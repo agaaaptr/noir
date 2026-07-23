@@ -3,3 +3,9 @@
 
 # OS / editor
 .DS_Store
+
+# Build / dependencies
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/

@@ -1,0 +1,27 @@
+{
+  "name": "noir",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Noir — the discipline, context, and memory layer for any agentic CLI.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9",
+  "scripts": {
+    "build": "pnpm -r --filter './packages/*' run build",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "pnpm -r --filter './packages/*' run typecheck",
+    "test": "pnpm build && vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0"
+  }
+}
