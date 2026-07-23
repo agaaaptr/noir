@@ -30,6 +30,22 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/cli:
+    dependencies:
+      '@noir-ai/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@noir-ai/core':
+        specifier: workspace:*
+        version: link:../core
+      '@noir-ai/daemon':
+        specifier: workspace:*
+        version: link:../daemon
+    devDependencies:
+      '@types/node':
+        specifier: ^26.1.1
+        version: 26.1.1
+
   packages/core:
     dependencies:
       yaml:
