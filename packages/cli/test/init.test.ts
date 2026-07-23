@@ -28,4 +28,10 @@ describe('init', () => {
     expect(claudeMd).toContain(CONTEXT_BLOCK_BEGIN);
     expect(claudeMd).toContain('@import ".noir/NOIR.md"');
   });
+
+  it('scaffolds an http .mcp.json when transport is streamable-http', async () => {
+    await init(root, { transport: 'streamable-http', url: 'http://127.0.0.1:4321/mcp' });
+    const mcp = JSON.parse(readFileSync(join(root, '.mcp.json'), 'utf8'));
+    expect(mcp.mcpServers.noir).toEqual({ type: 'http', url: 'http://127.0.0.1:4321/mcp' });
+  });
 });

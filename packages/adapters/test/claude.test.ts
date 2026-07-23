@@ -19,6 +19,12 @@ describe('claudeAdapter', () => {
     expect(json.mcpServers.noir).toEqual({ type: 'http', url: 'http://127.0.0.1:4321/mcp' });
   });
 
+  it('http without explicit url uses a placeholder to be edited', () => {
+    const json = JSON.parse(claudeAdapter.emitMcpConfig(ctx, { transport: 'streamable-http' }));
+    expect(json.mcpServers.noir.type).toBe('http');
+    expect(json.mcpServers.noir.url).toMatch(/^http:\/\/127\.0\.0\.1/);
+  });
+
   it('emits a CLAUDE.md @import block wrapped in markers', () => {
     const block = claudeAdapter.emitContext(ctx);
     expect(block).toContain(CONTEXT_BLOCK_BEGIN);
