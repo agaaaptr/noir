@@ -129,7 +129,7 @@ packages:
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "pnpm -r --filter './packages/*' run typecheck",
-    "test": "vitest run",
+    "test": "pnpm build && vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
