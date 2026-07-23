@@ -1,6 +1,7 @@
-import { homedir } from 'node:os';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import {
   clearDaemonRecord,
   daemonJsonPath,
@@ -8,6 +9,15 @@ import {
   readDaemonRecord,
   writeDaemonRecord,
 } from '../src/lifecycle.js';
+
+// Isolate the global daemon.json per vitest worker (file-parallelism safe).
+const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-test-lifecycle-'));
+process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'daemon.json');
+
+afterAll(() => {
+  clearDaemonRecord();
+  rmSync(tmpRoot, { recursive: true, force: true });
+});
 
 afterEach(() => {
   clearDaemonRecord();
@@ -30,7 +40,7 @@ describe('daemon lifecycle files', () => {
   it('pidAlive is false for an unlikely pid', () => {
     expect(pidAlive(2_000_000)).toBe(false);
   });
-  it('daemonJsonPath lives under ~/.noir', () => {
-    expect(daemonJsonPath()).toBe(join(homedir(), '.noir', 'daemon.json'));
+  it('daemonJsonPath honors the NOIR_DAEMON_JSON override', () => {
+    expect(daemonJsonPath()).toBe(process.env.NOIR_DAEMON_JSON);
   });
 });

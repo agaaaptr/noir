@@ -13,7 +13,10 @@ export function noirHome(): string {
 }
 
 export function daemonJsonPath(): string {
-  return join(noirHome(), 'daemon.json');
+  // NOIR_DAEMON_JSON override lets tests point each file's worker at an
+  // isolated temp path (vitest file-parallelism would otherwise race on the
+  // single global ~/.noir/daemon.json). Production leaves this unset.
+  return process.env.NOIR_DAEMON_JSON ?? join(noirHome(), 'daemon.json');
 }
 
 export function readDaemonRecord(): DaemonRecord | null {

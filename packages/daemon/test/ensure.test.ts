@@ -1,7 +1,14 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { ProjectInfo } from '@noir-ai/core';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { ensureDaemonRunning } from '../src/ensure.js';
 import { clearDaemonRecord, writeDaemonRecord } from '../src/lifecycle.js';
+
+// Isolate the global daemon.json per vitest worker (file-parallelism safe).
+const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-test-ensure-'));
+process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'daemon.json');
 
 // Node 20+ provides a global fetch (typed via @types/node); no import needed.
 
@@ -11,6 +18,11 @@ const project: ProjectInfo = {
   root: '/tmp/ensure',
   config: { host: 'claude', mode: 'full', daemon: { idleTimeoutSec: 900 } },
 };
+
+afterAll(() => {
+  clearDaemonRecord();
+  rmSync(tmpRoot, { recursive: true, force: true });
+});
 
 afterEach(() => {
   clearDaemonRecord();

@@ -9,6 +9,9 @@ export interface InitOptions {
 }
 
 export async function init(root: string, opts: InitOptions): Promise<void> {
+  if (opts.transport === 'streamable-http' && opts.url === undefined) {
+    throw new Error('--transport streamable-http requires --url');
+  }
   if (opts.url !== undefined) {
     assertLocalhostUrl(opts.url);
   }

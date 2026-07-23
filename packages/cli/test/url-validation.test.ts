@@ -44,4 +44,10 @@ describe('init --url localhost validation (security hardening)', () => {
       'Invalid URL: not a url',
     );
   });
+
+  it('rejects streamable-http without --url', async () => {
+    await expect(init(root, { transport: 'streamable-http' })).rejects.toThrow(
+      '--transport streamable-http requires --url',
+    );
+  });
 });

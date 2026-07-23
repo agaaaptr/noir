@@ -1,8 +1,20 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import type { ProjectInfo } from '@noir-ai/core';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { startHttpServer } from '../src/http.js';
 import { clearDaemonRecord } from '../src/lifecycle.js';
+
+// Isolate the global daemon.json per vitest worker (file-parallelism safe).
+const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-test-http-'));
+process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'daemon.json');
+
+afterAll(() => {
+  clearDaemonRecord();
+  rmSync(tmpRoot, { recursive: true, force: true });
+});
 
 const project: ProjectInfo = {
   id: 'deadbeef',

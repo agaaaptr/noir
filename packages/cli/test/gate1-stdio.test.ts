@@ -9,6 +9,12 @@ import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { clearDaemonRecord } from '@noir-ai/daemon';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+// Isolate the global daemon.json per vitest worker (file-parallelism safe).
+// The CLI subprocess inherits process.env, so it writes the same temp path;
+// its clearDaemonRecord() calls then target this isolated file too.
+const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-test-gate1-'));
+process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'daemon.json');
+
 const BIN = fileURLToPath(new URL('../src/bin.ts', import.meta.url));
 
 // `node --import tsx` resolves the `tsx` bare specifier relative to the child's cwd.
@@ -29,7 +35,9 @@ describe('Gate 1 — stdio round-trip', () => {
   }, 20000);
 
   afterAll(() => {
+    clearDaemonRecord();
     rmSync(cwd, { recursive: true, force: true });
+    rmSync(tmpRoot, { recursive: true, force: true });
   });
 
   it('noir.host_status returns transport=stdio over stdio', async () => {

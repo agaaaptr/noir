@@ -81,7 +81,7 @@ noir/
 
 | Package | Responsibility | Key deps |
 |---|---|---|
-| `@noir-ai/core` | Domain types, `config.yml` schema (zod), `.noir/` layout constants, `ProjectId` type + generator. **No I/O.** | zod |
+| `@noir-ai/core` | Domain types, `config.yml` schema (zod), `.noir/` layout constants, `ProjectId` type + generator, project loader (`loadProjectInfo` reads `.noir/project.id` + `config.yml`); otherwise no I/O. | zod |
 | `@noir-ai/daemon` | MCP handler core (tool definitions + handlers) + stdio binding + Streamable HTTP binding + daemon lifecycle manager. | `@modelcontextprotocol/server`, `@modelcontextprotocol/node`, core |
 | `@noir-ai/adapters` | `HostAdapter` interface (`emitMcpConfig`, `emitContext`, `install`, `healthCheck`, …) + `claude` emitter. | core |
 | `@noir-ai/cli` | The `noir` bin; `noir init` (scaffold `.noir/` + run adapter); `noir mcp serve [--stdio]`; `noir daemon start\|stop`; `noir doctor` (stub). | daemon, adapters, core |
@@ -140,6 +140,7 @@ The only tool surface in the skeleton (no args). Returns project + runtime statu
   - Stale-socket detection + reclaim (PID dead → take over).
 - Listens on **localhost TCP** (`127.0.0.1` only), **not** a unix socket — Claude Code's `.mcp.json` `url` transport expects `http(s)://`. (Shared-secret token noted as a security follow-up.)
 - **Daemon activation:** a plain HTTP `.mcp.json` only points at a URL, so something must bring the daemon up. For the skeleton, any `noir` invocation runs an `ensureDaemonRunning()` helper that starts-if-down (detached, writes `daemon.pid`); `noir daemon start` / `noir daemon stop` are explicit controls. In the Gate 2 manual demo the user runs `noir` once to bring the daemon up, then Claude Code (HTTP `.mcp.json`) connects to it.
+  - **v0 implementation note (2026-07-23 reconciliation):** the shipped skeleton runs a **foreground daemon** — `noir daemon start` blocks in-process, with the http server + idle timer keeping it alive, and the lifecycle record is written to `~/.noir/daemon.json` (pid + port), not `daemon.pid`. The detached / socket-activated lifecycle described above is a **post-v0 refinement**; the foreground shape is sufficient for the Gate 2 round-trip and acceptance.
 - **Serve modes (unambiguous):**
   - `noir mcp serve --stdio` → in-process stdio (Gate 1 / FS-fallback). Never touches the daemon.
   - `noir mcp serve` (no flag) → prefer the daemon: connect if up, else start it, else if it cannot start fall back to in-process stdio with a stderr warning. (This is the graceful-degradation story, D7/principle 5/Risk #1, built in from day one.)
