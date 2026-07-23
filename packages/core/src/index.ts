@@ -1,1 +1,5 @@
-export const NOIR_VERSION = '0.1.0';
+export { type NoirConfig, NoirConfigSchema, parseConfig } from './config.js';
+export { NOIR_DIR, paths } from './layout.js';
+export { loadProjectInfo, type ProjectInfo } from './project.js';
+export { createProjectId, type ProjectId } from './project-id.js';
+export { NOIR_VERSION } from './version.js';

@@ -21,5 +21,8 @@
   "dependencies": {
     "yaml": "^2.5.0",
     "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1"
   }
 }
