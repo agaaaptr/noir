@@ -108,6 +108,25 @@ If unset (or no id given), `/flow` uses the intake template — ClickUp is not r
 /wrap                      # close the session (tests, curate, commit, confirm push)
 ```
 
+## Noir (toolkit) — developer setup
+
+The Noir CLI lives under `packages/`. From the repo root:
+
+```bash
+pnpm install
+pnpm build          # build all packages
+pnpm test           # vitest (unit + integration)
+pnpm lint           # biome
+```
+
+Run the CLI locally without a global install:
+
+```bash
+node packages/cli/dist/bin.js init          # scaffold .noir/ in cwd
+node packages/cli/dist/bin.js mcp serve --stdio
+node packages/cli/dist/bin.js daemon start
+```
+
 ## Development
 
 This repo is itself developed with Claude Code. [`AGENTS.md`](AGENTS.md) holds the conventions for editing skills safely (SKILL.md format, commit-per-scope, where specs/plans go, how to validate). Edit skills here, then users refresh via `/plugin marketplace update noir` (or `git pull`).
