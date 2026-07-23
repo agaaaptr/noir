@@ -163,7 +163,7 @@ The repo is Noir-branded but still ships the predecessor Claude plugin under old
 - Marketplace (`.claude-plugin/marketplace.json`): `name` `ai-toolkit` → **`noir`**; plugin `name` `ai-dev-workflow` → **`noir-workflow`**; `source` → `./plugins/noir-workflow`; update `description` to the Noir identity.
 - Update internal references across the plugin's `SKILL.md` / `references/` / `templates/` and root `README.md` / `AGENTS.md`.
 
-**Names are proposed** — confirm at review. Alternatives if a name clashes: marketplace `noir-ai` (mirrors the npm scope `@noir-ai/*`); plugin `noir-skills`.
+**Names confirmed (2026-07-23 review):** marketplace **`noir`**, plugin **`noir-workflow`**. Used only as a fallback if a name turns out unavailable at impl: marketplace `noir-ai` (mirrors the npm scope `@noir-ai/*`), plugin `noir-skills`.
 
 > Note: the plugin remains a **predecessor / distribution channel** (blueprint §3 non-goal: Claude marketplace retained only as a distribution channel). Its skills are reused as canonical source material at S5. This rebrand is identity consistency, not a functional dependency of the skeleton.
 
@@ -203,12 +203,16 @@ The repo is Noir-branded but still ships the predecessor Claude plugin under old
 
 ---
 
-## 10. Open items to verify at implementation (non-blocking)
+## 10. Resolved at review (2026-07-23) vs. verify-at-implementation
 
+**Confirmed / locked at review:**
+- Plugin & marketplace names: marketplace **`noir`**, plugin **`noir-workflow`** (fallback only if unavailable: `noir-ai` / `noir-skills`).
+- **LICENSE:** **MIT**.
+- **Module system:** **ESM** (`"type": "module"`, tsup ESM output) to match the v2 SDK / modern Node.
+
+**Genuine verify-at-implementation (non-blocking):**
 - **Namespace availability:** `@noir-ai/*` npm scope + `noir` bin (D10). If `noir` is taken, packages stay scoped; local dev runs via `pnpm noir`.
 - **Claude Code `.mcp.json` schema** for the `url`/Streamable-HTTP transport (confirm before Gate 2; Gate 1 uses the stable stdio `command` form).
-- **ESM vs CJS:** proposed **ESM** (`"type": "module"`, tsup ESM output) to match the v2 SDK / modern Node.
-- **LICENSE:** proposed **MIT**.
 
 ---
 
