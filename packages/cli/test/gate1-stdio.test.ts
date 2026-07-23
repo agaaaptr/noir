@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL, URL } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import { clearDaemonRecord } from '@noir-ai/daemon';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const BIN = fileURLToPath(new URL('../src/bin.ts', import.meta.url));
@@ -50,6 +51,31 @@ describe('Gate 1 — stdio round-trip', () => {
       expect(parsed.daemon).toBe(false);
       expect(parsed.host).toBe('claude');
       expect(parsed.project.id.length).toBeGreaterThan(0);
+    } finally {
+      await client.close();
+    }
+  }, 20000);
+
+  it('stdio still works when no daemon is running (FS-fallback)', async () => {
+    // Prove the stdio path is independent of the shared daemon: with no daemon
+    // record present, `mcp serve --stdio` still serves host_status over stdio.
+    clearDaemonRecord();
+    const client = new Client(
+      { name: 'noir-test', version: '0.0.0' },
+      { versionNegotiation: { mode: 'auto' } },
+    );
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: ['--import', TSX_LOADER, BIN, 'mcp', 'serve', '--stdio'],
+      cwd,
+    });
+    await client.connect(transport);
+    try {
+      const result = await client.callTool({ name: 'host_status', arguments: {} });
+      const content = result.content?.[0] as { text: string } | undefined;
+      const parsed = JSON.parse(content?.text ?? '');
+      expect(parsed.transport).toBe('stdio');
+      expect(parsed.daemon).toBe(false);
     } finally {
       await client.close();
     }

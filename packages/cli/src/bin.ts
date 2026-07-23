@@ -36,8 +36,18 @@ async function main(): Promise<void> {
   }
 
   if (cmd === 'daemon') {
-    process.stderr.write('noir daemon start|stop arrives in Task 10.\n');
-    process.exitCode = 0;
+    const sub = argv[1];
+    const { daemonStart, daemonStop } = await import('./daemon-cmd.js');
+    if (sub === 'start') {
+      await daemonStart();
+      return;
+    }
+    if (sub === 'stop') {
+      await daemonStop();
+      return;
+    }
+    process.stderr.write('Usage: noir daemon start|stop\n');
+    process.exitCode = 2;
     return;
   }
 

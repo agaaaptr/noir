@@ -1,3 +1,4 @@
+export { type EnsureResult, ensureDaemonRunning } from './ensure.js';
 export { type RunningDaemon, type StartHttpOptions, startHttpServer } from './http.js';
 export {
   clearDaemonRecord,
