@@ -1,14 +1,14 @@
 # Modes & Graceful Degradation
 
-Every `ai-dev-workflow` skill Reads this on first use to detect its operating mode and degrade gracefully. Applies to both **rich** (plugins installed) and **lean** (no plugins) operation.
+Every `noir-workflow` skill Reads this on first use to detect its operating mode and degrade gracefully. Applies to both **rich** (plugins installed) and **lean** (no plugins) operation.
 
 ## Operating modes
 - **Rich** — plugins installed (Superpowers, context-mode, agentmemory): maximal capability, more tokens.
 - **Lean** — no plugins: token-efficient fallbacks, still systematic.
-- Default: **auto** (detect). Override via `ai-dev-workflow.mode` (below).
+- Default: **auto** (detect). Override via `noir-workflow.mode` (below).
 
 ## Mode detection (auto + override)
-1. **Override first.** Read `ai-dev-workflow.mode` from `CLAUDE.md`/`AGENTS.md`. Values: `auto` (default) | `rich` | `lean`. If `rich`/`lean`, force it and skip detection.
+1. **Override first.** Read `noir-workflow.mode` from `CLAUDE.md`/`AGENTS.md`. Values: `auto` (default) | `rich` | `lean`. If `rich`/`lean`, force it and skip detection.
 2. **Auto-detect** (only when `auto`): inspect the tool/skill list — cheaply, without invoking heavy tools — for each plugin:
    - **context-mode** → is `mcp__plugin_context-mode_context-mode__ctx_search` available?
    - **agentmemory** → is `mcp__agentmemory__memory_recall` available?

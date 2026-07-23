@@ -8,7 +8,7 @@ allowed-tools: Bash, Read, Edit, Write, Glob, Grep, AskUserQuestion, mcp__agentm
 Close a session. **Spine: Investigate → Confirm → Act** — confirm what changed before claiming it's done.
 
 ## Procedure
-0. **Mode + state.** **Mode.** Read `ai-dev-workflow.mode` (`auto`/`rich`/`lean`) in `CLAUDE.md`/`AGENTS.md` (force if set). Else auto-detect per capability: **context-mode** (is `ctx_search` available?), **agentmemory** (`memory_recall`?), **superpowers** (`superpowers:brainstorming`?). Use the rich path per capability present, lean fallback for the rest. Never fail silently — say which fallback is active. (Full matrix + rules: the plugin's `references/modes.md`.) **State:** If `workflow/<task>.md` exists, read it for what was in progress.
+0. **Mode + state.** **Mode.** Read `noir-workflow.mode` (`auto`/`rich`/`lean`) in `CLAUDE.md`/`AGENTS.md` (force if set). Else auto-detect per capability: **context-mode** (is `ctx_search` available?), **agentmemory** (`memory_recall`?), **superpowers** (`superpowers:brainstorming`?). Use the rich path per capability present, lean fallback for the rest. Never fail silently — say which fallback is active. (Full matrix + rules: the plugin's `references/modes.md`.) **State:** If `workflow/<task>.md` exists, read it for what was in progress.
 1. **Investigate changes.** `git status` + `git diff --stat`. Identify which docs/contracts the session touched.
 2. **Run tests.** Determine the test cmd from `CLAUDE.md` / manifest; run it; show output. If fail → STOP + report (no false success).
 3. **Update docs to current state.** From the diff, update `API-CONTRACT.md` / `docs/decisions/` / `docs/handoffs/` so docs are accurate after this session. Confirm scope with the user if unclear.

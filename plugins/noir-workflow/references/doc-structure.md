@@ -30,7 +30,7 @@ specs → `docs/specs/`, plans → `docs/plans/` (declared as a preference in `A
 - Sole record of a non-obvious decision → promote to `decisions/`, never delete.
 
 ## `/init` scan behavior
-When `/init` scans the project + docs and finds an **existing doc structure or similar docs**, ASK the user: (a) adapt the existing to this standard, or (b) leave existing as-is and generate the standard docs alongside. ai-dev-workflow standard docs are **always generated**; the fate of existing docs is the user's call (move / leave).
+When `/init` scans the project + docs and finds an **existing doc structure or similar docs**, ASK the user: (a) adapt the existing to this standard, or (b) leave existing as-is and generate the standard docs alongside. noir-workflow standard docs are **always generated**; the fate of existing docs is the user's call (move / leave).
 
 ## DOC-POLICY.md template
 

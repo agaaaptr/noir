@@ -12,7 +12,7 @@ Every skill uses **progressive disclosure** to stay token-efficient: `SKILL.md` 
 
 ## `references/` layout
 - **Per-skill** (`skills/<skill>/references/<topic>.md`): the resolvable, on-demand detail a skill loads at runtime (its own dir). Put phase detail / templates here.
-- **Cross-cutting** (`plugins/ai-dev-workflow/references/*.md` — `modes.md`, `skill-structure.md`, `commit-push.md`, `doc-structure.md`): canonical docs. **Not reliably resolvable at runtime** (a skill's cwd is the user's project, not the plugin) → skills **inline the essentials** (e.g. mode-detect at step 0) and reference these only as soft pointers / human reference. Never make a skill hard-depend on `Read`ing a cross-cutting file.
+- **Cross-cutting** (`plugins/noir-workflow/references/*.md` — `modes.md`, `skill-structure.md`, `commit-push.md`, `doc-structure.md`): canonical docs. **Not reliably resolvable at runtime** (a skill's cwd is the user's project, not the plugin) → skills **inline the essentials** (e.g. mode-detect at step 0) and reference these only as soft pointers / human reference. Never make a skill hard-depend on `Read`ing a cross-cutting file.
 
 ## Rule
 `SKILL.md` must NOT inline long procedures/templates — move them to `references/`. The lean body is the routing layer; references carry the substance.

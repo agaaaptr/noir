@@ -1,14 +1,14 @@
 # AGENTS.md
 
-Guidance for AI coding agents (Claude Code, Cursor, Codex, …) working **on this repository** — i.e., developing and maintaining the `ai-toolkit` plugins/skills. For *using* the plugin in a project, see the [README](README.md).
+Guidance for AI coding agents (Claude Code, Cursor, Codex, …) working **on this repository** — i.e., developing and maintaining the `noir` plugins/skills. For *using* the plugin in a project, see the [README](README.md).
 
 ## What this repo is
 
-A Claude Code plugin marketplace shipping the `ai-dev-workflow` plugin (skills: `init`, `sync`, `flow`, `wrap`, `checkpoint`). Skills are Markdown instructions to the model, not executable code; they orchestrate other plugins (Superpowers, context-mode, agentmemory). See [docs/architecture/](docs/architecture/).
+A Claude Code plugin marketplace shipping the `noir-workflow` plugin (skills: `init`, `sync`, `flow`, `wrap`, `checkpoint`). Skills are Markdown instructions to the model, not executable code; they orchestrate other plugins (Superpowers, context-mode, agentmemory). See [docs/architecture/](docs/architecture/).
 
 ## Two modes (rich / lean)
 
-The three plugins (Superpowers, context-mode, agentmemory) are **optional**. Skills run **rich** (plugins present → maximal, more tokens) or **lean** (absent → token-efficient fallbacks, still systematic). Detection is auto (probe availability, per capability) + override via `ai-dev-workflow.mode: auto|rich|lean` in `CLAUDE.md`/`AGENTS.md`. Details: [`plugins/ai-dev-workflow/references/modes.md`](plugins/ai-dev-workflow/references/modes.md). Related references: [`skill-structure.md`](plugins/ai-dev-workflow/references/skill-structure.md), [`commit-push.md`](plugins/ai-dev-workflow/references/commit-push.md), [`doc-structure.md`](plugins/ai-dev-workflow/references/doc-structure.md).
+The three plugins (Superpowers, context-mode, agentmemory) are **optional**. Skills run **rich** (plugins present → maximal, more tokens) or **lean** (absent → token-efficient fallbacks, still systematic). Detection is auto (probe availability, per capability) + override via `noir-workflow.mode: auto|rich|lean` in `CLAUDE.md`/`AGENTS.md`. Details: [`plugins/noir-workflow/references/modes.md`](plugins/noir-workflow/references/modes.md). Related references: [`skill-structure.md`](plugins/noir-workflow/references/skill-structure.md), [`commit-push.md`](plugins/noir-workflow/references/commit-push.md), [`doc-structure.md`](plugins/noir-workflow/references/doc-structure.md).
 
 ## Layout
 
@@ -28,8 +28,8 @@ The three plugins (Superpowers, context-mode, agentmemory) are **optional**. Ski
 
 - **Conventional Commits** (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`).
 - **Commit per scope** — never bundle unrelated changes into one commit; group by logical unit.
-- Scope plugin changes: `feat(ai-dev-workflow): …`.
-- Push requires explicit user confirmation (never auto-push) — see [`references/commit-push.md`](plugins/ai-dev-workflow/references/commit-push.md).
+- Scope plugin changes: `feat(noir-workflow): …`.
+- Push requires explicit user confirmation (never auto-push) — see [`references/commit-push.md`](plugins/noir-workflow/references/commit-push.md).
 
 ## Where docs go (overrides Superpowers defaults)
 
@@ -38,7 +38,7 @@ The three plugins (Superpowers, context-mode, agentmemory) are **optional**. Ski
 - Architecture Decision Records → `docs/decisions/NNNN-<slug>.md`.
 - Validation/PoC findings → `docs/findings/`.
 - The `brainstorming` and `writing-plans` skills accept a user-preferred location — use the paths above.
-- Full doc standard (permanent/ephemeral, DOC-POLICY, curation): [`references/doc-structure.md`](plugins/ai-dev-workflow/references/doc-structure.md).
+- Full doc standard (permanent/ephemeral, DOC-POLICY, curation): [`references/doc-structure.md`](plugins/noir-workflow/references/doc-structure.md).
 
 ## Do not
 

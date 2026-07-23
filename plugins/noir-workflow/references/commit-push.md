@@ -4,7 +4,7 @@ Every push-capable skill (`/flow`, `/wrap`) follows this.
 
 ## Commit
 - **Per scope** (conventional commits: `feat` / `fix` / `docs` / `chore` / `refactor`). Never bundle unrelated changes into one commit.
-- Scope plugin changes: `feat(ai-dev-workflow): …`.
+- Scope plugin changes: `feat(noir-workflow): …`.
 
 ## Push
 - Push **requires explicit user confirmation** — never auto-push.

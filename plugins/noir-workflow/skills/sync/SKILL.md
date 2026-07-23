@@ -8,7 +8,7 @@ allowed-tools: Read, Bash, Glob, Grep, mcp__plugin_context-mode_context-mode__ct
 Load project context. **Read-only** — do not edit project files. Spine: Investigate → Confirm (report setup) → Act (none).
 
 ## Procedure
-0. **Mode.** Read `ai-dev-workflow.mode` (`auto`/`rich`/`lean`) in `CLAUDE.md`/`AGENTS.md` (force if set). Else auto-detect per capability: **context-mode** (is `ctx_search` available?), **agentmemory** (`memory_recall`?), **superpowers** (`superpowers:brainstorming`?). Use the rich path per capability present, lean fallback for the rest. Never fail silently — say which fallback is active. (Full matrix + rules: the plugin's `references/modes.md`.)
+0. **Mode.** Read `noir-workflow.mode` (`auto`/`rich`/`lean`) in `CLAUDE.md`/`AGENTS.md` (force if set). Else auto-detect per capability: **context-mode** (is `ctx_search` available?), **agentmemory** (`memory_recall`?), **superpowers** (`superpowers:brainstorming`?). Use the rich path per capability present, lean fallback for the rest. Never fail silently — say which fallback is active. (Full matrix + rules: the plugin's `references/modes.md`.)
 1. **Read anchors.** Read `CLAUDE.md` + `AGENTS.md` (always-on; re-read to ground the brief).
 2. **Index/scan knowledge (JIT — keep it OUT of context).** Rich (context-mode): `ctx_index` `.notes/GUIDE.md` + `docs/`. Lean (no context-mode): note the key doc paths only — do not dump; `ctx_search` if a prior session captured the KB, else flag "scan on demand". Detail: `references/procedure.md`.
 3. **Git state.** `git rev-parse --abbrev-ref HEAD` ; `git status --porcelain` ; `git log --oneline -3`.

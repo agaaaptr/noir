@@ -15,4 +15,4 @@
 
 ## AI workflow docs
 
-This project uses `ai-dev-workflow`. Specs → `docs/specs/`, plans → `docs/plans/` (override Superpowers' default `docs/superpowers/`). Doc layout + curation rules: the plugin's `references/doc-structure.md`. Plugins optional (2-mode).
+This project uses `noir-workflow`. Specs → `docs/specs/`, plans → `docs/plans/` (override Superpowers' default `docs/superpowers/`). Doc layout + curation rules: the plugin's `references/doc-structure.md`. Plugins optional (2-mode).

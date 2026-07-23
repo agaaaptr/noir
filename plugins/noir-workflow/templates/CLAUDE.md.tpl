@@ -19,9 +19,9 @@ Project instructions for Claude Code (this repo).
 - Test: [cmd]
 - Run: [cmd]
 
-## AI workflow (`ai-dev-workflow`)
+## AI workflow (`noir-workflow`)
 
-This project uses `ai-dev-workflow` (`/init`, `/sync`, `/flow`, `/wrap`, `/checkpoint`). Plugins (Superpowers, context-mode, agentmemory) are **optional** — 2-mode (rich/lean). Override: `ai-dev-workflow.mode: auto|rich|lean`.
+This project uses `noir-workflow` (`/init`, `/sync`, `/flow`, `/wrap`, `/checkpoint`). Plugins (Superpowers, context-mode, agentmemory) are **optional** — 2-mode (rich/lean). Override: `noir-workflow.mode: auto|rich|lean`.
 
 **Doc layout:** permanent `docs/{specs,plans,decisions,architecture,reference,handoffs,findings}/` + `docs/DOC-POLICY.md`; ephemeral (gitignored) `.session/`, `.superpowers/sdd/`. **Superpowers paths:** specs → `docs/specs/`, plans → `docs/plans/` (not `docs/superpowers/`).
 

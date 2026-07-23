@@ -1,8 +1,8 @@
-# ai-toolkit
+# noir
 
-> A Claude Code plugin marketplace shipping **`ai-dev-workflow`** — a daily, stack-agnostic AI development loop that survives context loss and never acts on assumptions.
+> A Claude Code plugin marketplace shipping **`noir-workflow`** — a daily, stack-agnostic AI development loop that survives context loss and never acts on assumptions.
 
-`ai-dev-workflow` orchestrates the full lifecycle of a single task — intake, investigation, confirmation, planning, execution, verification, documentation — delegating to specialized plugins when present (else inlining lean phases) and persisting state so work survives context loss. It runs **with or without plugins** (2-mode).
+`noir-workflow` orchestrates the full lifecycle of a single task — intake, investigation, confirmation, planning, execution, verification, documentation — delegating to specialized plugins when present (else inlining lean phases) and persisting state so work survives context loss. It runs **with or without plugins** (2-mode).
 
 ## Why
 
@@ -37,9 +37,9 @@ Eight phases, each pausing for your approval:
 ## Repository structure
 
 ```
-ai-toolkit/
+noir/
 ├── .claude-plugin/marketplace.json   marketplace manifest
-├── plugins/ai-dev-workflow/
+├── plugins/noir-workflow/
 │   ├── skills/{init,sync,flow,wrap,checkpoint}/  one SKILL.md per skill (+ per-skill references/)
 │   ├── references/                   cross-cutting: modes, skill-structure, commit-push, doc-structure
 │   └── templates/                    state-file templates
@@ -51,7 +51,7 @@ See [`docs/architecture/`](docs/architecture/) for the full system overview.
 
 ## Prerequisites (optional)
 
-The three companion plugins are **optional** — `ai-dev-workflow` runs with or without them (see Two modes below):
+The three companion plugins are **optional** — `noir-workflow` runs with or without them (see Two modes below):
 
 | Plugin | Role | If absent |
 |---|---|---|
@@ -65,28 +65,28 @@ The three companion plugins are **optional** — `ai-dev-workflow` runs with or 
 - **Lean** — no plugins: token-efficient fallbacks, still systematic.
 - Default **auto** (each skill probes what is available, per capability). Override in the project's `CLAUDE.md`/`AGENTS.md`:
   ```
-  ai-dev-workflow.mode: auto | rich | lean
+  noir-workflow.mode: auto | rich | lean
   ```
-- Internals: [`references/modes.md`](plugins/ai-dev-workflow/references/modes.md) · skill authoring [`references/skill-structure.md`](plugins/ai-dev-workflow/references/skill-structure.md) · commit/push [`references/commit-push.md`](plugins/ai-dev-workflow/references/commit-push.md) · doc layout [`references/doc-structure.md`](plugins/ai-dev-workflow/references/doc-structure.md).
+- Internals: [`references/modes.md`](plugins/noir-workflow/references/modes.md) · skill authoring [`references/skill-structure.md`](plugins/noir-workflow/references/skill-structure.md) · commit/push [`references/commit-push.md`](plugins/noir-workflow/references/commit-push.md) · doc layout [`references/doc-structure.md`](plugins/noir-workflow/references/doc-structure.md).
 
 ## Installation
 
 **Plugin marketplace (primary):**
 ```
-/plugin marketplace add agaaaptr/ai-toolkit
-/plugin install ai-dev-workflow@ai-toolkit
+/plugin marketplace add agaaaptr/noir
+/plugin install noir-workflow@noir
 ```
 
 **npx skills (community discoverability):**
 ```bash
-npx skills add agaaaptr/ai-toolkit
+npx skills add agaaaptr/noir
 # if it lands in ~/.agents/skills/, symlink:
-ln -s ~/.agents/skills/ai-toolkit ~/.claude/skills/ai-toolkit
+ln -s ~/.agents/skills/noir ~/.claude/skills/noir
 ```
 
 **Git clone (fallback):**
 ```bash
-git clone https://github.com/agaaaptr/ai-toolkit ~/.claude/skills/ai-toolkit
+git clone https://github.com/agaaaptr/noir ~/.claude/skills/noir
 ```
 
 ## Configuration (ClickUp — optional, for `/flow`)
@@ -110,7 +110,7 @@ If unset (or no id given), `/flow` uses the intake template — ClickUp is not r
 
 ## Development
 
-This repo is itself developed with Claude Code. [`AGENTS.md`](AGENTS.md) holds the conventions for editing skills safely (SKILL.md format, commit-per-scope, where specs/plans go, how to validate). Edit skills here, then users refresh via `/plugin marketplace update ai-toolkit` (or `git pull`).
+This repo is itself developed with Claude Code. [`AGENTS.md`](AGENTS.md) holds the conventions for editing skills safely (SKILL.md format, commit-per-scope, where specs/plans go, how to validate). Edit skills here, then users refresh via `/plugin marketplace update noir` (or `git pull`).
 
 ## Known caveats
 

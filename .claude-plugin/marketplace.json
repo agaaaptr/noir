@@ -1,11 +1,11 @@
 {
-  "name": "ai-toolkit",
+  "name": "noir",
   "owner": { "name": "agaaaptr", "url": "https://github.com/agaaaptr" },
   "plugins": [
     {
-      "name": "ai-dev-workflow",
-      "source": "./plugins/ai-dev-workflow",
-      "description": "Daily, stack-agnostic AI dev workflow — 2-mode (runs with OR without plugins). Skills: /init bootstrap, /sync context-load, /flow 8-phase plan->execute->verify->document loop (investigate-confirm-act gates; ClickUp or no-id intake), /wrap session close (built-in doc curation), /checkpoint mid-session resume. Plugins (Superpowers, context-mode, agentmemory) optional."
+      "name": "noir-workflow",
+      "source": "./plugins/noir-workflow",
+      "description": "Noir's spec-driven development workflow for Claude Code — 2-mode (runs with OR without plugins). Skills: /init bootstrap, /sync context-load, /flow plan->execute->verify->document loop (investigate-confirm-act gates), /wrap session close, /checkpoint resume. The Noir-native distribution channel; superseded by the Noir CLI at runtime."
     }
   ]
 }
