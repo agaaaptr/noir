@@ -10,6 +10,8 @@ export {
 export type { AdvanceOpts } from './engine.js';
 export { WorkflowEngine } from './engine.js';
 export { gateFor, recordGate } from './gates.js';
+export type { QuickOpts } from './modes.js';
+export { QUICK_SPEC_STUB, resumeTask, runQuick } from './modes.js';
 export {
   applyTransition,
   canTransition,

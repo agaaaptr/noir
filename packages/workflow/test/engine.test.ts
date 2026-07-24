@@ -288,6 +288,61 @@ describe('WorkflowEngine', () => {
     });
   });
 
+  describe('skip (quick-mode gates: skipped is RECORDED, never dropped)', () => {
+    it('records the landing gate as skipped when opts.skip is supplied at a gate', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'quick');
+        await engine.advance('task-1'); // → clarifying
+
+        const specified = await engine.advance('task-1', { skip: true });
+        expect(specified.history).toHaveLength(1);
+        expect(specified.history[0]).toMatchObject({ phase: 'spec', decision: 'skipped' });
+        // skipped carries no reason (only `forced` does)
+        expect(specified.history[0].reason).toBeUndefined();
+
+        // audit KV mirrors history with the skipped decision
+        const audit = store.getState<GateResult[]>('audit:task-1');
+        expect(audit?.[0]).toMatchObject({ phase: 'spec', decision: 'skipped' });
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('skip on a non-gate advance records nothing (clarify is not a gate phase)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'quick');
+        const clarifying = await engine.advance('task-1', { skip: true });
+        expect(clarifying.state).toBe('clarifying');
+        expect(clarifying.history).toHaveLength(0);
+        expect(store.getState<GateResult[]>('audit:task-1')).toBeNull();
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('rejects combining skip with force (mutually exclusive gate decisions)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'full');
+        await engine.advance('task-1'); // → clarifying
+
+        await expect(
+          engine.advance('task-1', { skip: true, force: { reason: 'x' } }),
+        ).rejects.toThrow(/cannot combine --force and skip/);
+        // nothing recorded on a rejected advance
+        expect(engine.status('task-1')?.state).toBe('clarifying');
+        expect(store.getState<GateResult[]>('audit:task-1')).toBeNull();
+      } finally {
+        await store.close();
+      }
+    });
+  });
+
   describe('blocked / abandoned (set directly, not via the FSM)', () => {
     it('setBlocked sets state=blocked directly and stores the reason', async () => {
       const store = await openStore({ projectId, root });

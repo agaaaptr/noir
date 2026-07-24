@@ -18,7 +18,8 @@ export interface AdvanceOpts {
   /**
    * Pass a gate without satisfying its criteria. Requires a non-empty `reason`
    * (validated here, in the engine — `recordGate` is policy-free). The landing
-   * gate, if any, is recorded with `decision: 'forced'`.
+   * gate, if any, is recorded with `decision: 'forced'`. Mutually exclusive
+   * with {@link skip}.
    */
   force?: { reason?: string };
   /**
@@ -28,6 +29,13 @@ export interface AdvanceOpts {
    * gate so the observable-checkpoint invariant holds.
    */
   to?: Phase;
+  /**
+   * Quick-mode: record the landing gate (if any) as `decision: 'skipped'`
+   * instead of `approved`. The gate is still RECORDED — never silently dropped
+   * (Noir §9.1 observable-checkpoint invariant) — only the decision changes.
+   * Mutually exclusive with {@link force}.
+   */
+  skip?: true;
 }
 
 /**
@@ -63,8 +71,13 @@ function gatePhaseForState(state: WorkflowState): Phase | null {
 export class WorkflowEngine {
   constructor(
     private readonly store: Store,
-    // biome-ignore lint/correctness/noUnusedPrivateClassMembers: project root for T5 artifact flushes (checkpoint/writeSpec/…); stored at construction so the engine is self-contained.
-    private readonly root: string,
+    /**
+     * Project root — the engine is constructed with it so modes (quickPath
+     * writes a spec stub via {@link writeSpec}) and future artifact flushes
+     * (checkpoint/audit export) are self-contained. Public so the modes module
+     * can pass it to {@link ArtifactWriter}.
+     */
+    readonly root: string,
     private readonly projectId: ProjectId,
   ) {}
 
@@ -93,15 +106,21 @@ export class WorkflowEngine {
    * Advance `taskId` to its next phase, or jump with `opts.to`.
    *
    * At a gate-landing state (entering `specified` / `planned` / `done`) a
-   * {@link GateResult} is recorded — `approved` by default, or `forced` (with the
-   * reason) when `opts.force` is supplied. Jumps bypass the FSM and additionally
-   * stamp `jumpEntry`.
+   * {@link GateResult} is recorded — `approved` by default, `forced` (with the
+   * reason) when `opts.force` is supplied, or `skipped` when `opts.skip` is
+   * supplied (quick mode). `force` and `skip` are mutually exclusive. Jumps
+   * bypass the FSM and additionally stamp `jumpEntry`.
    */
   async advance(taskId: string, opts?: AdvanceOpts): Promise<TaskState> {
     const task = this.requireTask(taskId);
 
-    // Policy: --force requires a non-empty reason. Validated BEFORE any gate
-    // write so a bad force never leaves a partial audit trail behind.
+    // Policy: --force and skip are mutually exclusive gate decisions (a gate
+    // can't be both forced AND skipped). Validated BEFORE any gate write so a
+    // bad combination never leaves a partial audit trail behind.
+    if (opts?.force && opts?.skip) {
+      throw new Error('cannot combine --force and skip');
+    }
+    // Policy: --force requires a non-empty reason.
     if (opts?.force && !opts.force.reason?.trim()) {
       throw new Error('--force requires a reason');
     }
@@ -119,7 +138,7 @@ export class WorkflowEngine {
     // gate — looked up from the target STATE (see gatePhaseForState).
     const gatePhase = gatePhaseForState(targetState);
     if (gatePhase !== null) {
-      const decision = opts?.force ? 'forced' : 'approved';
+      const decision = opts?.force ? 'forced' : opts?.skip ? 'skipped' : 'approved';
       const gate: GateResult = {
         phase: gatePhase,
         decision,
