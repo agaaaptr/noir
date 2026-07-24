@@ -4,7 +4,14 @@ import type { ProjectInfo } from '@noir-ai/core';
 import { NOIR_VERSION } from '@noir-ai/core';
 import type { MemoryEngine } from '@noir-ai/memory';
 import type { Store } from '@noir-ai/store';
-import type { GateResult, Mode, Phase, WorkflowEngine, WorkflowState } from '@noir-ai/workflow';
+import type {
+  AdvanceOpts,
+  GateResult,
+  Mode,
+  Phase,
+  WorkflowEngine,
+  WorkflowState,
+} from '@noir-ai/workflow';
 import { PHASES } from '@noir-ai/workflow';
 import { z } from 'zod';
 import { buildStatus, type Transport } from './status.js';
@@ -270,6 +277,96 @@ export function createNoirServer(ctx: ServerContext): McpServer {
         const payload = buildWorkflowStatus(engine, id, degraded);
         if (!payload) return textResult({ ok: false, taskId: id, error: 'unknown task' });
         return textResult({ action, ...payload });
+      },
+    );
+
+    // `workflow_start` / `workflow_advance` expose the engine's writes that the
+    // S9 `task new` / `task advance` CLI commands drive (previously those were
+    // honest "not exposed" stubs). Both are writes, so a read-only (daemon-down)
+    // store fences them off up front with a clear envelope (mirrors
+    // `context_index` / `memory_save`). The result reuses buildWorkflowStatus so
+    // the wire shape matches `workflow_status` (taskId/phase/state/nextGate/...).
+    server.registerTool(
+      'workflow_start',
+      {
+        description:
+          'Start a Noir SDD task at draft/intake and make it the active task (workflow:active). Re-starting an existing taskId overwrites it (the KV is the source of truth, not a journal). Defaults to full mode.',
+        inputSchema: {
+          taskId: z.string().min(1).describe('Stable task handle (re-starting overwrites).'),
+          slug: z.string().min(1).describe('Human-readable slug, e.g. "add-login".'),
+          mode: z.enum(['full', 'quick']).optional().describe("Mode: 'full' (default) or 'quick'."),
+        },
+      },
+      async ({ taskId, slug, mode }) => {
+        if (degraded) {
+          return textResult({
+            ok: false,
+            degraded: true,
+            error: 'store is read-only (daemon down) — workflow_start is unavailable',
+          });
+        }
+        try {
+          const resolvedMode: Mode = mode ?? 'full';
+          await engine.startTask(taskId, slug, resolvedMode);
+          const payload = buildWorkflowStatus(engine, taskId, degraded);
+          if (!payload) return textResult({ ok: false, taskId, error: 'unknown task' });
+          return textResult(payload);
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
+      },
+    );
+
+    server.registerTool(
+      'workflow_advance',
+      {
+        description:
+          'Advance a Noir SDD task to its next phase, or jump with `to`. At a gate-landing state (entering specified/planned/done) a gate is recorded — approved by default, forced (with reason) via `force`, or skipped via `skip`. Omit taskId to target the active task. `force` and `skip` are mutually exclusive.',
+        inputSchema: {
+          taskId: z
+            .string()
+            .optional()
+            .describe('Task id; defaults to the active task (workflow:active).'),
+          force: z
+            .object({ reason: z.string().min(1) })
+            .optional()
+            .describe(
+              'Pass the next gate without satisfying its criteria; requires a non-empty reason. Mutually exclusive with skip.',
+            ),
+          to: z
+            .enum(['intake', 'clarify', 'spec', 'plan', 'execute', 'verify', 'document'])
+            .optional()
+            .describe('Jump directly to a phase, bypassing the FSM.'),
+          skip: z
+            .boolean()
+            .optional()
+            .describe(
+              "Quick-mode: record the landing gate as 'skipped' instead of 'approved'. Mutually exclusive with force.",
+            ),
+        },
+      },
+      async ({ taskId, force, to, skip }) => {
+        if (degraded) {
+          return textResult({
+            ok: false,
+            degraded: true,
+            error: 'store is read-only (daemon down) — workflow_advance is unavailable',
+          });
+        }
+        try {
+          const id = taskId ?? engine.activeTaskId();
+          if (!id) return textResult({ ok: false, error: 'no active task' });
+          const opts: AdvanceOpts = {};
+          if (force) opts.force = { reason: force.reason };
+          if (to) opts.to = to;
+          if (skip) opts.skip = true;
+          await engine.advance(id, opts);
+          const payload = buildWorkflowStatus(engine, id, degraded);
+          if (!payload) return textResult({ ok: false, taskId: id, error: 'unknown task' });
+          return textResult(payload);
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
       },
     );
   }

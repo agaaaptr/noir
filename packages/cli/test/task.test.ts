@@ -1,0 +1,293 @@
+// S9 t5 — `noir task {new,status,advance,next}` tests. daemon-client is mocked
+// at the module boundary. These pin the contract:
+//   • `status`/`next` read `workflow_status`; a logical-failure envelope
+//     (`{ok:false,error:'no active task'}` / `'unknown task'`) → exit 3
+//     (NOT_FOUND) — a focused task read's "absent" is not-found, not an error;
+//   • `new`/`advance` are wired to `workflow_start`/`workflow_advance` (I1):
+//     they forward args, render the resulting task, and map a logical-failure
+//     envelope (incl. read-only store) to exit 1; an invalid mode/phase is
+//     exit 2 (USAGE); daemon-unreachable would be exit 4 from callDaemonTool
+//     (covered by daemon-client.test).
+//   • `next` suggests the grounded phase→skill (plan → noir-plan).
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { payloads } = vi.hoisted(() => ({ payloads: { current: {} as Record<string, unknown> } }));
+
+vi.mock('../src/daemon-client.js', () => ({
+  callDaemonTool: vi.fn(async (_opts: unknown, name: string, args?: Record<string, unknown>) => {
+    // `workflow_status` defaults to the active task when no taskId given.
+    if (name === 'workflow_status' && args && args['taskId']) {
+      return payloads.current['workflow_status:' + String(args['taskId'])];
+    }
+    return payloads.current[name];
+  }),
+}));
+
+import {
+  type TaskOptions,
+  taskAdvance,
+  taskNew,
+  taskNext,
+  taskStatus,
+} from '../src/commands/task.js';
+import { callDaemonTool } from '../src/daemon-client.js';
+
+function reset(): void {
+  payloads.current = {
+    workflow_status: {
+      ok: true,
+      taskId: 't-9',
+      phase: 'plan',
+      state: 'in_progress',
+      mode: 'full',
+      nextGate: 'plan',
+      history: [],
+      updatedAt: 1700000000000,
+      degraded: false,
+    },
+    workflow_start: {
+      ok: true,
+      taskId: 'auth',
+      slug: 'auth',
+      phase: 'intake',
+      state: 'draft',
+      mode: 'full',
+      nextGate: 'spec',
+      history: [],
+      updatedAt: 1700000000000,
+      degraded: false,
+    },
+    workflow_advance: {
+      ok: true,
+      taskId: 'auth',
+      phase: 'clarify',
+      state: 'clarifying',
+      mode: 'full',
+      nextGate: 'spec',
+      history: [],
+      updatedAt: 1700000000001,
+      degraded: false,
+    },
+  };
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  reset();
+});
+
+interface Captured {
+  out: string;
+  err: string;
+}
+function captureStreams(): { capture: () => Captured; restore: () => void } {
+  const out: string[] = [];
+  const err: string[] = [];
+  const o = process.stdout.write.bind(process.stdout);
+  const e = process.stderr.write.bind(process.stderr);
+  process.stdout.write = ((c: unknown) => (
+    out.push(typeof c === 'string' ? c : String(c)), true
+  )) as typeof process.stdout.write;
+  process.stderr.write = ((c: unknown) => (
+    err.push(typeof c === 'string' ? c : String(c)), true
+  )) as typeof process.stderr.write;
+  return {
+    capture: () => ({ out: out.join(''), err: err.join('') }),
+    restore: () => {
+      process.stdout.write = o;
+      process.stderr.write = e;
+    },
+  };
+}
+
+const base: TaskOptions = {};
+
+describe('task status', () => {
+  it('--json emits the WorkflowStatus on STDOUT', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskStatus({ ...base, json: true });
+      const c = capture();
+      expect(c.err).toBe('');
+      const env = JSON.parse(c.out);
+      expect(env.data.taskId).toBe('t-9');
+      expect(env.data.phase).toBe('plan');
+    } finally {
+      restore();
+    }
+  });
+
+  it('forwards a positional task id', async () => {
+    payloads.current['workflow_status:t-42'] = {
+      ok: true,
+      taskId: 't-42',
+      phase: 'spec',
+      state: 'specified',
+      mode: 'full',
+      nextGate: 'plan',
+    };
+    await taskStatus({ ...base, id: 't-42' });
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(expect.anything(), 'workflow_status', {
+      taskId: 't-42',
+    });
+  });
+
+  it('human renders a Field/Value table to STDERR', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskStatus({ ...base });
+      const c = capture();
+      expect(c.out).toBe('');
+      expect(c.err).toContain('t-9');
+      expect(c.err).toContain('Phase');
+      expect(c.err).toContain('plan');
+    } finally {
+      restore();
+    }
+  });
+
+  it('"no active task" envelope → exit 3 (NOT_FOUND)', async () => {
+    payloads.current['workflow_status'] = { ok: false, error: 'no active task' };
+    await expect(taskStatus({ ...base })).rejects.toMatchObject({ exitCode: 3 });
+  });
+
+  it('"unknown task" envelope → exit 3 (NOT_FOUND)', async () => {
+    payloads.current['workflow_status:t-99'] = { ok: false, taskId: 't-99', error: 'unknown task' };
+    await expect(taskStatus({ ...base, id: 't-99' })).rejects.toMatchObject({ exitCode: 3 });
+  });
+});
+
+describe('task next', () => {
+  it('--json emits phase + nextGate + grounded skill suggestion', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskNext({ ...base, json: true });
+      const c = capture();
+      const env = JSON.parse(c.out);
+      expect(env.data.phase).toBe('plan');
+      expect(env.data.nextGate).toBe('plan');
+      expect(env.data.suggestion).toBe('noir-plan');
+    } finally {
+      restore();
+    }
+  });
+
+  it('human surfaces next gate + skill on STDERR', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskNext({ ...base });
+      const err = capture().err;
+      expect(err).toContain('next gate: plan');
+      expect(err).toContain('noir-plan');
+    } finally {
+      restore();
+    }
+  });
+
+  it('no active task → exit 3', async () => {
+    payloads.current['workflow_status'] = { ok: false, error: 'no active task' };
+    await expect(taskNext({ ...base })).rejects.toMatchObject({ exitCode: 3 });
+  });
+});
+
+describe('task new — wired to workflow_start', () => {
+  it('--json emits the started task on STDOUT + calls workflow_start', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskNew({ ...base, slug: 'auth', mode: 'full', json: true });
+      const c = capture();
+      expect(c.err).toBe('');
+      const env = JSON.parse(c.out);
+      expect(env.data.taskId).toBe('auth');
+      expect(env.data.phase).toBe('intake');
+      expect(env.data.state).toBe('draft');
+      expect(env.data.mode).toBe('full');
+    } finally {
+      restore();
+    }
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(expect.anything(), 'workflow_start', {
+      taskId: 'auth',
+      slug: 'auth',
+      mode: 'full',
+    });
+  });
+
+  it('derives taskId from the slug and omits mode when not given (server defaults to full)', async () => {
+    await taskNew({ ...base, slug: 'feat-x' });
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(expect.anything(), 'workflow_start', {
+      taskId: 'feat-x',
+      slug: 'feat-x',
+    });
+  });
+
+  it('invalid mode → exit 2 (USAGE), no daemon call', async () => {
+    await expect(taskNew({ ...base, slug: 'x', mode: 'bogus' })).rejects.toMatchObject({
+      exitCode: 2,
+    });
+    expect(vi.mocked(callDaemonTool)).not.toHaveBeenCalled();
+  });
+
+  it('logical-failure envelope (read-only store) → exit 1 with detail', async () => {
+    payloads.current['workflow_start'] = {
+      ok: false,
+      degraded: true,
+      error: 'store is read-only (daemon down) — workflow_start is unavailable',
+    };
+    await expect(taskNew({ ...base, slug: 'x' })).rejects.toMatchObject({ exitCode: 1 });
+  });
+
+  it('human renders the started task row to STDERR (slug surfaces)', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskNew({ ...base, slug: 'auth' });
+      const c = capture();
+      expect(c.out).toBe('');
+      expect(c.err).toContain('auth');
+      expect(c.err).toContain('Phase');
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe('task advance — wired to workflow_advance', () => {
+  it('forwards --to <phase> as {to} and emits the advanced task', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskAdvance({ ...base, to: 'spec', json: true });
+      const c = capture();
+      expect(JSON.parse(c.out).ok).toBe(true);
+    } finally {
+      restore();
+    }
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(expect.anything(), 'workflow_advance', {
+      to: 'spec',
+    });
+  });
+
+  it('forwards --force <reason> as {force:{reason}}', async () => {
+    await taskAdvance({ ...base, force: 'waiting on design' });
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(expect.anything(), 'workflow_advance', {
+      force: { reason: 'waiting on design' },
+    });
+  });
+
+  it('omits to/force when neither is given (active-task default advance)', async () => {
+    await taskAdvance({ ...base });
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(
+      expect.anything(),
+      'workflow_advance',
+      {},
+    );
+  });
+
+  it('invalid phase → exit 2 (USAGE), no daemon call', async () => {
+    await expect(taskAdvance({ ...base, to: 'bogus' })).rejects.toMatchObject({ exitCode: 2 });
+    expect(vi.mocked(callDaemonTool)).not.toHaveBeenCalled();
+  });
+
+  it('logical-failure envelope → exit 1', async () => {
+    payloads.current['workflow_advance'] = { ok: false, error: 'no active task' };
+    await expect(taskAdvance({ ...base })).rejects.toMatchObject({ exitCode: 1 });
+  });
+});
