@@ -90,6 +90,19 @@ importers:
         specifier: ^26.1.1
         version: 26.1.1
 
+  packages/skills:
+    dependencies:
+      '@noir-ai/core':
+        specifier: workspace:*
+        version: link:../core
+      yaml:
+        specifier: ^2.5.0
+        version: 2.9.0
+    devDependencies:
+      '@types/node':
+        specifier: ^26.1.1
+        version: 26.1.1
+
   packages/store:
     dependencies:
       '@noir-ai/core':

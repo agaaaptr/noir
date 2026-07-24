@@ -1,0 +1,29 @@
+{
+  "name": "@noir-ai/skills",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "builtin"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@noir-ai/core": "workspace:*",
+    "yaml": "^2.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1"
+  }
+}
