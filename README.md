@@ -127,6 +127,10 @@ node packages/cli/dist/bin.js mcp serve --stdio
 node packages/cli/dist/bin.js daemon start
 ```
 
+### Noir store
+
+Embedded SQLite (better-sqlite3) with FTS5 (BM25 + window snippets) and sqlite-vec (384-dim kNN). Project-local DB at `.noir/store/<projectId>.db`. The daemon opens the store as the single writer; when the daemon is down, clients fall back to read-only direct access (no migrations). `store_status` MCP tool reports health: `{ok, projectId, docCount, vecCount, dbPath, degraded}`. Tests open the store via `openStore({ projectId, root })` from `@noir-ai/store`.
+
 ## Development
 
 This repo is itself developed with Claude Code. [`AGENTS.md`](AGENTS.md) holds the conventions for editing skills safely (SKILL.md format, commit-per-scope, where specs/plans go, how to validate). Edit skills here, then users refresh via `/plugin marketplace update noir` (or `git pull`).
