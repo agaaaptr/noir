@@ -1,6 +1,6 @@
 # Noir — S7 Cross-Session Memory Design (`@noir-ai/memory`)
 
-> **Status: DRAFT v0 — pending clarification answers (OQ-1..OQ-8). Do not implement until resolved.**
+> **Status: RESOLVED 2026-07-25 — implemented & validated (501/501 tests). OQs resolved per docs/superpowers/plans/2026-07-24-v1.0-execution-plan.md §1.**
 
 - **Date:** 2026-07-24
 - **Spec type:** Implementation design (next slice after S6 Context).

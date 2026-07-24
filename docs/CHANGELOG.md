@@ -2,6 +2,35 @@
 
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
+## S7 — Memory management (2026-07-25)
+
+**Release-ready.** 501/501 tests green (was 340); build / typecheck / lint green. All on branch `develop`, local (not pushed).
+
+### Added
+- **New package `@noir-ai/memory`** (10th package — `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory}`). Cross-session memory layered **ON TOP of the store — no schema migration.**
+- **Observations** via `indexDoc({source:'memory'})` (FTS5) + `upsertVec({source:'memory'})` (sqlite-vec, 384-dim) + KV `memory:obs:<id>` (authoritative full row) + `memory:sessions` / `memory:index` rollups. Dev-flavored open-enum taxonomy: `pattern | preference | architecture | bug | workflow | fact | decision | lesson` (`lesson` reserved for consolidation output; unknown values accepted + stored).
+- **`save` / `recall` / `search` / `sessions` / `forget` / `consolidate`.** Recall **reuses S6's hybrid retrieval**: store `searchFt` + `knn` scoped to `source:'memory'` → `fuseRrf` (Reciprocal Rank Fusion, k=60 — imported from `@noir-ai/context`) → cheap regex entity-boost (identifiers / paths, no LLM) → hydrate FULL content from KV (never truncated, blueprint §9 / DS-9). BM25-only degraded fallback when no embedder.
+- **Daemon:** resolves the embedder ONCE and passes the same `EmbedFn` to both `ContextEngine` and `MemoryEngine`; new `packages/daemon/src/memory-seam.ts`. 5 MCP tools (`memory_save` / `memory_recall` / `memory_search` / `memory_sessions` / `memory_forget`) + conditional `memory_consolidate`, all gated on `ctx.memory` (mirrors `ctx.store` / `ctx.engine`).
+- **Consolidation:** append-only, explicitly-invoked job consuming S8 `complete()`. Emits derived `type:'lesson'` with `provenance:[ids]`; originals never mutated or deleted (reversible + auditable).
+- **Config:** new `memory:` block in `NoirConfigSchema` (`consolidation:{enabled, provider?, model?, types?}`); `resolveMemoryConfig` bridge (pure projection; no core→memory import cycle) wired through the daemon.
+- **Capture:** explicit-save is the default; a host-neutral `CaptureEvent` type + an **OPT-IN** Claude Code hooks template (a doc/settings snippet the user installs; NEVER auto-wired, never silent).
+- **2 new builtin skills** `noir-recall` + `noir-remember` (skills pack now 31 = 19 full + 12 stub).
+
+### Changed
+- Consolidation capability is gated on the user's `memory.consolidation.enabled` master switch (NOT on `model.defaultProvider`); `enabled:false` ⇒ `memory_consolidate` tool unregistered + `consolidate` refuses `{ok:false, reason:'no-provider'}` with no model call — regardless of other model config.
+- The daemon constructs a single shared embedder for context + memory (was: context-only).
+
+### Security
+- Opus final review (1 CRITICAL — FIXED + tested; all other blueprint D6 hard rules clean). **CRITICAL:** consolidation was initially gated on `model.defaultProvider`, which left a path to a silent paid LLM call (blueprint §9 anti-pattern). Now gated on the explicit `memory.consolidation.enabled` master switch — `enabled:false` refuses with no model call before any provider resolution. Verified by a no-provider test asserting zero model invocation. Remaining D6 rules clean: in-process only, `ProjectId`-scoped (never a fs path), KV authoritative, never-truncated recall, single-flight, append-only consolidation, no sidecar / external server.
+
+### Known v0 debt (deferred)
+- Graph expansion / temporal knowledge graph (Zep / Graphiti-style entities + edges) — v1.x; needs an extraction LLM + graph storage.
+- LLM auto-tagging (`concepts` / `type` on save) — v1.x; would be another silent LLM touch.
+- Auto-capture-by-default — **opt-in hooks template only**; never auto-wired (DS-4 / DS-10).
+- Auto-install of the Claude Code hooks template (today the user copies the snippet manually).
+- Multi-user / org scoping (per-user memory namespaces) — v1.x; v1 is solo power-user.
+- Remote sync / cloud memory — never default (violates D6 local+free); a remote *embedding* provider is already opt-in via S6.
+
 ## S8 — Bounded model layer (2026-07-25)
 
 **Release-ready.** 340/340 tests green (was 247); build / typecheck / lint green. All on branch `develop`, local (not pushed).
