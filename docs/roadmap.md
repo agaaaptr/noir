@@ -21,7 +21,7 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 
 ## Current status (living — update as slices ship)
 
-> **As of 2026-07-25.** The single source of "where Noir is right now, what's built, and what's still missing." Update this whenever a slice ships or direction shifts — so no session loses the thread.
+> **As of 2026-07-25. v1.0 RELEASE-READY / acceptance-complete.** The single source of "where Noir is right now." Update this whenever a slice ships or direction shifts — so no session loses the thread.
 
 **Built & releasable (on `develop`, local — not pushed):**
 - **Walking skeleton** (slices **S0 + S2 + S3-minimal**) — the integration thesis is *proven*: a host (Claude Code) connects to Noir over MCP and `host_status` round-trips over **stdio** (Gate 1) and a **daemon-backed Streamable HTTP** transport with stdio FS-fallback (Gate 2).
@@ -37,15 +37,69 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 - Legacy plugin rebranded: marketplace `noir`, plugin `noir-workflow`.
 
 **Next:**
-- **v1.0 is FEATURE-COMPLETE (S6–S9 done).** No new features remain. NEXT is **MVP v1.0 finalization**: full codebase / doc / quality audits, project cleanup, and end-to-end dogfood — then cut v1.0.
-- **Then:** S10 (cross-CLI hosts) / S11 (distribution + SDK) begin **v1.x**.
+- **v1.0 is RELEASE-READY / acceptance-complete** — S6–S9 done; **729/729 tests**; end-to-end dogfood passed 14/14; all MVP acceptance criteria met. No features and no finalization remain.
+- **NEXT = cut the v1.0 release** (publish / tag). Everything is committed locally on `develop` (**not pushed**).
+- **Then:** S10 (more host adapters) + S11 (distribution + SDK) begin **v1.x** — see the consolidated **"v1.x backlog"** section below.
 
-**Still missing for v1.0 (the MVP target) — finalization, not features:**
-- Full whole-project audits (code, docs, quality) + E2E dogfood run before the v1.0 cut. Cross-CLI hosts (S10) and distribution/SDK (S11) remain v1.x.
+**v1.0 finalization — COMPLETE:**
+- Finalization audits (code, docs, quality) run + fixes applied: zod consolidated to **v4**, root **README rewritten** for the v1.0 toolkit, dead code + unused deps removed, biome/mcp/hash/jsdoc/re-export nits fixed. End-to-end dogfood PASSED 14/14 (real local embeddings → `context_search` hits; memory save→recall; workflow start→advance; durability across daemon restart; bounded-model degrades to `null` with no key). Cross-CLI hosts (S10) and distribution/SDK (S11) remain v1.x — see the backlog below.
 
-**Known v0 debt (documented in `.superpowers/sdd/progress.md`):** foreground daemon (detached/socket-activation is post-v0 / v1.x — `daemon --detach` honestly returns exit 2); single global `~/.noir/daemon.json` (concurrent-project clobbering); no daemon auth token; full-screen Ink/blessed TUI (v2 — S9 ships a `@clack/prompts` menu, not a full-screen TUI); in-process read-only store fallback for `context *` / `memory *` / `task *` (daemon-required for v1; `status` is the only probe-only command); `task` id/slug distinction collapsed to slug for v1; cosmetic nits.
+**Known v0 debt** is now consolidated in the **"v1.x backlog"** section below (S10 hosts, S11 distribution, daemon detach/auth, full-screen TUI, in-process read-only fallback, tree-sitter chunking, OS keychain, prompt caching, streaming, god-file refactors, and more).
 
 **Goal (North Star, unchanged):** Noir = the discipline/context/memory layer that makes any agentic CLI behave like a disciplined spec-driven engineer. v1 MVP = a solo power-user doing idea→spec→plan→implement inside Claude Code with persistent cross-session memory.
+
+---
+
+## v1.x backlog (consolidated)
+
+All deferred items, grouped by area. Each was intentionally out of v1 to keep scope sharp; none are abandoned. S10/S11 begin the v1.x line after the v1.0 cut. (The high-level "why deferred" view stays in the **Deferred Features** table further down; this is the detailed engineering list.)
+
+### S10 — More host adapters
+- Emitters for **gemini / agy / opencode / qwen**.
+- **REQUIRES** an adapter registry (`resolveAdapter(host)`) + widening `host` config from `z.literal('claude')` + replacing direct `claudeAdapter` imports in the CLI with the resolver. **The current single-host assumption is the S10 gate.**
+- Skills compiler `CompileTarget` is also Claude-only today (needs the same widening).
+
+### S11 — Distribution + SDK
+- npm publish (`@noir-ai/*`), Claude marketplace listing, framework/SDK docs, `noir doctor` publish checks.
+
+### Daemon
+- backgrounded/detached mode + socket-activation (`daemon --detach` honestly returns exit 2 today).
+- auth token for the daemon transport (none today).
+- per-project `daemon.json` (today a single global `~/.noir/daemon.json` clobbers under concurrent projects).
+
+### CLI / TUI
+- full-screen Ink/blessed TUI (v2 — S9 ships a `@clack/prompts` menu only).
+- in-process read-only store fallback for `context` / `memory` / `task` commands (daemon-required for v1; `status` is the only probe-only command today).
+- `task` id/slug distinction (collapsed to a single slug namespace for v1).
+
+### Context
+- tree-sitter symbol-aware code chunking (line/token-bounded chunking ships today).
+- full `.gitignore` parsing (a static denylist ships today).
+- `trigram` tokenizer for FTS5 (`porter unicode61` today; splits camelCase poorly).
+- kNN-only-hit snippet hydration (currently an empty snippet, reported as `mode:'hybrid'`).
+- `--watch` full daemon wiring.
+- remote embedding provider SDK completion (current stubs).
+- embedding model upgrade (`bge-small-en-v1.5`, same 384-dim).
+
+### Memory
+- graph / temporal-KG expansion (Zep/Graphiti-style entities + edges; needs an extraction LLM + graph storage).
+- LLM auto-tagging (`concepts` / `type` on save).
+- auto-capture-by-default (an opt-in Claude Code hooks template ships today; never auto-wired).
+- multi-user / org scoping (per-user memory namespaces; v1 is solo power-user).
+
+### Model
+- OS keychain for secrets (env vars today).
+- prompt caching (Anthropic `cache_control`).
+- provider-native JSON strict mode (OpenAI `response_format: strict` / Anthropic forced-tool).
+- `onUsage` usage sink (fires on success; `noir doctor` wiring deferred).
+- streaming (single-shot by design today; agent loops forbidden by D5).
+
+### Toolchain / quality
+- `tsconfig.test.json` (test/ files are not statically typechecked today).
+- `references/` skill code-path coverage (only synthetic fixtures today; 0 shipped skills use it).
+- engine-naming consistency (`ContextEngine` / `MemoryEngineImpl`).
+- `indexer.ts` + `daemon/server.ts` god-file refactors.
+- first-run model download UX (one-time ~22 MB fetch, cached in `~/.noir/models/`).
 
 ---
 

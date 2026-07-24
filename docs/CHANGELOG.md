@@ -2,6 +2,25 @@
 
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
+## v1.0 — release-ready (2026-07-25)
+
+**v1.0 ACCEPTANCE-COMPLETE.** **10 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory}`; **729/729 tests green** (was 142 at the skeleton); build / typecheck / lint green. All committed locally on `develop` (**not pushed**).
+
+**What shipped (S6–S9 + the skeleton S0–S5):**
+- **S6 Context** — embedded hybrid retrieval: local in-process MiniLM embeddings + BM25 ∪ kNN fused by Reciprocal Rank Fusion.
+- **S8 Model** — thin single-shot model library (`anthropic` / `openai` / `openai-compatible`); first-class `null` degradation; agent loops impossible by construction (no `tools`/`stream` on the request).
+- **S7 Memory** — cross-session memory layered on the store (no schema migration); explicit-save default + opt-in Claude Code hooks template; append-only consolidation gated on the `memory.consolidation.enabled` master switch (never a silent paid call).
+- **S9 CLI/TUI** — commander command tree + `@clack/prompts` home; stable exit codes; `status` probe-only (works daemon-down); every capability reachable from one shell entry point.
+- Plus **S0–S5**: walking skeleton (stdio + daemon Streamable HTTP), S1 stores (SQLite + FTS5 + sqlite-vec), S4 SDD workflow engine, S5 builtin skills + compiler (**31 skills** = 19 full + 12 stub).
+
+**End-to-end dogfood — PASSED 14/14:** real local embeddings → `context_search` hits; memory save→recall; workflow start→advance; durability across daemon restart; bounded-model degrades to `null` with no key.
+
+**Finalization cleanups applied:** zod consolidated to **v4**; root **README rewritten** for the v1.0 toolkit; dead code + unused deps removed; biome / mcp-config / content-hash / jsdoc / re-export nits fixed.
+
+All MVP v1.0 acceptance criteria met. **Next: cut the v1.0 release (publish / tag).** Deferred items are consolidated in the **v1.x backlog** in `docs/roadmap.md` (S10 more hosts, S11 distribution/SDK, plus per-area debt lists — daemon, CLI/TUI, context, memory, model, toolchain).
+
+---
+
 ## S9 — CLI/TUI home screen (2026-07-25)
 
 **Release-ready. v1.0 FEATURE-COMPLETE (S6–S9 done).** 729/729 tests green (was 501); build / typecheck / lint green. All on branch `develop`, local (not pushed). NO new package — the existing `@noir-ai/cli` was overhauled (total stays 10 packages).
