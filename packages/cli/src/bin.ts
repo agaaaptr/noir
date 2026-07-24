@@ -20,6 +20,12 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (cmd === 'sync') {
+    const { sync } = await import('./sync.js');
+    await sync(process.cwd());
+    return;
+  }
+
   if (cmd === 'mcp') {
     const sub = argv[1];
     if (sub !== 'serve') {
@@ -57,7 +63,7 @@ async function main(): Promise<void> {
   }
 
   process.stderr.write(
-    'Noir — commands: init | mcp serve [--stdio] | daemon start|stop | doctor\n',
+    'Noir — commands: init | sync | mcp serve [--stdio] | daemon start|stop | doctor\n',
   );
   process.exitCode = 2;
 }

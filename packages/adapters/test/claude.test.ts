@@ -31,4 +31,8 @@ describe('claudeAdapter', () => {
     expect(block).toContain(CONTEXT_BLOCK_END);
     expect(block).toContain('@import ".noir/NOIR.md"');
   });
+
+  it('targets .claude/skills for skill emission', () => {
+    expect(claudeAdapter.skillsDir?.({ root: '/p' })).toBe('/p/.claude/skills');
+  });
 });

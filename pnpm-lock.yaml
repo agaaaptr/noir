@@ -29,6 +29,10 @@ importers:
       '@noir-ai/core':
         specifier: workspace:*
         version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^26.1.1
+        version: 26.1.1
 
   packages/cli:
     dependencies:
@@ -41,6 +45,9 @@ importers:
       '@noir-ai/daemon':
         specifier: workspace:*
         version: link:../daemon
+      '@noir-ai/skills':
+        specifier: workspace:*
+        version: link:../skills
     devDependencies:
       '@modelcontextprotocol/client':
         specifier: ^2.0.0-beta.5

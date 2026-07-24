@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { claudeAdapter } from '@noir-ai/adapters';
 import { CONTEXT_BLOCK_BEGIN, CONTEXT_BLOCK_END, createProjectId, paths } from '@noir-ai/core';
+import { emitSkillsToDir } from '@noir-ai/skills';
 
 export interface InitOptions {
   transport: 'stdio' | 'streamable-http';
@@ -39,6 +40,11 @@ export async function init(root: string, opts: InitOptions): Promise<void> {
     replaceBlock(existing, claudeAdapter.emitContext({ root })),
     'utf8',
   );
+
+  if (claudeAdapter.skillsDir) {
+    const summary = await emitSkillsToDir(claudeAdapter.skillsDir({ root }));
+    process.stderr.write(`Emitted ${summary.emitted.length} Noir skills to .claude/skills/.\n`);
+  }
 
   process.stderr.write(`Noir initialized in ${root} (transport: ${opts.transport}).\n`);
 }
