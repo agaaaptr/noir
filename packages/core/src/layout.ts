@@ -9,4 +9,19 @@ export const paths = {
   projectId: (root: string) => join(root, NOIR_DIR, 'project.id'),
   storeDir: (root: string) => join(root, NOIR_DIR, 'store'),
   storeDb: (root: string, projectId: string) => join(root, NOIR_DIR, 'store', `${projectId}.db`),
+  // Artifact directories and files
+  specsDir: (root: string) => join(root, NOIR_DIR, 'specs'),
+  specFile: (root: string, taskId: string, slug: string) =>
+    join(root, NOIR_DIR, 'specs', `${taskId}-${slug}.md`),
+  plansDir: (root: string) => join(root, NOIR_DIR, 'plans'),
+  planFile: (root: string, taskId: string, slug: string) =>
+    join(root, NOIR_DIR, 'plans', `${taskId}-${slug}.md`),
+  tasksDir: (root: string) => join(root, NOIR_DIR, 'tasks'),
+  taskFile: (root: string, taskId: string, taskName: string) =>
+    join(root, NOIR_DIR, 'tasks', `${taskId}-${taskName}.md`),
+  decisionsDir: (root: string) => join(root, NOIR_DIR, 'decisions'),
+  decisionFile: (root: string, n: number) =>
+    join(root, NOIR_DIR, 'decisions', `${String(n).padStart(4, '0')}.md`),
+  auditDir: (root: string) => join(root, NOIR_DIR, 'audit'),
+  auditFile: (root: string, taskId: string) => join(root, NOIR_DIR, 'audit', `${taskId}.json`),
 } as const;

@@ -1,3 +1,12 @@
+export {
+  writeAuditExport,
+  writeChangelogStub,
+  writeDecisionStub,
+  writeIntake,
+  writePlan,
+  writeSpec,
+  writeTask,
+} from './artifacts.js';
 export { gateFor, recordGate } from './gates.js';
 export {
   applyTransition,
