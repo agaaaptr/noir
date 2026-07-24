@@ -48,7 +48,9 @@ interface VecRow {
 export async function openStore(opts: OpenOptions): Promise<Store & { __db: Database.Database }> {
   const projectId: ProjectId = opts.projectId;
   const dbPath = paths.storeDb(opts.root, projectId);
-  mkdirSync(paths.storeDir(opts.root), { recursive: true });
+  if (opts.readonly !== true) {
+    mkdirSync(paths.storeDir(opts.root), { recursive: true });
+  }
 
   const db = new Database(dbPath, { readonly: opts.readonly === true });
 
