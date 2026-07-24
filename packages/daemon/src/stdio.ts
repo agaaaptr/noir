@@ -1,6 +1,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { createNoirServer, type ServerContext } from './server.js';
 import { openStoreForDaemon } from './store-seam.js';
+import { buildWorkflowEngine } from './workflow-seam.js';
 
 export async function startStdioServer(ctx: ServerContext): Promise<void> {
   // The daemon is the single writer: open the store once for this stdio serve
@@ -11,6 +12,10 @@ export async function startStdioServer(ctx: ServerContext): Promise<void> {
   const daemonStore = await openStoreForDaemon(ctx.project.id, ctx.project.root).catch(
     () => undefined,
   );
+  // One engine per serve lifecycle, built from the same store handle.
+  const engine = daemonStore
+    ? buildWorkflowEngine(daemonStore.store, ctx.project.root, ctx.project.id)
+    : undefined;
   const server = createNoirServer({
     ...ctx,
     ...(daemonStore
@@ -20,6 +25,7 @@ export async function startStdioServer(ctx: ServerContext): Promise<void> {
           storeDegraded: daemonStore.degraded,
         }
       : {}),
+    ...(engine ? { engine } : {}),
   });
   const transport = new StdioServerTransport();
   await server.connect(transport);

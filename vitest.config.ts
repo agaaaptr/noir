@@ -13,6 +13,7 @@ export default defineConfig({
       '@noir-ai/adapters': alias('adapters'),
       '@noir-ai/cli': alias('cli'),
       '@noir-ai/store': alias('store'),
+      '@noir-ai/workflow': alias('workflow'),
     },
   },
   test: {

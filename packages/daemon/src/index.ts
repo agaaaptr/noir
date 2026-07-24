@@ -9,7 +9,13 @@ export {
   readDaemonRecord,
   writeDaemonRecord,
 } from './lifecycle.js';
-export { createNoirServer, type ServerContext, type StoreStatus } from './server.js';
+export {
+  createNoirServer,
+  type ServerContext,
+  type StoreStatus,
+  type WorkflowStatus,
+} from './server.js';
 export { buildStatus, type HostStatus, type StatusContext, type Transport } from './status.js';
 export { startStdioServer } from './stdio.js';
 export { type DaemonStore, openStoreForDaemon } from './store-seam.js';
+export { buildWorkflowEngine } from './workflow-seam.js';

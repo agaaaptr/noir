@@ -165,6 +165,16 @@ export class WorkflowEngine {
   }
 
   /**
+   * The taskId of the most-recently-started task (`workflow:active` in the
+   * store KV), or `null` when no task has been started yet. Lets the MCP
+   * `workflow_status` / `checkpoint` tools omit `taskId` and operate on the
+   * active task.
+   */
+  activeTaskId(): string | null {
+    return this.store.getState<string>(ACTIVE_KEY);
+  }
+
+  /**
    * Re-flush the current state to KV. In T4 every advance already persists, so
    * this is the explicit "mark a checkpoint" hook (bumps `updatedAt`); T5
    * deepens it to flush artifacts + audit export for cross-session resume.

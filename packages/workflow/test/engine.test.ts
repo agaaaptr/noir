@@ -286,6 +286,23 @@ describe('WorkflowEngine', () => {
         await store.close();
       }
     });
+
+    it('activeTaskId returns the most-recently-started task (workflow:active), or null', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        expect(engine.activeTaskId()).toBeNull();
+
+        await engine.startTask('task-1', 'a', 'full');
+        expect(engine.activeTaskId()).toBe('task-1');
+
+        // Starting another task re-points `workflow:active` at it.
+        await engine.startTask('task-2', 'b', 'quick');
+        expect(engine.activeTaskId()).toBe('task-2');
+      } finally {
+        await store.close();
+      }
+    });
   });
 
   describe('skip (quick-mode gates: skipped is RECORDED, never dropped)', () => {

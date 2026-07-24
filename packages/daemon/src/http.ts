@@ -8,6 +8,7 @@ import type { ProjectInfo } from '@noir-ai/core';
 import { clearDaemonRecord, type DaemonRecord, writeDaemonRecord } from './lifecycle.js';
 import { createNoirServer } from './server.js';
 import { openStoreForDaemon } from './store-seam.js';
+import { buildWorkflowEngine } from './workflow-seam.js';
 
 export interface StartHttpOptions {
   project: ProjectInfo;
@@ -39,6 +40,11 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
   const daemonStore = await openStoreForDaemon(opts.project.id, opts.project.root).catch(
     () => undefined,
   );
+  // One engine per lifecycle, built from the shared store handle — reused
+  // across every request, exactly like the store.
+  const engine = daemonStore
+    ? buildWorkflowEngine(daemonStore.store, opts.project.root, opts.project.id)
+    : undefined;
 
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     lastActivity = Date.now();
@@ -64,6 +70,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
               storeDegraded: daemonStore.degraded,
             }
           : {}),
+        ...(engine ? { engine } : {}),
       });
       const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       await server.connect(transport);
