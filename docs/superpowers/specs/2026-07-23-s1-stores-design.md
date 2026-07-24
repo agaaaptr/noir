@@ -1,7 +1,7 @@
 # Noir — S1 Stores Design (`@noir-ai/store`)
 
 - **Date:** 2026-07-23
-- **Status:** Draft (awaiting review — autonomously drafted overnight; user AFK. Decisions documented; open questions flagged for confirmation.)
+- **Status:** Reviewed (2026-07-24) — OQ-1…OQ-6 resolved (see §9); ready for implementation planning.
 - **Owner:** agaaaptr
 - **Spec type:** Implementation design (next slice after the walking skeleton)
 - **Parent:** `docs/specs/2026-07-23-noir-toolkit-design.md` (blueprint §5.3, §6.2, §6.3, §9.2, §9.3) + `docs/superpowers/specs/2026-07-23-noir-walking-skeleton-design.md` (delivered skeleton)
@@ -31,6 +31,8 @@ S1's acceptance: ***persistence exists and is queryable*** — the daemon opens 
 - Schema + a lightweight versioned migration runner.
 - Project-scoped DB keyed by the **canonical `ProjectId`** (never a filesystem path — D6/§9.3).
 - The daemon opens/owns the store (single writer).
+- **Read-only FS-fallback** (principle 5): a `Store` can be opened read-only; when the daemon is down, the diagnostic path opens it read-only directly (degraded reads, no writes).
+- A diagnostic MCP tool **`noir.store_status`** (returns `{ ok, projectId, docCount, vecCount, dbPath }`) — end-to-end daemon→store proof; degrades to read-only direct-open when the daemon is down.
 - Markdown export (minimal — memory rows → `.noir/memory/*.md`); full governance in S7.
 - Tests: DB round-trips, FTS5 BM25 + snippet, vec kNN, migrations, project-ID keying.
 
@@ -155,14 +157,14 @@ Notes:
 
 - The daemon calls `openStore(projectId, root)` once at startup (lazy on first store-using tool). `better-sqlite3` is synchronous; the daemon serializes writes within its event loop (single process = single writer). WAL mode (`PRAGMA journal_mode=WAL`) for concurrent readers.
 - The DB path is derived from `ProjectId`, not `root`: `paths.storeDb(root, projectId) → .noir/store/<projectId>.db`. Moving the project dir does not orphan the DB (the id travels with `.noir/project.id`).
-- **FS-fallback** (D7/principle 5): if the daemon is down, the store is not directly opened by the CLI in S1 (the store is daemon-owned). Read-only FS fallback for the store is a later hardening; S1 keeps the store behind the daemon. *(OQ-2: is daemon-only store access acceptable for S1, or do we want a read-only direct-open fallback now?)*
+- **Read-only FS-fallback** (D7/principle 5, **in scope for S1** per OQ-2): `Store` supports a read-only open (better-sqlite3 `?mode=ro` / `PRAGMA query_only=1`). When the daemon is unavailable, the CLI/diagnostic path opens the store read-only directly — **degraded reads** (KV get, FTS5 search, vec kNN work; writes fail with a clear "daemon down, read-only" error). The daemon stays the only writer. Full degraded-reads for `context_search`/`recall` arrive with S6/S7; S1 wires the mechanism + uses it in `noir.store_status`.
 
 ---
 
 ## 7. Testing & CI
 
 - **Unit/ integration (vitest):** temp-dir DB per test (no global state); round-trip KV; FTS5 BM25 ranking + `snippet()` window correctness (assert the snippet contains the match, not truncated); vec kNN ordering; migration runner (v1 applies; re-open is idempotent); project-ID keying (DB path uses id, not path).
-- The `sqlite-vec` extension must load in CI (it ships prebuilt binaries via the `sqlite-vec` npm package + better-sqlite3 `loadExtension`). **CI risk:** the extension binary must match the platform — verify on ubuntu + macos in the existing matrix. *(OQ-3: confirm sqlite-vec prebuilt coverage for the CI matrix; if a platform lacks a binary, gate vec tests.)*
+- The `sqlite-vec` extension loads in CI via the `sqlite-vec` npm helper (per-platform prebuilt binary) + better-sqlite3 `loadExtension`. **OQ-3 resolved:** prebuilts cover linux + macOS (the CI matrix); if a platform ever lacks a binary, gate the vec tests (skip + reason).
 - No network; embeddings are faked in S1 tests (deterministic `Float32Array`).
 
 ---
@@ -174,19 +176,19 @@ Notes:
 | Context indexing/watcher, RRF fusion, essential-brief | S6 | Logic on top of the store. |
 | Memory lifecycle, capture, consolidation, governance, MCP tools | S7 | Logic on top of the store. |
 | Embeddings model (transformers.js) | S6/S7 | Injected via `EmbedFn`. |
-| Store FS-fallback (daemon-down read-only) | later | D7 graceful degradation; daemon-only for S1. |
+| Store read-only FS-fallback → **moved INTO S1** per OQ-2 | — | see §6. |
 | User-global memory mirror | S7 | Cross-project memory needs identity/scope work. |
 
 ---
 
-## 9. Open questions (confirm at review)
+## 9. Open questions — RESOLVED (2026-07-24 review)
 
-- **OQ-1:** DB location — project-local primary (`.noir/store/<id>.db`) for S1? (DS-5)
-- **OQ-2:** Daemon-only store access in S1, or a read-only direct-open FS fallback now? (§6)
-- **OQ-3:** sqlite-vec prebuilt binary coverage across the CI matrix (ubuntu + macos)? Gate vec tests if a platform is missing. (§7)
-- **OQ-4:** Vec dimension confirmed at **384** (MiniLM-L6-v2)? (If a different model is later chosen for S6/S7, the schema column changes — a migration.)
-- **OQ-5:** Does S1 add a minimal `noir.store_status` MCP tool (daemon → store → "ok, N docs, M vecs") to prove the seam end-to-end, or keep S1 store-only with no new MCP surface (proven via daemon-internal tests only)?
-- **OQ-6:** Migration runner — accept the lightweight versioned-SQL approach (DS-6), or adopt a tiny library (e.g. a hand-rolled runner is fine)?
+- **OQ-1 → project-local primary:** DB at `.noir/store/<projectId>.db` (travels with the project via `.noir/project.id`); user-global mirror (`~/.noir/store/`) added in S7. (confirms DS-5)
+- **OQ-2 → read-only FS-fallback IN S1:** `Store` supports a read-only open; the CLI/diagnostic path opens it read-only directly when the daemon is down (degraded reads — KV/FTS/vec queries work, writes fail clearly). `noir.store_status` uses it. Full degraded-reads for `context_search`/`recall` come with S6/S7.
+- **OQ-3 → covered (controller-resolved):** `better-sqlite3` v12+ and `sqlite-vec` ship prebuilts for linux + macOS (the CI matrix); load via the `sqlite-vec` npm helper (per-platform binary). Gate vec tests (skip + reason) if a platform ever lacks a binary.
+- **OQ-4 → 384-dim** (`Xenova/all-MiniLM-L6-v2`). A future model change → schema migration. (confirms DS-8)
+- **OQ-5 → add `noir.store_status` MCP tool:** returns `{ ok, projectId, docCount, vecCount, dbPath }`; end-to-end daemon→store proof + useful diagnostic; degrades to read-only direct-open when daemon down.
+- **OQ-6 → hand-rolled versioned-SQL runner:** `schema_version` table + ordered SQL files (~30 lines, no dep, inspectable). (confirms DS-6)
 
 ---
 
@@ -202,5 +204,5 @@ Notes:
 
 ## 11. Next steps
 
-1. **User reviews this draft** (current gate) — confirm OQ-1…OQ-6.
-2. On approval → invoke **writing-plans** to produce the S1 implementation plan (task breakdown: package scaffold → schema/migrations v1 → KV → FTS5 + snippet → vec + kNN → daemon `openStore` seam → markdown export → tests), then subagent-driven execution.
+1. ~~User reviews this draft — confirm OQ-1…OQ-6.~~ **Reviewed 2026-07-24: all OQs resolved (§9).**
+2. → invoke **writing-plans** to produce the S1 implementation plan (task breakdown: package scaffold → schema/migrations v1 → KV → FTS5 + snippet → vec + kNN → daemon `openStore` seam + read-only FS-fallback → `noir.store_status` MCP tool → markdown export → tests), then subagent-driven execution.
