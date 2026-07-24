@@ -11,15 +11,20 @@ import { clearDaemonRecord } from '../src/lifecycle.js';
 const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-test-http-'));
 process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'daemon.json');
 
+// Isolated project root so startHttpServer's store open doesn't leak a DB
+// under a shared path like /tmp/http-demo.
+const projectRoot = mkdtempSync(join(tmpdir(), 'noir-test-http-root-'));
+
 afterAll(() => {
   clearDaemonRecord();
   rmSync(tmpRoot, { recursive: true, force: true });
+  rmSync(projectRoot, { recursive: true, force: true });
 });
 
 const project: ProjectInfo = {
   id: 'deadbeef',
   name: 'http-demo',
-  root: '/tmp/http-demo',
+  root: projectRoot,
   config: { host: 'claude', mode: 'full', daemon: { idleTimeoutSec: 900 } },
 };
 

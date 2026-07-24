@@ -73,6 +73,9 @@ importers:
       '@noir-ai/core':
         specifier: workspace:*
         version: link:../core
+      '@noir-ai/store':
+        specifier: workspace:*
+        version: link:../store
     devDependencies:
       '@modelcontextprotocol/client':
         specifier: ^2.0.0-beta.0

@@ -7,6 +7,7 @@ import {
 import type { ProjectInfo } from '@noir-ai/core';
 import { clearDaemonRecord, type DaemonRecord, writeDaemonRecord } from './lifecycle.js';
 import { createNoirServer } from './server.js';
+import { openStoreForDaemon } from './store-seam.js';
 
 export interface StartHttpOptions {
   project: ProjectInfo;
@@ -31,6 +32,14 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     if (Date.now() - lastActivity > opts.idleTimeoutSec * 1000) void shutdown();
   }, 10_000);
 
+  // The daemon is the single writer: open the store ONCE per serve lifecycle
+  // and reuse the same handle across every HTTP request. The stateless
+  // Streamable HTTP model builds a fresh McpServer per request, but they all
+  // share this one store handle — no per-request re-open, no second writer.
+  const daemonStore = await openStoreForDaemon(opts.project.id, opts.project.root).catch(
+    () => undefined,
+  );
+
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     lastActivity = Date.now();
     if (req.method === 'GET' && req.url === '/health') {
@@ -48,6 +57,13 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
         daemon: true,
         pid,
         startedAt,
+        ...(daemonStore
+          ? {
+              store: daemonStore.store,
+              dbPath: daemonStore.dbPath,
+              storeDegraded: daemonStore.degraded,
+            }
+          : {}),
       });
       const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       await server.connect(transport);
@@ -75,6 +91,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
       idleTimer = undefined;
     }
     await new Promise<void>((r) => httpServer.close(() => r()));
+    await daemonStore?.store.close().catch(() => undefined);
     clearDaemonRecord();
   }
 

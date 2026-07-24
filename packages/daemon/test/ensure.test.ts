@@ -10,18 +10,23 @@ import { clearDaemonRecord, writeDaemonRecord } from '../src/lifecycle.js';
 const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-test-ensure-'));
 process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'daemon.json');
 
+// Isolated project root so ensureDaemonRunning's store open doesn't leak a DB
+// under a shared path like /tmp/ensure.
+const projectRoot = mkdtempSync(join(tmpdir(), 'noir-test-ensure-root-'));
+
 // Node 20+ provides a global fetch (typed via @types/node); no import needed.
 
 const project: ProjectInfo = {
   id: 'ensure',
   name: 'ensure-demo',
-  root: '/tmp/ensure',
+  root: projectRoot,
   config: { host: 'claude', mode: 'full', daemon: { idleTimeoutSec: 900 } },
 };
 
 afterAll(() => {
   clearDaemonRecord();
   rmSync(tmpRoot, { recursive: true, force: true });
+  rmSync(projectRoot, { recursive: true, force: true });
 });
 
 afterEach(() => {
