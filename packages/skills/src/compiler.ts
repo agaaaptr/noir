@@ -14,7 +14,7 @@ import type {
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 const NAME_RE = /^noir-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const WHEN_START =
-  /^(use|using|whenever|when|before|after|while|starting|encountering|completing|creating|about to)\b/i;
+  /^(use|using|used|whenever|when|before|after|while|starting|encountering|completing|creating|about to|upon|during|to|for|on)\b/i;
 const MAX_DESC = 1024;
 
 export function parseFrontmatter(md: string): SkillFrontmatter {
@@ -34,11 +34,11 @@ export function bodyOf(md: string): string {
   return md.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
 }
 
+/** A WHEN description leads with its trigger. Requiring a leading cue — rather
+ *  than a loose "contains when/before/after anywhere" — avoids false positives
+ *  ("A tool that decides when to run tests") and accepts valid leads ("Upon…"). */
 export function looksLikeWhenDescription(desc: string): boolean {
-  const d = desc.trim();
-  if (!d) return false;
-  if (WHEN_START.test(d)) return true;
-  return /\b(when|before|after|whenever|while)\b/i.test(d);
+  return WHEN_START.test(desc.trim());
 }
 
 export function validateSkill(skill: BuiltinSkill): ValidationResult {

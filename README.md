@@ -167,7 +167,9 @@ node packages/cli/dist/bin.js sync   # re-emits idempotently (same 28, determini
 
 **The compiler is copy + validate, not generate.** `emitSkillsToDir()` reads the shipped `builtin/` directory, parses each `SKILL.md`, and validates before writing a single file — fail-fast, atomic-ish (one invalid skill blocks the whole emit). No LLM in the loop; drafting/generation is S8.
 
-**Authoring rule: `description` = WHEN, not WHAT.** `looksLikeWhenDescription` rejects descriptions that say what a skill does instead of when it fires (`/^(use|using|whenever|when|before|after|while|…)\b/i`); `validateSkill` enforces `name` = `noir-<kebab>`, dir matches name, and `references/*.md` naming. The hygiene test suite gates every shipped skill on every run.
+**Authoring rule: `description` = WHEN, not WHAT.** Each skill's `description` must lead with a WHEN trigger (`Use when…`, `Before…`, `Upon…`, `To…`); `looksLikeWhenDescription` rejects descriptions that don't lead with a temporal cue — the common WHAT pattern ("A tool that decides when to run tests" passes the sniff but fails the lead). It's a guardrail, not a full NLP check. `validateSkill` also enforces `name` = `noir-<kebab>`, dir matches name, and `references/*.md` naming. The hygiene test suite gates every shipped skill on every run.
+
+> **Caveat — `noir-*` is a managed namespace.** `noir init` and `noir sync` manage the `noir-*` namespace in `.claude/skills/`. Edits to a `noir-*` skill are overwritten on the next sync — put customizations under a non-colliding name.
 
 **Enforcement stance: observable gates, not skill-level rhetoric.** Superpowers' `<EXTREMELY-IMPORTANT>`/`SUBAGENT-STOP`/anti-rationalization tables and the predecessor's "HARD GATE / Spine" framing are stripped on port — `FORBIDDEN_RESIDUE` lists the tokens the hygiene test rejects. Discipline comes from the **S4 engine's observable gates** (every decision recorded `approved`/`forced`/`skipped`), not from shouty markdown inside a skill body.
 

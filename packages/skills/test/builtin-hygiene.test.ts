@@ -9,6 +9,16 @@ import { FORBIDDEN_RESIDUE } from '../src/residue.js';
 
 const skills = discoverBuiltin();
 const byName = new Map(skills.map((s) => [s.name, s]));
+
+/** Returns the named skill, throwing if absent — a type-safe replacement for
+ *  `const s = byName.get(name); expect(s).toBeDefined(); …s?.skillMd`, which
+ *  under noUncheckedIndexedAccess leaks `string | undefined` into bodyOf. */
+function getOrFail(name: string) {
+  const s = byName.get(name);
+  if (!s) throw new Error(`missing ${name}`);
+  return s;
+}
+
 const FULL_LIFECYCLE = [
   'noir-intake',
   'noir-clarify',
@@ -38,10 +48,8 @@ describe('builtin pack: shared hygiene', () => {
 describe('builtin pack: SDD lifecycle (T2)', () => {
   it('has all 7 lifecycle skills, each with a substantial body', () => {
     for (const name of FULL_LIFECYCLE) {
-      const s = byName.get(name);
-      expect(s, `missing ${name}`).toBeDefined();
-      // `s` is guaranteed defined by the assertion above; use optional chain to satisfy noNonNullAssertion.
-      expect(bodyOf(s?.skillMd).length, `${name} body too short`).toBeGreaterThan(300);
+      const s = getOrFail(name);
+      expect(bodyOf(s.skillMd).length, `${name} body too short`).toBeGreaterThan(300);
     }
   });
 });
@@ -58,10 +66,8 @@ const FULL_POWER = [
 describe('builtin pack: power skills (T3)', () => {
   it('has all 6 power skills, each with a substantial body', () => {
     for (const name of FULL_POWER) {
-      const s = byName.get(name);
-      expect(s, `missing ${name}`).toBeDefined();
-      // `s` is guaranteed defined by the assertion above; use optional chain to satisfy noNonNullAssertion.
-      expect(bodyOf(s?.skillMd).length, `${name} body too short`).toBeGreaterThan(300);
+      const s = getOrFail(name);
+      expect(bodyOf(s.skillMd).length, `${name} body too short`).toBeGreaterThan(300);
     }
   });
 });
@@ -71,10 +77,8 @@ const FULL_SESSION = ['noir-sync', 'noir-checkpoint', 'noir-explore'];
 describe('builtin pack: session skills (T4)', () => {
   it('has all 3 full session skills, each with a substantial body', () => {
     for (const name of FULL_SESSION) {
-      const s = byName.get(name);
-      expect(s, `missing ${name}`).toBeDefined();
-      // `s` is guaranteed defined by the assertion above; use optional chain to satisfy noNonNullAssertion.
-      expect(bodyOf(s?.skillMd).length, `${name} body too short`).toBeGreaterThan(300);
+      const s = getOrFail(name);
+      expect(bodyOf(s.skillMd).length, `${name} body too short`).toBeGreaterThan(300);
     }
   });
 });
@@ -97,10 +101,8 @@ const STUBS = [
 describe('builtin pack: stubs + totals (T5)', () => {
   it('has all 12 stubs, each marked as a stub', () => {
     for (const name of STUBS) {
-      const s = byName.get(name);
-      expect(s, `missing ${name}`).toBeDefined();
-      // `s` is guaranteed defined by the assertion above; use optional chain to satisfy noNonNullAssertion.
-      expect(s?.skillMd, `${name} missing stub marker`).toContain('> **Stub:**');
+      const s = getOrFail(name);
+      expect(s.skillMd, `${name} missing stub marker`).toContain('> **Stub:**');
     }
   });
   it('pack total is 28 = 16 full + 12 stubs, all valid', () => {

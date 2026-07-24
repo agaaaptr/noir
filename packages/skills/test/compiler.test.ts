@@ -28,6 +28,16 @@ async function writeSkill(name: string, md: string, refs: Record<string, string>
   for (const [n, c] of Object.entries(refs)) await writeFile(join(dir, 'references', n), c, 'utf8');
 }
 
+/** Returns the first discovered skill, throwing if none — a type-safe replacement
+ *  for `const [skill] = discoverBuiltin(fixture)`, which under
+ *  noUncheckedIndexedAccess yields `BuiltinSkill | undefined`. */
+function firstSkill(dir: string) {
+  const found = discoverBuiltin(dir);
+  const first = found[0];
+  if (!first) throw new Error(`no skill discovered under ${dir}`);
+  return first;
+}
+
 describe('compiler: frontmatter', () => {
   it('parses name + description', () => {
     const fm = parseFrontmatter('---\nname: noir-x\ndescription: Use when testing.\n---\n# body');
@@ -47,11 +57,23 @@ describe('compiler: WHEN heuristic', () => {
     expect(looksLikeWhenDescription('Use when starting creative work.')).toBe(true);
     expect(looksLikeWhenDescription('Before claiming work is done.')).toBe(true);
   });
+  it('accepts WHEN descriptions that lead with a broader cue', () => {
+    // Was a false negative under the old "contains when/before/after" rule.
+    expect(looksLikeWhenDescription('Upon starting a new feature, gather requirements.')).toBe(
+      true,
+    );
+    expect(looksLikeWhenDescription('To create a spec, gather requirements first.')).toBe(true);
+  });
   it('rejects pure-WHAT descriptions', () => {
     expect(looksLikeWhenDescription('Guides the agent through brainstorming with questions.')).toBe(
       false,
     );
     expect(looksLikeWhenDescription('A tool that dispatches subagents per task.')).toBe(false);
+  });
+  it('rejects descriptions containing a WHEN word but not LEADING with one', () => {
+    // Was a false positive under the old loose "contains" fallback.
+    expect(looksLikeWhenDescription('A tool that decides when to run tests.')).toBe(false);
+    expect(looksLikeWhenDescription('Helper that fires after the build.')).toBe(false);
   });
 });
 
@@ -61,7 +83,7 @@ describe('compiler: validateSkill', () => {
       'noir-x',
       '---\nname: noir-x\ndescription: Use when testing.\n---\n# noir-x\nbody',
     );
-    const [skill] = discoverBuiltin(fixture);
+    const skill = firstSkill(fixture);
     expect(validateSkill(skill).ok).toBe(true);
   });
   it('rejects a non-noir name', async () => {
@@ -70,12 +92,12 @@ describe('compiler: validateSkill', () => {
       'noir-bad',
       '---\nname: brainstorm\ndescription: Use when testing.\n---\nbody',
     );
-    const [skill] = discoverBuiltin(fixture);
+    const skill = firstSkill(fixture);
     expect(validateSkill(skill).ok).toBe(false);
   });
   it('rejects a name/dir mismatch', async () => {
     await writeSkill('noir-x', '---\nname: noir-y\ndescription: Use when testing.\n---\nbody');
-    const [skill] = discoverBuiltin(fixture);
+    const skill = firstSkill(fixture);
     expect(validateSkill(skill).errors.join('; ')).toMatch(/dir .* must equal name/i);
   });
   it('rejects a WHAT description', async () => {
@@ -83,7 +105,7 @@ describe('compiler: validateSkill', () => {
       'noir-x',
       '---\nname: noir-x\ndescription: Guides the agent step by step.\n---\nbody',
     );
-    const [skill] = discoverBuiltin(fixture);
+    const skill = firstSkill(fixture);
     expect(validateSkill(skill).errors.join('; ')).toMatch(/when to trigger/i);
   });
 });
@@ -92,14 +114,14 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
   it('compileSkill is a verbatim copy for claude target', async () => {
     const md = '---\nname: noir-x\ndescription: Use when testing.\n---\n# noir-x\nbody';
     await writeSkill('noir-x', md, { 'detail.md': '# detail' });
-    const [skill] = discoverBuiltin(fixture);
+    const skill = firstSkill(fixture);
     const out = compileSkill(skill, 'claude');
     expect(out.files.map((f) => f.path.join('/'))).toEqual(['SKILL.md', 'references/detail.md']);
-    expect(out.files[0].content).toBe(md);
+    expect(out.files[0]?.content).toBe(md);
   });
   it('compileSkill refuses an invalid skill', async () => {
     await writeSkill('noir-x', '---\nname: noir-x\ndescription: Guides things.\n---\nbody');
-    const [skill] = discoverBuiltin(fixture);
+    const skill = firstSkill(fixture);
     expect(() => compileSkill(skill, 'claude')).toThrow(/Cannot compile noir-x/i);
   });
   it('emitSkillsToDir writes every skill + reference, idempotently', async () => {
