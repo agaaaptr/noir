@@ -1,7 +1,7 @@
 # Noir — S5 Builtin Skills + Compiler Design (`@noir-ai/skills`)
 
 - **Date:** 2026-07-24
-- **Status:** Draft (researched; OQ-1…OQ-4 flagged for review)
+- **Status:** Reviewed (2026-07-24) — OQ-1…OQ-4 resolved (see §8); ready for implementation planning.
 - **Parent:** blueprint §6.4 (skill system) + §9.1 (description=WHEN, observable checkpoint) + the delivered S4 engine
 - **Slice:** S5 — roadmap v1.0. Depends on `@noir-ai/core` + `@noir-ai/adapters` (the host emitter).
 
@@ -151,12 +151,12 @@ Noir deliberately does NOT copy Superpowers' ALL-CAPS rhetorical enforcement ("Y
 
 ---
 
-## 8. Open questions (confirm at review)
+## 8. Open questions — RESOLVED (2026-07-24 review)
 
-- **OQ-1:** Full 12-skill pack for S5, or a subset (e.g., the core SDD loop: brainstorm/spec/plan/execute/verify + sync/checkpoint = 7, with power skills debug/review + intake/clarify/document deferred)?
-- **OQ-2:** Author **full content** for each skill (substantial — 12 × markdown playbooks), or author the **format + compiler + stubs** and reuse `plugins/noir-workflow/` as source (ported + `noir-` prefixed in S5)?
-- **OQ-3:** Compiler — pure **copy + validate** for Claude (v1), or build a real transformer now (even though only Claude is v1)?
-- **OQ-4:** Emit target — `.claude/skills/` (project-local) or `.claude-plugin/` (marketplace), or both? (Blueprint §6.5: Claude uses `.claude/{skills,agents,commands}` + optional `.claude-plugin`.)
+- **OQ-1 → 16 full + 12 stubs:** Full content (playbooks) for the 16 core skills (SDD lifecycle 7 + power skills 6 + sync/checkpoint/explore); the remaining 12 (git/FE/BE/utils) ship as stubs (name + description + minimal body — valid loadable skills, deepened later).
+- **OQ-2 → Reuse + re-implement native:** Adopt proven content/patterns from predecessor `plugins/noir-workflow/` (~5) + Superpowers (~10) + net-new (~1 explore), **re-implemented as native Noir skills** in `@noir-ai/skills` — self-contained, `noir-` prefixed, **no runtime dependency** on predecessor or Superpowers. (Blueprint §9: "adopt the ideas, re-implemented as original native features.")
+- **OQ-3 → Copy + validate compiler** for Claude (v1): validate frontmatter (name/description/references) then copy to `.claude/skills/`. A real transformer comes with multi-host (S10).
+- **OQ-4 → `.claude/skills/`** (project-local): direct skill files the host loads. Simplest, works immediately.
 
 ---
 
