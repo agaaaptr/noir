@@ -9,7 +9,7 @@
 ## Prerequisites
 
 - [ ] Noir toolkit built: `pnpm -r build` (all 7 packages compile; `@noir-ai/skills` ships `dist/` + `builtin/`).
-- [ ] Tests green: `pnpm test` (140/140 tests pass — 19 in `packages/skills/` + the `skills-emit` integration test in `packages/cli/`).
+- [ ] Tests green: `pnpm test` (142/142 tests pass — 21 in `packages/skills/` + the `skills-emit` integration test in `packages/cli/`).
 - [ ] CLI runs: `node packages/cli/dist/bin.js --help` (no stack trace).
 
 ---
@@ -92,7 +92,7 @@ diff /tmp/s5-sha-1.txt       /tmp/s5-sha-2.txt        # → no diff
 
 ## 3. Every `description` reads as a WHEN trigger
 
-**Goal:** Confirm the compiler's `description = WHEN` rule held for all 28 shipped skills. A valid description starts with `use`/`using`/`whenever`/`when`/`before`/`after`/`while`/… — it states **when to fire**, not **what the skill does**.
+**Goal:** Confirm the compiler's `description = WHEN` rule held for all 28 shipped skills. A valid description must **lead with** a WHEN cue (`use`/`using`/`used`/`whenever`/`when`/`before`/`after`/`while`/`starting`/`encountering`/`completing`/`creating`/`about to`/`upon`/`during`/`to`/`for`/`on`/…) — it states **when to fire**, not **what the skill does**. The compiler enforces a **leading cue** (a guardrail against the common WHAT pattern, not a full NLP check).
 
 ```bash
 # Extract every description from the emitted pack
@@ -179,7 +179,7 @@ pnpm --filter @noir-ai/skills test
 The `compiler.test.ts` suite asserts rejection of: missing `name`, name not matching `noir-<kebab>`, dir ≠ name, missing `description`, description > 1024 chars, and a WHAT-description.
 
 **Check:**
-- [ ] `packages/skills/test/compiler.test.ts` (13 tests) passes — these are the negative cases above.
+- [ ] `packages/skills/test/compiler.test.ts` (15 tests) passes — these are the negative cases above.
 - [ ] `packages/skills/test/builtin-hygiene.test.ts` (6 tests) passes — every shipped skill passes validation **and** the `FORBIDDEN_RESIDUE` check.
 
 ---
@@ -229,14 +229,14 @@ cd /path/to/noir
 pnpm lint        # Biome — clean (2 deprecation infos about schema version; not failures)
 pnpm typecheck   # tsc --noEmit across 7 packages — clean
 pnpm -r build    # all 7 packages emit dist/ — clean
-pnpm test        # Vitest — 140/140 tests green
+pnpm test        # Vitest — 142/142 tests green
 ```
 
 **Check:**
 - [ ] `pnpm lint` exits 0 (no Biome errors).
 - [ ] `pnpm typecheck` exits 0 (no TS errors).
 - [ ] `pnpm -r build` succeeds (all 7 packages emit `dist/`; `@noir-ai/skills` also ships `builtin/`).
-- [ ] `pnpm test` reports **140/140** tests pass (29 test files; including `packages/skills/` 19 + `packages/cli/test/skills-emit.test.ts` 3).
+- [ ] `pnpm test` reports **142/142** tests pass (29 test files; including `packages/skills/` 21 + `packages/cli/test/skills-emit.test.ts` 3).
 - [ ] The CLI integration tests print `Emitted 28 Noir skills to .claude/skills/.` and `Synced 28 Noir skills to .claude/skills/.` — live end-to-end evidence of emit.
 
 ---
@@ -248,7 +248,7 @@ pnpm test        # Vitest — 140/140 tests green
 - [ ] Every shipped `description` reads as a WHEN trigger (starts with `use`/`when`/`before`/…).
 - [ ] A WHAT-description is rejected by `validateSkill`, and `emitSkillsToDir` aborts before writing.
 - [ ] No predecessor/Superpowers residue (`FORBIDDEN_RESIDUE`) in any shipped skill or reference.
-- [ ] Full pipeline green: lint + typecheck + build + **140/140 tests**.
+- [ ] Full pipeline green: lint + typecheck + build + **142/142 tests**.
 - [ ] No scope creep (S5 scope: pack + copy+validate compiler + emit on init/sync; no LLM drafting — that's S8).
 
 **S5 is accepted when all checkboxes are satisfied.**
