@@ -21,23 +21,24 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 
 ## Current status (living — update as slices ship)
 
-> **As of 2026-07-24.** The single source of "where Noir is right now, what's built, and what's still missing." Update this whenever a slice ships or direction shifts — so no session loses the thread.
+> **As of 2026-07-25.** The single source of "where Noir is right now, what's built, and what's still missing." Update this whenever a slice ships or direction shifts — so no session loses the thread.
 
 **Built & releasable (on `develop`, local — not pushed):**
 - **Walking skeleton** (slices **S0 + S2 + S3-minimal**) — the integration thesis is *proven*: a host (Claude Code) connects to Noir over MCP and `host_status` round-trips over **stdio** (Gate 1) and a **daemon-backed Streamable HTTP** transport with stdio FS-fallback (Gate 2).
 - **S1 Stores** — `@noir-ai/store`: embedded `better-sqlite3` + FTS5 (BM25, window snippets) + `sqlite-vec` (384-dim kNN), daemon-owned single writer, `ProjectId`-keyed DB at `.noir/store/<projectId>.db`, read-only FS-fallback, `store_status` MCP tool. Acceptance (persistence exists + queryable) MET; final review = release-ready.
 - **S4 SDD Workflow Engine** — `@noir-ai/workflow`: hand-rolled FSM (Intake→Clarify→Spec→Plan→Execute→Verify→Document) with **observable, escapable gates** (§9.1 — every decision recorded; `--force` with reason; jump-to-phase), Full/Quick/Resume modes, cross-session resume, `.noir/` artifacts, `checkpoint` + `workflow_status` MCP tools. Acceptance (lifecycle runs end-to-end) MET; final review = release-ready.
 - **S5 Builtin skills + compiler** — `@noir-ai/skills`: a copy+validate compiler over a shipped `builtin/` pack of **28 skills** (16 full playbooks + 12 valid stubs, 6 categories — SDD lifecycle 7, power 6, session 4, git 4, FE/BE/domain 4, utils 3), all `noir-` prefixed. `noir init` / `noir sync` emit the pack to `.claude/skills/` idempotently; `description` = WHEN is enforced in code (WHAT-descriptions rejected); enforcement is the S4 engine's observable gates, not skill-level rhetoric. Acceptance (pack emits + validates + installs end-to-end) MET; final review = release-ready.
-- 7 packages `@noir-ai/{core,store,workflow,daemon,adapters,cli,skills}`; MCP TS SDK **v2 beta (`2.0.0-beta.5`)**; toolchain pnpm/tsup/vitest/Biome/TS-ESM; CI (ubuntu+macos, node 22); MIT.
-- 142/142 tests green; all acceptance gates verified; final whole-branch reviews = release-ready.
+- **S6 Context management** — `@noir-ai/context`: embedded hybrid retrieval engine that fills S1's declared-but-unused `EmbedFn` seam. Local in-process embedder (`@huggingface/transformers` + `Xenova/all-MiniLM-L6-v2`, 384-dim → zero `vec0` migration) loaded lazily via dynamic import, L2-normalized; remote (OpenAI/Voyage/Cohere via Matryoshka-384) + Ollama embedders are opt-in / provider-explicit (never default, never silent). SHA-256 content-hash incremental indexer (on-demand default, `--watch` opt-in); markdown-heading chunker for docs + ~512-tok/64-overlap for code. Hybrid retriever: BM25 ∪ kNN → Reciprocal Rank Fusion (k=60, rank-based) → token-budget fill → FTS5 windowed snippets (never truncated); BM25-only degraded mode when no embedder. Three MCP tools (`context_search` / `context_index` / `context_status`) on a new `ctx.context` ServerContext service; sensitive-file denylist + path confinement + single-flight serialization. New `noir-context` builtin skill (pack now 29 = 17 full + 12 stub). **Milestone: the host agent stays focused — it queries a small ranked snippet set instead of re-reading whole files into its context window.** Acceptance MET; final review = release-ready.
+- 8 packages `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context}`; MCP TS SDK **v2 beta (`2.0.0-beta.5`)**; toolchain pnpm/tsup/vitest/Biome/TS-ESM; CI (ubuntu+macos, node 22); MIT.
+- 247/247 tests green; all acceptance gates verified; final whole-branch reviews = release-ready.
 - Legacy plugin rebranded: marketplace `noir`, plugin `noir-workflow`.
 
 **Next:**
-- **S6 Context management** — working-context indexing/retrieval: index project files/docs into the store, hybrid retrieval (BM25 + vec, RRF fusion), `context_search` MCP tool. Spec next.
-- **Then:** S7 (memory mgmt — recall, consolidation, governance) → S8 (bounded model layer — spec/plan drafting) → S9 (CLI/TUI home screen) = **v1.0**.
+- **S8 Bounded model layer** — optional in-process model that assists with spec/plan drafting (bounded, opt-in, never silent). Spec next.
+- **Then:** S7 (memory mgmt — recall, consolidation, governance) → S9 (CLI/TUI home screen) = **v1.0**.
 
 **Still missing for v1.0 (the MVP target) — by design, built slice-by-slice:**
-- working-context indexing/retrieval (S6); long-term memory recall/consolidation/governance (S7); the optional bounded model layer (S8); the interactive TUI home screen (S9). Cross-CLI hosts (S10) and distribution/SDK (S11) are v1.x.
+- long-term memory recall/consolidation/governance (S7); the optional bounded model layer (S8); the interactive TUI home screen (S9). Cross-CLI hosts (S10) and distribution/SDK (S11) are v1.x.
 
 **Known v0 debt (documented in `.superpowers/sdd/progress.md`):** foreground daemon (detached/socket-activated is post-v0); single global `~/.noir/daemon.json` (concurrent-project clobbering); no daemon auth token; cosmetic nits.
 
