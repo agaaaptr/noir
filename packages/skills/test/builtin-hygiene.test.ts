@@ -78,3 +78,36 @@ describe('builtin pack: session skills (T4)', () => {
     }
   });
 });
+
+const STUBS = [
+  'noir-wrap',
+  'noir-commit',
+  'noir-pr',
+  'noir-branch',
+  'noir-worktree',
+  'noir-frontend',
+  'noir-backend',
+  'noir-security',
+  'noir-test',
+  'noir-doctor',
+  'noir-skill-author',
+  'noir-readme',
+];
+
+describe('builtin pack: stubs + totals (T5)', () => {
+  it('has all 12 stubs, each marked as a stub', () => {
+    for (const name of STUBS) {
+      const s = byName.get(name);
+      expect(s, `missing ${name}`).toBeDefined();
+      // `s` is guaranteed defined by the assertion above; use optional chain to satisfy noNonNullAssertion.
+      expect(s?.skillMd, `${name} missing stub marker`).toContain('> **Stub:**');
+    }
+  });
+  it('pack total is 28 = 16 full + 12 stubs, all valid', () => {
+    expect(skills.length).toBe(28);
+    const stubCount = skills.filter((s) => s.skillMd.includes('> **Stub:**')).length;
+    expect(stubCount).toBe(12);
+    expect(skills.length - stubCount).toBe(16);
+    for (const s of skills) expect(validateSkill(s).ok, `${s.name} invalid`).toBe(true);
+  });
+});
