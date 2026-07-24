@@ -98,6 +98,44 @@ export const NoirConfigSchema = z.object({
     // degradation (offline, free, the default). Inner fields are `.optional()`
     // (no inner `.default()`) so a present-but-empty block also degrades.
     .default({}),
+  // Slice S7 cross-session memory (@noir-ai/memory). Mirrors the `daemon` idiom —
+  // a top-level object with `.default({})` so a config with NO `memory:` block
+  // still parses and behaves as consolidation-disabled (the safe default —
+  // capture/store/retrieve are always local + free; consolidation is the ONLY
+  // LLM touch and it is opt-in + provider-explicit). `resolveMemoryConfig`
+  // (@noir-ai/memory) is the single bridge from this user-facing schema to the
+  // runtime `MemoryConfig` the engine consumes, so core never imports memory
+  // (no core→memory cycle; mirrors @noir-ai/context + @noir-ai/model).
+  //
+  // Provider-EXPLICIT, never silent paid (blueprint D6 / DS-6): the provider is
+  // resolved ONLY from explicit `consolidation.provider`. Env-var presence is
+  // NEVER consulted to pick a provider — `ANTHROPIC_API_KEY` being set for
+  // another tool does NOT activate consolidation. No explicit, enabled provider
+  // ⇒ `runConsolidation` refuses with `'no-provider'` + writes a miss audit, and
+  // NO S8 `complete()` call is made (the Agent-Memory anti-pattern, §9). The
+  // outer default matches the parsed output shape (Zod v4 requirement).
+  memory: z
+    .object({
+      consolidation: z
+        .object({
+          // Master switch (default false). When false, `consolidate` refuses +
+          // logs (`no-provider`) regardless of provider/model — the first gate.
+          enabled: z.boolean().default(false),
+          // Provider key, e.g. 'anthropic' | 'openai' | 'ollama'. Free-form
+          // string so openai-compatible providers stay expressible without an
+          // enum churn; required (alongside enabled) for consolidation to run.
+          provider: z.string().optional(),
+          // Provider-specific model id (consumed by S8 complete(); optional
+          // here only because a future anonymous local provider may not need it
+          // — runConsolidation still refuses when model is absent).
+          model: z.string().optional(),
+          // Restrict candidates to these types (default: every non-`lesson`).
+          types: z.array(z.string()).optional(),
+        })
+        // Absent consolidation block ⇒ disabled. Outer shape matches output.
+        .default({ enabled: false }),
+    })
+    .default({ consolidation: { enabled: false } }),
 });
 
 export type NoirConfig = z.infer<typeof NoirConfigSchema>;

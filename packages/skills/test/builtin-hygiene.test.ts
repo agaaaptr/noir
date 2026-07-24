@@ -84,6 +84,17 @@ describe('builtin pack: session skills (T4)', () => {
   });
 });
 
+const FULL_MEMORY = ['noir-recall', 'noir-remember'];
+
+describe('builtin pack: memory skills (S7)', () => {
+  it('has both memory skills, each with a substantial body', () => {
+    for (const name of FULL_MEMORY) {
+      const s = getOrFail(name);
+      expect(bodyOf(s.skillMd).length, `${name} body too short`).toBeGreaterThan(300);
+    }
+  });
+});
+
 const STUBS = [
   'noir-wrap',
   'noir-commit',
@@ -106,11 +117,11 @@ describe('builtin pack: stubs + totals (T5)', () => {
       expect(s.skillMd, `${name} missing stub marker`).toContain('> **Stub:**');
     }
   });
-  it('pack total is 29 = 17 full + 12 stubs, all valid', () => {
-    expect(skills.length).toBe(29);
+  it('pack total is 31 = 19 full + 12 stubs, all valid', () => {
+    expect(skills.length).toBe(31);
     const stubCount = skills.filter((s) => s.skillMd.includes('> **Stub:**')).length;
     expect(stubCount).toBe(12);
-    expect(skills.length - stubCount).toBe(17);
+    expect(skills.length - stubCount).toBe(19);
     for (const s of skills) expect(validateSkill(s).ok, `${s.name} invalid`).toBe(true);
   });
 });

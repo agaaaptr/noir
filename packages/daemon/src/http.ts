@@ -4,10 +4,13 @@ import {
   localhostOriginValidation,
   NodeStreamableHTTPServerTransport,
 } from '@modelcontextprotocol/node';
-import { resolveEmbedderConfig } from '@noir-ai/context';
+import { createEmbedFn, resolveEmbedderConfig } from '@noir-ai/context';
 import type { ProjectInfo } from '@noir-ai/core';
+import { resolveMemoryConfig } from '@noir-ai/memory';
+import { resolveModelConfig } from '@noir-ai/model';
 import { buildContextEngine } from './context-seam.js';
 import { clearDaemonRecord, type DaemonRecord, writeDaemonRecord } from './lifecycle.js';
+import { buildMemoryEngine, resolveConsolidationCapability } from './memory-seam.js';
 import { createNoirServer } from './server.js';
 import { openStoreForDaemon } from './store-seam.js';
 import { buildWorkflowEngine } from './workflow-seam.js';
@@ -49,18 +52,47 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     : undefined;
   // One context engine per lifecycle, built from the same shared store handle +
   // the resolved embedder config — reused across every request, exactly like the
-  // store + engine. The embedder config comes from the project's parsed config
-  // (`NoirConfig.context`), defaulting to local in-process embeddings when the
-  // block is absent (AC-7); `resolveEmbedderConfig` is the core→context bridge
-  // (no cycle). The store's `degraded` flag threads through so `context_status`
-  // is honest under a read-only handle and `context_index` short-circuits.
+  // store + engine. The daemon owns ONE embedder: the config is resolved once
+  // (`resolveEmbedderConfig`) and the `EmbedFn` materialized once
+  // (`createEmbedFn`); the same `EmbedFn` is handed to the memory engine below.
+  // The context engine still takes the `EmbedderConfig` (its own contract) and
+  // resolves its embedder internally from the SAME config — for `kind:'local'`
+  // the ONNX pipeline is module-cached, so the two resolutions share one loaded
+  // model. The store's `degraded` flag threads through so `context_status`/
+  // `memory_save` are honest under a read-only handle and writes short-circuit.
+  const embedderCfg = resolveEmbedderConfig(opts.project.config.context);
+  const embed = createEmbedFn(embedderCfg).embed;
   const context = daemonStore
     ? buildContextEngine(
         daemonStore.store,
         opts.project.root,
         opts.project.id,
-        resolveEmbedderConfig(opts.project.config.context),
+        embedderCfg,
         daemonStore.degraded,
+      )
+    : undefined;
+  // One memory engine per lifecycle, built from the same shared store handle +
+  // the SAME `EmbedFn` already materialized for S6 (the daemon owns one
+  // embedder; memory takes `{store, embed, ...}` — no embedder duplication).
+  // Consolidation is OPT-IN + provider-explicit (D5/D6/DS-6 — NEVER a silent
+  // paid call, the Agent-Memory anti-pattern §9). The master switch is the
+  // user's `memory.consolidation.enabled`; only when it is true does the
+  // model-derived provider+model even get considered. `resolveMemoryConfig` is
+  // the pure core→memory bridge; resolved once and passed to buildMemoryEngine
+  // so the engine's config reflects the user's `memory:` consent exactly. The
+  // `memory_consolidate` tool is registered only when the gate resolves.
+  const modelCfg = resolveModelConfig(opts.project.config.model);
+  const resolvedMemory = resolveMemoryConfig(opts.project.config.memory);
+  const memoryConsolidation = resolveConsolidationCapability(resolvedMemory, modelCfg) !== null;
+  const memory = daemonStore
+    ? buildMemoryEngine(
+        daemonStore.store,
+        opts.project.root,
+        opts.project.id,
+        embed,
+        modelCfg,
+        daemonStore.degraded,
+        resolvedMemory,
       )
     : undefined;
 
@@ -90,6 +122,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
           : {}),
         ...(engine ? { engine } : {}),
         ...(context ? { context } : {}),
+        ...(memory ? { memory, memoryConsolidation } : {}),
       });
       const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       await server.connect(transport);

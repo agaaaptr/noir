@@ -15,6 +15,11 @@ export {
   writeDaemonRecord,
 } from './lifecycle.js';
 export {
+  buildMemoryEngine,
+  resolveConsolidationCapability,
+  resolveMemoryConsolidation,
+} from './memory-seam.js';
+export {
   createNoirServer,
   type ServerContext,
   type StoreStatus,

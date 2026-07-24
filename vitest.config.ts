@@ -19,6 +19,12 @@ export default defineConfig({
       // touch the seam must resolve it to SOURCE like every other workspace
       // package — without this the round-trip test needs a built dist.
       '@noir-ai/context': alias('context'),
+      // @noir-ai/memory + @noir-ai/model are likewise VALUE-imported by the
+      // daemon's memory-seam (`createMemoryEngine` + `complete`/
+      // `resolveModelConfig`), so daemon tests that touch the memory tools must
+      // resolve them to SOURCE too (mirrors the context alias above).
+      '@noir-ai/memory': alias('memory'),
+      '@noir-ai/model': alias('model'),
     },
   },
   test: {

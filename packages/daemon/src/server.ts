@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/server';
 import type { ContextEngine } from '@noir-ai/context';
 import type { ProjectInfo } from '@noir-ai/core';
 import { NOIR_VERSION } from '@noir-ai/core';
+import type { MemoryEngine } from '@noir-ai/memory';
 import type { Store } from '@noir-ai/store';
 import type { GateResult, Mode, Phase, WorkflowEngine, WorkflowState } from '@noir-ai/workflow';
 import { PHASES } from '@noir-ai/workflow';
@@ -43,6 +44,30 @@ export interface ServerContext {
    * context rows, so the daemon's single-writer discipline is preserved.
    */
   context?: ContextEngine;
+  /**
+   * Optional memory engine. When present, the `memory_save`, `memory_recall`,
+   * `memory_search`, `memory_sessions`, and `memory_forget` tools are
+   * registered. Built once per serve lifecycle from the same store handle + the
+   * SAME `EmbedFn` already resolved for S6 (see `buildMemoryEngine` in
+   * `./memory-seam.js`) and reused across HTTP requests, mirroring the store +
+   * engine + context. The engine is the only thing that writes `source:memory`
+   * rows through the injected handle, so the daemon's single-writer discipline
+   * is preserved (blueprint D6: in-process, no sidecar, canonical `ProjectId`).
+   */
+  memory?: MemoryEngine;
+  /**
+   * Whether the {@link memory} engine is consolidation-capable — i.e. the user
+   * opted in (`memory.consolidation.enabled === true`) AND a usable provider+model
+   * resolved (see `resolveConsolidationCapability` in `./memory-seam.js`, the AND
+   * of the master switch + the provider derivation). Only when this is true is the
+   * `memory_consolidate` tool registered: consolidation is OPT-IN +
+   * provider-explicit (blueprint D5/D6/DS-6 / §9), NEVER a silent paid call — a
+   * `model:` block set for summarize/title/draft does NOT flip this when the user
+   * left `memory.consolidation.enabled` false. The engine's `consolidate`
+   * self-refuses (`no-provider`/`model-unavailable`) when this flag is false, so
+   * the flag + the engine agree by construction.
+   */
+  memoryConsolidation?: boolean;
 }
 
 /** JSON returned by the `store_status` tool. */
@@ -355,6 +380,206 @@ export function createNoirServer(ctx: ServerContext): McpServer {
         }
       },
     );
+  }
+
+  // The memory engine is optional: stdio/HTTP inject it alongside the store +
+  // workflow + context engines (same lifecycle, same single store handle, the
+  // SAME EmbedFn already resolved for S6). When present, expose Noir's
+  // cross-session memory — append-only observations stored on top of the store
+  // (FTS5 + vec0 + KV) — via five tools (spec §8): `memory_save`,
+  // `memory_recall` (hybrid BM25 ∪ kNN + RRF, hydrated to FULL content),
+  // `memory_search` (BM25-only instant), `memory_sessions`, `memory_forget`.
+  // `host_status` / `store_status` / `workflow_status` / `context_*` above are
+  // unchanged. `memory_save` / `memory_forget` are writes, so a read-only
+  // (daemon-down) handle fences them off up front (mirrors `context_index`).
+  if (ctx.memory) {
+    const memory = ctx.memory;
+    const storeDegraded = ctx.storeDegraded === true;
+
+    server.registerTool(
+      'memory_save',
+      {
+        description:
+          'Persist a cross-session memory observation (pattern / preference / architecture / bug / workflow / fact / decision). Stored locally on top of the Noir store (FTS5 + vectors + KV) — never truncated, never sent to an LLM. Returns the full saved observation.',
+        inputSchema: {
+          content: z
+            .string()
+            .min(1)
+            .describe('The insight to remember (full text; never truncated).'),
+          // Open enum (DS-3): unknown types are accepted + stored, so this is a
+          // free-form string (with the known values described) rather than a
+          // closed zod enum that would reject forward-compatible types.
+          type: z
+            .string()
+            .optional()
+            .describe(
+              'Observation type — pattern | preference | architecture | bug | workflow | fact | decision. Unknown values are accepted.',
+            ),
+          concepts: z
+            .array(z.string())
+            .optional()
+            .describe('User tags (no auto-LLM tagging in v1 — explicit only).'),
+          files: z.array(z.string()).optional().describe('Repo-relative paths mentioned.'),
+          importance: z
+            .number()
+            .min(0)
+            .max(1)
+            .optional()
+            .describe('Salience 0..1 (defaults to 0.5).'),
+          sessionId: z.string().optional().describe('Host session id (recorded when known).'),
+        },
+      },
+      async (input) => {
+        // Read-only (daemon-down) store: a save is a write — fence it off up
+        // front with a clear envelope rather than letting the engine throw
+        // mid-run (mirrors `context_index`).
+        if (storeDegraded) {
+          return textResult({
+            ok: false,
+            degraded: true,
+            error: 'store is read-only (daemon down) — memory_save is unavailable',
+          });
+        }
+        try {
+          const observation = await memory.save(input);
+          return textResult({ ok: true, id: observation.id, observation });
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
+      },
+    );
+
+    server.registerTool(
+      'memory_recall',
+      {
+        description:
+          'Hybrid recall over cross-session memory: BM25 ∪ cosine-kNN fused by Reciprocal Rank Fusion (k=60) scoped to source:"memory", plus a cheap entity-boost. Returns ranked observations with FULL content (hydrated from the authoritative KV row — never the truncated FTS snippet). Degrades to BM25-only when the embedder is unavailable.',
+        inputSchema: {
+          query: z.string().describe('Natural-language or identifier query.'),
+          limit: z.number().int().positive().optional().describe('Max results (default 10).'),
+          type: z.string().optional().describe('Filter to a single observation type.'),
+          sessionId: z.string().optional().describe('Filter to a single host session.'),
+        },
+      },
+      async ({ query, limit, type, sessionId }) => {
+        try {
+          const results = await memory.recall(query, { limit, type, sessionId });
+          return textResult({ ok: true, results });
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
+      },
+    );
+
+    server.registerTool(
+      'memory_search',
+      {
+        description:
+          'Instant BM25-only lookup over cross-session memory (no embedding cost). Returns ranked observations with FULL content, scoped to source:"memory". Use memory_recall for the hybrid (vector + BM25) path.',
+        inputSchema: {
+          query: z.string().describe('Natural-language or identifier query.'),
+          limit: z.number().int().positive().optional().describe('Max results (default 10).'),
+        },
+      },
+      async ({ query, limit }) => {
+        try {
+          const hits = await memory.search(query, { limit });
+          return textResult({ ok: true, hits });
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
+      },
+    );
+
+    server.registerTool(
+      'memory_sessions',
+      {
+        description:
+          "List per-session memory rollups (session id, observation count, most-recent timestamp) for this project's cross-session memory.",
+        inputSchema: {},
+      },
+      async () => {
+        try {
+          return textResult({ ok: true, sessions: memory.sessions() });
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
+      },
+    );
+
+    server.registerTool(
+      'memory_forget',
+      {
+        description:
+          'Remove observations from cross-session memory: deletes the authoritative KV row + best-effort FTS/vector purge. Returns the count actually removed.',
+        inputSchema: {
+          ids: z.array(z.string()).min(1).describe('Observation ids to remove.'),
+        },
+      },
+      async ({ ids }) => {
+        if (storeDegraded) {
+          return textResult({
+            ok: false,
+            degraded: true,
+            error: 'store is read-only (daemon down) — memory_forget is unavailable',
+          });
+        }
+        try {
+          const result = memory.forget(ids);
+          return textResult({ ok: true, ...result });
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
+      },
+    );
+
+    // Consolidation is OPT-IN + provider-explicit (blueprint D5/D6/DS-6 / §9):
+    // the tool is registered ONLY when the daemon wired a consolidation-capable
+    // engine — i.e. the user set `memory.consolidation.enabled: true` AND a usable
+    // provider+model resolved (see `resolveConsolidationCapability`). The engine's
+    // `consolidate` self-refuses (`no-provider`/`model-unavailable`) and logs the
+    // miss otherwise — never a crash, never a silent paid call. A `model:` block
+    // set for summarize/title/draft does NOT register this tool when the user
+    // opted out under `memory:` (the Agent-Memory anti-pattern, §9).
+    if (ctx.memoryConsolidation === true) {
+      server.registerTool(
+        'memory_consolidate',
+        {
+          description:
+            'Explicitly consolidate recent memory observations into ONE derived lesson (append-only; originals are never mutated). Provider-gated: refuses + logs if no provider is configured — NEVER a silent paid call. Emits a type:"lesson" observation with provenance.',
+          inputSchema: {
+            types: z
+              .array(z.string())
+              .optional()
+              .describe('Restrict candidates to these observation types.'),
+            limit: z
+              .number()
+              .int()
+              .positive()
+              .optional()
+              .describe('Cap on candidate observations.'),
+          },
+        },
+        async ({ types, limit }) => {
+          try {
+            const result = await memory.consolidate?.({ types, limit });
+            if (result === undefined) {
+              // Defensive: the gate (`ctx.memoryConsolidation`) and the engine's
+              // `consolidate` presence agree by construction; if they ever
+              // diverge, surface a clear refusal instead of a crash.
+              return textResult({
+                ok: false,
+                degraded: true,
+                error: 'consolidation is not wired on this engine',
+              });
+            }
+            return textResult(result);
+          } catch (err) {
+            return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+          }
+        },
+      );
+    }
   }
 
   return server;
