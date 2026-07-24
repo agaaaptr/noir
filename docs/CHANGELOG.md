@@ -2,6 +2,38 @@
 
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
+## S9 — CLI/TUI home screen (2026-07-25)
+
+**Release-ready. v1.0 FEATURE-COMPLETE (S6–S9 done).** 729/729 tests green (was 501); build / typecheck / lint green. All on branch `develop`, local (not pushed). NO new package — the existing `@noir-ai/cli` was overhauled (total stays 10 packages).
+
+### Added
+- **Commander Command tree** replacing the hand-rolled `parseArgs` dispatcher (behavior-preserving: `init` / `sync` / `mcp serve` / `daemon start|stop` / `doctor` unchanged; the Gate-1 stdio subprocess test still passes). `exitOverride` + `configureOutput` so the process never `exit()`s mid-test and help/errors go to stderr.
+- **Global flags** `--json` / `--no-input` / `--quiet` / `--verbose` / `--cwd` parsed in any position.
+- **Stable exit codes:** 0 ok · 1 error · 2 usage · 3 not-found · 4 daemon-down · 5 cancelled. **Data → stdout, diagnostics → stderr.** `isInteractive()` gates every prompt (no hangs in CI / pipes / scripts).
+- **Interactive home:** bare `noir` → `@clack/prompts` menu when TTY; `status` (human) when non-interactive; `status --json` under `--json`.
+- **Commands:** `status` (probe-only — works daemon-down), `context {search,index,status}`, `memory {recall,save,sessions,forget,consolidate}`, `skills {list,sync}`, `task {new,status,advance,next}`, `daemon {start,stop,status,restart}`, `doctor` (config / store / embedder / native-deps / provider-status via `resolveModelConfig` — NO live model call).
+- **Store-touching commands are MCP clients to the daemon** (`ensureDaemonRunning` + `@modelcontextprotocol/client` over HTTP).
+- **New daemon MCP tools** `workflow_start` + `workflow_advance` (gated `ctx.engine`) backing `task new` / `advance`.
+- **New runtime deps:** commander, @clack/prompts, picocolors, cli-table3, ora, @modelcontextprotocol/client.
+
+### Changed
+- `status` is now **probe-only**: it reports daemon state honestly and NEVER auto-starts a daemon (works daemon-down: exit 0, `daemon:{running:false}`). Active commands (`context *`, `memory *`, `task *`) still start/require the daemon for v1.
+- Bare `noir` in a non-interactive context now dispatches to `status` (was `printHelp`).
+- `daemon --detach` is foreground-honest: it returns exit code 2 ("not implemented, tracked v1.x") rather than pretending to background.
+
+### Fixed
+- Opus final review (2 CRITICAL + 2 IMPORTANT — ALL FIXED + tested):
+  - **C1 (silent daemon auto-start):** `status` no longer starts a daemon as a side effect of probing — it is read-only and reports daemon-down honestly.
+  - **C2 (`--json` daemon-down envelope):** emits a single clean JSON envelope (was doubly-encoded — the error wrapper was itself JSON-stringified).
+  - **I1 (`task new`/`advance` were permanent stubs):** now wired end-to-end via the new `workflow_start` / `workflow_advance` daemon MCP tools (gated `ctx.engine`).
+  - **I2 (bare `noir` non-interactive):** runs `status` instead of `printHelp`, so scripts / pipes get a real machine-readable snapshot.
+
+### Known v0 debt (deferred)
+- Full-screen Ink/blessed TUI — v2 (S9 ships a `@clack/prompts` menu, not a full-screen TUI).
+- Backgrounded daemon detach / socket-activation — v1.x (`daemon --detach` honestly returns exit 2 for v1).
+- In-process read-only store fallback for `context *` / `memory *` / `task *` — daemon-required for v1; `status` is the only probe-only command.
+- `task` id/slug distinction collapsed to slug for v1 (single namespace).
+
 ## S7 — Memory management (2026-07-25)
 
 **Release-ready.** 501/501 tests green (was 340); build / typecheck / lint green. All on branch `develop`, local (not pushed).

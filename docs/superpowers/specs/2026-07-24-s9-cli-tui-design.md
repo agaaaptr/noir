@@ -1,6 +1,6 @@
 # Noir — S9 CLI/TUI Home Screen Design (`@noir-ai/cli`)
 
-> **Status: DRAFT v0 — pending clarification answers (OQ-1..OQ-6). Do not implement until resolved.**
+> **Status: RESOLVED 2026-07-25 — implemented & validated (729/729 tests). OQs resolved per docs/superpowers/plans/2026-07-24-v1.0-execution-plan.md §1.**
 
 - **Date:** 2026-07-24
 - **Slice:** S9 — roadmap v1.0 capstone. Depends on S6 (context), S7 (memory), S8 (bounded model) being landed.
@@ -70,7 +70,7 @@ Turn `@noir-ai/cli` from a **hand-rolled `parseArgs` dispatcher** (digest §6: `
 ## 4. Functional requirements
 
 - **F1** Bare `noir` in a TTY → interactive home menu (status snapshot + quick links to `status/context/memory/skills/task/daemon/doctor`). Bare `noir` in CI / `--json` / `--no-input` → behaves as `noir status` (human) or `noir status --json` (machine).
-- **F2** `noir status [--json]` reports: project id, mode, daemon pid/uptime/mode (or "not running" → exit 4 if a daemon was expected), active workflow task id + phase (or none), store status (`ok`/`degraded`), counts (docs/vecs/memories).
+- **F2** `noir status [--json]` reports: project id, mode, daemon pid/uptime/mode, active workflow task id + phase (or none), store status (`ok`/`degraded`), counts (docs/vecs/memories). **Probe-only (amended post-review):** `status` NEVER auto-starts a daemon — it probes `~/.noir/daemon.json` + pid + `GET /health` and reports `daemon:{running:false}` with **exit 0** when down (status is informational; a down daemon is not an error). Project id/name/host/version are read in-process; the count tools are fetched over the running daemon only when the probe succeeds (one connection, never starts one). Active read/write commands (`context *`, `memory *`, `task *`) still start/require the daemon for v1 — in-process read fallback is deferred to v1.x (DS-5); their daemon-down path is the exit-4 `{ok:false,error:{code:4,message}}` envelope.
 - **F3** `noir context {search,index,status}` — wires to S6 hybrid engine. `search <query> [--limit N] [--json]`; `index [--path …] [--force]`; `status` (index freshness / counts).
 - **F4** `noir memory {recall,save,sessions,forget,consolidate}` — wires to S7. `recall <query>`; `save --content … --type …`; `sessions`; `forget <id>`; `consolidate` (provider-explicit; refuses with a clear message if no provider configured — S8 rule).
 - **F5** `noir skills {list,sync}` — wires to S5 compiler. `list` (installed builtin pack); `sync` (re-emit to host skills dir).
@@ -274,7 +274,7 @@ All are dev + runtime; no native build steps; compatible with `pnpm.onlyBuiltDep
 3. `--json` output matches the versioned schema for every command.
 4. Migrated `init/sync/mcp/daemon/doctor` pass the §10 behavior snapshot (zero diff).
 5. `noir daemon start` blocks foreground with the honest message; `--detach` exits 2.
-6. Read sub-commands work with the daemon down (in-process fallback); write sub-commands route through the daemon when up.
+6. `noir status` works daemon-down (probe-only — reports `daemon:{running:false}` + exit 0, NEVER auto-starts). Active read/write sub-commands (`context *`, `memory *`, `task *`) start/require the daemon for v1 (in-process read fallback deferred to v1.x / DS-5); their daemon-down path is the exit-4 envelope.
 7. All output deps auto-disable under `--json` / `NO_COLOR` / `CI` / `!isTTY`.
 
 ---
