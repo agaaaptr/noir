@@ -6,7 +6,7 @@ import { openStore, type Store } from '@noir-ai/store';
  *
  * - `store` — the single writer/reader handle (the daemon is the only writer).
  * - `dbPath` — absolute path to `<root>/.noir/store/<projectId>.db`; reported by
- *   `noir.store_status`.
+ *   `store_status`.
  * - `degraded` — `true` when the writable open failed and we fell back to a
  *   read-only handle. In degraded mode writes throw
  *   `"store is read-only (daemon down)"`, but reads (FTS, kNN, counts) keep
@@ -25,7 +25,7 @@ export interface DaemonStore {
  * needed). On any failure (DB locked by another writer, permissions, transient
  * FS error) it falls back to a read-only open so the daemon still has an
  * accurate read handle — the FS-fallback / degraded story. The caller threads
- * `degraded` into `ServerContext` so `noir.store_status` can surface it.
+ * `degraded` into `ServerContext` so `store_status` can surface it.
  */
 export async function openStoreForDaemon(projectId: ProjectId, root: string): Promise<DaemonStore> {
   const dbPath = paths.storeDb(root, projectId);

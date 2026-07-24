@@ -164,6 +164,12 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     return rows.map((r) => ({ id: r.id, source: r.source, score: r.distance }));
   };
 
+  const countDocs = (): number =>
+    (db.prepare('SELECT count(*) AS c FROM docs').get() as { c: number }).c;
+
+  const countVecs = (): number =>
+    (db.prepare('SELECT count(*) AS c FROM vec').get() as { c: number }).c;
+
   return {
     projectId,
     __db: db,
@@ -173,6 +179,8 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     searchFt,
     upsertVec,
     knn,
+    countDocs,
+    countVecs,
     exportMarkdown: (dir: string) => exportMarkdown(db, dir),
     close: async () => {
       db.close();

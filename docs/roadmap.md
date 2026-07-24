@@ -30,7 +30,7 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 - Legacy plugin rebranded: marketplace `noir`, plugin `noir-workflow`.
 
 **In design / next:**
-- **S1 Stores** — spec **finalized** (`docs/superpowers/specs/2026-07-23-s1-stores-design.md`); implementation plan next. Embedded `better-sqlite3` + FTS5 (BM25, window snippets) + `sqlite-vec` (384-dim), daemon-owned single writer, `ProjectId`-keyed, read-only FS-fallback, `noir.store_status` MCP tool.
+- **S1 Stores** — spec **finalized** (`docs/superpowers/specs/2026-07-23-s1-stores-design.md`); implementation plan next. Embedded `better-sqlite3` + FTS5 (BM25, window snippets) + `sqlite-vec` (384-dim), daemon-owned single writer, `ProjectId`-keyed, read-only FS-fallback, `store_status` MCP tool.
 - **Then:** S4 (SDD workflow engine) → S5 (builtin skills + compiler — all skills get the **`noir-`** prefix) → S6 (context mgmt) → S7 (memory mgmt) → S8 (bounded model layer) → S9 (CLI/TUI home screen) = **v1.0**.
 
 **Still missing for v1.0 (the MVP target) — by design, built slice-by-slice:**

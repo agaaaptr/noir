@@ -31,7 +31,7 @@ const project: ProjectInfo = {
 /** 384-dim unit vector (sqlite-vec requires float[384]). */
 const VEC = new Float32Array(384).fill(0);
 
-describe('noir.store_status', () => {
+describe('store_status', () => {
   it('returns ok:true with accurate doc/vec counts, projectId, and dbPath over MCP', async () => {
     // Seed the store: one doc + one vec. The daemon is the single writer, so
     // we open writable just like the seam does.
@@ -60,7 +60,7 @@ describe('noir.store_status', () => {
       );
       await client.connect(clientTransport);
 
-      const result = await client.callTool({ name: 'noir.store_status', arguments: {} });
+      const result = await client.callTool({ name: 'store_status', arguments: {} });
       const block = result.content?.[0];
       const parsed = JSON.parse((block as { text: string }).text);
 

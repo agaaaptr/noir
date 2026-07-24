@@ -4,16 +4,6 @@ import { NOIR_VERSION } from '@noir-ai/core';
 import type { Store } from '@noir-ai/store';
 import { buildStatus, type Transport } from './status.js';
 
-/**
- * Structural view of the store's underlying SQLite handle — just the slice
- * `noir.store_status` uses (a `count(*)`). Avoids a direct `better-sqlite3`
- * type dependency in the daemon; the real handle is `Database.Database` from
- * the store package, which is structurally compatible.
- */
-type CountableDb = {
-  prepare(sql: string): { get(...params: unknown[]): unknown };
-};
-
 export interface ServerContext {
   project: ProjectInfo;
   transport: Transport;
@@ -21,18 +11,18 @@ export interface ServerContext {
   pid?: number;
   startedAt?: number;
   /**
-   * Optional store handle. When present, the `noir.store_status` tool is
+   * Optional store handle. When present, the `store_status` tool is
    * registered. The daemon is the single writer; stdio/HTTP serve paths open
    * the store once per serve lifecycle and reuse the same handle.
    */
   store?: Store;
-  /** Filesystem path to the store DB (reported by `noir.store_status`). */
+  /** Filesystem path to the store DB (reported by `store_status`). */
   dbPath?: string;
   /** True when the store was opened read-only (writable open failed). */
   storeDegraded?: boolean;
 }
 
-/** JSON returned by the `noir.store_status` tool. */
+/** JSON returned by the `store_status` tool. */
 export interface StoreStatus {
   ok: boolean;
   projectId: string;
@@ -43,21 +33,19 @@ export interface StoreStatus {
 }
 
 /**
- * Build the `noir.store_status` payload from a store handle.
+ * Build the `store_status` payload from a store handle.
  *
  * `docCount`/`vecCount` come straight from the live SQLite connection (the
- * daemon's single writer handle), so they reflect indexed data immediately
- * after `indexDoc`/`upsertVec` — no caching, no stale reads.
+ * daemon's single writer handle) via the Store's own `countDocs`/`countVecs`
+ * methods, so they reflect indexed data immediately after `indexDoc`/
+ * `upsertVec` — no caching, no stale reads, no `__db` coupling.
  */
 export function buildStoreStatus(store: Store, dbPath?: string, degraded = false): StoreStatus {
-  const db = (store as Store & { __db: CountableDb }).__db;
-  const docCount = (db.prepare('SELECT count(*) AS c FROM docs').get() as { c: number }).c;
-  const vecCount = (db.prepare('SELECT count(*) AS c FROM vec').get() as { c: number }).c;
   return {
     ok: true,
     projectId: store.projectId,
-    docCount,
-    vecCount,
+    docCount: store.countDocs(),
+    vecCount: store.countVecs(),
     dbPath: dbPath ?? null,
     degraded,
   };
@@ -81,13 +69,13 @@ export function createNoirServer(ctx: ServerContext): McpServer {
   );
 
   // The store is optional: stdio/HTTP only inject it when openStoreForDaemon
-  // succeeded. When present, surface counts/health via `noir.store_status`.
+  // succeeded. When present, surface counts/health via `store_status`.
   if (ctx.store) {
     const store = ctx.store;
     const dbPath = ctx.dbPath;
     const degraded = ctx.storeDegraded === true;
     server.registerTool(
-      'noir.store_status',
+      'store_status',
       {
         description:
           "Report the Noir embedded store's health: project id, document and vector counts, DB path, and degraded state.",

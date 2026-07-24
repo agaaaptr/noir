@@ -32,7 +32,7 @@ S1's acceptance: ***persistence exists and is queryable*** — the daemon opens 
 - Project-scoped DB keyed by the **canonical `ProjectId`** (never a filesystem path — D6/§9.3).
 - The daemon opens/owns the store (single writer).
 - **Read-only FS-fallback** (principle 5): a `Store` can be opened read-only; when the daemon is down, the diagnostic path opens it read-only directly (degraded reads, no writes).
-- A diagnostic MCP tool **`noir.store_status`** (returns `{ ok, projectId, docCount, vecCount, dbPath }`) — end-to-end daemon→store proof; degrades to read-only direct-open when the daemon is down.
+- A diagnostic MCP tool **`store_status`** (returns `{ ok, projectId, docCount, vecCount, dbPath }`) — end-to-end daemon→store proof; degrades to read-only direct-open when the daemon is down.
 - Markdown export (minimal — memory rows → `.noir/memory/*.md`); full governance in S7.
 - Tests: DB round-trips, FTS5 BM25 + snippet, vec kNN, migrations, project-ID keying.
 
@@ -40,7 +40,7 @@ S1's acceptance: ***persistence exists and is queryable*** — the daemon opens 
 - **S6** context management: file watcher, incremental indexing, RRF fusion of BM25 + kNN, essential-brief budgeting, the `noir.context_search` MCP tool.
 - **S7** memory management: typed memory lifecycle, auto-capture, recall consolidation, governance (`forget`/audit), the `noir.recall`/`noir.memory_save` MCP tools.
 - **Embeddings model** (transformers.js / MiniLM) — S6/S7 inject an `EmbedFn`; S1 only defines the contract + stores the blobs.
-- The MCP tool surface that *exposes* the store (S6/S7). S1 may add one diagnostic tool (`noir.store_status`) only if needed to prove the daemon→store seam — see open question OQ-5.
+- The MCP tool surface that *exposes* the store (S6/S7). S1 may add one diagnostic tool (`store_status`) only if needed to prove the daemon→store seam — see open question OQ-5.
 
 ---
 
@@ -157,7 +157,7 @@ Notes:
 
 - The daemon calls `openStore(projectId, root)` once at startup (lazy on first store-using tool). `better-sqlite3` is synchronous; the daemon serializes writes within its event loop (single process = single writer). WAL mode (`PRAGMA journal_mode=WAL`) for concurrent readers.
 - The DB path is derived from `ProjectId`, not `root`: `paths.storeDb(root, projectId) → .noir/store/<projectId>.db`. Moving the project dir does not orphan the DB (the id travels with `.noir/project.id`).
-- **Read-only FS-fallback** (D7/principle 5, **in scope for S1** per OQ-2): `Store` supports a read-only open (better-sqlite3 `?mode=ro` / `PRAGMA query_only=1`). When the daemon is unavailable, the CLI/diagnostic path opens the store read-only directly — **degraded reads** (KV get, FTS5 search, vec kNN work; writes fail with a clear "daemon down, read-only" error). The daemon stays the only writer. Full degraded-reads for `context_search`/`recall` arrive with S6/S7; S1 wires the mechanism + uses it in `noir.store_status`.
+- **Read-only FS-fallback** (D7/principle 5, **in scope for S1** per OQ-2): `Store` supports a read-only open (better-sqlite3 `?mode=ro` / `PRAGMA query_only=1`). When the daemon is unavailable, the CLI/diagnostic path opens the store read-only directly — **degraded reads** (KV get, FTS5 search, vec kNN work; writes fail with a clear "daemon down, read-only" error). The daemon stays the only writer. Full degraded-reads for `context_search`/`recall` arrive with S6/S7; S1 wires the mechanism + uses it in `store_status`.
 
 ---
 
@@ -184,10 +184,10 @@ Notes:
 ## 9. Open questions — RESOLVED (2026-07-24 review)
 
 - **OQ-1 → project-local primary:** DB at `.noir/store/<projectId>.db` (travels with the project via `.noir/project.id`); user-global mirror (`~/.noir/store/`) added in S7. (confirms DS-5)
-- **OQ-2 → read-only FS-fallback IN S1:** `Store` supports a read-only open; the CLI/diagnostic path opens it read-only directly when the daemon is down (degraded reads — KV/FTS/vec queries work, writes fail clearly). `noir.store_status` uses it. Full degraded-reads for `context_search`/`recall` come with S6/S7.
+- **OQ-2 → read-only FS-fallback IN S1:** `Store` supports a read-only open; the CLI/diagnostic path opens it read-only directly when the daemon is down (degraded reads — KV/FTS/vec queries work, writes fail clearly). `store_status` uses it. Full degraded-reads for `context_search`/`recall` come with S6/S7.
 - **OQ-3 → covered (controller-resolved):** `better-sqlite3` v12+ and `sqlite-vec` ship prebuilts for linux + macOS (the CI matrix); load via the `sqlite-vec` npm helper (per-platform binary). Gate vec tests (skip + reason) if a platform ever lacks a binary.
 - **OQ-4 → 384-dim** (`Xenova/all-MiniLM-L6-v2`). A future model change → schema migration. (confirms DS-8)
-- **OQ-5 → add `noir.store_status` MCP tool:** returns `{ ok, projectId, docCount, vecCount, dbPath }`; end-to-end daemon→store proof + useful diagnostic; degrades to read-only direct-open when daemon down.
+- **OQ-5 → add `store_status` MCP tool:** returns `{ ok, projectId, docCount, vecCount, dbPath }`; end-to-end daemon→store proof + useful diagnostic; degrades to read-only direct-open when daemon down.
 - **OQ-6 → hand-rolled versioned-SQL runner:** `schema_version` table + ordered SQL files (~30 lines, no dep, inspectable). (confirms DS-6)
 
 ---
@@ -205,4 +205,4 @@ Notes:
 ## 11. Next steps
 
 1. ~~User reviews this draft — confirm OQ-1…OQ-6.~~ **Reviewed 2026-07-24: all OQs resolved (§9).**
-2. → invoke **writing-plans** to produce the S1 implementation plan (task breakdown: package scaffold → schema/migrations v1 → KV → FTS5 + snippet → vec + kNN → daemon `openStore` seam + read-only FS-fallback → `noir.store_status` MCP tool → markdown export → tests), then subagent-driven execution.
+2. → invoke **writing-plans** to produce the S1 implementation plan (task breakdown: package scaffold → schema/migrations v1 → KV → FTS5 + snippet → vec + kNN → daemon `openStore` seam + read-only FS-fallback → `store_status` MCP tool → markdown export → tests), then subagent-driven execution.

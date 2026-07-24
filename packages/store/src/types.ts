@@ -65,6 +65,10 @@ export interface Store {
   upsertVec(id: string, vec: Float32Array, meta?: VecUpsertMeta): void;
   /** k-nearest-neighbor search over `vec`; results ordered by ascending distance. */
   knn(vec: Float32Array, opts?: VecOpts): VecHit[];
+  /** Count rows in the `docs` table (live read from the single writer handle). */
+  countDocs(): number;
+  /** Count rows in the `vec` table (live read from the single writer handle). */
+  countVecs(): number;
   /** Export all `docs` rows to `<dir>/<id>.md` with YAML frontmatter. */
   exportMarkdown(dir: string): Promise<string[]>;
   close(): Promise<void>;

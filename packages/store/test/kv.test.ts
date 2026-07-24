@@ -62,3 +62,23 @@ describe('KV state store', () => {
     }
   });
 });
+
+describe('countDocs/countVecs', () => {
+  it('reflect indexed docs and vecs on the public Store surface', async () => {
+    const store = await openStore({ projectId: id, root });
+    try {
+      expect(store.countDocs()).toBe(0);
+      expect(store.countVecs()).toBe(0);
+
+      store.indexDoc({ id: 'd1', source: 'spec', content: 'one' });
+      store.indexDoc({ id: 'd2', source: 'spec', content: 'two three' });
+      store.upsertVec('v1', new Float32Array(384).fill(0));
+      store.upsertVec('v2', new Float32Array(384).fill(0));
+
+      expect(store.countDocs()).toBe(2);
+      expect(store.countVecs()).toBe(2);
+    } finally {
+      await store.close();
+    }
+  });
+});
