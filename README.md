@@ -131,6 +131,31 @@ node packages/cli/dist/bin.js daemon start
 
 Embedded SQLite (better-sqlite3) with FTS5 (BM25 + window snippets) and sqlite-vec (384-dim kNN). Project-local DB at `.noir/store/<projectId>.db`. The daemon opens the store as the single writer; when the daemon is down, clients fall back to read-only direct access (no migrations). `store_status` MCP tool reports health: `{ok, projectId, docCount, vecCount, dbPath, degraded}`. Tests open the store via `openStore({ projectId, root })` from `@noir-ai/store`.
 
+### Noir workflow
+
+The SDD (spec-driven development) lifecycle engine — a hand-rolled FSM that drives a single task through seven phases with observable gates. State lives in the store KV (`workflow:active`, `workflow:<taskId>`, `audit:<taskId>`) and survives daemon restarts; artifacts flush to `.noir/{specs,plans,tasks,decisions,audit}/`.
+
+**Lifecycle (7 phases):**
+
+```
+intake → clarify → spec (gate) → plan (gate) → execute → verify (gate) → document
+```
+
+Three gates — spec, plan, verify — each record an observable decision (`approved` / `forced` / `skipped`) to the audit log. Gates are escapable: `--force` passes a gate with a reason (recorded as `forced`), `--skip` records `skipped` (used by quick mode), and `--to <phase>` jumps directly to a phase (recorded as `jumpEntry`).
+
+**Modes:**
+
+- **Full** — walk every phase, approve each gate (discipline).
+- **Quick** — stub the spec, skip spec/plan gates, land in `executing` (discipline lite — verify gate still fires as `approved`).
+- **Resume** — reload the active task from the store KV after a daemon restart (state survives).
+
+**MCP tools:**
+
+- `workflow_status` — report the active task's phase, state, next gate, mode, and gate history.
+- `checkpoint {action: 'save'|'restore'}` — flush in-flight state to the store KV or read it back.
+
+Internally: `@noir-ai/workflow` (engine + FSM + gates) → store KV + ArtifactWriter → daemon exposes the 2 MCP tools.
+
 ## Development
 
 This repo is itself developed with Claude Code. [`AGENTS.md`](AGENTS.md) holds the conventions for editing skills safely (SKILL.md format, commit-per-scope, where specs/plans go, how to validate). Edit skills here, then users refresh via `/plugin marketplace update noir` (or `git pull`).
