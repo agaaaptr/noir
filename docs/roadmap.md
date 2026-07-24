@@ -19,6 +19,29 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 
 ---
 
+## Current status (living — update as slices ship)
+
+> **As of 2026-07-24.** The single source of "where Noir is right now, what's built, and what's still missing." Update this whenever a slice ships or direction shifts — so no session loses the thread.
+
+**Built & releasable (on `develop`, local — not pushed):**
+- **Walking skeleton** (slices **S0 + S2 + S3-minimal**) — the integration thesis is *proven*: a host (Claude Code) connects to Noir over MCP and `noir.host_status` round-trips over **stdio** (Gate 1) and a **daemon-backed Streamable HTTP** transport with stdio FS-fallback (Gate 2).
+- 4 packages `@noir-ai/{core,daemon,adapters,cli}`; MCP TS SDK **v2 beta (`2.0.0-beta.5`)**; toolchain pnpm/tsup/vitest/Biome/TS-ESM; CI (ubuntu+macos, node 22); MIT.
+- 33/33 tests green; both acceptance gates verified un-fakeable; final whole-branch review = release-ready.
+- Legacy plugin rebranded: marketplace `noir`, plugin `noir-workflow`.
+
+**In design / next:**
+- **S1 Stores** — spec **finalized** (`docs/superpowers/specs/2026-07-23-s1-stores-design.md`); implementation plan next. Embedded `better-sqlite3` + FTS5 (BM25, window snippets) + `sqlite-vec` (384-dim), daemon-owned single writer, `ProjectId`-keyed, read-only FS-fallback, `noir.store_status` MCP tool.
+- **Then:** S4 (SDD workflow engine) → S5 (builtin skills + compiler — all skills get the **`noir-`** prefix) → S6 (context mgmt) → S7 (memory mgmt) → S8 (bounded model layer) → S9 (CLI/TUI home screen) = **v1.0**.
+
+**Still missing for v1.0 (the MVP target) — by design, built slice-by-slice:**
+- Persistence (S1); the SDD lifecycle engine (S4); the Noir skill pack + host compiler (S5); working-context indexing/retrieval (S6); long-term memory recall/consolidation/governance (S7); the optional bounded model layer (S8); the interactive TUI home screen (S9). Cross-CLI hosts (S10) and distribution/SDK (S11) are v1.x.
+
+**Known v0 debt (documented in `.superpowers/sdd/progress.md`):** foreground daemon (detached/socket-activated is post-v0); single global `~/.noir/daemon.json` (concurrent-project clobbering); no daemon auth token; cosmetic nits.
+
+**Goal (North Star, unchanged):** Noir = the discipline/context/memory layer that makes any agentic CLI behave like a disciplined spec-driven engineer. v1 MVP = a solo power-user doing idea→spec→plan→implement inside Claude Code with persistent cross-session memory.
+
+---
+
 ## Version Targets
 
 ### v0.x — Foundation & Walking Skeleton  *(pre-release)*
