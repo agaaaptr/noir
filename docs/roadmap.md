@@ -31,7 +31,7 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 - Legacy plugin rebranded: marketplace `noir`, plugin `noir-workflow`.
 
 **Next:**
-- **S4 SDD workflow engine** — the differentiator (state machine, phases, gates, escapability, resume); builds on the store's KV state.
+- **S4 SDD workflow engine** — the differentiator (state machine, phases, **observable gates**, escapability, resume). **Spec drafted** (`docs/superpowers/specs/2026-07-24-s4-sdd-engine-design.md`, research-grounded); OQ-1…OQ-6 open for review. Builds on the store's KV state.
 - **Then:** S5 (builtin skills + compiler — all skills get the **`noir-`** prefix) → S6 (context mgmt) → S7 (memory mgmt) → S8 (bounded model layer) → S9 (CLI/TUI home screen) = **v1.0**.
 
 **Still missing for v1.0 (the MVP target) — by design, built slice-by-slice:**
