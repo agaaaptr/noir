@@ -34,11 +34,11 @@
 // the indexer disables embedding for the rest of the run, still indexes the
 // `docs` rows, and reports `degraded:true` — it never crashes on a bad embedder.
 
-import { createHash } from 'node:crypto';
 import type { Dirent } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { chunkFile, inferLanguage, withIdentifierExplosion } from './chunker.js';
+import { sha256Hex } from './hash.js';
 import type { EmbedderInfo, EmbedFn, IndexResult, SourceKind, Store } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -264,11 +264,6 @@ export function isSensitive(name: string): boolean {
 // ---------------------------------------------------------------------------
 // Small path helpers (stable, cross-platform keys)
 // ---------------------------------------------------------------------------
-
-/** UTF-8 SHA-256 hex digest (file-content skip key). */
-function sha256Hex(text: string): string {
-  return createHash('sha256').update(text, 'utf8').digest('hex');
-}
 
 /** Normalize OS separators to `/` so registry keys match across platforms. */
 function posix(p: string): string {

@@ -24,7 +24,7 @@
 // single canonical form of that append, so the chunker's hash and the
 // indexer's stored content stay byte-identical.
 
-import { createHash } from 'node:crypto';
+import { sha256Hex } from './hash.js';
 import type { Chunk, SourceKind } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -213,11 +213,6 @@ function defaultSource(path: string, language?: string): SourceKind {
 // ---------------------------------------------------------------------------
 // Hashing
 // ---------------------------------------------------------------------------
-
-/** UTF-8 SHA-256 hex digest. Single source for `parentDocId` + `chunkId`. */
-function sha256Hex(text: string): string {
-  return createHash('sha256').update(text, 'utf8').digest('hex');
-}
 
 /** `parentDocId` + `chunkId` root — `sha256(path)`, stable across re-index. */
 function parentDocIdOf(path: string): string {

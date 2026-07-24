@@ -23,11 +23,7 @@
     "@noir-ai/core": "workspace:*",
     "@noir-ai/store": "workspace:*"
   },
-  "peerDependencies": {
-    "zod": "^4.2.0"
-  },
   "devDependencies": {
-    "@types/node": "^26.1.1",
-    "zod": "^4.2.0"
+    "@types/node": "^26.1.1"
   }
 }

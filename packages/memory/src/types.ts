@@ -93,7 +93,7 @@ export const DEFAULT_IMPORTANCE = 0.5;
  * FTS snippet is only a preview window hydrated-around on recall.
  */
 export interface Observation {
-  /** Sortable unique id (ulid). Key into KV `memory:obs:<id>`. */
+  /** Unique id (crypto.randomUUID()). Key into KV `memory:obs:<id>`. */
   id: string;
   /** Open enum (DS-3). `lesson` is reserved for consolidation output. */
   type: MemoryType;

@@ -92,9 +92,6 @@ importers:
       '@types/node':
         specifier: ^26.1.1
         version: 26.1.1
-      zod:
-        specifier: ^4.2.0
-        version: 4.4.3
 
   packages/core:
     dependencies:
@@ -102,8 +99,8 @@ importers:
         specifier: ^2.5.0
         version: 2.9.0
       zod:
-        specifier: ^3.25.0
-        version: 3.25.76
+        specifier: ^4.2.0
+        version: 4.4.3
     devDependencies:
       '@types/node':
         specifier: ^26.1.1
@@ -140,7 +137,7 @@ importers:
         version: 4.4.3
     devDependencies:
       '@modelcontextprotocol/client':
-        specifier: ^2.0.0-beta.0
+        specifier: ^2.0.0-beta.5
         version: 2.0.0-beta.5
       '@types/node':
         specifier: ^26.1.1
@@ -161,9 +158,6 @@ importers:
       '@types/node':
         specifier: ^26.1.1
         version: 26.1.1
-      zod:
-        specifier: ^4.2.0
-        version: 4.4.3
 
   packages/model:
     dependencies:
@@ -209,6 +203,9 @@ importers:
       '@types/better-sqlite3':
         specifier: ^7.6.0
         version: 7.6.13
+      '@types/node':
+        specifier: ^26.1.1
+        version: 26.1.1
 
   packages/workflow:
     dependencies:
@@ -218,6 +215,10 @@ importers:
       '@noir-ai/store':
         specifier: workspace:*
         version: link:../store
+    devDependencies:
+      '@types/node':
+        specifier: ^26.1.1
+        version: 26.1.1
 
 packages:
 
@@ -1961,9 +1962,6 @@ packages:
     engines: {node: '>= 14.6'}
     hasBin: true
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
-
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
@@ -3421,7 +3419,5 @@ snapshots:
   yallist@5.0.0: {}
 
   yaml@2.9.0: {}
-
-  zod@3.25.76: {}
 
   zod@4.4.3: {}

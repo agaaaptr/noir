@@ -2,10 +2,6 @@ import { join } from 'node:path';
 import { CONTEXT_BLOCK_BEGIN, CONTEXT_BLOCK_END } from '@noir-ai/core';
 import type { EmitContext, HostAdapter, McpConfigOptions } from './types.js';
 
-// Re-export so existing callers (and tests) that import the markers from this
-// module continue to resolve. The canonical home is @noir-ai/core/markers.
-export { CONTEXT_BLOCK_BEGIN, CONTEXT_BLOCK_END };
-
 export const claudeAdapter: HostAdapter = {
   id: 'claude',
   emitMcpConfig(_ctx, opts: McpConfigOptions): string {

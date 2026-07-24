@@ -1,5 +1,6 @@
+import { CONTEXT_BLOCK_BEGIN, CONTEXT_BLOCK_END } from '@noir-ai/core';
 import { describe, expect, it } from 'vitest';
-import { CONTEXT_BLOCK_BEGIN, CONTEXT_BLOCK_END, claudeAdapter } from '../src/claude.js';
+import { claudeAdapter } from '../src/claude.js';
 
 describe('claudeAdapter', () => {
   const ctx = { root: '/tmp/demo' };

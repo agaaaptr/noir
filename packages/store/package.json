@@ -24,6 +24,7 @@
     "sqlite-vec": "^0.1.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.0"
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^26.1.1"
   }
 }

@@ -21,5 +21,8 @@
   "dependencies": {
     "@noir-ai/core": "workspace:*",
     "@noir-ai/store": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1"
   }
 }

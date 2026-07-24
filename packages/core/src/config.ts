@@ -1,4 +1,4 @@
-import * as z from 'zod/v4';
+import * as z from 'zod';
 
 export const NoirConfigSchema = z.object({
   host: z.literal('claude'),
