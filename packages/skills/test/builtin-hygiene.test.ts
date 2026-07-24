@@ -45,3 +45,23 @@ describe('builtin pack: SDD lifecycle (T2)', () => {
     }
   });
 });
+
+const FULL_POWER = [
+  'noir-brainstorm',
+  'noir-debug',
+  'noir-review',
+  'noir-tdd',
+  'noir-subagent',
+  'noir-parallel',
+];
+
+describe('builtin pack: power skills (T3)', () => {
+  it('has all 6 power skills, each with a substantial body', () => {
+    for (const name of FULL_POWER) {
+      const s = byName.get(name);
+      expect(s, `missing ${name}`).toBeDefined();
+      // `s` is guaranteed defined by the assertion above; use optional chain to satisfy noNonNullAssertion.
+      expect(bodyOf(s?.skillMd).length, `${name} body too short`).toBeGreaterThan(300);
+    }
+  });
+});
