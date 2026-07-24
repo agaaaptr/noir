@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { paths } from '@noir-ai/core';
 import type { GateResult } from './types.js';
@@ -100,13 +100,18 @@ export function writeChangelogStub(root: string, entry: string): void {
   // Create directory if it doesn't exist
   mkdirSync(join(root, '.noir'), { recursive: true });
 
-  let content = '';
+  let content: string;
   if (existsSync(file)) {
-    content = `${entry}\n`;
+    // Append: read existing content and add the new entry on its own line,
+    // preserving the header and all prior entries.
+    const existing = readFileSync(file, 'utf-8');
+    const prefix = existing.endsWith('\n') ? existing : `${existing}\n`;
+    content = `${prefix}${entry}\n`;
   } else {
     content = `# Changelog
 
-${entry}`;
+${entry}
+`;
   }
 
   writeFileSync(file, content, 'utf-8');
