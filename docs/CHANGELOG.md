@@ -2,6 +2,34 @@
 
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
+## S8 — Bounded model layer (2026-07-25)
+
+**Release-ready.** 340/340 tests green (was 247); build / typecheck / lint green. All on branch `develop`, local (not pushed).
+
+### Added
+- **New package `@noir-ai/model`** (9th package — `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model}`). A thin single-shot model **library** — zero MCP tools; consumed in-process by S4 / S7 / S9.
+- **`complete(req, cfg)` → `string | object | null`:** one function, 3 adapters (`anthropic` via `@anthropic-ai/sdk` Messages; `openai` via the openai SDK; `openai-compatible` via global `fetch` POST `${baseURL}/chat/completions`, covering Ollama / LM Studio / vLLM with zero extra dep). All adapters use dynamic `import()` + structural typing — import-isolated: a bundle that never selects an adapter ships zero SDK bytes.
+- **Structured output:** prompt-based JSON + validate (Zod `.parse` or a caller-supplied function) + at most ONE repair retry (the only retry in the layer).
+- **First-class `null` degradation:** no provider ⇒ `null`; missing key ⇒ `null` / `{ok:false}` BEFORE the SDK client is constructed. Full test suite runs offline/free.
+- **`model:` config block** on `NoirConfigSchema` (`defaultProvider`, `tiers` draft/title/summarize/consolidate, `providers{name:{model, baseURL?, apiKeyEnv?}}`); `resolveModelConfig` bridge in `@noir-ai/model` (pure projection; no core→model import cycle; stores the env-var NAME, reads the value at call time).
+
+### Changed
+- Agent loops are impossible by construction: the `complete` request type has NO `tools` / `stream` parameter (compile-time-enforced).
+- Provider resolution is EXPLICIT-only: resolved solely from `req.provider || cfg.defaultProvider`; NEVER inferred from env-var presence; no explicit configured provider ⇒ `null`. The Anthropic/OpenAI SDKs' own env-var fallback can therefore NEVER trigger a paid call.
+- SDK `maxRetries: 0` everywhere; transport failures are not retried (the JSON-repair retry is the only retry).
+
+### Security
+- Opus final review (0 critical; all blueprint D5 hard rules clean; 2 IMPORTANT — all fixed + tested): (1) `openai-compatible` error `reason` no longer embeds the raw response body (was a prompt/key leak risk on echoing endpoints — NFR-4); (2) the OpenAI adapter now forwards `req.signal` + `maxRetries:0` (bounded wall-clock — NFR-3).
+
+### Known v0 debt (deferred)
+- Streaming; tool-calling / agent loops (forbidden by D5 design).
+- OS keychain (secrets via env for now).
+- Prompt caching (Anthropic `cache_control`).
+- Provider-native JSON strict mode (OpenAI `response_format: strict` / Anthropic forced-tool).
+- `onUsage` usage sink (fires on success; `noir doctor` wiring deferred).
+- Consumer wiring — S4 artifact drafting, S7 consolidation, S9 home help wire `complete()` when consumed; S8 provides the library + config only.
+- Real-SDK export-shape drift is unverifiable under offline (fixture-based) CI.
+
 ## S6 — Context management (2026-07-25)
 
 **Release-ready.** 247/247 tests green (was 142); build / typecheck / lint green. All on branch `develop`, local (not pushed).

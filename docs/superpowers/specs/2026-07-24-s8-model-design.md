@@ -5,7 +5,7 @@
 - **Parent:** blueprint §8 D5 (bounded model) + grounding digest §10 S8 + the delivered S4 engine (deferred artifact generation).
 - **Slice:** S8 — roadmap v1.0. Depends on `@noir-ai/core` (config). Consumed by S4 (full-mode artifact drafting + Document phase), S7 (memory consolidation), S9 (home help).
 
-> **Status: DRAFT v0 — pending clarification answers (OQ-1..n). Do not implement until resolved.**
+> **Status: RESOLVED 2026-07-25 — implemented & validated (340/340 tests). OQs resolved per docs/superpowers/plans/2026-07-24-v1.0-execution-plan.md §1.**
 
 ---
 
