@@ -1,3 +1,4 @@
+export { gateFor, recordGate } from './gates.js';
 export {
   applyTransition,
   canTransition,
