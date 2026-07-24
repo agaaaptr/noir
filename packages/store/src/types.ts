@@ -25,5 +25,7 @@ export type EmbedFn = (text: string) => Promise<Float32Array>;
 
 export interface Store {
   readonly projectId: ProjectId;
+  getState<T>(key: string): T | null;
+  setState<T>(key: string, value: T): void;
   close(): Promise<void>;
 }

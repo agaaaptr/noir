@@ -30,9 +30,29 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
   // read-only: do not write. If the schema is missing, queries simply fail —
   // acceptable for degraded reads (e.g. inspecting a foreign DB).
 
+  const readonly = opts.readonly === true;
+
+  const getState = <T>(key: string): T | null => {
+    const row = db.prepare('SELECT value FROM kv WHERE key = ?').get(key) as
+      | { value: string }
+      | undefined;
+    return row ? (JSON.parse(row.value) as T) : null;
+  };
+
+  const setState = <T>(key: string, value: T): void => {
+    if (readonly) {
+      throw new Error('store is read-only (daemon down)');
+    }
+    db.prepare(
+      'INSERT INTO kv(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    ).run(key, JSON.stringify(value));
+  };
+
   return {
     projectId,
     __db: db,
+    getState,
+    setState,
     close: async () => {
       db.close();
     },
