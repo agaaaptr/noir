@@ -1,9 +1,9 @@
 # Noir — AI Toolkit Design Blueprint
 
 - **Date:** 2026-07-23
-- **Status:** Proposed (design phase — no implementation yet)
+- **Status:** Implemented (v1.0 feature-complete; see docs/roadmap.md)
 - **Owner:** agaaaptr
-- **Session:** Discovery, architecture, and blueprint (pre-implementation)
+- **Session:** Discovery, architecture, and blueprint (implemented across S0–S9)
 - **Supersedes (direction):** the `ai-toolkit` marketplace / `ai-dev-workflow` plugin identity
 - **Companion docs:** `docs/roadmap.md` (living forward plan), `docs/decisions/` (ADR series, to be created at impl)
 
