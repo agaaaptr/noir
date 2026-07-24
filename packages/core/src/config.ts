@@ -45,6 +45,59 @@ export const NoirConfigSchema = z.object({
     // inner field already carries its own default, so an absent `context:` block
     // still resolves to local-embedder/empty-roots/4096). Mirrors `daemon:`.
     .default({ embedder: { kind: 'local', dim: 384 }, roots: [], budgetTokens: 4096 }),
+  // Slice S8 bounded model layer (@noir-ai/model). Mirrors the `daemon` idiom —
+  // a top-level object with `.default({})` so a config with NO `model:` block
+  // still parses and behaves as fully-degraded (every `complete()` call returns
+  // `null`; callers substitute a template — the always-available offline path,
+  // blueprint D5 / DS-5). `resolveModelConfig` (@noir-ai/model) is the single
+  // bridge from this user-facing schema to the runtime shape `complete()`
+  // consumes, so core never imports model (no core→model cycle).
+  //
+  // Provider-EXPLICIT, never silent paid (blueprint D5 / DS-6): the provider is
+  // resolved ONLY from explicit `defaultProvider` / a tier's provider key. Env-
+  // var presence is NEVER consulted to pick a provider — `ANTHROPIC_API_KEY`
+  // being set for another tool does NOT activate Anthropic in Noir. No explicit,
+  // configured provider ⇒ `null`. Secrets live in env vars only (DS-8):
+  // `apiKeyEnv` stores the env-var NAME (`ANTHROPIC_API_KEY`), never the value,
+  // so `.noir/config.yml` stays safe to commit and share; `complete()` reads the
+  // value at call time. `tiers` map a tier name → provider block key; each
+  // `providers[name]` declares the model id, optional `baseURL` (openai-compat),
+  // and optional `apiKeyEnv` (omit for anonymous local providers like Ollama).
+  model: z
+    .object({
+      // Fallback provider name (key into `providers`) when a call's tier resolves
+      // no explicit provider. Free-form string so openai-compatible providers stay
+      // expressible without an enum churn.
+      defaultProvider: z.string().optional(),
+      // Per-tier provider-key overrides (draft / title / summarize / consolidate).
+      // Each value is a key into `providers{}`; resolution is the consumer's job
+      // (tier → tier.provider → defaultProvider → providers[name]).
+      tiers: z
+        .object({
+          draft: z.string().optional(),
+          title: z.string().optional(),
+          summarize: z.string().optional(),
+          consolidate: z.string().optional(),
+        })
+        .optional(),
+      // Configured provider blocks, keyed by name. `model` is required (a provider
+      // without a model id is meaningless); `apiKeyEnv` is omitted for anonymous
+      // local providers (Ollama / LM Studio) which then send no auth header.
+      providers: z
+        .record(
+          z.string(),
+          z.object({
+            model: z.string(),
+            baseURL: z.string().optional(),
+            apiKeyEnv: z.string().optional(),
+          }),
+        )
+        .optional(),
+    })
+    // Absent `model:` block ⇒ `{}` ⇒ every tier/provider is undefined ⇒ full
+    // degradation (offline, free, the default). Inner fields are `.optional()`
+    // (no inner `.default()`) so a present-but-empty block also degrades.
+    .default({}),
 });
 
 export type NoirConfig = z.infer<typeof NoirConfigSchema>;
