@@ -42,5 +42,7 @@ export interface TaskState {
   mode: Mode;
   history: GateResult[]; // gate decisions (audit in-process view)
   jumpEntry?: Phase; // recorded if a jump-to-phase happened
+  /** Reason captured by `setBlocked` (admin escape; set directly, not via FSM). */
+  blockReason?: string;
   updatedAt: number;
 }
