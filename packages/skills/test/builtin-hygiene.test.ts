@@ -65,3 +65,16 @@ describe('builtin pack: power skills (T3)', () => {
     }
   });
 });
+
+const FULL_SESSION = ['noir-sync', 'noir-checkpoint', 'noir-explore'];
+
+describe('builtin pack: session skills (T4)', () => {
+  it('has all 3 full session skills, each with a substantial body', () => {
+    for (const name of FULL_SESSION) {
+      const s = byName.get(name);
+      expect(s, `missing ${name}`).toBeDefined();
+      // `s` is guaranteed defined by the assertion above; use optional chain to satisfy noNonNullAssertion.
+      expect(bodyOf(s?.skillMd).length, `${name} body too short`).toBeGreaterThan(300);
+    }
+  });
+});
