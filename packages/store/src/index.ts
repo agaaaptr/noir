@@ -11,3 +11,4 @@ export type {
   VecOpts,
   VecUpsertMeta,
 } from './types.js';
+export { type VecAvailability, vecAvailability } from './vec-probe.js';

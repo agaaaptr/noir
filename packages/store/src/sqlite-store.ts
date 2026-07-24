@@ -101,6 +101,16 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     ).run(doc.id, doc.source, doc.content, doc.meta ? JSON.stringify(doc.meta) : null);
   };
 
+  const deleteDoc = (id: string): void => {
+    if (readonly) {
+      throw new Error('store is read-only (daemon down)');
+    }
+    // The docs_ad AFTER DELETE trigger replays the row into docs_fts as a
+    // 'delete' command (external-content sync, see migrations.ts), keeping the
+    // FTS index consistent — no manual docs_fts work needed here.
+    db.prepare('DELETE FROM docs WHERE id = ?').run(id);
+  };
+
   const searchFt = (query: string, opts?: SearchFtOpts): FtsHit[] => {
     const limit = opts?.limit ?? 10;
     // bm25(): more negative = more relevant, so ORDER BY score ascending.
@@ -147,6 +157,15 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     upsert();
   };
 
+  const deleteVec = (id: string): void => {
+    if (readonly) {
+      throw new Error('store is read-only (daemon down)');
+    }
+    // vec0 keys on rowid; `id` is a filterable metadata column, so delete-by-id
+    // is a plain metadata predicate (same one upsertVec uses for idempotency).
+    db.prepare('DELETE FROM vec WHERE id = ?').run(id);
+  };
+
   const knn = (vec: Float32Array, opts?: VecOpts): VecHit[] => {
     const limit = opts?.limit ?? 5;
     const buf = Buffer.from(vec.buffer, vec.byteOffset, vec.byteLength);
@@ -176,8 +195,10 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     getState,
     setState,
     indexDoc,
+    deleteDoc,
     searchFt,
     upsertVec,
+    deleteVec,
     knn,
     countDocs,
     countVecs,

@@ -93,7 +93,9 @@ describeVec(describeLabel, () => {
       expect(() => ro.indexDoc({ id: 'x', source: 's', content: 'c' })).toThrow(
         'store is read-only (daemon down)',
       );
+      expect(() => ro.deleteDoc('x')).toThrow('store is read-only (daemon down)');
       expect(() => ro.upsertVec('y', BASE)).toThrow('store is read-only (daemon down)');
+      expect(() => ro.deleteVec('y')).toThrow('store is read-only (daemon down)');
     } finally {
       await ro.close();
     }

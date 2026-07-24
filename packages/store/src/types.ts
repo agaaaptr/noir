@@ -59,10 +59,14 @@ export interface Store {
   setState<T>(key: string, value: T): void;
   /** Upsert a document into the `docs` table (FTS sync is automatic via triggers). */
   indexDoc(doc: IndexDoc): void;
+  /** Delete a document row by id; FTS cleanup is automatic via the `docs_ad` trigger. */
+  deleteDoc(id: string): void;
   /** BM25 full-text search with window-extracted snippets. */
   searchFt(query: string, opts?: SearchFtOpts): FtsHit[];
   /** Upsert a 384-dim vector keyed by `id` (idempotent; delete-by-id-then-insert). */
   upsertVec(id: string, vec: Float32Array, meta?: VecUpsertMeta): void;
+  /** Delete a vector row by id (idempotent; used by the context indexer for removals). */
+  deleteVec(id: string): void;
   /** k-nearest-neighbor search over `vec`; results ordered by ascending distance. */
   knn(vec: Float32Array, opts?: VecOpts): VecHit[];
   /** Count rows in the `docs` table (live read from the single writer handle). */
