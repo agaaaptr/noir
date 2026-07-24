@@ -27,16 +27,17 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 - **Walking skeleton** (slices **S0 + S2 + S3-minimal**) — the integration thesis is *proven*: a host (Claude Code) connects to Noir over MCP and `host_status` round-trips over **stdio** (Gate 1) and a **daemon-backed Streamable HTTP** transport with stdio FS-fallback (Gate 2).
 - **S1 Stores** — `@noir-ai/store`: embedded `better-sqlite3` + FTS5 (BM25, window snippets) + `sqlite-vec` (384-dim kNN), daemon-owned single writer, `ProjectId`-keyed DB at `.noir/store/<projectId>.db`, read-only FS-fallback, `store_status` MCP tool. Acceptance (persistence exists + queryable) MET; final review = release-ready.
 - **S4 SDD Workflow Engine** — `@noir-ai/workflow`: hand-rolled FSM (Intake→Clarify→Spec→Plan→Execute→Verify→Document) with **observable, escapable gates** (§9.1 — every decision recorded; `--force` with reason; jump-to-phase), Full/Quick/Resume modes, cross-session resume, `.noir/` artifacts, `checkpoint` + `workflow_status` MCP tools. Acceptance (lifecycle runs end-to-end) MET; final review = release-ready.
-- 6 packages `@noir-ai/{core,store,workflow,daemon,adapters,cli}`; MCP TS SDK **v2 beta (`2.0.0-beta.5`)**; toolchain pnpm/tsup/vitest/Biome/TS-ESM; CI (ubuntu+macos, node 22); MIT.
-- 117/117 tests green; all acceptance gates verified; final whole-branch reviews = release-ready.
+- **S5 Builtin skills + compiler** — `@noir-ai/skills`: a copy+validate compiler over a shipped `builtin/` pack of **28 skills** (16 full playbooks + 12 valid stubs, 6 categories — SDD lifecycle 7, power 6, session 4, git 4, FE/BE/domain 4, utils 3), all `noir-` prefixed. `noir init` / `noir sync` emit the pack to `.claude/skills/` idempotently; `description` = WHEN is enforced in code (WHAT-descriptions rejected); enforcement is the S4 engine's observable gates, not skill-level rhetoric. Acceptance (pack emits + validates + installs end-to-end) MET; final review = release-ready.
+- 7 packages `@noir-ai/{core,store,workflow,daemon,adapters,cli,skills}`; MCP TS SDK **v2 beta (`2.0.0-beta.5`)**; toolchain pnpm/tsup/vitest/Biome/TS-ESM; CI (ubuntu+macos, node 22); MIT.
+- 140/140 tests green; all acceptance gates verified; final whole-branch reviews = release-ready.
 - Legacy plugin rebranded: marketplace `noir`, plugin `noir-workflow`.
 
 **Next:**
-- **S5 Builtin skills + compiler** — **spec done** (`docs/superpowers/specs/2026-07-24-s5-skills-design.md`); **28 skills** (16 full + 12 stubs, 6 categories), all `noir-` prefixed; copy+validate compiler; emit to `.claude/skills/`. OQ-1…4 resolved. **Ready for implementation** (writing-plans → subagent-driven).
-- **Then:** S6 (context mgmt — indexing, RRF fusion, `context_search`) → S7 (memory mgmt — recall, consolidation, governance) → S8 (bounded model layer — spec/plan drafting) → S9 (CLI/TUI home screen) = **v1.0**.
+- **S6 Context management** — working-context indexing/retrieval: index project files/docs into the store, hybrid retrieval (BM25 + vec, RRF fusion), `context_search` MCP tool. Spec next.
+- **Then:** S7 (memory mgmt — recall, consolidation, governance) → S8 (bounded model layer — spec/plan drafting) → S9 (CLI/TUI home screen) = **v1.0**.
 
 **Still missing for v1.0 (the MVP target) — by design, built slice-by-slice:**
-- the Noir skill pack + host compiler (S5); working-context indexing/retrieval (S6); long-term memory recall/consolidation/governance (S7); the optional bounded model layer (S8); the interactive TUI home screen (S9). Cross-CLI hosts (S10) and distribution/SDK (S11) are v1.x.
+- working-context indexing/retrieval (S6); long-term memory recall/consolidation/governance (S7); the optional bounded model layer (S8); the interactive TUI home screen (S9). Cross-CLI hosts (S10) and distribution/SDK (S11) are v1.x.
 
 **Known v0 debt (documented in `.superpowers/sdd/progress.md`):** foreground daemon (detached/socket-activated is post-v0); single global `~/.noir/daemon.json` (concurrent-project clobbering); no daemon auth token; cosmetic nits.
 

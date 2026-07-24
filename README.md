@@ -156,6 +156,23 @@ Three gates — spec, plan, verify — each record an observable decision (`appr
 
 Internally: `@noir-ai/workflow` (engine + FSM + gates) → store KV + ArtifactWriter → daemon exposes the 2 MCP tools.
 
+### Noir skills
+
+The builtin skill pack + a copy+validate compiler — `@noir-ai/skills` (the 7th package). 28 canonical `SKILL.md` files, all `noir-` prefixed, organized in 6 categories: **SDD lifecycle** (7), **power** (6), **session** (4), **git** (4), **FE/BE/domain** (4), **utils** (3). 16 are full playbooks; 12 are valid stubs (real `description` + a `> **Stub:**` body with a one-line "For now" pointer — they load in the host and validate like any other skill, with full bodies deferred to later slices).
+
+```bash
+node packages/cli/dist/bin.js init   # writes 28 noir-* skills to .claude/skills/
+node packages/cli/dist/bin.js sync   # re-emits idempotently (same 28, deterministic)
+```
+
+**The compiler is copy + validate, not generate.** `emitSkillsToDir()` reads the shipped `builtin/` directory, parses each `SKILL.md`, and validates before writing a single file — fail-fast, atomic-ish (one invalid skill blocks the whole emit). No LLM in the loop; drafting/generation is S8.
+
+**Authoring rule: `description` = WHEN, not WHAT.** `looksLikeWhenDescription` rejects descriptions that say what a skill does instead of when it fires (`/^(use|using|whenever|when|before|after|while|…)\b/i`); `validateSkill` enforces `name` = `noir-<kebab>`, dir matches name, and `references/*.md` naming. The hygiene test suite gates every shipped skill on every run.
+
+**Enforcement stance: observable gates, not skill-level rhetoric.** Superpowers' `<EXTREMELY-IMPORTANT>`/`SUBAGENT-STOP`/anti-rationalization tables and the predecessor's "HARD GATE / Spine" framing are stripped on port — `FORBIDDEN_RESIDUE` lists the tokens the hygiene test rejects. Discipline comes from the **S4 engine's observable gates** (every decision recorded `approved`/`forced`/`skipped`), not from shouty markdown inside a skill body.
+
+Internally: `@noir-ai/skills` (compiler + `builtin/`) → `HostAdapter.skillsDir(ctx)` (`.claude/skills/`) → wired into `noir init` + `noir sync`.
+
 ## Development
 
 This repo is itself developed with Claude Code. [`AGENTS.md`](AGENTS.md) holds the conventions for editing skills safely (SKILL.md format, commit-per-scope, where specs/plans go, how to validate). Edit skills here, then users refresh via `/plugin marketplace update noir` (or `git pull`).
