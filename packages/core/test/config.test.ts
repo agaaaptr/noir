@@ -120,4 +120,58 @@ describe('parseConfig', () => {
       }),
     ).toThrow();
   });
+
+  // Slice S7 `memory:` block (blueprint D6 / DS-6): a config with NO memory
+  // block parses to consolidation-disabled (capture/store/retrieve are always
+  // local + free; consolidation is the ONLY LLM touch and it is opt-in +
+  // provider-explicit — refuse + log if no provider, NEVER a silent paid call).
+  // Mirrors the `daemon` idiom: the outer default matches the parsed output
+  // shape so an absent `memory:` block still resolves to a normalized object.
+  it('defaults the memory block to consolidation-disabled when absent', () => {
+    const cfg = parseConfig({ host: 'claude' });
+    expect(cfg.memory.consolidation.enabled).toBe(false);
+    expect(cfg.memory.consolidation.provider).toBeUndefined();
+    expect(cfg.memory.consolidation.model).toBeUndefined();
+    expect(cfg.memory.consolidation.types).toBeUndefined();
+  });
+
+  it('accepts an explicit memory block and round-trips consolidation fields', () => {
+    const cfg = parseConfig({
+      host: 'claude',
+      memory: {
+        consolidation: {
+          enabled: true,
+          provider: 'anthropic',
+          model: 'claude-haiku',
+          types: ['pattern', 'decision'],
+        },
+      },
+    });
+    expect(cfg.memory.consolidation.enabled).toBe(true);
+    expect(cfg.memory.consolidation.provider).toBe('anthropic');
+    expect(cfg.memory.consolidation.model).toBe('claude-haiku');
+    expect(cfg.memory.consolidation.types).toEqual(['pattern', 'decision']);
+  });
+
+  it('applies the enabled default for a partial consolidation block', () => {
+    // A consolidation block with only provider/model written still defaults
+    // `enabled` to false — the master switch is opt-in (DS-6).
+    const cfg = parseConfig({
+      host: 'claude',
+      memory: { consolidation: { provider: 'anthropic', model: 'claude-haiku' } },
+    });
+    expect(cfg.memory.consolidation.enabled).toBe(false);
+    expect(cfg.memory.consolidation.provider).toBe('anthropic');
+  });
+
+  it('treats a present-but-empty memory block as consolidation-disabled', () => {
+    const cfg = parseConfig({ host: 'claude', memory: {} });
+    expect(cfg.memory.consolidation.enabled).toBe(false);
+  });
+
+  it('rejects a non-boolean enabled flag', () => {
+    expect(() =>
+      parseConfig({ host: 'claude', memory: { consolidation: { enabled: 'yes' } } }),
+    ).toThrow();
+  });
 });
