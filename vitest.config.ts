@@ -12,6 +12,7 @@ export default defineConfig({
       '@noir-ai/daemon': alias('daemon'),
       '@noir-ai/adapters': alias('adapters'),
       '@noir-ai/cli': alias('cli'),
+      '@noir-ai/store': alias('store'),
     },
   },
   test: {

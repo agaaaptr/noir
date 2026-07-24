@@ -7,4 +7,6 @@ export const paths = {
   noirMd: (root: string) => join(root, NOIR_DIR, 'NOIR.md'),
   config: (root: string) => join(root, NOIR_DIR, 'config.yml'),
   projectId: (root: string) => join(root, NOIR_DIR, 'project.id'),
+  storeDir: (root: string) => join(root, NOIR_DIR, 'store'),
+  storeDb: (root: string, projectId: string) => join(root, NOIR_DIR, 'store', `${projectId}.db`),
 } as const;
