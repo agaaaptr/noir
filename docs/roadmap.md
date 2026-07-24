@@ -32,7 +32,7 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 - Legacy plugin rebranded: marketplace `noir`, plugin `noir-workflow`.
 
 **Next:**
-- **S5 Builtin skills + compiler** — the Noir skill pack (SDD lifecycle + power skills: brainstorm, debug, review), all with the **`noir-`** prefix; canonical `SKILL.md` format → host compiler (Claude first).
+- **S5 Builtin skills + compiler** — **spec done** (`docs/superpowers/specs/2026-07-24-s5-skills-design.md`); **28 skills** (16 full + 12 stubs, 6 categories), all `noir-` prefixed; copy+validate compiler; emit to `.claude/skills/`. OQ-1…4 resolved. **Ready for implementation** (writing-plans → subagent-driven).
 - **Then:** S6 (context mgmt — indexing, RRF fusion, `context_search`) → S7 (memory mgmt — recall, consolidation, governance) → S8 (bounded model layer — spec/plan drafting) → S9 (CLI/TUI home screen) = **v1.0**.
 
 **Still missing for v1.0 (the MVP target) — by design, built slice-by-slice:**
