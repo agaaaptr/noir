@@ -29,11 +29,13 @@ CREATE TABLE IF NOT EXISTS docs (
 
 CREATE VIRTUAL TABLE IF NOT EXISTS docs_fts USING fts5(
   content,
+  content='docs',
   content_rowid='rowid',
   tokenize='porter unicode61'
 );
 
--- keep docs_fts in sync with docs
+-- keep docs_fts in sync with docs (external-content sync triggers:
+-- the 'delete' command requires content='docs' above to function)
 CREATE TRIGGER IF NOT EXISTS docs_ai AFTER INSERT ON docs BEGIN
   INSERT INTO docs_fts(rowid, content) VALUES (new.rowid, new.content);
 END;

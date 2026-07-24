@@ -2,7 +2,16 @@ import { mkdirSync } from 'node:fs';
 import { type ProjectId, paths } from '@noir-ai/core';
 import Database from 'better-sqlite3';
 import { migrate } from './migrations.js';
-import type { OpenOptions, Store } from './types.js';
+import type { FtsHit, IndexDoc, OpenOptions, SearchFtOpts, Store } from './types.js';
+
+/** Internal row shape from the docs_fts JOIN docs query. */
+interface FtsRow {
+  id: string;
+  source: string;
+  meta: string | null;
+  score: number;
+  snippet: string;
+}
 
 /**
  * Open (or create) the project's embedded SQLite store at
@@ -48,11 +57,53 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     ).run(key, JSON.stringify(value));
   };
 
+  const indexDoc = (doc: IndexDoc): void => {
+    if (readonly) {
+      throw new Error('store is read-only (daemon down)');
+    }
+    // Upsert into docs; the docs_ai/docs_au triggers keep docs_fts in sync.
+    db.prepare(
+      'INSERT INTO docs(id, source, content, meta) VALUES(?, ?, ?, ?) ' +
+        'ON CONFLICT(id) DO UPDATE SET source=excluded.source, content=excluded.content, meta=excluded.meta',
+    ).run(doc.id, doc.source, doc.content, doc.meta ? JSON.stringify(doc.meta) : null);
+  };
+
+  const searchFt = (query: string, opts?: SearchFtOpts): FtsHit[] => {
+    const limit = opts?.limit ?? 10;
+    // bm25(): more negative = more relevant, so ORDER BY score ascending.
+    // snippet(docs_fts, 0, ...): column 0 is `content`; 16-token window with
+    // <<match>> markers — NEVER the full content (blueprint §9.2).
+    const source = opts?.source;
+    const sql = source
+      ? `SELECT d.id AS id, d.source AS source, d.meta AS meta, bm25(docs_fts) AS score,
+                snippet(docs_fts, 0, '<<', '>>', '…', 16) AS snippet
+         FROM docs_fts JOIN docs d ON d.rowid = docs_fts.rowid
+         WHERE docs_fts MATCH ? AND d.source = ?
+         ORDER BY score LIMIT ?`
+      : `SELECT d.id AS id, d.source AS source, d.meta AS meta, bm25(docs_fts) AS score,
+                snippet(docs_fts, 0, '<<', '>>', '…', 16) AS snippet
+         FROM docs_fts JOIN docs d ON d.rowid = docs_fts.rowid
+         WHERE docs_fts MATCH ?
+         ORDER BY score LIMIT ?`;
+    const rows = source
+      ? (db.prepare(sql).all(query, source, limit) as FtsRow[])
+      : (db.prepare(sql).all(query, limit) as FtsRow[]);
+    return rows.map((r) => ({
+      id: r.id,
+      source: r.source,
+      score: r.score,
+      snippet: r.snippet,
+      ...(r.meta ? { meta: JSON.parse(r.meta) } : {}),
+    }));
+  };
+
   return {
     projectId,
     __db: db,
     getState,
     setState,
+    indexDoc,
+    searchFt,
     close: async () => {
       db.close();
     },
