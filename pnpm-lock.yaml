@@ -100,6 +100,15 @@ importers:
         specifier: ^7.6.0
         version: 7.6.13
 
+  packages/workflow:
+    dependencies:
+      '@noir-ai/core':
+        specifier: workspace:*
+        version: link:../core
+      '@noir-ai/store':
+        specifier: workspace:*
+        version: link:../store
+
 packages:
 
   '@biomejs/biome@2.5.5':
