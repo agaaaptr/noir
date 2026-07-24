@@ -1,3 +1,8 @@
+// ContextStatus is defined in @noir-ai/context (the engine's own status type);
+// re-exported here so the daemon's public surface carries it alongside
+// StoreStatus / WorkflowStatus.
+export type { ContextStatus } from '@noir-ai/context';
+export { buildContextEngine } from './context-seam.js';
 export { type EnsureResult, ensureDaemonRunning } from './ensure.js';
 export { type RunningDaemon, type StartHttpOptions, startHttpServer } from './http.js';
 export {

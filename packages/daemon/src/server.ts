@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/server';
+import type { ContextEngine } from '@noir-ai/context';
 import type { ProjectInfo } from '@noir-ai/core';
 import { NOIR_VERSION } from '@noir-ai/core';
 import type { Store } from '@noir-ai/store';
@@ -33,6 +34,15 @@ export interface ServerContext {
    * requests, mirroring the store.
    */
   engine?: WorkflowEngine;
+  /**
+   * Optional context engine. When present, the `context_search`,
+   * `context_index`, and `context_status` tools are registered. Built once per
+   * serve lifecycle from the same store handle (see `buildContextEngine` in
+   * `./context-seam.js`) and reused across HTTP requests, mirroring the store
+   * + engine. The engine — through its indexer — is the only thing that writes
+   * context rows, so the daemon's single-writer discipline is preserved.
+   */
+  context?: ContextEngine;
 }
 
 /** JSON returned by the `store_status` tool. */
@@ -235,6 +245,114 @@ export function createNoirServer(ctx: ServerContext): McpServer {
         const payload = buildWorkflowStatus(engine, id, degraded);
         if (!payload) return textResult({ ok: false, taskId: id, error: 'unknown task' });
         return textResult({ action, ...payload });
+      },
+    );
+  }
+
+  // The context engine is optional: stdio/HTTP inject it alongside the store +
+  // workflow engine (same lifecycle, same single store handle). When present,
+  // expose Noir's hybrid retrieval (BM25 ∪ cosine-kNN fused by RRF) via three
+  // tools — `context_search`, `context_index`, `context_status` (spec F9/F10/F11).
+  // `host_status` / `store_status` / `workflow_status` above are unchanged.
+  if (ctx.context) {
+    const context = ctx.context;
+    const storeDegraded = ctx.storeDegraded === true;
+
+    server.registerTool(
+      'context_search',
+      {
+        description:
+          'Hybrid search over the Noir context index: BM25 ∪ cosine-kNN fused by Reciprocal Rank Fusion (k=60), packed into a token budget with window-extracted snippets (never truncated). Returns ranked hits with path, snippet, and score.',
+        inputSchema: {
+          query: z
+            .string()
+            .describe('Natural-language or identifier query (e.g. "ContextEngine").'),
+          limit: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe('Max hits requested from each leg before fusion (default 10).'),
+          budgetTokens: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe('Token budget for the packed result set (default 4096).'),
+          // Singular `source` (not the spec's plural `sources`): both store
+          // primitives (SearchFtOpts.source / VecOpts.source) and the engine's
+          // SearchOptions.source take a single string, so a plural array is not
+          // honor-able here. Spec F9 source-filtering surfaces as one bucket.
+          source: z
+            .string()
+            .optional()
+            .describe('Restrict both legs to a single source bucket (e.g. "docs", "codebase").'),
+        },
+      },
+      async ({ query, limit, budgetTokens, source }) => {
+        try {
+          const result = await context.search(query, { limit, budgetTokens, source });
+          return textResult({ ok: true, ...result });
+        } catch (err) {
+          // Never crash the daemon: surface a degraded envelope (spec F12).
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
+      },
+    );
+
+    // No `watch` param is exposed here on purpose: watch mode (spec F5, daemon
+    // --watch via chokidar) is deferred and the engine's IndexPathOptions has
+    // no watch field. Accepting it now would silently no-op; if exposed later,
+    // return an explicit `ok:false, error:'watch not implemented (F5)'` rather
+    // than ignoring the flag. (spec F10 lists watch, but it is not wired yet.)
+    server.registerTool(
+      'context_index',
+      {
+        description:
+          'Incrementally index files/directories into the Noir context store (SHA-256 content-hash; unchanged files are skipped). Indexes docs + 384-dim vectors into the existing tables (no schema migration). Omit paths to index the project root.',
+        inputSchema: {
+          paths: z
+            .array(z.string())
+            .optional()
+            .describe('Files/directories to index (repo-relative or absolute); defaults to ["."].'),
+        },
+      },
+      async ({ paths }) => {
+        // Read-only (daemon-down) store: indexing is a write, so fence it off
+        // up front with a clear envelope rather than letting the first write
+        // throw partway through (spec F12 / AC-5).
+        if (storeDegraded) {
+          return textResult({
+            ok: false,
+            degraded: true,
+            error: 'store is read-only (daemon down) — context_index is unavailable',
+          });
+        }
+        try {
+          const result = await context.indexPaths(paths && paths.length > 0 ? paths : ['.']);
+          return textResult({ ok: true, ...result });
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
+      },
+    );
+
+    server.registerTool(
+      'context_status',
+      {
+        description:
+          "Report the Noir context index's health: project id, document + vector counts, indexed file count, the active embedder (kind/model/dim), and degraded state.",
+        inputSchema: {},
+      },
+      async () => {
+        try {
+          // Live read off the single writer handle — no cache (mirrors
+          // buildStoreStatus). docCount/vecCount/indexedFiles reflect indexed
+          // data immediately after context_index.
+          return textResult(context.status());
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
       },
     );
   }

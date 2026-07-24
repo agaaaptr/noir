@@ -61,10 +61,11 @@ const FULL_POWER = [
   'noir-tdd',
   'noir-subagent',
   'noir-parallel',
+  'noir-context',
 ];
 
 describe('builtin pack: power skills (T3)', () => {
-  it('has all 6 power skills, each with a substantial body', () => {
+  it('has all 7 power skills, each with a substantial body', () => {
     for (const name of FULL_POWER) {
       const s = getOrFail(name);
       expect(bodyOf(s.skillMd).length, `${name} body too short`).toBeGreaterThan(300);
@@ -105,11 +106,11 @@ describe('builtin pack: stubs + totals (T5)', () => {
       expect(s.skillMd, `${name} missing stub marker`).toContain('> **Stub:**');
     }
   });
-  it('pack total is 28 = 16 full + 12 stubs, all valid', () => {
-    expect(skills.length).toBe(28);
+  it('pack total is 29 = 17 full + 12 stubs, all valid', () => {
+    expect(skills.length).toBe(29);
     const stubCount = skills.filter((s) => s.skillMd.includes('> **Stub:**')).length;
     expect(stubCount).toBe(12);
-    expect(skills.length - stubCount).toBe(16);
+    expect(skills.length - stubCount).toBe(17);
     for (const s of skills) expect(validateSkill(s).ok, `${s.name} invalid`).toBe(true);
   });
 });

@@ -19,25 +19,25 @@ describe('noir init / sync emit the builtin pack', () => {
     expect(claudeAdapter.skillsDir?.({ root })).toBe(join(root, '.claude', 'skills'));
   });
 
-  it('init writes all 28 skills to .claude/skills/<name>/SKILL.md', async () => {
+  it('init writes all 29 skills to .claude/skills/<name>/SKILL.md', async () => {
     await init(root, { transport: 'stdio' });
     const dir = join(root, '.claude', 'skills');
     const names = (await readdir(dir, { withFileTypes: true }))
       .filter((e) => e.isDirectory() && e.name.startsWith('noir-'))
       .map((e) => e.name)
       .sort();
-    expect(names.length).toBe(28);
+    expect(names.length).toBe(29);
     const md = await readFile(join(dir, 'noir-brainstorm', 'SKILL.md'), 'utf8');
     expect(md).toContain('name: noir-brainstorm');
   });
 
-  it('sync is idempotent (re-emits the same 28)', async () => {
+  it('sync is idempotent (re-emits the same 29)', async () => {
     await init(root, { transport: 'stdio' });
     await sync(root);
     const dir = join(root, '.claude', 'skills');
     const names = (await readdir(dir, { withFileTypes: true }))
       .filter((e) => e.isDirectory() && e.name.startsWith('noir-'))
       .map((e) => e.name);
-    expect(names.length).toBe(28);
+    expect(names.length).toBe(29);
   });
 });

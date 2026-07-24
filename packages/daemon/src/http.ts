@@ -4,7 +4,9 @@ import {
   localhostOriginValidation,
   NodeStreamableHTTPServerTransport,
 } from '@modelcontextprotocol/node';
+import { resolveEmbedderConfig } from '@noir-ai/context';
 import type { ProjectInfo } from '@noir-ai/core';
+import { buildContextEngine } from './context-seam.js';
 import { clearDaemonRecord, type DaemonRecord, writeDaemonRecord } from './lifecycle.js';
 import { createNoirServer } from './server.js';
 import { openStoreForDaemon } from './store-seam.js';
@@ -45,6 +47,22 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
   const engine = daemonStore
     ? buildWorkflowEngine(daemonStore.store, opts.project.root, opts.project.id)
     : undefined;
+  // One context engine per lifecycle, built from the same shared store handle +
+  // the resolved embedder config — reused across every request, exactly like the
+  // store + engine. The embedder config comes from the project's parsed config
+  // (`NoirConfig.context`), defaulting to local in-process embeddings when the
+  // block is absent (AC-7); `resolveEmbedderConfig` is the core→context bridge
+  // (no cycle). The store's `degraded` flag threads through so `context_status`
+  // is honest under a read-only handle and `context_index` short-circuits.
+  const context = daemonStore
+    ? buildContextEngine(
+        daemonStore.store,
+        opts.project.root,
+        opts.project.id,
+        resolveEmbedderConfig(opts.project.config.context),
+        daemonStore.degraded,
+      )
+    : undefined;
 
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     lastActivity = Date.now();
@@ -71,6 +89,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
             }
           : {}),
         ...(engine ? { engine } : {}),
+        ...(context ? { context } : {}),
       });
       const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       await server.connect(transport);

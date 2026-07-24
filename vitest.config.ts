@@ -14,6 +14,11 @@ export default defineConfig({
       '@noir-ai/cli': alias('cli'),
       '@noir-ai/store': alias('store'),
       '@noir-ai/workflow': alias('workflow'),
+      // @noir-ai/context is consumed at runtime by the daemon's context-seam
+      // (a VALUE import of `ContextEngine`, not type-only), so daemon tests that
+      // touch the seam must resolve it to SOURCE like every other workspace
+      // package — without this the round-trip test needs a built dist.
+      '@noir-ai/context': alias('context'),
     },
   },
   test: {
