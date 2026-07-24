@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { type ProjectId, paths } from '@noir-ai/core';
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
+import { exportMarkdown } from './markdown.js';
 import { migrate } from './migrations.js';
 import type {
   FtsHit,
@@ -172,6 +173,7 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     searchFt,
     upsertVec,
     knn,
+    exportMarkdown: (dir: string) => exportMarkdown(db, dir),
     close: async () => {
       db.close();
     },
