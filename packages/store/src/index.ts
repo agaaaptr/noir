@@ -8,4 +8,6 @@ export type {
   SearchFtOpts,
   Store,
   VecHit,
+  VecOpts,
+  VecUpsertMeta,
 } from './types.js';

@@ -39,6 +39,20 @@ export interface SearchFtOpts {
   source?: string;
 }
 
+/** Metadata accepted by {@link Store.upsertVec}. */
+export interface VecUpsertMeta {
+  /** Logical source bucket for the vector (default `'default'`). */
+  source?: string;
+}
+
+/** Optional filters/cap for {@link Store.knn}. */
+export interface VecOpts {
+  /** Maximum number of neighbors to return (default 5). */
+  limit?: number;
+  /** Restrict results to a single source bucket (applied at kNN scan time). */
+  source?: string;
+}
+
 export interface Store {
   readonly projectId: ProjectId;
   getState<T>(key: string): T | null;
@@ -47,5 +61,9 @@ export interface Store {
   indexDoc(doc: IndexDoc): void;
   /** BM25 full-text search with window-extracted snippets. */
   searchFt(query: string, opts?: SearchFtOpts): FtsHit[];
+  /** Upsert a 384-dim vector keyed by `id` (idempotent; delete-by-id-then-insert). */
+  upsertVec(id: string, vec: Float32Array, meta?: VecUpsertMeta): void;
+  /** k-nearest-neighbor search over `vec`; results ordered by ascending distance. */
+  knn(vec: Float32Array, opts?: VecOpts): VecHit[];
   close(): Promise<void>;
 }

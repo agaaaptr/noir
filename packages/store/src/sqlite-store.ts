@@ -1,8 +1,18 @@
 import { mkdirSync } from 'node:fs';
 import { type ProjectId, paths } from '@noir-ai/core';
 import Database from 'better-sqlite3';
+import * as sqliteVec from 'sqlite-vec';
 import { migrate } from './migrations.js';
-import type { FtsHit, IndexDoc, OpenOptions, SearchFtOpts, Store } from './types.js';
+import type {
+  FtsHit,
+  IndexDoc,
+  OpenOptions,
+  SearchFtOpts,
+  Store,
+  VecHit,
+  VecOpts,
+  VecUpsertMeta,
+} from './types.js';
 
 /** Internal row shape from the docs_fts JOIN docs query. */
 interface FtsRow {
@@ -13,17 +23,27 @@ interface FtsRow {
   snippet: string;
 }
 
+/** Internal row shape from the vec0 kNN query. */
+interface VecRow {
+  id: string;
+  source: string;
+  distance: number;
+}
+
 /**
  * Open (or create) the project's embedded SQLite store at
  * `.noir/store/<projectId>.db`.
  *
- * In read-write mode the schema is migrated to the latest version and WAL
- * journaling is enabled. In read-only mode neither migrations nor the WAL
- * pragma are applied (both require write access); callers get a best-effort
- * read handle against whatever schema already exists on disk.
+ * `sqlite-vec` is loaded into every connection (read-safe) so kNN queries work
+ * in both read-write and read-only modes. In read-write mode the schema is
+ * migrated to the latest version, WAL journaling is enabled, and the `vec0`
+ * virtual table (deferred from v1 because `vec0` requires the extension
+ * loaded) is created. In read-only mode none of those writes happen; callers
+ * get a best-effort read handle against whatever schema already exists on
+ * disk — kNN works if the `vec` table was created by a prior read-write open,
+ * otherwise queries fail clearly against the missing table.
  *
- * `__db` is exposed for tests to assert schema state directly; the public
- * `Store` API (kv/search/vec methods) is added in later tasks.
+ * `__db` is exposed for tests to assert schema state directly.
  */
 export async function openStore(opts: OpenOptions): Promise<Store & { __db: Database.Database }> {
   const projectId: ProjectId = opts.projectId;
@@ -32,9 +52,19 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
 
   const db = new Database(dbPath, { readonly: opts.readonly === true });
 
+  // Load sqlite-vec first (read-safe; needed for kNN in either mode).
+  sqliteVec.load(db);
+
   if (opts.readonly !== true) {
     db.pragma('journal_mode = WAL');
     migrate(db);
+    // vec0 DDL deferred from v1: vec0 requires the sqlite-vec extension to be
+    // loaded (done above). `source`/`id` are metadata columns — filterable in
+    // kNN (`source = ?`) and deletable for idempotent upsert (`id = ?`). vec0
+    // keys on rowid (auto-assigned); there is no text primary key.
+    db.exec(
+      'CREATE VIRTUAL TABLE IF NOT EXISTS vec USING vec0(embedding float[384], source TEXT, id TEXT)',
+    );
   }
   // read-only: do not write. If the schema is missing, queries simply fail —
   // acceptable for degraded reads (e.g. inspecting a foreign DB).
@@ -97,6 +127,40 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     }));
   };
 
+  const upsertVec = (id: string, vec: Float32Array, meta?: VecUpsertMeta): void => {
+    if (readonly) {
+      throw new Error('store is read-only (daemon down)');
+    }
+    // Account for Float32Array views (byteOffset/byteLength) so a subarray
+    // binds exactly its own bytes, not the whole backing ArrayBuffer.
+    const buf = Buffer.from(vec.buffer, vec.byteOffset, vec.byteLength);
+    const source = meta?.source ?? 'default';
+    // vec0 keys on rowid; `id` is a metadata column. Idempotent via
+    // delete-by-id-then-insert (both are filterable metadata ops) in one txn.
+    const upsert = db.transaction(() => {
+      db.prepare('DELETE FROM vec WHERE id = ?').run(id);
+      db.prepare('INSERT INTO vec(embedding, source, id) VALUES (?, ?, ?)').run(buf, source, id);
+    });
+    upsert();
+  };
+
+  const knn = (vec: Float32Array, opts?: VecOpts): VecHit[] => {
+    const limit = opts?.limit ?? 5;
+    const buf = Buffer.from(vec.buffer, vec.byteOffset, vec.byteLength);
+    // `MATCH ? AND k = ?` is the canonical vec0 kNN form (version-independent;
+    // `ORDER BY distance` is ascending by default — nearest first). distance is
+    // L2, so lower == more similar; we mirror it onto `score` to match the FTS
+    // convention where lower bm25 == more relevant.
+    const source = opts?.source;
+    const sql = source
+      ? 'SELECT id, source, distance FROM vec WHERE embedding MATCH ? AND k = ? AND source = ? ORDER BY distance'
+      : 'SELECT id, source, distance FROM vec WHERE embedding MATCH ? AND k = ? ORDER BY distance';
+    const rows = source
+      ? (db.prepare(sql).all(buf, limit, source) as VecRow[])
+      : (db.prepare(sql).all(buf, limit) as VecRow[]);
+    return rows.map((r) => ({ id: r.id, source: r.source, score: r.distance }));
+  };
+
   return {
     projectId,
     __db: db,
@@ -104,6 +168,8 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     setState,
     indexDoc,
     searchFt,
+    upsertVec,
+    knn,
     close: async () => {
       db.close();
     },

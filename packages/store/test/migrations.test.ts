@@ -70,11 +70,13 @@ describe('openStore + migrations', () => {
         | { content: string }
         | undefined;
       expect(hit?.content).toBe('hello world');
-      // vec table is deferred to T4 (sqlite-vec not loaded in T1)
-      const vecMissing = db
+      // T4: sqlite-vec is loaded in openStore and the vec0 virtual table is
+      // created in read-write mode (deferred from v1 because vec0 needs the
+      // extension loaded).
+      const vecTable = db
         .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='vec'")
         .get();
-      expect(vecMissing).toBeUndefined();
+      expect(vecTable).toBeDefined();
     } finally {
       await store.close();
     }
