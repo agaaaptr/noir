@@ -1,7 +1,7 @@
 # Noir — S4 SDD Workflow Engine Design
 
 - **Date:** 2026-07-24
-- **Status:** Draft (awaiting review — researched + drafted; open questions OQ-1…OQ-6 flagged for confirmation)
+- **Status:** Reviewed (2026-07-24) — OQ-1…OQ-6 resolved (see §11); ready for implementation planning.
 - **Owner:** agaaaptr
 - **Spec type:** Implementation design (next slice after S1 Stores)
 - **Parent:** `docs/specs/2026-07-23-noir-toolkit-design.md` (blueprint §6.1, §9.1) + the delivered walking-skeleton & S1 specs
@@ -155,14 +155,14 @@ interface GateResult { phase: Phase; decision: 'approved' | 'forced' | 'skipped'
 
 ---
 
-## 11. Open questions (confirm at review)
+## 11. Open questions — RESOLVED (2026-07-24 review)
 
-- **OQ-1:** Engine in a new `@noir-ai/workflow` package (6th) vs in `@noir-ai/core`? (DS-1 — recommend new package; core stays I/O-pure.)
-- **OQ-2:** State machine — hand-rolled FSM vs xstate? (DS-2 — recommend hand-rolled.)
-- **OQ-3:** Gate enforcement — observable checkpoint (escapable via `--force`, logged) vs hard-block? (DS-3 — recommend observable + escapable, per §9.1.)
-- **OQ-4:** MCP surface in S4 — just `checkpoint` + `workflow_status` (engine + state), or the full `spec_*`/`plan_*`/`task_*` authoring tools now? (DS-6 — recommend minimal now; authoring tools when S8 lands.)
-- **OQ-5:** Audit log — store KV (queryable, daemon-owned) vs a `.noir/audit/<taskId>.json` file (human-inspectable)? (Recommend: store KV as source + export to `.noir/audit/` — both.)
-- **OQ-6:** Does S4 include the **Document** phase (CHANGELOG/ADR generation), or stub it? (Recommend: phase + artifact stubs in S4; full doc/ADR generation later — ADR scaffolding via the existing `docs/decisions/` pattern.)
+- **OQ-1 → new `@noir-ai/workflow` package (6th; depends core + store).** Core stays I/O-pure; engine's artifact/KV writes are explicit. (confirms DS-1)
+- **OQ-2 → hand-rolled FSM** (explicit transition table + guards). xstate is overkill + a heavy dep; matches the "no fragility / no heavy deps" stance. (confirms DS-2)
+- **OQ-3 → observable + escapable gates** (programmatic checkpoint records approved/forced/skipped; `--force` bypass with a reason, always audited). Per §9.1 — quiet + observable, not rhetoric, not a hard block. (confirms DS-3)
+- **OQ-4 → minimal MCP surface in S4:** `noir.checkpoint` + `noir.workflow_status`. The full `spec_*`/`plan_*`/`task_*` authoring tools defer to when S8 (model layer) can draft. (confirms DS-6)
+- **OQ-5 → audit in store KV as source of truth + export to `.noir/audit/<taskId>.json`** (queryable via the store + human-inspectable).
+- **OQ-6 → Document phase + artifact stubs in S4** (CHANGELOG-entry stub, ADR stub via the existing `docs/decisions/` pattern); full LLM generation later (S8).
 
 ---
 
@@ -176,5 +176,5 @@ interface GateResult { phase: Phase; decision: 'approved' | 'forced' | 'skipped'
 
 ## 13. Next steps
 
-1. **User reviews this draft** — confirm OQ-1…OQ-6.
-2. On approval → **writing-plans** → subagent-driven implementation (same as S1).
+1. ~~User reviews this draft — confirm OQ-1…OQ-6.~~ **Reviewed 2026-07-24: all OQs resolved (§11).**
+2. → **writing-plans** → subagent-driven implementation (same as S1).
