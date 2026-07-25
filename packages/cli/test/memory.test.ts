@@ -206,7 +206,7 @@ describe('memory recall', () => {
   });
 
   it('logical-failure envelope → exit 1', async () => {
-    payloads.current['memory_recall'] = { ok: false, degraded: true, error: 'no embedder' };
+    payloads.current.memory_recall = { ok: false, degraded: true, error: 'no embedder' };
     await expect(memoryRecall({ ...base, query: 'x' })).rejects.toMatchObject({ exitCode: 1 });
   });
 
@@ -264,7 +264,7 @@ describe('memory save', () => {
   });
 
   it('read-only fence envelope → exit 1', async () => {
-    payloads.current['memory_save'] = {
+    payloads.current.memory_save = {
       ok: false,
       degraded: true,
       error: 'store is read-only (daemon down) — memory_save is unavailable',
@@ -334,7 +334,7 @@ describe('memory consolidate (capability-discovered)', () => {
   });
 
   it('tool exposed + success → {ok:true,data:{lessons,from}}', async () => {
-    payloads.current['memory_consolidate'] = {
+    payloads.current.memory_consolidate = {
       ok: true,
       lessons: [{ id: 'L1', type: 'lesson', content: 'derived lesson' }],
       from: ['01A', '01B'],
@@ -358,7 +358,7 @@ describe('memory consolidate (capability-discovered)', () => {
   });
 
   it('provider refusal ({ok:false,reason}) → exit 1 with the reason', async () => {
-    payloads.current['memory_consolidate'] = { ok: false, reason: 'no-provider', logged: true };
+    payloads.current.memory_consolidate = { ok: false, reason: 'no-provider', logged: true };
     await expect(memoryConsolidate({ ...base })).rejects.toMatchObject({ exitCode: 1 });
   });
 });

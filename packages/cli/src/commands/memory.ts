@@ -133,15 +133,15 @@ function toHit(raw: unknown): MemoryHitData {
   const arr = (v: unknown): string[] =>
     Array.isArray(v) ? (v.filter((x) => typeof x === 'string') as string[]) : [];
   return {
-    id: typeof h['id'] === 'string' ? h['id'] : '',
-    type: typeof h['type'] === 'string' ? h['type'] : '',
-    score: typeof h['score'] === 'number' ? h['score'] : 0,
-    content: typeof h['content'] === 'string' ? h['content'] : '',
-    concepts: arr(h['concepts']),
-    files: arr(h['files']),
-    ts: typeof h['ts'] === 'number' ? h['ts'] : 0,
-    importance: typeof h['importance'] === 'number' ? h['importance'] : 0,
-    source: typeof h['source'] === 'string' ? h['source'] : '',
+    id: typeof h.id === 'string' ? h.id : '',
+    type: typeof h.type === 'string' ? h.type : '',
+    score: typeof h.score === 'number' ? h.score : 0,
+    content: typeof h.content === 'string' ? h.content : '',
+    concepts: arr(h.concepts),
+    files: arr(h.files),
+    ts: typeof h.ts === 'number' ? h.ts : 0,
+    importance: typeof h.importance === 'number' ? h.importance : 0,
+    source: typeof h.source === 'string' ? h.source : '',
   };
 }
 
@@ -225,8 +225,8 @@ export async function memorySave(opts: MemorySaveOptions): Promise<void> {
   const content = await resolveContent(opts);
   const files = splitCsv(opts.files);
   const args: Record<string, unknown> = { content };
-  if (typeof opts.type === 'string' && opts.type.length > 0) args['type'] = opts.type;
-  if (files !== undefined) args['files'] = files;
+  if (typeof opts.type === 'string' && opts.type.length > 0) args.type = opts.type;
+  if (files !== undefined) args.files = files;
 
   const res = await callDaemonTool<MemorySaveResult | ToolFailure>(opts, 'memory_save', args);
   if (res.ok !== true) failTool('memory save', res, opts);
@@ -277,7 +277,7 @@ function renderObservation(obs: Record<string, unknown>, opts: CliOptions): void
     if (obs[key] !== undefined) rows.push({ Field: key, Value: obs[key] });
   }
   if (rows.length > 0) table(rows, ['Field', 'Value'], opts);
-  const content = obs['content'];
+  const content = obs.content;
   if (typeof content === 'string') log(`\n${content}`, opts);
 }
 
@@ -292,9 +292,9 @@ export async function memorySessions(opts: MemoryOptions): Promise<void> {
     ? (res.sessions as unknown[]).map((raw) => {
         const s = (raw ?? {}) as Record<string, unknown>;
         return {
-          id: typeof s['id'] === 'string' ? s['id'] : '',
-          count: typeof s['count'] === 'number' ? s['count'] : 0,
-          lastTs: typeof s['lastTs'] === 'number' ? s['lastTs'] : 0,
+          id: typeof s.id === 'string' ? s.id : '',
+          count: typeof s.count === 'number' ? s.count : 0,
+          lastTs: typeof s.lastTs === 'number' ? s.lastTs : 0,
         };
       })
     : [];
@@ -365,8 +365,8 @@ export async function memoryConsolidate(opts: MemoryConsolidateOptions): Promise
   const types = splitCsv(opts.types);
   const limit = parseLimit(opts.limit, 'memory consolidate', opts);
   const args: Record<string, unknown> = {};
-  if (types !== undefined) args['types'] = types;
-  if (limit !== undefined) args['limit'] = limit;
+  if (types !== undefined) args.types = types;
+  if (limit !== undefined) args.limit = limit;
 
   const res = await callDaemonTool<MemoryConsolidateOk | MemoryConsolidateRefusal | ToolFailure>(
     opts,
@@ -389,8 +389,8 @@ export async function memoryConsolidate(opts: MemoryConsolidateOptions): Promise
       const l = lessons[i];
       if (l === undefined) continue;
       const obs = (l ?? {}) as Record<string, unknown>;
-      const id = typeof obs['id'] === 'string' ? obs['id'] : `<lesson ${i + 1}>`;
-      const content = typeof obs['content'] === 'string' ? obs['content'] : '';
+      const id = typeof obs.id === 'string' ? obs.id : `<lesson ${i + 1}>`;
+      const content = typeof obs.content === 'string' ? obs.content : '';
       log(`- ${id}: ${content}`, opts);
     }
     return;
@@ -402,10 +402,10 @@ export async function memoryConsolidate(opts: MemoryConsolidateOptions): Promise
   // union members (they don't all carry `error` / `degraded`).
   const env = res as unknown as Record<string, unknown>;
   const reason =
-    (typeof env['reason'] === 'string' ? env['reason'] : undefined) ??
-    (typeof env['error'] === 'string' ? env['error'] : undefined) ??
+    (typeof env.reason === 'string' ? env.reason : undefined) ??
+    (typeof env.error === 'string' ? env.error : undefined) ??
     'unknown';
-  const logged = env['logged'] === true || env['degraded'] === true;
+  const logged = env.logged === true || env.degraded === true;
   const suffix = logged ? ' (logged)' : '';
   fail(EXIT.ERROR, `memory consolidate did not run: ${reason}${suffix}`, opts);
 }

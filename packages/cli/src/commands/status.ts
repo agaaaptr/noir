@@ -156,7 +156,7 @@ async function tryTool<T>(caller: DaemonToolCaller, name: string): Promise<T | n
 }
 
 function pickStore(s: StoreStatusResult | null): StatusPayload['store'] {
-  if (!s || s.ok !== true) return null;
+  if (s?.ok !== true) return null;
   return {
     docCount: s.docCount,
     vecCount: s.vecCount,
@@ -172,7 +172,7 @@ function describeEmbedder(e: ContextStatusResult['embedder']): string {
 }
 
 function pickContext(c: ContextStatusResult | null): StatusPayload['context'] {
-  if (!c || c.ok !== true) return null;
+  if (c?.ok !== true) return null;
   return {
     docCount: c.docCount,
     vecCount: c.vecCount,
@@ -186,7 +186,7 @@ function pickWorkflow(w: WorkflowStatusResult | null): StatusPayload['workflow']
   // `workflow_status` returns `{ok:false,error:'no active task'}` (data) when no
   // task is active — normalize that to `null` so the payload's `workflow` field
   // cleanly means "active task snapshot present".
-  if (!w || w.ok !== true) return null;
+  if (w?.ok !== true) return null;
   return {
     taskId: w.taskId,
     phase: w.phase,
@@ -198,7 +198,7 @@ function pickWorkflow(w: WorkflowStatusResult | null): StatusPayload['workflow']
 }
 
 function pickMemory(m: MemorySessionsResult | null): StatusPayload['memory'] {
-  if (!m || m.ok !== true || !Array.isArray(m.sessions)) return null;
+  if (m?.ok !== true || !Array.isArray(m.sessions)) return null;
   let observations = 0;
   for (const s of m.sessions) observations += s.count;
   return { sessions: m.sessions.length, observations };

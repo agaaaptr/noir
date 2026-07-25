@@ -16,8 +16,8 @@ const { payloads } = vi.hoisted(() => ({ payloads: { current: {} as Record<strin
 vi.mock('../src/daemon-client.js', () => ({
   callDaemonTool: vi.fn(async (_opts: unknown, name: string, args?: Record<string, unknown>) => {
     // `workflow_status` defaults to the active task when no taskId given.
-    if (name === 'workflow_status' && args && args['taskId']) {
-      return payloads.current['workflow_status:' + String(args['taskId'])];
+    if (name === 'workflow_status' && args && args.taskId) {
+      return payloads.current[`workflow_status:${String(args.taskId)}`];
     }
     return payloads.current[name];
   }),
@@ -147,7 +147,7 @@ describe('task status', () => {
   });
 
   it('"no active task" envelope → exit 3 (NOT_FOUND)', async () => {
-    payloads.current['workflow_status'] = { ok: false, error: 'no active task' };
+    payloads.current.workflow_status = { ok: false, error: 'no active task' };
     await expect(taskStatus({ ...base })).rejects.toMatchObject({ exitCode: 3 });
   });
 
@@ -185,7 +185,7 @@ describe('task next', () => {
   });
 
   it('no active task → exit 3', async () => {
-    payloads.current['workflow_status'] = { ok: false, error: 'no active task' };
+    payloads.current.workflow_status = { ok: false, error: 'no active task' };
     await expect(taskNext({ ...base })).rejects.toMatchObject({ exitCode: 3 });
   });
 });
@@ -228,7 +228,7 @@ describe('task new — wired to workflow_start', () => {
   });
 
   it('logical-failure envelope (read-only store) → exit 1 with detail', async () => {
-    payloads.current['workflow_start'] = {
+    payloads.current.workflow_start = {
       ok: false,
       degraded: true,
       error: 'store is read-only (daemon down) — workflow_start is unavailable',
@@ -287,7 +287,7 @@ describe('task advance — wired to workflow_advance', () => {
   });
 
   it('logical-failure envelope → exit 1', async () => {
-    payloads.current['workflow_advance'] = { ok: false, error: 'no active task' };
+    payloads.current.workflow_advance = { ok: false, error: 'no active task' };
     await expect(taskAdvance({ ...base })).rejects.toMatchObject({ exitCode: 1 });
   });
 });

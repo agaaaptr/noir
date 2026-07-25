@@ -143,7 +143,7 @@ export async function probeDaemon(opts: DaemonClientOptions = {}): Promise<Daemo
       pid?: number;
       uptimeSec?: number;
     } | null;
-    if (!body || body.ok !== true) {
+    if (body?.ok !== true) {
       if (opts.verbose) process.stderr.write('noir: daemon probe: /health body not ok\n');
       return { running: false };
     }
@@ -218,7 +218,7 @@ async function callToolParse<T>(
   const block = (result.content as readonly unknown[] | undefined)?.[0] as
     | { type?: string; text?: unknown }
     | undefined;
-  if (!block || block.type !== 'text' || typeof block.text !== 'string') {
+  if (block?.type !== 'text' || typeof block.text !== 'string') {
     failDaemonDown(opts, new Error(`tool '${name}' returned no text content`));
   }
   const text: string = block.text;

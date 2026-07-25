@@ -193,7 +193,7 @@ export function createProgram(): Command {
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();
-      const detach = g['detach'] === true;
+      const detach = g.detach === true;
       await daemonStart({ ...toCliOptions(g), ...(detach ? { detach } : {}) });
     });
   daemonGrp
@@ -249,7 +249,7 @@ export function createProgram(): Command {
       const g = cmd.optsWithGlobals();
       // Positional `<query>` is always the leading action arg.
       const query = typeof args[0] === 'string' ? (args[0] as string) : '';
-      const limit = typeof g['limit'] === 'string' ? (g['limit'] as string) : undefined;
+      const limit = typeof g.limit === 'string' ? (g.limit as string) : undefined;
       await contextSearch({
         ...toCliOptions(g),
         query,
@@ -272,10 +272,10 @@ export function createProgram(): Command {
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();
-      const rawPaths = Array.isArray(g['path'])
-        ? (g['path'] as unknown[]).filter((p): p is string => typeof p === 'string')
+      const rawPaths = Array.isArray(g.path)
+        ? (g.path as unknown[]).filter((p): p is string => typeof p === 'string')
         : [];
-      const force = g['force'] === true;
+      const force = g.force === true;
       await contextIndex({
         ...toCliOptions(g),
         ...(rawPaths.length === 0 ? {} : { paths: rawPaths }),
@@ -302,7 +302,7 @@ export function createProgram(): Command {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();
       const query = typeof args[0] === 'string' ? (args[0] as string) : '';
-      const limit = typeof g['limit'] === 'string' ? (g['limit'] as string) : undefined;
+      const limit = typeof g.limit === 'string' ? (g.limit as string) : undefined;
       await memoryRecall({
         ...toCliOptions(g),
         query,
@@ -323,9 +323,9 @@ export function createProgram(): Command {
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();
-      const content = typeof g['content'] === 'string' ? (g['content'] as string) : undefined;
-      const type = typeof g['type'] === 'string' ? (g['type'] as string) : undefined;
-      const files = typeof g['files'] === 'string' ? (g['files'] as string) : undefined;
+      const content = typeof g.content === 'string' ? (g.content as string) : undefined;
+      const type = typeof g.type === 'string' ? (g.type as string) : undefined;
+      const files = typeof g.files === 'string' ? (g.files as string) : undefined;
       await memorySave({
         ...toCliOptions(g),
         ...(content === undefined ? {} : { content }),
@@ -359,8 +359,8 @@ export function createProgram(): Command {
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();
-      const types = typeof g['types'] === 'string' ? (g['types'] as string) : undefined;
-      const limit = typeof g['limit'] === 'string' ? (g['limit'] as string) : undefined;
+      const types = typeof g.types === 'string' ? (g.types as string) : undefined;
+      const limit = typeof g.limit === 'string' ? (g.limit as string) : undefined;
       await memoryConsolidate({
         ...toCliOptions(g),
         ...(types === undefined ? {} : { types }),
@@ -401,8 +401,8 @@ export function createProgram(): Command {
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();
-      const slug = typeof g['slug'] === 'string' ? (g['slug'] as string) : '';
-      const mode = typeof g['mode'] === 'string' ? (g['mode'] as string) : undefined;
+      const slug = typeof g.slug === 'string' ? (g.slug as string) : '';
+      const mode = typeof g.mode === 'string' ? (g.mode as string) : undefined;
       await taskNew({
         ...toCliOptions(g),
         slug,
@@ -432,8 +432,8 @@ export function createProgram(): Command {
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();
-      const to = typeof g['to'] === 'string' ? (g['to'] as string) : undefined;
-      const force = typeof g['force'] === 'string' ? (g['force'] as string) : undefined;
+      const to = typeof g.to === 'string' ? (g.to as string) : undefined;
+      const force = typeof g.force === 'string' ? (g.force as string) : undefined;
       await taskAdvance({
         ...toCliOptions(g),
         ...(to === undefined ? {} : { to }),

@@ -207,7 +207,7 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
     // ECONNREFUSED / DNS / timeout — treat as not-running below.
     health = null;
   }
-  if (!health || health.ok !== true) {
+  if (health?.ok !== true) {
     clearDaemonRecord();
     fail(
       EXIT.DAEMON_DOWN,

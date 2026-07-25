@@ -45,8 +45,8 @@ vi.mock('../src/daemon-client.js', () => ({
   callDaemonTool: vi.fn(async (_opts: unknown, name: string, args?: Record<string, unknown>) => {
     // `workflow_status` is keyed by taskId when one is given (mirrors task.ts's
     // optional-positional convention) so the flow can assert forwarding.
-    if (name === 'workflow_status' && args && args['taskId']) {
-      return payloads.current['workflow_status:' + String(args['taskId'])];
+    if (name === 'workflow_status' && args && args.taskId) {
+      return payloads.current[`workflow_status:${String(args.taskId)}`];
     }
     return payloads.current[name];
   }),
@@ -306,7 +306,7 @@ describe('daemon-backed command flow — shared mocked daemon, stream discipline
     // The daemon WAS reachable (the mock resolved); the tool returned its own
     // {ok:false} envelope. That's data → the command maps it to exit 1 (ERROR),
     // never to exit 4 (DAEMON_DOWN).
-    payloads.current['memory_recall'] = { ok: false, degraded: true, error: 'embedder offline' };
+    payloads.current.memory_recall = { ok: false, degraded: true, error: 'embedder offline' };
     const { capture, restore } = captureStreams();
     try {
       await expect(memoryRecall({ json: true, query: 'x' })).rejects.toMatchObject({

@@ -157,7 +157,7 @@ describe('context search --json', () => {
   });
 
   it('tool logical-failure envelope → exit 1 (ERROR), daemon message surfaced', async () => {
-    payloads.current['context_search'] = { ok: false, degraded: true, error: 'embedder blew up' };
+    payloads.current.context_search = { ok: false, degraded: true, error: 'embedder blew up' };
     const { capture, restore } = captureStreams();
     try {
       await expect(contextSearch({ ...base, json: true, query: 'x' })).rejects.toMatchObject({
@@ -188,7 +188,7 @@ describe('context search — human table on stderr', () => {
   });
 
   it('annotates degraded + truncated runs', async () => {
-    payloads.current['context_search'] = {
+    payloads.current.context_search = {
       ok: true,
       results: [],
       consumedTokens: 4096,
@@ -235,7 +235,7 @@ describe('context index', () => {
   });
 
   it('read-only fence envelope → exit 1 with the daemon message', async () => {
-    payloads.current['context_index'] = {
+    payloads.current.context_index = {
       ok: false,
       degraded: true,
       error: 'store is read-only (daemon down) — context_index is unavailable',

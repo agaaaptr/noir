@@ -135,10 +135,10 @@ function failTool(label: string, envelope: ToolFailure, opts: CliOptions): never
 function toHit(raw: unknown): ContextHit {
   const h = (raw ?? {}) as Record<string, unknown>;
   return {
-    path: typeof h['path'] === 'string' ? h['path'] : '<unknown>',
-    score: typeof h['score'] === 'number' ? h['score'] : 0,
-    snippet: typeof h['snippet'] === 'string' ? h['snippet'] : '',
-    source: typeof h['source'] === 'string' ? h['source'] : '',
+    path: typeof h.path === 'string' ? h.path : '<unknown>',
+    score: typeof h.score === 'number' ? h.score : 0,
+    snippet: typeof h.snippet === 'string' ? h.snippet : '',
+    source: typeof h.source === 'string' ? h.source : '',
   };
 }
 
