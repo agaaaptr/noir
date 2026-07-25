@@ -9,6 +9,12 @@ export {
   CONTEXT_BLOCK_END,
   RULES_BLOCK,
 } from './markers.js';
+export {
+  commentStyleFor,
+  readManagedBlock,
+  stripManagedBlock,
+  writeManagedRegion,
+} from './block-writer.js';
 export { loadProjectInfo, type ProjectInfo } from './project.js';
 export { createProjectId, type ProjectId } from './project-id.js';
 export { NOIR_VERSION } from './version.js';
