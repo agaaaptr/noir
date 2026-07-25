@@ -55,14 +55,14 @@ afterEach(() => {
 });
 
 describe('noir skills list', () => {
-  it('discovers every builtin skill (32) and emits a --json envelope to stdout', async () => {
+  it('discovers every builtin skill (33) and emits a --json envelope to stdout', async () => {
     const r = await run(() => skillsList({ json: true }));
     expect(r.err).toBeUndefined();
     const envelope = JSON.parse(r.stdout);
     expect(envelope.ok).toBe(true);
-    expect(envelope.data.count).toBe(32);
+    expect(envelope.data.count).toBe(33);
     expect(Array.isArray(envelope.data.skills)).toBe(true);
-    expect(envelope.data.skills.length).toBe(32);
+    expect(envelope.data.skills.length).toBe(33);
     const first = envelope.data.skills[0];
     expect(first).toEqual(
       expect.objectContaining({
@@ -96,7 +96,7 @@ describe('noir skills list', () => {
     const r = await run(() => skillsList({}));
     expect(r.err).toBeUndefined();
     expect(r.stdout).toBe('');
-    expect(r.stderr).toMatch(/noir skills — 32 builtin skills/);
+    expect(r.stderr).toMatch(/noir skills — 33 builtin skills/);
     expect(r.stderr).toMatch(/Skill.*Category.*Description/);
     expect(r.stderr).toMatch(/noir-brainstorm/);
   });
@@ -113,12 +113,12 @@ describe('noir skills sync', () => {
       expect(r.err).toBeUndefined();
       const envelope = JSON.parse(r.stdout);
       expect(envelope.ok).toBe(true);
-      expect(envelope.data.emitted.length).toBe(32);
+      expect(envelope.data.emitted.length).toBe(33);
       expect(envelope.data.dir).toBe(join(root, '.claude', 'skills'));
       const names = readdirSync(join(root, '.claude', 'skills'), { withFileTypes: true })
         .filter((e) => e.isDirectory() && e.name.startsWith('noir-'))
         .map((e) => e.name);
-      expect(names.length).toBe(32);
+      expect(names.length).toBe(33);
     } finally {
       process.chdir(origCwd);
     }
@@ -132,7 +132,7 @@ describe('noir skills sync', () => {
       const r = await run(() => skillsSync({}));
       expect(r.err).toBeUndefined();
       expect(r.stdout).toBe('');
-      expect(r.stderr).toMatch(/Synced 32 Noir skills to .*\.claude\/skills\./);
+      expect(r.stderr).toMatch(/Synced 33 Noir skills to .*\.claude\/skills\./);
     } finally {
       process.chdir(origCwd);
     }

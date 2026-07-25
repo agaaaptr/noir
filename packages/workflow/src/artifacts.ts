@@ -35,6 +35,33 @@ ${body}`;
 }
 
 /**
+ * Write PRD artifact to .noir/prd/<taskId>-<slug>.md
+ * Pre-SDD product document; the spec @imports it (prdRef). No FSM change.
+ */
+export function writePrd(root: string, taskId: string, slug: string, body: string): void {
+  const dir = paths.prdDir(root);
+  const file = paths.prdFile(root, taskId, slug);
+
+  mkdirSync(dir, { recursive: true });
+
+  const content = `---
+taskId: ${taskId}
+slug: ${slug}
+---
+
+${body}`;
+
+  writeFileSync(file, content, 'utf-8');
+}
+
+/** Read a PRD artifact, or null if absent. */
+export function readPrd(root: string, taskId: string, slug: string): string | null {
+  const file = paths.prdFile(root, taskId, slug);
+  if (!existsSync(file)) return null;
+  return readFileSync(file, 'utf-8');
+}
+
+/**
  * Write plan artifact to .noir/plans/<taskId>-<slug>.md
  */
 export function writePlan(root: string, taskId: string, slug: string, body: string): void {

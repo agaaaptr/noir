@@ -40,6 +40,9 @@ export const paths = {
   specsDir: (root: string) => join(root, NOIR_DIR, 'specs'),
   specFile: (root: string, taskId: string, slug: string) =>
     join(root, NOIR_DIR, 'specs', `${taskId}-${slug}.md`),
+  prdDir: (root: string) => join(root, NOIR_DIR, 'prd'),
+  prdFile: (root: string, taskId: string, slug: string) =>
+    join(root, NOIR_DIR, 'prd', `${taskId}-${slug}.md`),
   plansDir: (root: string) => join(root, NOIR_DIR, 'plans'),
   planFile: (root: string, taskId: string, slug: string) =>
     join(root, NOIR_DIR, 'plans', `${taskId}-${slug}.md`),
