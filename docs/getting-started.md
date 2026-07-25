@@ -1,0 +1,179 @@
+# Getting started
+
+> The first-use walkthrough: install Noir, initialize a project, connect your host, and run your first spec-driven session. Concrete commands throughout.
+
+New to Noir? Read the [README](../README.md) first for the 30-second "what and why," then come back here. For the full reference (every command, the config schema, the filesystem layout), see [usage.md](usage.md).
+
+## What you need
+
+- **Node.js ≥ 20** and **pnpm 9** (`corepack enable && corepack prepare pnpm@9 --activate`).
+- **An agentic CLI host.** Noir v1 targets **Claude Code** (behind an abstract `HostAdapter`; more hosts arrive in v1.x). Noir is the workflow/context/memory *layer* — it is not an agent runtime. **Bring your own agent.**
+- macOS, Linux, or Windows on x64 or arm64 (native deps ship prebuilt).
+
+## Install
+
+### Today: from source
+
+v1.0 is **release-ready but not yet published to npm**. Distribution — `npm publish`, `npx noir`, the marketplace listing, and the SDK — is slice **S11**, deferred to v1.x. So for now, install is from-source. This is the path for **developers of Noir**, not end users.
+
+```bash
+git clone <noir-repo> && cd noir
+pnpm install      # installs the 10 @noir-ai/* packages + native deps
+pnpm build        # builds every package → packages/*/dist/
+```
+
+`pnpm install` will ask you to approve the native builds (`pnpm approve-builds`, or they're pre-approved via the pinned `pnpm.onlyBuiltDependencies`). The native dependencies are:
+
+- `better-sqlite3`, `sqlite-vec` — embedded SQLite + 384-dim vector kNN (prebuilt on mac/linux/win, x64 + arm64).
+- `onnxruntime-node` — pulled in by `@huggingface/transformers` for the local embedder.
+
+On **first use** of the context engine, the embedder downloads the ~22 MB `all-MiniLM-L6-v2` model **once** into `~/.noir/models/` (cached after that, offline and private).
+
+Now make the `noir` command available. Two options:
+
+```bash
+# Option A (recommended): put `noir` on your PATH
+pnpm --filter @noir-ai/cli link --global
+noir --help        # works from anywhere
+
+# Option B: invoke the built bin directly (no global link)
+node packages/cli/dist/bin.js --help
+```
+
+Option A matters: the `.mcp.json` that `noir init` writes calls `command: "noir"`, so Claude Code needs `noir` resolvable on your PATH when it spawns the server. With Option B you'd have to hand-edit `.mcp.json` to point at `node packages/cli/dist/bin.js` instead.
+
+### Later: one-liner (after S11 ships)
+
+Once slice S11 lands, this whole section collapses to:
+
+```bash
+npx noir init          # or: npm i -g @noir-ai/cli && noir init
+# bunx noir init also works
+```
+
+Until then, use the from-source path above.
+
+## Initialize a project
+
+From the root of the project you want Noir to manage:
+
+```bash
+noir init
+```
+
+`noir init` is idempotent and safe to re-run. It scaffolds the per-project `.noir/` directory and emits the host wiring. Specifically it creates:
+
+| Path | What it is |
+|---|---|
+| `.noir/project.id` | A UUID — the project's canonical `ProjectId` (Noir keys everything on this, never on a filesystem path). |
+| `.noir/config.yml` | Project config. Starts as `host: claude` + `mode: full`. See [usage.md → Configuration](usage.md#configuration). |
+| `.noir/NOIR.md` | The canonical context file. The host merely `@import`s it. |
+| `.mcp.json` | The MCP server entry Claude Code reads. |
+| `CLAUDE.md` | A managed `@import ".noir/NOIR.md"` block is inserted (existing content is preserved). |
+| `.claude/skills/noir-*` | The **31 native `noir-` skills** are compiled and emitted here. |
+
+`.noir/store/` (the SQLite DB), `.noir/specs/`, `.noir/plans/`, `.noir/tasks/`, `.noir/decisions/`, and `.noir/audit/` are created on demand as you work.
+
+> **No plugin, no marketplace.** Noir ships only its native `noir-` builtins. There is nothing to install into the host — `noir init`/`noir sync` overwrite the `noir-*` namespace idempotently.
+
+## Connect your host over MCP
+
+The Noir MCP server runs in one of **two transport modes**. This is about *how the server process runs* — it's a separate concern from the SDD discipline level (full/quick) covered later. `noir init` defaults to the one almost everyone should use.
+
+### Default: stdio (recommended)
+
+This is the zero-config path. `noir init` (no flags) writes a `.mcp.json` that points Claude Code at a stdio server:
+
+```json
+{
+  "mcpServers": {
+    "noir": { "command": "noir", "args": ["mcp", "serve", "--stdio"] }
+  }
+}
+```
+
+**Steps:**
+
+1. `noir init` (default transport is `stdio`).
+2. Open the project in **Claude Code**. That's it — Claude Code auto-spawns `noir mcp serve --stdio` and connects.
+3. The server's lifecycle **is** the Claude Code session: when you close the session, the server goes with it. No separate process to manage.
+
+This is the right choice for almost everyone. Use the daemon only if you need the extras below.
+
+### Optional: daemon (persistent HTTP)
+
+The daemon is a **long-lived** Noir server that multiple clients can share — the host *and* terminal CLI commands (`noir context search`, `noir task new`, …) all talk to the same process, and it persists across host sessions.
+
+**Steps:**
+
+1. Initialize for the HTTP transport, pinning a localhost port:
+
+   ```bash
+   noir init --transport streamable-http --url http://127.0.0.1:8787/mcp
+   ```
+
+2. Set the **same** port in `.noir/config.yml` so CLI commands find the daemon:
+
+   ```yaml
+   daemon:
+     port: 8787
+   ```
+
+3. Start the daemon (it runs in the **foreground**):
+
+   ```bash
+   noir daemon start
+   # foreground mode (backgrounding deferred); Ctrl+C to stop
+   ```
+
+4. Open the project in Claude Code. It connects to `http://127.0.0.1:8787/mcp` via `.mcp.json`.
+
+**Caveats (v1):**
+
+- Killing the daemon while the host is connected **breaks the connection** — there is **no auto-fallback to stdio** in v1. Your data stays durable on disk, and reads have a degraded read-only fallback, but the live host link is severed until you restart the daemon.
+- The daemon is **foreground-only** in v1 (`--detach` honestly returns exit code 2). Backgrounded / auto-restart daemons are v1.x.
+- A single global `~/.noir/daemon.json` records the running daemon; running Noir concurrently in two projects on the same machine will clobber that record (per-project records are v1.x).
+
+Pick the daemon **only** if you need a persistent shared server or terminal CLI access alongside the host. Otherwise, stdio. See [usage.md → Transports](usage.md#transports) for the full comparison.
+
+## Your first session in Claude Code
+
+You work **through** the host. After `noir init` and opening the project in Claude Code, just ask it to build something — for example, *"add a CSV export to the reports module."* The native skills pick up the request and run Noir's spec-driven lifecycle:
+
+```
+noir-brainstorm  →  noir-intake  →  noir-clarify  →  noir-spec
+   →  noir-plan  →  noir-execute  →  noir-verify  →  noir-document
+```
+
+- `noir-execute` uses `context_search` to pull focused, ranked snippets instead of re-reading whole files, and `memory_recall` for anything you saved in a prior session.
+- `noir-document` ends with `memory_save`, so insights carry into the next session.
+- **Every gate decision is recorded** in `.noir/audit/`. State persists to the project-local store, so a new session can resume a task where the last one left off.
+
+You can watch the lifecycle from a terminal at any time:
+
+```bash
+noir status         # probe-only health; works even with the daemon down
+noir task status    # where the active task is in the lifecycle
+noir doctor         # config / store / embedder / native deps / provider status
+```
+
+That's the whole loop. You don't drive the gates by hand — you talk to the host, and the host drives Noir.
+
+## Switching discipline: full vs quick
+
+Separate from the transport, every task runs at a **discipline level** — `full` or `quick`. Set the default in `.noir/config.yml` (`mode: full` is the default after `noir init`), or override it per task:
+
+```bash
+noir task new --slug csv-export --mode quick
+```
+
+- **full** — spec + plan are authored **and reviewed** (gates), then execute, then verify (tests/build). Use this for real features and risky changes. This is the default.
+- **quick** — spec + plan are **skipped** (a `<quick-mode stub spec>` is written, and the spec/plan gates are recorded as `skipped`), execute runs, and the **verify gate still fires**. Use this for small, trivial, or spike tasks. It is not a free-for-all — it only skips formal planning, not verification.
+
+The host picks up the configured mode via the `noir-intake` skill / the `workflow_start` MCP tool. See [usage.md → SDD modes](usage.md#sdd-modes-full--quick) for the details.
+
+## Where to go next
+
+- [usage.md](usage.md) — the full reference: every command, the config schema, the `.noir/` + `~/.noir/` layout, and the privacy rules.
+- [architecture/README.md](architecture/README.md) — how the 10 packages fit together.
+- [roadmap.md](roadmap.md) — what ships in v1.0 vs v1.x (distribution/`npx` is S11).

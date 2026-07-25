@@ -8,7 +8,9 @@ The Noir toolkit's architecture, the decisions behind it, the design blueprint, 
 
 | Path | Purpose |
 |---|---|
-| [`architecture/`](architecture/) | How the 10-package toolkit fits together and how a host connects. Start here. |
+| [`getting-started.md`](getting-started.md) | First-use walkthrough: install, `noir init`, transports, your first session, switching full/quick. Start here for *using* Noir. |
+| [`usage.md`](usage.md) | The reference: transports, SDD modes, the full command tree, the config schema, the `.noir/` + `~/.noir/` layout, privacy rules. |
+| [`architecture/`](architecture/) | How the 10-package toolkit fits together and how a host connects. |
 | [`decisions/`](decisions/) | Architecture Decision Records (ADRs) — *why* a choice was made. |
 | [`specs/`](specs/) | The Noir design blueprint (`2026-07-23-noir-toolkit-design.md`). Per-slice design specs live under `superpowers/specs/`. |
 | [`superpowers/specs/`](superpowers/specs/) | Per-slice SDD design history (the brainstorm → spec record for each slice). |

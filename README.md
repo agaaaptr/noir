@@ -16,26 +16,38 @@ v1.0 is **release-ready / acceptance-complete** (slices S0–S9, 729/729 tests g
 
 See [`docs/roadmap.md`](docs/roadmap.md) for the living current-status, and [`docs/specs/2026-07-23-noir-toolkit-design.md`](docs/specs/2026-07-23-noir-toolkit-design.md) for the design blueprint.
 
-## Quick start
+## Getting started
+
+v1.0 is release-ready but **not yet on npm** — distribution (`npm publish`, `npx noir`, the marketplace listing, the SDK) is slice **S11**, deferred to v1.x. So **today** install is **from source** (this is the path for developers of Noir). Once S11 ships it becomes a one-liner: `npx noir init`.
 
 ```bash
-pnpm install
-pnpm build          # build all 10 packages
+# 1. Build the toolkit (Node ≥ 20, pnpm 9)
+git clone <noir-repo> && cd noir
+pnpm install && pnpm build          # native deps prebuilt; pnpm approve-builds if prompted
+pnpm --filter @noir-ai/cli link --global   # puts `noir` on PATH (the emitted .mcp.json calls `noir`)
 
-# Initialize a project (scaffolds .noir/ + emits builtin skills + host wiring)
-node packages/cli/dist/bin.js init
+# 2. Initialize a project (from the project you want Noir to manage)
+cd /path/to/your/project
+noir init                           # scaffolds .noir/ + emits 31 builtin skills + host wiring
 
-# Connect a host over MCP (stdio). Claude Code's .mcp.json entry becomes:
-#   { "mcpServers": { "noir": { "command": "noir", "args": ["mcp", "serve", "--stdio"] } } }
-node packages/cli/dist/bin.js mcp serve --stdio
+# 3. Open the project in Claude Code → it auto-spawns the Noir MCP server. That's it.
 ```
 
-Install the CLI globally (optional) to use `noir` instead of `node packages/cli/dist/bin.js`:
+`noir init` creates `.noir/` (`project.id`, `config.yml` as `host: claude` + `mode: full`, `NOIR.md`, the SQLite store), root `.mcp.json`, a managed `CLAUDE.md` `@import` block, and the **31 native `noir-*` skills** in `.claude/skills/`. **There is no plugin and no marketplace** — `noir init`/`noir sync` overwrite the `noir-*` namespace idempotently.
 
-```bash
-pnpm --filter @noir-ai/cli build
-# then run `noir`, or link/install @noir-ai/cli as you see fit
-```
+For the deep, copy-pasteable walkthrough (what each file is, daemon mode, your first session, switching full/quick), see **[docs/getting-started.md](docs/getting-started.md)**.
+
+### Two transports (how the server runs)
+
+- **stdio (default, recommended)** — Claude Code spawns `noir mcp serve --stdio` per session. Zero extra config; the server's lifecycle is the session.
+- **daemon (persistent HTTP, opt-in)** — `noir init --transport streamable-http --url http://127.0.0.1:<port>/mcp` + `noir daemon start`. Shared by the host **and** terminal CLI commands; persists across sessions. Killing it while connected breaks the link (no stdio fallback in v1).
+
+### Two SDD modes (discipline level)
+
+- **full (default)** — spec + plan authored **and reviewed**, then execute, then verify. For real features/risky changes.
+- **quick** — spec + plan **skipped**, execute, but **verify still fires**. For small/trivial/spike tasks. Override per task: `noir task new --slug <s> --mode quick`.
+
+Transports and modes are **independent** concerns. Full comparison, caveats, the command reference, the config schema, and the `.noir/` + `~/.noir/` layout live in **[docs/usage.md](docs/usage.md)**.
 
 ## What's in the box
 
@@ -143,6 +155,7 @@ This repo is itself developed with Claude Code; [`AGENTS.md`](AGENTS.md) holds t
 
 ## Documentation
 
+- **[Getting started](docs/getting-started.md)** · **[Usage reference](docs/usage.md)** — install, transports, SDD modes, commands, config.
 - [Roadmap & current status](docs/roadmap.md) · [Changelog](docs/CHANGELOG.md)
 - [Architecture](docs/architecture/) · [Decision records (ADRs)](docs/decisions/)
 - [Design blueprint](docs/specs/2026-07-23-noir-toolkit-design.md) · [SDD spec/plan history](docs/superpowers/)
