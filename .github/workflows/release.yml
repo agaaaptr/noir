@@ -112,5 +112,5 @@ jobs:
           if [ "${#tarballs[@]}" -eq 0 ]; then echo "No tarballs found"; exit 1; fi
           for tgz in "${tarballs[@]}"; do
             echo "Publishing $tgz (dist-tag: $DIST_TAG)"
-            npm publish "$tgz" --provenance --access public --tag "$DIST_TAG"
+            npm publish "./$tgz" --provenance --access public --tag "$DIST_TAG"
           done

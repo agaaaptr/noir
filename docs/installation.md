@@ -73,7 +73,9 @@ The script lives at [`scripts/install.sh`](../scripts/install.sh) in this repo a
 
 ## npm / pnpm / yarn / bun
 
-If you already have a Node package manager you prefer, skip the script and install directly. **Global** install puts `noir` on your PATH; re-running the same command upgrades in place.
+If you already have a Node package manager you prefer, skip the script and install directly. **Global** install puts `noir` on your PATH; re-running the same command upgrades in place. Every command below lives in its own copy-pasteable fenced block.
+
+At a glance (each command also appears in a block below):
 
 | Tool | Stable | Beta |
 |---|---|---|
@@ -81,6 +83,42 @@ If you already have a Node package manager you prefer, skip the script and insta
 | **pnpm** | `pnpm add -g @noir-ai/cli` | `pnpm add -g @noir-ai/cli@beta` |
 | **yarn** (classic) | `yarn global add @noir-ai/cli` | `yarn global add @noir-ai/cli@beta` |
 | **bun** | `bun add -g @noir-ai/cli` | `bun add -g @noir-ai/cli@beta` |
+
+### npm
+
+```bash
+# stable
+npm install -g @noir-ai/cli
+# beta
+npm install -g @noir-ai/cli@beta
+```
+
+### pnpm
+
+```bash
+# stable
+pnpm add -g @noir-ai/cli
+# beta
+pnpm add -g @noir-ai/cli@beta
+```
+
+### yarn (classic)
+
+```bash
+# stable
+yarn global add @noir-ai/cli
+# beta
+yarn global add @noir-ai/cli@beta
+```
+
+### bun
+
+```bash
+# stable
+bun add -g @noir-ai/cli
+# beta
+bun add -g @noir-ai/cli@beta
+```
 
 > **pnpm note:** pnpm gates native-module builds behind `pnpm approve-builds`. If `pnpm add -g @noir-ai/cli` prints a prompt about `onnxruntime-node` / `better-sqlite3` / `sqlite-vec`, run `pnpm approve-builds` and re-run. The native modules will not function until approved.
 
@@ -90,22 +128,38 @@ If you already have a Node package manager you prefer, skip the script and insta
 
 ## One-shot (no install)
 
-Run Noir once without adding anything to your PATH. Each tool fetches the package on first use and caches it:
+Run Noir once without adding anything to your PATH. Each tool fetches the package on first use and caches it. Append `@beta` for the beta channel.
 
+**npx** (npm)
 ```bash
-npx    @noir-ai/cli init       # npm
-pnpm   dlx @noir-ai/cli init   # pnpm
-yarn   dlx @noir-ai/cli init   # yarn (Berry)
-bunx       @noir-ai/cli init   # bun
+# stable
+npx @noir-ai/cli init
+# beta
+npx @noir-ai/cli@beta init
 ```
 
-Append `@beta` for the beta channel:
-
+**pnpm dlx** (pnpm)
 ```bash
-npx    @noir-ai/cli@beta init
-pnpm   dlx @noir-ai/cli@beta init
-yarn   dlx @noir-ai/cli@beta init
-bunx       @noir-ai/cli@beta init
+# stable
+pnpm dlx @noir-ai/cli init
+# beta
+pnpm dlx @noir-ai/cli@beta init
+```
+
+**yarn dlx** (yarn / Berry)
+```bash
+# stable
+yarn dlx @noir-ai/cli init
+# beta
+yarn dlx @noir-ai/cli@beta init
+```
+
+**bunx** (bun)
+```bash
+# stable
+bunx @noir-ai/cli init
+# beta
+bunx @noir-ai/cli@beta init
 ```
 
 This is the right choice when you want to try Noir in a throwaway project without committing to a global install, or when you'll always invoke it through your package manager's runner.

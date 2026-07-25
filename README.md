@@ -26,16 +26,57 @@ curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.
 
 Beta channel: append `| NOIR_CHANNEL=beta bash`. Pin a version: `| NOIR_VERSION=1.2.3 bash`. Safer than blind `curl | sh`: `curl -fsSL -o install.sh … && less install.sh && bash install.sh`.
 
-The alternatives, in one line each:
+The alternatives — every command below lives in its own fenced block so each is copy-pasteable (Homebrew is stable-only; use npm for beta):
 
-| Path | Stable | Beta |
-|---|---|---|
-| npm | `npm i -g @noir-ai/cli` | `npm i -g @noir-ai/cli@beta` |
-| pnpm | `pnpm add -g @noir-ai/cli` | `pnpm add -g @noir-ai/cli@beta` |
-| yarn | `yarn global add @noir-ai/cli` | `yarn global add @noir-ai/cli@beta` |
-| bun | `bun add -g @noir-ai/cli` | `bun add -g @noir-ai/cli@beta` |
-| one-shot (no install) | `npx @noir-ai/cli init` | `npx @noir-ai/cli@beta init` |
-| Homebrew (advanced, stable-only) | `brew tap agaaaptr/noir … && brew install noir` | — |
+**npm**
+```bash
+# stable
+npm install -g @noir-ai/cli
+# beta
+npm install -g @noir-ai/cli@beta
+```
+
+**pnpm**
+```bash
+# stable
+pnpm add -g @noir-ai/cli
+# beta
+pnpm add -g @noir-ai/cli@beta
+```
+
+**yarn** (classic)
+```bash
+# stable
+yarn global add @noir-ai/cli
+# beta
+yarn global add @noir-ai/cli@beta
+```
+
+**bun**
+```bash
+# stable
+bun add -g @noir-ai/cli
+# beta
+bun add -g @noir-ai/cli@beta
+```
+
+**One-shot** (no install — run `init` and exit):
+```bash
+npx    @noir-ai/cli init          # npm, stable
+npx    @noir-ai/cli@beta init     # npm, beta
+pnpm   dlx @noir-ai/cli init      # pnpm, stable
+pnpm   dlx @noir-ai/cli@beta init # pnpm, beta
+yarn   dlx @noir-ai/cli init      # yarn (Berry), stable
+yarn   dlx @noir-ai/cli@beta init # yarn (Berry), beta
+bunx   @noir-ai/cli init          # bun, stable
+bunx   @noir-ai/cli@beta init     # bun, beta
+```
+
+**Homebrew** (advanced, stable-only — beta via npm):
+```bash
+brew tap agaaaptr/noir https://github.com/agaaaptr/homebrew-noir
+brew install noir
+```
 
 **Requirements:** Node ≥ 20; native deps (better-sqlite3, sqlite-vec, onnxruntime-node) prebuilt on mac/linux/win x64 + arm64; first run downloads ~22 MB MiniLM to `~/.noir/models/`. Verify with `noir --version` / `noir doctor`. Full reference (every path, troubleshooting, the from-source build for repo developers) lives in **[docs/installation.md](docs/installation.md)**.
 
