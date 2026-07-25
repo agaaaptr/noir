@@ -141,24 +141,13 @@ describe('cursor adapter', () => {
     expect(cursorAdapter.emitContext(ctx)).toBe(emitAgentsMd(ctx));
   });
 
-  it('emitRules returns the .mdc content (frontmatter + pointer to RULES.md)', () => {
-    const mdc = cursorAdapter.emitRules?.(ctx) ?? '';
-    // Cursor .mdc frontmatter shape: leading --- , YAML, closing ---.
-    expect(mdc.startsWith('---\n')).toBe(true);
-    expect(mdc).toMatch(/^---\n[\s\S]*?\n---\n/);
-    // Required frontmatter keys for Cursor rule selection.
-    expect(mdc).toContain('description: Noir working rules');
-    expect(mdc).toContain('alwaysApply: false');
-    expect(mdc).toContain('globs:');
-    // Body points to the canonical rules (NOT an @-import — Cursor .mdc may
-    // not resolve them; the cli may inline in a later pass).
-    expect(mdc).toContain('.noir/rules/RULES.md');
-  });
-
-  it('emitRules uses a wildcard globs entry + alwaysApply false (agent-decided)', () => {
-    const mdc = cursorAdapter.emitRules?.(ctx) ?? '';
-    expect(mdc).toContain("  - '**/*'");
-    expect(mdc).toContain('alwaysApply: false');
+  it('has NO emitRules (cursor rules are delivered via AGENTS.md — no separate host-rules .mdc)', () => {
+    // The prior `noir-contract.mdc` host-rules pointer was REMOVED: it
+    // collided with the C3 cursor flat-skill prune of `noir-*.mdc` under
+    // `.cursor/rules/`. Cursor's rules now come via AGENTS.md's
+    // `@.noir/rules/RULES.md` import (same universal surface as agents-md/
+    // opencode), so the cursor adapter no longer owns a rules emission.
+    expect(cursorAdapter.emitRules).toBeUndefined();
   });
 
   it('skillsDir is .cursor/rules (skills compile to .mdc here)', () => {
@@ -217,14 +206,17 @@ describe('opencode adapter', () => {
     expect(json.mcpServers).toBeUndefined();
   });
 
-  it('emitMcpConfig (http) produces {type:"http", url}', () => {
+  it('emitMcpConfig (http) produces {type:"remote", url} — opencode spells it "remote", NOT "http" (C1)', () => {
+    // Verified against https://opencode.ai/docs/mcp-servers/: "Add remote MCP
+    // servers by setting `type` to \"remote\"". The prior `type:'http'` shape
+    // was wrong — opencode has no `'http'`/`'sse'` enum value.
     const json = JSON.parse(
       opencodeAdapter.emitMcpConfig(ctx, {
         transport: 'streamable-http',
         url: 'http://127.0.0.1:4321/mcp',
       }),
     );
-    expect(json.mcp.noir).toEqual({ type: 'http', url: 'http://127.0.0.1:4321/mcp' });
+    expect(json.mcp.noir).toEqual({ type: 'remote', url: 'http://127.0.0.1:4321/mcp' });
   });
 
   it('emitMcpConfig merges an external-mcp stdio integration under its serverName', () => {
@@ -248,7 +240,7 @@ describe('opencode adapter', () => {
     });
   });
 
-  it('emitMcpConfig merges an external-mcp http integration', () => {
+  it('emitMcpConfig merges an external-mcp http integration (type:"remote"; C1)', () => {
     const integration: IntegrationMcpEmission = {
       serverName: 'noir-linear',
       transport: 'http',
@@ -257,7 +249,37 @@ describe('opencode adapter', () => {
     const json = JSON.parse(
       opencodeAdapter.emitMcpConfig(ctx, { transport: 'streamable-http' }, integration),
     );
-    expect(json.mcp['noir-linear']).toEqual({ type: 'http', url: 'https://mcp.linear.app/sse' });
+    expect(json.mcp['noir-linear']).toEqual({ type: 'remote', url: 'https://mcp.linear.app/sse' });
+  });
+
+  it('C2: opencode env vars land under `environment:` (NOT `env:`) — verified verbatim from opencode docs', () => {
+    // Opencode's server entries use the `environment:` key for env vars (the
+    // `.mcp.json` / `.cursor/mcp.json` / `.gemini/mcp.json` family keeps `env:`
+    // — correct for THOSE hosts; this assertion guards opencode's spelling).
+    const stdioWithEnv: IntegrationMcpEmission = {
+      serverName: 'noir-github',
+      command: 'noir-integration-github',
+      args: ['serve'],
+      transport: 'stdio',
+      env: { GITHUB_TOKEN: 'secret' },
+    };
+    const stdioJson = JSON.parse(
+      opencodeAdapter.emitMcpConfig(ctx, { transport: 'stdio' }, stdioWithEnv),
+    );
+    expect(stdioJson.mcp['noir-github'].environment).toEqual({ GITHUB_TOKEN: 'secret' });
+    expect(stdioJson.mcp['noir-github'].env).toBeUndefined();
+
+    const httpWithEnv: IntegrationMcpEmission = {
+      serverName: 'noir-linear',
+      transport: 'http',
+      url: 'https://mcp.linear.app/sse',
+      env: { LINEAR_TOKEN: 'secret' },
+    };
+    const httpJson = JSON.parse(
+      opencodeAdapter.emitMcpConfig(ctx, { transport: 'streamable-http' }, httpWithEnv),
+    );
+    expect(httpJson.mcp['noir-linear'].environment).toEqual({ LINEAR_TOKEN: 'secret' });
+    expect(httpJson.mcp['noir-linear'].env).toBeUndefined();
   });
 });
 

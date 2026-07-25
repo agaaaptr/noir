@@ -199,10 +199,15 @@ export async function emitSkillsToDir(
   let references = 0;
   const emitted: string[] = [];
   const integrationNames: string[] = [];
+  // C3: cursor skills land FLAT under targetDir (`.cursor/rules/<name>.mdc`) —
+  // Cursor's rule loader scans `.cursor/rules/*.mdc` and does NOT recurse into
+  // per-name subdirs. The verbatim branch (claude/agents-md/gemini/opencode)
+  // keeps the canonical nested layout (`<name>/SKILL.md` + `<name>/references/`).
+  const flat = target === 'cursor';
   for (const s of builtins) {
     const compiled = compileSkill(s, target);
     for (const f of compiled.files) {
-      const dest = join(targetDir, s.name, ...f.path);
+      const dest = flat ? join(targetDir, ...f.path) : join(targetDir, s.name, ...f.path);
       await mkdir(dirname(dest), { recursive: true });
       await writeFile(dest, f.content, 'utf8');
       if (f.path[0] !== 'SKILL.md') references++;
@@ -213,7 +218,7 @@ export async function emitSkillsToDir(
     for (const i of integrations) {
       const compiled = compileIntegration(i, target);
       for (const f of compiled.files) {
-        const dest = join(targetDir, i.name, ...f.path);
+        const dest = flat ? join(targetDir, ...f.path) : join(targetDir, i.name, ...f.path);
         await mkdir(dirname(dest), { recursive: true });
         await writeFile(dest, f.content, 'utf8');
         if (f.path[0] !== 'SKILL.md') references++;
@@ -226,33 +231,57 @@ export async function emitSkillsToDir(
     }
   }
 
-  // --- T2: prune stale `noir-*` dirs from the managed namespace -------------
+  // --- T2: prune stale `noir-*` entries from the managed namespace ----------
   // Idempotent hygiene: a previous Noir version may have shipped a builtin that
   // was since renamed/removed (e.g. `noir-old-thing`). Each `noir sync`
-  // re-writes the CURRENT pack but a stale dir would otherwise linger forever.
-  // After emit, scan `targetDir` for `noir-`-prefixed dirs NOT in the emitted
+  // re-writes the CURRENT pack but a stale entry would otherwise linger forever.
+  // After emit, scan `targetDir` for `noir-`-prefixed entries NOT in the emitted
   // set and remove them. ONLY the `noir-` namespace — user skills without the
   // prefix are NEVER touched (they are not Noir's to manage).
+  //
+  // C3 shape awareness: the nested layout (claude/agents-md/gemini/opencode)
+  // writes one `noir-<name>/` DIR per skill → prune stale DIRS. The cursor flat
+  // layout writes one `noir-<name>.mdc` FILE per skill → prune stale .mdc FILES.
+  // Cursor ALSO clears legacy pre-C3 `noir-<name>/` dirs (nesting residue) so an
+  // upgrade from nested→flat does not leave orphans under `.cursor/rules/`.
   const keep = new Set(emitted);
   const pruned: string[] = [];
-  let entries: string[] = [];
+  let dirEntries: import('node:fs').Dirent[] = [];
   try {
-    entries = await readdir(targetDir, { withFileTypes: true })
-      .then((ents) => ents.filter((e) => e.isDirectory() && e.name.startsWith('noir-')))
-      .then((ents) => ents.map((e) => e.name));
+    dirEntries = await readdir(targetDir, { withFileTypes: true });
   } catch {
-    entries = []; // targetDir vanished between the mkdir above and now — nothing to prune.
+    dirEntries = []; // targetDir vanished between the mkdir above and now — nothing to prune.
   }
-  for (const name of entries) {
-    if (keep.has(name)) continue;
-    // Best-effort removal: a failure to remove a stale dir must NOT fail the
+  for (const ent of dirEntries) {
+    if (!ent.name.startsWith('noir-')) continue;
+    if (flat) {
+      // Cursor flat layout — prune stale FILES (`noir-<name>.mdc`) + legacy
+      // nested DIRS (`noir-<name>/`) from a pre-C3 sync.
+      if (ent.isFile()) {
+        const mdcMatch = ent.name.match(/^(noir-[a-z0-9]+(?:-[a-z0-9]+)*)\.mdc$/);
+        const skillName = mdcMatch?.[1];
+        if (skillName && keep.has(skillName)) continue;
+      } else if (ent.isDirectory()) {
+        // Legacy pre-C3 cursor nested dir — clear unconditionally (the flat
+        // layout has NO `noir-*/` dirs under .cursor/rules/; any such dir is
+        // stale by definition, regardless of name overlap with the current
+        // pack — the fresh `.mdc` file is what's kept, not the dir).
+      } else {
+        continue;
+      }
+    } else {
+      // Nested layout — prune stale DIRS only (the canonical shape).
+      if (!ent.isDirectory()) continue;
+      if (keep.has(ent.name)) continue;
+    }
+    // Best-effort removal: a failure to remove a stale entry must NOT fail the
     // emit (the fresh skills are already on disk and valid). Surface it via the
     // summary so a caller can warn; the next sync will try again.
     try {
-      await rm(join(targetDir, name), { recursive: true, force: true });
-      pruned.push(name);
+      await rm(join(targetDir, ent.name), { recursive: true, force: true });
+      pruned.push(ent.name);
     } catch {
-      // Swallow — stale-dir pruning is hygienic, not correctness-critical.
+      // Swallow — stale-entry pruning is hygienic, not correctness-critical.
     }
   }
 

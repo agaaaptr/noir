@@ -30,10 +30,11 @@ import type { WriteMode } from './writers.js';
  * the byte-for-byte output MUST stay equivalent for first-run init. S10 makes
  * the manifest HOST-PARAMETRIC: {@link buildManifest} now returns host-agnostic
  * entries + a {@link buildHostArtifacts} call that materializes per-host files
- * (AGENTS.md always; CLAUDE.md/GEMINI.md/.cursor/.../opencode.json per host)
- * via the resolved adapter. The claude output stays byte-identical to v1.1
- * EXCEPT the additive root `AGENTS.md` (the 32-platform universal standard —
- * Claude reads it natively, and every other host already required it).
+ * (CLAUDE.md/GEMINI.md for claude/gemini; AGENTS.md + .cursor/.../opencode.json
+ * for agents-md/cursor/opencode) via the resolved adapter. The claude default
+ * `noir init` stays BYTE-IDENTICAL to v1.1 — fix-wave I1 REMOVED the additive
+ * root `AGENTS.md` (it was double-importing `.noir/NOIR.md` + RULES.md via
+ * CLAUDE.md's existing @-imports; claude's native surface is CLAUDE.md alone).
  *
  * Path-derivation: repo-relative POSIX strings that mirror
  * `@noir-ai/core/layout.ts` (`paths.*`). The test suite asserts
@@ -120,7 +121,9 @@ export const MANIFEST_PATH_PARITY: ReadonlyArray<
  * S10 structure: the manifest is now `[...hostAgnosticEntries(ctx), ...hostSpecificEntries(ctx)]`
  * where the host-specific half comes from {@link buildHostArtifacts} (driven by
  * `resolveAdapter(ctx.host)`). The host-agnostic half is unchanged from v1.1
- * (canonical `.noir/` store + ignore files).
+ * (canonical `.noir/` store + ignore files). Fix-wave I1: {@link buildHostArtifacts}
+ * emits AGENTS.md ONLY for agents-md/cursor/opencode (claude/gemini use their
+ * own CLAUDE.md/GEMINI.md — emitting AGENTS.md too would double-import .noir/).
  *
  * Mode-tagging rationale per artifact (see S-T1 report for the full table):
  *  - `project.id`  → skipIfExists. First init writes a fresh id; re-init MUST
@@ -220,11 +223,19 @@ export interface BuildHostArtifactsContext {
  * SINGLE entry point — no scattered `if (host === '…')` conditionals in the
  * orchestrator. Returns entries in emission order:
  *
- *   1. **AGENTS.md** (universal, every host) — `regenerate` at
+ *   1. **AGENTS.md** (universal baseline) — `regenerate` at
  *      `adapter.agentsMdPath(ctx)` (default `<root>/AGENTS.md`), content from
- *      the shared `emitAgentsMd(ctx)` helper. AGENTS.md is the 32-platform
- *      baseline (Claude Code, Codex, Cursor, Gemini CLI, Junie, … all read it
- *      natively), so every host — including claude — emits it.
+ *      the shared `emitAgentsMd(ctx)` helper. Emitted ONLY for hosts whose
+ *      `emitContext` IS the AGENTS.md content (agents-md, cursor, opencode) —
+ *      for them AGENTS.md is the SINGLE native context surface AND carries the
+ *      Noir working rules via its `@.noir/rules/RULES.md` import. claude and
+ *      gemini have their OWN native context file (CLAUDE.md / GEMINI.md) that
+ *      `@`-imports the canonical `.noir/` sources; emitting AGENTS.md too
+ *      would IMPORT THOSE FILES TWICE into the host's context (2× tokens +
+ *      drift risk), so for those two hosts AGENTS.md is SKIPPED. (Claude Code
+ *      still discovers AGENTS.md at the repo root when present — users who
+ *      want the universal file can drop one in by hand; Noir's auto-emission
+ *      stays single-source per host.)
  *   2. **Host-native context file** — emitted ONLY for hosts whose `emitContext`
  *      is NOT the AGENTS.md content (i.e. the host has its OWN context file
  *      with a distinct syntax). Concretely: claude → `CLAUDE.md` (CONTEXT +
@@ -232,11 +243,14 @@ export interface BuildHostArtifactsContext {
  *      `GEMINI.md` (CONTEXT + RULES managed blocks with Gemini's bare `@`
  *      import syntax). For `agents-md`/`cursor`/`opencode` the context IS the
  *      AGENTS.md (already emitted in step 1) → SKIP to avoid a duplicate.
- *   3. **Host rules** (separate file, when applicable) — cursor →
- *      `.cursor/rules/noir-rules.mdc` (`adapter.emitRules(ctx)`, regenerate).
- *      Claude's rules live IN CLAUDE.md (step 2); gemini's IN GEMINI.md (step
- *      2); agents-md/opencode's IN AGENTS.md (step 1) — no separate file.
- *   4. **Host MCP config** — `regenerate` at `adapter.mcpConfigPath(ctx)`
+ *      Rules live INSIDE the host's context file: claude's in CLAUDE.md,
+ *      gemini's in GEMINI.md, agents-md/cursor/opencode's in AGENTS.md — NO
+ *      host emits a separate rules file. (The prior cursor
+ *      `.cursor/rules/noir-contract.mdc` host-rules pointer was REMOVED: it
+ *      collided with the C3 cursor flat-skill prune of `noir-*.mdc` under
+ *      `.cursor/rules/`, and cursor's rules are already delivered via
+ *      AGENTS.md's `@.noir/rules/RULES.md` import.)
+ *   3. **Host MCP config** — `regenerate` at `adapter.mcpConfigPath(ctx)`
  *      (default `<root>/.mcp.json` for claude), content from
  *      `adapter.emitMcpConfig(ctx, {transport,url})`. Claude KEEPS the template
  *      path (byte-identical parity with v1.1 + the .mcp.json parity test that
@@ -245,8 +259,8 @@ export interface BuildHostArtifactsContext {
  *
  * Skills are OUT OF SCOPE here — the cli composes `emitSkillsToDir` with
  * `adapter.skillsDir` + the host's `CompileTarget` (claude → `.claude/skills/`
- * as SKILL.md; cursor → `.cursor/rules/<skill>/<skill>.mdc`; gemini/agents-md/
- * opencode have no skill dir → skip).
+ * as SKILL.md; cursor → `.cursor/rules/<skill>.mdc` FLAT per C3; gemini/
+ * agents-md/opencode have no skill dir → skip).
  */
 export function buildHostArtifacts(
   adapter: HostAdapter,
@@ -256,14 +270,22 @@ export function buildHostArtifacts(
   const host = adapter.id;
   const entries: ManifestEntry[] = [];
 
-  // 1. Universal AGENTS.md — always emitted (every host reads it).
-  entries.push({
-    path: hostRel(adapter.agentsMdPath?.(ectx) ?? join(ctx.root, AGENTS_MD_FILENAME), ctx.root),
-    mode: 'regenerate',
-    host,
-    content: emitAgentsMd(ectx),
-    description: `universal AGENTS.md (32-platform baseline; ${host} reads it natively)`,
-  });
+  // 1. AGENTS.md — emitted for hosts whose emitContext IS the AGENTS.md content
+  //    (agents-md, cursor, opencode). SKIPPED for claude/gemini: their native
+  //    CLAUDE.md / GEMINI.md already @-import the canonical .noir/ sources, so
+  //    a root AGENTS.md would double-import (2× context tokens, drift risk).
+  //    This also restores the claude default `noir init` to byte-identity with
+  //    v1.1 (the prior additive AGENTS.md delta is removed).
+  const emitsAgentsMd = host === 'agents-md' || host === 'cursor' || host === 'opencode';
+  if (emitsAgentsMd) {
+    entries.push({
+      path: hostRel(adapter.agentsMdPath?.(ectx) ?? join(ctx.root, AGENTS_MD_FILENAME), ctx.root),
+      mode: 'regenerate',
+      host,
+      content: emitAgentsMd(ectx),
+      description: `AGENTS.md (${host}'s native context surface; @-imports .noir/)`,
+    });
+  }
 
   // 2. Host-native context file (when distinct from AGENTS.md) + folded rules.
   switch (host) {
@@ -315,26 +337,13 @@ export function buildHostArtifacts(
     case 'cursor':
     case 'opencode':
       // emitContext IS the AGENTS.md content (already emitted in step 1) →
-      // no separate context file. Rules either folded into AGENTS.md
-      // (agents-md/opencode — the `@.noir/rules/RULES.md` import covers them)
-      // OR emitted as a separate .mdc below (cursor — step 3).
+      // no separate context file. Rules are carried by AGENTS.md's
+      // `@.noir/rules/RULES.md` import (agents-md/cursor/opencode share that
+      // universal surface — NO host emits a separate rules file).
       break;
   }
 
-  // 3. Host rules as a SEPARATE file (only cursor — its .mdc rule format is
-  //    distinct from the AGENTS.md body, and the agent decides whether to
-  //    apply it via the `description` frontmatter field).
-  if (host === 'cursor' && adapter.emitRules) {
-    entries.push({
-      path: '.cursor/rules/noir-rules.mdc',
-      mode: 'regenerate',
-      host,
-      content: adapter.emitRules(ectx),
-      description: 'Cursor noir-rules .mdc (agent-decided via description; alwaysApply:false)',
-    });
-  }
-
-  // 4. Host MCP config. Claude keeps the template path (byte-identical parity
+  // 3. Host MCP config. Claude keeps the template path (byte-identical parity
   //    gate); other hosts use adapter.emitMcpConfig directly.
   const mcpAbs = adapter.mcpConfigPath?.(ectx) ?? join(ctx.root, '.mcp.json');
   const mcpRel = hostRel(mcpAbs, ctx.root);

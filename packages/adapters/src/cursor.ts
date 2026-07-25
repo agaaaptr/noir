@@ -10,19 +10,19 @@ import type {
 
 /**
  * The `cursor` host adapter — Cursor. Cursor reads the universal `AGENTS.md`
- * for context (same content as every other host); the Noir working rules land
- * as a Cursor `.mdc` rule file the cli writes to `.cursor/rules/noir-rules.mdc`.
- * Skills compile to `.mdc` in `.cursor/rules/` via `compileSkill(_, 'cursor')`
- * (the skills compiler owns the per-skill transform; the cli owns writing them
- * to `skillsDir`). MCP config lands at `.cursor/mcp.json`.
+ * for context (same content as every other host); that file's
+ * `@.noir/rules/RULES.md` import IS the Noir working-rules surface for cursor
+ * (NO separate `.cursor/rules/noir-contract.mdc` host-rules pointer — that
+ * file was REMOVED: it was `noir-`-prefixed and the C3 cursor flat-skill prune
+ * in `emitSkillsToDir` deleted it on every `noir init/create/sync --host
+ * cursor`). Skills compile to FLAT `.mdc` in `.cursor/rules/` via
+ * `compileSkill(_, 'cursor')` (one file per skill, no per-name subdir). MCP
+ * config lands at `.cursor/mcp.json`.
  *
- * `emitRules` returns the `.mdc` CONTENT for the Noir rules file — frontmatter
- * (`description` / `globs` / `alwaysApply: false`) + a pointer to the canonical
- * `.noir/rules/RULES.md`. Cursor's `.mdc` format does not reliably resolve
- * `@`-imports, so we POINT to the rules (the cli may choose to inline in a
- * later pass — the contract here is content shape, not inlining policy).
- * `alwaysApply: false` is the spec's locked default — the agent decides whether
- * to pull the rule via the `description`.
+ * `emitContext` returns the universal AGENTS.md content (the single native
+ * context surface for cursor). There is NO `emitRules` here — cursor's rules
+ * are delivered via AGENTS.md's `@.noir/rules/RULES.md` import, identical to
+ * agents-md/opencode.
  */
 export const cursorAdapter: HostAdapter = {
   id: 'cursor',
@@ -32,22 +32,6 @@ export const cursorAdapter: HostAdapter = {
   emitContext(ctx: EmitContext): string {
     // Cursor reads AGENTS.md — same universal content as every other host.
     return emitAgentsMd(ctx);
-  },
-  emitRules(_ctx: EmitContext): string {
-    // The noir-rules .mdc — frontmatter with a wildcard `globs` entry +
-    // `alwaysApply: false` (the agent decides via `description`). Body POINTS
-    // to the canonical RULES.md. Hand-rolled YAML (fixed strings, no special
-    // chars) — avoids adding a `yaml` dep to adapters for one stable shape.
-    return (
-      '---\n' +
-      'description: Noir working rules\n' +
-      'globs:\n' +
-      "  - '**/*'\n" +
-      'alwaysApply: false\n' +
-      '---\n' +
-      '# Noir working rules\n\n' +
-      'See `.noir/rules/RULES.md` for the canonical Noir working rules.\n'
-    );
   },
   skillsDir(ctx: EmitContext): string {
     // Skills compile to `.mdc` here (via `compileSkill(_, 'cursor')` in skills).

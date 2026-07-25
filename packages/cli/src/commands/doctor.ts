@@ -81,11 +81,12 @@ export interface DoctorPayload {
   } | null;
   /** S10 host report. `null` when the project isn't initialized (no resolved
    *  host); otherwise carries the active `host` + the list of repo-relative
-   *  primary artifact paths the doctor verified (AGENTS.md always; the host's
-   *  native context file when distinct from AGENTS.md; cursor's noir-rules
-   *  .mdc; the host's MCP config). The check row is `ok` when all present,
-   *  `warn` (NEVER `fail`) when any are missing — re-running `noir sync`
-   *  restores them. */
+   *  primary artifact paths the doctor verified (AGENTS.md for agents-md/
+   *  cursor/opencode; the host's native context file when distinct from
+   *  AGENTS.md (claude → CLAUDE.md, gemini → GEMINI.md); the host's MCP
+   *  config). The check row is `ok` when
+   *  all present, `warn` (NEVER `fail`) when any are missing — re-running
+   *  `noir sync` restores them. */
   host: { active: HostId; expected: string[]; missing: string[] } | null;
   /** S11 publish-readiness report (repo-developer-facing, advisory). `null`
    *  when doctor is NOT running from a monorepo checkout (a global install has
@@ -482,13 +483,18 @@ function summarize(checks: CheckResult[]): DoctorPayload['summary'] {
 /**
  * S10 — host-artifacts presence check. Reports the ACTIVE host (read from
  * `project.config.host`) + verifies the host's primary emission paths exist on
- * disk. The expected set is the SAME matrix `buildHostArtifacts` emits:
+ * disk. The expected set mirrors `buildHostArtifacts` in @noir-ai/create:
  *
- *   - AGENTS.md (always — universal baseline).
+ *   - AGENTS.md for the hosts that emit it (agents-md/cursor/opencode — their
+ *     native context surface IS AGENTS.md). claude/gemini do NOT emit AGENTS.md
+ *     (their CLAUDE.md/GEMINI.md @-import the canonical .noir/ sources; a root
+ *     AGENTS.md would double-import them — fix-wave I1 removed that delta).
  *   - The host's native context file when distinct from AGENTS.md
  *     (claude → CLAUDE.md; gemini → GEMINI.md; agents-md/cursor/opencode →
- *     none, AGENTS.md IS the context).
- *   - cursor's `.cursor/rules/noir-rules.mdc` (the host rules .mdc).
+ *     none, AGENTS.md IS the context). Cursor's working-rules ride AGENTS.md's
+ *     `@.noir/rules/RULES.md` import — NO separate `.cursor/rules/noir-contract.mdc`
+ *     host-rules pointer (it was `noir-`-prefixed and the C3 cursor flat-skill
+ *     prune deleted it on every sync).
  *   - The host's MCP config (.mcp.json / .gemini/mcp.json / .cursor/mcp.json /
  *     opencode.json).
  *
@@ -519,13 +525,19 @@ function checkHostArtifacts(
   // restore with `noir sync`. Kept inline (not imported) so doctor stays a
   // READ-ONLY health probe with zero write-side coupling.
   const expected: string[] = [];
-  // AGENTS.md (universal).
-  expected.push(relOr(adapter.agentsMdPath?.(ectx) ?? 'AGENTS.md', root));
+  // AGENTS.md — only for hosts whose emitContext IS the AGENTS.md (I1: claude/
+  // gemini skip it — their native context file already covers .noir/).
+  const emitsAgentsMd = host === 'agents-md' || host === 'cursor' || host === 'opencode';
+  if (emitsAgentsMd) {
+    expected.push(relOr(adapter.agentsMdPath?.(ectx) ?? 'AGENTS.md', root));
+  }
   // Host-native context file (when distinct from AGENTS.md).
   if (host === 'claude') expected.push('CLAUDE.md');
   else if (host === 'gemini') expected.push('GEMINI.md');
-  // Cursor's noir-rules .mdc (the host rules emission).
-  if (host === 'cursor') expected.push('.cursor/rules/noir-rules.mdc');
+  // Cursor has NO separate host-rules .mdc — the prior `noir-contract.mdc`
+  // pointer was REMOVED (it was `noir-`-prefixed, so the C3 cursor flat-skill
+  // prune in emitSkillsToDir deleted it on every noir init/create/sync).
+  // Cursor's rules ride AGENTS.md's `@.noir/rules/RULES.md` import instead.
   // Host MCP config (fallback .mcp.json for claude/agents-md).
   expected.push(relOr(adapter.mcpConfigPath?.(ectx) ?? '.mcp.json', root));
 
@@ -736,13 +748,27 @@ export function checkPublish(
   return { checked, issues };
 }
 
-/** Repo-relative POSIX form of `abs` under `root` (defensive: if `abs` is
- *  already relative, return it as-is — doctor deals with literal paths like
- *  `'AGENTS.md'` from buildHostArtifacts' default fallback). */
+/** Repo-relative POSIX form of `abs` under `root`. Defensive (N2): rejects
+ *  paths that escape `root` — mirrors `hostRel` in @noir-ai/create/manifest.ts.
+ *  A future adapter that returns a stray path fails loudly here instead of
+ *  producing a misleading "missing" row for a path doctor would never probe.
+ *  Relative literals (e.g. `'AGENTS.md'`, `'.mcp.json'`) pass through unchanged
+ *  AFTER the `..`-escape check so a buggy literal could not exfiltrate either. */
 function relOr(abs: string, root: string): string {
-  if (!abs.startsWith('/')) return abs.replace(/\\/g, '/');
-  const rel = relative(root, abs);
-  return rel.replace(/\\/g, '/');
+  const posix = abs.replace(/\\/g, '/');
+  if (posix.startsWith('/')) {
+    const rel = relative(root, abs).replace(/\\/g, '/');
+    if (rel.length === 0 || rel.startsWith('..') || rel.startsWith('/')) {
+      throw new Error(`doctor: host path '${abs}' is not under root '${root}'`);
+    }
+    return rel;
+  }
+  // Already-relative literal: still reject `..` segments (a `../etc/passwd`
+  // literal from a buggy adapter must not silently pass through).
+  if (posix.split('/').some((seg) => seg === '..')) {
+    throw new Error(`doctor: host path '${abs}' escapes root '${root}'`);
+  }
+  return posix;
 }
 
 /** Join `root` with a repo-relative POSIX path for an existsSync probe. */

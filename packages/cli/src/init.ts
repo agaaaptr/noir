@@ -77,7 +77,9 @@ async function emitHostSkills(root: string, host: HostId): Promise<void> {
   const adapter = resolveAdapter(host);
   const skillsDir = adapter.skillsDir?.({ root });
   if (skillsDir === undefined) {
-    process.stderr.write(`Host '${host}' has no skill emitter; skipping skills.\n`);
+    // N1: standardized wording — same phrase across init/sync/create so logs
+    // grep uniformly. (Pre-N1 each command phrased this differently.)
+    process.stderr.write(`host '${host}' has no skill emitter; skipping skills\n`);
     return;
   }
   const target: CompileTarget = host;

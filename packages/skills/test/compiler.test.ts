@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -206,6 +207,82 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     for (const target of ['claude', 'agents-md', 'gemini', 'cursor', 'opencode'] as const) {
       expect(() => compileSkill(skill, target)).not.toThrow();
     }
+  });
+
+  // C3 — cursor skills must emit FLAT (.cursor/rules/<name>.mdc), NOT nested.
+  // Cursor's rule loader scans `.cursor/rules/*.mdc` and does NOT recurse into
+  // per-name subdirs; the prior nested `<name>/<name>.mdc` layout left skills
+  // invisible to Cursor. The verbatim branch keeps the canonical nested shape.
+  it('C3: emitSkillsToDir(cursor) writes .mdc FLAT under targetDir (no <name>/ subdir)', async () => {
+    await writeSkill(
+      'noir-x',
+      '---\nname: noir-x\ndescription: Use when testing flat cursor.\n---\n# noir-x\nbody',
+    );
+    const target = join(fixture, '_out');
+    await emitSkillsToDir(target, { builtinDir: fixture, target: 'cursor' });
+
+    // FLAT: `<target>/noir-x.mdc` exists; `<target>/noir-x/noir-x.mdc` does NOT.
+    const flatPath = join(target, 'noir-x.mdc');
+    const nestedPath = join(target, 'noir-x', 'noir-x.mdc');
+    expect(existsSync(flatPath)).toBe(true);
+    expect(existsSync(nestedPath)).toBe(false);
+    // The flat .mdc carries the compiled cursor shape (frontmatter + body).
+    const mdc = await readFile(flatPath, 'utf8');
+    expect(mdc).toContain('alwaysApply: false');
+    expect(mdc).toContain('# noir-x');
+  });
+
+  it('C3: emitSkillsToDir(claude) keeps the canonical NESTED layout (regression anchor)', async () => {
+    // The flat fix is cursor-only; the verbatim branch (claude/agents-md/gemini/
+    // opencode) still lands at `<target>/<name>/SKILL.md` (+ references/).
+    await writeSkill(
+      'noir-x',
+      '---\nname: noir-x\ndescription: Use when testing nested.\n---\n# noir-x\nbody',
+    );
+    const target = join(fixture, '_out');
+    await emitSkillsToDir(target, { builtinDir: fixture, target: 'claude' });
+
+    expect(existsSync(join(target, 'noir-x', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(target, 'noir-x.mdc'))).toBe(false);
+    expect(existsSync(join(target, 'noir-x.mdc', 'SKILL.md'))).toBe(false);
+  });
+
+  it('C3+T2: cursor flat layout prunes stale .mdc FILES + legacy nested DIRS', async () => {
+    // Pack ships only noir-keep. Pre-populate targetDir with:
+    //   - noir-stale.mdc         (stale FLAT file — must be pruned)
+    //   - noir-keep-legacy/      (legacy nested dir from pre-C3 cursor sync —
+    //                             must be pruned even if name overlaps, since
+    //                             the flat layout has no noir-*/ dirs at all)
+    //   - my-custom-rule.mdc     (user-authored — UNTOUCHED, no noir- prefix)
+    await writeSkill(
+      'noir-keep',
+      '---\nname: noir-keep\ndescription: Use when keeping.\n---\n# keep',
+    );
+    const target = join(fixture, '_out');
+    const { mkdir, writeFile } = await import('node:fs/promises');
+    // The other emitSkillsToDir tests rely on emitSkillsToDir itself creating
+    // `target/` (it mkdir's recursively on emit). This test pre-populates
+    // `target/` with stale files BEFORE the emit call to assert the prune — so
+    // it must mkdir `target/` itself (otherwise the writeFile below ENOENTs).
+    await mkdir(target, { recursive: true });
+    await writeFile(join(target, 'noir-stale.mdc'), 'stale flat content', 'utf8');
+    await mkdir(join(target, 'noir-keep-legacy'), { recursive: true });
+    await writeFile(join(target, 'noir-keep-legacy', 'noir-keep-legacy.mdc'), 'legacy', 'utf8');
+    await writeFile(join(target, 'my-custom-rule.mdc'), 'user-authored', 'utf8');
+
+    const summary = await emitSkillsToDir(target, { builtinDir: fixture, target: 'cursor' });
+
+    expect(summary.emitted).toContain('noir-keep');
+    // Stale flat .mdc pruned; legacy nested dir pruned.
+    // Cursor flat layout prunes stale `.mdc` FILES (reported WITH extension)
+    // + legacy nested `noir-*/` DIRS (reported as dir names, no extension).
+    expect(summary.pruned.sort()).toEqual(['noir-keep-legacy', 'noir-stale.mdc']);
+    expect(existsSync(join(target, 'noir-stale.mdc'))).toBe(false);
+    expect(existsSync(join(target, 'noir-keep-legacy'))).toBe(false);
+    // The fresh flat .mdc is in place.
+    expect(existsSync(join(target, 'noir-keep.mdc'))).toBe(true);
+    // User-authored rule UNTOUCHED.
+    expect(await readFile(join(target, 'my-custom-rule.mdc'), 'utf8')).toBe('user-authored');
   });
   it('emitSkillsToDir writes every skill + reference, idempotently', async () => {
     await writeSkill('noir-a', '---\nname: noir-a\ndescription: Use when a.\n---\n# a');

@@ -109,6 +109,23 @@ describe('emitAgentsMd — the universal shared helper', () => {
     expect(md).toContain('`noir sync`');
   });
 
+  it('I2: carries an inline fallback summary BEFORE the @-imports (for readers that do not resolve @)', () => {
+    // The fallback sits BEFORE the @-imports so a viewer that does NOT resolve
+    // `@`-imports still gets a one-glance pointer to .noir/. Order matters:
+    // fallback first, then the canonical imports.
+    const md = emitAgentsMd({ root: '/tmp/demo' });
+    const fallbackIdx = md.indexOf('Noir manages this project');
+    const noirImportIdx = md.indexOf('@.noir/NOIR.md');
+    const rulesImportIdx = md.indexOf('@.noir/rules/RULES.md');
+    expect(fallbackIdx).toBeGreaterThanOrEqual(0);
+    expect(noirImportIdx).toBeGreaterThan(fallbackIdx);
+    expect(rulesImportIdx).toBeGreaterThan(fallbackIdx);
+    // The fallback names both canonical sources + the re-emit command.
+    expect(md).toContain('`.noir/NOIR.md`');
+    expect(md).toContain('`.noir/rules/RULES.md`');
+    expect(md).toMatch(/re-emit host files/);
+  });
+
   it('produces a stable shape (byte-identical across hosts — the SSOT invariant)', () => {
     // Two different roots produce headings that differ ONLY in the project name
     // — the body (guidance + @-imports) is identical. This is the S10

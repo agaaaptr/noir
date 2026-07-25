@@ -46,7 +46,9 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<void> 
   const adapter = resolveAdapter(host);
   const skillsDir = adapter.skillsDir?.({ root });
   if (skillsDir === undefined) {
-    process.stderr.write(`Host '${host}' has no skill emitter; nothing to sync.\n`);
+    // N1: standardized wording — same phrase across init/sync/create so logs
+    // grep uniformly. (Pre-N1 sync phrased this as "nothing to sync".)
+    process.stderr.write(`host '${host}' has no skill emitter; skipping skills\n`);
     return;
   }
   const target: CompileTarget = host;

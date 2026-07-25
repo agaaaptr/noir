@@ -4,8 +4,8 @@
 // resolved adapter for each `--host <id>`. Asserts the host's primary
 // artifacts land on disk + that the chosen host persists to `.noir/config.yml`
 // (so a subsequent bare `noir sync` re-emits the SAME host without --host).
-// The claude default is asserted byte-identical to v1.1 EXCEPT the additive
-// root AGENTS.md (the universal 32-platform baseline Claude reads natively).
+// The claude default is asserted byte-identical to v1.1 (fix-wave I1 REMOVED
+// the additive root AGENTS.md — it double-imported .noir/ via CLAUDE.md).
 //
 // The bin-level `--host` argv wiring is covered in bin.test.ts; this file
 // covers the module-level behavior the bin dispatches to.
@@ -28,11 +28,14 @@ afterEach(() => {
 });
 
 describe('noir init --host <id> — per-host artifact matrix', () => {
-  it('claude (default): CLAUDE.md + AGENTS.md + .mcp.json + .claude/skills (SKILL.md)', async () => {
+  it('claude (default): CLAUDE.md + .mcp.json + .claude/skills (SKILL.md); NO AGENTS.md (I1)', async () => {
     await init(root, { transport: 'stdio' });
 
     expect(existsSync(join(root, 'CLAUDE.md'))).toBe(true);
-    expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
+    // I1 regression anchor: claude NO LONGER emits AGENTS.md (would double-
+    // import .noir/ via CLAUDE.md's existing @-imports). The default `noir init`
+    // is now BYTE-IDENTICAL to v1.1.
+    expect(existsSync(join(root, 'AGENTS.md'))).toBe(false);
     expect(existsSync(join(root, '.mcp.json'))).toBe(true);
     expect(existsSync(join(root, '.claude', 'skills'))).toBe(true);
     // A skill file is the verbatim SKILL.md shape (claude CompileTarget).
@@ -41,11 +44,12 @@ describe('noir init --host <id> — per-host artifact matrix', () => {
     expect(readFileSync(paths.config(root), 'utf8')).toMatch(/^host: claude/m);
   });
 
-  it('gemini: GEMINI.md + AGENTS.md + .gemini/mcp.json; no .claude/; no skills dir', async () => {
+  it('gemini: GEMINI.md + .gemini/mcp.json; NO AGENTS.md (I1); no .claude/; no skills dir', async () => {
     await init(root, { transport: 'stdio', host: 'gemini' });
 
     expect(existsSync(join(root, 'GEMINI.md'))).toBe(true);
-    expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
+    // I1: gemini NO LONGER emits AGENTS.md.
+    expect(existsSync(join(root, 'AGENTS.md'))).toBe(false);
     expect(existsSync(join(root, '.gemini', 'mcp.json'))).toBe(true);
     // Gemini has no skill concept — no .claude/skills, no .gemini/skills.
     expect(existsSync(join(root, '.claude'))).toBe(false);
@@ -56,16 +60,26 @@ describe('noir init --host <id> — per-host artifact matrix', () => {
     expect(readFileSync(paths.config(root), 'utf8')).toMatch(/^host: gemini/m);
   });
 
-  it('cursor: AGENTS.md + .cursor/rules/noir-rules.mdc + .cursor/mcp.json + skills as .mdc', async () => {
+  it('cursor: AGENTS.md + .cursor/mcp.json + skills as FLAT .mdc (C3); rules via AGENTS.md (no host-rules .mdc)', async () => {
     await init(root, { transport: 'stdio', host: 'cursor' });
 
     expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
+    // No separate host-rules .mdc — the prior `noir-contract.mdc` pointer was
+    // REMOVED (it collided with the C3 cursor flat-skill prune of `noir-*.mdc`
+    // under .cursor/rules/). Cursor's rules ride AGENTS.md's
+    // `@.noir/rules/RULES.md` import instead (same universal surface as
+    // agents-md/opencode). The `noir-rules` builtin skill now legitimately
+    // lands at `noir-rules.mdc` (a real skill, FLAT) — no host-rules pointer
+    // collides with it anymore.
     expect(existsSync(join(root, '.cursor', 'rules', 'noir-rules.mdc'))).toBe(true);
     expect(existsSync(join(root, '.cursor', 'mcp.json'))).toBe(true);
-    // Cursor compiles skills to .mdc (target:'cursor') under .cursor/rules/.
+    // C3: cursor skills land FLAT under .cursor/rules/ (one .mdc per skill, no
+    // per-name subdir — Cursor's rule loader does not recurse).
+    expect(existsSync(join(root, '.cursor', 'rules', 'noir-brainstorm.mdc'))).toBe(true);
+    // The pre-C3 nested layout is GONE.
     expect(
       existsSync(join(root, '.cursor', 'rules', 'noir-brainstorm', 'noir-brainstorm.mdc')),
-    ).toBe(true);
+    ).toBe(false);
     // No CLAUDE.md / GEMINI.md leakage.
     expect(existsSync(join(root, 'CLAUDE.md'))).toBe(false);
     expect(existsSync(join(root, 'GEMINI.md'))).toBe(false);
@@ -97,7 +111,7 @@ describe('noir init --host <id> — per-host artifact matrix', () => {
 });
 
 describe('noir create --host <id> — greenfield per host', () => {
-  it('create --host gemini bootstraps a fresh dir with GEMINI.md + AGENTS.md + .gemini/mcp.json', async () => {
+  it('create --host gemini bootstraps a fresh dir with GEMINI.md + .gemini/mcp.json (NO AGENTS.md — I1)', async () => {
     const target = join(root, 'fresh-gemini');
     expect(existsSync(target)).toBe(false);
 
@@ -105,20 +119,24 @@ describe('noir create --host <id> — greenfield per host', () => {
 
     expect(existsSync(target)).toBe(true);
     expect(existsSync(join(target, 'GEMINI.md'))).toBe(true);
-    expect(existsSync(join(target, 'AGENTS.md'))).toBe(true);
+    // I1: gemini NO LONGER emits AGENTS.md.
+    expect(existsSync(join(target, 'AGENTS.md'))).toBe(false);
     expect(existsSync(join(target, '.gemini', 'mcp.json'))).toBe(true);
     expect(existsSync(join(target, '.noir', 'project.id'))).toBe(true);
   });
 
-  it('create --host cursor bootstraps .cursor/rules/noir-rules.mdc + skills as .mdc', async () => {
+  it('create --host cursor bootstraps AGENTS.md + .cursor/mcp.json + skills as FLAT .mdc (C3)', async () => {
     const target = join(root, 'fresh-cursor');
     await create(target, { transport: 'stdio', host: 'cursor' });
 
-    expect(existsSync(join(target, '.cursor', 'rules', 'noir-rules.mdc'))).toBe(true);
-    // Skills compile to .mdc under .cursor/rules/<skill>/<skill>.mdc.
+    // Cursor's rules ride AGENTS.md's @-import (no separate host-rules .mdc).
+    expect(existsSync(join(target, 'AGENTS.md'))).toBe(true);
+    expect(existsSync(join(target, '.cursor', 'mcp.json'))).toBe(true);
+    // C3: skills land FLAT under .cursor/rules/<skill>.mdc (no nested dir).
+    expect(existsSync(join(target, '.cursor', 'rules', 'noir-brainstorm.mdc'))).toBe(true);
     expect(
       existsSync(join(target, '.cursor', 'rules', 'noir-brainstorm', 'noir-brainstorm.mdc')),
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 
@@ -156,20 +174,25 @@ describe('noir sync — host round-trips from .noir/config.yml', () => {
 
     // Override-emt under cursor — adds cursor artifacts alongside.
     await sync(root, { host: 'cursor' });
-    expect(existsSync(join(root, '.cursor', 'rules', 'noir-rules.mdc'))).toBe(true);
+    // Cursor's rules ride AGENTS.md's @-import (no separate host-rules .mdc).
+    expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
+    expect(existsSync(join(root, '.cursor', 'mcp.json'))).toBe(true);
   });
 });
 
 describe('noir init — claude byte-identity (regression anchor)', () => {
-  // The S10 spec guarantees the default `noir init` is byte-equivalent to v1.1
-  // EXCEPT the additive root AGENTS.md (Claude reads it natively). The
-  // scaffold.test.ts parity gates already assert the .mcp.json + CLAUDE.md
-  // regions byte-equal the adapter; here we add the AGENTS.md presence
-  // assertion + confirm the regression-anchor files are still byte-stable.
-  it('default init produces .mcp.json + CLAUDE.md + AGENTS.md (additive) + ignores', async () => {
+  // Fix-wave I1 restored the byte-identity guarantee: the default `noir init` is
+  // now FULLY byte-equivalent to v1.1 (the additive root AGENTS.md was REMOVED
+  // — claude's CLAUDE.md already @-imports .noir/ sources, so AGENTS.md
+  // double-imported them). The scaffold.test.ts parity gates assert .mcp.json +
+  // CLAUDE.md regions byte-equal the adapter; here we add the no-AGENTS.md
+  // regression anchor + confirm the v1.1 files are still byte-stable.
+  it('default init produces .mcp.json + CLAUDE.md + ignores; NO AGENTS.md (I1 = full v1.1 byte-identity)', async () => {
     await init(root, { transport: 'stdio' });
-    // AGENTS.md is the S10 additive (Claude reads it natively).
-    expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
+    // I1 regression anchor: claude does NOT emit AGENTS.md (would double-import
+    // .noir/ via CLAUDE.md's existing @-imports). The default `noir init` is
+    // byte-identical to v1.1.
+    expect(existsSync(join(root, 'AGENTS.md'))).toBe(false);
     // v1.1 regression-anchor files unchanged.
     expect(existsSync(join(root, '.mcp.json'))).toBe(true);
     expect(existsSync(join(root, 'CLAUDE.md'))).toBe(true);
@@ -179,14 +202,16 @@ describe('noir init — claude byte-identity (regression anchor)', () => {
     expect(mcp.mcpServers.noir).toEqual({ command: 'noir', args: ['mcp', 'serve', '--stdio'] });
   });
 
-  it('claude default-then-sync is byte-idempotent for AGENTS.md + .mcp.json', async () => {
+  it('claude default-then-sync is byte-idempotent for .mcp.json + CLAUDE.md', async () => {
     await init(root, { transport: 'stdio' });
-    const agentsAfter1 = readFileSync(join(root, 'AGENTS.md'), 'utf8');
     const mcpAfter1 = readFileSync(join(root, '.mcp.json'), 'utf8');
+    const claudeAfter1 = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
 
     await sync(root);
 
-    expect(readFileSync(join(root, 'AGENTS.md'), 'utf8')).toBe(agentsAfter1);
     expect(readFileSync(join(root, '.mcp.json'), 'utf8')).toBe(mcpAfter1);
+    expect(readFileSync(join(root, 'CLAUDE.md'), 'utf8')).toBe(claudeAfter1);
+    // I1: AGENTS.md still absent after sync (no double-emission on re-run).
+    expect(existsSync(join(root, 'AGENTS.md'))).toBe(false);
   });
 });
