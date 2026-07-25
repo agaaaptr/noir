@@ -6,6 +6,7 @@ import {
   createProjectId,
   paths,
   RULES_BLOCK,
+  syncIgnores,
   writeManagedRegion,
 } from '@noir-ai/core';
 import { emitSkillsToDir } from '@noir-ai/skills';
@@ -46,6 +47,8 @@ export async function init(root: string, opts: InitOptions): Promise<void> {
     `${claudeAdapter.emitMcpConfig({ root }, opts)}\n`,
     'utf8',
   );
+
+  syncIgnores(root);
 
   writeManagedRegion(join(root, 'CLAUDE.md'), CONTEXT_BLOCK, claudeAdapter.emitContext({ root }));
   if (claudeAdapter.emitRules) {

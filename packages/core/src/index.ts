@@ -4,6 +4,7 @@ export {
   stripManagedBlock,
   writeManagedRegion,
 } from './block-writer.js';
+export { IGNORE_BLOCK, syncIgnores } from './ignore-manager.js';
 export { type NoirConfig, NoirConfigSchema, parseConfig } from './config.js';
 export { modelsDir, NOIR_DIR, noirHome, paths } from './layout.js';
 export {

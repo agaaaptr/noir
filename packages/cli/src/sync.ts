@@ -6,6 +6,7 @@ import {
   loadProjectInfo,
   paths,
   RULES_BLOCK,
+  syncIgnores,
   writeManagedRegion,
 } from '@noir-ai/core';
 import { emitSkillsToDir } from '@noir-ai/skills';
@@ -13,6 +14,9 @@ import { RULES_SEED } from './rules-seed.js';
 
 export async function sync(root: string): Promise<void> {
   loadProjectInfo(root); // asserts Noir is initialized (throws otherwise)
+
+  // Reconcile ignore-file managed blocks (.gitignore/.dockerignore/.npmignore/.prettierignore).
+  syncIgnores(root);
 
   // Reconcile host context-file managed blocks (context + rules).
   writeManagedRegion(join(root, 'CLAUDE.md'), CONTEXT_BLOCK, claudeAdapter.emitContext({ root }));

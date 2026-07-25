@@ -34,6 +34,10 @@ describe('init', () => {
     expect(rules).toContain('Anti-assumption contract');
     expect(claudeMd).toContain(RULES_BLOCK.begin);
     expect(claudeMd).toContain('@import ".noir/rules/RULES.md"');
+
+    // Ignore management (slice I): .gitignore managed block.
+    const gi = readFileSync(join(root, '.gitignore'), 'utf8');
+    expect(gi).toContain('/.noir/store/');
   });
 
   it('scaffolds an http .mcp.json when transport is streamable-http', async () => {
