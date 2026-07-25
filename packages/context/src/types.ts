@@ -142,11 +142,17 @@ export interface Chunk {
 export type RRFWeights = [number, number];
 
 /**
- * Retrieval mode actually used for a `search` call. `'hybrid'` = BM25 ∪ kNN
- * fused by RRF; `'bm25-only'` = degraded fallback when the embedder is
- * unavailable (`kind:'none'` or `embed()` threw).
+ * Retrieval mode actually used for a `search` call.
+ * - `'hybrid'` — BM25 ∪ kNN fused by RRF, AND every kNN-only hit was hydrated
+ *   to a real windowed snippet (the ideal outcome).
+ * - `'knn'` — the kNN leg ran but at least one kNN-only hit could NOT be
+ *   hydrated (no `readDoc` hydrator, or the source doc was deleted/degraded),
+ *   so that hit keeps its rank but carries an empty snippet. Honest about the
+ *   fact the caller did not receive the full hybrid snippet quality.
+ * - `'bm25-only'` — degraded fallback when the embedder is unavailable
+ *   (`kind:'none'` or `embed()` threw); the kNN leg did not run at all.
  */
-export type SearchMode = 'hybrid' | 'bm25-only';
+export type SearchMode = 'hybrid' | 'knn' | 'bm25-only';
 
 /**
  * Secondary metadata carried on a retriever hit. All optional: a BM25 hit

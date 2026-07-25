@@ -276,7 +276,13 @@ describe('callDaemonTool — daemon-down failures map to exit 4', () => {
 
   it('the exit-4 message names the remediation command', async () => {
     vi.mocked(ensureDaemonRunning).mockRejectedValue(new Error('down'));
-    const err = await callDaemonTool(baseOpts, 'host_status').catch((e) => e as NoirCliError);
+    // callDaemonTool defaults to `Promise<unknown>`, so the `await ...catch` is
+    // `unknown | NoirCliError` → `unknown`. Cast at the assignment site so TS
+    // lets us read .exitCode/.message; the test's intent is explicit (the
+    // rejection is the NoirCliError failDaemonDown throws).
+    const err = (await callDaemonTool(baseOpts, 'host_status').catch(
+      (e) => e as NoirCliError,
+    )) as NoirCliError;
     expect(err.exitCode).toBe(EXIT.DAEMON_DOWN);
     expect(err.message).toMatch(/daemon not reachable/);
     expect(err.message).toMatch(/noir daemon start/);

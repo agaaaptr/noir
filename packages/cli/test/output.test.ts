@@ -98,7 +98,7 @@ let savedCi: string | undefined;
 let savedNoColor: string | undefined;
 let savedStdoutTty: boolean | undefined;
 let savedStdinTty: boolean | undefined;
-let savedExitCode: number | string | undefined;
+let savedExitCode: number | string | null | undefined;
 
 function setTty(stdout: boolean, stdin: boolean): void {
   Object.defineProperty(process.stdout, 'isTTY', {

@@ -37,7 +37,7 @@ function okResponse(body: unknown): Response {
 }
 
 describe('openaiCompatibleAdapter — request shape (blueprint D5)', () => {
-  it('POSTs to ${baseURL}/chat/completions with model/messages/max_tokens + Bearer key', async () => {
+  it('POSTs to {baseURL}/chat/completions with model/messages/max_tokens + Bearer key', async () => {
     fetchMock.mockResolvedValue(okResponse({ choices: [{ message: { content: 'hi' } }] }));
     await openaiCompatibleAdapter.complete(baseReq({ system: 'be brief', maxTokens: 128 }), 'sk-x');
 

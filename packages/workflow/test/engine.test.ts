@@ -1,9 +1,10 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createProjectId } from '@noir-ai/core';
 import { openStore } from '@noir-ai/store';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { writePrd } from '../src/artifacts.js';
 import { WorkflowEngine } from '../src/engine.js';
 import type { GateResult, TaskState } from '../src/types.js';
 
@@ -386,6 +387,299 @@ describe('WorkflowEngine', () => {
         const abandoned = await engine.abandon('task-1');
         expect(abandoned.state).toBe('abandoned');
         expect(engine.status('task-1')?.state).toBe('abandoned');
+      } finally {
+        await store.close();
+      }
+    });
+
+    // W3: setBlocked now requires a non-empty (post-trim) reason when one is
+    // supplied — mirrors --force's whitespace rejection. Omitting reason stays
+    // valid (clears nothing, just flips state).
+    it('W3: setBlocked rejects a whitespace-only reason (consistent with --force)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'full');
+
+        await expect(engine.setBlocked('task-1', '   ')).rejects.toThrow(/non-empty/);
+        await expect(engine.setBlocked('task-1', '\t\n')).rejects.toThrow(/non-empty/);
+        // State is unchanged on rejection (still draft/intake).
+        expect(engine.status('task-1')?.state).toBe('draft');
+
+        // No-reason call stays valid — flips state, leaves blockReason unset.
+        const blocked = await engine.setBlocked('task-1');
+        expect(blocked.state).toBe('blocked');
+        expect(blocked.blockReason).toBeUndefined();
+
+        // A reason with surrounding whitespace is trimmed + accepted.
+        const blocked2 = await engine.setBlocked('task-1', '  waiting on design  ');
+        expect(blocked2.blockReason).toBe('waiting on design');
+      } finally {
+        await store.close();
+      }
+    });
+  });
+
+  // Debt-batch A / W1 — collapse the dual source of truth. The audit:<id> KV is
+  // AUTHORITATIVE (S4 §11 OQ-5); task.history is a DERIVED view regenerated
+  // from it on every advance and every status() read. No drift, one timestamp.
+  describe('W1: history is derived from the authoritative audit KV', () => {
+    it('advance mirrors the audit KV exactly (single timestamp, no drift)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'full');
+        await engine.advance('task-1'); // → clarifying (no gate)
+        const specified = await engine.advance('task-1'); // → specified (spec gate)
+
+        const audit = store.getState<GateResult[]>('audit:task-1') ?? [];
+        expect(audit).toHaveLength(1);
+        // Single source, single timestamp: history === audit, byte-for-byte.
+        expect(specified.history).toEqual(audit);
+        expect(specified.history[0]?.at).toBe(audit[0]?.at);
+
+        // Round-trip through status(): the read also derives from the KV.
+        const reread = engine.status('task-1');
+        expect(reread?.history).toEqual(audit);
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('status() re-derives history from the audit KV (catches external mutation)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'full');
+        await engine.advance('task-1'); // → clarifying
+        await engine.advance('task-1'); // → specified
+        expect(engine.status('task-1')?.history).toHaveLength(1);
+
+        // Simulate an external mutation (manual KV edit, audit import, …).
+        const mutated: GateResult[] = [
+          { phase: 'spec', decision: 'forced', reason: 'external override', at: 12345 },
+        ];
+        store.setState<GateResult[]>('audit:task-1', mutated);
+
+        // status() picks up the new KV without an intervening advance.
+        const reread = engine.status('task-1');
+        expect(reread?.history).toEqual(mutated);
+      } finally {
+        await store.close();
+      }
+    });
+  });
+
+  // Debt-batch A / P4 — soft, escapable PRD recommendation at the spec gate.
+  // The advance ALWAYS proceeds (never a hard block); the recommendation is
+  // folded into the recorded spec gate's `reason` (observable in the audit).
+  // --force <reason> is the explicit-override path; quick mode + unlisted
+  // taskClasses skip the check entirely.
+  describe('P4: soft PRD recommendation at the spec gate', () => {
+    it('records the PRD recommendation on the spec gate when a feature task has no PRD', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'add-login', 'full', 'feature');
+        await engine.advance('task-1'); // → clarifying
+
+        const specified = await engine.advance('task-1'); // → specified (spec gate)
+        // The advance PROCEEDED — never a hard block.
+        expect(specified.state).toBe('specified');
+        // The spec gate carries the recommendation note on its `reason`.
+        const specGate = specified.history[specified.history.length - 1];
+        expect(specGate?.decision).toBe('approved');
+        expect(specGate?.reason).toMatch(/PRD recommended for feature/);
+        expect(specGate?.reason).toMatch(/--force/);
+
+        // Same content is observable in the authoritative audit KV.
+        const audit = store.getState<GateResult[]>('audit:task-1');
+        expect(audit?.[audit.length - 1]?.reason).toMatch(/PRD recommended for feature/);
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('records the spec gate CLEAN (no reason) when a PRD artifact exists', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'add-login', 'full', 'feature');
+        writePrd(root, 'task-1', 'add-login', '# Problem\nUsers cannot log in.');
+        await engine.advance('task-1'); // → clarifying
+
+        const specified = await engine.advance('task-1'); // → specified
+        const specGate = specified.history[specified.history.length - 1];
+        expect(specGate?.decision).toBe('approved');
+        expect(specGate?.reason).toBeUndefined(); // clean — PRD present
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('--force overrides the recommendation and records decision=forced with the user reason', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'add-login', 'full', 'feature');
+        await engine.advance('task-1'); // → clarifying
+
+        const specified = await engine.advance('task-1', {
+          force: { reason: 'spike — PRD deferred' },
+        });
+        const specGate = specified.history[specified.history.length - 1];
+        // The user's reason wins (NOT the recommendation note) — force is the
+        // explicit-override path; the audit shows the user accepted + overrode.
+        expect(specGate?.decision).toBe('forced');
+        expect(specGate?.reason).toBe('spike — PRD deferred');
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('quick-mode tasks skip the check entirely (no recommendation, even with no PRD)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'quick', 'feature');
+        await engine.advance('task-1'); // → clarifying
+
+        const specified = await engine.advance('task-1', { skip: true }); // → specified
+        const specGate = specified.history[specified.history.length - 1];
+        // Quick mode: decision=skipped, no reason — the PRD check is bypassed.
+        expect(specGate?.decision).toBe('skipped');
+        expect(specGate?.reason).toBeUndefined();
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('tasks with an unlisted taskClass skip the check (bugfix default)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'fix-crash', 'full', 'bugfix');
+        await engine.advance('task-1'); // → clarifying
+
+        const specified = await engine.advance('task-1'); // → specified
+        const specGate = specified.history[specified.history.length - 1];
+        expect(specGate?.decision).toBe('approved');
+        expect(specGate?.reason).toBeUndefined();
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('tasks with NO taskClass skip the check (legacy callers — backward compat)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        // Legacy 3-arg startTask: no taskClass ⇒ no soft gate ever fires.
+        await engine.startTask('task-1', 'x', 'full');
+        await engine.advance('task-1'); // → clarifying
+
+        const specified = await engine.advance('task-1'); // → specified
+        const specGate = specified.history[specified.history.length - 1];
+        expect(specGate?.decision).toBe('approved');
+        expect(specGate?.reason).toBeUndefined();
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('honors a user-overridden mandatoryFor list via the 4th constructor arg', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        // User widens the recommendation to enhancement.
+        const engine = new WorkflowEngine(store, root, projectId, {
+          prd: { mandatoryFor: ['enhancement'] },
+        });
+        await engine.startTask('task-1', 'x', 'full', 'enhancement');
+        await engine.advance('task-1'); // → clarifying
+
+        const specified = await engine.advance('task-1'); // → specified
+        const specGate = specified.history[specified.history.length - 1];
+        expect(specGate?.reason).toMatch(/PRD recommended for enhancement/);
+
+        // `feature` is no longer in the list — a feature task now skips.
+        await engine.startTask('task-2', 'y', 'full', 'feature');
+        await engine.advance('task-2'); // → clarifying
+        const specified2 = await engine.advance('task-2'); // → specified
+        const specGate2 = specified2.history[specified2.history.length - 1];
+        expect(specGate2?.reason).toBeUndefined();
+      } finally {
+        await store.close();
+      }
+    });
+  });
+
+  // Debt-batch A / W3 — jump-to-current-phase was a no-op that re-stamped the
+  // audit (a duplicate landing-gate entry). Guarded now: a jump whose target
+  // equals the current phase returns the task unchanged.
+  describe('W3: jump-to-current-phase is a no-op (no spurious gate)', () => {
+    it('returns the task unchanged when opts.to === task.phase (no gate re-stamp)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'full');
+        await engine.advance('task-1'); // → clarifying
+        await engine.advance('task-1'); // → specified (spec gate)
+        const before = engine.status('task-1');
+        const historyBefore = before?.history.length ?? 0;
+
+        // Jump to the CURRENT phase (spec) — should be a no-op.
+        const same = await engine.advance('task-1', { to: 'spec' });
+        expect(same.state).toBe('specified');
+        expect(same.phase).toBe('spec');
+        // No new gate entry — the audit is unchanged.
+        expect(same.history).toHaveLength(historyBefore);
+        const audit = store.getState<GateResult[]>('audit:task-1');
+        expect(audit).toHaveLength(historyBefore);
+      } finally {
+        await store.close();
+      }
+    });
+  });
+
+  // Debt-batch A / W2 — checkpoint save was vestigial (just bumped updatedAt,
+  // which advance already does; resumeTask consumes nothing from it). Now WIRED
+  // to the S4-spec'd audit JSON export — `checkpoint` flushes `.noir/audit/
+  // <taskId>.json` (writeAuditExport) so the public MCP tool leaves a real
+  // cross-tool artifact, not just a timestamp bump.
+  describe('W2: checkpoint flushes the audit JSON export to disk', () => {
+    it('writes .noir/audit/<taskId>.json containing the audit KV (S4 §11 OQ-5)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'full');
+        await engine.advance('task-1'); // → clarifying
+        await engine.advance('task-1'); // → specified (spec gate)
+
+        const auditFile = join(root, '.noir', 'audit', 'task-1.json');
+        expect(existsSync(auditFile)).toBe(false);
+
+        await engine.checkpoint('task-1');
+
+        // The audit JSON now exists on disk and carries the spec gate entry.
+        expect(existsSync(auditFile)).toBe(true);
+        const raw = readFileSync(auditFile, 'utf8');
+        const exported = JSON.parse(raw) as GateResult[];
+        expect(exported).toHaveLength(1);
+        expect(exported[0]).toMatchObject({ phase: 'spec', decision: 'approved' });
+
+        // The KV (the SOT) and the exported JSON agree byte-for-byte.
+        const kv = store.getState<GateResult[]>('audit:task-1') ?? [];
+        expect(exported).toEqual(kv);
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('throws for an unknown task (consistent with requireTask)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await expect(engine.checkpoint('never-started')).rejects.toThrow(/Unknown task/);
       } finally {
         await store.close();
       }

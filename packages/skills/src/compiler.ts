@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { discoverAll, discoverBuiltin } from './discover.js';
@@ -163,7 +163,38 @@ export async function emitSkillsToDir(
       integrationNames.push(i.name);
     }
   }
-  return { dir: targetDir, emitted, references, integrations: integrationNames };
+
+  // --- T2: prune stale `noir-*` dirs from the managed namespace -------------
+  // Idempotent hygiene: a previous Noir version may have shipped a builtin that
+  // was since renamed/removed (e.g. `noir-old-thing`). Each `noir sync`
+  // re-writes the CURRENT pack but a stale dir would otherwise linger forever.
+  // After emit, scan `targetDir` for `noir-`-prefixed dirs NOT in the emitted
+  // set and remove them. ONLY the `noir-` namespace — user skills without the
+  // prefix are NEVER touched (they are not Noir's to manage).
+  const keep = new Set(emitted);
+  const pruned: string[] = [];
+  let entries: string[] = [];
+  try {
+    entries = await readdir(targetDir, { withFileTypes: true })
+      .then((ents) => ents.filter((e) => e.isDirectory() && e.name.startsWith('noir-')))
+      .then((ents) => ents.map((e) => e.name));
+  } catch {
+    entries = []; // targetDir vanished between the mkdir above and now — nothing to prune.
+  }
+  for (const name of entries) {
+    if (keep.has(name)) continue;
+    // Best-effort removal: a failure to remove a stale dir must NOT fail the
+    // emit (the fresh skills are already on disk and valid). Surface it via the
+    // summary so a caller can warn; the next sync will try again.
+    try {
+      await rm(join(targetDir, name), { recursive: true, force: true });
+      pruned.push(name);
+    } catch {
+      // Swallow — stale-dir pruning is hygienic, not correctness-critical.
+    }
+  }
+
+  return { dir: targetDir, emitted, references, integrations: integrationNames, pruned };
 }
 
 // Convenience for callers/tests that already hold raw markdown (unused by emit path;

@@ -30,14 +30,17 @@
 //     independent and both honest: `status()` describes the configured state;
 //     `search()` describes the actual outcome.
 //
-// kNN-only hydration (spec F7): the Store interface exposes no read-by-id and
-// vec0 carries no meta column, so a purely-semantic hit (kNN-only, no BM25
-// snippet) cannot be windowed without a content source. v1 intentionally does
-// NOT wire a `readDoc` hydrator: BM25 hits — the common, lexical path — always
-// carry their FTS5 windowed snippet verbatim (never truncated), and a kNN-only
-// hit degrades to an empty snippet while keeping its rank (the retriever's
-// tested fallback). A future `Store.getDoc` would let the engine hydrate these
-// with no other change here.
+// kNN-only hydration (spec F7, C1): the Store interface exposes no read-by-id
+// and vec0 carries no meta column, so a purely-semantic hit (kNN-only, no BM25
+// snippet) cannot be windowed without a content source. The engine wires the
+// indexer's `readChunkContent` as the retriever's `readDoc` hydrator — the
+// indexer owns the registry layout (`ctx:registry` + `ctx:file:<key>`) and the
+// chunk-id format, so it is the natural read-by-id. When the hydrator hits, the
+// chunk's CLEAN content is prefix-windowed with `<<query-term>>` highlights
+// (mirroring FTS5). When it misses (chunk unindexed, file deleted, content
+// drift), the hit degrades to an empty snippet AND the search result's `mode`
+// becomes `'knn'` so the caller knows the snippet quality is degraded (the
+// retriever's honest-mode logic, C1).
 
 import { createEmbedFn } from './embedders/index.js';
 import { CTX_REGISTRY_KEY, createIndexer, type Indexer, type IndexPathOptions } from './indexer.js';
@@ -164,9 +167,16 @@ export class ContextEngine {
     // Both reuse the SAME injected handle — the engine never opens a second
     // connection (single writer). The indexer is root-bound so path keys are
     // repo-relative; the retriever is read-only and uses the retriever defaults
-    // (RRF k=60 / [0.5,0.5], budget 4096, no kNN-only readDoc hydrator in v1).
+    // (RRF k=60 / [0.5,0.5], budget 4096). The retriever's `readDoc` hydrator
+    // is wired to the indexer's `readChunkContent` so kNN-only hits hydrate to
+    // a real windowed snippet from the source file (C1); a miss surfaces as
+    // mode:'knn' on the per-call SearchResult (degraded but honest).
     this.indexer = createIndexer({ store: opts.store, embed, info, root: opts.root });
-    this.retriever = createRetriever({ store: opts.store, embed });
+    this.retriever = createRetriever({
+      store: opts.store,
+      embed,
+      opts: { readDoc: (id) => this.indexer.readChunkContent(id) },
+    });
   }
 
   /**

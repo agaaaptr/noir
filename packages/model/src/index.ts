@@ -31,6 +31,13 @@ export {
   type ResolvedTiers,
   resolveModelConfig,
 } from './config.js';
+// --- Bounded draft helpers (slice P / debt-batch A — single-shot PRD drafting) ---
+export {
+  type DraftPrdInput,
+  type DraftPrdOptions,
+  draftPrd,
+  PRD_FALLBACK_TEMPLATE,
+} from './draft.js';
 export type {
   CompleteRequest,
   CompleteResult,

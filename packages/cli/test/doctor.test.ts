@@ -75,7 +75,11 @@ afterAll(() => {
 function findCheck(checks: Array<{ name: string; status: string; detail: string }>, name: string) {
   const c = checks.find((x) => x.name === name);
   expect(c, `check '${name}' should be present`).toBeDefined();
-  return c!;
+  // The expect().toBeDefined() above is the runtime check; this guard makes the
+  // narrowing visible to TS (replacing the prior `c!` non-null assertion) and
+  // throws with a clear message if a future caller skips the expect.
+  if (!c) throw new Error(`check '${name}' not found in doctor payload`);
+  return c;
 }
 
 describe('noir doctor — uninitialized project', () => {
@@ -263,5 +267,97 @@ describe('noir doctor — scaffold-version drift (slice S-T2)', () => {
     const r = await run(() => doctor({}));
     expect(r.stderr).toMatch(/scaffold version/);
     expect(r.stderr).toMatch(/up to date/);
+  });
+});
+
+describe('noir doctor — RULES.md budget (R5)', () => {
+  it('absent RULES.md → ok informational, data.rules is null', async () => {
+    // Initialize the project so the check runs (rather than skip-with-warn).
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-rules-absent\n', 'utf8');
+    writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    expect(env.data.rules).toBeNull();
+    const row = findCheck(env.data.checks, 'rules budget');
+    expect(row.status).toBe('ok');
+    expect(row.detail).toMatch(/no \.noir\/rules\/RULES\.md/);
+  });
+
+  it('under-budget RULES.md → ok with measured bytes/lines, data.rules populated', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    mkdirSync(join(root, '.noir', 'rules'), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-rules-under\n', 'utf8');
+    writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
+    // A small RULES.md: well under the 6 KB / 150-line defaults.
+    const body = '# RULES\n\n- Fail loudly.\n- Back every clause with a failure.\n';
+    writeFileSync(paths.rulesMd(root), body, 'utf8');
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    expect(env.data.rules).not.toBeNull();
+    const rules = env.data.rules;
+    expect(rules.over).toBe(false);
+    expect(rules.budget).toEqual({ kb: 6, maxLines: 150 });
+    expect(rules.onDisk.bytes).toBe(Buffer.byteLength(body, 'utf8'));
+    // 4 lines (no trailing newline offset: body ends with '\n' so 5 split - 1 = 4).
+    expect(rules.onDisk.lines).toBe(4);
+    const row = findCheck(env.data.checks, 'rules budget');
+    expect(row.status).toBe('ok');
+    expect(row.detail).toMatch(/within budget/);
+  });
+
+  it('over-byte-budget RULES.md → warn, data.rules.over true, hint names the lever', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    mkdirSync(join(root, '.noir', 'rules'), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-rules-over-bytes\n', 'utf8');
+    // lengthBudgetKb=1 makes it trivial to trip the byte ceiling without
+    // generating 150+ lines (keeps the test fast and focused on the byte leg).
+    writeFileSync(
+      paths.config(root),
+      'host: claude\nmode: full\nrules:\n  lengthBudgetKb: 1\n',
+      'utf8',
+    );
+    // 2 KB of content (well past the 1 KB budget) but only a few lines.
+    const line = 'x'.repeat(512);
+    const body = `# RULES\n\n${line}\n${line}\n${line}\n${line}\n`;
+    writeFileSync(paths.rulesMd(root), body, 'utf8');
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    const rules = env.data.rules;
+    expect(rules).not.toBeNull();
+    expect(rules.over).toBe(true);
+    expect(rules.budget.kb).toBe(1);
+    expect(rules.onDisk.bytes).toBeGreaterThan(1024);
+    const row = findCheck(env.data.checks, 'rules budget');
+    expect(row.status).toBe('warn');
+    expect(row.detail).toMatch(/OVER/);
+    // The hint names BOTH levers so the user knows the escape hatches.
+    expect(row.detail).toMatch(/trim RULES\.md/);
+    expect(row.detail).toMatch(/raise rules\.lengthBudgetKb/);
+  });
+
+  it('over-line-budget RULES.md → warn (line ceiling tripped, not bytes)', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    mkdirSync(join(root, '.noir', 'rules'), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-rules-over-lines\n', 'utf8');
+    // Default 6 KB budget. 200 short lines stay well under 6 KB but exceed the
+    // 150-line ceiling — exercises the OR leg independently of the byte leg.
+    writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
+    const body = `${Array.from({ length: 200 }, (_, i) => `rule ${i}`).join('\n')}\n`;
+    writeFileSync(paths.rulesMd(root), body, 'utf8');
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    const rules = env.data.rules;
+    expect(rules.over).toBe(true);
+    expect(rules.onDisk.lines).toBe(200);
+    // Sanity: byte budget NOT tripped for this body.
+    expect(rules.onDisk.bytes).toBeLessThan(6 * 1024);
+    const row = findCheck(env.data.checks, 'rules budget');
+    expect(row.status).toBe('warn');
+    expect(row.detail).toMatch(/200\/150 lines/);
   });
 });

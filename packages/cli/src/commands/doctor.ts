@@ -29,7 +29,7 @@
 // signaled by the EXIT CODE (0 healthy / 1 critical failure) — the same shape
 // `npm audit --json` uses (valid JSON out, non-zero exit when issues found).
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { loadProjectInfo, NOIR_VERSION, type ProjectInfo, paths } from '@noir-ai/core';
 import { CURRENT_SCAFFOLD_VERSION, readScaffoldVersion } from '@noir-ai/create';
 import { pidAlive, readDaemonRecord } from '@noir-ai/daemon';
@@ -66,6 +66,15 @@ export interface DoctorPayload {
    *  absent (uninitialized or pre-Slice-S project); `drift` is true only when
    *  a stamp is present AND differs from the engine's current version. */
   scaffold: { onDisk: string | null; current: string; drift: boolean };
+  /** RULES.md budget measurement (R5). `null` when the project isn't
+   *  initialized OR `.noir/rules/RULES.md` is absent — in either case there
+   *  is nothing to measure and the check row stays informational (warn skip
+   *  or ok "no RULES.md"). Never drives `fail` — over-budget is a `warn`. */
+  rules: {
+    onDisk: { bytes: number; lines: number };
+    budget: { kb: number; maxLines: number };
+    over: boolean;
+  } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -346,6 +355,83 @@ function checkScaffoldVersion(
   return { onDisk, current, drift };
 }
 
+/**
+ * Soft RULES.md budget cap (R5). Mirrors the Failure-Backed Rules doctrine:
+ * an over-budget RULES.md tends to accumulate stale / speculative clauses, so
+ * doctor warns (NEVER fails — purely a hygiene nudge) when the file exceeds
+ * the configured `lengthBudgetKb` (default 6 KB) OR a 150-line ceiling. The
+ * check is honest about the three "nothing to measure" cases:
+ *
+ *   • project not initialized  → skip-warn (parity with store/embedder/provider)
+ *   • RULES.md absent          → ok informational (no file = no budget problem)
+ *   • RULES.md unreadable      → warn (treat like a malformed-stamp: surface it)
+ *
+ * Returns the structured measurement for the `--json` envelope's `data.rules`,
+ * or `null` when there is nothing to measure (absent / skipped).
+ */
+function checkRulesMdBudget(
+  checks: CheckResult[],
+  root: string,
+  project: ProjectInfo | undefined,
+): {
+  onDisk: { bytes: number; lines: number };
+  budget: { kb: number; maxLines: number };
+  over: boolean;
+} | null {
+  if (!project) {
+    checks.push({ name: 'rules budget', status: 'warn', detail: 'skipped — not initialized' });
+    return null;
+  }
+  const rulesPath = paths.rulesMd(root);
+  if (!existsSync(rulesPath)) {
+    // No RULES.md is fine — most projects don't have one yet. Informational ok
+    // so a green run stays green without forcing a file creation.
+    checks.push({
+      name: 'rules budget',
+      status: 'ok',
+      detail: 'no .noir/rules/RULES.md',
+    });
+    return null;
+  }
+  // Read + measure. A read/decode failure surfaces as a warn (parallel to the
+  // malformed-stamp handling in checkScaffoldVersion): the doctor keeps
+  // reporting rather than crashing, and the user sees a clear hint.
+  let content: string;
+  try {
+    content = readFileSync(rulesPath, 'utf8');
+  } catch (e) {
+    checks.push({
+      name: 'rules budget',
+      status: 'warn',
+      detail: `RULES.md unreadable: ${msg(e)}`,
+    });
+    return null;
+  }
+  // bytes = UTF-8 file size on disk (the natural unit for a KB budget). lines
+  // uses wc-style counting: count of '\n' chars, +1 if the last line has no
+  // trailing newline; 0 only for an empty file.
+  const bytes = Buffer.byteLength(content, 'utf8');
+  const lineCount =
+    content.length === 0 ? 0 : content.split('\n').length - (content.endsWith('\n') ? 1 : 0);
+  const lengthBudgetKb = project.config.rules.lengthBudgetKb;
+  const budgetBytes = lengthBudgetKb * 1024;
+  const maxLines = 150;
+  const overBytes = bytes > budgetBytes;
+  const overLines = lineCount > maxLines;
+  const over = overBytes || overLines;
+  const status: Severity = over ? 'warn' : 'ok';
+  const kb = (n: number): string => (n / 1024).toFixed(1);
+  const detail = over
+    ? `OVER: ${kb(bytes)} KB / ${lengthBudgetKb} KB · ${lineCount}/${maxLines} lines — trim RULES.md (failure-backed clauses only) or raise rules.lengthBudgetKb`
+    : `${kb(bytes)} KB / ${lengthBudgetKb} KB · ${lineCount}/${maxLines} lines (within budget)`;
+  checks.push({ name: 'rules budget', status, detail });
+  return {
+    onDisk: { bytes, lines: lineCount },
+    budget: { kb: lengthBudgetKb, maxLines },
+    over,
+  };
+}
+
 function summarize(checks: CheckResult[]): DoctorPayload['summary'] {
   let ok = 0;
   let warnN = 0;
@@ -405,9 +491,10 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   checkEmbedder(checks, project, vecOk);
   checkProvider(checks, project);
   const scaffold = checkScaffoldVersion(checks, root);
+  const rules = checkRulesMdBudget(checks, root, project);
 
   const summary = summarize(checks);
-  const payload: DoctorPayload = { noir: NOIR_VERSION, checks, summary, scaffold };
+  const payload: DoctorPayload = { noir: NOIR_VERSION, checks, summary, scaffold, rules };
 
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: payload })}\n`);

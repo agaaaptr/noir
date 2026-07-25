@@ -147,4 +147,44 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
       /Invalid builtin skill/,
     );
   });
+
+  it('T2: prunes a stale noir-* dir left by a previous version (idempotent + safe)', async () => {
+    // Fresh pack ships only noir-keep. A prior version wrote noir-stale-thing
+    // and a user-authored skill (no `noir-` prefix) lives alongside.
+    await writeSkill(
+      'noir-keep',
+      '---\nname: noir-keep\ndescription: Use when keeping.\n---\n# keep',
+    );
+    const target = join(fixture, '_out');
+    const { mkdir, writeFile } = await import('node:fs/promises');
+    // Pre-populate the target with stale + user content (simulating a prior sync).
+    await mkdir(join(target, 'noir-stale-thing'), { recursive: true });
+    await writeFile(
+      join(target, 'noir-stale-thing', 'SKILL.md'),
+      '---\nname: noir-stale-thing\ndescription: Use when gone.\n---\nold',
+      'utf8',
+    );
+    await mkdir(join(target, 'my-custom-skill'), { recursive: true });
+    await writeFile(join(target, 'my-custom-skill', 'SKILL.md'), 'user-authored', 'utf8');
+
+    const summary = await emitSkillsToDir(target, { builtinDir: fixture });
+
+    // The fresh pack was emitted...
+    expect(summary.emitted).toContain('noir-keep');
+    // ...the stale noir-* dir was pruned and reported in the summary...
+    expect(summary.pruned).toEqual(['noir-stale-thing']);
+    // ...and the user-authored skill (no `noir-` prefix) is UNTOUCHED.
+    const remaining = await readdir(target);
+    expect(remaining.sort()).toEqual(['my-custom-skill', 'noir-keep']);
+    expect(await readFile(join(target, 'my-custom-skill', 'SKILL.md'), 'utf8')).toBe(
+      'user-authored',
+    );
+  });
+
+  it('T2: empty `pruned` array when nothing stale (clean sync)', async () => {
+    await writeSkill('noir-a', '---\nname: noir-a\ndescription: Use when a.\n---\n# a');
+    const target = join(fixture, '_out');
+    const summary = await emitSkillsToDir(target, { builtinDir: fixture });
+    expect(summary.pruned).toEqual([]);
+  });
 });

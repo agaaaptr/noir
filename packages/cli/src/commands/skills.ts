@@ -21,7 +21,7 @@ import {
   emitSkillsToDir,
   type IntegrationSkill,
 } from '@noir-ai/skills';
-import { type CliOptions, EXIT, fail, info, log, table } from '../output.js';
+import { type CliOptions, EXIT, fail, info, log, table, warn } from '../output.js';
 
 /** Options accepted by `skills` sub-commands (the global flags only). */
 export interface SkillsOptions extends CliOptions {}
@@ -203,10 +203,12 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
 
   const dir = claudeAdapter.skillsDir({ root });
   const summary = await emitSkillsToDir(dir);
+  const pruned = summary.pruned ?? [];
   const data = {
     emitted: summary.emitted,
     references: summary.references,
     dir,
+    pruned,
   };
 
   if (opts.json === true) {
@@ -218,4 +220,12 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
     `Synced ${summary.emitted.length} Noir skill${summary.emitted.length === 1 ? '' : 's'} to ${dir}.`,
     opts,
   );
+  // T2: surface stale-dir pruning in both human + JSON modes for parity with
+  // `noir sync` (the structured `pruned` field above covers --json).
+  if (pruned.length > 0) {
+    warn(
+      `Pruned ${pruned.length} stale noir-* skill dir${pruned.length === 1 ? '' : 's'}: ${pruned.join(', ')}`,
+      opts,
+    );
+  }
 }

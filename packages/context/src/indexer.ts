@@ -35,11 +35,12 @@
 // `docs` rows, and reports `degraded:true` — it never crashes on a bad embedder.
 
 import type { Dirent } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { chunkFile, inferLanguage, withIdentifierExplosion } from './chunker.js';
 import { sha256Hex } from './hash.js';
-import type { EmbedderInfo, EmbedFn, IndexResult, SourceKind, Store } from './types.js';
+import type { ChunkMeta, EmbedderInfo, EmbedFn, IndexResult, SourceKind, Store } from './types.js';
 
 // ---------------------------------------------------------------------------
 // KV schema (namespaced `ctx:` — disjoint from `workflow:*` / store meta)
@@ -324,6 +325,27 @@ export interface Indexer {
   forget(paths: string[]): Promise<ForgetResult>;
   /** Drop every indexed chunk + vector, then re-index the registered roots from scratch. */
   reindex(): Promise<IndexResult>;
+  /**
+   * Read a single chunk's CLEAN content + meta by id, by re-reading the source
+   * file from disk and re-chunking it (the indexer writes the post-identifier-
+   * explosion form to the `docs` table for FTS — the CLEAN pre-explosion text
+   * is what a kNN-only-hit snippet wants, since it is what humans read). This
+   * is the read side of the indexer's own writer: it knows the registry layout
+   * (`ctx:registry` + `ctx:file:<key>`) and the chunk-id format
+   * (`<sha256(path)>#chunk-<n>`), so it is the natural place to look up a
+   * chunk by id.
+   *
+   * Used by the engine to hydrate kNN-only retriever hits (C1) — wired as the
+   * retriever's `readDoc`. Returns `null` when:
+   *   • the chunk id is not in any tracked FileRecord (deleted, or never
+   *     indexed — e.g. a vec row whose `docs` row came from a foreign source);
+   *   • the source file is missing/unreadable on disk (deleted/moved/perm);
+   *   • the file's content changed and the re-chunk no longer yields this id.
+   *
+   * In all miss cases the caller (retriever) emits an empty snippet and the
+   * payload's `mode` honestly reflects `'knn'` — never crashes.
+   */
+  readChunkContent(id: string): { content: string; meta: ChunkMeta } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -648,15 +670,73 @@ export function createIndexer(opts: IndexerOptions): Indexer {
     return indexPaths(registry);
   }
 
+  // --- readChunkContent ------------------------------------------------------
+  /**
+   * Read-side companion to `indexPaths`/`forget`/`reindex`. Look up a chunk's
+   * CLEAN content + meta by id, by re-reading the source file from disk and
+   * re-chunking it (the CLEAN pre-explosion text is what a kNN-only snippet
+   * wants — humans read it; the post-identifier-explosion form is FTS-only).
+   *
+   * The chunk-id format is `<parentDocId>#chunk-<n>` where `parentDocId =
+   * sha256(path)`, but the indexer keys FileRecords by PATH KEY (which may be
+   * repo-relative OR absolute depending on `opts.root`), NOT by sha256(path).
+   * So the lookup walks the registry's FileRecords and picks the one whose
+   * `chunkIds` contains `id`. Returns `null` on any miss (no entry, missing
+   * file, content drift) so the retriever degrades honestly to `mode:'knn'`.
+   *
+   * Pure-read: no KV mutation, no `await` (synchronous file reads via
+   * `readFileSync`). Bypasses the serialized mutation queue — reads can run
+   * freely concurrent with each other AND with a concurrent `indexPaths`
+   * (SQLite WAL handles read concurrency; the worst case is a transient
+   * content-mismatch miss, which surfaces honestly as `mode:'knn'`).
+   */
+  function readChunkContent(id: string): { content: string; meta: ChunkMeta } | null {
+    const records = loadRecords();
+    // Find the FileRecord that owns this chunk id. Short-circuit: most kNN
+    // queries hydrate 0–few hits, and the registry is small (one entry per
+    // indexed file), so the linear scan is cheap.
+    let ownerKey: string | null = null;
+    for (const [key, rec] of records) {
+      if (rec.chunkIds.includes(id)) {
+        ownerKey = key;
+        break;
+      }
+    }
+    if (ownerKey === null) return null;
+    // Resolve the path key back to an absolute path the same way indexPaths
+    // does (`base` is the indexer's `opts.root ?? process.cwd()`). POSIX-form
+    // the result to match the on-disk key separator.
+    const abs = keyAbs(ownerKey);
+    let content: string;
+    try {
+      content = readFileSync(abs, 'utf8');
+    } catch {
+      // Missing/unreadable file (deleted, moved, permissions). Surface as a
+      // null miss — the retriever reports mode:'knn'.
+      return null;
+    }
+    // Null-byte guard mirrors indexPaths: don't trust a file that turned binary
+    // under us (would yield garbage chunks); treat as a miss.
+    if (content.includes(String.fromCharCode(0))) return null;
+    // Re-chunk and pick the chunk whose id matches. If the file's content
+    // drifted (chunkIds no longer line up), this returns null honestly.
+    const chunks = chunkFile({ path: ownerKey, content });
+    const found = chunks.find((c) => c.id === id);
+    if (!found) return null;
+    return { content: found.content, meta: found.meta };
+  }
+
   // Mutating ops are wrapped in `serialized` so they run strictly one at a time
   // over the shared store handle (see `chain` above). The inner closures call
   // the un-wrapped functions directly: `reindex` invokes `indexPaths` inline
   // within its own serialized slot, so there is no re-queue / deadlock.
+  // `readChunkContent` is a pure read and bypasses the queue (see its JSDoc).
   return {
     indexPaths: (inputPaths: string[], o?: IndexPathOptions) =>
       serialized(() => indexPaths(inputPaths, o)),
     forget: (inputPaths: string[]) => serialized(() => forget(inputPaths)),
     reindex: () => serialized(reindex),
+    readChunkContent,
   };
 }
 

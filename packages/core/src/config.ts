@@ -136,6 +136,48 @@ export const NoirConfigSchema = z.object({
         .default({ enabled: false }),
     })
     .default({ consolidation: { enabled: false } }),
+  // Debt-batch A — `rules:` block. Additive, no-op when absent (defaults make it
+  // a pass-through). Reserved for the upcoming rule-driven lint surface (the
+  // `@noir-ai/workflow` rule registry + future `noir check`); for v1.x this
+  // block is parsed + validated but no consumer reads it yet — declaring it
+  // here lets early adopters pin `enabled: false` or a non-default budget in
+  // `.noir/config.yml` without a schema churn when the rule engine ships.
+  rules: z
+    .object({
+      // Master switch (default true — the rule registry is opt-OUT; a project
+      // that wants no part of it sets `enabled: false`). When the rule engine
+      // ships, false ⇒ no rules registered + `noir check` is a no-op.
+      enabled: z.boolean().default(true),
+      // Soft per-rule body budget in KB (targets file-size discipline for the
+      // markdown rules; the future rule registry clips over-budget rule bodies
+      // and surfaces a warning rather than rejecting the file). Positive int.
+      lengthBudgetKb: z.number().int().positive().default(6),
+    })
+    // Outer default matches the parsed output shape (Zod v4 requirement): an
+    // absent `rules:` block resolves to enabled/6 — the registry-active default.
+    .default({ enabled: true, lengthBudgetKb: 6 }),
+  // Slice P (PRD) — `prd:` block. Additive, escapable-soft-gate config for the
+  // pre-SDD Product Requirements Document. The workflow engine reads
+  // `mandatoryFor` to decide when a missing PRD warrants an observable,
+  // escapable recommendation at the spec gate (the advance still proceeds —
+  // never a hard block; `--force <reason>` is the explicit override). The
+  // `TaskClass` enum mirrors @noir-ai/workflow's; duplicated HERE (as a literal
+  // z.enum) so core never imports workflow (no core→workflow cycle), exactly
+  // as `model`/`memory`/`context` declare provider shapes that their resolvers
+  // in other packages consume.
+  //
+  // Defaults: `mandatoryFor: ['feature', 'epic']` — the noir-prd skill's "when
+  // to draft" rule. Quick-mode + non-mandatory taskClasses skip the check
+  // entirely; a present-but-empty `prd:` block also degrades to the default.
+  prd: z
+    .object({
+      mandatoryFor: z
+        .array(
+          z.enum(['feature', 'epic', 'enhancement', 'bugfix', 'spike', 'quick-task', 'refactor']),
+        )
+        .default(['feature', 'epic']),
+    })
+    .default({ mandatoryFor: ['feature', 'epic'] }),
   // Slice X integration layer (@noir-ai/skills `integrations/<name>/`). Additive
   // block keyed by integration name — every field optional + default-`{}` so a
   // config with NO `integrations:` block still parses and behaves as "no

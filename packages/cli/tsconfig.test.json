@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // Tests import from `../src/...` (relative) AND from `@noir-ai/*` (workspace
+    // packages via their built dist). `rootDir` is widened to the package root so
+    // `test/` is admitted alongside `src/`; `noEmit` makes `outDir` irrelevant.
+    "rootDir": "."
+  },
+  // Type-check both `src` (defense-in-depth — surfaces src errors with the same
+  // flags test uses) and `test` in one pass. Tests use explicit imports from
+  // `vitest` (no globals), so no `types: ["vitest/globals"]` is needed.
+  "include": ["src", "test"]
+}

@@ -93,6 +93,13 @@ export interface EmitSummary {
    *  Additive — callers that ignore it (existing cli) still get the builtins in
    *  `emitted`. */
   integrations?: string[];
+  /** Stale `noir-*` directories removed from `dir` after emit (T2 cleanup).
+   *  Names a previous Noir version shipped but the current build no longer
+   *  does (builtin renamed/removed). Only the `noir-` managed namespace is
+   *  ever pruned — user skills without the prefix are NEVER touched. Empty
+   *  array when nothing was stale; undefined on callers that pre-date the
+   *  field (additive — old callers still get the rest of the summary). */
+  pruned?: string[];
 }
 
 export type CompileTarget = 'claude';

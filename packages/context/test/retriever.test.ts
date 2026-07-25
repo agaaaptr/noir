@@ -147,7 +147,10 @@ describe('retriever (degraded paths, stubbed store)', () => {
     const res = await r.search('anything');
 
     // No readDoc → the vec hit is unhydrated (empty snippet) but still ranked.
+    // Mode truthfully reports 'knn' (kNN leg ran, but the hit could not be
+    // hydrated to a real snippet — C1).
     expect(res.degraded).toBe(true);
+    expect(res.mode).toBe('knn');
     expect(res.results.map((h) => h.id)).toContain('v1');
   });
 });
@@ -354,7 +357,7 @@ describeStore(storeLabel, () => {
     }
   });
 
-  it('kNN-only hit without a readDoc hydrator keeps its rank but emits an empty snippet', async () => {
+  it('kNN-only hit without a readDoc hydrator keeps its rank but emits an empty snippet (mode:knn)', async () => {
     const store = await openStore({ projectId: id, root });
     try {
       store.indexDoc({
@@ -378,6 +381,10 @@ describeStore(storeLabel, () => {
       const r = createRetriever({ store, embed: embedBase });
       const res = await r.search('alpha');
 
+      // C1: the kNN leg ran but n2 could not be hydrated → mode truthfully
+      // reports 'knn' (NOT 'hybrid'), and the search is marked degraded.
+      expect(res.mode).toBe('knn');
+      expect(res.degraded).toBe(true);
       const n2 = res.results.find((h) => h.id === 'n2');
       expect(n2).toBeTruthy();
       if (!n2) throw new Error('expected n2 in results');
@@ -388,6 +395,51 @@ describeStore(storeLabel, () => {
     } finally {
       await store.close();
     }
+  });
+
+  it('C1: readDoc MISS (returns null) demotes mode to knn (honest about the empty snippet)', async () => {
+    const store = stubStore({
+      searchFt: () => [],
+      knn: () => [{ id: 'orphan1', source: 'codebase', score: 0.2 }],
+    });
+    const r = createRetriever({
+      store,
+      embed: fakeEmbedFn(),
+      // A hydrator is wired but it always misses (simulates a deleted/degraded
+      // source doc — the chunk id is in the vec table but the docs row / source
+      // file is gone). The hit keeps its rank; mode degrades to 'knn'.
+      opts: { readDoc: () => null },
+    });
+    const res = await r.search('anything');
+
+    expect(res.mode).toBe('knn');
+    expect(res.degraded).toBe(true);
+    expect(res.results.length).toBeGreaterThan(0);
+    expect(res.results[0]?.snippet).toBe('');
+  });
+
+  it('C1: readDoc HIT keeps mode hybrid (full hybrid snippet quality)', async () => {
+    const store = stubStore({
+      searchFt: () => [],
+      knn: () => [{ id: 'h1', source: 'codebase', score: 0.2 }],
+    });
+    const r = createRetriever({
+      store,
+      embed: fakeEmbedFn(),
+      opts: {
+        readDoc: (id) =>
+          id === 'h1'
+            ? { content: 'hydrated semantic content for the orphan chunk', meta: undefined }
+            : null,
+      },
+    });
+    const res = await r.search('semantic');
+
+    // kNN leg ran, the kNN-only hit was hydrated → full hybrid snippet quality
+    // → mode stays 'hybrid' (NOT 'knn').
+    expect(res.mode).toBe('hybrid');
+    expect(res.degraded).toBe(false);
+    expect(res.results[0]?.snippet.length).toBeGreaterThan(0);
   });
 
   it('no matches → empty results, not degraded, within budget', async () => {

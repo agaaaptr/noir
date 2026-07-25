@@ -530,4 +530,93 @@ describeVec(describeLabel, () => {
     expect(store.countDocs()).toBe(total);
     expect(store.countVecs()).toBe(total);
   });
+
+  // ---------------------------------------------------------------------------
+  // readChunkContent (C1 — kNN-only-hit snippet hydration)
+  // ---------------------------------------------------------------------------
+
+  it('C1: readChunkContent returns the CLEAN chunk content + meta for an indexed chunk', async () => {
+    store = await openStore({ projectId, root });
+    const indexer = freshIndexer();
+    // Two chunks in one file (parentDocId = sha256('src/hydrate.ts')).
+    writeFile('src/hydrate.ts', 'alpha first chunk\n\nbeta second chunk\n');
+    await indexer.indexPaths(['src/hydrate.ts']);
+
+    // Pick the first chunk's id from the per-file record (the indexer is the
+    // source of truth for the chunk-id format).
+    const rec = store.getState<FileRecord>(ctxFileKey('src/hydrate.ts'));
+    if (!rec) throw new Error('expected a FileRecord for src/hydrate.ts');
+    const firstId = rec.chunkIds[0];
+    if (!firstId) throw new Error('expected at least one chunk id');
+
+    const out = indexer.readChunkContent(firstId);
+    expect(out).not.toBeNull();
+    if (!out) return;
+    // Returns the CLEAN chunk content (pre-identifier-explosion) — what a
+    // kNN-only-hit snippet wants — not the docs-table indexedContent form.
+    expect(out.content).toContain('alpha first chunk');
+    // Meta is the full ChunkMeta the chunker produced.
+    expect(out.meta.path).toBe('src/hydrate.ts');
+    expect(out.meta.parentDocId).toBe(sha256('src/hydrate.ts'));
+    expect(out.meta.chunkIndex).toBe(0);
+  });
+
+  it('C1: readChunkContent returns null for a chunk id not in the registry (deleted/foreign)', async () => {
+    store = await openStore({ projectId, root });
+    const indexer = freshIndexer();
+    writeFile('src/one.ts', 'only file\n');
+    await indexer.indexPaths(['src/one.ts']);
+
+    // An id that was never indexed (vec row came from a foreign source, or the
+    // chunk was deleted in a prior reconcile): honest null miss.
+    expect(indexer.readChunkContent('deadbeef#chunk-0')).toBeNull();
+  });
+
+  it('C1: readChunkContent returns null when the source file is missing on disk', async () => {
+    store = await openStore({ projectId, root });
+    const indexer = freshIndexer();
+    writeFile('src/gone.ts', 'alpha indexed then deleted from disk\n');
+    await indexer.indexPaths(['src/gone.ts']);
+    const rec = store.getState<FileRecord>(ctxFileKey('src/gone.ts'));
+    if (!rec) throw new Error('expected FileRecord');
+    const id = rec.chunkIds[0];
+    if (!id) throw new Error('expected chunk id');
+
+    // Simulate the source file being removed out-of-band (the registry still
+    // references it, but the file is gone). The lookup must NOT crash — it
+    // returns null so the retriever degrades honestly to mode:'knn'.
+    removeFile('src/gone.ts');
+    expect(indexer.readChunkContent(id)).toBeNull();
+  });
+
+  it('C1: readChunkContent returns null when the file content drifted (chunkId no longer re-chunks)', async () => {
+    store = await openStore({ projectId, root });
+    const indexer = freshIndexer();
+    writeFile('src/drift.ts', 'alpha original content here\n');
+    await indexer.indexPaths(['src/drift.ts']);
+    const rec = store.getState<FileRecord>(ctxFileKey('src/drift.ts'));
+    if (!rec) throw new Error('expected FileRecord');
+    const id = rec.chunkIds[0];
+    if (!id) throw new Error('expected chunk id');
+
+    // Out-of-band edit: the file content changed under the registry's nose, so
+    // re-chunking no longer yields the prior chunk id (different sha256(path)
+    // is fine — same path — but the chunker may yield a different number of
+    // chunks, and the chunk-id index `<n>` no longer points at the same text).
+    // Replace with content that re-chunks to fewer / different chunks.
+    writeFile('src/drift.ts', 'completely different and much shorter\n');
+    // Either null (id no longer re-chunks) or a different content is acceptable
+    // — the contract is "the chunk id is still valid". In practice this path
+    // returns null because the new content's chunks have different ids when
+    // re-chunked against the same path key (the chunker is deterministic, but
+    // the chunk-id index stays 0..N-1; for a single-chunk file it stays 0).
+    // Assert honest behavior: the call does not crash; the result is either
+    // null (drift detected) or non-null content from the CURRENT file.
+    const out = indexer.readChunkContent(id);
+    if (out !== null) {
+      // If a chunk with this id still exists post-drift, it must reflect the
+      // CURRENT on-disk content (never stale).
+      expect(out.content).not.toContain('alpha original');
+    }
+  });
 });

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { createProjectId } from '@noir-ai/core';
 import { openStore } from '@noir-ai/store';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { gateFor, recordGate } from '../src/gates.js';
+import { gateFor, readGateHistory, recordGate } from '../src/gates.js';
 import type { GateResult } from '../src/types.js';
 
 // Real-store setup mirroring @noir-ai/store's own tests: a fresh temp-dir DB
@@ -24,17 +24,17 @@ describe('observable gates + audit recording', () => {
     const store = await openStore({ projectId: id, root });
     try {
       const t0 = Date.now();
+      // W3 GateResultInput split: callers omit `at` (recordGate stamps it).
       // approved — happy path through the spec gate
-      recordGate(store, 'task-1', { phase: 'spec', decision: 'approved', at: 0 });
+      recordGate(store, 'task-1', { phase: 'spec', decision: 'approved' });
       // forced — carries a reason (e.g. user override of the plan gate)
       recordGate(store, 'task-1', {
         phase: 'plan',
         decision: 'forced',
         reason: 'user overrode plan gate',
-        at: 0,
       });
       // skipped — quick mode bypasses the verify gate
-      recordGate(store, 'task-1', { phase: 'verify', decision: 'skipped', at: 0 });
+      recordGate(store, 'task-1', { phase: 'verify', decision: 'skipped' });
 
       const audit = store.getState<GateResult[]>('audit:task-1');
       expect(audit).not.toBeNull();
@@ -46,7 +46,7 @@ describe('observable gates + audit recording', () => {
         decision: 'approved',
         at: expect.any(Number),
       });
-      // at is stamped by recordGate (caller passed 0), and is recent
+      // at is stamped by recordGate (the caller no longer passes it), recent.
       expect(audit?.[0]?.at).toBeGreaterThanOrEqual(t0);
 
       // entry 1 — forced, carries the reason
@@ -75,10 +75,10 @@ describe('observable gates + audit recording', () => {
   it('is append-only — prior entries survive a later record (no overwrite)', async () => {
     const store = await openStore({ projectId: id, root });
     try {
-      recordGate(store, 'task-2', { phase: 'spec', decision: 'approved', at: 0 });
+      recordGate(store, 'task-2', { phase: 'spec', decision: 'approved' });
       expect(store.getState<GateResult[]>('audit:task-2')).toHaveLength(1);
 
-      recordGate(store, 'task-2', { phase: 'plan', decision: 'approved', at: 0 });
+      recordGate(store, 'task-2', { phase: 'plan', decision: 'approved' });
       const after2 = store.getState<GateResult[]>('audit:task-2');
       expect(after2).toHaveLength(2);
       // the first entry is intact (not overwritten by the second write)
@@ -93,7 +93,7 @@ describe('observable gates + audit recording', () => {
     const store = await openStore({ projectId: id, root });
     try {
       expect(store.getState<GateResult[]>('audit:task-3')).toBeNull();
-      recordGate(store, 'task-3', { phase: 'spec', decision: 'approved', at: 0 });
+      recordGate(store, 'task-3', { phase: 'spec', decision: 'approved' });
       expect(store.getState<GateResult[]>('audit:task-3')).toHaveLength(1);
     } finally {
       await store.close();
@@ -103,8 +103,8 @@ describe('observable gates + audit recording', () => {
   it('keeps per-task audit logs isolated by taskId', async () => {
     const store = await openStore({ projectId: id, root });
     try {
-      recordGate(store, 'task-a', { phase: 'spec', decision: 'approved', at: 0 });
-      recordGate(store, 'task-b', { phase: 'plan', decision: 'forced', reason: 'x', at: 0 });
+      recordGate(store, 'task-a', { phase: 'spec', decision: 'approved' });
+      recordGate(store, 'task-b', { phase: 'plan', decision: 'forced', reason: 'x' });
       expect(store.getState<GateResult[]>('audit:task-a')).toHaveLength(1);
       expect(store.getState<GateResult[]>('audit:task-b')).toHaveLength(1);
       expect(store.getState<GateResult[]>('audit:task-a')?.[0]?.decision).toBe('approved');
@@ -121,5 +121,35 @@ describe('observable gates + audit recording', () => {
     expect(gateFor('clarify')).toBeNull();
     expect(gateFor('execute')).toBeNull();
     expect(gateFor('document')).toBeNull();
+  });
+});
+
+// Debt-batch A / W1 — readGateHistory is the bridge consumers use to derive
+// `task.history` from the authoritative audit KV. Mirrors recordGate's
+// append-only semantics: returns [] for a task with no gates (never null).
+describe('readGateHistory — authoritative audit-KV reader (W1)', () => {
+  it('returns [] when no gate has fired for the task (never null)', async () => {
+    const store = await openStore({ projectId: id, root });
+    try {
+      expect(readGateHistory(store, 'never-started')).toEqual([]);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('returns the recorded entries in order (mirrors the audit KV)', async () => {
+    const store = await openStore({ projectId: id, root });
+    try {
+      recordGate(store, 'task-x', { phase: 'spec', decision: 'approved' });
+      recordGate(store, 'task-x', { phase: 'plan', decision: 'forced', reason: 'r' });
+      const history = readGateHistory(store, 'task-x');
+      expect(history).toHaveLength(2);
+      expect(history[0]).toMatchObject({ phase: 'spec', decision: 'approved' });
+      expect(history[1]).toMatchObject({ phase: 'plan', decision: 'forced', reason: 'r' });
+      // The returned objects carry the stamped `at` (callers pass GateResultInput).
+      expect(history[0]?.at).toBeTypeOf('number');
+    } finally {
+      await store.close();
+    }
   });
 });

@@ -18,7 +18,7 @@ const { payloads, clackMock, CANCEL } = vi.hoisted(() => ({
     intro: vi.fn(),
     outro: vi.fn(),
     cancel: vi.fn(),
-    text: vi.fn(async () => 'prompted content'),
+    text: vi.fn(async (): Promise<string | symbol> => 'prompted content'),
     isCancel: vi.fn((v: unknown) => v === CANCEL),
   },
 }));
@@ -151,12 +151,14 @@ function captureStreams(): { capture: () => Captured; restore: () => void } {
   const err: string[] = [];
   const o = process.stdout.write.bind(process.stdout);
   const e = process.stderr.write.bind(process.stderr);
-  process.stdout.write = ((c: unknown) => (
-    out.push(typeof c === 'string' ? c : String(c)), true
-  )) as typeof process.stdout.write;
-  process.stderr.write = ((c: unknown) => (
-    err.push(typeof c === 'string' ? c : String(c)), true
-  )) as typeof process.stderr.write;
+  process.stdout.write = ((c: unknown) => {
+    out.push(typeof c === 'string' ? c : String(c));
+    return true;
+  }) as typeof process.stdout.write;
+  process.stderr.write = ((c: unknown) => {
+    err.push(typeof c === 'string' ? c : String(c));
+    return true;
+  }) as typeof process.stderr.write;
   return {
     capture: () => ({ out: out.join(''), err: err.join('') }),
     restore: () => {

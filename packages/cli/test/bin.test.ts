@@ -98,7 +98,7 @@ async function parse(args: string[]): Promise<ParseResult> {
     errChunks.push(typeof chunk === 'string' ? chunk : String(chunk));
     return true;
   }) as typeof process.stderr.write;
-  let exitCode = EXIT.OK;
+  let exitCode: number = EXIT.OK;
   try {
     await program.parseAsync(args, { from: 'user' });
   } catch (err) {
@@ -260,7 +260,11 @@ describe('commander migration — behavior preservation (migrated commands)', ()
     // Regression guard: the conditional-spread must NOT add `upgrade: false`,
     // which would break the exact-arg assertions used elsewhere in this suite.
     await parse(['init']);
-    const [, opts] = vi.mocked(init).mock.calls[0];
+    // `noUncheckedIndexedAccess`: calls[0] is `[args, opts] | undefined`; guard
+    // explicitly so the destructure type-narrows without a non-null assertion.
+    const call = vi.mocked(init).mock.calls[0];
+    if (!call) throw new Error('init was not called');
+    const [, opts] = call;
     expect(opts).toEqual({ transport: 'stdio', url: undefined });
     expect('upgrade' in opts).toBe(false);
   });

@@ -41,6 +41,14 @@
 // read-only DB missing `docs_fts`) is also caught: search degrades to an empty
 // or vec-only result set rather than crashing.
 //
+// Mode truthfulness (C1): beyond the bm25-only fallback there is a softer
+// degradation — `'knn'`. When the kNN leg ran successfully but a kNN-only hit
+// could not be hydrated (no `readDoc` wired, or the source doc was
+// deleted/degraded), the hit keeps its rank but carries an empty snippet, and
+// the payload carries `mode:'knn'` so the caller knows it did not receive full
+// hybrid snippet quality. `'hybrid'` is reserved for the case where both legs
+// ran AND every hit got a real windowed snippet.
+//
 // Hard rules honored (see the slice brief):
 //   • Reuses the existing Store API only — no getDoc added, no schema migration.
 //   • RRF k=60 RANK-BASED (no score normalization; raw scores never summed).
@@ -118,7 +126,10 @@ export interface RetrieverOptions {
    * hit cannot be windowed. When provided and it hits, the chunk's content is
    * prefix-windowed with `<<query-term>>` highlights (mirroring FTS5). When
    * omitted or it misses, the hit is emitted with an empty snippet — degraded
-   * but ranked (F8). The engine (t8) wires this when a content source exists.
+   * but ranked (F8) — AND the search result's `mode` becomes `'knn'` so the
+   * caller can tell the snippet quality is degraded (C1). The engine (t8)
+   * wires this from the indexer's `readChunkContent` when a content source
+   * exists.
    */
   readDoc?: (id: string) => ChunkDoc | null;
 }
@@ -364,9 +375,6 @@ export function createRetriever(deps: RetrieverDeps): Retriever {
         knnFailed = true;
       }
 
-      const mode: SearchMode = knnFailed ? 'bm25-only' : 'hybrid';
-      const degraded = knnFailed || ftsFailed;
-
       // --- RRF fusion (rank-based; raw BM25+cosine scores NEVER summed) ---
       const fused = fuseRrf(ftsHits, knnHits, { k, weights });
 
@@ -376,6 +384,12 @@ export function createRetriever(deps: RetrieverDeps): Retriever {
       for (const h of ftsHits) {
         if (!ftsById.has(h.id)) ftsById.set(h.id, h);
       }
+
+      // Track whether ANY kNN-only hit could not be hydrated (no readDoc, or
+      // readDoc missed). When true, the search did not deliver full hybrid
+      // snippet quality — surface that honestly via mode:'knn' (degraded but
+      // distinct from 'bm25-only', which means the kNN leg did not run at all).
+      let knnUnhydrated = false;
 
       // --- Enrich each fused row into a public RetrieverHit ---
       const enriched: RetrieverHit[] = fused.map((row) => {
@@ -410,7 +424,10 @@ export function createRetriever(deps: RetrieverDeps): Retriever {
           }
         }
         // Unhydratable kNN-only hit: keep the rank, emit an empty snippet.
-        // (vec0 carries no meta; the Store has no read-by-id; no readDoc wired.)
+        // (vec0 carries no meta; the Store has no read-by-id; no readDoc
+        // wired, OR readDoc returned null because the source doc was
+        // deleted/degraded.) Flag so the reported mode reflects the truth.
+        knnUnhydrated = true;
         return {
           id: row.id,
           source: asSourceKind(row.source),
@@ -421,6 +438,13 @@ export function createRetriever(deps: RetrieverDeps): Retriever {
           meta: {},
         };
       });
+
+      // Mode truthfulness (C1): 'bm25-only' when the kNN leg failed entirely;
+      // 'knn' when the kNN leg ran but at least one kNN-only hit couldn't be
+      // hydrated (rank delivered, snippet not); 'hybrid' when both legs ran
+      // and every hit got a real snippet.
+      const mode: SearchMode = knnFailed ? 'bm25-only' : knnUnhydrated ? 'knn' : 'hybrid';
+      const degraded = knnFailed || ftsFailed || knnUnhydrated;
 
       // --- Collapse duplicate parent-docs, then pack to the token budget ---
       const collapsed = collapseByParent(enriched);

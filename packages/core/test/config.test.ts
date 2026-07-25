@@ -223,3 +223,74 @@ describe('parseConfig — Slice X integrations block', () => {
     ).toThrow();
   });
 });
+
+// Debt-batch A — `rules:` block (R4). Additive, schema-validated, no-op until
+// the rule registry ships. The outer default resolves to enabled/6 so a config
+// with NO `rules:` block still parses to the registry-active shape.
+describe('parseConfig — rules block (R4)', () => {
+  it('defaults the rules block to enabled + 6KB when absent (no-op carrier)', () => {
+    const cfg = parseConfig({ host: 'claude' });
+    expect(cfg.rules.enabled).toBe(true);
+    expect(cfg.rules.lengthBudgetKb).toBe(6);
+  });
+
+  it('round-trips an explicit rules block', () => {
+    const cfg = parseConfig({
+      host: 'claude',
+      rules: { enabled: false, lengthBudgetKb: 12 },
+    });
+    expect(cfg.rules.enabled).toBe(false);
+    expect(cfg.rules.lengthBudgetKb).toBe(12);
+  });
+
+  it('applies field-level defaults for a partial rules block', () => {
+    const cfg = parseConfig({ host: 'claude', rules: { enabled: false } });
+    expect(cfg.rules.enabled).toBe(false);
+    expect(cfg.rules.lengthBudgetKb).toBe(6); // default carries
+  });
+
+  it('rejects a non-positive lengthBudgetKb', () => {
+    expect(() => parseConfig({ host: 'claude', rules: { lengthBudgetKb: 0 } })).toThrow();
+    expect(() => parseConfig({ host: 'claude', rules: { lengthBudgetKb: -1 } })).toThrow();
+  });
+
+  it('rejects a non-integer lengthBudgetKb', () => {
+    expect(() => parseConfig({ host: 'claude', rules: { lengthBudgetKb: 1.5 } })).toThrow();
+  });
+});
+
+// Slice P (PRD) — `prd:` block (P4). The mandatoryFor default mirrors the
+// noir-prd skill ("feature/epic"); the workflow engine reads it to decide when
+// a missing PRD warrants an observable, escapable recommendation at the spec
+// gate. Additive — a config with NO `prd:` block parses to the default.
+describe('parseConfig — prd block (P4)', () => {
+  it('defaults prd.mandatoryFor to ["feature", "epic"] when absent', () => {
+    const cfg = parseConfig({ host: 'claude' });
+    expect(cfg.prd.mandatoryFor).toEqual(['feature', 'epic']);
+  });
+
+  it('round-trips an explicit mandatoryFor list', () => {
+    const cfg = parseConfig({
+      host: 'claude',
+      prd: { mandatoryFor: ['feature', 'epic', 'enhancement', 'spike'] },
+    });
+    expect(cfg.prd.mandatoryFor).toEqual(['feature', 'epic', 'enhancement', 'spike']);
+  });
+
+  it('accepts an empty mandatoryFor (disables the soft gate entirely)', () => {
+    // A user who wants no PRD recommendations at all writes `mandatoryFor: []`.
+    // This is the supported opt-OUT — the engine then skips the check for every
+    // taskClass, mirroring quick-mode's blanket skip.
+    const cfg = parseConfig({ host: 'claude', prd: { mandatoryFor: [] } });
+    expect(cfg.prd.mandatoryFor).toEqual([]);
+  });
+
+  it('treats a present-but-empty prd block as the default (feature/epic)', () => {
+    const cfg = parseConfig({ host: 'claude', prd: {} });
+    expect(cfg.prd.mandatoryFor).toEqual(['feature', 'epic']);
+  });
+
+  it('rejects an unknown taskClass value', () => {
+    expect(() => parseConfig({ host: 'claude', prd: { mandatoryFor: ['story'] } })).toThrow();
+  });
+});

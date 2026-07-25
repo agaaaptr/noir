@@ -32,4 +32,13 @@ export async function sync(root: string): Promise<void> {
   }
   const summary = await emitSkillsToDir(claudeAdapter.skillsDir({ root }));
   process.stderr.write(`Synced ${summary.emitted.length} Noir skills to .claude/skills/.\n`);
+  // T2: surface stale-dir pruning so a user can see when a previous Noir
+  // version's builtin was removed (the dir was deleted from .claude/skills/).
+  // Pure hygiene; never affects correctness of the freshly-emitted pack.
+  const pruned = summary.pruned ?? [];
+  if (pruned.length > 0) {
+    process.stderr.write(
+      `Pruned ${pruned.length} stale noir-* skill dir${pruned.length === 1 ? '' : 's'}: ${pruned.join(', ')}\n`,
+    );
+  }
 }
