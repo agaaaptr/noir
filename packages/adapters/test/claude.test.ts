@@ -1,4 +1,4 @@
-import { CONTEXT_BLOCK_BEGIN, CONTEXT_BLOCK_END } from '@noir-ai/core';
+import { CONTEXT_BLOCK_BEGIN, CONTEXT_BLOCK_END, RULES_BLOCK } from '@noir-ai/core';
 import { describe, expect, it } from 'vitest';
 import { claudeAdapter } from '../src/claude.js';
 
@@ -35,5 +35,12 @@ describe('claudeAdapter', () => {
 
   it('targets .claude/skills for skill emission', () => {
     expect(claudeAdapter.skillsDir?.({ root: '/p' })).toBe('/p/.claude/skills');
+  });
+
+  it('emits a rules @import block wrapped in markers', () => {
+    const block = claudeAdapter.emitRules?.(ctx) ?? '';
+    expect(block).toContain(RULES_BLOCK.begin);
+    expect(block).toContain(RULES_BLOCK.end);
+    expect(block).toContain('@import ".noir/rules/RULES.md"');
   });
 });
