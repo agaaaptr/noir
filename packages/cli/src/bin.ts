@@ -119,10 +119,11 @@ export function createProgram(): Command {
       throw err;
     })
     .configureOutput({
-      // S9 stream discipline: data → stdout, diagnostics → stderr. Help and
-      // errors are diagnostics, so both go to stderr (keeps stdout pristine for
-      // --json payloads). commander's default error formatting is preserved.
-      writeOut: (str) => process.stderr.write(str),
+      // Stream discipline: --help/--version → stdout (conventional; users pipe
+      // them), errors → stderr. --json data is emitted by command actions via
+      // process.stdout directly, NOT by commander's writeOut, so routing help/
+      // version to stdout does not conflict with --json payloads.
+      writeOut: (str) => process.stdout.write(str),
       writeErr: (str) => process.stderr.write(str),
     });
 
