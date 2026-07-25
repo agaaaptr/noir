@@ -153,7 +153,7 @@ noir/
 │   └── daemon/ adapters/ cli/
 ├── scripts/                  install.sh (native installer), bump-version.mjs (release versioning)
 ├── packaging/homebrew/       Homebrew formula + tap material
-├── .github/workflows/        ci.yml, release.yml (OIDC Trusted Publishing + provenance)
+├── .github/workflows/        ci.yml, release.yml (npm automation token + provenance)
 ├── docs/                     architecture, decisions (ADRs), specs, roadmap, changelog
 ├── AGENTS.md                 agent guidance for developing this repo
 ├── biome.json                formatter + linter
@@ -176,6 +176,7 @@ This repo is itself developed with Claude Code; [`AGENTS.md`](AGENTS.md) holds t
 
 - **[Installation](docs/installation.md)** — every install path (native installer, npm/pnpm/yarn/bun, npx, Homebrew), troubleshooting, requirements.
 - **[Getting started](docs/getting-started.md)** · **[Usage reference](docs/usage.md)** — transports, SDD modes, commands, config.
+- **[Releasing](docs/releasing.md)** · **[Adding a package](docs/packaging.md)** — the npm publish runbook (automation token + provenance, beta/stable channels), and how to add an `@noir-ai/*` package.
 - [Roadmap & current status](docs/roadmap.md) · [Changelog](docs/CHANGELOG.md)
 - [Architecture](docs/architecture/) · [Decision records (ADRs)](docs/decisions/)
 - [Design blueprint](docs/specs/2026-07-23-noir-toolkit-design.md) · [SDD spec/plan history](docs/superpowers/)

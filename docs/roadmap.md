@@ -61,7 +61,7 @@ All deferred items, grouped by area. Each was intentionally out of v1 to keep sc
 - Skills compiler `CompileTarget` is also Claude-only today (needs the same widening).
 
 ### S11 — Distribution + SDK
-- **Distribution plumbing DONE** (rolled into v1.0 finalization): branch-based beta/stable release flow (`release.yml`, OIDC Trusted Publishing + provenance), `scripts/install.sh` native installer, npm publish metadata on all 10 packages, release CI, and `docs/installation.md` + `docs/releasing.md`. **First publish is pending** the `@noir-ai` npm org + the first `v1.0.0` tag — nothing is on the registry yet.
+- **Distribution plumbing DONE** (rolled into v1.0 finalization): branch-based beta/stable release flow (`release.yml`, npm automation token + provenance), `scripts/install.sh` native installer, npm publish metadata on all 10 packages, release CI, and `docs/installation.md` + `docs/releasing.md`. **First publish is pending** the `@noir-ai` npm org + the first `v1.0.0` tag — nothing is on the registry yet.
 - **Remaining (v1.x):** framework/SDK docs surface, `noir doctor` publish checks. (Distribution is npm-native; there is no plugin marketplace to publish to.)
 
 ### Daemon

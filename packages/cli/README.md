@@ -46,6 +46,6 @@ This package is the CLI shell. Noir is a pnpm monorepo of 10 `@noir-ai/*` packag
 - **Getting-started walkthrough:** [docs/getting-started.md](../../docs/getting-started.md)
 - **Command reference + config schema:** [docs/usage.md](../../docs/usage.md)
 - **Roadmap & status:** [docs/roadmap.md](../../docs/roadmap.md)
-- **Releasing (OIDC + provenance):** [docs/releasing.md](../../docs/releasing.md)
+- **Releasing (npm token + provenance):** [docs/releasing.md](../../docs/releasing.md)
 
 MIT © agaaaptr

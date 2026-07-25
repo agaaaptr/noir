@@ -1,6 +1,6 @@
 # Releasing Noir
 
-> **Runbook for publishing the `@noir-ai/*` packages to npm.** Noir uses **unified versioning**: all 10 packages share one version and are released together, on a git tag, from CI, using **OIDC Trusted Publishing + SLSA provenance** — with **no long-lived npm token** stored anywhere in the repo.
+> **Runbook for publishing the `@noir-ai/*` packages to npm.** Noir uses **unified versioning**: all 10 packages share one version and are released together, on a git tag, from CI, authenticated with a **granular npm automation token** (the `NPM_TOKEN` repo secret) and carrying a **SLSA provenance** attestation on every publish.
 >
 > Audience: a maintainer cutting a release. **Read the [Irreversibility rules](#4-irreversibility-rules--safety) before the first publish.**
 
@@ -12,46 +12,56 @@
 - **Unified versioning:** every release moves all 10 packages to the same version in lockstep. There are no per-package releases.
 - **Two channels (branch-based).** A tag push on **`main`** → npm dist-tag **`latest`** (stable; `npm i @noir-ai/cli` resolves here). A tag push on **`develop`** → npm dist-tag **`beta`** (opt-in; `npm i @noir-ai/cli@beta`). The publish job derives the channel from which branch holds the tagged commit. Versions: stable is `X.Y.Z`; beta is `X.Y.Z-beta.N`. Full mechanics in [§2b](#2b-beta-vs-stable-channels); consumer side in [installation.md](installation.md#what-youre-installing).
 - **Trigger:** pushing a `vX.Y.Z` git tag runs `.github/workflows/release.yml`, which builds all 10 packages and publishes them to the npm registry.
-- **Auth = OIDC Trusted Publishing.** npm is configured to trust the `agaaaptr/noir` GitHub repo + the `release.yml` workflow. At publish time the GitHub Actions job mints a short-lived OIDC token that npm accepts — **no `NPM_TOKEN` secret is stored** on GitHub, and **no automation token** sits on an npm account. Removing the token from the blast radius is the whole point.
-- **Provenance:** every publish runs `npm publish --provenance`, which attaches a signed SLSA build-time attestation to each package. Consumers can verify the published tarball was built from this repo's tagged commit. This requires the repo to be **public** and the build to run on a **GitHub-hosted runner**.
+- **Auth = npm automation token (Path A).** A granular npm access token scoped to `@noir-ai/*` (read + write) is stored as the `NPM_TOKEN` GitHub repo secret; the publish job runs `npm publish …` with `env: NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}`. **OIDC Trusted Publishing (tokenless) is the target alternative**, not the v1 path — see [§1e](#1e-alternative-path--oidc-trusted-publishing-later).
+- **Provenance:** every publish runs `npm publish --provenance`, which attaches a signed SLSA build-time attestation to each package. Consumers can verify the published tarball was built from this repo's tagged commit. Provenance uses the GitHub OIDC token from the job's `permissions: id-token: write` — **independent of the npm token**, so it works identically under Path A. It requires the repo to be **public** and the build to run on a **GitHub-hosted runner**.
 - **Access:** scoped packages (`@noir-ai/*`) are **private by default**. `publishConfig: { access: "public" }` in every `package.json` overrides that so the packages publish publicly.
 
 ---
 
 ## 1. Prerequisites (one-time setup)
 
-These are done once, by the npm org owner, before the first release.
+These are done once, by the npm org owner, before the first release. v1 uses **Path A** — a granular npm automation token stored as a GitHub secret — because it works for the *very first* publish of brand-new packages. The tokenless OIDC alternative is described in [§1e](#1e-alternative-path--oidc-trusted-publishing-later).
 
 ### 1a. On npmjs.com
 
-1. **Create the `@noir-ai` organization** on https://www.npmjs.com/org/create.
-2. **Enable 2FA** on the owner account and **enforce 2FA at the org level** (Org settings → Require two-factor authentication for all members). Publishing and provenance both work under 2FA; the OIDC path is not weakened by it because the publish itself is tokenless.
-3. **Do NOT create a long-lived automation/publish token.** That is the legacy path; Noir does not use it.
+1. **Create an npm account** (if you don't have one), then **create the `@noir-ai` organization** on https://www.npmjs.com/org/create.
+2. **Enable 2FA on your account (mandatory)** and **enforce 2FA at the org level** (Org settings → Require two-factor authentication for all members). Publishing and provenance both work under 2FA.
+3. **Create a granular automation token** (profile → **Access Tokens** → **Granular Access Token**):
+   - **Name:** e.g. `noir-release`
+   - **Expiration:** your policy (e.g. 90 days / 1 year).
+   - **Packages:** select **"All packages in the `@noir-ai` scope"** (or enumerate the packages once they exist).
+   - **Permissions:** **Read and write** (write is required to publish).
+   - **2FA:** allow this token to **bypass 2FA**, so unattended CI can publish (the token itself is the credential).
+   - **Copy it once.** npm does not show the value again.
 
-### 1b. Link GitHub ↔ npm (Trusted Publishing, OIDC)
-
-For the unified set, configure Trusted Publishing so `release.yml` can publish **without a token**. On npm, for each package `@noir-ai/<pkg>` (or at the org level if npm exposes org-wide linked publishing at the time you read this):
-
-- **Settings → Linked publishers / Trusted Publishers → Add GitHub Action.**
-- **Repository owner:** `agaaaptr`
-- **Repository name:** `noir`
-- **Workflow filename:** `release.yml` (the file in `.github/workflows/`)
-- **Environment:** `release` (must match the `environment:` on the publish job in `release.yml`)
-- Leave the custom claims empty unless you know you need them.
-
-> Repeat for all 10 packages. This mapping is the only thing that authorizes CI to publish — keep it pointed at exactly `agaaaptr/noir` + `release.yml` + `release`.
-
-### 1c. On GitHub
+### 1b. On GitHub
 
 1. **Make the repo public** (`agaaaptr/noir`) — provenance requires a public source repo. If you keep it private, drop `--provenance` and accept weaker attestations.
-2. **Create the `release` environment** (Repo settings → Environments → New environment → `release`). You may add required reviewers here so a human approves each publish job before it runs. This is optional but recommended.
-3. **No secrets to add.** Specifically, do **not** add `NPM_TOKEN`. The job uses `permissions: id-token: write` and the npm CLI obtains auth via OIDC.
+2. **Add the `NPM_TOKEN` secret** (Repo settings → **Secrets and variables** → **Actions** → **New repository secret**): name `NPM_TOKEN`, value = the token from §1a step 3. The publish job reads it via `${{ secrets.NPM_TOKEN }}`.
+3. **Create the `release` environment** (Repo settings → **Environments** → **New environment** → `release`). Optionally add a **Required reviewer** so a tag push waits for human approval in the GitHub Actions UI before `npm publish` runs. For tighter blast-radius control, put the `NPM_TOKEN` secret on the `release` **environment** (instead of the repo) so it is only available after that approval — recommended.
 
-### 1d. Local machine
+### 1c. Local machine
 
 - Node ≥ 20, pnpm (the version pinned in the root `package.json` `packageManager` field).
 - `npm` CLI ≥ 9.5 (for provenance support) — comes with Node 20+.
 - You must have push + tag-push rights on `agaaaptr/noir`.
+
+### What CI does at publish time (`.github/workflows/release.yml`)
+
+The publish job uses **two independent credentials for two independent things**:
+
+1. **The npm token → publish auth.** `actions/setup-node` is configured with `registry-url: 'https://registry.npmjs.org'`, which writes an `.npmrc` that publishes to the registry using `NODE_AUTH_TOKEN`. The publish step sets `env: NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` and runs `npm publish "$tgz" --provenance --access public --tag "$DIST_TAG"`. The token is the granular one from §1a.
+2. **The GitHub OIDC token → provenance.** `permissions: id-token: write` lets the job mint a short-lived GitHub OIDC token, and `npm publish --provenance` uses it to attach a signed SLSA attestation to each package. This does **not** depend on the npm token — provenance works the same under Path A as under Trusted Publishing.
+
+The publish is a deliberate **two-step** flow — **pack** with `pnpm` (which rewrites `workspace:*` ranges to concrete versions), then **publish** each packed `.tgz` with `npm` (which supports `--provenance`; `pnpm publish` does not). Full pipeline (lint → build → derive channel → pack → publish) in [§2](#2-cutting-a-release-stable-from-main).
+
+> **Provenance note:** `--provenance` requires a public repo + a GitHub-hosted runner, both of which `release.yml` uses. Consumers can verify each published tarball was built from this repo's tagged commit (the npm UI shows the attestation; `npm view <pkg> dist.attestation` exposes it).
+
+### 1e. Alternative path — OIDC Trusted Publishing (later)
+
+OIDC Trusted Publishing (npm "Linked publishers" / "Trusted Publishers") is the **tokenless** alternative: npm is configured to trust `agaaaptr/noir` + the `release.yml` workflow + the `release` environment, and the job mints a short-lived OIDC token at publish time instead of reading a stored secret. Removing the token from the blast radius is the appeal.
+
+v1 does **not** use it for one reason: a Trusted Publisher can only be linked to a package that **already exists** on npm, so it cannot authorize the *first* publish of a brand-new package. Path A (the granular token) works for the first publish and every one after. Once all `@noir-ai/*` packages exist, you can migrate to OIDC by linking each package on npm and dropping the `NPM_TOKEN` secret — provenance is unchanged (still `--provenance` + `id-token: write`). Under OIDC, the [new-package flow](packaging.md) gains one extra manual step: the new package's Trusted Publisher must be registered on npm before its first tag push.
 
 ---
 
@@ -94,11 +104,11 @@ git push origin v1.0.0
    1. **Pack** — `pnpm -r --filter './packages/*' pack`
       - `pnpm pack` (NOT `npm pack`) **rewrites `workspace:*` dependency ranges to concrete versions** inside the tarballs, so the published packages resolve on install. `npm publish` does **not** rewrite workspace ranges on its own.
    2. **Publish** — for each packed `*.tgz`: `npm publish "$tgz" --provenance --access public --tag "$DIST_TAG"`
-      - `npm publish` (NOT `pnpm publish`) is used because **`pnpm publish` does not support `--provenance`**. `npm publish` is the step that attaches the SLSA attestation via the GitHub OIDC ↔ npm Trusted Publishing link (§1).
+      - `npm publish` (NOT `pnpm publish`) is used because **`pnpm publish` does not support `--provenance`**. `npm publish` attaches the SLSA attestation via the GitHub OIDC token from `permissions: id-token: write` (independent of the `NPM_TOKEN` — see [§1](#1-prerequisites-one-time-setup)).
       - `--provenance` attaches the SLSA attestation (requires `permissions: id-token: write`).
       - `--access public` overrides the scoped-package default of private (also enforced via `publishConfig.access:"public"` in each `package.json`).
       - `--tag "$DIST_TAG"` sets the npm dist-tag — `latest` for stable, `beta` for beta. This is how `npm i @noir-ai/cli` (stable) vs `npm i @noir-ai/cli@beta` (beta) resolve to different versions.
-6. The job runs on the `release` environment (the one you linked on npm).
+6. The job runs on the `release` environment, authenticated to npm via `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` (the setup-node `registry-url` writes the `.npmrc`).
 
 > If you enabled a required reviewer on the `release` environment, the publish job waits for approval in the GitHub Actions UI before running `npm publish`.
 
@@ -143,8 +153,8 @@ The publish job in `.github/workflows/release.yml` decides the dist-tag from **w
 That single `if` is the whole channel switch. Consequences:
 
 - **The branch IS the channel.** A tag reachable from `origin/main` → `latest`. Anything else (typically `develop`) → `beta`. There is no `--channel` flag and no per-package config.
-- **Beta tags never leave `develop`** until you merge to `main`. Cutting `v1.3.0-beta.4` on `develop` publishes under `beta`; when `develop` merges to `main` and you cut `v1.3.0` there, the same content ships under `latest`.
-- **Semver-style tag names are not parsed** for the channel — only the branch matters. A `v1.3.0-beta.4` tag pushed on `main` by mistake would publish as `latest`. Keep beta tags on `develop`.
+- **Beta tags never leave `develop`** until you merge to `main`. Cutting `v1.0.0-beta.1` on `develop` publishes under `beta`; when `develop` merges to `main` and you cut `v1.0.0` there, the same content ships under `latest`.
+- **Semver-style tag names are not parsed** for the channel — only the branch matters. A `v1.0.0-beta.1` tag pushed on `main` by mistake would publish as `latest`. Keep beta tags on `develop`.
 
 ### Cutting a beta release (from `develop`)
 
@@ -156,8 +166,8 @@ git checkout develop
 git pull --ff-only
 
 # 1. Bump to the prerelease version. The -beta.N suffix is what marks it prerelease.
-node scripts/bump-version.mjs 1.3.0-beta.4
-#    equivalent: pnpm release:bump 1.3.0-beta.4
+node scripts/bump-version.mjs 1.0.0-beta.1
+#    equivalent: pnpm release:bump 1.0.0-beta.1
 
 # 2. (Recommended) add a CHANGELOG entry under an "Unreleased / beta" heading.
 
@@ -166,19 +176,20 @@ git diff
 
 # 4. Commit + tag. The tag name still starts with v, but carries the prerelease suffix.
 git add -A
-git commit -m "chore(release): v1.3.0-beta.4"
-git tag v1.3.0-beta.4
+git commit -m "chore(release): v1.0.0-beta.1"
+git tag v1.0.0-beta.1
 
 # 5. Push commit + tag. CI derives channel=beta (the commit is on develop, not main).
 git push origin develop
-git push origin v1.3.0-beta.4
+git push origin v1.0.0-beta.1
 ```
 
 After the `release.yml` job goes green:
 
 ```bash
-npm view @noir-ai/cli dist-tags.beta   # → 1.3.0-beta.4
-npm i -g @noir-ai/cli@beta             # opt in
+npm view @noir-ai/cli                  # registry metadata (version, dist-tags, provenance)
+npm view @noir-ai/cli dist-tags.beta   # → 1.0.0-beta.1
+npx @noir-ai/cli@beta init             # smoke: opt into the beta and run init in a throwaway dir
 ```
 
 ### Promoting beta → stable
@@ -190,21 +201,21 @@ When the beta line is ready to ship to everyone:
 
    ```bash
    git checkout main
-   node scripts/bump-version.mjs 1.3.0      # same X.Y.Z, no prerelease suffix
-   git add -A && git commit -m "chore(release): v1.3.0"
-   git tag v1.3.0
-   git push origin main && git push origin v1.3.0
+   node scripts/bump-version.mjs 1.0.0      # same X.Y.Z, no prerelease suffix
+   git add -A && git commit -m "chore(release): v1.0.0"
+   git tag v1.0.0
+   git push origin main && git push origin v1.0.0
    ```
 
-3. CI derives `channel=stable` (commit is on `main`), publishes under `latest`. Now `npm i @noir-ai/cli` resolves to `1.3.0`; `npm i @noir-ai/cli@beta` keeps resolving to whatever the `beta` tag last pointed at (typically the last beta — move it forward with the next beta tag, or leave it).
+3. CI derives `channel=stable` (commit is on `main`), publishes under `latest`. Now `npm i @noir-ai/cli` resolves to `1.0.0`; `npm i @noir-ai/cli@beta` keeps resolving to whatever the `beta` tag last pointed at (typically the last beta — move it forward with the next beta tag, or leave it).
 
 ### Irreversibility reminder for pre-releases
 
 Everything in [§4 Irreversibility rules](#4-irreversibility-rules--safety) applies to prereleases identically — with three sharpenings:
 
-1. **`X.Y.Z-beta.N` versions are immutable too.** Once `@noir-ai/cli@1.3.0-beta.4` is published, that exact `name@version` is occupied forever, even after the stable `1.3.0` ships. A broken beta means **bump to `-beta.5`** — never republish `-beta.4`.
-2. **Dist-tag moves are reversible; version publishes aren't.** You can `npm dist-tag rm @noir-ai/cli beta && npm dist-tag add @noir-ai/cli@1.3.0-beta.3 beta` to roll the `beta` pointer back if `-beta.4` was bad. The published `-beta.4` tarball stays on the registry (deprecate it with `npm deprecate`); only the label moves.
-3. **Never republish the same version as a "fix".** A typo in `-beta.4` ships as `-beta.5`, full stop. There is no overwrite path, on stable or beta.
+1. **`X.Y.Z-beta.N` versions are immutable too.** Once `@noir-ai/cli@1.0.0-beta.2` is published, that exact `name@version` is occupied forever, even after the stable `1.0.0` ships. A broken beta means **bump to `-beta.3`** — never republish `-beta.2`.
+2. **Dist-tag moves are reversible; version publishes aren't.** You can `npm dist-tag rm @noir-ai/cli beta && npm dist-tag add @noir-ai/cli@1.0.0-beta.1 beta` to roll the `beta` pointer back if `-beta.2` was bad. The published `-beta.2` tarball stays on the registry (deprecate it with `npm deprecate`); only the label moves.
+3. **Never republish the same version as a "fix".** A typo in `-beta.2` ships as `-beta.3`, full stop. There is no overwrite path, on stable or beta.
 
 See [installation.md](installation.md) for the consumer-side view of these two channels.
 
@@ -283,13 +294,12 @@ If any package is missing or at the wrong version, **do not republish** — cut 
 The very first release (`1.0.0`) has extra gating. Do not cut it until every box is checked.
 
 **Setup (§1)**
-- [ ] `@noir-ai` org created on npmjs.com.
-- [ ] 2FA required at the org level.
-- [ ] **No** long-lived publish token created (deliberate).
-- [ ] Trusted Publisher linked for **all 10** packages: repo `agaaaptr/noir`, workflow `release.yml`, environment `release`.
-- [ ] Repo `agaaaptr/noir` is **public**.
+- [ ] npm account exists; `@noir-ai` org created on npmjs.com.
+- [ ] 2FA enabled on the owner account + required at the org level.
+- [ ] Granular automation token `noir-release` created on npm: scoped to `@noir-ai/*`, Read + Write, 2FA bypass.
+- [ ] `NPM_TOKEN` GitHub secret = the token (repo-level, or on the `release` environment for tighter gating).
+- [ ] Repo `agaaaptr/noir` is **public** (provenance requires it).
 - [ ] `release` environment created on GitHub (optional required-reviewer added).
-- [ ] **No `NPM_TOKEN` secret** in the repo or env.
 
 **Readiness (§2 / §4)**
 - [ ] `pnpm lint && pnpm typecheck && pnpm build && pnpm test` all green on `main` (target the same Node 22 the CI uses).

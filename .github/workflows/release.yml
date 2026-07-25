@@ -1,9 +1,10 @@
 name: Release
 
 # Publishes the 10 @noir-ai/* packages to npm (unified version, on a git tag).
-# Auth = OIDC Trusted Publishing (tokenless): npm trusts this repo + workflow
-# (see docs/releasing.md §1). No NPM_TOKEN secret. Every publish carries a SLSA
-# provenance attestation (--provenance).
+# Auth = npm automation token (the NPM_TOKEN repo secret — a granular publish-only
+# token created once on npm). Every publish ALSO carries a SLSA provenance
+# attestation (--provenance), which uses GitHub OIDC (the `id-token: write`
+# permission) independent of the publish token. See docs/releasing.md §1.
 #
 # CHANNEL = branch-based (two channels only: beta + stable):
 #   - tag on `main`    → dist-tag `latest` (stable). `npm i @noir-ai/cli` gets it.
@@ -65,13 +66,15 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: 10
-      # NOTE: no `registry-url` / no NODE_AUTH_TOKEN. With Trusted Publishing,
-      # `npm publish --provenance` exchanges the GitHub OIDC token for a
-      # short-lived publish credential; an explicit .npmrc token line would
-      # shadow that flow. Node 22 ships npm 10+, which supports this.
+      # `registry-url` + the NPM_TOKEN env (in the publish step) wire npm auth:
+      # setup-node writes an .npmrc that publishes to the registry using
+      # NODE_AUTH_TOKEN. The granular token is created once on npm + stored as the
+      # NPM_TOKEN repo secret (docs/releasing.md §1). Provenance (--provenance) is
+      # separate — it uses the GitHub OIDC token from the `id-token: write` permission.
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          registry-url: 'https://registry.npmjs.org'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -99,11 +102,13 @@ jobs:
         # (correct deps) then PUBLISH the tarballs with npm (which adds the provenance attestation).
         run: pnpm -r --filter './packages/*' pack
 
-      - name: Publish the packed tarballs (npm publish --provenance, tokenless OIDC)
+      - name: Publish the packed tarballs (npm publish --provenance, NPM_TOKEN)
         env:
           DIST_TAG: ${{ steps.channel.outputs.tag }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -e
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then echo "NPM_TOKEN secret is not set — see docs/releasing.md §1"; exit 1; fi
           echo "Publishing with npm dist-tag: $DIST_TAG"
           mapfile -d '' tarballs < <(find packages -maxdepth 2 -type f -name '*.tgz' -print0)
           if [ "${#tarballs[@]}" -eq 0 ]; then echo "No tarballs found"; exit 1; fi

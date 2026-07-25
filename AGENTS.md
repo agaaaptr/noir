@@ -20,6 +20,19 @@ Noir is a host-agnostic, spec-driven-workflow + native-context + cross-session-m
 
 - **Don't touch `packages/` source unless that's the task.** Doc-only work (READMEs, ADRs, roadmap) should not edit package source.
 
+## Adding a package
+
+A package is a dir under `packages/` named `@noir-ai/*`. The quickest path is the generator, which scaffolds a publish-ready template **and** wires the one manual papercut (the `vitest.config.ts` source-alias):
+
+```bash
+node scripts/new-package.mjs <name>   # e.g. telemetry → @noir-ai/telemetry
+pnpm install && pnpm build && pnpm test
+```
+
+The new package is **automatically** included in workspace detection, the root build/test, unified versioning (`scripts/bump-version.mjs`), and the `release.yml` publish — nothing to wire. Still manual: adding deps beyond the default `@noir-ai/core`, honoring the blueprint/privacy rules below, and (only if you migrate to OIDC later) registering the new package's Trusted Publisher on npm.
+
+**Add a package only for a genuinely new subsystem/domain.** Host adapters go **inside `@noir-ai/adapters`** (the S10 path), not in a new package; a feature in an existing domain extends the existing package. Full guide (what's automatic vs manual, when to add vs extend): [`docs/packaging.md`](docs/packaging.md).
+
 ## Dogfood SDD — how work is specified here
 
 This repo dogfoods Noir's own Spec-Driven Development flow: **brainstorm → spec → plan → subagent-driven implement + review → final whole-branch review**. Specs and plans live under `docs/superpowers/`:
