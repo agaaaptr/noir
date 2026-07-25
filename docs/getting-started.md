@@ -6,15 +6,36 @@ New to Noir? Read the [README](../README.md) first for the 30-second "what and w
 
 ## What you need
 
-- **Node.js ≥ 20** and **pnpm 9** (`corepack enable && corepack prepare pnpm@9 --activate`).
+- **Node.js ≥ 20** (Node 22 is what CI uses). For the from-source dev install below you also need **pnpm 10** (`corepack enable && corepack prepare pnpm@10 --activate`).
 - **An agentic CLI host.** Noir v1 targets **Claude Code** (behind an abstract `HostAdapter`; more hosts arrive in v1.x). Noir is the workflow/context/memory *layer* — it is not an agent runtime. **Bring your own agent.**
 - macOS, Linux, or Windows on x64 or arm64 (native deps ship prebuilt).
 
 ## Install
 
-### Today: from source
+### Recommended: native installer (once `@noir-ai/*` is on npm)
 
-v1.0 is **release-ready but not yet published to npm**. Distribution — `npm publish`, `npx noir`, the marketplace listing, and the SDK — is slice **S11**, deferred to v1.x. So for now, install is from-source. This is the path for **developers of Noir**, not end users.
+For end users the install is one line — a small `curl | sh` script that detects Node + npm and runs `npm install -g @noir-ai/cli` on your behalf:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | bash
+```
+
+Two channels ship in parallel:
+
+- **Stable (default)** — `@noir-ai/cli@latest`. The command above.
+- **Beta** — `@noir-ai/cli@beta`. Append `NOIR_CHANNEL=beta`:
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | NOIR_CHANNEL=beta bash
+  ```
+
+- **Pin a version** — `NOIR_VERSION=1.2.3` (or `1.2.3-beta.1`) overrides the channel.
+
+The installer is idempotent (re-run = upgrade), prints a PATH hint if `noir` isn't on PATH, and verifies with `noir --version` at the end. The full reference — npm/pnpm/yarn/bun, one-shot `npx`, Homebrew, troubleshooting, the from-source dev path — lives in **[installation.md](installation.md)**. That page also covers the **beta vs stable** channel model (`X.Y.Z-beta.N` vs `X.Y.Z`) in depth.
+
+### Today: from source (v1.0 not yet on npm)
+
+v1.0 is **release-ready but not yet published to npm**. Distribution — `npm publish`, `npx @noir-ai/cli`, the SDK — is slice **S11**, deferred to v1.x. So **today**, install is from-source. This is the path for **developers of Noir**, not end users.
 
 ```bash
 git clone <noir-repo> && cd noir
@@ -42,16 +63,7 @@ node packages/cli/dist/bin.js --help
 
 Option A matters: the `.mcp.json` that `noir init` writes calls `command: "noir"`, so Claude Code needs `noir` resolvable on your PATH when it spawns the server. With Option B you'd have to hand-edit `.mcp.json` to point at `node packages/cli/dist/bin.js` instead.
 
-### Later: one-liner (after S11 ships)
-
-Once slice S11 lands, this whole section collapses to:
-
-```bash
-npx noir init          # or: npm i -g @noir-ai/cli && noir init
-# bunx noir init also works
-```
-
-Until then, use the from-source path above.
+> When S11 ships, the from-source section above collapses to the one-liner at the top of this Install block. Until then, use the from-source path.
 
 ## Initialize a project
 
@@ -174,6 +186,7 @@ The host picks up the configured mode via the `noir-intake` skill / the `workflo
 
 ## Where to go next
 
+- [installation.md](installation.md) — the full install reference (every path, troubleshooting, the channel model).
 - [usage.md](usage.md) — the full reference: every command, the config schema, the `.noir/` + `~/.noir/` layout, and the privacy rules.
 - [architecture/README.md](architecture/README.md) — how the 10 packages fit together.
 - [roadmap.md](roadmap.md) — what ships in v1.0 vs v1.x (distribution/`npx` is S11).

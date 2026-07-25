@@ -10,6 +10,7 @@
 
 - **Scope:** `@noir-ai/{core, store, workflow, skills, daemon, adapters, cli, context, model, memory}` — 10 packages.
 - **Unified versioning:** every release moves all 10 packages to the same version in lockstep. There are no per-package releases.
+- **Two channels (branch-based).** A tag push on **`main`** → npm dist-tag **`latest`** (stable; `npm i @noir-ai/cli` resolves here). A tag push on **`develop`** → npm dist-tag **`beta`** (opt-in; `npm i @noir-ai/cli@beta`). The publish job derives the channel from which branch holds the tagged commit. Versions: stable is `X.Y.Z`; beta is `X.Y.Z-beta.N`. Full mechanics in [§2b](#2b-beta-vs-stable-channels); consumer side in [installation.md](installation.md#what-youre-installing).
 - **Trigger:** pushing a `vX.Y.Z` git tag runs `.github/workflows/release.yml`, which builds all 10 packages and publishes them to the npm registry.
 - **Auth = OIDC Trusted Publishing.** npm is configured to trust the `agaaaptr/noir` GitHub repo + the `release.yml` workflow. At publish time the GitHub Actions job mints a short-lived OIDC token that npm accepts — **no `NPM_TOKEN` secret is stored** on GitHub, and **no automation token** sits on an npm account. Removing the token from the blast radius is the whole point.
 - **Provenance:** every publish runs `npm publish --provenance`, which attaches a signed SLSA build-time attestation to each package. Consumers can verify the published tarball was built from this repo's tagged commit. This requires the repo to be **public** and the build to run on a **GitHub-hosted runner**.
@@ -54,9 +55,9 @@ For the unified set, configure Trusted Publishing so `release.yml` can publish *
 
 ---
 
-## 2. Cutting a release
+## 2. Cutting a release (stable, from `main`)
 
-> All 10 packages move together. The version you bump is the version that ships.
+> All 10 packages move together. The version you bump is the version that ships. This is the **stable** flow; the beta flow is in [§2b](#2b-beta-vs-stable-channels).
 
 ```bash
 # 0. Start from an up-to-date main, clean tree.
@@ -88,14 +89,122 @@ git push origin v1.0.0
 1. Checks out the tagged commit.
 2. Sets up Node 22 + pnpm; `pnpm install --frozen-lockfile`.
 3. `pnpm lint` → `pnpm typecheck` → `pnpm build` (all 10 packages → `dist/`).
-4. Publishes all 10 packages: `pnpm -r publish --access public --provenance --no-git-checks`
+4. **Derives the channel** from the branch (see [§2b](#2b-beta-vs-stable-channels)): if the tagged commit is reachable from `origin/main`, dist-tag = `latest` (stable); otherwise `beta`. For the §2 flow that is always `latest`.
+5. Publishes all 10 packages:
+   `pnpm -r --filter './packages/*' exec npm publish --provenance --access public --tag "$DIST_TAG"`
    - `--provenance` attaches the SLSA attestation (requires `permissions: id-token: write`).
-   - `--no-git-checks` lets pnpm publish despite CI-side git state.
-   - `publishConfig.access:"public"` in each `package.json` makes the scoped packages public.
+   - `--access public` overrides the scoped-package default of private (also enforced via `publishConfig.access:"public"` in each `package.json`).
+   - `--tag "$DIST_TAG"` sets the npm dist-tag — `latest` for stable, `beta` for beta. This is how `npm i @noir-ai/cli` (stable) vs `npm i @noir-ai/cli@beta` (beta) resolve to different versions.
    - `workspace:*` dependency ranges are rewritten to concrete versions automatically by pnpm at publish time.
-5. The job runs on the `release` environment (the one you linked on npm).
+6. The job runs on the `release` environment (the one you linked on npm).
 
 > If you enabled a required reviewer on the `release` environment, the publish job waits for approval in the GitHub Actions UI before running `npm publish`.
+
+---
+
+## 2b. Beta vs stable channels
+
+Noir ships **two release channels in parallel**, both cut as git tags and both published by the same `release.yml`. They differ in (a) which branch the tag lives on, (b) the npm dist-tag applied at publish time, (c) the version string, and (d) what consumers type to opt in.
+
+### The model
+
+| | Stable | Beta |
+|---|---|---|
+| **Tag lives on** | `main` | `develop` |
+| **npm dist-tag** | `latest` (the default) | `beta` (opt-in) |
+| **Version scheme** | `X.Y.Z` | `X.Y.Z-beta.N` (prerelease, `-beta.N` suffix) |
+| **Consumer install** | `npm i @noir-ai/cli` | `npm i @noir-ai/cli@beta` |
+| **Audience** | Everyone | Early testers willing to hit rough edges |
+| **Promotion path** | — | Merge `develop` → `main`, then cut a stable tag with the same `X.Y.Z` (no `-beta.N`) |
+
+A dist-tag is **just a movable label** npm keeps alongside the immutable versions. `latest` and `beta` are independent pointers: each can be moved forward by publishing a new tag without affecting the other. Consumers who type `@noir-ai/cli` get whatever `latest` points at; consumers who type `@noir-ai/cli@beta` get whatever `beta` points at; either can also pin an exact version (`@noir-ai/cli@1.2.3`).
+
+### How CI derives the channel from the branch
+
+The publish job in `.github/workflows/release.yml` decides the dist-tag from **which branch holds the tagged commit**, not from anything in the version string or tag name:
+
+```yaml
+- name: Determine release channel (tag on main → latest/stable; else → beta)
+  id: channel
+  run: |
+    SHA="${{ github.sha }}"
+    # `git branch -r --contains` lists remote branches holding the tagged commit.
+    if git branch -r --contains "$SHA" 2>/dev/null | grep -q 'origin/main'; then
+      echo "tag=latest"     >> "$GITHUB_OUTPUT"
+      echo "channel=stable" >> "$GITHUB_OUTPUT"
+    else
+      echo "tag=beta"   >> "$GITHUB_OUTPUT"
+      echo "channel=beta" >> "$GITHUB_OUTPUT"
+    fi
+```
+
+That single `if` is the whole channel switch. Consequences:
+
+- **The branch IS the channel.** A tag reachable from `origin/main` → `latest`. Anything else (typically `develop`) → `beta`. There is no `--channel` flag and no per-package config.
+- **Beta tags never leave `develop`** until you merge to `main`. Cutting `v1.3.0-beta.4` on `develop` publishes under `beta`; when `develop` merges to `main` and you cut `v1.3.0` there, the same content ships under `latest`.
+- **Semver-style tag names are not parsed** for the channel — only the branch matters. A `v1.3.0-beta.4` tag pushed on `main` by mistake would publish as `latest`. Keep beta tags on `develop`.
+
+### Cutting a beta release (from `develop`)
+
+The mechanical mirror of the §2 stable flow, on `develop` and with the prerelease version:
+
+```bash
+# 0. Start from an up-to-date develop, clean tree.
+git checkout develop
+git pull --ff-only
+
+# 1. Bump to the prerelease version. The -beta.N suffix is what marks it prerelease.
+node scripts/bump-version.mjs 1.3.0-beta.4
+#    equivalent: pnpm release:bump 1.3.0-beta.4
+
+# 2. (Recommended) add a CHANGELOG entry under an "Unreleased / beta" heading.
+
+# 3. Review the diff — 10× one-line version bumps (+ changelog).
+git diff
+
+# 4. Commit + tag. The tag name still starts with v, but carries the prerelease suffix.
+git add -A
+git commit -m "chore(release): v1.3.0-beta.4"
+git tag v1.3.0-beta.4
+
+# 5. Push commit + tag. CI derives channel=beta (the commit is on develop, not main).
+git push origin develop
+git push origin v1.3.0-beta.4
+```
+
+After the `release.yml` job goes green:
+
+```bash
+npm view @noir-ai/cli dist-tags.beta   # → 1.3.0-beta.4
+npm i -g @noir-ai/cli@beta             # opt in
+```
+
+### Promoting beta → stable
+
+When the beta line is ready to ship to everyone:
+
+1. Merge `develop` into `main` (`git checkout main && git merge --ff-only develop && git push origin main`).
+2. Bump to the stable version (drop the `-beta.N` suffix):
+
+   ```bash
+   git checkout main
+   node scripts/bump-version.mjs 1.3.0      # same X.Y.Z, no prerelease suffix
+   git add -A && git commit -m "chore(release): v1.3.0"
+   git tag v1.3.0
+   git push origin main && git push origin v1.3.0
+   ```
+
+3. CI derives `channel=stable` (commit is on `main`), publishes under `latest`. Now `npm i @noir-ai/cli` resolves to `1.3.0`; `npm i @noir-ai/cli@beta` keeps resolving to whatever the `beta` tag last pointed at (typically the last beta — move it forward with the next beta tag, or leave it).
+
+### Irreversibility reminder for pre-releases
+
+Everything in [§4 Irreversibility rules](#4-irreversibility-rules--safety) applies to prereleases identically — with three sharpenings:
+
+1. **`X.Y.Z-beta.N` versions are immutable too.** Once `@noir-ai/cli@1.3.0-beta.4` is published, that exact `name@version` is occupied forever, even after the stable `1.3.0` ships. A broken beta means **bump to `-beta.5`** — never republish `-beta.4`.
+2. **Dist-tag moves are reversible; version publishes aren't.** You can `npm dist-tag rm @noir-ai/cli beta && npm dist-tag add @noir-ai/cli@1.3.0-beta.3 beta` to roll the `beta` pointer back if `-beta.4` was bad. The published `-beta.4` tarball stays on the registry (deprecate it with `npm deprecate`); only the label moves.
+3. **Never republish the same version as a "fix".** A typo in `-beta.4` ships as `-beta.5`, full stop. There is no overwrite path, on stable or beta.
+
+See [installation.md](installation.md) for the consumer-side view of these two channels.
 
 ---
 

@@ -1,12 +1,19 @@
 name: Release
 
-# Publishes the 10 @noir-ai/* packages to npm, unified-version, on a git tag.
-# Auth = OIDC Trusted Publishing (tokenless): npm is configured to trust this
-# repo + this workflow (see docs/releasing.md §1). No NPM_TOKEN secret is used.
-# Every publish carries a SLSA provenance attestation (--provenance).
+# Publishes the 10 @noir-ai/* packages to npm (unified version, on a git tag).
+# Auth = OIDC Trusted Publishing (tokenless): npm trusts this repo + workflow
+# (see docs/releasing.md §1). No NPM_TOKEN secret. Every publish carries a SLSA
+# provenance attestation (--provenance).
 #
-# Cut a release from main:
-#   node scripts/bump-version.mjs <X.Y.Z> && git commit && git tag v<X.Y.Z> && git push --tags
+# CHANNEL = branch-based (two channels only: beta + stable):
+#   - tag on `main`    → dist-tag `latest` (stable). `npm i @noir-ai/cli` gets it.
+#   - tag on `develop` → dist-tag `beta`.   `npm i @noir-ai/cli@beta` to opt in.
+# The publish job derives the channel from which branch holds the tagged commit.
+#
+# Cut a release:
+#   beta:    node scripts/bump-version.mjs 1.0.0-beta.1 && commit && tag v1.0.0-beta.1 (on develop)
+#   stable:  merge develop→main, node scripts/bump-version.mjs 1.0.0 && commit && tag v1.0.0 (on main)
+#   then:    git push --tags
 
 on:
   push:
@@ -44,14 +51,17 @@ jobs:
       - run: pnpm test
 
   publish:
-    name: Publish @noir-ai/* (unified, provenance)
+    name: Publish @noir-ai/* (unified, provenance; main=stable, develop=beta)
     needs: verify
     runs-on: ubuntu-latest
     # `release` is the environment linked on npm as the Trusted Publisher.
     # Add a required reviewer here on GitHub to require human approval before publish.
     environment: release
     steps:
+      # fetch-depth: 0 so we can determine which branch holds the tagged commit (the channel).
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -66,7 +76,26 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
-      - name: Publish all 10 packages (npm publish --provenance, tokenless OIDC)
+      - name: Determine release channel (tag on main → latest/stable; else → beta)
+        id: channel
         run: |
           set -e
-          pnpm -r --filter './packages/*' exec npm publish --provenance --access public
+          SHA="${{ github.sha }}"
+          # `git branch -r --contains` lists remote branches holding the tagged commit.
+          if git branch -r --contains "$SHA" 2>/dev/null | grep -q 'origin/main'; then
+            echo "tag=latest"   >> "$GITHUB_OUTPUT"
+            echo "channel=stable" >> "$GITHUB_OUTPUT"
+            echo "Channel: STABLE (npm dist-tag: latest — 'npm i @noir-ai/cli' resolves here)."
+          else
+            echo "tag=beta"   >> "$GITHUB_OUTPUT"
+            echo "channel=beta" >> "$GITHUB_OUTPUT"
+            echo "Channel: BETA (npm dist-tag: beta — 'npm i @noir-ai/cli@beta' to opt in)."
+          fi
+
+      - name: Publish all 10 packages (npm publish --provenance --tag <channel>)
+        env:
+          DIST_TAG: ${{ steps.channel.outputs.tag }}
+        run: |
+          set -e
+          echo "Publishing with npm dist-tag: $DIST_TAG"
+          pnpm -r --filter './packages/*' exec npm publish --provenance --access public --tag "$DIST_TAG"

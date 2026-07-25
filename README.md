@@ -16,21 +16,37 @@ v1.0 is **release-ready / acceptance-complete** (slices S0–S9, 729/729 tests g
 
 See [`docs/roadmap.md`](docs/roadmap.md) for the living current-status, and [`docs/specs/2026-07-23-noir-toolkit-design.md`](docs/specs/2026-07-23-noir-toolkit-design.md) for the design blueprint.
 
-## Getting started
+## Installation
 
-v1.0 is release-ready but **not yet on npm** — distribution (`npm publish`, `npx noir`, the marketplace listing, the SDK) is slice **S11**, deferred to v1.x. So **today** install is **from source** (this is the path for developers of Noir). Once S11 ships it becomes a one-liner: `npx noir init`.
+Noir ships as the npm package **`@noir-ai/cli`** (bin: `noir`). The recommended path is the native installer — a small `curl | sh` script that detects Node + npm and runs `npm install -g` on your behalf:
 
 ```bash
-# 1. Build the toolkit (Node ≥ 20, pnpm 9)
-git clone <noir-repo> && cd noir
-pnpm install && pnpm build          # native deps prebuilt; pnpm approve-builds if prompted
-pnpm --filter @noir-ai/cli link --global   # puts `noir` on PATH (the emitted .mcp.json calls `noir`)
+curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | bash
+```
 
-# 2. Initialize a project (from the project you want Noir to manage)
-cd /path/to/your/project
+Beta channel: append `| NOIR_CHANNEL=beta bash`. Pin a version: `| NOIR_VERSION=1.2.3 bash`. Safer than blind `curl | sh`: `curl -fsSL -o install.sh … && less install.sh && bash install.sh`.
+
+The alternatives, in one line each:
+
+| Path | Stable | Beta |
+|---|---|---|
+| npm | `npm i -g @noir-ai/cli` | `npm i -g @noir-ai/cli@beta` |
+| pnpm | `pnpm add -g @noir-ai/cli` | `pnpm add -g @noir-ai/cli@beta` |
+| yarn | `yarn global add @noir-ai/cli` | `yarn global add @noir-ai/cli@beta` |
+| bun | `bun add -g @noir-ai/cli` | `bun add -g @noir-ai/cli@beta` |
+| one-shot (no install) | `npx @noir-ai/cli init` | `npx @noir-ai/cli@beta init` |
+| Homebrew (advanced, stable-only) | `brew tap agaaaptr/noir … && brew install noir` | — |
+
+**Requirements:** Node ≥ 20; native deps (better-sqlite3, sqlite-vec, onnxruntime-node) prebuilt on mac/linux/win x64 + arm64; first run downloads ~22 MB MiniLM to `~/.noir/models/`. Verify with `noir --version` / `noir doctor`. Full reference (every path, troubleshooting, the from-source build for repo developers) lives in **[docs/installation.md](docs/installation.md)**.
+
+> **Until v1.0 is published (slice S11):** the install paths above assume the npm packages exist on the registry. Today they don't — `@noir-ai/*` is built and release-ready locally but not yet pushed to npm. Until then, use the **from-source** path in [docs/installation.md → From source](docs/installation.md) (the developer install).
+
+## Getting started
+
+Once installed (stable or beta), from the project you want Noir to manage:
+
+```bash
 noir init                           # scaffolds .noir/ + emits 31 builtin skills + host wiring
-
-# 3. Open the project in Claude Code → it auto-spawns the Noir MCP server. That's it.
 ```
 
 `noir init` creates `.noir/` (`project.id`, `config.yml` as `host: claude` + `mode: full`, `NOIR.md`, the SQLite store), root `.mcp.json`, a managed `CLAUDE.md` `@import` block, and the **31 native `noir-*` skills** in `.claude/skills/`. **There is no plugin and no marketplace** — `noir init`/`noir sync` overwrite the `noir-*` namespace idempotently.
@@ -155,7 +171,8 @@ This repo is itself developed with Claude Code; [`AGENTS.md`](AGENTS.md) holds t
 
 ## Documentation
 
-- **[Getting started](docs/getting-started.md)** · **[Usage reference](docs/usage.md)** — install, transports, SDD modes, commands, config.
+- **[Installation](docs/installation.md)** — every install path (native installer, npm/pnpm/yarn/bun, npx, Homebrew), troubleshooting, requirements.
+- **[Getting started](docs/getting-started.md)** · **[Usage reference](docs/usage.md)** — transports, SDD modes, commands, config.
 - [Roadmap & current status](docs/roadmap.md) · [Changelog](docs/CHANGELOG.md)
 - [Architecture](docs/architecture/) · [Decision records (ADRs)](docs/decisions/)
 - [Design blueprint](docs/specs/2026-07-23-noir-toolkit-design.md) · [SDD spec/plan history](docs/superpowers/)

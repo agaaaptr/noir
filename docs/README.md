@@ -8,7 +8,8 @@ The Noir toolkit's architecture, the decisions behind it, the design blueprint, 
 
 | Path | Purpose |
 |---|---|
-| [`getting-started.md`](getting-started.md) | First-use walkthrough: install, `noir init`, transports, your first session, switching full/quick. Start here for *using* Noir. |
+| [`installation.md`](installation.md) | The install reference: native installer (`curl \| sh`), npm/pnpm/yarn/bun, `npx`, Homebrew, beta vs stable channels, requirements, troubleshooting. Start here for *installing* Noir. |
+| [`getting-started.md`](getting-started.md) | First-use walkthrough: `noir init`, transports, your first session, switching full/quick. Start here for *using* Noir. |
 | [`usage.md`](usage.md) | The reference: transports, SDD modes, the full command tree, the config schema, the `.noir/` + `~/.noir/` layout, privacy rules. |
 | [`architecture/`](architecture/) | How the 10-package toolkit fits together and how a host connects. |
 | [`decisions/`](decisions/) | Architecture Decision Records (ADRs) — *why* a choice was made. |
