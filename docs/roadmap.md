@@ -34,7 +34,7 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 - **S9 CLI/TUI home screen** — `@noir-ai/cli` overhauled (NO new package — extends the existing CLI; total stays 10 packages). Migrated the hand-rolled `parseArgs` dispatcher → **commander** Command tree (behavior-preserving: init / sync / mcp serve / daemon start|stop / doctor unchanged; the gate1-stdio subprocess test still passes) with `exitOverride` + `configureOutput` (never `process.exit` mid-test; help+errors → stderr). Global flags `--json` / `--no-input` / `--quiet` / `--verbose` / `--cwd` (parse in any position); stable exit codes (0 ok · 1 error · 2 usage · 3 not-found · 4 daemon-down · 5 cancelled); **data → stdout, diagnostics → stderr**; `isInteractive()` gates every prompt (no hangs in CI / pipes / scripts). Home: bare `noir` → `@clack/prompts` menu when TTY, `status` (human) when non-interactive, `status --json` under `--json`. Commands: `status` (probe-only — works daemon-down, NEVER auto-starts), `context {search,index,status}`, `memory {recall,save,sessions,forget,consolidate}`, `skills {list,sync}`, `task {new,status,advance,next}`, `daemon {start,stop,status,restart}` (foreground-honest; `--detach` → exit 2), `doctor` (config / store / embedder / native-deps / provider-status via `resolveModelConfig` — NO live model call). Store-touching commands are MCP clients to the daemon (`ensureDaemonRunning` + `@modelcontextprotocol/client` over HTTP); new daemon MCP tools `workflow_start` + `workflow_advance` (gated `ctx.engine`) back `task new` / `advance`. New runtime deps: commander, @clack/prompts, picocolors, cli-table3, ora, @modelcontextprotocol/client. **Milestone: the integrative capstone — every S1/S4/S6/S7/S8 capability is now reachable from one shell entry point, scriptable OR interactive, daemon-down-honest.** Acceptance MET; final review = release-ready.
 - 10 packages `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory}`; MCP TS SDK **v2 beta (`2.0.0-beta.5`)**; toolchain pnpm/tsup/vitest/Biome/TS-ESM; CI (ubuntu+macos, node 22); MIT.
 - **729/729 tests green** (was 501); all acceptance gates verified; final whole-branch reviews = release-ready.
-- Legacy plugin rebranded: marketplace `noir`, plugin `noir-workflow`.
+- **Native skills only** — the predecessor `noir-workflow` Claude Code plugin + marketplace (the repo's origin) have been removed; Noir now ships its 31 `noir-` builtins via `noir init`/`sync` with no plugin or marketplace anywhere (see ADR-0002).
 
 **Next:**
 - **v1.0 is RELEASE-READY / acceptance-complete** — S6–S9 done; **729/729 tests**; end-to-end dogfood passed 14/14; all MVP acceptance criteria met. No features and no finalization remain.
@@ -60,7 +60,7 @@ All deferred items, grouped by area. Each was intentionally out of v1 to keep sc
 - Skills compiler `CompileTarget` is also Claude-only today (needs the same widening).
 
 ### S11 — Distribution + SDK
-- npm publish (`@noir-ai/*`), Claude marketplace listing, framework/SDK docs, `noir doctor` publish checks.
+- npm publish (`@noir-ai/*`), framework/SDK docs, `noir doctor` publish checks. (Distribution is npm-native; there is no plugin marketplace to publish to.)
 
 ### Daemon
 - backgrounded/detached mode + socket-activation (`daemon --detach` honestly returns exit 2 today).
@@ -115,13 +115,13 @@ All deferred items, grouped by area. Each was intentionally out of v1 to keep sc
 - **Host scope:** **Claude Code only** (behind an abstract `HostAdapter` so generalization is later mechanical, not architectural).
 
 ### v1.x — Cross-CLI & Distribution
-**Slices S10–S11.** Additional host adapters (OpenCode, Gemini, Agy, Qwen) with per-host emulation; Claude marketplace + npm publish; `noir doctor`; framework docs; SDK surface ("usable as a framework").
+**Slices S10–S11.** Additional host adapters (OpenCode, Gemini, Agy, Qwen) with per-host emulation; npm publish (`@noir-ai/*`); `noir doctor`; framework docs; SDK surface ("usable as a framework").
 - **Milestone:** true cross-CLI + installable product.
 
 ### v2.0 — Ecosystem  *(long-term)*
 - Cloud sync for memory (opt-in).
 - Team / multi-user features: shared specs, plans, and memory across a team.
-- First-class plugin/marketplace registry (Noir-native, not just Claude's).
+- First-class Noir-native skill registry/distribution.
 - Full theming + plugin SDK.
 - Programmatic headless driving of host CLIs (multi-step orchestration from the TUI).
 - Possibly a hosted/managed offering.
@@ -137,7 +137,7 @@ These are intentionally **out of v1** to keep scope sharp. Each has a target ver
 | Hosts beyond Claude Code | v1.x | Nail one host fully first; abstract adapter keeps it cheap. |
 | Memory cloud sync | v2.0 | v1 is solo/local; sync adds auth + infra. |
 | Team / multi-user | v2.0 | Requires shared stores, identity, permissions. |
-| First-class Noir marketplace/registry | v2.0 | Claude marketplace suffices for v1 distribution. |
+| First-class Noir-native skill registry/distribution | v2.0 | v1 ships its native builtins via `noir init`/`sync` with no install step. |
 | Programmatic host-driving (`claude -p`, etc.) | v2.0 | v1 hands tasks off; full automation is later. |
 | Full theming + plugin SDK | v1.x / v2.0 | Polish/en extensibility after core is solid. |
 

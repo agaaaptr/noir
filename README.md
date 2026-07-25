@@ -12,7 +12,7 @@
 
 ## Status
 
-v1.0 is **feature-complete** (slices S0–S9). The current product is the **Noir toolkit** under `packages/`. The older `plugins/noir-workflow/` marketplace plugin (a Claude Code skill pack) is the **predecessor** — still present, but superseded; see [Legacy plugin](#legacy-plugin-predecessor) below.
+v1.0 is **release-ready / acceptance-complete** (slices S0–S9, 729/729 tests green). Noir ships **only native builtin skills** — there is no plugin and no marketplace; the 31 `noir-` skills below are the entire skill surface.
 
 See [`docs/roadmap.md`](docs/roadmap.md) for the living current-status, and [`docs/specs/2026-07-23-noir-toolkit-design.md`](docs/specs/2026-07-23-noir-toolkit-design.md) for the design blueprint.
 
@@ -85,6 +85,12 @@ When a host connects via `noir mcp serve`, it gets a curated tool surface:
 - **Context (3):** `context_search`, `context_index`, `context_status`
 - **Memory (5 + 1 conditional):** `memory_save`, `memory_recall`, `memory_search`, `memory_sessions`, `memory_forget`, and `memory_consolidate` (registered only when `memory.consolidation.enabled` is on)
 
+## Native builtin skills
+
+**The builtin skills ARE the only skills.** There is no plugin to install and no marketplace to add — Noir ships a pack of **31 native `noir-` skills** (19 full playbooks + 12 stubs) in the Claude Code `SKILL.md` format. `noir init` / `noir sync` discover, compile, and emit them idempotently to the host's `.claude/skills/` via the `@noir-ai/skills` compiler; the `noir-*` namespace is managed and overwritten on every sync.
+
+The pack spans the SDD lifecycle, power/session/git/domain skills, and utils (e.g. `noir-brainstorm`, `noir-spec`, `noir-plan`, `noir-execute`, `noir-review`, `noir-recall`, `noir-remember`, `noir-context`, `noir-commit`, `noir-pr`, …). Each skill's YAML `description` states **WHEN** to trigger (a leading cue like "Use when…"), never WHAT it does — so the host loads the body on demand instead of following a shortcut. Adding a skill is authoring a folder under `packages/skills/builtin/` (see [AGENTS.md](AGENTS.md)).
+
 ## Configuration
 
 Noir reads `.noir/config.yml` (project-local, safe to commit). It defines chunk defaults, embedder/model providers, and the memory consolidation switch. The env-var **name** is stored in config; the **value** is read at call time, so secrets never enter `.noir/config.yml`.
@@ -117,8 +123,7 @@ noir/
 │   ├── core/ store/ workflow/ skills/
 │   ├── context/ memory/ model/
 │   └── daemon/ adapters/ cli/
-├── plugins/noir-workflow/   PREDECESSOR — the old Claude Code skill-pack plugin (superseded)
-├── docs/                     architecture, decisions (ADRs), specs, plans, findings, roadmap, changelog
+├── docs/                     architecture, decisions (ADRs), specs, roadmap, changelog
 ├── AGENTS.md                 agent guidance for developing this repo
 ├── biome.json                formatter + linter
 └── package.json              pnpm workspace root
@@ -136,15 +141,11 @@ pnpm test           # build + vitest run (unit + integration)
 
 This repo is itself developed with Claude Code; [`AGENTS.md`](AGENTS.md) holds the conventions.
 
-## Legacy plugin (predecessor)
-
-`plugins/noir-workflow/` is the **older product**: a Claude Code plugin marketplace shipping a `noir-workflow` skill pack (`/init`, `/sync`, `/flow`, `/wrap`, `/checkpoint`). It is the direct ancestor of the toolkit's SDD engine + skill compiler, but is **superseded** — the current product is the `packages/` toolkit above. It remains in-tree for history and for users still on the plugin flow; new users should use `noir init` / `noir sync`.
-
 ## Documentation
 
 - [Roadmap & current status](docs/roadmap.md) · [Changelog](docs/CHANGELOG.md)
 - [Architecture](docs/architecture/) · [Decision records (ADRs)](docs/decisions/)
-- [Design specs](docs/specs/) · [Implementation plans](docs/plans/) · [Validation findings](docs/findings/)
+- [Design blueprint](docs/specs/2026-07-23-noir-toolkit-design.md) · [SDD spec/plan history](docs/superpowers/)
 
 ## License
 

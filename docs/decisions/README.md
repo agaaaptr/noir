@@ -11,3 +11,4 @@ ADRs record *why* a choice was made — not *what* the code does (the skills the
 ## Index
 
 - [ADR-0001 — Documentation layout and spec/plan paths](0001-doc-layout-and-spec-plan-paths.md)
+- [ADR-0002 — Native skills only — plugin + marketplace removed](0002-native-skills-only-plugin-removed.md)

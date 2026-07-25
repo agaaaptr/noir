@@ -1,21 +1,23 @@
 # Documentation
 
-Everything that isn't the runnable skills: the system's architecture, the decisions behind it, the validated designs, the execution plans, and the validation findings.
+The Noir toolkit's architecture, the decisions behind it, the design blueprint, the SDD spec/plan history, the living forward plan, and the changelog.
 
-> **📍 Current direction (2026-07):** This repository is being redesigned into **Noir** — a standalone, host-agnostic AI development toolkit. Blueprint: [`specs/2026-07-23-noir-toolkit-design.md`](specs/2026-07-23-noir-toolkit-design.md). Living forward plan: [`roadmap.md`](roadmap.md). The legacy `ai-toolkit` marketplace / `ai-dev-workflow` plugin identity is deprecated pending implementation.
+> **What Noir is:** a host-agnostic, spec-driven-workflow + native-context + cross-session-memory layer for agentic CLIs (bring your own agent). Design blueprint: [`specs/2026-07-23-noir-toolkit-design.md`](specs/2026-07-23-noir-toolkit-design.md). Living forward plan: [`roadmap.md`](roadmap.md).
 
 ## Structure
 
 | Path | Purpose |
 |---|---|
-| [`architecture/`](architecture/) | How the marketplace, plugins, and skills fit together. Start here. |
+| [`architecture/`](architecture/) | How the 10-package toolkit fits together and how a host connects. Start here. |
 | [`decisions/`](decisions/) | Architecture Decision Records (ADRs) — *why* a choice was made. |
-| [`specs/`](specs/) | Design specs — validated design before implementation. |
-| [`plans/`](plans/) | Implementation plans — task-by-task execution plans. |
-| [`findings/`](findings/) | Validation findings — PoC results, incident notes, retrospectives. |
+| [`specs/`](specs/) | The Noir design blueprint (`2026-07-23-noir-toolkit-design.md`). Per-slice design specs live under `superpowers/specs/`. |
+| [`superpowers/specs/`](superpowers/specs/) | Per-slice SDD design history (the brainstorm → spec record for each slice). |
+| [`superpowers/plans/`](superpowers/plans/) | Per-slice implementation + acceptance plans (the SDD plan history). **Active plans live here** — there is no separate `docs/plans/`. |
+| [`roadmap.md`](roadmap.md) | The living forward plan: current status, v1.x backlog, version targets. |
+| [`CHANGELOG.md`](CHANGELOG.md) | Notable changes, newest first. |
 
 ## Conventions
 
-- **Specs** → `specs/` and **plans** → `plans/`, both dated `YYYY-MM-DD-<topic>.md`. This overrides the Superpowers default of `docs/superpowers/` (see [ADR-0001](decisions/0001-doc-layout-and-spec-plan-paths.md) and [`AGENTS.md`](../AGENTS.md)).
+- Per-slice design specs → `superpowers/specs/YYYY-MM-DD-sN-<topic>-design.md`; implementation plans → `superpowers/plans/YYYY-MM-DD-sN-<topic>.md` (dated). See [ADR-0001](decisions/0001-doc-layout-and-spec-plan-paths.md) and [`../AGENTS.md`](../AGENTS.md).
 - **ADRs** are numbered `NNNN-<slug>.md` and append-only — supersede, don't rewrite.
 - Cross-link liberally: a spec should link to its plan and any related ADR.
