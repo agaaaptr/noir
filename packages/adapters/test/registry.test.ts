@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { AGENTS_MD_FILENAME, emitAgentsMd } from '../src/agents-md.js';
+import { agentsMdAdapter } from '../src/agents-md-adapter.js';
 import { claudeAdapter } from '../src/claude.js';
+import { cursorAdapter } from '../src/cursor.js';
+import { geminiAdapter } from '../src/gemini.js';
 import { resolveAdapter, SUPPORTED_HOSTS } from '../src/index.js';
+import { opencodeAdapter } from '../src/opencode.js';
 import type { HostId } from '../src/types.js';
 
 describe('SUPPORTED_HOSTS', () => {
@@ -16,27 +20,58 @@ describe('SUPPORTED_HOSTS', () => {
   });
 });
 
-describe('resolveAdapter — S10-Foundation registry', () => {
+describe('resolveAdapter — S10-Adapters registry (all 5 hosts wired)', () => {
+  // The S10-Foundation "coming in S10" throw assertions are now FLIPPED — every
+  // host resolves to a real adapter. The exhaustiveness `default: never` guard
+  // in resolveAdapter stays (defensive — untyped JS callers still get a clear
+  // error if they pass a non-HostId string).
+
   it('returns the claude adapter for the claude host (the regression anchor)', () => {
     const adapter = resolveAdapter('claude');
     expect(adapter).toBe(claudeAdapter);
     expect(adapter.id).toBe('claude');
   });
 
-  it.each(['agents-md', 'gemini', 'cursor', 'opencode'] satisfies HostId[])(
-    'throws a clear "coming in S10" error for %s (wired in the next slice)',
+  it('returns the agents-md adapter (the universal baseline)', () => {
+    const adapter = resolveAdapter('agents-md');
+    expect(adapter).toBe(agentsMdAdapter);
+    expect(adapter.id).toBe('agents-md');
+  });
+
+  it('returns the gemini adapter', () => {
+    const adapter = resolveAdapter('gemini');
+    expect(adapter).toBe(geminiAdapter);
+    expect(adapter.id).toBe('gemini');
+  });
+
+  it('returns the cursor adapter', () => {
+    const adapter = resolveAdapter('cursor');
+    expect(adapter).toBe(cursorAdapter);
+    expect(adapter.id).toBe('cursor');
+  });
+
+  it('returns the opencode adapter', () => {
+    const adapter = resolveAdapter('opencode');
+    expect(adapter).toBe(opencodeAdapter);
+    expect(adapter.id).toBe('opencode');
+  });
+
+  it.each(['claude', 'agents-md', 'gemini', 'cursor', 'opencode'] satisfies HostId[])(
+    'every supported host resolves (no host throws) — %s',
     (host) => {
-      expect(() => resolveAdapter(host)).toThrow(/Unsupported host: .* \(coming in S10\)/);
+      expect(() => resolveAdapter(host)).not.toThrow();
+      expect(resolveAdapter(host).id).toBe(host);
     },
   );
 
-  it('the four non-claude hosts are part of HostId but not yet resolvable', () => {
-    // Sanity: the foundation ships the FULL shape (5 hosts in SUPPORTED_HOSTS)
-    // but only claude resolves. This is the documented S10-Foundation contract.
-    const nonClaude = SUPPORTED_HOSTS.filter((h) => h !== 'claude');
-    expect(nonClaude).toEqual(['agents-md', 'gemini', 'cursor', 'opencode']);
-    for (const host of nonClaude) {
-      expect(() => resolveAdapter(host)).toThrow();
+  it('all five hosts are wired (the registry is complete — no host left as a stub)', () => {
+    // The S10-Foundation contract shipped 5 hosts in SUPPORTED_HOSTS but only
+    // claude resolved. S10-Adapters completes the registry: every supported
+    // host now returns a real adapter (the `default: never` guard remains as
+    // defensive coverage for future HostId additions).
+    for (const host of SUPPORTED_HOSTS) {
+      const adapter = resolveAdapter(host);
+      expect(adapter.id).toBe(host);
     }
   });
 });

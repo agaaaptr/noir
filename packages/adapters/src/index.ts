@@ -1,8 +1,17 @@
+import { agentsMdAdapter } from './agents-md-adapter.js';
 import { claudeAdapter } from './claude.js';
+import { cursorAdapter } from './cursor.js';
+import { geminiAdapter } from './gemini.js';
+import { opencodeAdapter } from './opencode.js';
 import type { HostAdapter, HostId } from './types.js';
 
 export { AGENTS_MD_FILENAME, emitAgentsMd } from './agents-md.js';
+export { agentsMdAdapter } from './agents-md-adapter.js';
 export { claudeAdapter } from './claude.js';
+export { cursorAdapter } from './cursor.js';
+export { geminiAdapter } from './gemini.js';
+export { buildMcpServersJson } from './mcp.js';
+export { opencodeAdapter } from './opencode.js';
 export type {
   EmitContext,
   HostAdapter,
@@ -34,10 +43,12 @@ export const SUPPORTED_HOSTS: readonly HostId[] = Object.freeze([
  * indirection instead of importing adapters directly so adding a host needs NO
  * CLI edits beyond the `--host` flag's enum.
  *
- * S10-Foundation state: only `claude` (the regression anchor) is wired. The
- * other four hosts (`agents-md`, `gemini`, `cursor`, `opencode`) ship in
- * S10-Adapters (the next slice); until then, they throw a clear "coming in S10"
- * error so the registry shape is complete but only claude resolves.
+ * S10-Adapters: all five hosts are now wired —
+ *   - `claude`     — CLAUDE.md + `.claude/skills/` + `.mcp.json` (regression anchor).
+ *   - `agents-md`  — universal AGENTS.md (the 32-platform baseline).
+ *   - `gemini`     — GEMINI.md + AGENTS.md + `.gemini/mcp.json`.
+ *   - `cursor`     — AGENTS.md + `.cursor/rules/*.mdc` + `.cursor/mcp.json`.
+ *   - `opencode`   — AGENTS.md + `opencode.json` (different MCP shape).
  *
  * Unknown/non-`HostId` strings are impossible to pass at compile time (the
  * signature accepts only `HostId`); the runtime fallback is defensive — a
@@ -48,13 +59,13 @@ export function resolveAdapter(host: HostId): HostAdapter {
     case 'claude':
       return claudeAdapter;
     case 'agents-md':
+      return agentsMdAdapter;
     case 'gemini':
+      return geminiAdapter;
     case 'cursor':
+      return cursorAdapter;
     case 'opencode':
-      // Wired in S10-Adapters (the next slice). Throwing here (rather than
-      // returning a stub) keeps the foundation honest: the registry shape is
-      // complete, but only claude is callable today.
-      throw new Error(`Unsupported host: ${host} (coming in S10)`);
+      return opencodeAdapter;
     default: {
       // Exhaustiveness guard — if `HostId` gains a member and this switch is
       // not updated, TS narrows `host` to `never` here. At runtime (untyped JS
