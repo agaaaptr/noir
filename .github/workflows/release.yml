@@ -45,8 +45,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
-      - run: pnpm typecheck
+      # Build BEFORE typecheck: each package's exports/types point at ./dist/*.d.ts,
+      # so tsc can't resolve inter-package imports until the dist artifacts exist.
       - run: pnpm build
+      - run: pnpm typecheck
       - run: pnpm test
 
   publish:
