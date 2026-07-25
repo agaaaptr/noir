@@ -1,3 +1,21 @@
+/**
+ * The set of host CLIs Noir knows how to scaffold for. The `host:` config
+ * (in @noir-ai/core) + `CompileTarget` (in @noir-ai/skills) widen to this
+ * same enum. Defined HERE (in adapters) rather than core/skills so the host
+ * list has ONE owner; core/skills carry the enum string literals only (no
+ * cross-package dep). See `2026-07-25-s10-multihost-design.md` (A1).
+ *
+ *  - `claude`     — Claude Code (the v1 default; the regression anchor).
+ *  - `agents-md`  — the 32-platform universal AGENTS.md standard.
+ *  - `gemini`     — Gemini CLI (GEMINI.md + AGENTS.md).
+ *  - `cursor`     — Cursor (.cursor/rules/*.mdc + AGENTS.md).
+ *  - `opencode`   — OpenCode (AGENTS.md + opencode.json).
+ *
+ * Add a new host here, extend `resolveAdapter`'s registry, and the schema +
+ * compiler widen automatically.
+ */
+export type HostId = 'claude' | 'agents-md' | 'gemini' | 'cursor' | 'opencode';
+
 export interface EmitContext {
   root: string;
 }
@@ -26,7 +44,9 @@ export interface IntegrationMcpEmission {
 }
 
 export interface HostAdapter {
-  readonly id: string;
+  /** The host identifier — must match a `HostId` registry key. Tightened from
+   *  `string` to `HostId` in S10 so the registry is type-safe end-to-end. */
+  readonly id: HostId;
   /** Full contents of the host's MCP config file (e.g. .mcp.json).
    *
    *  Two-arg form (the original, used by `noir init`/`sync` today): emits only
@@ -52,4 +72,16 @@ export interface HostAdapter {
   skillsDir?(ctx: EmitContext): string;
   install?(ctx: EmitContext): Promise<void>;
   healthCheck?(ctx: EmitContext): Promise<boolean>;
+  /** S10 seam — where the host's MCP config file lives (workspace-level), e.g.
+   *  `.mcp.json`, `.cursor/mcp.json`, `.gemini/mcp.json`, `opencode.json`. The
+   *  cli uses this to write the string returned by `emitMcpConfig` to disk.
+   *  Absent ⇒ the cli falls back to a host-specific default (or skips for
+   *  hosts with no MCP concept). Optional so existing adapters keep working
+   *  unchanged; new adapters implement it. */
+  mcpConfigPath?(ctx: EmitContext): string;
+  /** S10 seam — where the universal AGENTS.md goes. Defaults to root `AGENTS.md`
+   *  for every host (the 32-platform standard); overridable for hosts that want
+   *  it elsewhere. The shared `emitAgentsMd(ctx)` helper produces the CONTENT
+   *  (byte-identical across hosts); the cli writes it to this path. */
+  agentsMdPath?(ctx: EmitContext): string;
 }

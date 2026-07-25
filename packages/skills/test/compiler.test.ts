@@ -124,6 +124,89 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     const skill = firstSkill(fixture);
     expect(() => compileSkill(skill, 'claude')).toThrow(/Cannot compile noir-x/i);
   });
+
+  // S10 multi-host — `compileSkill` widens from claude-only to the 5-host enum.
+  // The verbatim branch (claude/agents-md/gemini/opencode) is byte-identical to
+  // v1.1 (the regression anchor); the cursor branch transforms to .mdc.
+  it.each(['claude', 'agents-md', 'gemini', 'opencode'] as const)(
+    'S10: compileSkill(%j) emits the verbatim SKILL.md + references (canonical format)',
+    async (target) => {
+      const md = '---\nname: noir-x\ndescription: Use when testing.\n---\n# noir-x\nbody';
+      await writeSkill('noir-x', md, { 'detail.md': '# detail' });
+      const skill = firstSkill(fixture);
+      const out = compileSkill(skill, target);
+      expect(out.files.map((f) => f.path.join('/'))).toEqual(['SKILL.md', 'references/detail.md']);
+      expect(out.files[0]?.content).toBe(md);
+    },
+  );
+
+  it('S10: compileSkill defaults to "claude" (backward-compatible with every existing caller)', async () => {
+    const md = '---\nname: noir-x\ndescription: Use when testing.\n---\n# noir-x\nbody';
+    await writeSkill('noir-x', md, { 'detail.md': '# detail' });
+    const skill = firstSkill(fixture);
+    // No second arg — must behave exactly like compileSkill(skill, 'claude').
+    const out = compileSkill(skill);
+    expect(out.files.map((f) => f.path.join('/'))).toEqual(['SKILL.md', 'references/detail.md']);
+    expect(out.files[0]?.content).toBe(md);
+  });
+
+  it('S10: compileSkill(cursor) transforms to <name>.mdc with description/globs/alwaysApply frontmatter', async () => {
+    const md =
+      '---\nname: noir-x\ndescription: Use when testing cursor transform.\n---\n# noir-x\nA body.';
+    await writeSkill('noir-x', md);
+    const skill = firstSkill(fixture);
+    const out = compileSkill(skill, 'cursor');
+
+    // ONE file named after the skill with the .mdc extension; no references dir
+    // (Cursor's rule format has no references concept — references are dropped).
+    expect(out.files.map((f) => f.path.join('/'))).toEqual(['noir-x.mdc']);
+    const mdc = out.files[0]?.content ?? '';
+
+    // Frontmatter block bounded by `---` lines.
+    expect(mdc.startsWith('---\n')).toBe(true);
+    const closeIdx = mdc.indexOf('\n---\n', 4);
+    expect(closeIdx).toBeGreaterThan(0);
+    const frontmatter = mdc.slice(4, closeIdx);
+    // The skill's WHEN description drives Cursor's agent-decided rule selection.
+    expect(frontmatter).toContain('description: Use when testing cursor transform.');
+    // `globs: ['**/*']` — broad applicability; the description is the selector.
+    // yaml.stringify quotes the wildcard entry, so we assert the literal pattern
+    // (not the quote style — single vs double quotes is yaml's call).
+    expect(frontmatter).toContain('globs:');
+    expect(frontmatter).toContain('**/*');
+    // `alwaysApply: false` per the S10 locked decision (agent-decided, not auto).
+    expect(frontmatter).toContain('alwaysApply: false');
+
+    // Body = the SKILL.md body (frontmatter stripped); no leakage of the original
+    // frontmatter into the rendered rule body.
+    const body = mdc.slice(closeIdx + '\n---\n'.length);
+    expect(body).toContain('# noir-x');
+    expect(body).toContain('A body.');
+    expect(body).not.toContain('name: noir-x');
+  });
+
+  it('S10: compileSkill(cursor) drops the references/ dir (Cursor rules have no references concept)', async () => {
+    await writeSkill('noir-x', '---\nname: noir-x\ndescription: Use when testing.\n---\n# noir-x', {
+      'extra.md': '# extra context',
+    });
+    const skill = firstSkill(fixture);
+    const out = compileSkill(skill, 'cursor');
+    // References are not emitted for the cursor target (documented risk in the
+    // S10 spec — the body alone is the surface for Cursor's rule format).
+    expect(out.files.map((f) => f.path.join('/'))).toEqual(['noir-x.mdc']);
+    expect(out.files[0]?.content ?? '').not.toContain('extra context');
+  });
+
+  it('S10: all five targets are valid (no "Unsupported compile target" throw)', async () => {
+    // Pre-S10, anything but 'claude' threw. After the widening, every HostId is
+    // a legal CompileTarget — the validator runs, the format is selected, no
+    // generic "unsupported" rejection.
+    await writeSkill('noir-x', '---\nname: noir-x\ndescription: Use when testing.\n---\n# noir-x');
+    const skill = firstSkill(fixture);
+    for (const target of ['claude', 'agents-md', 'gemini', 'cursor', 'opencode'] as const) {
+      expect(() => compileSkill(skill, target)).not.toThrow();
+    }
+  });
   it('emitSkillsToDir writes every skill + reference, idempotently', async () => {
     await writeSkill('noir-a', '---\nname: noir-a\ndescription: Use when a.\n---\n# a');
     await writeSkill('noir-b', '---\nname: noir-b\ndescription: Use when b.\n---\n# b', {

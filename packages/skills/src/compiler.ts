@@ -1,6 +1,6 @@
 import { mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import { parse as parseYaml } from 'yaml';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { discoverAll, discoverBuiltin } from './discover.js';
 import { runtimeEmitsHostMcp } from './integrations-schema.js';
 import type {
@@ -64,16 +64,65 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
   return { ok: errors.length === 0, errors };
 }
 
+/**
+ * Compile a builtin skill into the host-shaped `CompiledSkill`. The validator
+ * runs for every target (a malformed skill is malformed in any format).
+ *
+ *  - `claude` | `agents-md` | `gemini` | `opencode` (the AGENTS.md-aligned
+ *    hosts): canonical format copied verbatim — `SKILL.md` plus its
+ *    `references/` siblings (DS-4). These hosts read the same SKILL.md shape;
+ *    the EMIT-LOCATION (which dir they land in) is the cli/adapter's job, not
+ *    the compiler's.
+ *  - `cursor`: transform into a Cursor `.mdc` rule — ONE file `<name>.mdc`
+ *    whose frontmatter carries the skill description, a wildcard globs entry,
+ *    and `alwaysApply: false` (the agent decides whether to pull the rule via
+ *    the description; never auto-applied). The body is the SKILL.md BODY
+ *    (frontmatter stripped). Cursor's rule format has no references concept,
+ *    so references are dropped (documented in the S10 spec risks — the body is
+ *    the surface).
+ *
+ * The `target` defaults to `'claude'` for backward compatibility with every
+ * existing caller; the verbatim branch produces byte-identical output to v1.1
+ * (the regression anchor).
+ */
 export function compileSkill(skill: BuiltinSkill, target: CompileTarget = 'claude'): CompiledSkill {
   const res = validateSkill(skill);
   if (!res.ok) throw new Error(`Cannot compile ${skill.name}: ${res.errors.join('; ')}`);
-  if (target !== 'claude') throw new Error(`Unsupported compile target: ${target}`);
-  // Claude (v1) target = canonical format copied verbatim (DS-4). Multi-host transform is S10.
+  if (target === 'cursor') {
+    return { name: skill.name, files: [{ path: [`${skill.name}.mdc`], content: toMdc(skill) }] };
+  }
+  // claude / agents-md / gemini / opencode → canonical verbatim format.
   const files = [
     { path: ['SKILL.md'], content: skill.skillMd },
     ...skill.references.map((r) => ({ path: ['references', r.name], content: r.content })),
   ];
   return { name: skill.name, files };
+}
+
+/**
+ * Cursor `.mdc` rule transform — frontmatter `{description, globs, alwaysApply:
+ * false}` + the SKILL.md body. The description drives Cursor's agent-decided
+ * rule selection (per the S10 spec open-decision default: `alwaysApply: false`).
+ * Cursor's rule format has no references/ concept, so the body alone is the
+ * surface; references are dropped (documented risk in the spec).
+ *
+ * Frontmatter is YAML-serialized via the `yaml` package (already a dep) so
+ * description escaping (colons, quotes, multi-line) is correct without hand
+ * rolling. `lineWidth: 0` keeps descriptions on a single quoted line (predictable
+ * byte shape; Cursor tolerates either). */
+function toMdc(skill: BuiltinSkill): string {
+  const frontmatter = stringifyYaml(
+    {
+      description: skill.frontmatter.description,
+      globs: ['**/*'],
+      alwaysApply: false,
+    },
+    { lineWidth: 0 },
+  ).trimEnd();
+  const body = bodyOf(skill.skillMd);
+  // Cursor's `.mdc` shape: leading `---\n`, frontmatter, closing `---\n`, blank
+  // line, body. Trailing newline so files concatenate cleanly on disk.
+  return `---\n${frontmatter}\n---\n${body.endsWith('\n') ? body : `${body}\n`}`;
 }
 
 /**

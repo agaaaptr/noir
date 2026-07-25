@@ -102,4 +102,20 @@ export interface EmitSummary {
   pruned?: string[];
 }
 
-export type CompileTarget = 'claude';
+/**
+ * The set of host-shaped compile targets the compiler knows how to emit. Was
+ * `'claude'` only through v1.1; widened in S10 to the multi-host enum (mirrors
+ * `@noir-ai/adapters`' `HostId` literally — duplicated here so skills does NOT
+ * add an adapters dependency; the values are an S10-locked contract). See
+ * `2026-07-25-s10-multihost-design.md` (A1 + the per-adapter emission table).
+ *
+ *  - `claude` | `agents-md` | `gemini` | `opencode` → verbatim SKILL.md + refs
+ *    (the canonical format; emitted to the host's skill-equivalent dir).
+ *  - `cursor` → transform to `<name>.mdc` (Cursor rule with YAML frontmatter
+ *    `{description, globs, alwaysApply:false}` + SKILL.md body; no `references/`).
+ *
+ * The EMIT-LOCATION (where compiled files land per host — `.claude/skills/`,
+ * `.cursor/rules/`, etc.) is the cli/adapter's job, NOT the compiler's; the
+ * compiler just produces host-shaped CONTENT.
+ */
+export type CompileTarget = 'claude' | 'agents-md' | 'gemini' | 'cursor' | 'opencode';

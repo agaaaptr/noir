@@ -19,8 +19,27 @@ describe('parseConfig', () => {
     expect(cfg.daemon.port).toBe(4321);
   });
   it('rejects an unknown host', () => {
-    expect(() => parseConfig({ host: 'gemini' })).toThrow();
+    // S10 widened the enum — 'gemini' is now VALID. Use a value outside the
+    // supported set (qwen is on the deferred list per the S10 spec) so this
+    // stays a genuine rejection test for the enum boundary.
+    expect(() => parseConfig({ host: 'qwen' })).toThrow();
+    expect(() => parseConfig({ host: 'unknown-host' })).toThrow();
   });
+
+  // S10 multi-host — the `host:` enum widening. Core owns the enum string (the
+  // canonical `HostId` union lives in @noir-ai/adapters; no core→adapters dep).
+  // `claude` stays the default so existing projects parse byte-equivalent.
+  it('S10: defaults host to "claude" when the key is absent (regression anchor)', () => {
+    const cfg = parseConfig({});
+    expect(cfg.host).toBe('claude');
+  });
+  it.each(['claude', 'agents-md', 'gemini', 'cursor', 'opencode'] as const)(
+    'S10: accepts host: "%s" (the five-value enum)',
+    (host) => {
+      const cfg = parseConfig({ host });
+      expect(cfg.host).toBe(host);
+    },
+  );
 
   // Slice S6 `context:` block (AC-7 / NFR-6): a config with NO context block
   // parses and defaults to local-embedder-attempted; an explicit block

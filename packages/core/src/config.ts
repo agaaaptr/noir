@@ -1,7 +1,13 @@
 import * as z from 'zod';
 
 export const NoirConfigSchema = z.object({
-  host: z.literal('claude'),
+  // S10 multi-host: widens from `z.literal('claude')` to a 5-value enum. The
+  // canonical `HostId` union lives in @noir-ai/adapters (single owner); core
+  // owns the enum STRING here so it does not import adapters (no core→adapters
+  // cycle — mirrors the existing pattern where `model`/`memory`/`context`/`prd`
+  // redeclare shapes their resolvers consume). `claude` remains the default so
+  // existing single-host projects are byte-equivalent (regression anchor).
+  host: z.enum(['claude', 'agents-md', 'gemini', 'cursor', 'opencode']).default('claude'),
   name: z.string().optional(),
   mode: z.enum(['full', 'quick']).default('full'),
   daemon: z
