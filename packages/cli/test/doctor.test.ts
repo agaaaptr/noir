@@ -16,7 +16,7 @@ import { CURRENT_SCAFFOLD_VERSION, scaffoldVersionPath } from '@noir-ai/create';
 import { clearDaemonRecord } from '@noir-ai/daemon';
 import { openStore, vecAvailability } from '@noir-ai/store';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { doctor } from '../src/commands/doctor.js';
+import { type CheckResult, checkPublish, doctor } from '../src/commands/doctor.js';
 import { EXIT, inferExitCode } from '../src/output.js';
 
 const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-doctor-test-'));
@@ -472,5 +472,114 @@ describe('noir doctor — host artifacts (S10)', () => {
     // Even with a missing host artifact, doctor's overall exit reflects only
     // CRITICAL fails — the host row contributed a warn, not a fail.
     expect(env.data.summary.fail).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S11 — publish-readiness check (advisory; warn-only).
+// ---------------------------------------------------------------------------
+//
+// The check is exercised via `checkPublish(checks, packagesDir)` directly with
+// synthetic package dirs (isolated, deterministic — no dependency on the real
+// repo's package.json contents or on `npm pack` being available). A final
+// integration test confirms `doctor()` wires the publish row into the payload.
+describe('noir doctor — publish check (S11)', () => {
+  /** Build a synthetic `packages/` dir under a temp root with the given package
+   *  shapes. Each entry is `[dirName, package.json-shape]`. Returns the
+   *  absolute path of the synthetic packages dir. */
+  function syntheticPackages(entries: Array<[string, Record<string, unknown>]>): string {
+    const packagesDir = join(root, 'packages');
+    mkdirSync(packagesDir, { recursive: true });
+    for (const [dir, pkg] of entries) {
+      mkdirSync(join(packagesDir, dir), { recursive: true });
+      writeFileSync(
+        join(packagesDir, dir, 'package.json'),
+        `${JSON.stringify(pkg, null, 2)}\n`,
+        'utf8',
+      );
+    }
+    return packagesDir;
+  }
+
+  it('all packages valid → ok, data.publish { checked, issues: [] }', () => {
+    const packagesDir = syntheticPackages([
+      ['core', { name: '@noir-ai/core', version: '1.0.0', files: ['dist'] }],
+      [
+        'cli',
+        {
+          name: '@noir-ai/cli',
+          version: '1.1.0-beta.1',
+          files: ['dist', 'README.md'],
+          bin: { noir: 'dist/bin.js' },
+        },
+      ],
+    ]);
+    const checks: CheckResult[] = [];
+    const result = checkPublish(checks, packagesDir, { skipNpmPack: true });
+    expect(result).not.toBeNull();
+    expect(result?.checked).toBe(2);
+    expect(result?.issues).toEqual([]);
+    const row = findCheck(checks, 'publish');
+    expect(row.status).toBe('ok');
+  });
+
+  it('a synthetic broken package.json (bad version) → warn, issue names version', () => {
+    const packagesDir = syntheticPackages([
+      ['bogus', { name: '@noir-ai/bogus', version: 'latest', files: ['dist'] }],
+    ]);
+    const checks: CheckResult[] = [];
+    const result = checkPublish(checks, packagesDir, { skipNpmPack: true });
+    expect(result?.checked).toBe(1);
+    expect(result?.issues.length).toBe(1);
+    // The issue calls out BOTH the package and the failed check.
+    expect(result?.issues[0]).toMatch(/bogus/);
+    expect(result?.issues[0]).toMatch(/version/);
+    expect(findCheck(checks, 'publish').status).toBe('warn');
+    // Publish is advisory: a warn row must NEVER escalate to a critical fail.
+    expect(findCheck(checks, 'publish').status).not.toBe('fail');
+  });
+
+  it('cli missing bin → warn, issue names bin (cli package must declare a bin)', () => {
+    // Everything else valid; only the cli `bin` field is omitted.
+    const packagesDir = syntheticPackages([
+      ['cli', { name: '@noir-ai/cli', version: '1.0.0', files: ['dist'] }],
+    ]);
+    const checks: CheckResult[] = [];
+    const result = checkPublish(checks, packagesDir, { skipNpmPack: true });
+    expect(result?.checked).toBe(1);
+    expect(result?.issues.length).toBe(1);
+    expect(result?.issues[0]).toMatch(/bin/);
+    expect(findCheck(checks, 'publish').status).toBe('warn');
+  });
+
+  it('null packagesDir → ok skip + data.publish null (global-install path)', () => {
+    // A global `npm install -g` has no `packages/*` workspace to validate; the
+    // check still produces a row (always-runs contract) but reports ok-skip and
+    // returns null for `data.publish`.
+    const checks: CheckResult[] = [];
+    const result = checkPublish(checks, null);
+    expect(result).toBeNull();
+    const row = findCheck(checks, 'publish');
+    expect(row.status).toBe('ok');
+    expect(row.detail).toMatch(/skipped/);
+  });
+
+  it('doctor() wires the publish row into the --json payload', async () => {
+    // Integration: running doctor() from the test process resolves the real
+    // workspace (the cli test files live under packages/cli/...) and emits a
+    // `publish` field + a `publish` check row. The shape is asserted, not the
+    // issue list (which depends on the repo's current package.json state + npm
+    // availability at test time).
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    // data.publish is either null (not a monorepo) or {checked, issues}. From
+    // the test process we ARE in the monorepo, so it must be the object shape.
+    expect(env.data.publish).not.toBeNull();
+    expect(typeof env.data.publish.checked).toBe('number');
+    expect(env.data.publish.checked).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(env.data.publish.issues)).toBe(true);
+    const row = findCheck(env.data.checks, 'publish');
+    // Advisory only — the publish row must never be a critical fail.
+    expect(row.status).not.toBe('fail');
   });
 });

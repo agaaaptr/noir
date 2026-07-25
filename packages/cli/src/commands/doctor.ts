@@ -29,8 +29,10 @@
 // signaled by the EXIT CODE (0 healthy / 1 critical failure) — the same shape
 // `npm audit --json` uses (valid JSON out, non-zero exit when issues found).
 
-import { existsSync, readFileSync } from 'node:fs';
-import { relative } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { type HostId, resolveAdapter } from '@noir-ai/adapters';
 import { loadProjectInfo, NOIR_VERSION, type ProjectInfo, paths } from '@noir-ai/core';
 import { CURRENT_SCAFFOLD_VERSION, readScaffoldVersion } from '@noir-ai/create';
@@ -85,6 +87,15 @@ export interface DoctorPayload {
    *  `warn` (NEVER `fail`) when any are missing — re-running `noir sync`
    *  restores them. */
   host: { active: HostId; expected: string[]; missing: string[] } | null;
+  /** S11 publish-readiness report (repo-developer-facing, advisory). `null`
+   *  when doctor is NOT running from a monorepo checkout (a global install has
+   *  no workspace package.json set to validate → the row reports `ok`
+   *  "skipped"). Otherwise carries the count of workspace `package.json` files
+   *  validated + the list of advisory issues found (bad semver, missing
+   *  `files`, cli missing `bin`, …). The row severity is `warn` when any issues
+   *  are present, `ok` otherwise — NEVER `fail` (a missing field does not break
+   *  the local install). */
+  publish: { checked: number; issues: string[] } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -528,6 +539,203 @@ function checkHostArtifacts(
   return { active: host, expected, missing };
 }
 
+// ---------------------------------------------------------------------------
+// S11 — publish-readiness check (advisory, repo-developer-facing).
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve the workspace `packages/` directory from the CLI's own location —
+ * walk up from `import.meta.url` to the nearest `package.json` named
+ * `@noir-ai/cli`, then return its PARENT dir (the `packages/` root) IF that
+ * dir's parent carries the monorepo marker (`pnpm-workspace.yaml`). Returns
+ * `null` when not running from a monorepo checkout (a global `npm install -g`
+ * has no `packages/*` workspace to validate → the publish check skips).
+ *
+ * The walk is robust across layouts: source (`packages/cli/src/commands/`),
+ * built (`packages/cli/dist/`), and bundled-chunk (`packages/cli/dist/`) all
+ * walk up to `packages/cli/package.json`. In a global install the same walk
+ * lands on `node_modules/@noir-ai/cli/package.json`, whose parent
+ * (`node_modules/@noir-ai/`) has NO `pnpm-workspace.yaml` parent → null.
+ */
+function resolveWorkspacePackagesDir(): string | null {
+  let here = dirname(fileURLToPath(import.meta.url));
+  // Bound the walk so a pathological layout never loops the filesystem.
+  for (let i = 0; i < 8; i++) {
+    const pkgPath = join(here, 'package.json');
+    if (existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as { name?: string };
+        if (pkg.name === '@noir-ai/cli') {
+          // `here` is the cli package dir; `dirname(here)` is `packages/`.
+          const packagesDir = dirname(here);
+          // Monorepo gate: the repo root (`dirname(packagesDir)`) carries
+          // `pnpm-workspace.yaml`. A global install fails this gate.
+          if (existsSync(join(dirname(packagesDir), 'pnpm-workspace.yaml'))) {
+            return packagesDir;
+          }
+          return null;
+        }
+      } catch {
+        // Malformed package.json — keep walking.
+      }
+    }
+    const parent = dirname(here);
+    if (parent === here) break; // filesystem root
+    here = parent;
+  }
+  return null;
+}
+
+/**
+ * Permissive semver-ish regex for the advisory check. Accepts release and
+ * pre-release/build forms (`1.0.0`, `1.1.0-beta.1`, `1.2.0+build.4`). Strict
+ * enough to catch the obvious foot-guns (a git SHA, a literal "latest", a
+ * missing patch) without pulling in the `semver` package for a warn-level
+ * check. `npm publish` itself enforces rigor at pack time.
+ */
+const SEMVER_ISH = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+
+/** Best-effort `npm pack --dry-run` on the cli package — read-only (it does
+ *  NOT write the tarball). Returns `{ fileCount, distIncluded }` parsed from
+ *  npm's notice output, or `{ error }` when npm is unavailable / the pack
+ *  fails. Gated on npm being on PATH (the spec's expensive-but-optional leg):
+ *  we probe `npm --version` first and skip-with-note if it isn't resolvable. */
+function npmPackDryRun(
+  cliPkgDir: string,
+): { fileCount: number | null; distIncluded: boolean | null } | { error: string } {
+  // Probe npm availability first (cheap). shell:true so Windows finds npm.cmd.
+  const probe = spawnSync('npm', ['--version'], { encoding: 'utf8', shell: true });
+  if (probe.status !== 0 || probe.error) {
+    return { error: probe.error ? probe.error.message : 'npm not on PATH' };
+  }
+  // `npm pack --dry-run` lists the tarball contents without writing the file.
+  // It IS read-only (npm's own docs: "--dry-run ... does not write anything").
+  const res = spawnSync('npm', ['pack', '--dry-run'], {
+    cwd: cliPkgDir,
+    encoding: 'utf8',
+    shell: true,
+  });
+  if (res.status !== 0 || res.error) {
+    return { error: res.error ? res.error.message : `npm pack exited ${res.status ?? '?'}` };
+  }
+  const out = `${res.stdout ?? ''}\n${res.stderr ?? ''}`;
+  // `npm notice total files: 42` — the canonical summary line.
+  const totalMatch = out.match(/total files:\s*(\d+)/i);
+  const fileCount = totalMatch?.[1] ? Number.parseInt(totalMatch[1], 10) : null;
+  // `dist/` appears in the tarball contents (`npm notice <size> dist/<file>`).
+  const distIncluded = /\bdist\//.test(out);
+  return { fileCount, distIncluded };
+}
+
+/**
+ * S11 publish-readiness check. For every workspace `package.json` under
+ * `packagesDir`, validate publishability:
+ *   - `name` starts with `@noir-ai/`
+ *   - `version` matches {@link SEMVER_ISH}
+ *   - `files` is a non-empty array
+ *   - the cli package has a `bin` field
+ *
+ * Optionally runs `npm pack --dry-run` on the cli package (best-effort, gated
+ * on npm being available) to report the file count + confirm `dist/` ships.
+ *
+ * Severity is ALWAYS `ok` or `warn` — NEVER `fail`: a missing/odd package.json
+ * field does not break the local install (this is an advisory nudge to repo
+ * developers, not a project-facing health check). The check runs ALWAYS (it
+ * produces a row in every doctor report) but returns `null` from
+ * `data.publish` when not running from a monorepo (`packagesDir === null`).
+ */
+export function checkPublish(
+  checks: CheckResult[],
+  packagesDir: string | null,
+  opts: { skipNpmPack?: boolean } = {},
+): { checked: number; issues: string[] } | null {
+  if (packagesDir === null) {
+    checks.push({
+      name: 'publish',
+      status: 'ok',
+      detail: 'skipped — not a monorepo checkout (no packages/* workspace)',
+    });
+    return null;
+  }
+  // Discover workspace package.json files (depth-1 dirs only — no glob dep).
+  let entries: string[] = [];
+  try {
+    entries = readdirSync(packagesDir, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+  } catch (e) {
+    checks.push({
+      name: 'publish',
+      status: 'warn',
+      detail: `could not read ${packagesDir}: ${msg(e)}`,
+    });
+    return { checked: 0, issues: [`unreadable packages dir: ${msg(e)}`] };
+  }
+
+  const issues: string[] = [];
+  let checked = 0;
+  let cliDir: string | null = null;
+  for (const name of entries) {
+    const pkgPath = join(packagesDir, name, 'package.json');
+    if (!existsSync(pkgPath)) continue;
+    let pkg: Record<string, unknown>;
+    try {
+      pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as Record<string, unknown>;
+    } catch (e) {
+      issues.push(`${name}/package.json: unparseable (${msg(e)})`);
+      checked++;
+      continue;
+    }
+    checked++;
+    const pkgName = typeof pkg.name === 'string' ? pkg.name : '';
+    if (!pkgName.startsWith('@noir-ai/')) {
+      issues.push(`${name}/package.json: name '${pkgName}' is not @noir-ai/*`);
+    }
+    const version = typeof pkg.version === 'string' ? pkg.version : '';
+    if (!SEMVER_ISH.test(version)) {
+      issues.push(`${name}/package.json: version '${version}' is not semver`);
+    }
+    if (!Array.isArray(pkg.files) || pkg.files.length === 0) {
+      issues.push(`${name}/package.json: files missing or empty`);
+    }
+    if (pkgName === '@noir-ai/cli') {
+      if (pkg.bin == null || (typeof pkg.bin === 'object' && Object.keys(pkg.bin).length === 0)) {
+        issues.push(`${name}/package.json: bin missing (cli package must declare a bin)`);
+      }
+      cliDir = join(packagesDir, name);
+    }
+  }
+
+  // Best-effort npm pack --dry-run on the cli package. Gated on npm being
+  // available; a failure here is surfaced in the detail but does NOT add an
+  // issue (it is environmental, not a package.json defect). `skipNpmPack` is a
+  // testability seam — synthetic test fixtures have no real `dist/`, so the
+  // dist-absent signal would otherwise pollute the package.json-validation
+  // assertions. Production (`doctor()`) leaves it unset.
+  let packNote = '';
+  if (cliDir && opts.skipNpmPack !== true) {
+    const pack = npmPackDryRun(cliDir);
+    if ('error' in pack) {
+      packNote = ` · npm pack skipped (${pack.error})`;
+    } else {
+      const count = pack.fileCount == null ? '?' : String(pack.fileCount);
+      const dist = pack.distIncluded ? 'dist/ included' : 'dist/ NOT in tarball';
+      packNote = ` · npm pack: ${count} files, ${dist}`;
+      if (pack.distIncluded === false) {
+        issues.push('cli npm pack --dry-run: dist/ absent from the tarball');
+      }
+    }
+  }
+
+  const status: Severity = issues.length > 0 ? 'warn' : 'ok';
+  const detail =
+    issues.length === 0
+      ? `${checked}/${entries.length} packages publish-ready${packNote}`
+      : `${issues.length} issue${issues.length === 1 ? '' : 's'} across ${checked} package${checked === 1 ? '' : 's'}${packNote}`;
+  checks.push({ name: 'publish', status, detail });
+  return { checked, issues };
+}
+
 /** Repo-relative POSIX form of `abs` under `root` (defensive: if `abs` is
  *  already relative, return it as-is — doctor deals with literal paths like
  *  `'AGENTS.md'` from buildHostArtifacts' default fallback). */
@@ -591,9 +799,18 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   const scaffold = checkScaffoldVersion(checks, root);
   const rules = checkRulesMdBudget(checks, root, project);
   const host = checkHostArtifacts(checks, root, project);
+  const publish = checkPublish(checks, resolveWorkspacePackagesDir());
 
   const summary = summarize(checks);
-  const payload: DoctorPayload = { noir: NOIR_VERSION, checks, summary, scaffold, rules, host };
+  const payload: DoctorPayload = {
+    noir: NOIR_VERSION,
+    checks,
+    summary,
+    scaffold,
+    rules,
+    host,
+    publish,
+  };
 
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: payload })}\n`);
