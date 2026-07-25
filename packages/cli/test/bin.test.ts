@@ -118,11 +118,11 @@ beforeEach(() => {
 });
 
 describe('commander migration — exit codes + stream discipline', () => {
-  it('--help writes to stderr (not stdout) and exits 0', async () => {
+  it('--help writes to stdout (conventional; users pipe it) and exits 0', async () => {
     const r = await parse(['--help']);
     expect(r.exitCode).toBe(EXIT.OK);
-    expect(r.stdout).toBe('');
-    expect(r.stderr).toMatch(/Usage:|Commands:|noir/);
+    expect(r.stdout).toMatch(/Usage:|Commands:|noir/);
+    expect(r.stderr).toBe('');
   });
 
   it('unknown command → exit 3 (not-found)', async () => {
