@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { CONTEXT_BLOCK_BEGIN, paths } from '@noir-ai/core'; // CONTEXT_BLOCK_BEGIN re-exported below; see note
+import { CONTEXT_BLOCK_BEGIN, RULES_BLOCK, paths } from '@noir-ai/core'; // CONTEXT_BLOCK_BEGIN re-exported below; see note
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { init } from '../src/init.js';
 
@@ -27,6 +27,13 @@ describe('init', () => {
     const claudeMd = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
     expect(claudeMd).toContain(CONTEXT_BLOCK_BEGIN);
     expect(claudeMd).toContain('@import ".noir/NOIR.md"');
+
+    // Rules seed + rules @import managed block in CLAUDE.md (slice R).
+    expect(existsSync(paths.rulesMd(root))).toBe(true);
+    const rules = readFileSync(paths.rulesMd(root), 'utf8');
+    expect(rules).toContain('Anti-assumption contract');
+    expect(claudeMd).toContain(RULES_BLOCK.begin);
+    expect(claudeMd).toContain('@import ".noir/rules/RULES.md"');
   });
 
   it('scaffolds an http .mcp.json when transport is streamable-http', async () => {

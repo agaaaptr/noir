@@ -1,0 +1,40 @@
+/** Canonical AI working-rules seed written to `.noir/rules/RULES.md` at init.
+ *  AGENTS.md-compatible plain markdown; the host context file (CLAUDE.md) @imports it.
+ *  Keep LEAN: every line must be failure-backed, tool-enforceable, decision-encoding,
+ *  or triggerable — else delete it. Users edit freely; Noir re-emits only the
+ *  @import pointer, never this body. */
+export const RULES_SEED = `# Noir working rules
+
+> Canonical AI working-contract for this project. The host context file (CLAUDE.md) @imports this.
+> Keep LEAN: every line must be failure-backed, tool-enforceable, decision-encoding, or triggerable — else delete it.
+> Edit freely — Noir re-emits only the @import pointer, never this body.
+
+## Identity & scope
+- This project uses **Noir** (discipline/context/memory layer) inside **Claude Code**.
+- Noir is an orchestration layer — the host CLI is the execution engine; Noir is the spec/context/memory brain.
+- Stay in scope: do only what the current Noir task (\`.noir/tasks/\`) requires. Surface scope creep BEFORE acting.
+
+## Anti-assumption contract
+- **Never fabricate** facts, APIs, file contents, or command output. Use only what you have read or verified.
+- **Never assume** — if a path, signature, or convention is unclear, STOP and ask before acting.
+- Cite the file/line or command you relied on for any non-obvious claim.
+- Detect non-conventional setups; do not paper over them with assumed conventions.
+
+## Spec-Driven Development workflow
+- Follow the Noir SDD lifecycle: intake → clarify → spec → plan → execute → verify → document.
+- Gates are observable: every gate decision is recorded (approved / forced / skipped). \`--force\` requires a reason.
+- Do not edit/run/execute before facts are gathered AND the human confirms understanding.
+
+## Verification (run before claiming done)
+- \`pnpm build && pnpm lint && pnpm typecheck && pnpm test\` — all green, with real output. No hedging.
+- Report failures truthfully with the actual output; never claim green without evidence.
+
+## Coding standards & architecture
+- Follow existing patterns; match surrounding code's style, naming, comment density.
+- Architecture decisions live in \`.noir/decisions/\` (ADR-style) — read them before cross-cutting changes.
+- See \`docs/roadmap.md\` for direction and \`docs/specs/\` for design.
+
+## Conventions gotchas (project-specific — fill in)
+- Commits stay local until explicitly pushed.
+- The full test suite runs offline/free (no network in CI).
+`;

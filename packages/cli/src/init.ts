@@ -1,8 +1,9 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { claudeAdapter } from '@noir-ai/adapters';
-import { CONTEXT_BLOCK, createProjectId, paths, writeManagedRegion } from '@noir-ai/core';
+import { CONTEXT_BLOCK, RULES_BLOCK, createProjectId, paths, writeManagedRegion } from '@noir-ai/core';
 import { emitSkillsToDir } from '@noir-ai/skills';
+import { RULES_SEED } from './rules-seed.js';
 
 export interface InitOptions {
   transport: 'stdio' | 'streamable-http';
@@ -28,6 +29,12 @@ export async function init(root: string, opts: InitOptions): Promise<void> {
     'utf8',
   );
 
+  // AI working-rules seed (skip_if_exists: never clobber user edits on re-init).
+  if (!existsSync(paths.rulesMd(root))) {
+    mkdirSync(dirname(paths.rulesMd(root)), { recursive: true });
+    writeFileSync(paths.rulesMd(root), RULES_SEED, 'utf8');
+  }
+
   writeFileSync(
     join(root, '.mcp.json'),
     `${claudeAdapter.emitMcpConfig({ root }, opts)}\n`,
@@ -35,6 +42,9 @@ export async function init(root: string, opts: InitOptions): Promise<void> {
   );
 
   writeManagedRegion(join(root, 'CLAUDE.md'), CONTEXT_BLOCK, claudeAdapter.emitContext({ root }));
+  if (claudeAdapter.emitRules) {
+    writeManagedRegion(join(root, 'CLAUDE.md'), RULES_BLOCK, claudeAdapter.emitRules({ root }));
+  }
 
   if (claudeAdapter.skillsDir) {
     const summary = await emitSkillsToDir(claudeAdapter.skillsDir({ root }));

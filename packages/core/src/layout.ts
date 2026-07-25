@@ -31,6 +31,7 @@ export function modelsDir(): string {
 export const paths = {
   noirDir: (root: string) => join(root, NOIR_DIR),
   noirMd: (root: string) => join(root, NOIR_DIR, 'NOIR.md'),
+  rulesMd: (root: string) => join(root, NOIR_DIR, 'rules', 'RULES.md'),
   config: (root: string) => join(root, NOIR_DIR, 'config.yml'),
   projectId: (root: string) => join(root, NOIR_DIR, 'project.id'),
   storeDir: (root: string) => join(root, NOIR_DIR, 'store'),
