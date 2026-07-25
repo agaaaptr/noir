@@ -4,7 +4,7 @@ Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`d
 
 ## 1.1.0-beta.1 (2026-07-25)
 
-**v1.x capabilities ship on the beta channel.** All 6 v1.x capability slices (**K/R/I/P/S/X**) are done on `develop`, plus a consolidated debt batch. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (added `@noir-ai/create`); **965/965 tests** (was 729 at 1.0.0-beta.1); build / typecheck / lint (0 warnings) green. Design record: `docs/specs/2026-07-25-v1x-capabilities-design.md` + per-slice specs in `docs/superpowers/specs/`.
+**v1.x capabilities ship on the beta channel.** All 6 v1.x capability slices (**K/R/I/P/S/X**) are done on `develop`, plus a consolidated debt batch. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (added `@noir-ai/create`); **966/966 tests** (was 729 at 1.0.0-beta.1); build / typecheck / lint (0 warnings) green. Design record: `docs/specs/2026-07-25-v1x-capabilities-design.md` + per-slice specs in `docs/superpowers/specs/`.
 
 The 6 v1.x capability slices extend one keystone refactor (`managedBlock` + shared `blockWriter` + `HostAdapter` emitters):
 - **K** Keystone — `managedBlock(name, commentStyle)` factory + shared `blockWriter` (`writeManagedRegion`/`readManagedBlock`/`stripManagedBlock`/`commentStyleFor`) + `HostAdapter.emitRules` seam (pure refactor).
@@ -25,6 +25,9 @@ The 6 v1.x capability slices extend one keystone refactor (`managedBlock` + shar
 
 ### Security — Slice X
 Opus adversarial review (no CRITICAL; all IMPORTANT fixed + tested): confirm gate is HARD (no write without `confirm:true`; zero fetch on dry-run — asserted); token resolved at call time only, never logged/leaked (canary-tested on success + error paths); allowlist + id-charset enforced on every path-segment id (including config-derived); 429 backoff single-retry; audit JSONL one-line-per-executed-write. Fixed post-review: batch create-task `assignee`→`assignees` (plural — was silent data loss with `success:true` audit) + config `runtime:'none'` downgrade honored at registration (was inert). **Live-verified**: token resolves, `GET /user` → HTTP 200. CI stays cassette-only (no real network).
+
+### Fixed (found in pre-release verification)
+- **`noir doctor` no longer reports a CRITICAL store failure on a fresh project.** The store DB is created lazily on first daemon run, so a brand-new project (bare `noir init`/`create`, daemon never started) showed "1 critical check failed" + exit 1 on its first `noir doctor`. Now the store check **warns** ("not created yet — created when the daemon first runs") when the DB is absent on an otherwise-initialized project; only an existing-but-unopenable DB is a `fail`. Fresh-project `noir doctor` now exits 0.
 
 ### Behavior changes (Slice S — spec-aligned latent-bug fixes)
 - `.noir/project.id` + `.noir/config.yml` → `skipIfExists` (predecessor `noir init` overwrote on every run — `project.id` overwrite orphaned the store DB named after it). Re-init now preserves both.

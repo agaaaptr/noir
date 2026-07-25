@@ -1,6 +1,6 @@
 # Noir — next-session handoff & playbook
 
-> **Status (2026-07-25): v1.1.0-beta.1 PUBLISHED on npm (dist-tag `beta`).** All 6 v1.x capability slices (K/R/I/P/S/X) + the consolidated debt batch are DONE on `develop` (merged to the release tag). **965/965 tests green**, build/typecheck/lint (0 warnings) clean. This doc + `docs/roadmap.md` + `docs/CHANGELOG.md` + `/recall noir` = full context for the next session.
+> **Status (2026-07-25): v1.1.0-beta.1 PREPPED locally — NOT pushed/published.** All 6 v1.x capability slices (K/R/I/P/S/X) + the consolidated debt batch are DONE + committed on `develop` (local); the version is bumped to `1.1.0-beta.1` (uncommitted in the working tree, verified correct). **966/966 tests green**, build/typecheck/lint (0 warnings) clean. The outward push/tag/publish was **blocked by the auto-mode guardrail** (public repo + the user's standing "don't push without asking" rule) — it is reserved for an explicit per-action ask. See **§ Release status (blocked at push)** for the exact 4-command resume. This doc + `docs/roadmap.md` + `docs/CHANGELOG.md` + `/recall noir` = full context. (public repo + the user's standing "don't push without asking" rule) — it is reserved for an explicit per-action ask. See **§ Release status (blocked at push)** for the exact 4-command resume. This doc + `docs/roadmap.md` + `docs/CHANGELOG.md` + `/recall noir` = full context.
 
 ## What this session shipped (v1.1.0-beta.1)
 
@@ -12,9 +12,21 @@
 
 Test trajectory: 729 (1.0.0-beta.1) → 857 (Slice S) → 914 (Slice X) → 953 (debt A) → 965 (debt B). 11 packages (added `@noir-ai/create`).
 
-## Release state
-- **v1.1.0-beta.1** published to npm (dist-tag `beta`, SLSA provenance), cut from `develop` via `release.yml` (tag on `develop` → `channel=beta`).
-- `main` / npm `latest` still at **1.0.0-beta.1** (729 tests). Stable `1.x` promotion is a separate decision (see below).
+## Release status (blocked at push — resume here)
+
+Everything is release-ready **locally**; only the outward push/tag/publish is pending (blocked this session by the auto-mode guardrail — public repo + the user's standing "don't push without asking" rule). The version bump (`1.1.0-beta.1` across all 11 packages) is **uncommitted in the working tree** (verified correct); the 5 session commits (Slice S `f2730da`, Slice X `5a1817a`, debt `e071460`, docs `48230a3`, doctor-fix `f3b7e8f`) are committed on `develop` (local, not pushed). Final pre-release validation PASSED: **966/966 tests**, build/typecheck/lint(0 warnings) green; `noir doctor` on a fresh project verified exit-0.
+
+**To complete the release (run when back — review the diff first):**
+```bash
+cd /Users/agaaaptr/Documents/Personal/Project/AI/noir
+git add packages/*/package.json
+git commit -m "chore(release): 1.1.0-beta.1"
+git push origin develop                  # pushes the 6 commits (S, X, debt, docs, doctor-fix, release)
+git tag v1.1.0-beta.1 && git push origin v1.1.0-beta.1   # triggers release.yml → channel=beta → npm publish w/ provenance
+```
+Then verify: GitHub Actions `release.yml` GREEN → `npm view @noir-ai/cli dist-tags` shows `beta: 1.1.0-beta.1` → `npx @noir-ai/cli@beta --version` prints `1.1.0-beta.1`. `@noir-ai/create` publishes for the first time. `main` / npm `latest` stay at 1.0.0-beta.1 (beta tag lives on `develop`).
+
+If you'd rather not publish unattended: everything is safe to leave as-is — the local `develop` is a clean, release-ready branch.
 
 ## Next-session goal candidates (pick with the user)
 1. **Validate 1.1.0-beta.1 in a real project** (`npx @noir-ai/cli@beta init` + exercise ClickUp / scaffold / context / memory end-to-end), then **promote to stable `1.0.0` or `1.1.0`** (merge `develop`→`main`, `node scripts/bump-version.mjs <ver>`, tag on `main` → CI publishes `--tag latest`).
