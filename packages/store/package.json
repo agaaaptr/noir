@@ -1,6 +1,6 @@
 {
   "name": "@noir-ai/store",
-  "version": "1.0.0-beta.1",
+  "version": "1.2.0-beta.1",
   "description": "Noir store — embedded storage: better-sqlite3 + FTS5 (BM25, window snippets) + sqlite-vec (384-dim kNN).",
   "license": "MIT",
   "author": "agaaaptr",
