@@ -2,7 +2,7 @@
 
 > The discipline, context, and memory layer for any agentic CLI — spec-driven workflow, native working-context, and cross-session memory, local-first by default.
 
-**Noir** is a host-agnostic orchestration layer that makes an agentic CLI (Claude Code is the v1 host; bring-your-own-agent) behave like a disciplined spec-driven engineer. It wires three capabilities every long-running agent loses without help:
+**Noir** is a host-agnostic orchestration layer that makes an agentic CLI behave like a disciplined spec-driven engineer. **Claude Code is the default host; Gemini, Cursor, OpenCode, and AGENTS.md are one `--host` flag away** (bring-your-own-agent). It wires three capabilities every long-running agent loses without help:
 
 1. **Spec-driven workflow** — an escapable, observable lifecycle (idea → spec → plan → implement → verify → document) where every gate decision is recorded.
 2. **Native working-context** — a hybrid retrieval engine (BM25 + vector kNN + Reciprocal Rank Fusion) so the host queries small ranked snippets instead of re-reading whole files into its context window.
@@ -12,7 +12,7 @@
 
 ## Status
 
-**v1.1.0-beta.1** is published on npm (dist-tag `beta`); stable `1.x` has not been cut yet. The beta ships the full v1.x capability set — the keystone refactor (K) and five extensions: **R** (rules), **I** (ignore), **P** (PRD), **S** (scaffold), **X** (integrations) — on top of the v1.0 release-ready baseline (slices S0–S9). **965/965 tests green; 11 packages; 34 skills (33 builtins + 1 integration).**
+**v1.2.0-beta.1** is the current beta (dist-tag `beta`); stable `1.x` has not been cut yet. The beta ships the full v1.x capability set — the keystone refactor (K), five extensions (**R** rules, **I** ignore, **P** PRD, **S** scaffold, **X** integrations), and **multi-host adapters (S10)** — on top of the v1.0 release-ready baseline (slices S0–S9). Claude Code is the default host; **Gemini, Cursor, OpenCode, and AGENTS.md** (the 32-platform standard) are supported via `--host`. **1089/1089 tests green; 11 packages; 34 skills (33 builtins + 1 integration).**
 
 Noir ships **only native builtin skills (+ opt-in integrations)** — there is no plugin and no marketplace.
 
@@ -84,7 +84,7 @@ brew install noir
 
 **Use as a library:** the `@noir-ai/*` workspace packages are also designed to embed — the workflow FSM, hybrid retrieval, cross-session memory, bounded model layer, and scaffold engine are all consumable as libraries. See **[docs/sdk.md](docs/sdk.md)** for the per-package stable API surface.
 
-> **Beta today, stable soon.** `v1.1.0-beta.1` is on npm under the `beta` dist-tag (cut from `develop`; stable `1.x` follows once the beta is validated in a real project). `1.0.0-beta.1` was the first publish. Repo developers can also run Noir from source — see [docs/installation.md → From source](docs/installation.md).
+> **Beta today, stable soon.** `v1.2.0-beta.1` is on npm under the `beta` dist-tag (cut from `develop`; stable `1.x` follows once the beta is validated in a real project). `1.0.0-beta.1` was the first publish; `1.1.0-beta.1` added the v1.x capability slices; `1.2.0-beta.1` adds multi-host. Repo developers can also run Noir from source — see [docs/installation.md → From source](docs/installation.md).
 
 ## Getting started
 
@@ -95,6 +95,17 @@ noir init                           # scaffolds .noir/ + emits 34 skills (33 bui
 ```
 
 `noir init` creates `.noir/` (`project.id`, `config.yml` as `host: claude` + `mode: full`, `NOIR.md`, the SQLite store, `.noir/scaffold-version`, `.noir/rules/RULES.md`), root `.mcp.json`, a managed `CLAUDE.md` `@import` block (plus a managed `RULES_BLOCK`), and the **34 native `noir-*` skills** in `.claude/skills/`. **There is no plugin and no marketplace** — `noir init`/`noir sync` overwrite the `noir-*` namespace idempotently.
+
+**Other hosts:** Noir is cross-CLI. Pass `--host` to target a different agentic CLI — each emits that host's native context/rules/skills/MCP config:
+
+```bash
+noir init --host gemini             # GEMINI.md + AGENTS.md + .gemini/mcp.json
+noir init --host cursor             # AGENTS.md + .cursor/rules/*.mdc + .cursor/mcp.json
+noir init --host opencode           # AGENTS.md + opencode.json
+noir init --host agents-md          # AGENTS.md only (the 32-platform universal standard)
+```
+
+The chosen host is persisted in `.noir/config.yml`; `noir sync` re-emits for it. See [usage.md → Multi-host](docs/usage.md#multi-host) for the per-host output table.
 
 For the deep, copy-pasteable walkthrough (what each file is, daemon mode, your first session, switching full/quick), see **[docs/getting-started.md](docs/getting-started.md)**.
 
@@ -124,7 +135,7 @@ A pnpm monorepo of **11 packages**, all `@noir-ai/*`:
 | `@noir-ai/memory` | Cross-session memory layered on the store — save / recall / search / sessions / forget / consolidate, with governance (audit trail, delete-with-reason). |
 | `@noir-ai/model` | Optional bounded model layer — single-shot completion, provider-explicit, null-degrades without a key (Anthropic / OpenAI / OpenAI-compatible via fetch). |
 | `@noir-ai/daemon` | The runtime authority: owns the store write handle, resolves the embedder once, and exposes the Noir MCP server. |
-| `@noir-ai/adapters` | Host abstraction (`HostAdapter`); v1 ships the Claude Code adapter (`.mcp.json` + `CLAUDE.md` @import + `.claude/skills/`). |
+| `@noir-ai/adapters` | Host abstraction (`HostAdapter`) + a `resolveAdapter(host)` registry. Ships 5 adapters — **claude** (default: `.mcp.json` + `CLAUDE.md` @import + `.claude/skills/`), **agents-md** (universal `AGENTS.md`), **gemini** (`GEMINI.md`), **cursor** (`.cursor/rules/*.mdc`), **opencode** (`opencode.json`). |
 | `@noir-ai/cli` | The `noir` command tree (commander + @clack/prompts). |
 | `@noir-ai/create` | The scaffold engine (Slice S): three-mode writer (`regenerate`/`managedBlock`/`skipIfExists`), declarative manifest, `{{var}}` templates, `.noir/scaffold-version`, inline-conflict migrations, read-only stack-detect. Powers `noir init`/`sync` and `noir create`. |
 
@@ -133,7 +144,7 @@ A pnpm monorepo of **11 packages**, all `@noir-ai/*`:
 Bare `noir` opens an interactive home screen (TTY) or prints `status` (non-interactive).
 
 ```
-noir init                           scaffold .noir/ + emit builtin skills + host wiring
+noir init                           scaffold .noir/ + emit builtin skills + host wiring (--host <id> selects the host; default claude)
 noir init --upgrade                 run scaffold migrations against an existing .noir/
 noir create [dir]                   AI-layer-only scaffold (drop .noir/ + skills, don't touch the rest)
 noir sync                           re-emit skills + host config idempotently (cleans stale noir-* dirs)
@@ -174,7 +185,7 @@ Noir reads `.noir/config.yml` (project-local, safe to commit). It defines chunk 
 
 ```yaml
 # .noir/config.yml (sketch — see NoirConfigSchema in @noir-ai/core for the full shape)
-host: claude                 # the only host in v1 (S10 adds more)
+host: claude                 # claude (default) | agents-md | gemini | cursor | opencode
 mode: full                   # full | quick — the SDD discipline level
 daemon: { idleTimeoutSec: 900, port: 0 }
 context:                     # local-first retrieval (S6)

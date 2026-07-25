@@ -7,7 +7,7 @@ New to Noir? Read the [README](../README.md) first for the 30-second "what and w
 ## What you need
 
 - **Node.js ≥ 20** (Node 22 is what CI uses). For the from-source dev install below you also need **pnpm 10** (`corepack enable && corepack prepare pnpm@10 --activate`).
-- **An agentic CLI host.** Noir v1 targets **Claude Code** (behind an abstract `HostAdapter`; more hosts arrive in v1.x). Noir is the workflow/context/memory *layer* — it is not an agent runtime. **Bring your own agent.**
+- **An agentic CLI host.** Noir targets **Claude Code by default**; Gemini, Cursor, OpenCode, and AGENTS.md are supported via `noir init --host <id>` (see [usage.md → Multi-host](usage.md#multi-host)). This walkthrough uses Claude Code. Noir is the workflow/context/memory *layer* — it is not an agent runtime. **Bring your own agent.**
 - macOS, Linux, or Windows on x64 or arm64 (native deps ship prebuilt).
 
 ## Install

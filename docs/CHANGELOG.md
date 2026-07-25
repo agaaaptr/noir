@@ -2,6 +2,35 @@
 
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
+## 1.2.0-beta.1 (2026-07-26)
+
+**Multi-host (S10) ships on the beta channel.** Noir is now cross-CLI: Claude Code stays the default, and **Gemini, Cursor, OpenCode, and AGENTS.md** are one `--host` flag away. Supersedes `1.1.0-beta.1` on the `beta` dist-tag. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (unchanged); **1089/1089 tests** (was 966 at 1.1.0-beta.1); build / typecheck / lint (0 warnings) green. Design record: `docs/superpowers/specs/2026-07-25-s10-multihost-design.md`; the locked decisions in [ADR-0004](decisions/0004-multi-host-adapters.md).
+
+### Added — S10 multi-host adapters
+- **Adapter registry.** `resolveAdapter(host: HostId): HostAdapter` in `@noir-ai/adapters` — a `Record<HostId, HostAdapter>` map with an exhaustiveness guard. `HostId = 'claude' | 'agents-md' | 'gemini' | 'cursor' | 'opencode'` (one owner; core/skills redeclare the literals). `SUPPORTED_HOSTS` — a frozen iteration list the CLI `--host` flag's `.choices(...)` and `noir doctor` consume. The CLI's 8 direct `claudeAdapter` imports collapsed to one `resolveAdapter(host)` call; adding a host needs no CLI edits beyond the flag enum.
+- **`host:` config widens** from `z.literal('claude')` to `z.enum(['claude','agents-md','gemini','cursor','opencode']).default('claude')`. `claude` is the **default and the regression anchor** — a bare `noir init` is byte-equivalent to pre-multi-host (existing init/skills/doctor tests stay green). `CompileTarget` widens to the same enum so the skills compiler transforms per host.
+- **`--host <id>` flag** on `noir init` / `noir create` / `noir sync` (default `claude`; commander rejects unknown values as `usage=2`). The choice persists into `.noir/config.yml`; `noir sync` reads it back (pass `--host` to override — advanced, not written back to config). `noir doctor` reports the **active host** and verifies host-specific artifacts (a `host:{active, expected, missing}` check).
+- **4 new adapters:**
+  - **`agents-md`** — the 32-platform universal standard. Root `AGENTS.md` (context + rules unified) + a broadly-compatible `.mcp.json`. No skills dir.
+  - **`gemini`** — `GEMINI.md` (Gemini's native `@import` form, rules folded in) + root `AGENTS.md` + `.gemini/mcp.json`. No skills dir.
+  - **`cursor`** — `AGENTS.md` + `.cursor/rules/*.mdc` (skills compile to **flat** `.mdc` with YAML frontmatter `description`/`alwaysApply:false`; the `@.noir/rules/RULES.md` import in AGENTS.md is cursor's rules surface — no separate host-rules pointer) + `.cursor/mcp.json`.
+  - **`opencode`** — `AGENTS.md` + `opencode.json`. **Distinct MCP shape:** OpenCode's `mcp` block entries are `type`-tagged (`{type:'local', command:[...]}` stdio / `{type:'remote', url}` HTTP), not the `{mcpServers:{...}}` family; the emitted file stamps `$schema: https://opencode.ai/config.json`. Schema verified against `https://opencode.ai/docs/mcp-servers/`. No skills dir.
+- **Universal `AGENTS.md` emitter (shared helper).** `emitAgentsMd(ctx)` produces byte-identical `AGENTS.md` content for every host: a heading + a 3-line inline fallback summary + `@.noir/NOIR.md` + `@.noir/rules/RULES.md` `@`-imports. The inline summary precedes the imports so readers that do not resolve `@`-imports still get a one-glance pointer; the imports remain canonical for hosts that do (Cursor, Codex, Junie, …).
+- **No-duplication gating.** AGENTS.md is always emitted (every host reads it), but hosts with a native context file (`claude`→`CLAUDE.md`, `gemini`→`GEMINI.md`) keep it primary and **do not duplicate** content into AGENTS.md — the universal file carries only the canonical `@`-imports. One source (`.noir/`), never a drifting copy.
+
+### Added — S11 remainder
+- **[`docs/sdk.md`](sdk.md)** — the per-package framework/library API surface ("usable as a framework"): the stable barrels of `@noir-ai/{core,store,workflow,adapters,skills,context,memory,model}` with versioning + stability stance. Includes the `@noir-ai/adapters` `HostAdapter`/`resolveAdapter`/`SUPPORTED_HOSTS` surface.
+- **`noir doctor` `publish` check** — advisory package-metadata validation across all `packages/*` (`name` `@noir-ai/*`, semver `version`, non-empty `files`, and `bin` for the cli). `warn` level, never `fail`.
+
+### Fixed
+- **`noir doctor` no longer reports a stale host list.** The host check is now adapter-driven (`resolveAdapter(host)` + each adapter's `agentsMdPath`/`mcpConfigPath`/`skillsDir`), so the expected-artifacts list matches the configured host exactly.
+
+### Deferred (documented in `docs/roadmap.md` §v1.x backlog)
+- `qwen` and `agy` adapters (the universal `AGENTS.md` covers them in the meantime).
+- Multi-host emit (`hosts:[...]` → emit for several hosts at once). v1.x is single-host select.
+
+---
+
 ## 1.1.0-beta.1 (2026-07-25)
 
 **v1.x capabilities ship on the beta channel.** All 6 v1.x capability slices (**K/R/I/P/S/X**) are done on `develop`, plus a consolidated debt batch. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (added `@noir-ai/create`); **966/966 tests** (was 729 at 1.0.0-beta.1); build / typecheck / lint (0 warnings) green. Design record: `docs/specs/2026-07-25-v1x-capabilities-design.md` + per-slice specs in `docs/superpowers/specs/`.
