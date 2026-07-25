@@ -30,6 +30,8 @@
 // `npm audit --json` uses (valid JSON out, non-zero exit when issues found).
 
 import { existsSync, readFileSync } from 'node:fs';
+import { relative } from 'node:path';
+import { type HostId, resolveAdapter } from '@noir-ai/adapters';
 import { loadProjectInfo, NOIR_VERSION, type ProjectInfo, paths } from '@noir-ai/core';
 import { CURRENT_SCAFFOLD_VERSION, readScaffoldVersion } from '@noir-ai/create';
 import { pidAlive, readDaemonRecord } from '@noir-ai/daemon';
@@ -75,6 +77,14 @@ export interface DoctorPayload {
     budget: { kb: number; maxLines: number };
     over: boolean;
   } | null;
+  /** S10 host report. `null` when the project isn't initialized (no resolved
+   *  host); otherwise carries the active `host` + the list of repo-relative
+   *  primary artifact paths the doctor verified (AGENTS.md always; the host's
+   *  native context file when distinct from AGENTS.md; cursor's noir-rules
+   *  .mdc; the host's MCP config). The check row is `ok` when all present,
+   *  `warn` (NEVER `fail`) when any are missing — re-running `noir sync`
+   *  restores them. */
+  host: { active: HostId; expected: string[]; missing: string[] } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -458,6 +468,80 @@ function summarize(checks: CheckResult[]): DoctorPayload['summary'] {
   return { ok, warn: warnN, fail };
 }
 
+/**
+ * S10 — host-artifacts presence check. Reports the ACTIVE host (read from
+ * `project.config.host`) + verifies the host's primary emission paths exist on
+ * disk. The expected set is the SAME matrix `buildHostArtifacts` emits:
+ *
+ *   - AGENTS.md (always — universal baseline).
+ *   - The host's native context file when distinct from AGENTS.md
+ *     (claude → CLAUDE.md; gemini → GEMINI.md; agents-md/cursor/opencode →
+ *     none, AGENTS.md IS the context).
+ *   - cursor's `.cursor/rules/noir-rules.mdc` (the host rules .mdc).
+ *   - The host's MCP config (.mcp.json / .gemini/mcp.json / .cursor/mcp.json /
+ *     opencode.json).
+ *
+ * Severity is `ok` when every expected path exists, `warn` when any are
+ * missing (NEVER `fail` — a missing host artifact is restored by `noir sync`,
+ * not a critical product failure). Mirrors the policy of the other
+ * presence/projection checks (scaffold-version drift, RULES.md budget): warn,
+ * surface the remediation, never block.
+ *
+ * Returns the structured payload for the `--json` envelope's `data.host`, or
+ * `null` when the project isn't initialized (no resolved host).
+ */
+function checkHostArtifacts(
+  checks: CheckResult[],
+  root: string,
+  project: ProjectInfo | undefined,
+): { active: HostId; expected: string[]; missing: string[] } | null {
+  if (!project) {
+    checks.push({ name: 'host artifacts', status: 'warn', detail: 'skipped — not initialized' });
+    return null;
+  }
+  const host = project.config.host;
+  const adapter = resolveAdapter(host);
+  const ectx = { root };
+
+  // Build the expected repo-relative path list. Mirrors buildHostArtifacts in
+  // @noir-ai/create so a missing row maps 1:1 to a manifest entry the user can
+  // restore with `noir sync`. Kept inline (not imported) so doctor stays a
+  // READ-ONLY health probe with zero write-side coupling.
+  const expected: string[] = [];
+  // AGENTS.md (universal).
+  expected.push(relOr(adapter.agentsMdPath?.(ectx) ?? 'AGENTS.md', root));
+  // Host-native context file (when distinct from AGENTS.md).
+  if (host === 'claude') expected.push('CLAUDE.md');
+  else if (host === 'gemini') expected.push('GEMINI.md');
+  // Cursor's noir-rules .mdc (the host rules emission).
+  if (host === 'cursor') expected.push('.cursor/rules/noir-rules.mdc');
+  // Host MCP config (fallback .mcp.json for claude/agents-md).
+  expected.push(relOr(adapter.mcpConfigPath?.(ectx) ?? '.mcp.json', root));
+
+  const missing = expected.filter((p) => !existsSync(joinRoot(root, p)));
+  const status: Severity = missing.length === 0 ? 'ok' : 'warn';
+  const detail =
+    missing.length === 0
+      ? `host=${host} · all ${expected.length} primary artifacts present`
+      : `host=${host} · missing ${missing.join(', ')} (run \`noir sync\` to restore)`;
+  checks.push({ name: 'host artifacts', status, detail });
+  return { active: host, expected, missing };
+}
+
+/** Repo-relative POSIX form of `abs` under `root` (defensive: if `abs` is
+ *  already relative, return it as-is — doctor deals with literal paths like
+ *  `'AGENTS.md'` from buildHostArtifacts' default fallback). */
+function relOr(abs: string, root: string): string {
+  if (!abs.startsWith('/')) return abs.replace(/\\/g, '/');
+  const rel = relative(root, abs);
+  return rel.replace(/\\/g, '/');
+}
+
+/** Join `root` with a repo-relative POSIX path for an existsSync probe. */
+function joinRoot(root: string, relPath: string): string {
+  return `${root}/${relPath}`;
+}
+
 function renderHuman(payload: DoctorPayload, opts: CliOptions): void {
   log(
     `noir doctor — ${payload.checks.length} check${payload.checks.length === 1 ? '' : 's'}`,
@@ -506,9 +590,10 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   checkProvider(checks, project);
   const scaffold = checkScaffoldVersion(checks, root);
   const rules = checkRulesMdBudget(checks, root, project);
+  const host = checkHostArtifacts(checks, root, project);
 
   const summary = summarize(checks);
-  const payload: DoctorPayload = { noir: NOIR_VERSION, checks, summary, scaffold, rules };
+  const payload: DoctorPayload = { noir: NOIR_VERSION, checks, summary, scaffold, rules, host };
 
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: payload })}\n`);

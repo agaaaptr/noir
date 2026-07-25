@@ -9,6 +9,12 @@
 //     error strings are locked by url-validation.test.ts), and
 //   - skills emission (out-of-manifest by design — composed after scaffold()).
 //
+// S10 multi-host: the 8 direct `claudeAdapter` imports across init/sync/create
+// collapsed to `resolveAdapter(host)` where `host` comes from `--host <id>`
+// (default `'claude'`). The adapter drives (a) the manifest via
+// `scaffold({host})` and (b) skills emission — claude/cursor have a skill dir;
+// gemini/agents-md/opencode have no skill concept and the call is skipped.
+//
 // Deliberate behavior changes vs the predecessor (spec-aligned latent-bug
 // fixes; see S-T1 contract notes + CHANGELOG):
 //   - `.noir/project.id` → skipIfExists (predecessor overwrote on every init,
@@ -19,9 +25,9 @@
 //     user notes outside the markers survive re-runs.
 //   - `.noir/scaffold-version` is now stamped on init/create (engine-owned).
 
-import { claudeAdapter } from '@noir-ai/adapters';
+import { type HostId, resolveAdapter } from '@noir-ai/adapters';
 import { scaffold } from '@noir-ai/create';
-import { emitSkillsToDir } from '@noir-ai/skills';
+import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 
 export interface InitOptions {
   transport: 'stdio' | 'streamable-http';
@@ -31,27 +37,55 @@ export interface InitOptions {
    *  (regenerate + managedBlock). skipIfExists seeds are left alone so user
    *  edits survive. */
   upgrade?: boolean;
+  /** S10 target host. Defaults to `'claude'` (the regression anchor). Drives
+   *  both scaffold emission (the manifest's host-specific half) and skills
+   *  emission (skipped for hosts with no `skillsDir`). */
+  host?: HostId;
 }
 
 export async function init(root: string, opts: InitOptions): Promise<void> {
   assertTransportUrl(opts);
 
+  const host: HostId = opts.host ?? 'claude';
+
   await scaffold({
     root,
     mode: 'init',
+    host,
     transport: opts.transport,
     ...(opts.url !== undefined ? { url: opts.url } : {}),
     ...(opts.upgrade === true ? { upgrade: true } : {}),
   });
 
-  // Skills are out-of-manifest by design: the host skill dir is a pure
-  // pointer derived from the adapter, so compose the call after scaffold().
-  if (claudeAdapter.skillsDir) {
-    const summary = await emitSkillsToDir(claudeAdapter.skillsDir({ root }));
-    process.stderr.write(`Emitted ${summary.emitted.length} Noir skills to .claude/skills/.\n`);
-  }
+  await emitHostSkills(root, host);
 
-  process.stderr.write(`Noir initialized in ${root} (transport: ${opts.transport}).\n`);
+  process.stderr.write(
+    `Noir initialized in ${root} (host: ${host}, transport: ${opts.transport}).\n`,
+  );
+}
+
+/**
+ * Compose skill emission onto the resolved adapter's `skillsDir` (claude →
+ * `.claude/skills/`; cursor → `.cursor/rules/` compiled as `.mdc`; the other
+ * three hosts have no skill concept and are skipped with a stderr note).
+ *
+ * The `CompileTarget` matches the host id (S10 foundation widened the enum to
+ * the same union) so cursor skills compile to the `.mdc` rule shape via
+ * `compileSkill(_, 'cursor')`; the others keep the verbatim SKILL.md format.
+ */
+async function emitHostSkills(root: string, host: HostId): Promise<void> {
+  const adapter = resolveAdapter(host);
+  const skillsDir = adapter.skillsDir?.({ root });
+  if (skillsDir === undefined) {
+    process.stderr.write(`Host '${host}' has no skill emitter; skipping skills.\n`);
+    return;
+  }
+  const target: CompileTarget = host;
+  const summary = await emitSkillsToDir(skillsDir, { includeIntegrations: true, target });
+  const relDir = skillsDir.replace(`${root}/`, '');
+  process.stderr.write(
+    `Emitted ${summary.emitted.length} Noir skills to ${relDir}/ (target: ${target}).\n`,
+  );
 }
 
 /**

@@ -390,3 +390,87 @@ describe('noir doctor — RULES.md budget (R5)', () => {
     expect(row.detail).toMatch(/200\/150 lines/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// S10 — host-artifacts presence check.
+// ---------------------------------------------------------------------------
+describe('noir doctor — host artifacts (S10)', () => {
+  it('host row warns "skipped" when the project is not initialized; data.host null', async () => {
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    expect(env.data.host).toBeNull();
+    const row = findCheck(env.data.checks, 'host artifacts');
+    expect(row.status).toBe('warn');
+    expect(row.detail).toMatch(/skipped — not initialized/);
+  });
+
+  it('claude project with all artifacts → ok; data.host reports active + expected', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-host-claude\n', 'utf8');
+    writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
+    // Seed the expected claude artifacts (what `noir init` would write).
+    writeFileSync(join(root, 'AGENTS.md'), '# agents\n', 'utf8');
+    writeFileSync(
+      join(root, 'CLAUDE.md'),
+      '<!-- noir:context begin -->\n@import ".noir/NOIR.md"\n<!-- noir:context end -->\n',
+      'utf8',
+    );
+    writeFileSync(join(root, '.mcp.json'), '{\n  "mcpServers": {}\n}\n', 'utf8');
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    expect(env.data.host).not.toBeNull();
+    expect(env.data.host.active).toBe('claude');
+    expect(env.data.host.expected).toEqual(
+      expect.arrayContaining(['AGENTS.md', 'CLAUDE.md', '.mcp.json']),
+    );
+    expect(env.data.host.missing).toEqual([]);
+    const row = findCheck(env.data.checks, 'host artifacts');
+    expect(row.status).toBe('ok');
+    expect(row.detail).toMatch(/host=claude/);
+  });
+
+  it('gemini project → expected set is AGENTS.md + GEMINI.md + .gemini/mcp.json', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-host-gemini\n', 'utf8');
+    writeFileSync(paths.config(root), 'host: gemini\nmode: full\n', 'utf8');
+    // Seed all three expected gemini artifacts.
+    writeFileSync(join(root, 'AGENTS.md'), '# agents\n', 'utf8');
+    mkdirSync(join(root, '.gemini'), { recursive: true });
+    writeFileSync(join(root, 'GEMINI.md'), '# gemini\n', 'utf8');
+    writeFileSync(join(root, '.gemini', 'mcp.json'), '{\n  "mcpServers": {}\n}\n', 'utf8');
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    expect(env.data.host.active).toBe('gemini');
+    expect(env.data.host.expected).toEqual(
+      expect.arrayContaining(['AGENTS.md', 'GEMINI.md', '.gemini/mcp.json']),
+    );
+    expect(env.data.host.missing).toEqual([]);
+    expect(findCheck(env.data.checks, 'host artifacts').status).toBe('ok');
+  });
+
+  it('cursor project missing .cursor/rules/noir-rules.mdc → warn (NEVER fail); data.host.missing lists it', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-host-cursor\n', 'utf8');
+    writeFileSync(paths.config(root), 'host: cursor\nmode: full\n', 'utf8');
+    // Seed AGENTS.md + .cursor/mcp.json but NOT the noir-rules .mdc.
+    writeFileSync(join(root, 'AGENTS.md'), '# agents\n', 'utf8');
+    mkdirSync(join(root, '.cursor', 'rules'), { recursive: true });
+    mkdirSync(join(root, '.cursor'), { recursive: true });
+    writeFileSync(join(root, '.cursor', 'mcp.json'), '{\n  "mcpServers": {}\n}\n', 'utf8');
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    expect(env.data.host.active).toBe('cursor');
+    expect(env.data.host.missing).toContain('.cursor/rules/noir-rules.mdc');
+    const row = findCheck(env.data.checks, 'host artifacts');
+    // warn — NEVER fail (a missing host artifact is restored by `noir sync`,
+    // not a critical product failure).
+    expect(row.status).toBe('warn');
+    expect(row.detail).toMatch(/noir sync/);
+    // Even with a missing host artifact, doctor's overall exit reflects only
+    // CRITICAL fails — the host row contributed a warn, not a fail.
+    expect(env.data.summary.fail).toBe(0);
+  });
+});

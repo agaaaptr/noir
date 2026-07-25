@@ -419,3 +419,85 @@ describe('scaffold — migrations skip on fresh project (M4)', () => {
     expect(res.migrationsRan).toContain('1.0.0→1.0.0');
   });
 });
+
+// ---------------------------------------------------------------------------
+// S10 — host-parametric scaffold. The default (claude) is byte-identical to
+// v1.1 EXCEPT the additive root AGENTS.md (Claude reads it natively alongside
+// CLAUDE.md). Each non-claude host emits its own native context file + the
+// universal AGENTS.md + the host MCP config.
+// ---------------------------------------------------------------------------
+describe('scaffold — host-parametric (--host <id>)', () => {
+  it('default host (no opts.host) is claude; CLAUDE.md + AGENTS.md + .mcp.json all present', async () => {
+    const res = await scaffold({ root, mode: 'init', transport: 'stdio' });
+    expect(res.host).toBe('claude');
+    expect(existsSync(join(root, 'CLAUDE.md'))).toBe(true);
+    // S10 additive: AGENTS.md now emitted for claude too.
+    expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
+    expect(existsSync(join(root, '.mcp.json'))).toBe(true);
+  });
+
+  it('host:gemini → GEMINI.md + AGENTS.md + .gemini/mcp.json; no CLAUDE.md leakage', async () => {
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'gemini' });
+    expect(existsSync(join(root, 'GEMINI.md'))).toBe(true);
+    expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
+    expect(existsSync(join(root, '.gemini', 'mcp.json'))).toBe(true);
+    // The canonical store is host-agnostic.
+    expect(existsSync(paths.projectId(root))).toBe(true);
+    expect(existsSync(paths.noirMd(root))).toBe(true);
+    // Claude artifacts do NOT leak into a gemini project.
+    expect(existsSync(join(root, 'CLAUDE.md'))).toBe(false);
+    expect(existsSync(join(root, '.mcp.json'))).toBe(false);
+    // GEMINI.md carries both CONTEXT_BLOCK + RULES_BLOCK markers (the multi-
+    // region atomic write — same write path as CLAUDE.md).
+    const md = readFileSync(join(root, 'GEMINI.md'), 'utf8');
+    expect(md).toContain(CONTEXT_BLOCK.begin);
+    expect(md).toContain('@.noir/NOIR.md');
+    expect(md).toContain(RULES_BLOCK.begin);
+    expect(md).toContain('@.noir/rules/RULES.md');
+    // .gemini/mcp.json is the {mcpServers} shape (stdio entry).
+    const mcp = JSON.parse(readFileSync(join(root, '.gemini', 'mcp.json'), 'utf8'));
+    expect(mcp.mcpServers.noir).toEqual({ command: 'noir', args: ['mcp', 'serve', '--stdio'] });
+  });
+
+  it('host:cursor → AGENTS.md + .cursor/rules/noir-rules.mdc + .cursor/mcp.json; no CLAUDE.md/GEMINI.md', async () => {
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'cursor' });
+    expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
+    expect(existsSync(join(root, '.cursor', 'rules', 'noir-rules.mdc'))).toBe(true);
+    expect(existsSync(join(root, '.cursor', 'mcp.json'))).toBe(true);
+    expect(existsSync(paths.projectId(root))).toBe(true);
+    // Cursor has NO separate native context file (AGENTS.md IS the context).
+    expect(existsSync(join(root, 'CLAUDE.md'))).toBe(false);
+    expect(existsSync(join(root, 'GEMINI.md'))).toBe(false);
+    // The noir-rules .mdc carries the frontmatter the cursor adapter owns.
+    const mdc = readFileSync(join(root, '.cursor', 'rules', 'noir-rules.mdc'), 'utf8');
+    expect(mdc).toContain('alwaysApply: false');
+    expect(mdc).toContain('.noir/rules/RULES.md');
+  });
+
+  it('host:opencode → AGENTS.md + opencode.json (mcp block, type-tagged)', async () => {
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'opencode' });
+    expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
+    expect(existsSync(join(root, 'opencode.json'))).toBe(true);
+    const cfg = JSON.parse(readFileSync(join(root, 'opencode.json'), 'utf8'));
+    expect(cfg.$schema).toBe('https://opencode.ai/config.json');
+    expect(cfg.mcp.noir).toEqual({ type: 'local', command: ['noir', 'mcp', 'serve', '--stdio'] });
+    // No Claude/Gemini leakage.
+    expect(existsSync(join(root, 'CLAUDE.md'))).toBe(false);
+    expect(existsSync(join(root, '.mcp.json'))).toBe(false);
+  });
+
+  it('host:agents-md → AGENTS.md + .mcp.json (Claude-shape; broadly compatible)', async () => {
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'agents-md' });
+    expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
+    expect(existsSync(join(root, '.mcp.json'))).toBe(true);
+    // No host-native context file beyond AGENTS.md.
+    expect(existsSync(join(root, 'CLAUDE.md'))).toBe(false);
+    expect(existsSync(join(root, 'GEMINI.md'))).toBe(false);
+  });
+
+  it('config.yml persists the chosen host (so `noir sync` reads it back)', async () => {
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'gemini' });
+    const cfg = readFileSync(paths.config(root), 'utf8');
+    expect(cfg).toMatch(/^host: gemini/m); // yaml literal — `noir sync` reads this
+  });
+});

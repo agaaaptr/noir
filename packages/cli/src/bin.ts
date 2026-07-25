@@ -10,6 +10,7 @@
 // A main-module guard prevents auto-running when bin.ts is imported by tests.
 
 import { pathToFileURL } from 'node:url';
+import { type HostId, SUPPORTED_HOSTS } from '@noir-ai/adapters';
 import { NOIR_VERSION } from '@noir-ai/core';
 import { Command, Option } from 'commander';
 import { contextIndex, contextSearch, contextStatus } from './commands/context.js';
@@ -99,6 +100,22 @@ function toStatusOptions(g: Record<string, unknown>): StatusOptions {
   };
 }
 
+/**
+ * S10 — narrow commander's `string | undefined` host option to `HostId |
+ * undefined`. Commander's `.choices(SUPPORTED_HOSTS)` already rejects unknown
+ * values at parse time (usage=2), so by the time the action runs any string
+ * present IS one of `SUPPORTED_HOSTS`. The cast is therefore total — but kept
+ * explicit (not a type assertion) so a future change to the choices wiring
+ * surfaces here rather than silently coercing. Returns `undefined` for an
+ * unset flag so callers can conditional-spread (preserves the exact-arg-shape
+ * assertions in bin.test.ts).
+ */
+function parseHost(raw: string | undefined): HostId | undefined {
+  if (raw === undefined) return undefined;
+  // The cast is safe: commander's `.choices` enforces it pre-action.
+  return raw as HostId;
+}
+
 export function createProgram(): Command {
   const program = new Command();
 
@@ -156,23 +173,37 @@ export function createProgram(): Command {
       '--upgrade',
       'run scaffold migrations before re-emitting (re-run on an existing project)',
     )
-    .action(async (opts: { transport?: string; url?: string; upgrade?: boolean }) => {
-      // Preserve the parseArgs coercion exactly: only 'streamable-http' is
-      // special; any other value (incl. typos / future transports) → 'stdio'.
-      const transport: 'stdio' | 'streamable-http' =
-        opts.transport === 'streamable-http' ? 'streamable-http' : 'stdio';
-      // `upgrade` is conditionally spread so an unset flag does NOT add an
-      // `upgrade: false` key to the opts object — that would break the
-      // toEqual-based arg assertions in bin.test.ts (which expects exactly
-      // `{transport, url}` for the default-invocation cases). Matches the
-      // conditional-spread pattern used for task/memory options elsewhere.
-      const upgrade = opts.upgrade === true;
-      await init(process.cwd(), {
-        transport,
-        url: opts.url,
-        ...(upgrade ? { upgrade } : {}),
-      });
-    });
+    .addOption(
+      // S10: target host. Defaults to `'claude'` (the regression anchor). The
+      // chosen host is forwarded to scaffold() + skills emission via
+      // resolveAdapter. The choice list mirrors `SUPPORTED_HOSTS` so a new host
+      // lands here automatically; commander rejects anything else as usage=2.
+      new Option(
+        '--host <id>',
+        'target agentic CLI (default: claude) — drives host-side emission',
+      ).choices(SUPPORTED_HOSTS),
+    )
+    .action(
+      async (opts: { transport?: string; url?: string; upgrade?: boolean; host?: string }) => {
+        // Preserve the parseArgs coercion exactly: only 'streamable-http' is
+        // special; any other value (incl. typos / future transports) → 'stdio'.
+        const transport: 'stdio' | 'streamable-http' =
+          opts.transport === 'streamable-http' ? 'streamable-http' : 'stdio';
+        // `upgrade`/`host` are conditionally spread so an UNSET flag does NOT add
+        // an `upgrade: false` / `host: …` key to the opts object — that would
+        // break the toEqual-based arg assertions in bin.test.ts (which expects
+        // exactly `{transport, url}` for the default-invocation cases). Matches
+        // the conditional-spread pattern used for task/memory options elsewhere.
+        const upgrade = opts.upgrade === true;
+        const host = parseHost(opts.host);
+        await init(process.cwd(), {
+          transport,
+          url: opts.url,
+          ...(upgrade ? { upgrade } : {}),
+          ...(host !== undefined ? { host } : {}),
+        });
+      },
+    );
 
   // `noir create [dir]` — greenfield AI-layer bootstrap (slice S). Lazy import
   // mirrors sync's dispatcher so the create module isn't loaded for unrelated
@@ -182,22 +213,55 @@ export function createProgram(): Command {
     .description('bootstrap the Noir AI layer in a new or empty directory')
     .option('--transport <transport>', 'stdio | streamable-http (default: stdio)', 'stdio')
     .option('--url <url>', 'streamable-http daemon URL (localhost only)')
-    .action(async (dir: string | undefined, opts: { transport?: string; url?: string }) => {
-      const transport: 'stdio' | 'streamable-http' =
-        opts.transport === 'streamable-http' ? 'streamable-http' : 'stdio';
-      const { create } = await import('./commands/create.js');
-      await create(dir, { transport, url: opts.url });
-    });
+    .addOption(
+      new Option(
+        '--host <id>',
+        'target agentic CLI (default: claude) — drives host-side emission',
+      ).choices(SUPPORTED_HOSTS),
+    )
+    .action(
+      async (
+        dir: string | undefined,
+        opts: { transport?: string; url?: string; host?: string },
+      ) => {
+        const transport: 'stdio' | 'streamable-http' =
+          opts.transport === 'streamable-http' ? 'streamable-http' : 'stdio';
+        const host = parseHost(opts.host);
+        const { create } = await import('./commands/create.js');
+        await create(dir, {
+          transport,
+          url: opts.url,
+          ...(host !== undefined ? { host } : {}),
+        });
+      },
+    );
 
   program
     .command('sync')
     .description(
       're-emit Noir managed files (.mcp.json, CLAUDE.md blocks, NOIR.md brief, ignores) + skills',
     )
-    .action(async () => {
+    .addOption(
+      // S10: optional `--host` override. When omitted, sync reads host from
+      // `.noir/config.yml` (whatever `noir init --host <id>` persisted). The
+      // override is rarely needed — documented as advanced.
+      new Option(
+        '--host <id>',
+        'override the configured host (advanced; default reads .noir/config.yml)',
+      ).choices(SUPPORTED_HOSTS),
+    )
+    .action(async (opts: { host?: string }) => {
       // Lazy import preserves the original dispatcher's deferred module load.
       const { sync } = await import('./sync.js');
-      await sync(process.cwd());
+      const host = parseHost(opts.host);
+      // Single-positional regression anchor: when no `--host` is given, call
+      // `sync(cwd)` exactly (bin.test.ts pins this). Only spread the opts bag
+      // when an override was explicit so the default-args snapshot stays green.
+      if (host === undefined) {
+        await sync(process.cwd());
+      } else {
+        await sync(process.cwd(), { host });
+      }
     });
 
   // `mcp` group — preserve legacy bare-`mcp` usage error.

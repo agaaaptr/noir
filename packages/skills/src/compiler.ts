@@ -164,8 +164,21 @@ export function compileIntegration(
 
 export async function emitSkillsToDir(
   targetDir: string,
-  opts: { builtinDir?: string; integrationsDir?: string; includeIntegrations?: boolean } = {},
+  opts: {
+    builtinDir?: string;
+    integrationsDir?: string;
+    includeIntegrations?: boolean;
+    /** S10 CompileTarget — selects the per-skill transform. Defaults to
+     *  `'claude'` (the v1.1 verbatim SKILL.md shape) so every existing caller
+     *  stays byte-identical. `'cursor'` compiles each skill to a `.mdc` rule
+     *  file (frontmatter `description`/`globs`/`alwaysApply:false` + the
+     *  SKILL.md body); the other targets map to the verbatim shape (their
+     *  hosts have no skill concept, so emit is skipped upstream — but the
+     *  default-verbatim policy keeps the signature total). */
+    target?: CompileTarget;
+  } = {},
 ): Promise<EmitSummary> {
+  const target: CompileTarget = opts.target ?? 'claude';
   const { builtins, integrations } = discoverAll({
     builtinDir: opts.builtinDir,
     integrationsDir: opts.integrationsDir,
@@ -187,7 +200,7 @@ export async function emitSkillsToDir(
   const emitted: string[] = [];
   const integrationNames: string[] = [];
   for (const s of builtins) {
-    const compiled = compileSkill(s, 'claude');
+    const compiled = compileSkill(s, target);
     for (const f of compiled.files) {
       const dest = join(targetDir, s.name, ...f.path);
       await mkdir(dirname(dest), { recursive: true });
@@ -198,7 +211,7 @@ export async function emitSkillsToDir(
   }
   if (emitIntegrations) {
     for (const i of integrations) {
-      const compiled = compileIntegration(i, 'claude');
+      const compiled = compileIntegration(i, target);
       for (const f of compiled.files) {
         const dest = join(targetDir, i.name, ...f.path);
         await mkdir(dirname(dest), { recursive: true });

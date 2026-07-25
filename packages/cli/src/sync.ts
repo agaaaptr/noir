@@ -15,23 +15,46 @@
 //     missing; init now owns all seeds. (Spec-aligned: "sync re-emits
 //     generated/managed content; init owns seeds.")
 //
-// Skills emission stays a core sync feature — composed after scaffold().
-// `scaffold({mode:'sync'})` throws when the project isn't initialized
+// S10 multi-host: sync resolves the host from `.noir/config.yml` (persisted by
+// `noir init --host <id>` via the config seed's `host: {{host}}` literal) OR
+// from an explicit `--host <id>` override. The resolved adapter drives the
+// manifest + skills emission. Skills emission stays a core sync feature for
+// hosts with a `skillsDir` (claude → `.claude/skills/`; cursor → `.cursor/rules/`
+// as `.mdc`); gemini/agents-md/opencode have no skill concept and the step is
+// skipped. `scaffold({mode:'sync'})` throws when the project isn't initialized
 // (no .noir/project.id), matching the predecessor's `loadProjectInfo` gate.
 
-import { claudeAdapter } from '@noir-ai/adapters';
+import { existsSync } from 'node:fs';
+import { type HostId, resolveAdapter } from '@noir-ai/adapters';
+import { loadProjectInfo, paths } from '@noir-ai/core';
 import { scaffold } from '@noir-ai/create';
-import { emitSkillsToDir } from '@noir-ai/skills';
+import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 
-export async function sync(root: string): Promise<void> {
-  await scaffold({ root, mode: 'sync' });
+export interface SyncOptions {
+  /** S10 `--host <id>` override. When set, takes precedence over the
+   *  `.noir/config.yml` `host:` field. Useful for re-emitting under a
+   *  different host without re-init (advanced — the canonical host stays
+   *  whatever init wrote). */
+  host?: HostId;
+}
 
-  if (!claudeAdapter.skillsDir) {
-    process.stderr.write('This host has no skill emitter; nothing to sync.\n');
+export async function sync(root: string, opts: SyncOptions = {}): Promise<void> {
+  const host = resolveSyncHost(root, opts);
+
+  await scaffold({ root, mode: 'sync', host });
+
+  const adapter = resolveAdapter(host);
+  const skillsDir = adapter.skillsDir?.({ root });
+  if (skillsDir === undefined) {
+    process.stderr.write(`Host '${host}' has no skill emitter; nothing to sync.\n`);
     return;
   }
-  const summary = await emitSkillsToDir(claudeAdapter.skillsDir({ root }));
-  process.stderr.write(`Synced ${summary.emitted.length} Noir skills to .claude/skills/.\n`);
+  const target: CompileTarget = host;
+  const summary = await emitSkillsToDir(skillsDir, { includeIntegrations: true, target });
+  const relDir = skillsDir.replace(`${root}/`, '');
+  process.stderr.write(
+    `Synced ${summary.emitted.length} Noir skills to ${relDir}/ (target: ${target}).\n`,
+  );
   // T2: surface stale-dir pruning so a user can see when a previous Noir
   // version's builtin was removed (the dir was deleted from .claude/skills/).
   // Pure hygiene; never affects correctness of the freshly-emitted pack.
@@ -40,5 +63,21 @@ export async function sync(root: string): Promise<void> {
     process.stderr.write(
       `Pruned ${pruned.length} stale noir-* skill dir${pruned.length === 1 ? '' : 's'}: ${pruned.join(', ')}\n`,
     );
+  }
+}
+
+/** Resolve the sync host: explicit `--host` override > `.noir/config.yml`
+ *  `host:` field > `'claude'` (default — preserves the v1.1 regression anchor
+ *  for projects initialized before S10). The config read is best-effort: if
+ *  `.noir/config.yml` is absent OR fails to parse, scaffold's own
+ *  "not initialized" gate (no `.noir/project.id`) fires below with the locked
+ *  error string. */
+function resolveSyncHost(root: string, opts: SyncOptions): HostId {
+  if (opts.host !== undefined) return opts.host;
+  if (!existsSync(paths.config(root))) return 'claude';
+  try {
+    return loadProjectInfo(root).config.host;
+  } catch {
+    return 'claude';
   }
 }

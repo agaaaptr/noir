@@ -18,7 +18,9 @@
 
 export {
   BRIEF_BLOCK,
+  type BuildHostArtifactsContext,
   type BuildManifestContext,
+  buildHostArtifacts,
   buildManifest,
   type HostTag,
   MANIFEST_PATH_PARITY,
