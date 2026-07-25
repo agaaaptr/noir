@@ -98,7 +98,7 @@ jobs:
         # published packages resolve on install. `npm publish` does NOT rewrite workspace
         # ranges, and `pnpm publish` does NOT support --provenance — so we PACK with pnpm
         # (correct deps) then PUBLISH the tarballs with npm (which adds the provenance attestation).
-        run: pnpm -r --filter './packages/*' pack
+        run: pnpm -r --filter './packages/*' pack --pack-destination artifacts
 
       - name: Publish the packed tarballs (npm publish --provenance, NPM_TOKEN)
         env:
@@ -108,7 +108,7 @@ jobs:
           set -e
           if [ -z "${NODE_AUTH_TOKEN:-}" ]; then echo "NPM_TOKEN secret is not set — see docs/releasing.md §1"; exit 1; fi
           echo "Publishing with npm dist-tag: $DIST_TAG"
-          mapfile -d '' tarballs < <(find packages -maxdepth 2 -type f -name '*.tgz' -print0)
+          mapfile -d '' tarballs < <(find artifacts -type f -name '*.tgz' -print0)
           if [ "${#tarballs[@]}" -eq 0 ]; then echo "No tarballs found"; exit 1; fi
           for tgz in "${tarballs[@]}"; do
             echo "Publishing $tgz (dist-tag: $DIST_TAG)"

@@ -9,3 +9,6 @@ node_modules/
 dist/
 *.tsbuildinfo
 coverage/
+
+# Release pack output (pnpm pack --pack-destination)
+artifacts/
