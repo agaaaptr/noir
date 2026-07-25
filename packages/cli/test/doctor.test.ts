@@ -12,6 +12,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { paths } from '@noir-ai/core';
+import { CURRENT_SCAFFOLD_VERSION, scaffoldVersionPath } from '@noir-ai/create';
 import { clearDaemonRecord } from '@noir-ai/daemon';
 import { openStore, vecAvailability } from '@noir-ai/store';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -203,5 +204,64 @@ describe('noir doctor — --json envelope shape', () => {
     for (const c of checks) recompute[c.status] = (recompute[c.status] ?? 0) + 1;
     expect(summary).toEqual(recompute);
     expect(existsSync(paths.config(root))).toBe(false); // sanity: still uninitialized
+  });
+});
+
+describe('noir doctor — scaffold-version drift (slice S-T2)', () => {
+  it('reports onDisk=null + drift=false (warn) when the stamp is absent', async () => {
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    expect(env.data.scaffold).toEqual({
+      onDisk: null,
+      current: CURRENT_SCAFFOLD_VERSION,
+      drift: false,
+    });
+    const row = findCheck(env.data.checks, 'scaffold version');
+    expect(row.status).toBe('warn');
+    expect(row.detail).toMatch(/no .noir\/scaffold-version stamp/);
+  });
+
+  it('reports drift=false (ok) when on-disk == current', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-scaffold-up-to-date\n', 'utf8');
+    writeFileSync(scaffoldVersionPath(root), `noir-scaffold=${CURRENT_SCAFFOLD_VERSION}\n`, 'utf8');
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    expect(env.data.scaffold).toEqual({
+      onDisk: CURRENT_SCAFFOLD_VERSION,
+      current: CURRENT_SCAFFOLD_VERSION,
+      drift: false,
+    });
+    expect(findCheck(env.data.checks, 'scaffold version').status).toBe('ok');
+  });
+
+  it('reports drift=true (warn) when on-disk != current', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-scaffold-stale\n', 'utf8');
+    // Emulate a project last scaffolded by an older build.
+    writeFileSync(scaffoldVersionPath(root), 'noir-scaffold=0.9.0\n', 'utf8');
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    expect(env.data.scaffold).toEqual({
+      onDisk: '0.9.0',
+      current: CURRENT_SCAFFOLD_VERSION,
+      drift: true,
+    });
+    const row = findCheck(env.data.checks, 'scaffold version');
+    expect(row.status).toBe('warn');
+    expect(row.detail).toMatch(/on-disk 0\.9\.0 .* current/);
+    expect(row.detail).toMatch(/noir init --upgrade/);
+  });
+
+  it('human mode renders the scaffold-version row', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-scaffold-human\n', 'utf8');
+    writeFileSync(scaffoldVersionPath(root), `noir-scaffold=${CURRENT_SCAFFOLD_VERSION}\n`, 'utf8');
+
+    const r = await run(() => doctor({}));
+    expect(r.stderr).toMatch(/scaffold version/);
+    expect(r.stderr).toMatch(/up to date/);
   });
 });

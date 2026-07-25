@@ -31,6 +31,7 @@
 
 import { existsSync } from 'node:fs';
 import { loadProjectInfo, NOIR_VERSION, type ProjectInfo, paths } from '@noir-ai/core';
+import { CURRENT_SCAFFOLD_VERSION, readScaffoldVersion } from '@noir-ai/create';
 import { pidAlive, readDaemonRecord } from '@noir-ai/daemon';
 import { resolveModelConfig } from '@noir-ai/model';
 import {
@@ -61,6 +62,10 @@ export interface DoctorPayload {
   noir: string;
   checks: CheckResult[];
   summary: { ok: number; warn: number; fail: number };
+  /** Scaffold-version drift (slice S). `onDisk` is null when the stamp is
+   *  absent (uninitialized or pre-Slice-S project); `drift` is true only when
+   *  a stamp is present AND differs from the engine's current version. */
+  scaffold: { onDisk: string | null; current: string; drift: boolean };
 }
 
 // ---------------------------------------------------------------------------
@@ -313,9 +318,33 @@ function checkProvider(checks: CheckResult[], project: ProjectInfo | undefined):
   });
 }
 
-// ---------------------------------------------------------------------------
-// Rendering + exit
-// ---------------------------------------------------------------------------
+function checkScaffoldVersion(
+  checks: CheckResult[],
+  root: string,
+): {
+  onDisk: string | null;
+  current: string;
+  drift: boolean;
+} {
+  // readScaffoldVersion never throws — it returns null on an absent/malformed
+  // stamp, so doctor keeps reporting even on a partially-initialized project.
+  const onDisk = readScaffoldVersion(root);
+  const current = CURRENT_SCAFFOLD_VERSION;
+  const drift = onDisk !== null && onDisk !== current;
+  // Drift is NEVER critical: a stale scaffold still works (the manifest entries
+  // are forward-compatible), it just means `noir init --upgrade` will run
+  // pending migrations. Absent stamp on an uninitialized project → warn (parity
+  // with the other project-dependent checks that skip-with-warn pre-init).
+  const status: Severity = onDisk === null || drift ? 'warn' : 'ok';
+  const detail =
+    onDisk === null
+      ? 'no .noir/scaffold-version stamp (run `noir init`)'
+      : drift
+        ? `on-disk ${onDisk} ≠ current ${current} (run \`noir init --upgrade\`)`
+        : `${onDisk} (up to date)`;
+  checks.push({ name: 'scaffold version', status, detail });
+  return { onDisk, current, drift };
+}
 
 function summarize(checks: CheckResult[]): DoctorPayload['summary'] {
   let ok = 0;
@@ -375,9 +404,10 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   await checkStore(checks, project, root);
   checkEmbedder(checks, project, vecOk);
   checkProvider(checks, project);
+  const scaffold = checkScaffoldVersion(checks, root);
 
   const summary = summarize(checks);
-  const payload: DoctorPayload = { noir: NOIR_VERSION, checks, summary };
+  const payload: DoctorPayload = { noir: NOIR_VERSION, checks, summary, scaffold };
 
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: payload })}\n`);

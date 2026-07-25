@@ -1,26 +1,29 @@
 {
-  "name": "@noir-ai/cli",
-  "version": "1.0.0-beta.1",
-  "description": "Noir CLI — the `noir` command tree (commander + @clack/prompts), the shell entry point to the Noir AI toolkit.",
+  "name": "@noir-ai/create",
+  "version": "0.0.0",
+  "description": "Noir scaffold engine — the declarative three-mode writer, manifest, templates, stack-detect, and migrations that power `noir init`/`create`/`sync`.",
   "license": "MIT",
   "author": "agaaaptr",
   "homepage": "https://github.com/agaaaptr/noir#readme",
   "repository": {
     "type": "git",
     "url": "https://github.com/agaaaptr/noir.git",
-    "directory": "packages/cli"
+    "directory": "packages/create"
   },
   "bugs": {
     "url": "https://github.com/agaaaptr/noir/issues"
   },
   "keywords": [
     "noir",
-    "cli",
-    "agent",
+    "scaffold",
+    "init",
+    "create",
+    "manifest",
+    "templates",
+    "migrations",
     "sdd",
     "spec-driven",
-    "mcp",
-    "claude"
+    "agent"
   ],
   "engines": {
     "node": ">=20"
@@ -30,9 +33,6 @@
     "provenance": true
   },
   "type": "module",
-  "bin": {
-    "noir": "dist/bin.js"
-  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -43,26 +43,14 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "templates"
   ],
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@clack/prompts": "^0.7.0",
-    "@modelcontextprotocol/client": "^2.0.0-beta.5",
-    "@noir-ai/adapters": "workspace:*",
-    "@noir-ai/core": "workspace:*",
-    "@noir-ai/create": "workspace:*",
-    "@noir-ai/daemon": "workspace:*",
-    "@noir-ai/model": "workspace:*",
-    "@noir-ai/skills": "workspace:*",
-    "@noir-ai/store": "workspace:*",
-    "cli-table3": "^0.6.5",
-    "commander": "^12.1.0",
-    "ora": "^8.1.0",
-    "picocolors": "^1.1.1"
+    "@noir-ai/core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.1.1"

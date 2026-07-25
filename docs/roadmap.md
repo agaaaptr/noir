@@ -42,13 +42,14 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 - **Then:** S10 (more host adapters) + the SDK/framework-docs remainder of S11 begin **v1.x** — see the consolidated **"v1.x backlog"** section below.
 
 **v1.x capability slices (designed 2026-07-25, in-progress on `develop`):**
-Design: `docs/specs/2026-07-25-v1x-capabilities-design.md`. Five capabilities extend one keystone refactor. **4/6 done on `develop` (LOCAL, not pushed; 746 tests green):**
+Design: `docs/specs/2026-07-25-v1x-capabilities-design.md`. Five capabilities extend one keystone refactor. **5/6 done on `develop` (LOCAL, not pushed; 857 tests green):**
 - **K** Keystone — `managedBlock` factory + shared `blockWriter` (`writeManagedRegion` etc.) + `HostAdapter.emitRules` seam (pure refactor; no behavior change).
 - **R** Rules — `.noir/rules/RULES.md` Noir-curated seed + wired into `CLAUDE.md` via `RULES_BLOCK` + `noir-rules` skill.
 - **I** Ignore — `IgnoreManager` + `syncIgnores` into init/sync (managed-block idempotent; `.gitignore`/`.dockerignore`/`.npmignore`/`.prettierignore`).
 - **P** PRD — `prd` artifact kind + `writePrd`/`readPrd` + `noir-prd` skill (no FSM change; explicit opt-in).
-**Remaining:** **S** Scaffold (new `@noir-ai/create` + three-mode writer + `noir create`) + **X** Integration (ClickUp + gated-write-proxy + `integrations_auth`). Specs: `docs/superpowers/specs/2026-07-25-slice-{s-scaffold,x-integration}-design.md`. **Next-session playbook + FULL technical debt + push/tag/verdaccio: `docs/v1x-next-session.md`.**
-> Note: `develop` is at **746 tests** (K/R/I/P added); `main`/npm beta stays at 729 until merged.
+- **S** Scaffold — new `@noir-ai/create` engine (three-mode writer `regenerate`/`managedBlock`/`skipIfExists` generalizing keystone-K `blockWriter`; declarative manifest; hand-rolled `{{var}}` templates; `.noir/scaffold-version`; migrations registry w/ inline-conflict CI-safe path; read-only stack-detect) + `noir init`/`sync` refactored to consume it + **new `noir create [dir]`** (AI-layer only) + `noir init --upgrade` (migrations) + `noir doctor` scaffold-version drift. Opus-reviewed + gate bugs fixed (project.id heal, CLAUDE.md idempotency, legacy NOIR.md self-heal). Behavior changes: `project.id`/`config.yml` → skipIfExists; `NOIR.md` → managed `BRIEF_BLOCK`; `sync` widened (re-emits `.mcp.json` + NOIR.md brief, no longer seeds RULES.md).
+**Remaining:** **X** Integration (ClickUp + gated-write-proxy + `integrations_auth`). Specs: `docs/superpowers/specs/2026-07-25-slice-{s-scaffold,x-integration}-design.md`. **Next-session playbook + FULL technical debt + push/tag/verdaccio: `docs/v1x-next-session.md`.**
+> Note: `develop` is at **857 tests** (K/R/I/P/S added); `main`/npm beta stays at 729 until merged.
 
 **v1.0 finalization — COMPLETE:**
 - Finalization audits (code, docs, quality) run + fixes applied: zod consolidated to **v4**, root **README rewritten** for the v1.0 toolkit, dead code + unused deps removed, biome/mcp/hash/jsdoc/re-export nits fixed. End-to-end dogfood PASSED 14/14 (real local embeddings → `context_search` hits; memory save→recall; workflow start→advance; durability across daemon restart; bounded-model degrades to `null` with no key). Cross-CLI hosts (S10) and distribution/SDK (S11) remain v1.x — see the backlog below.

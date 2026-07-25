@@ -1,6 +1,6 @@
 name: Release
 
-# Publishes the 10 @noir-ai/* packages to npm (unified version, on a git tag).
+# Publishes the @noir-ai/* workspace packages to npm (unified version, on a git tag).
 # Auth = npm automation token (the NPM_TOKEN repo secret — a granular publish-only
 # token created once on npm). Every publish ALSO carries a SLSA provenance
 # attestation (--provenance), which uses GitHub OIDC (the `id-token: write`
@@ -93,7 +93,7 @@ jobs:
             echo "Channel: BETA (npm dist-tag: beta — 'npm i @noir-ai/cli@beta' to opt in)."
           fi
 
-      - name: Pack all 10 packages (pnpm rewrites workspace:* ranges into the tarballs)
+      - name: Pack all workspace packages (pnpm rewrites workspace:* ranges into the tarballs)
         # pnpm pack (NOT npm pack) rewrites workspace:* → concrete versions, so the
         # published packages resolve on install. `npm publish` does NOT rewrite workspace
         # ranges, and `pnpm publish` does NOT support --provenance — so we PACK with pnpm

@@ -26,6 +26,10 @@ vi.mock('../src/commands/skills.js', () => ({
   skillsList: vi.fn(async () => {}),
   skillsSync: vi.fn(async () => {}),
 }));
+// Slice S-T2: `noir create` is a new command; mock it at the boundary like the
+// other commands. Its dedicated behavior (engine delegation, dir creation) is
+// covered by an integration-style test in create.test.ts.
+vi.mock('../src/commands/create.js', () => ({ create: vi.fn(async () => {}) }));
 // t4: status + home are real modules now; mock them at the boundary so the bin
 // dispatch tests stay focused on wiring (argv → action → module) without a
 // daemon. Their dedicated behavior is covered in status.test / home.test.
@@ -55,6 +59,7 @@ vi.mock('../src/commands/task.js', () => ({
 
 import { createProgram, EXIT, inferExitCode, NoirCliError } from '../src/bin.js';
 import { contextIndex, contextSearch, contextStatus } from '../src/commands/context.js';
+import { create } from '../src/commands/create.js';
 import { daemonRestart, daemonStart, daemonStatus, daemonStop } from '../src/commands/daemon.js';
 import { doctor } from '../src/commands/doctor.js';
 import { home } from '../src/commands/home.js';
@@ -239,6 +244,62 @@ describe('commander migration — behavior preservation (migrated commands)', ()
     const r = await parse(['sync']);
     expect(r.exitCode).toBe(EXIT.OK);
     expect(sync).toHaveBeenCalledWith(process.cwd());
+  });
+
+  it('init --upgrade passes upgrade:true through to init()', async () => {
+    const r = await parse(['init', '--upgrade']);
+    expect(r.exitCode).toBe(EXIT.OK);
+    expect(init).toHaveBeenCalledWith(process.cwd(), {
+      transport: 'stdio',
+      url: undefined,
+      upgrade: true,
+    });
+  });
+
+  it('init without --upgrade omits the upgrade key (arg-shape parity)', async () => {
+    // Regression guard: the conditional-spread must NOT add `upgrade: false`,
+    // which would break the exact-arg assertions used elsewhere in this suite.
+    await parse(['init']);
+    const [, opts] = vi.mocked(init).mock.calls[0];
+    expect(opts).toEqual({ transport: 'stdio', url: undefined });
+    expect('upgrade' in opts).toBe(false);
+  });
+
+  describe('noir create [dir] (slice S-T2)', () => {
+    it('create with no dir defaults transport=stdio and calls create(undefined, …)', async () => {
+      const r = await parse(['create']);
+      expect(r.exitCode).toBe(EXIT.OK);
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(create).toHaveBeenCalledWith(undefined, { transport: 'stdio', url: undefined });
+    });
+
+    it('create <dir> passes the positional through', async () => {
+      const r = await parse(['create', './my-app']);
+      expect(r.exitCode).toBe(EXIT.OK);
+      expect(create).toHaveBeenCalledWith('./my-app', { transport: 'stdio', url: undefined });
+    });
+
+    it('create --transport streamable-http --url passes them through (stdio coercion parity)', async () => {
+      const r = await parse([
+        'create',
+        'my-app',
+        '--transport',
+        'streamable-http',
+        '--url',
+        'http://127.0.0.1:4321/mcp',
+      ]);
+      expect(r.exitCode).toBe(EXIT.OK);
+      expect(create).toHaveBeenCalledWith('my-app', {
+        transport: 'streamable-http',
+        url: 'http://127.0.0.1:4321/mcp',
+      });
+    });
+
+    it('create coerces an unknown transport back to stdio (parseArgs parity with init)', async () => {
+      const r = await parse(['create', '--transport', 'bogus']);
+      expect(r.exitCode).toBe(EXIT.OK);
+      expect(create).toHaveBeenCalledWith(undefined, { transport: 'stdio', url: undefined });
+    });
   });
 
   it('mcp serve --stdio → serve({stdio:true})', async () => {

@@ -152,17 +152,48 @@ export function createProgram(): Command {
     .description('scaffold Noir in the current project (.noir/, .mcp.json, CLAUDE.md, skills)')
     .option('--transport <transport>', 'stdio | streamable-http (default: stdio)', 'stdio')
     .option('--url <url>', 'streamable-http daemon URL (localhost only)')
-    .action(async (opts: { transport?: string; url?: string }) => {
+    .option(
+      '--upgrade',
+      'run scaffold migrations before re-emitting (re-run on an existing project)',
+    )
+    .action(async (opts: { transport?: string; url?: string; upgrade?: boolean }) => {
       // Preserve the parseArgs coercion exactly: only 'streamable-http' is
       // special; any other value (incl. typos / future transports) → 'stdio'.
       const transport: 'stdio' | 'streamable-http' =
         opts.transport === 'streamable-http' ? 'streamable-http' : 'stdio';
-      await init(process.cwd(), { transport, url: opts.url });
+      // `upgrade` is conditionally spread so an unset flag does NOT add an
+      // `upgrade: false` key to the opts object — that would break the
+      // toEqual-based arg assertions in bin.test.ts (which expects exactly
+      // `{transport, url}` for the default-invocation cases). Matches the
+      // conditional-spread pattern used for task/memory options elsewhere.
+      const upgrade = opts.upgrade === true;
+      await init(process.cwd(), {
+        transport,
+        url: opts.url,
+        ...(upgrade ? { upgrade } : {}),
+      });
+    });
+
+  // `noir create [dir]` — greenfield AI-layer bootstrap (slice S). Lazy import
+  // mirrors sync's dispatcher so the create module isn't loaded for unrelated
+  // commands. Optional `[dir]` defaults to process.cwd() inside the action.
+  program
+    .command('create [dir]')
+    .description('bootstrap the Noir AI layer in a new or empty directory')
+    .option('--transport <transport>', 'stdio | streamable-http (default: stdio)', 'stdio')
+    .option('--url <url>', 'streamable-http daemon URL (localhost only)')
+    .action(async (dir: string | undefined, opts: { transport?: string; url?: string }) => {
+      const transport: 'stdio' | 'streamable-http' =
+        opts.transport === 'streamable-http' ? 'streamable-http' : 'stdio';
+      const { create } = await import('./commands/create.js');
+      await create(dir, { transport, url: opts.url });
     });
 
   program
     .command('sync')
-    .description('re-emit the Noir builtin skills into the host skills dir')
+    .description(
+      're-emit Noir managed files (.mcp.json, CLAUDE.md blocks, NOIR.md brief, ignores) + skills',
+    )
     .action(async () => {
       // Lazy import preserves the original dispatcher's deferred module load.
       const { sync } = await import('./sync.js');
