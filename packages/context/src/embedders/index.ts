@@ -13,7 +13,6 @@
 //   none     — disable vectors; search degrades to BM25-only (F8)
 
 import type { EmbedderConfig, EmbedderInfo, EmbedFn } from '../types.js';
-import { fakeEmbedFn } from './fake.js';
 import { localEmbedder } from './local.js';
 import { EMBED_DIM } from './normalize.js';
 import { ollamaEmbedder } from './ollama.js';

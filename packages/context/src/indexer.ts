@@ -196,7 +196,7 @@ const BINARY_EXTS = new Set([
 /** True if the path's extension is a known binary type. */
 export function isBinaryExt(pathOrName: string): boolean {
   const m = pathOrName.toLowerCase().match(/\.([a-z0-9]+)$/);
-  if (!m || !m[1]) return false;
+  if (!m?.[1]) return false;
   return BINARY_EXTS.has(m[1]);
 }
 

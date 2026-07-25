@@ -58,7 +58,6 @@ function buildRequestBody(provider: string, model: string, text: string): string
         input_type: 'search_document',
         embedding_types: ['float'],
       });
-    case 'openai':
     default:
       // OpenAI-compatible. We deliberately omit `dimensions` (only the
       // text-embedding-3-* family accepts it; others 400) and rely on

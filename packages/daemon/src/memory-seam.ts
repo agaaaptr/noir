@@ -37,7 +37,7 @@ export function resolveMemoryConsolidation(
   const providerKey = modelCfg.tiers.consolidate ?? modelCfg.defaultProvider;
   if (!providerKey) return null;
   const block = modelCfg.providers[providerKey];
-  if (!block || !block.model) return null;
+  if (!block?.model) return null;
   return { provider: providerKey, model: block.model };
 }
 

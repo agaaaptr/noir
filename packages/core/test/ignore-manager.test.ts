@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { IGNORE_BLOCK, syncIgnores } from '@noir-ai/core';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 describe('syncIgnores', () => {
   let root: string;

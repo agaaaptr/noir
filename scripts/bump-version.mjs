@@ -65,7 +65,7 @@ for (const dir of pkgDirs) {
     console.error(`skip  ${dir} (no package.json)`);
     continue;
   }
-  if (!json.name || !json.name.startsWith('@noir-ai/')) {
+  if (!json.name?.startsWith('@noir-ai/')) {
     console.error(`skip  ${dir} (name ${json.name ?? '<none>'} is not @noir-ai/*)`);
     continue;
   }

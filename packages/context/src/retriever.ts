@@ -162,16 +162,16 @@ export interface Retriever {
 function asChunkMeta(meta: unknown): ChunkMeta | undefined {
   if (typeof meta !== 'object' || meta === null) return undefined;
   const m = meta as Record<string, unknown>;
-  const path = m['path'];
-  const parentDocId = m['parentDocId'];
+  const path = m.path;
+  const parentDocId = m.parentDocId;
   // The two required fields — bail to `undefined` if either is missing/non-string
   // so callers fall back to empty strings rather than crashing.
   if (typeof path !== 'string' || typeof parentDocId !== 'string') {
     return undefined;
   }
-  const chunkIndex = m['chunkIndex'];
-  const language = m['language'];
-  const sha256Val = m['sha256'];
+  const chunkIndex = m.chunkIndex;
+  const language = m.language;
+  const sha256Val = m.sha256;
   return {
     path,
     parentDocId,

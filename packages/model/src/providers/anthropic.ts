@@ -33,7 +33,7 @@
 // so it stays a single, provider-agnostic completion primitive.
 
 import { registerProviderAdapter } from '../complete.js';
-import type { CompleteRequest, CompleteResult, CompleteUsage, ProviderAdapter } from '../types.js';
+import type { CompleteResult, CompleteUsage, ProviderAdapter } from '../types.js';
 
 // Structural aliases for the dynamically-imported SDK, so this file does NOT
 // depend on the SDK's exact exported types at compile time (resilient to minor

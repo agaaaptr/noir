@@ -259,7 +259,7 @@ function markdownSections(content: string): string[] {
   for (const line of lines) {
     // Track code fences so `#` lines inside them don't read as headings.
     const fence = FENCE_OPEN.exec(line);
-    if (fence && fence[1]) {
+    if (fence?.[1]) {
       const marker = fence[1].charAt(0);
       if (!inFence) {
         inFence = true;

@@ -39,7 +39,7 @@ export function readManagedBlock(file: string, block: ManagedBlock): string | nu
     return null;
   }
   const m = content.match(new RegExp(`${escapeRe(block.begin)}[\\s\\S]*?${escapeRe(block.end)}`));
-  return m && m[0] ? m[0] : null;
+  return m?.[0] ? m[0] : null;
 }
 
 /** Idempotently write `regionText` (a full `<begin>…<end>` block) into `file`,
