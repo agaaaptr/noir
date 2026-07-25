@@ -1,0 +1,72 @@
+name: Release
+
+# Publishes the 10 @noir-ai/* packages to npm, unified-version, on a git tag.
+# Auth = OIDC Trusted Publishing (tokenless): npm is configured to trust this
+# repo + this workflow (see docs/releasing.md §1). No NPM_TOKEN secret is used.
+# Every publish carries a SLSA provenance attestation (--provenance).
+#
+# Cut a release from main:
+#   node scripts/bump-version.mjs <X.Y.Z> && git commit && git tag v<X.Y.Z> && git push --tags
+
+on:
+  push:
+    tags:
+      - "v*"
+
+# Never run two publishes for the same tag; a new tag push cancels the in-flight one.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# `id-token: write` is REQUIRED for npm OIDC Trusted Publishing + provenance.
+# `contents: read` is enough to read the tagged source (the bump commit is already pushed).
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  verify:
+    name: Build + test (tag ${{ github.ref_name }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test
+
+  publish:
+    name: Publish @noir-ai/* (unified, provenance)
+    needs: verify
+    runs-on: ubuntu-latest
+    # `release` is the environment linked on npm as the Trusted Publisher.
+    # Add a required reviewer here on GitHub to require human approval before publish.
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      # NOTE: no `registry-url` / no NODE_AUTH_TOKEN. With Trusted Publishing,
+      # `npm publish --provenance` exchanges the GitHub OIDC token for a
+      # short-lived publish credential; an explicit .npmrc token line would
+      # shadow that flow. Node 22 ships npm 10+, which supports this.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - name: Publish all 10 packages (npm publish --provenance, tokenless OIDC)
+        run: |
+          set -e
+          pnpm -r --filter './packages/*' exec npm publish --provenance --access public

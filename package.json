@@ -15,7 +15,8 @@
     "format": "biome format --write .",
     "typecheck": "pnpm -r --filter './packages/*' run typecheck",
     "test": "pnpm build && vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "release:bump": "node scripts/bump-version.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",

@@ -1,7 +1,35 @@
 {
   "name": "@noir-ai/context",
   "version": "0.1.0",
+  "description": "Noir context — SHA-256 incremental indexer and hybrid retrieval (BM25 + vector kNN + Reciprocal Rank Fusion).",
   "license": "MIT",
+  "author": "agaaaptr",
+  "homepage": "https://github.com/agaaaptr/noir#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agaaaptr/noir.git",
+    "directory": "packages/context"
+  },
+  "bugs": {
+    "url": "https://github.com/agaaaptr/noir/issues"
+  },
+  "keywords": [
+    "noir",
+    "context",
+    "retrieval",
+    "hybrid",
+    "bm25",
+    "vector",
+    "rrf",
+    "embeddings"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,7 +40,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup",

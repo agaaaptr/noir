@@ -1,7 +1,33 @@
 {
   "name": "@noir-ai/memory",
   "version": "0.1.0",
+  "description": "Noir memory — cross-session observations over the store, with hybrid recall and provider-gated consolidation.",
   "license": "MIT",
+  "author": "agaaaptr",
+  "homepage": "https://github.com/agaaaptr/noir#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agaaaptr/noir.git",
+    "directory": "packages/memory"
+  },
+  "bugs": {
+    "url": "https://github.com/agaaaptr/noir/issues"
+  },
+  "keywords": [
+    "noir",
+    "memory",
+    "cross-session",
+    "recall",
+    "consolidation",
+    "agent"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,7 +38,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup",

@@ -1,10 +1,37 @@
 {
   "name": "@noir-ai/cli",
   "version": "0.1.0",
+  "description": "Noir CLI — the `noir` command tree (commander + @clack/prompts), the shell entry point to the Noir AI toolkit.",
   "license": "MIT",
+  "author": "agaaaptr",
+  "homepage": "https://github.com/agaaaptr/noir#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agaaaptr/noir.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/agaaaptr/noir/issues"
+  },
+  "keywords": [
+    "noir",
+    "cli",
+    "agent",
+    "sdd",
+    "spec-driven",
+    "mcp",
+    "claude"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "type": "module",
   "bin": {
-    "noir": "./dist/bin.js"
+    "noir": "dist/bin.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -15,7 +42,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup",

@@ -1,7 +1,34 @@
 {
   "name": "@noir-ai/skills",
   "version": "0.1.0",
+  "description": "Noir skills — the builtin noir-* skill pack (31 skills) and a copy-and-validate compiler.",
   "license": "MIT",
+  "author": "agaaaptr",
+  "homepage": "https://github.com/agaaaptr/noir#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agaaaptr/noir.git",
+    "directory": "packages/skills"
+  },
+  "bugs": {
+    "url": "https://github.com/agaaaptr/noir/issues"
+  },
+  "keywords": [
+    "noir",
+    "skills",
+    "compiler",
+    "sdd",
+    "spec-driven",
+    "agent",
+    "pack"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,7 +40,8 @@
   },
   "files": [
     "dist",
-    "builtin"
+    "builtin",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup",

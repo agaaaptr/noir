@@ -1,7 +1,34 @@
 {
   "name": "@noir-ai/store",
   "version": "0.1.0",
+  "description": "Noir store — embedded storage: better-sqlite3 + FTS5 (BM25, window snippets) + sqlite-vec (384-dim kNN).",
   "license": "MIT",
+  "author": "agaaaptr",
+  "homepage": "https://github.com/agaaaptr/noir#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agaaaptr/noir.git",
+    "directory": "packages/store"
+  },
+  "bugs": {
+    "url": "https://github.com/agaaaptr/noir/issues"
+  },
+  "keywords": [
+    "noir",
+    "sqlite",
+    "fts5",
+    "vector",
+    "sqlite-vec",
+    "embeddings",
+    "persistence"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,7 +39,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup",

@@ -72,6 +72,10 @@ All deferred items, grouped by area. Each was intentionally out of v1 to keep sc
 - in-process read-only store fallback for `context` / `memory` / `task` commands (daemon-required for v1; `status` is the only probe-only command today).
 - `task` id/slug distinction (collapsed to a single slug namespace for v1).
 
+### Workflow
+- S4 dual source of truth: `task.history` (inside TaskState) duplicates `audit:<id>` KV (`GateResult[]`); collapse to one authoritative record.
+- S4 checkpoint save/restore is vestigial (data is written but nothing consumes it on resume) — wire it into resume or remove it.
+
 ### Context
 - tree-sitter symbol-aware code chunking (line/token-bounded chunking ships today).
 - full `.gitignore` parsing (a static denylist ships today).
@@ -99,6 +103,8 @@ All deferred items, grouped by area. Each was intentionally out of v1 to keep sc
 - `references/` skill code-path coverage (only synthetic fixtures today; 0 shipped skills use it).
 - engine-naming consistency (`ContextEngine` / `MemoryEngineImpl`).
 - `indexer.ts` + `daemon/server.ts` god-file refactors.
+- stale-skill-dir cleanup on `noir sync` (the managed `noir-*` namespace is overwritten idempotently, but removed/renamed builtin skills aren't pruned from `.claude/skills/` today).
+- `biome.json` schema deprecation infos (drift between biome's config schema and the pinned version).
 - first-run model download UX (one-time ~22 MB fetch, cached in `~/.noir/models/`).
 
 ---
