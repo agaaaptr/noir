@@ -38,9 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - uses: pnpm/action-setup@v4  # pnpm version comes from package.json `packageManager` (single source — v4 errors if `version:` is also set here)
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -63,9 +61,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - uses: pnpm/action-setup@v4  # pnpm version comes from package.json `packageManager` (single source — v4 errors if `version:` is also set here)
       # `registry-url` + the NPM_TOKEN env (in the publish step) wire npm auth:
       # setup-node writes an .npmrc that publishes to the registry using
       # NODE_AUTH_TOKEN. The granular token is created once on npm + stored as the
