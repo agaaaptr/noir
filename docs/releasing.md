@@ -97,7 +97,7 @@ git push origin v1.0.0
 ### What CI does next (`.github/workflows/release.yml`)
 
 1. Checks out the tagged commit.
-2. Sets up Node 22 + pnpm; `pnpm install --frozen-lockfile`.
+2. Sets up Node 24 + pnpm; `pnpm install --frozen-lockfile`.
 3. `pnpm lint` → `pnpm typecheck` → `pnpm build` (all 10 packages → `dist/`).
 4. **Derives the channel** from the branch (see [§2b](#2b-beta-vs-stable-channels)): if the tagged commit is reachable from `origin/main`, dist-tag = `latest` (stable); otherwise `beta`. For the §2 flow that is always `latest`.
 5. Packs, then publishes, all 10 packages. This is a deliberate **two-step** flow (see `.github/workflows/release.yml`):
@@ -191,6 +191,8 @@ npm view @noir-ai/cli                  # registry metadata (version, dist-tags, 
 npm view @noir-ai/cli dist-tags.beta   # → 1.0.0-beta.1
 npx @noir-ai/cli@beta init             # smoke: opt into the beta and run init in a throwaway dir
 ```
+
+> **v1.0.0-beta.1 was the first publish (2026-07-25);** the 5 CI fixes it took to get the publish job green are documented in [§8 Troubleshooting](#8-troubleshooting) so they don't recur.
 
 ### Promoting beta → stable
 
@@ -302,7 +304,7 @@ The very first release (`1.0.0`) has extra gating. Do not cut it until every box
 - [ ] `release` environment created on GitHub (optional required-reviewer added).
 
 **Readiness (§2 / §4)**
-- [ ] `pnpm lint && pnpm typecheck && pnpm build && pnpm test` all green on `main` (target the same Node 22 the CI uses).
+- [ ] `pnpm lint && pnpm typecheck && pnpm build && pnpm test` all green on `main` (target the same Node 24 the CI uses).
 - [ ] Every `packages/*/package.json` has `publishConfig: { access:"public", provenance:true }`, `engines.node >=20`, a one-line `description`, valid `repository`/`bugs`/`homepage`, and `files` including `dist` (+ `README.md`, and `builtin/` for skills).
 - [ ] `npm publish --dry-run` in `packages/cli` and at least one library package is sane (correct files, **no `src/`/tests/secrets**).
 - [ ] `docs/CHANGELOG.md` has a `1.0.0` entry.
@@ -331,3 +333,15 @@ git push origin main && git push origin v<X.Y.Z>
 ```
 
 The tag push hands off to `.github/workflows/release.yml`. You're done.
+
+---
+
+## 8. Troubleshooting
+
+Gotchas hit cutting v1.0.0-beta.1 (the first publish, 2026-07-25). Each is one line: symptom → fix. Narrative in `docs/CHANGELOG.md` → `1.0.0-beta.1`.
+
+1. **pnpm version conflict.** `pnpm/action-setup`'s default pnpm didn't match the repo's `packageManager` pin, so `pnpm install` failed. **Fix:** install the pinned pnpm explicitly (`version` from `packageManager`), not the action's default.
+2. **build/typecheck order.** The pipeline ran `typecheck` before `build`, so generated `dist/` + `.d.ts` outputs didn't exist when typecheck read them. **Fix:** run `build` before `typecheck`.
+3. **`pnpm pack` destination.** `pnpm -r pack` scattered `.tgz` files the publish step couldn't locate. **Fix:** `pnpm pack --pack-destination <dir>` writes them into one known directory; glob that dir in publish.
+4. **`npm publish` path.** Publish must target the packed tarball — `npm publish "./<name>-<version>.tgz"` — not a directory or a bare `npm publish` (a bare/directory publish skips the `workspace:*` → concrete rewrite that `pnpm pack` performs, so the published packages wouldn't resolve).
+5. **vitest major-bump test.** Bumping `vitest` to `^3` (to clear the security audit) is a major bump — re-run the full suite and re-check assertions/expectations; do not assume the test command is unchanged.

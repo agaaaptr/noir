@@ -2,6 +2,29 @@
 
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
+## 1.0.0-beta.1 (2026-07-25)
+
+**First npm publish.** All 10 `@noir-ai/*` packages (`core, store, workflow, skills, daemon, adapters, cli, context, model, memory`) published at the unified version `1.0.0-beta.1`, dist-tag **`beta`**, each tarball carrying SLSA **provenance**. Consumable via `npx @noir-ai/cli@beta init`. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`.
+
+### Fixed — CI release flow
+Five integration fixes that took the publish job from red to green (documented in `docs/releasing.md` §8 Troubleshooting so they don't recur):
+- **pnpm version conflict** — `pnpm/action-setup`'s default didn't match the repo's `packageManager` pin; install the pinned pnpm explicitly (version from `packageManager`), not the action's default.
+- **build-before-typecheck ordering** — build now precedes typecheck so generated `dist/` + `.d.ts` outputs exist when typecheck reads them.
+- **`pnpm pack --pack-destination`** — pack writes `.tgz` files into one known directory the publish step can locate (was scattering them).
+- **`npm publish "./<tgz>"` path** — publish targets the packed tarball path, not a directory or a bare `npm publish` (which would miss the workspace-range rewrite `pnpm pack` does).
+- **vitest major-bump test re-verification** — the `^3` bump (see Security) is a major; full suite + assertions re-checked, test invocation not assumed unchanged.
+
+### Security
+- **`pnpm audit` 8 → 0**, cleared via `pnpm.overrides` (`sharp`, `hono`, `esbuild`, `vite`) and bumping `vitest` to `^3`. Transitive dedupe only; no source changes.
+
+### Changed
+- **`noir --version` / `noir --help` → stdout** (were stderr) — data on stdout, diagnostics on stderr, matching the S9 convention.
+- **CI actions → v7/v6, Node 24** — `actions/checkout@v7`, `actions/setup-node@v7`, `pnpm/action-setup@v6` (clears the Node-20 deprecation annotation).
+
+Beta targets early testers; promote to stable `1.0.0` once validated in a real project (merge `develop`→`main`, tag `v1.0.0` on `main` → CI publishes `--tag latest`).
+
+---
+
 ## v1.0 — release-ready (2026-07-25)
 
 **v1.0 ACCEPTANCE-COMPLETE.** **10 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory}`; **729/729 tests green** (was 142 at the skeleton); build / typecheck / lint green. All committed locally on `develop` (**not pushed**).
