@@ -164,6 +164,35 @@ describe('noir doctor — initialized project (vec-gated store open)', () => {
   );
 });
 
+describe('noir doctor — initialized but store not yet created (fresh project)', () => {
+  it('store WARNS (not fails) when the store DB is absent — no critical from store', async () => {
+    const nativeOk = vecAvailability().ok === true;
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-fresh-project\n', 'utf8');
+    writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
+    // Deliberately do NOT seed a store: a bare `noir init`/`create` hasn't opened
+    // one yet either (the store DB is created lazily on first daemon run). Doctor
+    // must treat this expected fresh state as a warning, NOT a critical failure.
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    const store = findCheck(env.data.checks, 'store');
+    expect(store.status).toBe('warn');
+    expect(store.detail).toMatch(/not created yet/);
+    // The store absence must NOT drive a critical failure. The only possible
+    // `fail` on this host is native-deps when sqlite-vec can't load — and even
+    // then the store row stays a warning, not the failure.
+    if (nativeOk) {
+      expect(env.data.summary.fail).toBe(0);
+      expect(r.err).toBeUndefined(); // exit 0 — nothing critical
+    } else {
+      expect(findCheck(env.data.checks, 'native deps').status).toBe('fail');
+      expect(env.data.summary.fail).toBe(1);
+      expect(store.status).toBe('warn'); // store is NOT the failing check
+    }
+  });
+});
+
 describe('noir doctor — provider status (no live call)', () => {
   it.skipIf(vecAvailability().ok !== true)(
     'reports configured provider + hasKey from env (never a live call)',

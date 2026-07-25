@@ -234,6 +234,20 @@ async function checkStore(
     checks.push({ name: 'store', status: 'warn', detail: 'skipped — not initialized' });
     return;
   }
+  const dbPath = paths.storeDb(root, project.id);
+  if (!existsSync(dbPath)) {
+    // Fresh project: the store DB is created LAZILY when the daemon first runs
+    // (or when content is indexed) — `noir init`/`create` does not pre-create it.
+    // Its absence on an otherwise-initialized project is EXPECTED, not a failure:
+    // surfacing it as `fail` would alarm every new user on their first `noir doctor`.
+    // Warn (never exit-1) with the action that materializes the store.
+    checks.push({
+      name: 'store',
+      status: 'warn',
+      detail: `not created yet — the store DB is created when the daemon first runs (\`noir daemon start\` or index content); expected at ${dbPath}`,
+    });
+    return;
+  }
   const { openStore } = await import('@noir-ai/store');
   let store: { close(): Promise<void> | void } | undefined;
   try {
