@@ -117,11 +117,11 @@ describe('builtin pack: stubs + totals (T5)', () => {
       expect(s.skillMd, `${name} missing stub marker`).toContain('> **Stub:**');
     }
   });
-  it('pack total is 31 = 19 full + 12 stubs, all valid', () => {
-    expect(skills.length).toBe(31);
+  it('pack total is 32 = 20 full + 12 stubs, all valid', () => {
+    expect(skills.length).toBe(32);
     const stubCount = skills.filter((s) => s.skillMd.includes('> **Stub:**')).length;
     expect(stubCount).toBe(12);
-    expect(skills.length - stubCount).toBe(19);
+    expect(skills.length - stubCount).toBe(20);
     for (const s of skills) expect(validateSkill(s).ok, `${s.name} invalid`).toBe(true);
   });
 });

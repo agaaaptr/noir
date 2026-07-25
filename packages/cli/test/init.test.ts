@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { CONTEXT_BLOCK_BEGIN, RULES_BLOCK, paths } from '@noir-ai/core'; // CONTEXT_BLOCK_BEGIN re-exported below; see note
+import { CONTEXT_BLOCK_BEGIN, paths, RULES_BLOCK } from '@noir-ai/core'; // CONTEXT_BLOCK_BEGIN re-exported below; see note
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { init } from '../src/init.js';
 

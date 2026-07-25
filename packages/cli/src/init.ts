@@ -1,7 +1,13 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { claudeAdapter } from '@noir-ai/adapters';
-import { CONTEXT_BLOCK, RULES_BLOCK, createProjectId, paths, writeManagedRegion } from '@noir-ai/core';
+import {
+  CONTEXT_BLOCK,
+  createProjectId,
+  paths,
+  RULES_BLOCK,
+  writeManagedRegion,
+} from '@noir-ai/core';
 import { emitSkillsToDir } from '@noir-ai/skills';
 import { RULES_SEED } from './rules-seed.js';
 
