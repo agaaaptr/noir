@@ -9,6 +9,7 @@ import type { ProjectInfo } from '@noir-ai/core';
 import { resolveMemoryConfig } from '@noir-ai/memory';
 import { resolveModelConfig } from '@noir-ai/model';
 import { buildContextEngine } from './context-seam.js';
+import { buildIntegrationService } from './integration-seam.js';
 import { clearDaemonRecord, type DaemonRecord, writeDaemonRecord } from './lifecycle.js';
 import { buildMemoryEngine, resolveConsolidationCapability } from './memory-seam.js';
 import { createNoirServer } from './server.js';
@@ -95,6 +96,13 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
         resolvedMemory,
       )
     : undefined;
+  // Slice X — integration service (X-T3). Built once per serve lifecycle from
+  // the discovered declarations + the user's `integrations:` config overlay.
+  // Discovery is best-effort; an empty service still registers
+  // `integrations_auth` (env-var resolution needs no declaration) and simply
+  // skips `noir.clickup_write`. Built unconditionally (no store dependency) so
+  // `integrations_auth` works even under a read-only (daemon-down) store.
+  const integrations = buildIntegrationService(opts.project.root, opts.project.config.integrations);
 
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     lastActivity = Date.now();
@@ -123,6 +131,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
         ...(engine ? { engine } : {}),
         ...(context ? { context } : {}),
         ...(memory ? { memory, memoryConsolidation } : {}),
+        ...(integrations ? { integrations } : {}),
       });
       const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       await server.connect(transport);

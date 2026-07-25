@@ -3,6 +3,7 @@ import { createEmbedFn, resolveEmbedderConfig } from '@noir-ai/context';
 import { resolveMemoryConfig } from '@noir-ai/memory';
 import { resolveModelConfig } from '@noir-ai/model';
 import { buildContextEngine } from './context-seam.js';
+import { buildIntegrationService } from './integration-seam.js';
 import { buildMemoryEngine, resolveConsolidationCapability } from './memory-seam.js';
 import { createNoirServer, type ServerContext } from './server.js';
 import { openStoreForDaemon } from './store-seam.js';
@@ -63,6 +64,9 @@ export async function startStdioServer(ctx: ServerContext): Promise<void> {
         resolvedMemory,
       )
     : undefined;
+  // Slice X — integration service (X-T3). Built once per serve lifecycle (no
+  // store dependency) so `integrations_auth` works even under a read-only store.
+  const integrations = buildIntegrationService(ctx.project.root, ctx.project.config.integrations);
   const server = createNoirServer({
     ...ctx,
     ...(daemonStore
@@ -75,6 +79,7 @@ export async function startStdioServer(ctx: ServerContext): Promise<void> {
     ...(engine ? { engine } : {}),
     ...(context ? { context } : {}),
     ...(memory ? { memory, memoryConsolidation } : {}),
+    ...(integrations ? { integrations } : {}),
   });
   const transport = new StdioServerTransport();
   await server.connect(transport);

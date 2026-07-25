@@ -136,6 +136,44 @@ export const NoirConfigSchema = z.object({
         .default({ enabled: false }),
     })
     .default({ consolidation: { enabled: false } }),
+  // Slice X integration layer (@noir-ai/skills `integrations/<name>/`). Additive
+  // block keyed by integration name — every field optional + default-`{}` so a
+  // config with NO `integrations:` block still parses and behaves as "no
+  // integrations wired" (degraded by default; the skill playbook still ships
+  // and works in manual-paste mode regardless of this block — it only carries
+  // the per-workspace binding like team_id/list_id for the gated proxy). The
+  // declaration shape lives in @noir-ai/skills' Zod schema; this block is the
+  // USER-facing overlay (which integration is enabled + where it points), not
+  // a re-statement of the declaration.
+  //
+  // Doctrine (slice-x spec + Q4b): the auth TOKEN stays in env (tokenEnv name
+  // is declared in integration.json, NOT here); ClickUp-specific ids are
+  // optional workspace binding; `runtime` mirrors the declaration tiers so a
+  // user can DOWNGRADE an integration locally (e.g. force `none` for a
+  // read-only run).
+  integrations: z
+    .record(
+      z.string(),
+      z.object({
+        auth: z
+          .object({
+            // Override the token env var name (defaults to the declaration's
+            // `auth.tokenEnv` when undefined). Min(1) matches the declaration
+            // schema's invariant (`integrations-schema.ts` tokenEnv is non-empty)
+            // — an empty-string override must FAIL validation, not silently
+            // disable the integration (env[''] is always undefined).
+            tokenEnv: z.string().min(1).optional(),
+          })
+          .partial()
+          .default({}),
+        runtime: z.enum(['none', 'gated-write-proxy', 'mcp-stdio', 'external-mcp']).default('none'),
+        // ClickUp-workspace binding (optional; flows 3 + 5 need a list_id).
+        teamId: z.string().optional(),
+        listId: z.string().optional(),
+        spaceId: z.string().optional(),
+      }),
+    )
+    .default({}),
 });
 
 export type NoirConfig = z.infer<typeof NoirConfigSchema>;

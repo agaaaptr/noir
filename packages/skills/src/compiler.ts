@@ -1,12 +1,15 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import { discoverBuiltin } from './discover.js';
+import { discoverAll, discoverBuiltin } from './discover.js';
+import { runtimeEmitsHostMcp } from './integrations-schema.js';
 import type {
   BuiltinSkill,
+  CompiledIntegration,
   CompiledSkill,
   CompileTarget,
   EmitSummary,
+  IntegrationSkill,
   SkillFrontmatter,
   ValidationResult,
 } from './types.js';
@@ -73,19 +76,68 @@ export function compileSkill(skill: BuiltinSkill, target: CompileTarget = 'claud
   return { name: skill.name, files };
 }
 
+/**
+ * Compile an integration: validates the SKILL.md (same shape as builtins) +
+ * renders the same per-skill files. When the integration's `runtime` widens
+ * emission (`mcp-stdio`/`external-mcp`) AND it carries a non-null `mcp`
+ * declaration, also expose a provider-neutral `hostMcp` server block the host
+ * adapter may merge into the host MCP config (e.g. Claude's `.mcp.json`).
+ *
+ * For `gated-write-proxy` (ClickUp) + `none` → no `hostMcp` (writes route
+ * through Noir's own MCP tool; the host MCP config is unchanged). For
+ * `mcp-stdio` the hostMcp is exposed (the compiler widens emission); the
+ * Claude adapter still does not emit a NEW server entry for it (Noir's own
+ * `noir mcp serve` entry already covers it).
+ */
+export function compileIntegration(
+  integration: IntegrationSkill,
+  target: CompileTarget = 'claude',
+): CompiledIntegration {
+  // Validate the skill half first (throws on a bad SKILL.md — same path as
+  // builtins). compileSkill returns a base CompiledSkill; we layer hostMcp on.
+  const base = compileSkill(integration, target);
+  const { runtime, mcp } = integration.declaration;
+  if (runtimeEmitsHostMcp(runtime) && mcp !== null) {
+    return {
+      ...base,
+      hostMcp: {
+        serverName: integration.name,
+        command: mcp.command,
+        args: mcp.args,
+        transport: mcp.transport,
+        url: mcp.url,
+        env: mcp.env,
+      },
+    };
+  }
+  return base;
+}
+
 export async function emitSkillsToDir(
   targetDir: string,
-  opts: { builtinDir?: string } = {},
+  opts: { builtinDir?: string; integrationsDir?: string; includeIntegrations?: boolean } = {},
 ): Promise<EmitSummary> {
-  const skills = discoverBuiltin(opts.builtinDir);
+  const { builtins, integrations } = discoverAll({
+    builtinDir: opts.builtinDir,
+    integrationsDir: opts.integrationsDir,
+  });
+  const emitIntegrations = opts.includeIntegrations ?? true;
   // Validate the whole pack before writing anything (fail-fast, atomic-ish).
-  for (const s of skills) {
+  for (const s of builtins) {
     const res = validateSkill(s);
     if (!res.ok) throw new Error(`Invalid builtin skill ${s.name}: ${res.errors.join('; ')}`);
   }
+  if (emitIntegrations) {
+    for (const i of integrations) {
+      const res = validateSkill(i);
+      if (!res.ok) throw new Error(`Invalid integration ${i.name}: ${res.errors.join('; ')}`);
+    }
+  }
   await mkdir(targetDir, { recursive: true });
   let references = 0;
-  for (const s of skills) {
+  const emitted: string[] = [];
+  const integrationNames: string[] = [];
+  for (const s of builtins) {
     const compiled = compileSkill(s, 'claude');
     for (const f of compiled.files) {
       const dest = join(targetDir, s.name, ...f.path);
@@ -93,10 +145,27 @@ export async function emitSkillsToDir(
       await writeFile(dest, f.content, 'utf8');
       if (f.path[0] !== 'SKILL.md') references++;
     }
+    emitted.push(s.name);
   }
-  return { dir: targetDir, emitted: skills.map((s) => s.name), references };
+  if (emitIntegrations) {
+    for (const i of integrations) {
+      const compiled = compileIntegration(i, 'claude');
+      for (const f of compiled.files) {
+        const dest = join(targetDir, i.name, ...f.path);
+        await mkdir(dirname(dest), { recursive: true });
+        await writeFile(dest, f.content, 'utf8');
+        if (f.path[0] !== 'SKILL.md') references++;
+      }
+      // `hostMcp` is NOT written per-skill — it is surfaced to the host adapter
+      // (via discoverAll/compileIntegration) to merge into the host's single
+      // MCP config (e.g. `.mcp.json`). Wiring lives in cli/daemon (X-T2 seam).
+      emitted.push(i.name);
+      integrationNames.push(i.name);
+    }
+  }
+  return { dir: targetDir, emitted, references, integrations: integrationNames };
 }
 
 // Convenience for callers/tests that already hold raw markdown (unused by emit path;
 // kept so adapters/tests can validate a single in-memory skill without a dir).
-export { discoverBuiltin };
+export { discoverAll, discoverBuiltin };

@@ -15,7 +15,12 @@
 
 import { claudeAdapter } from '@noir-ai/adapters';
 import { loadProjectInfo } from '@noir-ai/core';
-import { type BuiltinSkill, discoverBuiltin, emitSkillsToDir } from '@noir-ai/skills';
+import {
+  type BuiltinSkill,
+  discoverAll,
+  emitSkillsToDir,
+  type IntegrationSkill,
+} from '@noir-ai/skills';
 import { type CliOptions, EXIT, fail, info, log, table } from '../output.js';
 
 /** Options accepted by `skills` sub-commands (the global flags only). */
@@ -78,12 +83,16 @@ export interface SkillRow {
   name: string;
   category: string;
   description: string;
+  /** Slice X — distinguishes the shipped builtins from the integration skills
+   *  (e.g. `noir-clickup`) so `noir skills list` shows the full pack and which
+   *  entries are integrations. Defaults to `'builtin'` for back-compat. */
+  kind: 'builtin' | 'integration';
 }
 
-function toRow(s: BuiltinSkill): SkillRow {
+function toRow(s: BuiltinSkill, kind: 'builtin' | 'integration' = 'builtin'): SkillRow {
   const description =
     typeof s.frontmatter.description === 'string' ? s.frontmatter.description : '';
-  return { name: s.name, category: categoryOf(s.name), description };
+  return { name: s.name, category: categoryOf(s.name), description, kind };
 }
 
 /**
@@ -105,24 +114,32 @@ function truncate(text: string, max: number): string {
 // `noir skills list`
 // ---------------------------------------------------------------------------
 /**
- * `noir skills list`: discover the builtin pack and render it.
+ * `noir skills list`: discover the full shipped pack (builtins + integrations)
+ * and render it. Consistent with `emitSkillsToDir` (which emits BOTH) — the
+ * `noir-clickup` integration shows up here alongside the 33 builtins.
  *
  * `--json` emits `{ok:true, data:{count, skills: SkillRow[]}}` to stdout. A
- * discovery failure (the builtin dir is unreadable) maps to exit 1 (ERROR) —
+ * discovery failure (the pack dir is unreadable) maps to exit 1 (ERROR) —
  * not exit 4, since this command never touches the daemon.
  */
 export async function skillsList(opts: SkillsOptions): Promise<void> {
   let builtins: BuiltinSkill[];
+  let integrations: IntegrationSkill[];
   try {
-    builtins = discoverBuiltin();
+    const all = discoverAll();
+    builtins = all.builtins;
+    integrations = all.integrations;
   } catch (err) {
     fail(
       EXIT.ERROR,
-      `skills list: could not discover builtin skills (${err instanceof Error ? err.message : String(err)})`,
+      `skills list: could not discover skills (${err instanceof Error ? err.message : String(err)})`,
       opts,
     );
   }
-  const rows = builtins.map(toRow);
+  const rows = [
+    ...builtins.map((b) => toRow(b, 'builtin')),
+    ...integrations.map((i) => toRow(i, 'integration')),
+  ];
   const data = { count: rows.length, skills: rows };
 
   if (opts.json === true) {
@@ -130,14 +147,20 @@ export async function skillsList(opts: SkillsOptions): Promise<void> {
     return;
   }
 
-  log(`noir skills — ${rows.length} builtin skill${rows.length === 1 ? '' : 's'}`, opts);
+  const intCount = integrations.length;
+  const banner =
+    intCount > 0
+      ? `noir skills — ${rows.length} skill${rows.length === 1 ? '' : 's'} (${builtins.length} builtin, ${intCount} integration${intCount === 1 ? '' : 's'})`
+      : `noir skills — ${rows.length} builtin skill${rows.length === 1 ? '' : 's'}`;
+  log(banner, opts);
   table(
     rows.map((r) => ({
       Skill: r.name,
+      Kind: r.kind,
       Category: r.category,
       Description: truncate(r.description, 80),
     })),
-    ['Skill', 'Category', 'Description'],
+    ['Skill', 'Kind', 'Category', 'Description'],
     opts,
   );
 }

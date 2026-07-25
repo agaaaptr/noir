@@ -1,0 +1,14 @@
+{
+  "name": "noir-clickup",
+  "auth": {
+    "type": "env-var",
+    "tokenEnv": "CLICKUP_API_TOKEN",
+    "fallback": "manual-paste"
+  },
+  "runtime": "gated-write-proxy",
+  "sdd": {
+    "intakeFrom": "task",
+    "writeBack": ["status", "subtasks"]
+  },
+  "mcp": null
+}

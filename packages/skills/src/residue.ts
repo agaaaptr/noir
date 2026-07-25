@@ -5,8 +5,10 @@ export const FORBIDDEN_RESIDUE: readonly string[] = [
   'noir-workflow.mode', // predecessor mode flag
   'noir-workflow', // predecessor plugin name (as a plugin/path reference)
   '@uiigateway', // predecessor Angular specifics
-  'ClickUp',
-  'clickup',
+  // NOTE: 'ClickUp'/'clickup' were forbidden during the predecessor-port era (the
+  // ClickUp REST precedent lived in the deleted noir-workflow plugin). Slice X
+  // reintroduces ClickUp as a first-class Noir integration (skills/integrations/noir-clickup),
+  // so the token is no longer residue — it is the integration's legitimate subject.
   '<EXTREMELY-IMPORTANT', // Superpowers rhetoric
   'SUBAGENT-STOP', // Superpowers rhetoric
   'plugins/noir-workflow', // predecessor path

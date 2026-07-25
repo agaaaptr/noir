@@ -55,22 +55,38 @@ afterEach(() => {
 });
 
 describe('noir skills list', () => {
-  it('discovers every builtin skill (33) and emits a --json envelope to stdout', async () => {
+  it('discovers every builtin (33) + integration (1) skill (34 total) and emits a --json envelope to stdout', async () => {
     const r = await run(() => skillsList({ json: true }));
     expect(r.err).toBeUndefined();
     const envelope = JSON.parse(r.stdout);
     expect(envelope.ok).toBe(true);
-    expect(envelope.data.count).toBe(33);
+    expect(envelope.data.count).toBe(34); // 33 builtins + noir-clickup
     expect(Array.isArray(envelope.data.skills)).toBe(true);
-    expect(envelope.data.skills.length).toBe(33);
+    expect(envelope.data.skills.length).toBe(34);
     const first = envelope.data.skills[0];
     expect(first).toEqual(
       expect.objectContaining({
         name: expect.any(String),
         category: expect.any(String),
         description: expect.any(String),
+        kind: expect.stringMatching(/^(builtin|integration)$/),
       }),
     );
+  });
+
+  it('includes the noir-clickup integration tagged kind:"integration"', async () => {
+    const r = await run(() => skillsList({ json: true }));
+    const skills = JSON.parse(r.stdout).data.skills as Array<{
+      name: string;
+      kind: string;
+      category: string;
+    }>;
+    const clickup = skills.find((s) => s.name === 'noir-clickup');
+    expect(clickup).toBeDefined();
+    expect(clickup?.kind).toBe('integration');
+    // Builtins stay tagged builtin.
+    const brainstorm = skills.find((s) => s.name === 'noir-brainstorm');
+    expect(brainstorm?.kind).toBe('builtin');
   });
 
   it('derives a category per skill (no empty cells)', async () => {
@@ -92,13 +108,15 @@ describe('noir skills list', () => {
     expect(skills.some((s) => s.description.endsWith('…'))).toBe(false);
   });
 
-  it('human mode renders a table to stderr and keeps stdout empty', async () => {
+  it('human mode renders a table (with Kind column) to stderr and keeps stdout empty', async () => {
     const r = await run(() => skillsList({}));
     expect(r.err).toBeUndefined();
     expect(r.stdout).toBe('');
-    expect(r.stderr).toMatch(/noir skills — 33 builtin skills/);
-    expect(r.stderr).toMatch(/Skill.*Category.*Description/);
+    // Banner reports 34 skills (33 builtin + 1 integration).
+    expect(r.stderr).toMatch(/noir skills — 34 skills \(33 builtin, 1 integration\)/);
+    expect(r.stderr).toMatch(/Skill.*Kind.*Category.*Description/);
     expect(r.stderr).toMatch(/noir-brainstorm/);
+    expect(r.stderr).toMatch(/noir-clickup/);
   });
 });
 
@@ -113,12 +131,12 @@ describe('noir skills sync', () => {
       expect(r.err).toBeUndefined();
       const envelope = JSON.parse(r.stdout);
       expect(envelope.ok).toBe(true);
-      expect(envelope.data.emitted.length).toBe(33);
+      expect(envelope.data.emitted.length).toBe(34); // 33 builtins + 1 integration (noir-clickup)
       expect(envelope.data.dir).toBe(join(root, '.claude', 'skills'));
       const names = readdirSync(join(root, '.claude', 'skills'), { withFileTypes: true })
         .filter((e) => e.isDirectory() && e.name.startsWith('noir-'))
         .map((e) => e.name);
-      expect(names.length).toBe(33);
+      expect(names.length).toBe(34); // 33 builtins + 1 integration (noir-clickup)
     } finally {
       process.chdir(origCwd);
     }
@@ -132,7 +150,7 @@ describe('noir skills sync', () => {
       const r = await run(() => skillsSync({}));
       expect(r.err).toBeUndefined();
       expect(r.stdout).toBe('');
-      expect(r.stderr).toMatch(/Synced 33 Noir skills to .*\.claude\/skills\./);
+      expect(r.stderr).toMatch(/Synced 34 Noir skills to .*\.claude\/skills\./);
     } finally {
       process.chdir(origCwd);
     }

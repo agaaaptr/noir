@@ -1,7 +1,7 @@
 {
   "name": "@noir-ai/skills",
   "version": "1.0.0-beta.1",
-  "description": "Noir skills — the builtin noir-* skill pack (31 skills) and a copy-and-validate compiler.",
+  "description": "Noir skills — the builtin noir-* skill pack, the integrations pack (ClickUp first), and a copy-and-validate compiler.",
   "license": "MIT",
   "author": "agaaaptr",
   "homepage": "https://github.com/agaaaptr/noir#readme",
@@ -41,6 +41,7 @@
   "files": [
     "dist",
     "builtin",
+    "integrations",
     "README.md"
   ],
   "scripts": {
@@ -49,7 +50,8 @@
   },
   "dependencies": {
     "@noir-ai/core": "workspace:*",
-    "yaml": "^2.5.0"
+    "yaml": "^2.5.0",
+    "zod": "^4.2.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.1"

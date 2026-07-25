@@ -1,2 +1,7 @@
 export { claudeAdapter } from './claude.js';
-export type { EmitContext, HostAdapter, McpConfigOptions } from './types.js';
+export type {
+  EmitContext,
+  HostAdapter,
+  IntegrationMcpEmission,
+  McpConfigOptions,
+} from './types.js';

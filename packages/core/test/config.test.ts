@@ -175,3 +175,51 @@ describe('parseConfig', () => {
     ).toThrow();
   });
 });
+
+describe('parseConfig — Slice X integrations block', () => {
+  it('defaults the integrations block to empty (no integrations wired)', () => {
+    const cfg = parseConfig({ host: 'claude' });
+    expect(cfg.integrations).toEqual({});
+  });
+
+  it('accepts an integration overlay with teamId/listId + runtime', () => {
+    const cfg = parseConfig({
+      host: 'claude',
+      integrations: {
+        clickup: { runtime: 'gated-write-proxy', teamId: '90125', listId: 'list42' },
+      },
+    });
+    expect(cfg.integrations.clickup?.runtime).toBe('gated-write-proxy');
+    expect(cfg.integrations.clickup?.teamId).toBe('90125');
+    expect(cfg.integrations.clickup?.listId).toBe('list42');
+  });
+
+  it('defaults runtime to "none" (the safest tier — skill-side reads only)', () => {
+    const cfg = parseConfig({
+      host: 'claude',
+      integrations: { clickup: { listId: 'list42' } },
+    });
+    expect(cfg.integrations.clickup?.runtime).toBe('none');
+  });
+
+  it('accepts a non-empty auth.tokenEnv override', () => {
+    const cfg = parseConfig({
+      host: 'claude',
+      integrations: { clickup: { auth: { tokenEnv: 'CLICKUP_TOKEN_OVERRIDE' } } },
+    });
+    expect(cfg.integrations.clickup?.auth?.tokenEnv).toBe('CLICKUP_TOKEN_OVERRIDE');
+  });
+
+  it('M3: rejects an EMPTY auth.tokenEnv override (matches the declaration schema invariant)', () => {
+    // An empty-string override would silently disable the integration
+    // (`env['']` is always undefined) instead of failing loudly. The declaration
+    // schema enforces `tokenEnv: z.string().min(1)`; the user config overlay must
+    // match so a misconfigured empty override fails validation at config load.
+    expect(() =>
+      parseConfig({
+        host: 'claude',
+        integrations: { clickup: { auth: { tokenEnv: '' } } },
+      }),
+    ).toThrow();
+  });
+});

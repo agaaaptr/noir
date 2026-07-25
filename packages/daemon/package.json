@@ -53,6 +53,7 @@
     "@noir-ai/core": "workspace:*",
     "@noir-ai/memory": "workspace:*",
     "@noir-ai/model": "workspace:*",
+    "@noir-ai/skills": "workspace:*",
     "@noir-ai/store": "workspace:*",
     "@noir-ai/workflow": "workspace:*",
     "zod": "^4.2.0"
