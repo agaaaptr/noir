@@ -1,87 +1,48 @@
-# Noir v1.x — next-session handoff & playbook
+# Noir — next-session handoff & playbook
 
-> Generated 2026-07-25. **Status: 4/6 v1.x capability slices DONE on `develop` (local, NOT pushed).** This doc + `docs/specs/2026-07-25-v1x-capabilities-design.md` + the per-slice specs + `/recall noir` = full context for the next session.
+> **Status (2026-07-25): v1.1.0-beta.1 PUBLISHED on npm (dist-tag `beta`).** All 6 v1.x capability slices (K/R/I/P/S/X) + the consolidated debt batch are DONE on `develop` (merged to the release tag). **965/965 tests green**, build/typecheck/lint (0 warnings) clean. This doc + `docs/roadmap.md` + `docs/CHANGELOG.md` + `/recall noir` = full context for the next session.
 
-## Status snapshot
+## What this session shipped (v1.1.0-beta.1)
 
-| Slice | Status | Where |
+| Area | What | Key commits |
 |---|---|---|
-| **K** Keystone (markers factory + blockWriter + emitRules) | ✅ done + verified | `docs/superpowers/specs/2026-07-25-keystone-k-design.md` |
-| **R** Rules (`.noir/rules/RULES.md` seed + wired + `noir-rules`) | ✅ done + verified | commits `8f325d4`, `c5c2f0f` |
-| **I** Ignore (IgnoreManager + syncIgnores into init/sync) | ✅ done + verified | commit `ad536c0` |
-| **P** PRD (`prd` artifact + writePrd/readPrd + `noir-prd`) | ✅ done + verified | commit `6afe193` |
-| **S** Scaffold (new `@noir-ai/create` + three-mode writer + `noir create`) | ⏳ NOT started | `docs/superpowers/specs/2026-07-25-slice-s-scaffold-design.md` |
-| **X** Integration (ClickUp + gated-write-proxy + integrations_auth) | ⏳ NOT started | `docs/superpowers/specs/2026-07-25-slice-x-integration-design.md` |
+| **Slice S — Scaffold** | New `@noir-ai/create` (three-mode writer `regenerate`/`managedBlock`/`skipIfExists` generalizing keystone-K `blockWriter`; declarative manifest; `{{var}}` templates; `.noir/scaffold-version`; migrations registry w/ inline-conflict; read-only stack-detect). CLI: `noir init`/`sync` consume the engine; **new `noir create [dir]`** (AI-layer only); `noir init --upgrade`; `noir doctor` scaffold-version drift. Opus-reviewed (project.id heal, CLAUDE.md idempotency, legacy NOIR.md self-heal). | `f2730da` |
+| **Slice X — Integration** | First-class integration layer; first integration = **ClickUp**. `noir-clickup` skill + `integration.json` (`runtime:'gated-write-proxy'`) + real `references/`. `discoverIntegrations()` + `integration.json` Zod schema (= the deferred **K3**); `discoverAll()` emits builtins+integrations (pack 34). Daemon `integrations_auth` (resolves `CLICKUP_API_TOKEN` server-side) + `noir.clickup_write` gated-write-proxy (HARD confirm gate; allowlist; id-charset; 429 backoff; audit JSONL). Core `integrations` config; adapter `emitMcpConfig` overload. Opus security-reviewed (no CRITICAL; fixed assignee-plural + runtime-gating). **Live-verified** (token resolves, `GET /user`→200). | `5a1817a` |
+| **Debt batch** | R4 (rules config) · R5 (doctor RULES budget) · P3 (model `draftPrd`) · P4 (prd config + soft gate) · W1 (workflow dual-SoT collapsed) · W2 (checkpoint→audit export) · W3 (S4 nits) · C1 (kNN snippet hydration) · T2 (stale-skill cleanup) · T1 (`tsconfig.test.json` pilot on cli) · lint 10→0. | `e071460` |
 
-- **`develop`: 746 tests green** (K/R/I/P added; range `4493783..6afe193`, 12 commits, LOCAL — not pushed). lint green, typecheck green.
-- **`main` / npm beta: 729 tests** (`v1.0.0-beta.1` published). Stable 1.0.0 not yet cut.
-- Builtin pack now **33** (added `noir-rules`, `noir-prd`).
+Test trajectory: 729 (1.0.0-beta.1) → 857 (Slice S) → 914 (Slice X) → 953 (debt A) → 965 (debt B). 11 packages (added `@noir-ai/create`).
 
-## Built this session — one-line each
-- **K:** `managedBlock(name,commentStyle)` factory + `CONTEXT_BLOCK`/`RULES_BLOCK` named instances (`core/markers.ts`); shared `blockWriter` (`writeManagedRegion`/`readManagedBlock`/`stripManagedBlock`/`commentStyleFor`, `core/block-writer.ts`); `cli/init.ts` refactored to use it; `HostAdapter.emitRules?` seam + claude impl. Pure refactor.
-- **R:** `.noir/rules/RULES.md` Noir-curated seed (`cli/rules-seed.ts`) written at init (skip_if_exists); wired into `CLAUDE.md` via `RULES_BLOCK` managed block; `sync.ts` reconciles context+rules+ignore+skills; `noir-rules` skill.
-- **I:** `IgnoreManager` (`core/ignore-manager.ts`, `IGNORE_BLOCK=managedBlock('ignore','hash')`, registry for `.gitignore`/`.dockerignore`/`.npmignore`/`.prettierignore`) + `syncIgnores` hooked into init+sync. Idempotent.
-- **P:** `prd` artifact kind (`layout.prdDir/prdFile` + workflow `writePrd`/`readPrd`) + `noir-prd` skill. **No FSM change.** Explicit opt-in.
+## Release state
+- **v1.1.0-beta.1** published to npm (dist-tag `beta`, SLSA provenance), cut from `develop` via `release.yml` (tag on `develop` → `channel=beta`).
+- `main` / npm `latest` still at **1.0.0-beta.1** (729 tests). Stable `1.x` promotion is a separate decision (see below).
 
-## Next-session goal (per user)
-1. **Load full context** — this doc + `/recall noir` + `docs/specs/2026-07-25-v1x-capabilities-design.md` + the S/X specs.
-2. **Ask ALL clarification questions in ONE discussion** (S-OQ1-3, X-OQ1-4, + debt-fix decisions below).
-3. **Write a systematic plan for ALL remaining tasks** (S + X + technical-debt fixes).
-4. **Execute via sub-driven agents (opus/sonnet only).**
-5. **After success → push + commit on `develop`, tag for npm publish** (see checklist).
-6. **Verdaccio** — decide (see §Verdaccio; recommendation: skip).
+## Next-session goal candidates (pick with the user)
+1. **Validate 1.1.0-beta.1 in a real project** (`npx @noir-ai/cli@beta init` + exercise ClickUp / scaffold / context / memory end-to-end), then **promote to stable `1.0.0` or `1.1.0`** (merge `develop`→`main`, `node scripts/bump-version.mjs <ver>`, tag on `main` → CI publishes `--tag latest`).
+2. **S10 — more host adapters** (gemini/agy/opencode/qwen) — the largest remaining v1.x line. REQUIRES an adapter registry (`resolveAdapter(host)`) + widening `host` config from `z.literal('claude')` + replacing direct `claudeAdapter` imports in the CLI + widening the skills `CompileTarget`. The single-host assumption is the S10 gate.
+3. **Finish the `tsconfig.test.json` rollout** to the remaining 9 packages (cli is the pilot; ~8 errors each is the representative upper bound).
+4. **Daemon detach / socket-activation / auth token / per-project `daemon.json`** (foreground + global singleton today).
+5. Any item from the **v1.x backlog** below.
 
-## Technical debt — FULL list (fix next session)
+## Deferred to a later beta / v1.x (NOT abandoned — see `docs/roadmap.md` §v1.x backlog)
+- **Embedding-model upgrade (`bge-small-en-v1.5`)** — *needs a model-version stamp on vec rows + re-index-on-change mechanism*; doing it without corrupts the vector space (mixed MiniLM/BGE). Implementation sketch: stamp `embedding:model` KV on index; on embedder load, if stamped model ≠ current, clear vecs + reindex.
+- S10 multi-host adapters (+ adapter registry + `CompileTarget` widening). S11 remainder (framework/SDK docs, `noir doctor` publish checks).
+- Daemon: detach/socket-activation/auth/per-project `daemon.json`. CLI/TUI: full-screen Ink/blessed TUI; in-process read-only store fallback for `context`/`memory`/`task`; `task` id/slug distinction.
+- Context: tree-sitter symbol-aware chunking; full `.gitignore` parsing; `trigram` tokenizer; `--watch` full daemon wiring; remote embedding SDK completion; embedding model upgrade.
+- Memory: graph/temporal-KG; LLM auto-tagging; auto-capture-by-default (opt-in template only today); multi-user/org (v2).
+- Model: OS keychain; prompt caching; provider-native JSON strict; `onUsage` sink; streaming (forbidden by D5).
+- Toolchain: `tsconfig.test.json` rollout (9 pkgs); `references/` skill coverage (ClickUp ships one real ref now); engine-naming consistency; `indexer.ts` + `daemon/server.ts` god-file refactors; `biome.json` schema drift; first-run model-download UX.
+- S1 micro-hardening (mkdir readonly guard, idempotent `close()`, `exportMarkdown` mkdir, `db.transaction()`, YAML escaping, chmod-555 test guard) + S5 micro (`compiler.ts` comment, `discover.ts` catch-all narrowing).
 
-> Canonical source: `docs/roadmap.md` §"v1.x backlog". This is the consolidated fix list.
+## Slice-X known refinement (flagged in review, non-blocking)
+- The `noir.clickup_write` op vocabulary accepts both short (`status|subtask|comment|batch`) and `task:`-prefixed forms + flat/`payload` input (dual-form, normalized). A future tighten could pick one canonical form.
+- ClickUp 2-way sync is at `/wrap` only (no standalone `noir clickup sync` command for v1.x).
+- Cassette strategy is `mcp-record`-style record/replay (no MockServer dep).
 
-### A. Pre-existing v1.0-beta debt (roadmap §v1.x backlog)
-- **Daemon:** backgrounded/detached + socket-activation; auth token; per-project `daemon.json` (today global `~/.noir/daemon.json` clobbers).
-- **CLI/TUI:** full-screen Ink/blessed TUI; in-process read-only store fallback for `context`/`memory`/`task`; `task` id/slug distinction.
-- **Workflow:** S4 dual source of truth (`task.history` vs `audit:<id>` KV — collapse to one); S4 checkpoint save/restore vestigial (wire or remove).
-- **Context:** tree-sitter symbol-aware chunking; full `.gitignore` parsing (static denylist today); `trigram` tokenizer; kNN-only-hit snippet hydration; `--watch` full wiring; remote embedding SDK completion; embedding model upgrade (`bge-small-en-v1.5`).
-- **Memory:** graph/temporal-KG; LLM auto-tagging; auto-capture-by-default; multi-user/org scoping.
-- **Model:** OS keychain for secrets; prompt caching; provider-native JSON strict; `onUsage` sink; streaming.
-- **Toolchain:** `tsconfig.test.json` (test/ not statically typechecked); `references/` skill coverage; engine naming consistency; god-file refactors (`indexer.ts`, `daemon/server.ts`); stale-skill-dir cleanup on `noir sync`; `biome.json` schema drift; first-run model-download UX.
-- **S10:** host adapters (gemini/agy/opencode/qwen) + adapter registry (`resolveAdapter`) + widen `host` config + `CompileTarget`.
-- **S11 remainder:** framework/SDK docs; `noir doctor` publish checks.
+## Resume recipe
+1. `cd` to repo; `/recall noir` → lands on the v1.1.0-beta.1 checkpoint.
+2. Read this doc + `docs/roadmap.md` "Current status" + `docs/CHANGELOG.md` §1.1.0-beta.1.
+3. Confirm `develop` baseline: `git log --oneline -1 && pnpm build && pnpm typecheck && pnpm test` (expect 965/965).
+4. Pick a next-session goal (above) with the user; follow the dogfooded SDD cadence (brainstorm→spec→plan→subagent-driven implement+review→main-loop validates→opus review→docs/memory checkpoint→local commit).
 
-### B. NEW deferred items (this session, K/R/I/P)
-- **K3:** skills-compiler generalization → **lands in X** (`discoverIntegrations` etc.).
-- **R4:** config `rules:` block (`{enabled, lengthBudgetKb}`).
-- **R5:** `noir doctor` RULES.md budget check (≤6 KB).
-- **P3:** `@noir-ai/model` `draftPrd(intake, clarify, memory)` (offline → template).
-- **P4:** config `prd:` block (`mandatoryFor:[feature,epic]`) + `advance()` soft gate predicate (feature/epic entering spec with no PRD → remind; escapable).
-- **Lint:** 10 warnings remain (`noCommaOperator`/`noNonNullAssertion` in `cli/test/*` — pre-existing, non-auto-fixable, cosmetic, not in CI). ⚠️ Note: `pnpm lint` was RED on the develop baseline before this session (pre-existing v1.0-beta `useOptionalChain`/`useLiteralKeys`); now GREEN via `biome --write --unsafe` (committed).
-
-### C. Verify-live (X execution only — not blockers)
-- ClickUp `GET /list/{id}` `statuses` field; tag auto-create behavior.
-
-## Push / tag / publish checklist (next session, after S+X + debt-fixes done)
-1. `pnpm build && pnpm lint && pnpm typecheck && pnpm test` → all green.
-2. **Decide version** (clarify): `v1.1.0-beta.1` (v1.x capabilities) OR promote to stable `v1.0.0` first (merge develop→main)?
-3. `node scripts/bump-version.mjs <ver>` (unified versioning across 10 pkgs).
-4. Commit on develop: `chore(release): <ver>`.
-5. Push develop: `git push origin develop`.
-6. Tag: `git tag v<ver> && git push origin v<ver>` → `release.yml` derives dist-tag from which branch holds the tag.
-7. (Stable 1.0.0 path: merge `develop`→`main`, tag `v1.0.0` on `main` → CI publishes `--tag latest`.)
-
-## Verdaccio
-
-**Is it necessary? — No, not for Noir's current stage.** Verdaccio (self-hosted npm registry) is for: private distribution, **local staging to test the publish+install flow before a real npm release**, air-gapped/offline, or a caching proxy. Noir is already published to public npmjs (`v1.0.0-beta.1`) with a working `release.yml`. Verdaccio is **overkill** unless you want repeatable local publish-testing.
-
-**Recommendation: skip it.** To validate a release locally without a registry, use `npm pack` + `npm install <tarball>` (or `pnpm pack`). Verdaccio is worth setting up only if you need a private registry for unreleased work OR repeatable publish CI tests.
-
-**How (if you still want it):**
-1. Run Verdaccio: `docker run -d -p 4873:4873 verdaccio/verdaccio` (or `npm i -g verdaccio && verdaccio`).
-2. Create a user: `npm adduser --registry http://localhost:4873`.
-3. Publish target — pick one: per-publish `npm publish --registry http://localhost:4873` · OR `publishConfig.registry` in each `package.json` · OR `.npmrc` with `@noir-ai:registry=http://localhost:4873`.
-4. For Noir's `release.yml`: add a `NPM_REGISTRY` env (default npmjs) so CI can target Verdaccio when set, OR a separate `release:verdaccio` workflow.
-5. Install from it: `.npmrc` `@noir-ai:registry=http://localhost:4873` then `npx @noir-ai/cli@beta init`.
-
-## Resume recipe (next session)
-1. `cd` to repo; `/recall noir` → lands on the v1.x execution checkpoint.
-2. Read this doc + the S/X specs + `docs/specs/2026-07-25-v1x-capabilities-design.md`.
-3. Confirm `develop` is at `6afe193` (746 tests green) via `git log --oneline -1 && pnpm test`.
-4. Run the clarify→plan→subagent-execute→push/tag workflow above.
-5. Conventions: commits LOCAL on develop until push asked; per-slice `pnpm build/lint/typecheck/test` gate; `biome check --write` after new files (import-order is error-level); dogfood SDD.
+## Conventions (unchanged)
+Skill prefix `noir-`; commits LOCAL on `develop` until a release push (don't push/publish without asking); per-slice `pnpm build/lint/typecheck/test` gate; `biome check --write` after new files (import-order is error-level); dogfood SDD; graceful degradation; no silent paid calls; adopt ideas, not copies. Sub-agents: Opus (review/judgment) + Sonnet (implementation) only; main loop runs all `pnpm` validation.

@@ -2,6 +2,41 @@
 
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
+## 1.1.0-beta.1 (2026-07-25)
+
+**v1.x capabilities ship on the beta channel.** All 6 v1.x capability slices (**K/R/I/P/S/X**) are done on `develop`, plus a consolidated debt batch. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (added `@noir-ai/create`); **965/965 tests** (was 729 at 1.0.0-beta.1); build / typecheck / lint (0 warnings) green. Design record: `docs/specs/2026-07-25-v1x-capabilities-design.md` + per-slice specs in `docs/superpowers/specs/`.
+
+The 6 v1.x capability slices extend one keystone refactor (`managedBlock` + shared `blockWriter` + `HostAdapter` emitters):
+- **K** Keystone — `managedBlock(name, commentStyle)` factory + shared `blockWriter` (`writeManagedRegion`/`readManagedBlock`/`stripManagedBlock`/`commentStyleFor`) + `HostAdapter.emitRules` seam (pure refactor).
+- **R** Rules — `.noir/rules/RULES.md` Noir-curated seed wired into `CLAUDE.md` via `RULES_BLOCK`; `noir-rules` skill.
+- **I** Ignore — `IgnoreManager` + `syncIgnores` into init/sync (managed-block idempotent across `.gitignore`/`.dockerignore`/`.npmignore`/`.prettierignore`).
+- **P** PRD — `prd` artifact kind + `writePrd`/`readPrd` + `noir-prd` skill (no FSM change; explicit opt-in).
+- **S** Scaffold — **new `@noir-ai/create`** package: three-mode writer (`regenerate`/`managedBlock`/`skipIfExists`) generalizing keystone-K `blockWriter`; declarative manifest; hand-rolled `{{var}}` templates; `.noir/scaffold-version`; migrations registry (inline-conflict, CI-safe); read-only stack-detect. CLI: `noir init`/`sync` refactored to consume the engine; **new `noir create [dir]`** (AI-layer only); `noir init --upgrade` (migrations); `noir doctor` scaffold-version drift. *Behavior changes (see §Behavior changes below).*
+- **X** Integration — first-class integration layer (skill-only default + gated-write-proxy tier + full-runtime tier). First integration = **ClickUp**: `noir-clickup` skill (5-flow playbook + real `references/`) + `integration.json` (`runtime:'gated-write-proxy'`). `discoverIntegrations()` + `integration.json` Zod schema (the deferred **K3**); `discoverAll()` emits builtins+integrations (skill pack now **34** = 33 builtins + 1). Daemon `integrations_auth` MCP tool (resolves `CLICKUP_API_TOKEN` server-side at call time — kills the non-interactive-shell gotcha) + `noir.clickup_write` gated-write-proxy (**HARD confirm gate** dry-run→confirm→POST; allowlisted endpoints only; id-charset validation; 429 `X-RateLimit-Reset` backoff; audit JSONL to `.noir/audit/`). Core `integrations` config block (`runtime` downgrade honored); adapter `emitMcpConfig(ctx, opts, integration?)` overload.
+
+### Added — debt batch (v1.x backlog resolved)
+- **R4** core `rules:{enabled,lengthBudgetKb:6}` config block. **R5** `noir doctor` RULES.md budget check (warn >6 KB / >150 lines).
+- **P3** `@noir-ai/model` `draftPrd(intake, clarify, memory)` (offline → 9-section template; `null` on no-provider/failure — graceful degradation). **P4** `prd:{mandatoryFor:[feature,epic]}` config + `advance()` SOFT ESCAPABLE PRD gate (observable in audit; never hard-blocks; `--force <reason>` escapable; quick-mode skips).
+- **W1** workflow dual source of truth collapsed — `audit:<id>` KV authoritative, `task.history` now a derived view (single timestamp; drift gone). **W2** checkpoint wired to `writeAuditExport` (was vestigial; MCP tool contract preserved). **W3** S4 nits (`setBlocked` non-empty, jump no-op guard, `GateResultInput`/`GateResult` type split) + FSM coverage.
+- **C1** kNN-only-hit snippet hydration + honest `mode:'knn'` (new `Indexer.readChunkContent`).
+- **T2** stale-skill-dir cleanup on `noir sync` (prunes `.claude/skills/noir-*` not in the current pack).
+- **T1** `tsconfig.test.json` **pilot** on `@noir-ai/cli` (typecheck now covers `test/`; 8 surfaced errors fixed; the other 9 packages remain `src`-only — documented follow-up).
+- **Lint:** 10 pre-existing warnings → 0.
+
+### Security — Slice X
+Opus adversarial review (no CRITICAL; all IMPORTANT fixed + tested): confirm gate is HARD (no write without `confirm:true`; zero fetch on dry-run — asserted); token resolved at call time only, never logged/leaked (canary-tested on success + error paths); allowlist + id-charset enforced on every path-segment id (including config-derived); 429 backoff single-retry; audit JSONL one-line-per-executed-write. Fixed post-review: batch create-task `assignee`→`assignees` (plural — was silent data loss with `success:true` audit) + config `runtime:'none'` downgrade honored at registration (was inert). **Live-verified**: token resolves, `GET /user` → HTTP 200. CI stays cassette-only (no real network).
+
+### Behavior changes (Slice S — spec-aligned latent-bug fixes)
+- `.noir/project.id` + `.noir/config.yml` → `skipIfExists` (predecessor `noir init` overwrote on every run — `project.id` overwrite orphaned the store DB named after it). Re-init now preserves both.
+- `.noir/NOIR.md` → managed `BRIEF_BLOCK` markers (predecessor wrote the whole file with no markers). First-run output gains markers; user notes outside markers survive re-runs. A legacy pre-Slice-S unmarked `NOIR.md` is self-healed on the next `noir init`.
+- `.noir/scaffold-version` (`noir-scaffold=1.0.0`) stamped on `noir init`/`create`.
+- `noir sync` widened: re-emits `.mcp.json` (regenerate) + the NOIR.md brief (managed) + CLAUDE.md blocks + ignore files; no longer seeds `RULES.md` (init owns seeds).
+
+### Deferred to a later beta (documented in `docs/roadmap.md` §v1.x backlog)
+Embedding-model upgrade (`bge-small-en-v1.5` — needs a model-version stamp + re-index-on-change mechanism); S10 multi-host adapters; daemon detach/socket-activation/auth; full-screen TUI; in-process read-only store fallback; tree-sitter chunking; trigram tokenizer; full `.gitignore` parsing; graph/temporal KG; OS keychain; prompt caching; streaming (D5-forbidden); the `tsconfig.test.json` rollout to the remaining 9 packages; and the smaller S1/S5 micro-items.
+
+---
+
 ## 1.0.0-beta.1 (2026-07-25)
 
 **First npm publish.** All 10 `@noir-ai/*` packages (`core, store, workflow, skills, daemon, adapters, cli, context, model, memory`) published at the unified version `1.0.0-beta.1`, dist-tag **`beta`**, each tarball carrying SLSA **provenance**. Consumable via `npx @noir-ai/cli@beta init`. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`.

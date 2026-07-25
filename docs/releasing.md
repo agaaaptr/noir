@@ -1,6 +1,6 @@
 # Releasing Noir
 
-> **Runbook for publishing the `@noir-ai/*` packages to npm.** Noir uses **unified versioning**: all 10 packages share one version and are released together, on a git tag, from CI, authenticated with a **granular npm automation token** (the `NPM_TOKEN` repo secret) and carrying a **SLSA provenance** attestation on every publish.
+> **Runbook for publishing the `@noir-ai/*` packages to npm.** Noir uses **unified versioning**: all 11 packages share one version and are released together, on a git tag, from CI, authenticated with a **granular npm automation token** (the `NPM_TOKEN` repo secret) and carrying a **SLSA provenance** attestation on every publish.
 >
 > Audience: a maintainer cutting a release. **Read the [Irreversibility rules](#4-irreversibility-rules--safety) before the first publish.**
 
@@ -8,10 +8,10 @@
 
 ## 0. Model (read once)
 
-- **Scope:** `@noir-ai/{core, store, workflow, skills, daemon, adapters, cli, context, model, memory}` — 10 packages.
-- **Unified versioning:** every release moves all 10 packages to the same version in lockstep. There are no per-package releases.
+- **Scope:** `@noir-ai/{core, store, workflow, skills, daemon, adapters, cli, context, model, memory, create}` — 11 packages.
+- **Unified versioning:** every release moves all 11 packages to the same version in lockstep. There are no per-package releases.
 - **Two channels (branch-based).** A tag push on **`main`** → npm dist-tag **`latest`** (stable; `npm i @noir-ai/cli` resolves here). A tag push on **`develop`** → npm dist-tag **`beta`** (opt-in; `npm i @noir-ai/cli@beta`). The publish job derives the channel from which branch holds the tagged commit. Versions: stable is `X.Y.Z`; beta is `X.Y.Z-beta.N`. Full mechanics in [§2b](#2b-beta-vs-stable-channels); consumer side in [installation.md](installation.md#what-youre-installing).
-- **Trigger:** pushing a `vX.Y.Z` git tag runs `.github/workflows/release.yml`, which builds all 10 packages and publishes them to the npm registry.
+- **Trigger:** pushing a `vX.Y.Z` git tag runs `.github/workflows/release.yml`, which builds all 11 packages and publishes them to the npm registry.
 - **Auth = npm automation token (Path A).** A granular npm access token scoped to `@noir-ai/*` (read + write) is stored as the `NPM_TOKEN` GitHub repo secret; the publish job runs `npm publish …` with `env: NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}`. **OIDC Trusted Publishing (tokenless) is the target alternative**, not the v1 path — see [§1e](#1e-alternative-path--oidc-trusted-publishing-later).
 - **Provenance:** every publish runs `npm publish --provenance`, which attaches a signed SLSA build-time attestation to each package. Consumers can verify the published tarball was built from this repo's tagged commit. Provenance uses the GitHub OIDC token from the job's `permissions: id-token: write` — **independent of the npm token**, so it works identically under Path A. It requires the repo to be **public** and the build to run on a **GitHub-hosted runner**.
 - **Access:** scoped packages (`@noir-ai/*`) are **private by default**. `publishConfig: { access: "public" }` in every `package.json` overrides that so the packages publish publicly.
@@ -67,21 +67,21 @@ v1 does **not** use it for one reason: a Trusted Publisher can only be linked to
 
 ## 2. Cutting a release (stable, from `main`)
 
-> All 10 packages move together. The version you bump is the version that ships. This is the **stable** flow; the beta flow is in [§2b](#2b-beta-vs-stable-channels).
+> All 11 packages move together. The version you bump is the version that ships. This is the **stable** flow; the beta flow is in [§2b](#2b-beta-vs-stable-channels).
 
 ```bash
 # 0. Start from an up-to-date main, clean tree.
 git checkout main
 git pull --ff-only
 
-# 1. Bump the unified version in all 10 package.json files.
+# 1. Bump the unified version in all 11 package.json files.
 #    (Choose the bump per §3 semver policy. Example: first public release → 1.0.0.)
 node scripts/bump-version.mjs 1.0.0
 #    equivalent: pnpm release:bump 1.0.0
 
 # 2. (Recommended) update docs/CHANGELOG.md for the release.
 
-# 3. Review the diff — it should be 10× one-line "version" bumps (+ changelog).
+# 3. Review the diff — it should be 11× one-line "version" bumps (+ changelog).
 git diff
 
 # 4. Commit + tag. The tag name is the signal CI listens for.
@@ -98,9 +98,9 @@ git push origin v1.0.0
 
 1. Checks out the tagged commit.
 2. Sets up Node 24 + pnpm; `pnpm install --frozen-lockfile`.
-3. `pnpm lint` → `pnpm typecheck` → `pnpm build` (all 10 packages → `dist/`).
+3. `pnpm lint` → `pnpm typecheck` → `pnpm build` (all 11 packages → `dist/`).
 4. **Derives the channel** from the branch (see [§2b](#2b-beta-vs-stable-channels)): if the tagged commit is reachable from `origin/main`, dist-tag = `latest` (stable); otherwise `beta`. For the §2 flow that is always `latest`.
-5. Packs, then publishes, all 10 packages. This is a deliberate **two-step** flow (see `.github/workflows/release.yml`):
+5. Packs, then publishes, all 11 packages. This is a deliberate **two-step** flow (see `.github/workflows/release.yml`):
    1. **Pack** — `pnpm -r --filter './packages/*' pack`
       - `pnpm pack` (NOT `npm pack`) **rewrites `workspace:*` dependency ranges to concrete versions** inside the tarballs, so the published packages resolve on install. `npm publish` does **not** rewrite workspace ranges on its own.
    2. **Publish** — for each packed `*.tgz`: `npm publish "$tgz" --provenance --access public --tag "$DIST_TAG"`
@@ -171,7 +171,7 @@ node scripts/bump-version.mjs 1.0.0-beta.1
 
 # 2. (Recommended) add a CHANGELOG entry under an "Unreleased / beta" heading.
 
-# 3. Review the diff — 10× one-line version bumps (+ changelog).
+# 3. Review the diff — 11× one-line version bumps (+ changelog).
 git diff
 
 # 4. Commit + tag. The tag name still starts with v, but carries the prerelease suffix.
@@ -188,11 +188,11 @@ After the `release.yml` job goes green:
 
 ```bash
 npm view @noir-ai/cli                  # registry metadata (version, dist-tags, provenance)
-npm view @noir-ai/cli dist-tags.beta   # → 1.0.0-beta.1
+npm view @noir-ai/cli dist-tags.beta   # → 1.1.0-beta.1 (current beta pointer)
 npx @noir-ai/cli@beta init             # smoke: opt into the beta and run init in a throwaway dir
 ```
 
-> **v1.0.0-beta.1 was the first publish (2026-07-25);** the 5 CI fixes it took to get the publish job green are documented in [§8 Troubleshooting](#8-troubleshooting) so they don't recur.
+> **Publish history:** `1.0.0-beta.1` was the first publish (2026-07-25); the 5 CI fixes it took to get the publish job green are documented in [§8 Troubleshooting](#8-troubleshooting). `1.1.0-beta.1` (2026-07-25, later same day) added the v1.x capability slices (K/R/I/P/S/X) and the consolidated debt batch. Stable `1.x` has not been cut yet — the beta dist-tag is the live pointer.
 
 ### Promoting beta → stable
 
@@ -225,7 +225,7 @@ See [installation.md](installation.md) for the consumer-side view of these two c
 
 ## 3. Semver policy (unified)
 
-Noir ships a **single** version across all 10 packages. The bump level reflects the **most significant** change anywhere in the toolkit this release:
+Noir ships a **single** version across all 11 packages. The bump level reflects the **most significant** change anywhere in the toolkit this release:
 
 | Change | Bump | Examples |
 |---|---|---|
@@ -235,7 +235,7 @@ Noir ships a **single** version across all 10 packages. The bump level reflects 
 
 Rules:
 
-- **All 10 move together.** Even a change that only touches one package bumps the unified version for every package. This is deliberate: consumers install the toolkit, not loose fragments, and a single shared version removes the "is `@noir-ai/store@1.2.0` compatible with `@noir-ai/context@1.1.0`?" question.
+- **All 11 move together.** Even a change that only touches one package bumps the unified version for every package. This is deliberate: consumers install the toolkit, not loose fragments, and a single shared version removes the "is `@noir-ai/store@1.2.0` compatible with `@noir-ai/context@1.1.0`?" question.
 - **Pre-1.0 caveat:** while the version is `0.x`, minors may include breaking changes (per the loose pre-1.0 convention). Call them out in the changelog regardless. The **first public release is `1.0.0`**; from there the table above is binding.
 - **When in doubt, bump higher** and document it.
 
@@ -269,8 +269,8 @@ npm view @noir-ai/cli
 npm view @noir-ai/cli version           # should print 1.0.0
 npm view @noir-ai/cli dist.attestation  # provenance present (or check the npm UI badge)
 
-# 5b. All 10 are at the same version.
-for p in core store workflow skills daemon adapters cli context model memory; do
+# 5b. All 11 are at the same version.
+for p in core store workflow skills daemon adapters cli context model memory create; do
   printf "@noir-ai/%s\t%s\n" "$p" "$(npm view @noir-ai/$p version)"
 done
 
@@ -283,7 +283,7 @@ Optionally, in a throwaway project:
 
 ```bash
 mkdir /tmp/noir-smoke && cd /tmp/noir-smoke
-npx @noir-ai/cli@1.0.0 init     # scaffolds .noir/ + emits the 31 builtin skills + host wiring
+npx @noir-ai/cli@1.0.0 init     # scaffolds .noir/ + emits the skill pack + host wiring
 ls -la .noir .claude/skills      # confirm artifacts
 ```
 
@@ -310,15 +310,15 @@ The very first release (`1.0.0`) has extra gating. Do not cut it until every box
 - [ ] `docs/CHANGELOG.md` has a `1.0.0` entry.
 
 **Cut (§2)**
-- [ ] `node scripts/bump-version.mjs 1.0.0`; verify all 10 are `1.0.0` and identical.
+- [ ] `node scripts/bump-version.mjs 1.0.0`; verify all 11 are `1.0.0` and identical.
 - [ ] Commit + tag `v1.0.0`; push commit and tag.
-- [ ] `release.yml` run on the `release` environment goes green; all 10 publishes succeed.
+- [ ] `release.yml` run on the `release` environment goes green; all 11 publishes succeed.
 
 **Verify (§5)**
 - [ ] `npm view @noir-ai/cli version` → `1.0.0`.
-- [ ] All 10 packages resolve at `1.0.0`.
+- [ ] All 11 packages resolve at `1.0.0`.
 - [ ] `npx @noir-ai/cli@1.0.0 --version` runs; `npm view … dist.attestation` (or the npm UI) shows provenance.
-- [ ] GitHub **Release** notes published from the tag, summarizing the 10 packages + changelog.
+- [ ] GitHub **Release** notes published from the tag, summarizing the 11 packages + changelog.
 
 ---
 

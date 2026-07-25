@@ -12,7 +12,7 @@ New to Noir? Read the [README](../README.md) first for the 30-second "what and w
 
 ## Install
 
-### Recommended: native installer (once `@noir-ai/*` is on npm)
+### Recommended: native installer
 
 For end users the install is one line — a small `curl | sh` script that detects Node + npm and runs `npm install -g @noir-ai/cli` on your behalf:
 
@@ -31,39 +31,11 @@ Two channels ship in parallel:
 
 - **Pin a version** — `NOIR_VERSION=1.2.3` (or `1.2.3-beta.1`) overrides the channel.
 
-The installer is idempotent (re-run = upgrade), prints a PATH hint if `noir` isn't on PATH, and verifies with `noir --version` at the end. The full reference — npm/pnpm/yarn/bun, one-shot `npx`, Homebrew, troubleshooting, the from-source dev path — lives in **[installation.md](installation.md)**. That page also covers the **beta vs stable** channel model (`X.Y.Z-beta.N` vs `X.Y.Z`) in depth.
+The installer is idempotent (re-run = upgrade), prints a PATH hint if `noir` isn't on PATH, and verifies with `noir --version` at the end. The full reference — npm/pnpm/yarn/bun, one-shot `npx`, Homebrew, troubleshooting, the **beta vs stable** channel model in depth — lives in **[installation.md](installation.md)**.
 
-### Today: from source (v1.0 not yet on npm)
+### From source (repo developers only)
 
-v1.0 is **release-ready but not yet published to npm**. Distribution — `npm publish`, `npx @noir-ai/cli`, the SDK — is slice **S11**, deferred to v1.x. So **today**, install is from-source. This is the path for **developers of Noir**, not end users.
-
-```bash
-git clone <noir-repo> && cd noir
-pnpm install      # installs the 10 @noir-ai/* packages + native deps
-pnpm build        # builds every package → packages/*/dist/
-```
-
-`pnpm install` will ask you to approve the native builds (`pnpm approve-builds`, or they're pre-approved via the pinned `pnpm.onlyBuiltDependencies`). The native dependencies are:
-
-- `better-sqlite3`, `sqlite-vec` — embedded SQLite + 384-dim vector kNN (prebuilt on mac/linux/win, x64 + arm64).
-- `onnxruntime-node` — pulled in by `@huggingface/transformers` for the local embedder.
-
-On **first use** of the context engine, the embedder downloads the ~22 MB `all-MiniLM-L6-v2` model **once** into `~/.noir/models/` (cached after that, offline and private).
-
-Now make the `noir` command available. Two options:
-
-```bash
-# Option A (recommended): put `noir` on your PATH
-pnpm --filter @noir-ai/cli link --global
-noir --help        # works from anywhere
-
-# Option B: invoke the built bin directly (no global link)
-node packages/cli/dist/bin.js --help
-```
-
-Option A matters: the `.mcp.json` that `noir init` writes calls `command: "noir"`, so Claude Code needs `noir` resolvable on your PATH when it spawns the server. With Option B you'd have to hand-edit `.mcp.json` to point at `node packages/cli/dist/bin.js` instead.
-
-> When S11 ships, the from-source section above collapses to the one-liner at the top of this Install block. Until then, use the from-source path.
+If you're developing Noir itself rather than using it, install from source: `git clone`, then `pnpm install && pnpm build`, then put `noir` on PATH via `pnpm --filter @noir-ai/cli link --global`. The `.mcp.json` written by `noir init` calls `command: "noir"`, so Claude Code needs `noir` resolvable on PATH. Full from-source walk-through (native deps, the first-run model download, the PATH papercut): **[installation.md](installation.md)**. End users should ignore this path and use the native installer or npm.
 
 ## Initialize a project
 
@@ -82,7 +54,7 @@ noir init
 | `.noir/NOIR.md` | The canonical context file. The host merely `@import`s it. |
 | `.mcp.json` | The MCP server entry Claude Code reads. |
 | `CLAUDE.md` | A managed `@import ".noir/NOIR.md"` block is inserted (existing content is preserved). |
-| `.claude/skills/noir-*` | The **31 native `noir-` skills** are compiled and emitted here. |
+| `.claude/skills/noir-*` | The **34 native `noir-` skills** (33 builtins + 1 integration) are compiled and emitted here. |
 
 `.noir/store/` (the SQLite DB), `.noir/specs/`, `.noir/plans/`, `.noir/tasks/`, `.noir/decisions/`, and `.noir/audit/` are created on demand as you work.
 
@@ -188,5 +160,5 @@ The host picks up the configured mode via the `noir-intake` skill / the `workflo
 
 - [installation.md](installation.md) — the full install reference (every path, troubleshooting, the channel model).
 - [usage.md](usage.md) — the full reference: every command, the config schema, the `.noir/` + `~/.noir/` layout, and the privacy rules.
-- [architecture/README.md](architecture/README.md) — how the 10 packages fit together.
-- [roadmap.md](roadmap.md) — what ships in v1.0 vs v1.x (distribution/`npx` is S11).
+- [architecture/README.md](architecture/README.md) — how the 11 packages fit together (incl. the v1.x capability slices).
+- [roadmap.md](roadmap.md) — current status, v1.x backlog, version targets.

@@ -12,7 +12,7 @@
 
 ## What you're installing
 
-Noir ships as the npm package **`@noir-ai/cli`** (bin: **`noir`**), with nine companion `@noir-ai/*` packages pulled in as dependencies. It is **not** a single binary — it is a Node.js program that builds a few **native modules** at install time:
+Noir ships as the npm package **`@noir-ai/cli`** (bin: **`noir`**), with ten companion `@noir-ai/*` packages pulled in as dependencies. It is **not** a single binary — it is a Node.js program that builds a few **native modules** at install time:
 
 | Native dep | Why |
 |---|---|
@@ -200,7 +200,7 @@ noir doctor          # config / store / embedder / native-deps / provider status
 Then, from the project you want Noir to manage:
 
 ```bash
-noir init            # scaffolds .noir/ + emits the 31 builtin skills + host wiring
+noir init            # scaffolds .noir/ + emits the 34 skills (33 builtins + 1 integration) + host wiring
 ```
 
 `noir init` is idempotent — see [getting-started.md](getting-started.md) for the walkthrough.

@@ -2,7 +2,7 @@
 
 > How to add a new `@noir-ai/*` package to the Noir monorepo, and when to do it versus extend an existing one.
 
-A **package** is a directory under `packages/` with a `package.json` named `@noir-ai/*`. Noir ships 10 of them today (`core`, `store`, `workflow`, `skills`, `context`, `memory`, `model`, `daemon`, `adapters`, `cli`); the layout, build, test, versioning, and release tooling are all set up so a new package is cheap to add and ships in lockstep with the rest.
+A **package** is a directory under `packages/` with a `package.json` named `@noir-ai/*`. Noir ships 11 of them today (`core`, `store`, `workflow`, `skills`, `context`, `memory`, `model`, `daemon`, `adapters`, `cli`, `create`); the layout, build, test, versioning, and release tooling are all set up so a new package is cheap to add and ships in lockstep with the rest.
 
 ## Quickest path: the generator
 
@@ -47,7 +47,7 @@ A package produced by the generator is automatically included in:
 - **Extend an existing package** when the work is a **feature inside a domain that already exists**. A new MCP tool that reads the store goes in `@noir-ai/daemon`; a new retrieval strategy goes in `@noir-ai/context`; a new skill goes under `packages/skills/builtin/`.
 - **Host adapters are special.** A new host (OpenCode, Gemini, …) goes **inside `@noir-ai/adapters`**, not in a new package — that is the S10 path. Do not spawn `@noir-ai/opencode`, `@noir-ai/gemini`, etc.
 
-If you find yourself reaching for a new package, check first that the capability doesn't already have a home: the 10-package split was deliberate (see the [design blueprint](specs/2026-07-23-noir-toolkit-design.md)).
+If you find yourself reaching for a new package, check first that the capability doesn't already have a home: the package split was deliberate (see the [design blueprint](specs/2026-07-23-noir-toolkit-design.md)). The most recent addition was `@noir-ai/create` (Slice S) — added only when scaffolding graduated from a CLI-internal helper to a shared engine with its own public API and release contract.
 
 ## Reference
 

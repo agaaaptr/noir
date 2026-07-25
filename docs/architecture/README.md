@@ -22,20 +22,21 @@ Noir is a **host-agnostic orchestration layer** — not an LLM runtime. The host
    .noir/ (project, ProjectId-keyed)        ~/.noir/ (user-global: models, daemon record)
 ```
 
-## The 10 packages (`@noir-ai/*`)
+## The 11 packages (`@noir-ai/*`)
 
 | Package | Responsibility |
 |---|---|
 | `@noir-ai/core` | Domain types, the `NoirConfigSchema` (zod/v4), `.noir/` path/layout, artifact helpers. No I/O. |
 | `@noir-ai/store` | Embedded storage — `better-sqlite3` (SQLite) + FTS5 (BM25, window snippets) + `sqlite-vec` (384-dim kNN). Single writer = the daemon; read-only FS-fallback when the daemon is down. |
 | `@noir-ai/workflow` | The SDD lifecycle engine — a hand-rolled FSM (Intake→Clarify→Spec→Plan→Execute→Verify→Document) with observable, escapable gates; Full/Quick/Resume modes; state persists in the store so work survives daemon restarts and new sessions. |
-| `@noir-ai/skills` | The native builtin skill pack (31 skills) + a copy-and-validate compiler. Emits `noir-*` `SKILL.md` files to the host. |
+| `@noir-ai/skills` | The native builtin skill pack (33 builtins + 1 integration = 34 skills) + a copy-and-validate compiler. Emits `noir-*` `SKILL.md` files to the host. |
 | `@noir-ai/context` | Hybrid retrieval: local in-process embeddings (all-MiniLM-L6-v2), markdown/line-token chunker, SHA-256 incremental indexer, BM25 ∪ kNN → Reciprocal Rank Fusion → token-budget fill, windowed snippets (never truncated). |
 | `@noir-ai/memory` | Cross-session memory layered on the store (no schema migration): save / recall / search / sessions / forget / consolidate; append-only consolidation; governance (audit, delete-with-reason). |
 | `@noir-ai/model` | Optional bounded model layer — one single-shot `complete()` (Anthropic / OpenAI / OpenAI-compatible). No `tools`/`stream`; agent loops impossible by construction; first-class `null` degradation without a key. |
 | `@noir-ai/daemon` | The runtime authority: owns the store write handle, resolves the embedder once, and exposes the single Noir MCP server (stdio + Streamable HTTP on 127.0.0.1). |
 | `@noir-ai/adapters` | `HostAdapter` interface + emitters. v1 ships `claudeAdapter` (`.mcp.json`, managed `CLAUDE.md` @import block, `.claude/skills/`). |
 | `@noir-ai/cli` | The `noir` command tree (commander + @clack/prompts); store-touching commands are MCP clients to the daemon. |
+| `@noir-ai/create` | The scaffold engine (Slice S): three-mode writer (`regenerate`/`managedBlock`/`skipIfExists`), declarative manifest, `{{var}}` templates, `.noir/scaffold-version`, inline-conflict migrations, read-only stack-detect. Consumed by `noir init`/`sync` and the AI-layer-only `noir create [dir]`. |
 
 ## How a host connects
 
@@ -68,3 +69,16 @@ The daemon is the **single writer** to the store; if it is down, reads (FTS/kNN/
 ## Host-agnostic by design → S10
 
 The only host-specific assumption in v1 is `claudeAdapter` + the Claude-only skills `CompileTarget`. S10 widens both: an adapter registry (`resolveAdapter(host)`), `host` config beyond `z.literal('claude')`, and per-host compile targets. That is the **single gate** to cross-CLI — the architecture is built so generalization is mechanical, not a rewrite.
+
+## v1.x capabilities (added on the beta channel)
+
+Built on one keystone refactor (`managedBlock` + shared `blockWriter` + `HostAdapter` emitters), six capability slices ship in `v1.1.0-beta.1`:
+
+- **K** Keystone — pure refactor: a `managedBlock(name, commentStyle)` factory + shared block-region writer + the `HostAdapter.emitRules` seam that the later slices write through.
+- **R** Rules — `.noir/rules/RULES.md` Noir-curated seed wired into `CLAUDE.md` via a managed `RULES_BLOCK`; `noir-rules` skill.
+- **I** Ignore — `IgnoreManager` + `syncIgnores` into init/sync (managed-block idempotent across `.gitignore`/`.dockerignore`/`.npmignore`/`.prettierignore`).
+- **P** PRD — `prd` artifact kind + `writePrd`/`readPrd` + `noir-prd` skill (opt-in; no FSM change).
+- **S** Scaffold — the `@noir-ai/create` engine (see table above); `noir create [dir]` is AI-layer-only; `noir init --upgrade` runs migrations; `noir doctor` checks scaffold-version drift.
+- **X** Integration — first-class integration layer (skill-only / gated-write-proxy / full-runtime tiers). First integration: **ClickUp** (`noir-clickup` skill + `integration.json` + daemon `integrations_auth` / `noir.clickup_write` MCP tools).
+
+Full design record: [`specs/2026-07-25-v1x-capabilities-design.md`](specs/2026-07-25-v1x-capabilities-design.md); per-slice specs under [`superpowers/specs/`](superpowers/specs/); the locked decisions in [ADR-0003](decisions/0003-v1x-capabilities.md).

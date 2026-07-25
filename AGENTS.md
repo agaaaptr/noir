@@ -1,10 +1,10 @@
 # AGENTS.md
 
-Guidance for AI coding agents (Claude Code, Cursor, Codex, …) working **on this repository** — i.e., developing and maintaining the **Noir v1.0 toolkit** under `packages/`. For *using* Noir in a project, see the [README](README.md).
+Guidance for AI coding agents (Claude Code, Cursor, Codex, …) working **on this repository** — i.e., developing and maintaining the **Noir toolkit** under `packages/`. For *using* Noir in a project, see the [README](README.md).
 
 ## What this repo is
 
-Noir is a host-agnostic, spec-driven-workflow + native-context + cross-session-memory **layer** for agentic CLIs — not an LLM runtime (bring your own agent). v1 host = Claude Code, behind an abstract `HostAdapter`. It is a pnpm monorepo of **10 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory}`. Noir ships **only native `noir-` builtin skills** — there is no plugin, no marketplace, no slash-command-installed skill surface. See [docs/architecture/](docs/architecture/).
+Noir is a host-agnostic, spec-driven-workflow + native-context + cross-session-memory **layer** for agentic CLIs — not an LLM runtime (bring your own agent). v1 host = Claude Code, behind an abstract `HostAdapter`. It is a pnpm monorepo of **11 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`. Noir ships **only native `noir-` builtin skills (+ opt-in integrations)** — there is no plugin, no marketplace, no slash-command-installed skill surface. See [docs/architecture/](docs/architecture/).
 
 ## Toolchain + conventions (immutable)
 
@@ -53,7 +53,7 @@ There is **no plugin and no marketplace**. Skills are native `noir-` builtins, a
   - `description` is **WHEN-led** — it must lead with a trigger cue (`Use`/`Using`/`When`/`Before`/`After`/`Upon`/…). A WHAT-summary ("A tool that drafts specs…") is rejected: it becomes a shortcut the agent follows instead of loading the body. ≤ 1024 chars.
   - References are named `<kebab>.md` and non-empty.
 - **Compile target is Claude Code only** in v1 (canonical format copied verbatim). Multi-host transform is S10.
-- **Forbidden-residue guard** (`packages/skills/src/residue.ts`, `FORBIDDEN_RESIDUE`, checked by the hygiene tests): a native skill must not contain predecessor-plugin internals or Superpowers rhetoric — e.g. `workflow/<task`, `noir-workflow.mode`, `noir-workflow`, `plugins/noir-workflow`, `ClickUp`/`clickup`, `@uiigateway`, `<EXTREMELY-IMPORTANT`, `SUBAGENT-STOP`. If you are porting an old playbook, scrub these before committing.
+- **Forbidden-residue guard** (`packages/skills/src/residue.ts`, `FORBIDDEN_RESIDUE`, checked by the hygiene tests): a native skill must not contain predecessor-plugin internals or Superpowers rhetoric — e.g. `workflow/<task`, `noir-workflow.mode`, `noir-workflow`, `plugins/noir-workflow`, `@uiigateway`, `<EXTREMELY-IMPORTANT`, `SUBAGENT-STOP`. If you are porting an old playbook, scrub these before committing. (Note: `ClickUp`/`clickup` were forbidden during the predecessor-port era but are **allowed again** — Slice X reintroduced ClickUp as a first-class Noir integration under `packages/skills/integrations/noir-clickup/`. The residue list is the source of truth; check it before assuming a token is banned.)
 
 ## Privacy + provider-explicit rules (honor in any change)
 

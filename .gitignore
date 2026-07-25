@@ -9,6 +9,11 @@ node_modules/
 dist/
 *.tsbuildinfo
 coverage/
+*.tgz
 
 # Release pack output (pnpm pack --pack-destination)
 artifacts/
+
+# Noir local runtime data (the SQLite store; .noir/config.yml, .noir/NOIR.md,
+# .noir/specs, .noir/plans, etc. are project state and may be committed).
+.noir/store/

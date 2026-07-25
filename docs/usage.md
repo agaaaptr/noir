@@ -35,7 +35,7 @@ noir init          # writes the stdio .mcp.json below
 
 Open the project in Claude Code → it auto-spawns the server → connected. No separate process; the server's lifecycle is the Claude Code session.
 
-> From-source users: `.mcp.json` calls `command: "noir"`, so Claude Code needs `noir` on PATH. Run `pnpm --filter @noir-ai/cli link --global`, or edit `.mcp.json` to invoke `node packages/cli/dist/bin.js` instead. (Goes away with `npx noir` in S11.)
+> From-source users: `.mcp.json` calls `command: "noir"`, so Claude Code needs `noir` on PATH. Run `pnpm --filter @noir-ai/cli link --global`, or edit `.mcp.json` to invoke `node packages/cli/dist/bin.js` instead.
 
 ### daemon (persistent HTTP)
 
@@ -133,10 +133,11 @@ These parse in any position (`noir --json status` and `noir status --json` both 
 
 | Command | What it does |
 |---|---|
-| `noir init` | Scaffold `.noir/` + emit the 31 builtin skills + write host wiring (`.mcp.json`, `CLAUDE.md` @import). Flags: `--transport stdio\|streamable-http` (default `stdio`), `--url <url>` (required for HTTP, localhost only). |
-| `noir sync` | Re-emit skills + host config idempotently (the `noir-*` namespace is overwritten). |
+| `noir init` | Scaffold `.noir/` + emit the 34 skills (33 builtins + 1 integration) + write host wiring (`.mcp.json`, `CLAUDE.md` @import, managed `RULES_BLOCK`, ignore files). Flags: `--transport stdio\|streamable-http` (default `stdio`), `--url <url>` (required for HTTP, localhost only), `--upgrade` (run scaffold migrations against an existing `.noir/`). |
+| `noir create [dir]` | AI-layer-only scaffold (Slice S): drop the Noir AI layer (`.noir/` + skills + host wiring) into a new or existing directory without touching the rest of the project. |
+| `noir sync` | Re-emit skills + host config idempotently (the `noir-*` namespace is overwritten; stale `noir-*` skill dirs from a prior pack are cleaned up). |
 | `noir status` | Probe-only health check. **Works daemon-down; never auto-starts the daemon.** |
-| `noir doctor` | Report config / store / embedder / native-deps / provider status (no live model call). |
+| `noir doctor` | Report config / store / embedder / native-deps / provider status, **scaffold-version drift**, and the **RULES.md budget** (no live model call). |
 | `noir mcp serve [--stdio]` | Serve the Noir MCP server over stdio (this is how a host connects). |
 | `noir daemon start` | Start the daemon in the foreground (`--detach` → exit 2 in v1). |
 | `noir daemon stop` | Stop the running daemon. |
@@ -150,7 +151,7 @@ These parse in any position (`noir --json status` and `noir status --json` both 
 | `noir memory sessions` | List recent sessions. |
 | `noir memory forget` | Delete observations (governed: delete-with-reason, audited). |
 | `noir memory consolidate` | Append-only LLM consolidation → derived `lesson` observations. **Refuses cleanly without an enabled provider; never silent.** |
-| `noir skills list` | List the emitted builtin skills. |
+| `noir skills list` | List the emitted skills — **builtins + integrations** (a `Kind` column distinguishes them). |
 | `noir skills sync` | Re-emit the skill pack to `.claude/skills/`. |
 | `noir task new` | Start a workflow task. Flags: `--slug <s>` (required; doubles as the task id), `--mode full\|quick`. |
 | `noir task status` | Where the active task is in the lifecycle (phase / state / mode). |
@@ -167,6 +168,7 @@ When a host connects via `noir mcp serve`, it receives a curated tool surface:
 - **Workflow:** `workflow_status`, `workflow_start`, `workflow_advance`, `checkpoint`
 - **Context:** `context_search`, `context_index`, `context_status`
 - **Memory:** `memory_save`, `memory_recall`, `memory_search`, `memory_sessions`, `memory_forget`, and `memory_consolidate` (registered **only** when `memory.consolidation.enabled` is on)
+- **Integrations (Slice X):** `integrations_auth` (resolves an integration's token env-var server-side at call time — kills the non-interactive-shell gotcha) and per-integration gated-write proxies, e.g. `noir.clickup_write` (HARD confirm gate: dry-run → confirm → POST; endpoint allowlist; id-charset validation; 429 backoff; audit JSONL to `.noir/audit/`). Registered only for integrations whose `integration.json` declares a `runtime` other than `none`.
 
 ---
 
@@ -267,6 +269,6 @@ The project's single source of truth, keyed by a canonical `ProjectId`. Generate
 ## See also
 
 - [getting-started.md](getting-started.md) — the first-use walkthrough.
-- [architecture/README.md](architecture/README.md) — how the 10 packages fit together.
-- [roadmap.md](roadmap.md) — v1.0 vs v1.x (distribution / `npx` / more hosts are S10–S11).
+- [architecture/README.md](architecture/README.md) — how the 11 packages fit together (incl. the v1.x capability slices).
+- [roadmap.md](roadmap.md) — current status, v1.x backlog, version targets.
 - [AGENTS.md](../AGENTS.md) — guidance for developing Noir itself.
