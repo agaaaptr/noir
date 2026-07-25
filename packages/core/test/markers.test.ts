@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest';
 import {
-  managedBlock,
   CONTEXT_BLOCK,
   CONTEXT_BLOCK_BEGIN,
   CONTEXT_BLOCK_END,
+  managedBlock,
   RULES_BLOCK,
 } from '@noir-ai/core';
+import { describe, expect, it } from 'vitest';
 
 describe('managedBlock factory', () => {
   it('produces html sentinels', () => {

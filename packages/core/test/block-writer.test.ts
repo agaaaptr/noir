@@ -1,14 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   CONTEXT_BLOCK,
-  writeManagedRegion,
+  commentStyleFor,
   readManagedBlock,
   stripManagedBlock,
-  commentStyleFor,
+  writeManagedRegion,
 } from '@noir-ai/core';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const region = (body: string) => `${CONTEXT_BLOCK.begin}\n${body}\n${CONTEXT_BLOCK.end}\n`;
 

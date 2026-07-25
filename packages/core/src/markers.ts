@@ -14,7 +14,12 @@ export function managedBlock(name: string, commentStyle: CommentStyle = 'html'):
   if (commentStyle === 'hash') {
     return { name, commentStyle, begin: `# >>> noir:${name} >>>`, end: `# <<< noir:${name} <<<` };
   }
-  return { name, commentStyle, begin: `<!-- noir:${name} begin -->`, end: `<!-- noir:${name} end -->` };
+  return {
+    name,
+    commentStyle,
+    begin: `<!-- noir:${name} begin -->`,
+    end: `<!-- noir:${name} end -->`,
+  };
 }
 
 /** Named instances. CONTEXT_BLOCK_* are kept byte-identical for backward compat. */
