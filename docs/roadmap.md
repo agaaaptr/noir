@@ -41,6 +41,15 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 - **NEXT = test the beta in a real project**, then promote to stable 1.0.0: merge `develop`→`main`, `node scripts/bump-version.mjs 1.0.0`, tag `v1.0.0` on `main` → CI derives `channel=stable` and publishes `--tag latest` (so `npm i @noir-ai/cli` resolves to `1.0.0`).
 - **Then:** S10 (more host adapters) + the SDK/framework-docs remainder of S11 begin **v1.x** — see the consolidated **"v1.x backlog"** section below.
 
+**v1.x capability slices (designed 2026-07-25, in-progress on `develop`):**
+Design: `docs/specs/2026-07-25-v1x-capabilities-design.md`. Five capabilities extend one keystone refactor. **4/6 done on `develop` (LOCAL, not pushed; 746 tests green):**
+- **K** Keystone — `managedBlock` factory + shared `blockWriter` (`writeManagedRegion` etc.) + `HostAdapter.emitRules` seam (pure refactor; no behavior change).
+- **R** Rules — `.noir/rules/RULES.md` Noir-curated seed + wired into `CLAUDE.md` via `RULES_BLOCK` + `noir-rules` skill.
+- **I** Ignore — `IgnoreManager` + `syncIgnores` into init/sync (managed-block idempotent; `.gitignore`/`.dockerignore`/`.npmignore`/`.prettierignore`).
+- **P** PRD — `prd` artifact kind + `writePrd`/`readPrd` + `noir-prd` skill (no FSM change; explicit opt-in).
+**Remaining:** **S** Scaffold (new `@noir-ai/create` + three-mode writer + `noir create`) + **X** Integration (ClickUp + gated-write-proxy + `integrations_auth`). Specs: `docs/superpowers/specs/2026-07-25-slice-{s-scaffold,x-integration}-design.md`. **Next-session playbook + FULL technical debt + push/tag/verdaccio: `docs/v1x-next-session.md`.**
+> Note: `develop` is at **746 tests** (K/R/I/P added); `main`/npm beta stays at 729 until merged.
+
 **v1.0 finalization — COMPLETE:**
 - Finalization audits (code, docs, quality) run + fixes applied: zod consolidated to **v4**, root **README rewritten** for the v1.0 toolkit, dead code + unused deps removed, biome/mcp/hash/jsdoc/re-export nits fixed. End-to-end dogfood PASSED 14/14 (real local embeddings → `context_search` hits; memory save→recall; workflow start→advance; durability across daemon restart; bounded-model degrades to `null` with no key). Cross-CLI hosts (S10) and distribution/SDK (S11) remain v1.x — see the backlog below.
 
@@ -107,6 +116,13 @@ All deferred items, grouped by area. Each was intentionally out of v1 to keep sc
 - stale-skill-dir cleanup on `noir sync` (the managed `noir-*` namespace is overwritten idempotently, but removed/renamed builtin skills aren't pruned from `.claude/skills/` today).
 - `biome.json` schema deprecation infos (drift between biome's config schema and the pinned version).
 - first-run model download UX (one-time ~22 MB fetch, cached in `~/.noir/models/`).
+
+### v1.x capabilities (K/R/I/P/S/X) — deferred sub-items (2026-07-25)
+- **K3:** skills-compiler generalization — deferred to slice X (`discoverIntegrations` + integration.json schema).
+- **R4/R5:** config `rules:` block (`{enabled, lengthBudgetKb}`); `noir doctor` RULES.md budget check (≤6 KB).
+- **P3/P4:** `@noir-ai/model` `draftPrd(intake, clarify, memory)` (offline → template); config `prd:` block + `advance()` soft PRD gate predicate (feature/epic entering spec with no PRD → remind; escapable).
+- **Lint:** 10 `noCommaOperator`/`noNonNullAssertion` warnings remain in `cli/test/*` (pre-existing v1.0-beta, non-auto-fixable, cosmetic, not in CI). ⚠️ `pnpm lint` was RED on the develop baseline before this session (pre-existing `useOptionalChain`/`useLiteralKeys`); now GREEN via `biome --write --unsafe` (committed).
+- **X verify-live (runtime, not blockers):** ClickUp `GET /list/{id}` `statuses` field; tag auto-create vs 400 (ClickApp-dependent).
 
 ---
 
