@@ -90,12 +90,14 @@ git push origin v1.0.0
 2. Sets up Node 22 + pnpm; `pnpm install --frozen-lockfile`.
 3. `pnpm lint` → `pnpm typecheck` → `pnpm build` (all 10 packages → `dist/`).
 4. **Derives the channel** from the branch (see [§2b](#2b-beta-vs-stable-channels)): if the tagged commit is reachable from `origin/main`, dist-tag = `latest` (stable); otherwise `beta`. For the §2 flow that is always `latest`.
-5. Publishes all 10 packages:
-   `pnpm -r --filter './packages/*' exec npm publish --provenance --access public --tag "$DIST_TAG"`
-   - `--provenance` attaches the SLSA attestation (requires `permissions: id-token: write`).
-   - `--access public` overrides the scoped-package default of private (also enforced via `publishConfig.access:"public"` in each `package.json`).
-   - `--tag "$DIST_TAG"` sets the npm dist-tag — `latest` for stable, `beta` for beta. This is how `npm i @noir-ai/cli` (stable) vs `npm i @noir-ai/cli@beta` (beta) resolve to different versions.
-   - `workspace:*` dependency ranges are rewritten to concrete versions automatically by pnpm at publish time.
+5. Packs, then publishes, all 10 packages. This is a deliberate **two-step** flow (see `.github/workflows/release.yml`):
+   1. **Pack** — `pnpm -r --filter './packages/*' pack`
+      - `pnpm pack` (NOT `npm pack`) **rewrites `workspace:*` dependency ranges to concrete versions** inside the tarballs, so the published packages resolve on install. `npm publish` does **not** rewrite workspace ranges on its own.
+   2. **Publish** — for each packed `*.tgz`: `npm publish "$tgz" --provenance --access public --tag "$DIST_TAG"`
+      - `npm publish` (NOT `pnpm publish`) is used because **`pnpm publish` does not support `--provenance`**. `npm publish` is the step that attaches the SLSA attestation via the GitHub OIDC ↔ npm Trusted Publishing link (§1).
+      - `--provenance` attaches the SLSA attestation (requires `permissions: id-token: write`).
+      - `--access public` overrides the scoped-package default of private (also enforced via `publishConfig.access:"public"` in each `package.json`).
+      - `--tag "$DIST_TAG"` sets the npm dist-tag — `latest` for stable, `beta` for beta. This is how `npm i @noir-ai/cli` (stable) vs `npm i @noir-ai/cli@beta` (beta) resolve to different versions.
 6. The job runs on the `release` environment (the one you linked on npm).
 
 > If you enabled a required reviewer on the `release` environment, the publish job waits for approval in the GitHub Actions UI before running `npm publish`.

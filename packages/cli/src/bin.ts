@@ -10,6 +10,7 @@
 // A main-module guard prevents auto-running when bin.ts is imported by tests.
 
 import { pathToFileURL } from 'node:url';
+import { NOIR_VERSION } from '@noir-ai/core';
 import { Command, Option } from 'commander';
 import { contextIndex, contextSearch, contextStatus } from './commands/context.js';
 import { daemonRestart, daemonStart, daemonStatus, daemonStop } from './commands/daemon.js';
@@ -104,6 +105,7 @@ export function createProgram(): Command {
   program
     .name('noir')
     .description('Noir — discipline, context, and memory layer for agentic CLIs.')
+    .version(NOIR_VERSION, '-v, --version')
     // Global flags (S9 DS-4). makeGlobal() propagates each to every subcommand so
     // they parse in any position (e.g. `noir status --json` as well as `noir
     // --json status`) and appear on subcommand --help.

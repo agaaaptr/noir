@@ -38,8 +38,9 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 
 **Next:**
 - **v1.0 is RELEASE-READY / acceptance-complete** — S6–S9 done; **729/729 tests**; end-to-end dogfood passed 14/14; all MVP acceptance criteria met. No features and no finalization remain.
-- **NEXT = cut the v1.0 release** (publish / tag). Everything is committed locally on `develop` (**not pushed**).
-- **Then:** S10 (more host adapters) + S11 (distribution + SDK) begin **v1.x** — see the consolidated **"v1.x backlog"** section below.
+- **S11 distribution infrastructure is IMPLEMENTED** (rolled into v1.0 finalization): the branch-based beta/stable release flow (`release.yml` derives the npm dist-tag from which branch holds the tag), the native installer `scripts/install.sh`, npm publish metadata (`publishConfig`/`repository`/`files`) on all 10 packages, release CI, and `docs/installation.md` + `docs/releasing.md`. Consumers will install via `@noir-ai/cli@latest` (stable) / `@noir-ai/cli@beta` once published.
+- **NEXT = first publish to npm** (the actual tag push). The plumbing is ready; what remains is the `@noir-ai` npm org + the first `v1.0.0` tag. Everything is committed locally on `develop` (**not pushed**).
+- **Then:** S10 (more host adapters) + the SDK/framework-docs remainder of S11 begin **v1.x** — see the consolidated **"v1.x backlog"** section below.
 
 **v1.0 finalization — COMPLETE:**
 - Finalization audits (code, docs, quality) run + fixes applied: zod consolidated to **v4**, root **README rewritten** for the v1.0 toolkit, dead code + unused deps removed, biome/mcp/hash/jsdoc/re-export nits fixed. End-to-end dogfood PASSED 14/14 (real local embeddings → `context_search` hits; memory save→recall; workflow start→advance; durability across daemon restart; bounded-model degrades to `null` with no key). Cross-CLI hosts (S10) and distribution/SDK (S11) remain v1.x — see the backlog below.
@@ -60,7 +61,8 @@ All deferred items, grouped by area. Each was intentionally out of v1 to keep sc
 - Skills compiler `CompileTarget` is also Claude-only today (needs the same widening).
 
 ### S11 — Distribution + SDK
-- npm publish (`@noir-ai/*`), framework/SDK docs, `noir doctor` publish checks. (Distribution is npm-native; there is no plugin marketplace to publish to.)
+- **Distribution plumbing DONE** (rolled into v1.0 finalization): branch-based beta/stable release flow (`release.yml`, OIDC Trusted Publishing + provenance), `scripts/install.sh` native installer, npm publish metadata on all 10 packages, release CI, and `docs/installation.md` + `docs/releasing.md`. **First publish is pending** the `@noir-ai` npm org + the first `v1.0.0` tag — nothing is on the registry yet.
+- **Remaining (v1.x):** framework/SDK docs surface, `noir doctor` publish checks. (Distribution is npm-native; there is no plugin marketplace to publish to.)
 
 ### Daemon
 - backgrounded/detached mode + socket-activation (`daemon --detach` honestly returns exit 2 today).

@@ -156,7 +156,8 @@ main() {
   good "Installed ${spec}."
 
   # --- PATH hint + verify -------------------------------------------------------
-  npm_bin="$(npm bin -g 2>/dev/null || echo "${prefix}/bin")"
+  # `npm bin -g` was removed in npm 9; derive the global bin dir from the prefix.
+  npm_bin="${prefix}/bin"
   if command -v noir >/dev/null 2>&1; then
     good "noir is on PATH at: $(command -v noir)"
     if noir --version >/dev/null 2>&1; then

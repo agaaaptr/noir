@@ -92,10 +92,22 @@ jobs:
             echo "Channel: BETA (npm dist-tag: beta — 'npm i @noir-ai/cli@beta' to opt in)."
           fi
 
-      - name: Publish all 10 packages (npm publish --provenance --tag <channel>)
+      - name: Pack all 10 packages (pnpm rewrites workspace:* ranges into the tarballs)
+        # pnpm pack (NOT npm pack) rewrites workspace:* → concrete versions, so the
+        # published packages resolve on install. `npm publish` does NOT rewrite workspace
+        # ranges, and `pnpm publish` does NOT support --provenance — so we PACK with pnpm
+        # (correct deps) then PUBLISH the tarballs with npm (which adds the provenance attestation).
+        run: pnpm -r --filter './packages/*' pack
+
+      - name: Publish the packed tarballs (npm publish --provenance, tokenless OIDC)
         env:
           DIST_TAG: ${{ steps.channel.outputs.tag }}
         run: |
           set -e
           echo "Publishing with npm dist-tag: $DIST_TAG"
-          pnpm -r --filter './packages/*' exec npm publish --provenance --access public --tag "$DIST_TAG"
+          mapfile -d '' tarballs < <(find packages -maxdepth 2 -type f -name '*.tgz' -print0)
+          if [ "${#tarballs[@]}" -eq 0 ]; then echo "No tarballs found"; exit 1; fi
+          for tgz in "${tarballs[@]}"; do
+            echo "Publishing $tgz (dist-tag: $DIST_TAG)"
+            npm publish "$tgz" --provenance --access public --tag "$DIST_TAG"
+          done

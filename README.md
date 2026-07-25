@@ -124,16 +124,16 @@ The pack spans the SDD lifecycle, power/session/git/domain skills, and utils (e.
 Noir reads `.noir/config.yml` (project-local, safe to commit). It defines chunk defaults, embedder/model providers, and the memory consolidation switch. The env-var **name** is stored in config; the **value** is read at call time, so secrets never enter `.noir/config.yml`.
 
 ```yaml
-# .noir/config.yml (sketch — see NoirConfigSchema for the full shape)
-context:
-  chunk: { strategy: auto, codeMaxTokens: 512, codeOverlap: 64 }
-embedder:
-  default: local              # local = offline/private (all-MiniLM-L6-v2, 384-dim)
-model:
-  defaultProvider: null       # null = pure orchestration, no model calls
-  providers: {}
+# .noir/config.yml (sketch — see NoirConfigSchema in @noir-ai/core for the full shape)
+host: claude                 # the only host in v1 (S10 adds more)
+mode: full                   # full | quick — the SDD discipline level
+daemon: { idleTimeoutSec: 900, port: 0 }
+context:                     # local-first retrieval (S6)
+  embedder: { kind: local, dim: 384 }   # local = offline/private (MiniLM-L6-v2); remote/ollama opt-in
+  budgetTokens: 4096
+model: {}                    # empty = pure orchestration (no model calls); provider-explicit when set
 memory:
-  consolidation: { enabled: false }   # off by default; never silent
+  consolidation: { enabled: false }      # off by default; opt-in + provider-explicit, never silent
 ```
 
 ## Privacy stance
@@ -151,6 +151,9 @@ noir/
 │   ├── core/ store/ workflow/ skills/
 │   ├── context/ memory/ model/
 │   └── daemon/ adapters/ cli/
+├── scripts/                  install.sh (native installer), bump-version.mjs (release versioning)
+├── packaging/homebrew/       Homebrew formula + tap material
+├── .github/workflows/        ci.yml, release.yml (OIDC Trusted Publishing + provenance)
 ├── docs/                     architecture, decisions (ADRs), specs, roadmap, changelog
 ├── AGENTS.md                 agent guidance for developing this repo
 ├── biome.json                formatter + linter

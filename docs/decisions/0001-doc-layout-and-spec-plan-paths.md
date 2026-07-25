@@ -16,3 +16,9 @@ Adopt a typed `docs/` layout: `architecture/`, `decisions/` (ADRs), `findings/`,
 - One predictable home per document type; easier to find and maintain.
 - Brainstorming/writing-plans sessions must be told (via `AGENTS.md`) to use `docs/specs` / `docs/plans`. Both skills accept a user-preferred location, so this is supported.
 - Future repo-level decisions are recorded in `decisions/` as numbered, append-only ADRs.
+
+## Update (2026-07-25)
+
+The typed-layout intent above stands (`architecture/`, `decisions/`, `findings/`, `specs/`, `plans/` + a `docs/README.md` index), with one refinement learned in practice. The **Superpowers SDD flow's per-slice spec/plan artifacts** — the v1.0 SDD dogfood — live under `docs/superpowers/{specs,plans}/`, following the SDD skill's own default convention, while `docs/specs/` holds the top-level Noir blueprint (`2026-07-23-noir-toolkit-design.md`).
+
+So the original "specs/plans go to `docs/specs/` + `docs/plans/`, overriding `docs/superpowers/`" is refined to: **top-level design specs → `docs/specs/`**; **SDD-per-slice specs/plans → `docs/superpowers/{specs,plans}/`** (the dogfood convention, kept so the SDD skill works unmodified). This preserves the typed top-level layout without fighting the skill's per-slice output path.
