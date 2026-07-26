@@ -59,7 +59,7 @@ export async function create(dir: string | undefined, opts: CreateOptions): Prom
   const root = resolve(dir ?? process.cwd());
   const host: HostId = opts.host ?? 'claude';
 
-  await scaffold({
+  const res = await scaffold({
     root,
     mode: 'create',
     host,
@@ -68,6 +68,8 @@ export async function create(dir: string | undefined, opts: CreateOptions): Prom
     ...(opts.force === true ? { force: true } : {}),
     ...buildConflictOpts({ force: opts.force }),
   });
+  // SP-A: a no-op (already-initialized guard) must not re-emit skills.
+  if (res.noop) return;
 
   // Skills are out-of-manifest by design — same composition as init.
   const adapter = resolveAdapter(host);

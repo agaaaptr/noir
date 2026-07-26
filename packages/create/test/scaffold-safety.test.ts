@@ -90,6 +90,8 @@ describe('scaffold — already-initialized guard (SP-A)', () => {
 
     expect(second.written).toEqual([]);
     expect(second.skipped).toEqual([]);
+    expect(first.noop).toBe(false); // fresh init is NOT a no-op
+    expect(second.noop).toBe(true); // the already-init guard fired
     const idAfter = readFileSync(paths.projectId(root), 'utf8').trim();
     expect(idAfter).toBe(idBefore); // store DB name stays stable
     expect(second.projectId).toBe(first.projectId);
@@ -100,6 +102,7 @@ describe('scaffold — already-initialized guard (SP-A)', () => {
     await scaffold({ root, mode: 'create', transport: 'stdio' });
     const second = await scaffold({ root, mode: 'create', transport: 'stdio' });
     expect(second.written).toEqual([]);
+    expect(second.noop).toBe(true);
   });
 
   it('force: true bypasses the already-initialized guard and re-emits runtime files', async () => {
@@ -107,6 +110,7 @@ describe('scaffold — already-initialized guard (SP-A)', () => {
     await scaffold({ root, mode: 'init', transport: 'stdio' });
     const second = await scaffold({ root, mode: 'init', transport: 'stdio', force: true });
     expect(second.written.length).toBeGreaterThan(0);
+    expect(second.noop).toBe(false);
   });
 
   it('upgrade: true is NOT blocked by the already-initialized guard', async () => {

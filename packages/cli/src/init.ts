@@ -52,7 +52,7 @@ export async function init(root: string, opts: InitOptions): Promise<void> {
 
   const host: HostId = opts.host ?? 'claude';
 
-  await scaffold({
+  const res = await scaffold({
     root,
     mode: 'init',
     host,
@@ -62,6 +62,9 @@ export async function init(root: string, opts: InitOptions): Promise<void> {
     ...(opts.force === true ? { force: true } : {}),
     ...buildConflictOpts({ force: opts.force }),
   });
+  // SP-A: if the already-initialized guard no-op'd scaffold, stop — don't re-emit
+  // skills or print "initialized" (scaffold already printed the no-op message).
+  if (res.noop) return;
 
   await emitHostSkills(root, host);
 

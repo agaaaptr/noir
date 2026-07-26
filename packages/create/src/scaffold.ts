@@ -99,6 +99,11 @@ export interface ScaffoldResult {
   /** SP-D: repo-relative `regenerate` paths skipped because byte-identical to
    *  the template (content-hash dedup — no rewrite). */
   identical: string[];
+  /** SP-A: true when the already-initialized guard short-circuited (a bare
+   *  `noir init`/`create` on an initialized project). Callers (init.ts/create.ts)
+   *  gate skills emission + the "initialized" message on this — a no-op must NOT
+   *  re-emit skills or claim it initialized. */
+  noop: boolean;
   /** Migration steps executed (`<from>→<to>`), when upgrade ran. */
   migrationsRan: string[];
   /** Migration conflicts (repo-relative or `<runner>:…`), when upgrade ran. */
@@ -230,6 +235,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
       written: [],
       skipped: [],
       identical: [],
+      noop: true,
       migrationsRan: [],
       migrationConflicts: [],
       stack,
@@ -362,6 +368,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     written,
     skipped,
     identical,
+    noop: false,
     migrationsRan,
     migrationConflicts,
     stack,
