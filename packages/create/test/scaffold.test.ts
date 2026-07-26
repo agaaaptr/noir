@@ -152,7 +152,10 @@ describe('scaffold sync — runtime subset only', () => {
     const res = await scaffold({ root, mode: 'sync' });
     // sync's written list contains only runtime modes.
     const allEntries = res.written;
-    expect(allEntries).toContain('.mcp.json');
+    // .mcp.json is a regenerate file, byte-identical after init → content-hash
+    // dedup reports it in `identical` (no rewrite), not `written`.
+    expect(res.identical).toContain('.mcp.json');
+    expect(allEntries).not.toContain('.mcp.json');
     expect(allEntries).toContain('.noir/NOIR.md');
     expect(allEntries).toContain('CLAUDE.md');
     expect(allEntries).toContain('.gitignore');
@@ -192,7 +195,7 @@ describe('scaffold upgrade — migrations', () => {
 
     const res = await scaffold({ root, mode: 'init', upgrade: true });
     expect(res.migrationsRan).toContain('1.0.0→1.0.0');
-    expect(res.written).toContain('.mcp.json');
+    expect(res.identical).toContain('.mcp.json');
     expect(res.written).toContain('.noir/NOIR.md');
     // config.yml was deleted and upgrade did NOT re-seed it.
     expect(existsSync(paths.config(root))).toBe(false);

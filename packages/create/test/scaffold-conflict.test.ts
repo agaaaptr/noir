@@ -104,4 +104,14 @@ describe('scaffold — regenerate conflict resolution (SP-C)', () => {
     expect(readFileSync(`${mcp}.local.1`, 'utf8')).toBe('USER-EDIT');
     expect(res.skipped).toContain('.mcp.json.local.1');
   });
+
+  it('content-hash dedup: a byte-identical regenerate file is `identical`, not rewritten (SP-D)', async () => {
+    await scaffold({ root: tmp, mode: 'init', transport: 'stdio' });
+    const mcp = join(tmp, '.mcp.json');
+    const before = readFileSync(mcp, 'utf8');
+    const res = await reemit(); // force re-emit; .mcp.json unchanged → identical
+    expect(res.identical).toContain('.mcp.json');
+    expect(res.written).not.toContain('.mcp.json');
+    expect(readFileSync(mcp, 'utf8')).toBe(before); // untouched (no rewrite)
+  });
 });

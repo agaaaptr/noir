@@ -96,6 +96,9 @@ export interface ScaffoldResult {
   written: string[];
   /** Repo-relative paths skipIfExists'd (already present). */
   skipped: string[];
+  /** SP-D: repo-relative `regenerate` paths skipped because byte-identical to
+   *  the template (content-hash dedup — no rewrite). */
+  identical: string[];
   /** Migration steps executed (`<from>→<to>`), when upgrade ran. */
   migrationsRan: string[];
   /** Migration conflicts (repo-relative or `<runner>:…`), when upgrade ran. */
@@ -226,6 +229,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     return {
       written: [],
       skipped: [],
+      identical: [],
       migrationsRan: [],
       migrationConflicts: [],
       stack,
@@ -263,6 +267,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
 
   const written: string[] = [];
   const skipped: string[] = [];
+  const identical: string[] = [];
 
   // GROUP applicable entries by target path (manifest order preserved within
   // each group) so files carrying MULTIPLE managed blocks (CLAUDE.md today =
@@ -308,6 +313,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
         const out = await writeRegenerateWithConflict(abs, entry.path, body, opts);
         written.push(...out.written);
         skipped.push(...out.skipped);
+        identical.push(...out.identical);
       } else if (entry.mode === 'managedBlock') {
         const block = entry.block;
         if (!block) {
@@ -350,6 +356,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   return {
     written,
     skipped,
+    identical,
     migrationsRan,
     migrationConflicts,
     stack,
@@ -436,16 +443,20 @@ async function writeRegenerateWithConflict(
   relPath: string,
   proposed: string,
   opts: ScaffoldOptions,
-): Promise<{ written: string[]; skipped: string[] }> {
+): Promise<{ written: string[]; skipped: string[]; identical: string[] }> {
   let existing: string | undefined;
   try {
     existing = readFileSync(abs, 'utf8');
   } catch {
     existing = undefined;
   }
-  if (existing === undefined || existing === proposed) {
+  if (existing === undefined) {
     regenerate(abs, proposed);
-    return { written: [relPath], skipped: [] };
+    return { written: [relPath], skipped: [], identical: [] };
+  }
+  if (existing === proposed) {
+    // content-hash dedup: byte-identical → skip the rewrite entirely (no disk IO).
+    return { written: [], skipped: [], identical: [relPath] };
   }
   const resolution: ConflictResolution =
     opts.onConflict !== undefined
@@ -456,7 +467,7 @@ async function writeRegenerateWithConflict(
   switch (resolution) {
     case 'replace':
       regenerate(abs, proposed);
-      return { written: [relPath], skipped: [] };
+      return { written: [relPath], skipped: [], identical: [] };
     case 'rename': {
       // Preserve the user's file aside at a UNIQUE path. Review fix: a bare
       // `renameSync(abs, abs.local)` would silently clobber a pre-existing
@@ -466,17 +477,17 @@ async function writeRegenerateWithConflict(
       const aside = uniqueAside(abs, relPath, '.local');
       renameSync(abs, aside.abs);
       regenerate(abs, proposed);
-      return { written: [relPath], skipped: [aside.rel] };
+      return { written: [relPath], skipped: [aside.rel], identical: [] };
     }
     case 'duplicate': {
       // Write the template ALONGSIDE at a unique path; keep the user's file
       // untouched. (Same unique-suffix safeguard as `rename`.)
       const aside = uniqueAside(abs, relPath, '.noir');
       regenerate(aside.abs, proposed);
-      return { written: [aside.rel], skipped: [relPath] };
+      return { written: [aside.rel], skipped: [relPath], identical: [] };
     }
     case 'preserve':
-      return { written: [], skipped: [relPath] };
+      return { written: [], skipped: [relPath], identical: [] };
     case 'cancel':
       // Review fix: Cancel ABORTS the whole scaffold. It used to fall through
       // to "skip this file" and keep writing the remaining entries — a contract
@@ -485,7 +496,7 @@ async function writeRegenerateWithConflict(
       // remain on disk, as with any cancelled operation.
       throw new Error(`scaffold cancelled by user at conflicting file ${relPath}`);
     default:
-      return { written: [], skipped: [relPath] };
+      return { written: [], skipped: [relPath], identical: [] };
   }
 }
 
