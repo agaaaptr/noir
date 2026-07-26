@@ -2,9 +2,9 @@
 
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
-## Unreleased (develop — local, not pushed; pre-review)
+## 1.3.0-beta.1 (2026-07-26)
 
-Seven sub-projects (SP-A…G) + an opus whole-branch review fix wave from the 2026-07-26 scaffold/TUI discovery session. All TDD; full repo green (1153 tests). Discovery: `docs/discovery/2026-07-26-scaffold-tui-discovery.md`; specs in `docs/superpowers/specs/2026-07-26-*-design.md`.
+**Published on npm (dist-tag `beta`)** — cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. Eight sub-projects (SP-A…H) + an opus whole-branch review fix wave from the 2026-07-26 scaffold/TUI discovery session. All TDD; full repo green (1154 tests). Discovery: `docs/discovery/2026-07-26-scaffold-tui-discovery.md`; specs in `docs/superpowers/specs/2026-07-26-*-design.md`.
 
 ### SP-A — Scaffold root-safety + already-init no-op + doctor nested-`.noir`
 - **Root-caused & fixed the "noir init duplicates" bug:** running `init`/`create`/`sync` with cwd inside `.noir/` minted a fresh project.id (whenever `<root>/.noir/project.id` was absent) and built a **nested `.noir/.noir/`** project. New `assertSafeRoot` (`@noir-ai/create`) hard-refuses to scaffold when `root` is or is inside a `.noir/` directory (not bypassable).
@@ -28,13 +28,16 @@ Seven sub-projects (SP-A…G) + an opus whole-branch review fix wave from the 20
 - Tests pin that `--force` never weakens root-safety; rename idempotency; trailing-slash; strengthened overwrite/conflict assertions. (The `--json`/`--no-input` ⇒ conflict-prompt gap was closed in SP-G.)
 
 ### SP-E — Three-way managed-region merge (`noir sync --merge`)
-- Opt-in three-way merge (line-level diff3) for single-region managed files (NOIR.md, ignores): a hand-edit INSIDE a `<!-- noir:* -->` region survives a template update instead of being strip-replaced. `mergeThreeWay` + a `.noir/ancestors.json` store; disjoint changes merge cleanly, overlapping changes → inline conflict markers. Multi-region (CLAUDE.md) is a follow-up.
+- Opt-in three-way merge (line-level diff3) for single-region managed files (NOIR.md, ignores): a hand-edit INSIDE a `<!-- noir:* -->` region survives a template update instead of being strip-replaced. `mergeThreeWay` + a `.noir/ancestors.json` store; disjoint changes merge cleanly, overlapping changes → inline conflict markers. (Multi-region CLAUDE.md shipped in SP-H.)
 
 ### SP-F — content-hash dedup (`identical` report)
 - `regenerate` files byte-identical to disk are no longer rewritten — reported in a new `ScaffoldResult.identical` field (Yeoman-style). Managed/seed paths unchanged.
 
 ### SP-G — `--json`/`--no-input` never prompts for a conflict
 - Closes the review-flagged contract gap: `buildConflictOpts` now honors `NOIR_NON_INTERACTIVE` (set by bin's preAction hook under `--json`/`--no-input`) ⇒ a regenerate conflict preserves instead of prompting. Cascade-free (no init/create/sync arg changes; bin.test.ts arg-pins unchanged).
+
+### SP-H — Three-way merge for multi-region files (CLAUDE.md)
+- Extends SP-E to the multi-region `managedBlocks` path (CLAUDE.md = CONTEXT + RULES): each region merges against its own ancestor in the single atomic multi-region write. No remaining follow-ups — all managed regions (single + multi) support `--merge`.
 
 ---
 
