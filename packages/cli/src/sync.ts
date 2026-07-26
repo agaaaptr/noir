@@ -29,6 +29,7 @@ import { type HostId, resolveAdapter } from '@noir-ai/adapters';
 import { loadProjectInfo, paths } from '@noir-ai/core';
 import { scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
+import { buildConflictOpts } from './conflict.js';
 
 export interface SyncOptions {
   /** S10 `--host <id>` override. When set, takes precedence over the
@@ -36,12 +37,15 @@ export interface SyncOptions {
    *  different host without re-init (advanced — the canonical host stays
    *  whatever init wrote). */
   host?: HostId;
+  /** SP-C: overwrite differing regenerated files without prompting (bypasses
+   *  the conflict menu). */
+  force?: boolean;
 }
 
 export async function sync(root: string, opts: SyncOptions = {}): Promise<void> {
   const host = resolveSyncHost(root, opts);
 
-  await scaffold({ root, mode: 'sync', host });
+  await scaffold({ root, mode: 'sync', host, ...buildConflictOpts({ force: opts.force }) });
 
   const adapter = resolveAdapter(host);
   const skillsDir = adapter.skillsDir?.({ root });

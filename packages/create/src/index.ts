@@ -37,6 +37,8 @@ export {
 } from './migrations/index.js';
 export {
   assertSafeRoot,
+  type ConflictContext,
+  type ConflictResolution,
   type ScaffoldMode,
   type ScaffoldOptions,
   type ScaffoldResult,

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { createProjectId, paths } from '@noir-ai/core';
 import {
@@ -71,6 +71,15 @@ export interface ScaffoldOptions {
   /** Preview: compute the same written/skipped/migrated lists without touching
    *    disk. `noir doctor`/CI use this to report drift. */
   dryRun?: boolean;
+  /** SP-C: policy for a `regenerate` file that exists and DIFFERS from the
+   *    template, when no {@link onConflict} callback is provided. Default
+   *    `'overwrite'` is byte-backward-compatible. `'preserve'` keeps the user's
+   *    file (the non-TTY / CI default in the cli). */
+  conflictPolicy?: 'overwrite' | 'preserve';
+  /** SP-C: per-file conflict resolver — the UI seam (the engine stays UI-free;
+   *    the cli injects a @clack-based resolver). Called when a `regenerate`
+   *    file exists and differs from the template. */
+  onConflict?: (ctx: ConflictContext) => Promise<ConflictResolution> | ConflictResolution;
 }
 
 export interface ScaffoldResult {
@@ -89,6 +98,20 @@ export interface ScaffoldResult {
   /** The host actually emitted (post-default). */
   host: HostTag;
 }
+
+/** SP-C — context passed to {@link ScaffoldOptions.onConflict} when a
+ *  `regenerate` file exists and differs from the template. */
+export interface ConflictContext {
+  /** Repo-relative path of the conflicting file. */
+  relPath: string;
+  /** The file's current on-disk content. */
+  existing: string;
+  /** The content the scaffold would write. */
+  proposed: string;
+}
+
+/** SP-C — how to resolve a `regenerate` conflict. */
+export type ConflictResolution = 'replace' | 'preserve' | 'rename' | 'duplicate' | 'cancel';
 
 const WRITER_BY_MODE: Record<WriteMode, 'all' | 'runtime'> = {
   // 'runtime' subset = regenerate + managedBlock (the always-safe-to-rewrite
@@ -266,8 +289,9 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
       }
       const body = renderEntry(entry, vars);
       if (entry.mode === 'regenerate') {
-        regenerate(abs, body);
-        written.push(entry.path);
+        const out = await writeRegenerateWithConflict(abs, entry.path, body, opts);
+        written.push(...out.written);
+        skipped.push(...out.skipped);
       } else if (entry.mode === 'managedBlock') {
         const block = entry.block;
         if (!block) {
@@ -342,6 +366,59 @@ function resolveProjectId(
     throw new Error(`Noir is not initialized in ${opts.root}. Run \`noir init\` first.`);
   }
   return createProjectId();
+}
+
+/**
+ * SP-C — write a `regenerate` file, honoring conflict resolution when the
+ * target already exists and DIFFERS from the proposed bytes. Identical bytes
+ * (or a missing file) write straight through (content-hash dedup is a deferred
+ * slice — identical still "writes" today to keep sync/--upgrade byte-stable).
+ * Resolution:
+ *  - `replace`         — overwrite (the historical default).
+ *  - `preserve`/`cancel` — keep the user's file; report skipped.
+ *  - `rename`          — move the user's file to `<path>.local`, write template.
+ *  - `duplicate`       — write the template to `<path>.noir`, keep the user's.
+ * Returns the repo-relative paths to record as written / skipped.
+ */
+async function writeRegenerateWithConflict(
+  abs: string,
+  relPath: string,
+  proposed: string,
+  opts: ScaffoldOptions,
+): Promise<{ written: string[]; skipped: string[] }> {
+  let existing: string | undefined;
+  try {
+    existing = readFileSync(abs, 'utf8');
+  } catch {
+    existing = undefined;
+  }
+  if (existing === undefined || existing === proposed) {
+    regenerate(abs, proposed);
+    return { written: [relPath], skipped: [] };
+  }
+  const resolution: ConflictResolution =
+    opts.onConflict !== undefined
+      ? await opts.onConflict({ relPath, existing, proposed })
+      : opts.conflictPolicy === 'preserve'
+        ? 'preserve'
+        : 'replace';
+  switch (resolution) {
+    case 'replace':
+      regenerate(abs, proposed);
+      return { written: [relPath], skipped: [] };
+    case 'rename':
+      // Preserve the user's file aside, then write the template in place.
+      renameSync(abs, `${abs}.local`);
+      regenerate(abs, proposed);
+      return { written: [relPath], skipped: [`${relPath}.local`] };
+    case 'duplicate':
+      regenerate(`${abs}.noir`, proposed);
+      return { written: [`${relPath}.noir`], skipped: [relPath] };
+    case 'preserve':
+    case 'cancel':
+    default:
+      return { written: [], skipped: [relPath] };
+  }
 }
 
 /** Group applicable manifest entries by target path, preserving manifest order

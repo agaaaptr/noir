@@ -31,6 +31,7 @@ import { resolve } from 'node:path';
 import { type HostId, resolveAdapter } from '@noir-ai/adapters';
 import { scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
+import { buildConflictOpts } from '../conflict.js';
 import { assertTransportUrl } from '../init.js';
 
 export interface CreateOptions {
@@ -65,6 +66,7 @@ export async function create(dir: string | undefined, opts: CreateOptions): Prom
     transport: opts.transport,
     ...(opts.url !== undefined ? { url: opts.url } : {}),
     ...(opts.force === true ? { force: true } : {}),
+    ...buildConflictOpts({ force: opts.force }),
   });
 
   // Skills are out-of-manifest by design — same composition as init.

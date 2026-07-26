@@ -254,6 +254,10 @@ export function createProgram(): Command {
     .description(
       're-emit Noir managed files (.mcp.json, CLAUDE.md blocks, NOIR.md brief, ignores) + skills',
     )
+    .option(
+      '--force',
+      'overwrite differing regenerated files without prompting (bypasses the conflict menu)',
+    )
     .addOption(
       // S10: optional `--host` override. When omitted, sync reads host from
       // `.noir/config.yml` (whatever `noir init --host <id>` persisted). The
@@ -263,17 +267,22 @@ export function createProgram(): Command {
         'override the configured host (advanced; default reads .noir/config.yml)',
       ).choices(SUPPORTED_HOSTS),
     )
-    .action(async (opts: { host?: string }) => {
+    .action(async (opts: { host?: string; force?: boolean }) => {
       // Lazy import preserves the original dispatcher's deferred module load.
       const { sync } = await import('./sync.js');
       const host = parseHost(opts.host);
-      // Single-positional regression anchor: when no `--host` is given, call
-      // `sync(cwd)` exactly (bin.test.ts pins this). Only spread the opts bag
-      // when an override was explicit so the default-args snapshot stays green.
-      if (host === undefined) {
+      const force = opts.force === true;
+      // Single-positional regression anchor: when no `--host`/`--force` is
+      // given, call `sync(cwd)` exactly (bin.test.ts pins this). Only spread
+      // the opts bag when a flag was explicit so the default-args snapshot
+      // stays green.
+      if (host === undefined && !force) {
         await sync(process.cwd());
       } else {
-        await sync(process.cwd(), { host });
+        await sync(process.cwd(), {
+          ...(host !== undefined ? { host } : {}),
+          ...(force ? { force } : {}),
+        });
       }
     });
 

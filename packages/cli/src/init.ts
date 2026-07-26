@@ -28,6 +28,7 @@
 import { type HostId, resolveAdapter } from '@noir-ai/adapters';
 import { scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
+import { buildConflictOpts } from './conflict.js';
 
 export interface InitOptions {
   transport: 'stdio' | 'streamable-http';
@@ -59,6 +60,7 @@ export async function init(root: string, opts: InitOptions): Promise<void> {
     ...(opts.url !== undefined ? { url: opts.url } : {}),
     ...(opts.upgrade === true ? { upgrade: true } : {}),
     ...(opts.force === true ? { force: true } : {}),
+    ...buildConflictOpts({ force: opts.force }),
   });
 
   await emitHostSkills(root, host);
