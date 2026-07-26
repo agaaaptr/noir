@@ -62,6 +62,9 @@ export async function init(root: string, opts: InitOptions): Promise<void> {
   process.stderr.write(
     `Noir initialized in ${root} (host: ${host}, transport: ${opts.transport}).\n`,
   );
+  process.stderr.write(
+    'Next: run `noir` to open the home menu (or `noir status` for a snapshot).\n',
+  );
 }
 
 /**

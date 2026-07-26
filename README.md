@@ -25,6 +25,8 @@ $ noir
 ╰──────────────────────────────────────────────────╯
 ```
 
+> Run bare `noir` (no arguments) to open this menu. `noir init` is the **scaffold** command — non-interactive; it writes `.noir/` + skills and prints a status line, not this menu.
+
 **Noir** is a host-agnostic orchestration layer that makes an agentic CLI behave like a disciplined spec-driven engineer. **Claude Code is the default host; Gemini, Cursor, OpenCode, and AGENTS.md are one `--host` flag away** (bring-your-own-agent). It wires three capabilities every long-running agent loses without help:
 
 1. **Spec-driven workflow** — an escapable, observable lifecycle (idea → spec → plan → implement → verify → document) where every gate decision is recorded.
@@ -164,11 +166,15 @@ Homebrew is stable-only — use npm for the beta channel.
 
 ## Getting started
 
-Once installed (stable or beta), from the project you want Noir to manage:
+Three steps — **install**, **init**, then open the **home menu**:
 
 ```bash
-noir init                           # scaffolds .noir/ + emits 34 skills (33 builtins + 1 integration) + host wiring
+npm install -g @noir-ai/cli@beta     # 1. install (one time; puts `noir` on your PATH)
+noir init                            # 2. scaffold .noir/ + emit 34 skills + host wiring (non-interactive)
+noir                                 # 3. open the home menu (the TUI preview above)
 ```
+
+`noir init` creates `.noir/` (`project.id`, `config.yml` as `host: claude` + `mode: full`, `NOIR.md`, the SQLite store, `.noir/scaffold-version`, `.noir/rules/RULES.md`), root `.mcp.json`, a managed `CLAUDE.md` `@import` block (plus a managed `RULES_BLOCK`), and the **34 native `noir-*` skills** in `.claude/skills/`. It prints a status line and exits — **non-interactive**. **There is no plugin and no marketplace** — `noir init`/`noir sync` overwrite the `noir-*` namespace idempotently. Then bare `noir` opens the interactive home menu.
 
 `noir init` creates `.noir/` (`project.id`, `config.yml` as `host: claude` + `mode: full`, `NOIR.md`, the SQLite store, `.noir/scaffold-version`, `.noir/rules/RULES.md`), root `.mcp.json`, a managed `CLAUDE.md` `@import` block (plus a managed `RULES_BLOCK`), and the **34 native `noir-*` skills** in `.claude/skills/`. **There is no plugin and no marketplace** — `noir init`/`noir sync` overwrite the `noir-*` namespace idempotently.
 

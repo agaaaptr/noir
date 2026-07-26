@@ -81,4 +81,5 @@ export async function create(dir: string | undefined, opts: CreateOptions): Prom
   }
 
   process.stderr.write(`Noir created in ${root} (host: ${host}, transport: ${opts.transport}).\n`);
+  process.stderr.write('Next: cd into the new directory, then run `noir` to open the home menu.\n');
 }
