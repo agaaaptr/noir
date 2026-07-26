@@ -202,7 +202,10 @@ describe('context search — human table on stderr', () => {
     try {
       await contextSearch({ ...base, query: 'x' });
       const err = capture().err;
-      expect(err).toContain('[degraded: BM25-only]');
+      // TIER A2: the ad-hoc `[degraded: BM25-only]` marker is now a status badge
+      // (`⚠ degraded: BM25-only`) — symbol + text label, colorblind/NO_COLOR-safe.
+      expect(err).toContain('degraded: BM25-only');
+      expect(err).toContain('⚠');
       expect(err).toContain('budget hit — results truncated');
     } finally {
       restore();

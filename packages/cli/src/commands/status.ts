@@ -41,7 +41,8 @@ import {
   probeDaemon,
   withRunningDaemon,
 } from '../daemon-client.js';
-import { type CliOptions, log, table } from '../output.js';
+import { type CliOptions, definitionList, log } from '../output.js';
+import { badge } from '../theme.js';
 
 /** Options accepted by `status` (global flags + daemon-client knobs). */
 export interface StatusOptions extends CliOptions, DaemonClientOptions {}
@@ -259,20 +260,20 @@ function describeDaemon(d: StatusPayload['daemon']): string {
 
 function describeStore(s: StatusPayload['store']): string {
   if (!s) return 'unavailable (store engine not wired)';
-  const flag = s.degraded ? ' [degraded: read-only]' : '';
+  const flag = s.degraded ? `  ${badge('warn', 'degraded: read-only')}` : '';
   return `${s.docCount} docs / ${s.vecCount} vecs${flag}`;
 }
 
 function describeContext(c: StatusPayload['context']): string {
   if (!c) return 'unavailable (context engine not wired)';
-  const flag = c.degraded ? ' [degraded]' : '';
+  const flag = c.degraded ? `  ${badge('warn', 'degraded')}` : '';
   return `${c.docCount} docs, ${c.vecCount} vecs, ${c.indexedFiles} files · embedder ${c.embedder}${flag}`;
 }
 
 function describeWorkflow(w: StatusPayload['workflow']): string {
   if (!w) return 'no active task';
   const gate = w.nextGate ? ` → next gate: ${w.nextGate}` : '';
-  const flag = w.degraded ? ' [degraded]' : '';
+  const flag = w.degraded ? `  ${badge('warn', 'degraded')}` : '';
   return `${w.phase} (${w.state}, ${w.mode}) · task ${w.taskId}${gate}${flag}`;
 }
 
@@ -282,21 +283,21 @@ function describeMemory(m: StatusPayload['memory']): string {
 }
 
 function renderHuman(p: StatusPayload, opts: CliOptions): void {
-  // Banner + table both go to stderr (table is a no-op under --json; we only
-  // render human when opts.json is false, but passing opts keeps --quiet honest).
+  // Banner + definition list both go to stderr (rendering is a no-op under
+  // --json; we only render human when opts.json is false, but passing opts
+  // keeps --quiet honest).
   log(`noir status — ${p.project.name} (${p.project.id})`, opts);
-  table(
+  definitionList(
     [
-      { Field: 'Project', Value: `${p.project.name} (${p.project.id})` },
-      { Field: 'Host', Value: p.host },
-      { Field: 'Noir', Value: p.noir },
-      { Field: 'Daemon', Value: describeDaemon(p.daemon) },
-      { Field: 'Store', Value: describeStore(p.store) },
-      { Field: 'Context', Value: describeContext(p.context) },
-      { Field: 'Workflow', Value: describeWorkflow(p.workflow) },
-      { Field: 'Memory', Value: describeMemory(p.memory) },
+      { label: 'Project', value: `${p.project.name} (${p.project.id})` },
+      { label: 'Host', value: p.host },
+      { label: 'Noir', value: p.noir },
+      { label: 'Daemon', value: describeDaemon(p.daemon) },
+      { label: 'Store', value: describeStore(p.store) },
+      { label: 'Context', value: describeContext(p.context) },
+      { label: 'Workflow', value: describeWorkflow(p.workflow) },
+      { label: 'Memory', value: describeMemory(p.memory) },
     ],
-    ['Field', 'Value'],
     opts,
   );
 }

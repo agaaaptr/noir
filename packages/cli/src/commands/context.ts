@@ -19,7 +19,8 @@
 // USAGE error (exit 2) before we touch the daemon.
 
 import { callDaemonTool, type DaemonClientOptions } from '../daemon-client.js';
-import { type CliOptions, EXIT, fail, info, log, table } from '../output.js';
+import { type CliOptions, definitionList, EXIT, fail, info, log, table } from '../output.js';
+import { badge } from '../theme.js';
 
 /** Options accepted by every `context` sub-command (globals + daemon knobs). */
 export interface ContextOptions extends CliOptions, DaemonClientOptions {}
@@ -176,7 +177,7 @@ export async function contextSearch(opts: ContextSearchOptions): Promise<void> {
 }
 
 function renderSearch(data: ContextSearchData, opts: CliOptions): void {
-  const flag = data.degraded ? ' [degraded: BM25-only]' : '';
+  const flag = data.degraded ? `  ${badge('warn', 'degraded: BM25-only')}` : '';
   const trunc = data.truncated ? ' (budget hit — results truncated)' : '';
   log(
     `context search — ${data.hits.length} hit${data.hits.length === 1 ? '' : 's'} · ${data.mode} · ${data.consumedTokens} tokens${flag}${trunc}`,
@@ -238,17 +239,16 @@ export async function contextIndex(opts: ContextIndexOptions): Promise<void> {
 
 function renderIndex(data: ContextIndexData, paths: string[] | undefined, opts: CliOptions): void {
   const scope = paths && paths.length > 0 ? paths.join(', ') : '.';
-  const flag = data.degraded ? ' [degraded: vectors skipped]' : '';
+  const flag = data.degraded ? `  ${badge('warn', 'degraded: vectors skipped')}` : '';
   log(`context index — ${scope}${flag}`, opts);
-  table(
+  definitionList(
     [
-      { Field: 'Indexed (new)', Value: data.indexed },
-      { Field: 'Skipped (unchanged)', Value: data.skipped },
-      { Field: 'Deleted (removed)', Value: data.deleted },
-      { Field: 'Failed', Value: data.failed },
-      { Field: 'Total chunks', Value: data.totalChunks },
+      { label: 'Indexed (new)', value: data.indexed },
+      { label: 'Skipped (unchanged)', value: data.skipped },
+      { label: 'Deleted (removed)', value: data.deleted },
+      { label: 'Failed', value: data.failed },
+      { label: 'Total chunks', value: data.totalChunks },
     ],
-    ['Field', 'Value'],
     opts,
   );
   if (data.failed > 0) {
@@ -279,18 +279,17 @@ function describeEmbedder(e: ContextStatusData['embedder']): string {
 }
 
 function renderStatus(data: ContextStatusData, opts: CliOptions): void {
-  const flag = data.degraded ? ' [degraded]' : '';
+  const flag = data.degraded ? `  ${badge('warn', 'degraded')}` : '';
   log(`context status — ${data.projectId}${flag}`, opts);
-  table(
+  definitionList(
     [
-      { Field: 'Project', Value: data.projectId },
-      { Field: 'Docs', Value: data.docCount },
-      { Field: 'Vectors', Value: data.vecCount },
-      { Field: 'Indexed files', Value: data.indexedFiles },
-      { Field: 'Embedder', Value: describeEmbedder(data.embedder) },
-      { Field: 'Degraded', Value: data.degraded ? 'yes' : 'no' },
+      { label: 'Project', value: data.projectId },
+      { label: 'Docs', value: data.docCount },
+      { label: 'Vectors', value: data.vecCount },
+      { label: 'Indexed files', value: data.indexedFiles },
+      { label: 'Embedder', value: describeEmbedder(data.embedder) },
+      { label: 'Degraded', value: data.degraded ? 'yes' : 'no' },
     ],
-    ['Field', 'Value'],
     opts,
   );
 }

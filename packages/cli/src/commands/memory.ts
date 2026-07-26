@@ -23,7 +23,17 @@
 // honored as exit 1 with the reason; it is NEVER a silent paid call.
 
 import { callDaemonTool, type DaemonClientOptions, withDaemon } from '../daemon-client.js';
-import { type CliOptions, EXIT, fail, info, isInteractive, log, table } from '../output.js';
+import {
+  type CliOptions,
+  definitionList,
+  EXIT,
+  fail,
+  info,
+  isInteractive,
+  log,
+  table,
+} from '../output.js';
+import { badge } from '../theme.js';
 
 /** Options accepted by every `memory` sub-command (globals + daemon knobs). */
 export interface MemoryOptions extends CliOptions, DaemonClientOptions {}
@@ -190,7 +200,7 @@ function renderRecall(
   degraded: boolean,
   opts: CliOptions,
 ): void {
-  const flag = degraded ? ' [degraded: BM25-only]' : '';
+  const flag = degraded ? `  ${badge('warn', 'degraded: BM25-only')}` : '';
   log(
     `memory recall — ${hits.length} hit${hits.length === 1 ? '' : 's'} for '${query}'${flag}`,
     opts,
@@ -200,7 +210,8 @@ function renderRecall(
     return;
   }
   // Full content per hit (DS-9: never truncate the DATA; display shows it whole
-  // in a readable block rather than a cramped table cell).
+  // in a readable block rather than a cramped table cell). The block-list shape
+  // is load-bearing — do NOT sweep this into the responsive table().
   for (let i = 0; i < hits.length; i++) {
     const h = hits[i];
     if (h === undefined) continue;
@@ -272,11 +283,11 @@ async function resolveContent(opts: MemorySaveOptions): Promise<string> {
 }
 
 function renderObservation(obs: Record<string, unknown>, opts: CliOptions): void {
-  const rows: Array<{ Field: string; Value: unknown }> = [];
+  const rows: Array<{ label: string; value: unknown }> = [];
   for (const key of ['id', 'type', 'importance', 'ts', 'source', 'project', 'sessionId']) {
-    if (obs[key] !== undefined) rows.push({ Field: key, Value: obs[key] });
+    if (obs[key] !== undefined) rows.push({ label: key, value: obs[key] });
   }
-  if (rows.length > 0) table(rows, ['Field', 'Value'], opts);
+  if (rows.length > 0) definitionList(rows, opts);
   const content = obs.content;
   if (typeof content === 'string') log(`\n${content}`, opts);
 }

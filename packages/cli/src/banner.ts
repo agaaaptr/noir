@@ -11,8 +11,8 @@
 // skips --quiet and NOIR_NO_BANNER. color:false → zero ANSI for snapshots/CI.
 // Responsive: ≥50 cols → block wordmark; <50 → compact `◆ noir` mark.
 import gradient from 'gradient-string';
-import pc from 'picocolors';
 import type { CliOptions } from './output.js';
+import { accessibleMode, c, useColor } from './theme.js';
 
 // figlet "ANSI Shadow" — regenerated 2026-07-26 from the standard per-letter
 // glyphs and verified (N, O, I, R) to read "NOIR". Do NOT hand-edit — regenerate
@@ -44,17 +44,32 @@ export interface BannerOptions {
 
 /**
  * Render the Noir banner. Wide terminals (≥50 cols) get the full block
- * wordmark; narrow terminals get a compact `◆ noir` mark. `color:false` emits
- * pure text (zero ANSI) for snapshots / CI / NO_COLOR.
+ * wordmark; narrow terminals get a compact `◆ noir` mark.
+ *
+ * Color gating (TIER A2): decoration is on only when the caller did not pass
+ * `color:false` AND `useColor()` agrees (honoring NO_COLOR / CLICOLOR_FORCE /
+ * TTY uniformly via the theme — the single color authority). Under
+ * `NOIR_ACCESSIBLE` the gradient is replaced with a solid accent render
+ * (maximum legibility); the wordmark stays recognizable either way.
  */
 export function renderBanner(opts: BannerOptions = {}): string {
   const width = opts.width ?? process.stdout.columns ?? 80;
-  const color = opts.color ?? true;
+  const colorOn = opts.color !== false && useColor();
   if (width < 50) {
-    return color ? `${pc.magenta('◆')} noir` : '◆ noir';
+    return colorOn ? `${c.accent('◆')} noir` : '◆ noir';
   }
   const block = NOIR_BLOCK.join('\n');
-  return color ? NOIR_GRADIENT.multiline(block) : block;
+  if (!colorOn) return block;
+  // Accessible mode: skip the multi-stop gradient in favor of a single solid
+  // accent color (still the Midnight Cobalt blue role, just without the
+  // per-character hue drift that can be harder to read).
+  if (accessibleMode()) {
+    return block
+      .split('\n')
+      .map((line) => c.accent(line))
+      .join('\n');
+  }
+  return NOIR_GRADIENT.multiline(block);
 }
 
 /**

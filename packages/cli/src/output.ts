@@ -16,7 +16,7 @@
 import Table from 'cli-table3';
 import { CommanderError } from 'commander';
 import ora, { type Ora } from 'ora';
-import pc from 'picocolors';
+import { c, terminalWidth } from './theme.js';
 
 // ---------------------------------------------------------------------------
 // Exit-code contract + error types
@@ -131,28 +131,38 @@ export function log(msg: string, opts: CliOptions = {}): void {
 
 export function info(msg: string, opts: CliOptions = {}): void {
   if (isJsonMode(opts) || isQuietMode(opts)) return;
-  process.stderr.write(`${pc.cyan(msg)}\n`);
+  process.stderr.write(`${c.info(msg)}\n`);
 }
 
 export function success(msg: string, opts: CliOptions = {}): void {
   if (isJsonMode(opts) || isQuietMode(opts)) return;
-  process.stderr.write(`${pc.green(msg)}\n`);
+  process.stderr.write(`${c.ok(msg)}\n`);
 }
 
 export function warn(msg: string, opts: CliOptions = {}): void {
   if (isJsonMode(opts)) return;
-  process.stderr.write(`${pc.yellow(msg)}\n`);
+  process.stderr.write(`${c.warn(msg)}\n`);
 }
 
 export function error(msg: string, opts: CliOptions = {}): void {
   if (isJsonMode(opts)) return;
-  process.stderr.write(`${pc.red(msg)}\n`);
+  process.stderr.write(`${c.error(msg)}\n`);
 }
 
 // ---------------------------------------------------------------------------
 // Tables (stderr). Suppressed entirely under `--json` — the command has
-// already emitted the rows as a JSON array via `json()`. cli-table3 itself is
-// isTTY-aware, but we gate it here so JSON pipes never see table text.
+// already emitted the rows as a JSON array via `json()`.
+//
+// Design (TIER A2): cli-table3 styles headers/borders via `@colors/colors`
+// (whose NO_COLOR/TTY semantics differ from picocolors), which painted EVERY
+// header red while the body stripped — RED is now reserved strictly for ERROR.
+// We bypass `@colors/colors` entirely by passing EMPTY `style.head`/`style.border`
+// arrays (cli-table3's `wrapWithStyleColors` early-returns on length 0) and
+// PRE-COLOR the header strings ourselves via `theme.c` (picocolors). Result:
+// the header, border, and body all strip consistently under NO_COLOR / non-TTY,
+// because picocolors is the SOLE color authority. Responsive `colWidths` are
+// computed from `terminalWidth()` so tables never overflow; `wordWrap` keeps
+// free-text cells readable, and `truncate: '…'` caps any single over-long token.
 // ---------------------------------------------------------------------------
 export function table(
   rows: readonly Record<string, unknown>[],
@@ -164,11 +174,84 @@ export function table(
     info('(no rows)', opts);
     return;
   }
-  const t = new Table({ head: [...cols] });
+  const t = new Table({
+    head: cols.map((col) => c.bold(c.info(col))),
+    // Empty arrays ⇒ cli-table3 applies NO @colors/colors wrap (neither the
+    // default red header nor a colored border). All color is ours, via theme.
+    style: { head: [], border: [] },
+    colWidths: computeColWidths(rows, cols),
+    wordWrap: true,
+    truncate: '…',
+  });
   for (const row of rows) {
     t.push(cols.map((col) => formatCell(row[col])));
   }
   process.stderr.write(`${t.toString()}\n`);
+}
+
+/**
+ * Compute per-column widths (cli-table3 `colWidths`, which INCLUDE each column's
+ * 2 padding chars) that fit `terminalWidth()`. Strategy:
+ *
+ *   1. Measure each column's NATURAL content width (longest cell, at least the
+ *      header label so a header never wraps/truncates).
+ *   2. If the natural total fits, use it as-is — every cell renders whole.
+ *   3. Otherwise GREEDILY TRIM ONLY THE WIDEST column (down to its header width)
+ *      until the row fits. Narrow columns (paths, ids, statuses) keep their full
+ *      width — they're single tokens that can't word-wrap, so truncating them
+ *      loses information. The widest column is the free-text one (descriptions,
+ *      details, snippets); it has spaces and absorbs the shrink via `wordWrap`.
+ *
+ * cli-table3 accepts only positive integers (negatives collapse). Each returned
+ * width is `content + 2` to reserve the column's padding, so the content area
+ * equals the measured width and the math against `terminalWidth()` is exact.
+ */
+function computeColWidths(
+  rows: readonly Record<string, unknown>[],
+  cols: readonly string[],
+): number[] {
+  const n = cols.length;
+  if (n === 0) return [];
+  const headerLen = cols.map((col) => col.length);
+  const natural = cols.map((col, i) => {
+    let max = Math.max(headerLen[i] ?? col.length, 3);
+    for (const row of rows) {
+      const len = formatCell(row[col]).length;
+      if (len > max) max = len;
+    }
+    return max;
+  });
+  // cli-table3 row overhead: per column 1 left border + 2 padding, plus a final
+  // right border ⇒ 3n + 1 non-content chars. `contentBudget` is what remains for
+  // the sum of column CONTENT areas.
+  const contentBudget = Math.max(n * 4, terminalWidth() - 3 * n - 1);
+  const naturalSum = natural.reduce((a, b) => a + b, 0);
+  if (naturalSum <= contentBudget) {
+    return natural.map((w) => w + 2);
+  }
+  // Overflow: greedily cut the widest reducible column (≥ its header width).
+  const content = natural.slice();
+  let sum = naturalSum;
+  const floor = headerLen.map((h) => Math.max(h, 3));
+  while (sum > contentBudget) {
+    let idx = -1;
+    let widest = -1;
+    for (let i = 0; i < n; i++) {
+      const c = content[i] ?? 0;
+      const f = floor[i] ?? 3;
+      if (c > f && c > widest) {
+        widest = c;
+        idx = i;
+      }
+    }
+    if (idx === -1) break; // every column is at its header floor — stop
+    const overshoot = sum - contentBudget;
+    const reducible = (content[idx] ?? 0) - (floor[idx] ?? 3);
+    const cut = Math.min(overshoot, reducible);
+    content[idx] = (content[idx] ?? 0) - cut;
+    sum -= cut;
+  }
+  return content.map((w) => w + 2);
 }
 
 function formatCell(value: unknown): string {
@@ -178,6 +261,32 @@ function formatCell(value: unknown): string {
     return String(value);
   }
   return JSON.stringify(value);
+}
+
+// ---------------------------------------------------------------------------
+// Definition list (stderr). A two-column Field/Value rendering for snapshot-
+// shaped output (status / task / context-status). `status.ts` hand-rolled this
+// exact shape; this generalizes it. Rendered via the same responsive `table()`,
+// so it inherits the clean (non-red) header + NO_COLOR behavior automatically.
+// ---------------------------------------------------------------------------
+export interface DefinitionRow {
+  /** Field label (left column). */
+  label: string;
+  /** Field value; coerced to a string the same way table cells are. */
+  value: unknown;
+}
+
+export function definitionList(rows: readonly DefinitionRow[], opts: CliOptions = {}): void {
+  table(
+    rows.map((r) => ({ Field: r.label, Value: formatCell(r.value) })),
+    ['Field', 'Value'],
+    opts,
+  );
+}
+
+/** Render a single `label: value` line to stderr (human only). */
+export function kv(label: string, value: unknown, opts: CliOptions = {}): void {
+  log(`${c.bold(label)}: ${formatCell(value)}`, opts);
 }
 
 // ---------------------------------------------------------------------------

@@ -325,7 +325,11 @@ describe('status — human table on stderr', () => {
     const { capture, restore } = captureStreams();
     try {
       await status({ ...baseOpts });
-      expect(capture().err).toContain('local · all-MiniLM-L6-v2 (384-dim)');
+      // TIER A2: the responsive Value column word-wraps the embedder string at a
+      // space boundary, so assert the two semantic pieces separately.
+      const err = capture().err;
+      expect(err).toContain('local · all-MiniLM-L6-v2');
+      expect(err).toContain('(384-dim)');
     } finally {
       restore();
     }
@@ -350,7 +354,7 @@ describe('status — human table on stderr', () => {
     }
   });
 
-  it('marks a degraded store with [degraded: read-only]', async () => {
+  it('marks a degraded store with a degraded: read-only badge', async () => {
     PAYLOADS.store_status = {
       ok: true,
       projectId: 'proj-abc',
@@ -362,7 +366,11 @@ describe('status — human table on stderr', () => {
     const { capture, restore } = captureStreams();
     try {
       await status({ ...baseOpts });
-      expect(capture().err).toContain('[degraded: read-only]');
+      // TIER A2: the ad-hoc `[degraded: read-only]` marker is now a status badge
+      // (`⚠ degraded: read-only`) — symbol + text label, colorblind/NO_COLOR-safe.
+      const err = capture().err;
+      expect(err).toContain('degraded: read-only');
+      expect(err).toContain('⚠');
     } finally {
       restore();
     }

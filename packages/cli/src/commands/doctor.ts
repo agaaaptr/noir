@@ -48,6 +48,7 @@ import {
   table,
   warn,
 } from '../output.js';
+import { type BadgeState, badge } from '../theme.js';
 
 /** Options accepted by `doctor`: the global flags + the opt-in `--dedup`. */
 export interface DoctorOptions extends CliOptions {
@@ -919,6 +920,15 @@ function joinRoot(root: string, relPath: string): string {
   return `${root}/${relPath}`;
 }
 
+function severityBadge(s: Severity): string {
+  // Doctor's vocabulary is ok/warn/fail; the badge palette is ok/warn/error/info.
+  // `fail` is the CRITICAL state → red (`error`), so RED stays reserved for the
+  // broken-host states. The TEXT label keeps doctor's own uppercase word so the
+  // JSON envelope (`status: 'fail'`) and the human row agree on vocabulary.
+  const state: BadgeState = s === 'fail' ? 'error' : s;
+  return badge(state, s.toUpperCase());
+}
+
 function renderHuman(payload: DoctorPayload, opts: CliOptions): void {
   log(
     `noir doctor — ${payload.checks.length} check${payload.checks.length === 1 ? '' : 's'}`,
@@ -927,7 +937,7 @@ function renderHuman(payload: DoctorPayload, opts: CliOptions): void {
   table(
     payload.checks.map((c) => ({
       Check: c.name,
-      Status: c.status.toUpperCase(),
+      Status: severityBadge(c.status),
       Detail: c.detail,
     })),
     ['Check', 'Status', 'Detail'],

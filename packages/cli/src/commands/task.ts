@@ -20,7 +20,8 @@
 // envelope to `null` and stays exit 0).
 
 import { callDaemonTool, type DaemonClientOptions } from '../daemon-client.js';
-import { type CliOptions, EXIT, fail, info, log, table } from '../output.js';
+import { type CliOptions, definitionList, EXIT, fail, info, log } from '../output.js';
+import { badge } from '../theme.js';
 
 /** Options accepted by every `task` sub-command (globals + daemon knobs). */
 export interface TaskOptions extends CliOptions, DaemonClientOptions {}
@@ -99,18 +100,17 @@ function formatStamp(ms?: number): string {
 }
 
 function renderStatusRow(s: WorkflowStatusResult, opts: CliOptions): void {
-  const flag = s.degraded === true ? ' [degraded]' : '';
+  const flag = s.degraded === true ? `  ${badge('warn', 'degraded')}` : '';
   log(`task status — ${s.taskId}${flag}`, opts);
-  table(
+  definitionList(
     [
-      { Field: 'Task', Value: s.taskId },
-      { Field: 'Phase', Value: s.phase },
-      { Field: 'State', Value: s.state },
-      { Field: 'Mode', Value: s.mode },
-      { Field: 'Next gate', Value: s.nextGate ?? '—' },
-      { Field: 'Updated', Value: formatStamp(s.updatedAt) },
+      { label: 'Task', value: s.taskId },
+      { label: 'Phase', value: s.phase },
+      { label: 'State', value: s.state },
+      { label: 'Mode', value: s.mode },
+      { label: 'Next gate', value: s.nextGate ?? '—' },
+      { label: 'Updated', value: formatStamp(s.updatedAt) },
     ],
-    ['Field', 'Value'],
     opts,
   );
 }
@@ -154,7 +154,7 @@ export async function taskNext(opts: TaskOptions): Promise<void> {
     process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
     return;
   }
-  const flag = data.degraded ? ' [degraded]' : '';
+  const flag = data.degraded ? `  ${badge('warn', 'degraded')}` : '';
   log(`task next — ${s.taskId} · phase ${s.phase} (${s.state}, ${s.mode})${flag}`, opts);
   if (s.nextGate) {
     info(`next gate: ${s.nextGate}`, opts);
