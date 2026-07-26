@@ -4,7 +4,7 @@ Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`d
 
 ## 1.2.0-beta.2 (2026-07-26)
 
-> **Publish status: TAGGED + CI build GREEN, but PUBLISH PENDING** — the `release.yml` publish job is gated on the `release` environment's `required_reviewers` (npm `beta` still resolves to the broken `1.2.0-beta.1`). See `docs/v1x-next-session.md` to complete the publish.
+**Published on npm (dist-tag `beta`); verified working via global install** — `npx @noir-ai/cli@1.2.0-beta.2 --version` → `1.2.0-beta.2` (exit 0); `noir init` scaffolds. The critical global-install fix:
 
 **Critical fix: a global `noir` install was a silent no-op** (every published beta, including 1.2.0-beta.1). Two bugs:
 
