@@ -69,9 +69,15 @@ function hostDirection(host: HostId): string {
 /**
  * Bare-`noir` router. See module header for the three dispatch arms. Never
  * blocks when input is disabled (the interactive branch is unreachable then).
+ *
+ * C1 TUI policy: `--no-tui` (`opts.tui === false`) forces the non-interactive
+ * `status` path even when {@link isInteractive} would be true (a TTY). `--tui`
+ * (`opts.tui === true`) is advisory only — it still requires a TTY, so the
+ * `isInteractive(opts)` gate already encodes that. Auto (no flag) preserves the
+ * pre-C1 behavior. Advisory only — `home` never hard-gates any subcommand.
  */
 export async function home(opts: CliOptions, deps: HomeDeps): Promise<void> {
-  if (isInteractive(opts)) {
+  if (isInteractive(opts) && opts.tui !== false) {
     await runMenu(opts, deps);
     return;
   }

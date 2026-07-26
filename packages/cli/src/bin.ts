@@ -29,7 +29,16 @@ import { skillsList, skillsSync } from './commands/skills.js';
 import { type StatusOptions, status } from './commands/status.js';
 import { taskAdvance, taskNew, taskNext, taskStatus } from './commands/task.js';
 import { init } from './init.js';
-import { type CliOptions, EXIT, fail, handleError, inferExitCode, NoirCliError } from './output.js';
+import {
+  type CliOptions,
+  EXIT,
+  fail,
+  handleError,
+  inferExitCode,
+  json,
+  NoirCliError,
+  tip,
+} from './output.js';
 import { serve } from './serve.js';
 
 // Exit-code contract, error type, `fail`, and exit-code mapping live in
@@ -88,6 +97,14 @@ function toCliOptions(g: Record<string, unknown>): CliOptions {
     quiet: g.quiet === true,
     verbose: g.verbose === true,
     input: g.input !== false,
+    // C1 TUI policy — additive only. `--tui`/`--no-tui` land on `tui`
+    // (true/false; absent when neither flag is given). Spread conditionally so
+    // the default-args case (no flag) does NOT add a `tui` key — keeps the
+    // exact-shape assertions in bin.test.ts green.
+    ...(g.tui === true || g.tui === false ? { tui: g.tui === true } : {}),
+    // `--no-tips` is stored under `tips` (default true; flag ⇒ false). Map to
+    // the additive `noTips` spelling used by CliOptions + `tip()`.
+    ...(g.tips === false ? { noTips: true } : {}),
   };
 }
 
@@ -117,6 +134,74 @@ function parseHost(raw: string | undefined): HostId | undefined {
   return raw as HostId;
 }
 
+// ---------------------------------------------------------------------------
+// C1 — TUI policy + deprecation / redirect infrastructure.
+//
+// Approach B (locked): TUI-primary UX, but NEVER hard-gate any subcommand. The
+// bare `noir` home menu is the documented human entry point; every subcommand
+// stays 100% scriptable. `--json` is the headless contract. The deprecation
+// registry below is the formal "warn for N → redirect for N → never silently
+// remove" channel; ZERO entries today (no command is deprecated). See
+// docs/command-policy.md + docs/deprecation.md.
+// ---------------------------------------------------------------------------
+
+/** One entry in the {@link DEPRECATIONS} registry. */
+export interface DeprecationEntry {
+  /** Old command form as a path prefix, e.g. `['legacy-status']` or
+   *  `['context','legacy']`. Matched against the dispatched command's path
+   *  (program name `noir` stripped). */
+  readonly oldArgv: readonly string[];
+  /** Replacement command form, e.g. `['status']`. Shown in the redirect hint. */
+  readonly newArgv: readonly string[];
+  /** Version the deprecation started in, e.g. `'1.4.0'`. */
+  readonly since: string;
+}
+
+/**
+ * C1 deprecation registry. **Empty today** — no `noir` command is deprecated.
+ * When adding an entry, also update `docs/deprecation.md` (and, if the old
+ * form still routes, add a redirect). {@link emitDeprecationHintsFor} scans
+ * this on every dispatch and emits one `tip()` per match; `--no-tips` /
+ * `--json` suppress the hint (see {@link tip}).
+ */
+export const DEPRECATIONS: DeprecationEntry[] = [];
+
+/**
+ * Build the dispatched command's path (e.g. `['noir','context','search']`) by
+ * walking `.parent` up to the program root. Used by {@link emitDeprecationHintsFor}
+ * to match an {@link DeprecationEntry.oldArgv} prefix (program name stripped).
+ */
+function commandPath(cmd: Command): string[] {
+  const path: string[] = [];
+  let c: Command | null = cmd;
+  while (c !== null) {
+    path.unshift(c.name());
+    c = c.parent;
+  }
+  return path;
+}
+
+/**
+ * Emit one redirect hint per matching {@link DEPRECATIONS} entry for the
+ * dispatched command. Respects `--no-tips` and `--json` via {@link tip} (a CI
+ * run's stderr stays quiet and its stdout envelope stays pristine). Exported so
+ * tests can drive it with a temporarily-populated registry without going
+ * through commander.
+ */
+export function emitDeprecationHintsFor(cmd: Command, opts: CliOptions): void {
+  if (DEPRECATIONS.length === 0) return; // common case (no entries today)
+  // Strip the leading program name ('noir') for matching.
+  const rel = commandPath(cmd).slice(1);
+  for (const d of DEPRECATIONS) {
+    if (d.oldArgv.every((a, i) => rel[i] === a)) {
+      tip(
+        `\`noir ${d.oldArgv.join(' ')}\` is deprecated since v${d.since}; use \`noir ${d.newArgv.join(' ')}\`.`,
+        opts,
+      );
+    }
+  }
+}
+
 export function createProgram(): Command {
   const program = new Command();
 
@@ -132,6 +217,25 @@ export function createProgram(): Command {
     .addOption(new Option('--quiet', 'suppress non-essential diagnostics'))
     .addOption(new Option('--verbose', 'show additional diagnostic detail'))
     .addOption(new Option('--cwd <path>', 'run as if started in <path>'))
+    // C1 TUI policy — advisory routing for bare `noir` only (never hard-gates a
+    // subcommand). `--tui`/`--no-tui` are a commander negatable pair: parsed
+    // onto a single `tui` attribute (true / false / absent=auto). Bare `noir`
+    // in a TTY runs the home menu by default; `--no-tui` forces the
+    // non-interactive `status` path even in a TTY; `--tui` is a hint that still
+    // requires a TTY (so it never blocks in CI / a pipe). See home.ts + CLAUDE.md.
+    .addOption(
+      new Option('--tui', 'prefer the interactive home menu for bare `noir` (advisory; TTY-only)'),
+    )
+    .addOption(
+      new Option(
+        '--no-tui',
+        'route bare `noir` to the non-interactive `status` path even in a TTY',
+      ),
+    )
+    // C1 deprecation / redirect hints — `--no-tips` silences the `tip()` helper
+    // for CI / log-friendly runs. No command is deprecated today; the flag is
+    // the headless contract for quieting future notices (see docs/deprecation.md).
+    .addOption(new Option('--no-tips', 'suppress redirect / deprecation hints on stderr'))
     .exitOverride((err) => {
       // Never process.exit; surface to the caller (run()/test) instead.
       throw err;
@@ -169,6 +273,10 @@ export function createProgram(): Command {
     const nonInteractive = opts.json === true || opts.input === false;
     if (nonInteractive) process.env.NOIR_NON_INTERACTIVE = '1';
     else delete process.env.NOIR_NON_INTERACTIVE;
+    // C1: deprecation / redirect hints. Scans {@link DEPRECATIONS} against the
+    // dispatched command path; emits via `tip()` (suppressed by --no-tips /
+    // --json). Empty registry today — no-op until an entry is added.
+    emitDeprecationHintsFor(actionCmd, toCliOptions(opts));
   });
 
   // ----- migrated commands (behavior-preserving) -----
@@ -194,13 +302,16 @@ export function createProgram(): Command {
       ).choices(SUPPORTED_HOSTS),
     )
     .action(
-      async (opts: {
-        transport?: string;
-        url?: string;
-        upgrade?: boolean;
-        force?: boolean;
-        host?: string;
-      }) => {
+      async (
+        opts: {
+          transport?: string;
+          url?: string;
+          upgrade?: boolean;
+          force?: boolean;
+          host?: string;
+        },
+        cmd: Command,
+      ) => {
         // Preserve the parseArgs coercion exactly: only 'streamable-http' is
         // special; any other value (incl. typos / future transports) → 'stdio'.
         const transport: 'stdio' | 'streamable-http' =
@@ -213,13 +324,22 @@ export function createProgram(): Command {
         const upgrade = opts.upgrade === true;
         const force = opts.force === true;
         const host = parseHost(opts.host);
-        await init(process.cwd(), {
+        const result = await init(process.cwd(), {
           transport,
           url: opts.url,
           ...(upgrade ? { upgrade } : {}),
           ...(force ? { force } : {}),
           ...(host !== undefined ? { host } : {}),
         });
+        // C1 / B3 gap close: surface the structured ScaffoldResult (with
+        // `conflicts[]`) on stdout under `--json`, wrapped in the versioned
+        // `{ok, data}` envelope so it matches the headless contract every read
+        // command uses. The args passed to init() are UNCHANGED (bin.test.ts
+        // arg pins still hold); only the return value is captured + emitted.
+        // `init` returns `undefined` on the already-initialized no-op — skip.
+        if (cmd.optsWithGlobals().json === true && result !== undefined) {
+          json({ ok: true, data: result });
+        }
       },
     );
 
@@ -242,18 +362,25 @@ export function createProgram(): Command {
       async (
         dir: string | undefined,
         opts: { transport?: string; url?: string; force?: boolean; host?: string },
+        cmd: Command,
       ) => {
         const transport: 'stdio' | 'streamable-http' =
           opts.transport === 'streamable-http' ? 'streamable-http' : 'stdio';
         const force = opts.force === true;
         const host = parseHost(opts.host);
         const { create } = await import('./commands/create.js');
-        await create(dir, {
+        const result = await create(dir, {
           transport,
           url: opts.url,
           ...(force ? { force } : {}),
           ...(host !== undefined ? { host } : {}),
         });
+        // C1 / B3 gap close: surface the structured ScaffoldResult (with
+        // `conflicts[]`) on stdout under `--json`, wrapped in the `{ok, data}`
+        // envelope (headless contract). Skipped on the no-op return.
+        if (cmd.optsWithGlobals().json === true && result !== undefined) {
+          json({ ok: true, data: result });
+        }
       },
     );
 
@@ -289,7 +416,10 @@ export function createProgram(): Command {
       ).choices(SUPPORTED_HOSTS),
     )
     .action(
-      async (opts: { host?: string; force?: boolean; merge?: boolean; mergeRegions?: boolean }) => {
+      async (
+        opts: { host?: string; force?: boolean; merge?: boolean; mergeRegions?: boolean },
+        cmd: Command,
+      ) => {
         // Lazy import preserves the original dispatcher's deferred module load.
         const { sync } = await import('./sync.js');
         const host = parseHost(opts.host);
@@ -301,15 +431,21 @@ export function createProgram(): Command {
         // `--no-merge-regions` is given, call `sync(cwd)` exactly (bin.test.ts pins
         // this). Only spread the opts bag when a flag was explicit so the
         // default-args snapshot stays green.
-        if (host === undefined && !force && !merge && !noMergeRegions) {
-          await sync(process.cwd());
-        } else {
-          await sync(process.cwd(), {
-            ...(host !== undefined ? { host } : {}),
-            ...(force ? { force } : {}),
-            ...(merge ? { merge } : {}),
-            ...(noMergeRegions ? { mergeManagedRegions: false } : {}),
-          });
+        const result =
+          host === undefined && !force && !merge && !noMergeRegions
+            ? await sync(process.cwd())
+            : await sync(process.cwd(), {
+                ...(host !== undefined ? { host } : {}),
+                ...(force ? { force } : {}),
+                ...(merge ? { merge } : {}),
+                ...(noMergeRegions ? { mergeManagedRegions: false } : {}),
+              });
+        // C1 / B3 gap close: surface the structured ScaffoldResult (with
+        // `conflicts[]`) on stdout under `--json`, wrapped in the `{ok, data}`
+        // envelope (headless contract). sync() always returns a ScaffoldResult
+        // (never undefined), so the guard is the json flag only.
+        if (cmd.optsWithGlobals().json === true) {
+          json({ ok: true, data: result });
         }
       },
     );

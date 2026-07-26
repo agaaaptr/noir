@@ -69,6 +69,15 @@ export interface CliOptions {
   readonly input?: boolean;
   /** Convenience alias matching the `--no-input` intent (`true` ⇒ no input). */
   readonly noInput?: boolean;
+  /** C1 TUI-policy flag. `false` (`--no-tui`) forces bare `noir` onto the
+   *  non-interactive `status` path even in a TTY; `true` (`--tui`) is an
+   *  advisory hint that still requires a TTY; absent (auto) defers to
+   *  {@link isInteractive}. Advisory only — never hard-gates a subcommand. */
+  readonly tui?: boolean;
+  /** C1 hint-suppression flag (`--no-tips`). When `true`, redirect /
+   *  deprecation hints (and any other {@link tip} output) are silenced for
+   *  CI / log-friendly runs. */
+  readonly noTips?: boolean;
 }
 
 function isJsonMode(opts: CliOptions): boolean {
@@ -168,6 +177,18 @@ export function warn(msg: string, opts: CliOptions = {}): void {
 export function error(msg: string, opts: CliOptions = {}): void {
   if (isJsonMode(opts)) return;
   process.stderr.write(`${c.error(msg)}\n`);
+}
+
+/**
+ * C1 — redirect / deprecation hint (stderr). Silenced under `--json` (a CI
+ * consumer's stdout envelope must stay pristine) AND under `--no-tips`
+ * ({@link CliOptions.noTips}). This is the ONLY helper deprecation / redirect
+ * notices should use, so a single `--no-tips` flag quiets them all in CI / logs.
+ * Style matches {@link warn} (these are advisory, not errors).
+ */
+export function tip(msg: string, opts: CliOptions = {}): void {
+  if (isJsonMode(opts) || opts.noTips === true) return;
+  process.stderr.write(`${c.warn(msg)}\n`);
 }
 
 // ---------------------------------------------------------------------------

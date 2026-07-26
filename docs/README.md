@@ -11,6 +11,8 @@ The Noir toolkit's architecture, the decisions behind it, the design blueprint, 
 | [`installation.md`](installation.md) | The install reference: native installer (`curl \| sh`), npm/pnpm/yarn/bun, `npx`, Homebrew, beta vs stable channels, requirements, troubleshooting. Start here for *installing* Noir. |
 | [`getting-started.md`](getting-started.md) | First-use walkthrough: `noir init`, transports, your first session, switching full/quick. Start here for *using* Noir. |
 | [`usage.md`](usage.md) | The reference: transports, SDD modes, the full command tree, the config schema, the `.noir/` + `~/.noir/` layout, privacy rules. |
+| [`command-policy.md`](command-policy.md) | The interactive-vs-scriptable contract (TUI runtime): bare `noir` is the primary UX, every subcommand works in both modes, `--json` is the headless contract, `--tui`/`--no-tui`/`--no-tips` flags. |
+| [`deprecation.md`](deprecation.md) | The deprecation process: warn for N → redirect for N → never silently remove. Zero entries today; `--no-tips` quiets hints in CI. |
 | [`releasing.md`](releasing.md) | The release runbook: unified versioning, npm auth (automation token + provenance), beta-on-develop / stable-on-main channels, irreversibility rules. |
 | [`packaging.md`](packaging.md) | How to add a new `@noir-ai/*` package (`scripts/new-package.mjs`), what's automatic vs manual, when to add vs extend. |
 | [`sdk.md`](sdk.md) | The framework API surface — using the `@noir-ai/*` packages as a library (per-package stable exports + snippets). Start here for *embedding* Noir. |

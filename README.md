@@ -223,7 +223,7 @@ A pnpm monorepo of **11 packages**, all `@noir-ai/*`:
 
 ## The `noir` CLI
 
-Bare `noir` opens an interactive home screen (TTY) or prints `status` (non-interactive).
+**Bare `noir` is the primary UX.** Run it with no arguments: in a TTY it opens the interactive home screen (the menu shown above); in CI, a pipe, or with `--no-input`/`--json`, it prints a `status` snapshot and exits 0 — useful as a no-op health probe, never noisy. Every subcommand below is 100% scriptable and identical in both modes; the menu is just a human shortcut to them.
 
 ```
 noir init                           scaffold .noir/ + emit builtin skills + host wiring (--host <id> selects the host; default claude)
@@ -242,7 +242,7 @@ noir skills {list,sync}             list shows builtins + integrations (Kind col
 noir task {new,status,advance,next}
 ```
 
-Global flags: `--json` (machine-readable output), `--no-input` (never prompt), `--quiet`, `--verbose`, `--cwd <dir>`.
+Global flags: `--json` (machine-readable output, the headless contract), `--no-input` (never prompt), `--quiet`, `--verbose`, `--cwd <dir>`, plus the TUI-policy trio `--tui` / `--no-tui` (advisory routing for bare `noir`) and `--no-tips` (suppress redirect/deprecation hints on stderr). See [docs/command-policy.md](docs/command-policy.md) for the interactive-vs-scriptable matrix and [docs/deprecation.md](docs/deprecation.md) for the deprecation process.
 
 ## MCP tools
 
@@ -318,6 +318,7 @@ This repo is itself developed with Claude Code; [`AGENTS.md`](AGENTS.md) holds t
 
 - **[Installation](docs/installation.md)** — every install path (native installer, npm/pnpm/yarn/bun, npx, Homebrew), troubleshooting, requirements.
 - **[Getting started](docs/getting-started.md)** · **[Usage reference](docs/usage.md)** — transports, SDD modes, commands, config.
+- **[Command policy](docs/command-policy.md)** · **[Deprecation policy](docs/deprecation.md)** — the interactive-vs-scriptable contract (TUI runtime) and the warn→redirect→never-silently-remove process.
 - **[Releasing](docs/releasing.md)** · **[Adding a package](docs/packaging.md)** — the npm publish runbook (automation token + provenance, beta/stable channels), and how to add an `@noir-ai/*` package.
 - [Roadmap & current status](docs/roadmap.md) · [Changelog](docs/CHANGELOG.md)
 - [Architecture](docs/architecture/) · [Decision records (ADRs)](docs/decisions/)

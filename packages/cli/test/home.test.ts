@@ -111,6 +111,54 @@ describe('home — non-interactive routing (scriptable)', () => {
   });
 });
 
+// C1 TUI policy — `--no-tui` (opts.tui === false) forces the non-interactive
+// `status` path even when isInteractive() would be true (a TTY). `--tui`
+// (opts.tui === true) is advisory only — it still requires a TTY, so a non-TTY
+// run stays on the non-interactive path. Auto (no flag) preserves S9 behavior.
+describe('home — C1 TUI policy routing', () => {
+  it('--no-tui forces dispatch(["status"]) even in a TTY (no menu)', async () => {
+    setTty(true, true); // interactive by TTY alone
+    const deps = makeDeps();
+    await home({ tui: false }, deps); // --no-tui
+    expect(deps.dispatch).toHaveBeenCalledTimes(1);
+    expect(deps.dispatch).toHaveBeenCalledWith(['status']);
+    expect(clackMock.select).not.toHaveBeenCalled();
+  });
+
+  it('--no-tui + --json → dispatch(["status","--json"]) even in a TTY', async () => {
+    setTty(true, true);
+    const deps = makeDeps();
+    await home({ tui: false, json: true }, deps);
+    expect(deps.dispatch).toHaveBeenCalledWith(['status', '--json']);
+    expect(clackMock.select).not.toHaveBeenCalled();
+  });
+
+  it('--tui in a TTY runs the menu (advisory hint, TTY honored)', async () => {
+    setTty(true, true);
+    clackMock.select.mockResolvedValue('status');
+    const deps = makeDeps();
+    await home({ tui: true }, deps);
+    expect(clackMock.select).toHaveBeenCalledTimes(1);
+    expect(deps.dispatch).toHaveBeenCalledWith(['status']);
+  });
+
+  it('--tui WITHOUT a TTY still routes to dispatch(["status"]) (hint cannot force a menu)', async () => {
+    setTty(false, false); // non-interactive
+    const deps = makeDeps();
+    await home({ tui: true }, deps);
+    expect(deps.dispatch).toHaveBeenCalledWith(['status']);
+    expect(clackMock.select).not.toHaveBeenCalled();
+  });
+
+  it('auto (no flag) preserves S9 behavior — menu in a TTY, status without one', async () => {
+    setTty(true, true);
+    clackMock.select.mockResolvedValue('exit');
+    const deps = makeDeps();
+    await home({}, deps);
+    expect(clackMock.select).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('home — interactive @clack menu', () => {
   beforeEach(() => {
     setTty(true, true); // interactive
