@@ -12,7 +12,7 @@ node scripts/new-package.mjs <name>     # e.g. node scripts/new-package.mjs tele
 
 `<name>` is kebab-case (the unqualified directory name; the package becomes `@noir-ai/<name>`). The generator scaffolds a publish-ready template:
 
-- `package.json` — name, **unified version** (inherited from `packages/core`), `publishConfig: { access: "public", provenance: true }`, `engines.node ">=20"`, `repository`/`bugs`/`homepage`, `exports`, `files`, `tsup`/`typecheck` scripts, and a default `@noir-ai/core` workspace dep.
+- `package.json` — name, **unified version** (inherited from `packages/core`), `publishConfig: { access: "public", provenance: true }`, `engines.node ">=22"`, `repository`/`bugs`/`homepage`, `exports`, `files`, `tsup`/`typecheck` scripts, and a default `@noir-ai/core` workspace dep.
 - `tsup.config.ts`, `tsconfig.json` (extends the repo base).
 - `src/index.ts` barrel (empty, with a TODO).
 - `README.md` stub, `test/smoke.test.ts`.

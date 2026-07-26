@@ -61,7 +61,7 @@ const pkgJson = {
   },
   bugs: { url: 'https://github.com/agaaaptr/noir/issues' },
   keywords: ['noir', name],
-  engines: { node: '>=20' },
+  engines: { node: '>=22' },
   publishConfig: { access: 'public', provenance: true },
   type: 'module',
   main: './dist/index.js',

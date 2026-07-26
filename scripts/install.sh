@@ -64,20 +64,20 @@ detect_platform() {
   note "Detected platform: ${os}/${arch} (npm handles the actual install)."
 }
 
-# --- Require node (>=20) + npm --------------------------------------------------
+# --- Require node (>=22) + npm --------------------------------------------------
 require_node() {
   command -v node >/dev/null 2>&1 || die "Node.js is not installed.
-    Noir needs Node >= 20. Install it from ${NODEJS_URL}
+    Noir needs Node >= 22. Install it from ${NODEJS_URL}
     or use a version manager: 'nvm' (https://github.com/nvm-sh/nvm),
     'fnm' (https://github.com/Schniz/fnm), or 'brew install node'.
     This installer will not install Node for you."
   command -v npm >/dev/null 2>&1 || die "npm is not installed (it ships with Node).
-    Install Node >= 20 from ${NODEJS_URL} and retry."
+    Install Node >= 22 from ${NODEJS_URL} and retry."
 
   local major
   major="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
-  if [[ "$major" -lt 20 ]]; then
-    die "Node $(node --version) is too old — Noir requires Node >= 20.
+  if [[ "$major" -lt 22 ]]; then
+    die "Node $(node --version) is too old — Noir requires Node >= 22.
       Upgrade: https://nodejs.org/ (or nvm/fnm/'brew upgrade node')."
   fi
   good "Node $(node --version) + npm $(npm --version) found."

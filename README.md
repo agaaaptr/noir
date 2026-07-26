@@ -158,7 +158,7 @@ brew install noir
 
 Homebrew is stable-only — use npm for the beta channel.
 
-**Requirements:** Node ≥ 20; native deps (better-sqlite3, sqlite-vec, onnxruntime-node) prebuilt on mac/linux/win x64 + arm64; first run downloads ~22 MB MiniLM to `~/.noir/models/`. Verify with `noir --version` / `noir doctor`. Full reference (every path, troubleshooting, the from-source build for repo developers) lives in **[docs/installation.md](docs/installation.md)**.
+**Requirements:** Node ≥ 22; native deps (better-sqlite3, sqlite-vec, onnxruntime-node) prebuilt on mac/linux/win x64 + arm64; first run downloads ~22 MB MiniLM to `~/.noir/models/`. Verify with `noir --version` / `noir doctor`. Full reference (every path, troubleshooting, the from-source build for repo developers) lives in **[docs/installation.md](docs/installation.md)**.
 
 **Use as a library:** the `@noir-ai/*` workspace packages are also designed to embed — the workflow FSM, hybrid retrieval, cross-session memory, bounded model layer, and scaffold engine are all consumable as libraries. See **[docs/sdk.md](docs/sdk.md)** for the per-package stable API surface.
 

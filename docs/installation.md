@@ -52,7 +52,7 @@ curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.
 **What it does, step by step:**
 
 1. Detects OS + arch (`uname -s` / `uname -m`) and prints them for diagnostics. The actual install delegates to npm, which handles platform selection.
-2. Requires **Node ≥ 20** and **npm**. If Node is missing or too old, it stops with a clear message linking to https://nodejs.org and suggesting `nvm` / `fnm` / `brew install node`. It will **not** silently install Node for you.
+2. Requires **Node ≥ 22** and **npm**. If Node is missing or too old, it stops with a clear message linking to https://nodejs.org and suggesting `nvm` / `fnm` / `brew install node`. It will **not** silently install Node for you.
 3. Resolves the spec: `NOIR_VERSION` (if set) wins; otherwise `NOIR_CHANNEL` (default `latest`, or `beta`).
 4. Detects the npm global prefix (`npm prefix -g`). If it isn't user-writable **and** you have passwordless sudo, it uses `sudo -E`; otherwise it bails with the exact command to fix the prefix. It never surprises you with a sudo password prompt.
 5. Honors `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` (passed through to npm).
@@ -211,7 +211,7 @@ noir init            # scaffolds .noir/ + emits the 34 skills (33 builtins + 1 i
 
 | Requirement | Detail |
 |---|---|
-| **Node.js ≥ 20** | Noir's `package.json` declares `engines.node: ">=20"`. The installer and CI use Node 22. |
+| **Node.js ≥ 22** | Noir's `package.json` declares `engines.node: ">=22"` (Node 20 reached EOL on 2026-04-30). The installer and CI use Node 22/24. |
 | **npm** (or pnpm/yarn/bun) | The installer uses npm for portability; pnpm/yarn/bun are documented alternatives. |
 | **Platform** | macOS, Linux, or Windows on **x64 or arm64** (native deps ship prebuilt). Other architectures fall back to a source build and need a C/C++ toolchain. |
 | **Disk** | ~150 MB for the install (node_modules + prebuilt native binaries + the CLI build output). |
@@ -306,6 +306,15 @@ npm install -g @noir-ai/cli@beta    # reinstall the one you want
 ```
 
 `which -a noir` lists every `noir` on PATH; the first one wins.
+
+### Deprecation warnings during install
+
+A couple of warnings may appear during `npm install -g @noir-ai/cli` — most are harmless and none come from Noir directly.
+
+- **`prebuild-install` deprecation** — gone from `1.3.0-beta.7+`: Noir moved to `better-sqlite3@13` (an N-API rewrite) which removes `prebuild-install` entirely. If you still see it, you're on an older beta — upgrade.
+- **`boolean@3.2.0` deprecation** — a harmless transitive dependency (`@huggingface/transformers` → `onnxruntime-node` → `global-agent` → `boolean`). There is no released upstream fix yet (tracked in [transformers.js#1730](https://github.com/huggingface/transformers.js/pull/1730)); it will disappear with the next `transformers` release that bumps `onnxruntime-node`. It is muted in Noir's own monorepo via `allowedDeprecatedVersions`.
+- **`Unknown user config "python"`** — this comes from YOUR `~/.npmrc` (a legacy `python=` line for node-gyp), surfaced by pnpm 10's strict-config validation. It is not from Noir. With `better-sqlite3@13`'s N-API prebuilts, `python`/`node-gyp` are largely unnecessary; remove that line from `~/.npmrc`, or scope it to a project-local `.npmrc` if you genuinely need a source-compile fallback.
+- **A native build (`node-gyp`/`make`) for `better-sqlite3`** — `better-sqlite3@13` is brand-new (2026-07-21); on the very newest Node a matching prebuilt may not be published yet, so it may compile from source (needs a C/C++ toolchain, and on macOS the Xcode Command Line Tools). The build succeeding is fine; prebuilt coverage will fill in.
 
 ---
 

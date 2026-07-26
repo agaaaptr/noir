@@ -42,8 +42,8 @@ These are done once, by the npm org owner, before the first release. v1 uses **P
 
 ### 1c. Local machine
 
-- Node ≥ 20, pnpm (the version pinned in the root `package.json` `packageManager` field).
-- `npm` CLI ≥ 9.5 (for provenance support) — comes with Node 20+.
+- Node ≥ 22, pnpm (the version pinned in the root `package.json` `packageManager` field).
+- `npm` CLI ≥ 9.5 (for provenance support) — comes with Node 22+.
 - You must have push + tag-push rights on `agaaaptr/noir`.
 
 ### What CI does at publish time (`.github/workflows/release.yml`)
@@ -305,7 +305,7 @@ The very first release (`1.0.0`) has extra gating. Do not cut it until every box
 
 **Readiness (§2 / §4)**
 - [ ] `pnpm lint && pnpm typecheck && pnpm build && pnpm test` all green on `main` (target the same Node 24 the CI uses).
-- [ ] Every `packages/*/package.json` has `publishConfig: { access:"public", provenance:true }`, `engines.node >=20`, a one-line `description`, valid `repository`/`bugs`/`homepage`, and `files` including `dist` (+ `README.md`, and `builtin/` for skills).
+- [ ] Every `packages/*/package.json` has `publishConfig: { access:"public", provenance:true }`, `engines.node >=22`, a one-line `description`, valid `repository`/`bugs`/`homepage`, and `files` including `dist` (+ `README.md`, and `builtin/` for skills).
 - [ ] `npm publish --dry-run` in `packages/cli` and at least one library package is sane (correct files, **no `src/`/tests/secrets**).
 - [ ] `docs/CHANGELOG.md` has a `1.0.0` entry.
 
