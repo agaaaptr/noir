@@ -2,6 +2,14 @@
 
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
+## 1.3.0-beta.2 (2026-07-26)
+
+**Published on npm (dist-tag `beta`)** — patch on 1.3.0-beta.1. One fix, found by validating 1.3.0-beta.1 in a real project (svc-academic-activity-go):
+
+- **`noir init`/`create` on an already-initialized project now truly no-ops.** The already-init guard lived in the engine (`scaffold()`), but the cli commands unconditionally re-emitted the skill pack + printed "initialized" after it — so a 2nd `noir init` rewrote 34 skill files + misreported. New `ScaffoldResult.noop` flag gates skills emission + the message.
+
+---
+
 ## 1.3.0-beta.1 (2026-07-26)
 
 **Published on npm (dist-tag `beta`)** — cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. Eight sub-projects (SP-A…H) + an opus whole-branch review fix wave from the 2026-07-26 scaffold/TUI discovery session. All TDD; full repo green (1154 tests). Discovery: `docs/discovery/2026-07-26-scaffold-tui-discovery.md`; specs in `docs/superpowers/specs/2026-07-26-*-design.md`.
