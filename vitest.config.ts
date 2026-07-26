@@ -29,6 +29,9 @@ export default defineConfig({
   },
   test: {
     include: [`${root}packages/*/test/**/*.test.ts`, `${root}packages/*/test/**/*.test.tsx`],
-    testTimeout: 15000,
+    // Native-stack tests (e.g. `noir doctor` loads better-sqlite3 + sqlite-vec
+    // + onnxruntime + the embedder model) can exceed 15s under parallel suite
+    // load; 40s keeps the suite non-flaky without masking genuinely-hung tests.
+    testTimeout: 40000,
   },
 });
