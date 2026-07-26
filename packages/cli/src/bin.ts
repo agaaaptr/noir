@@ -338,8 +338,14 @@ export function createProgram(): Command {
   program
     .command('doctor')
     .description('environment + project health')
+    .option(
+      '--dedup',
+      'scan host-context + .noir/ docs for semantic near-duplicates (loads the local embedder)',
+    )
     .action(async (...args: unknown[]) => {
-      await doctor(toCliOptions(actionGlobals(args)));
+      const g = actionGlobals(args);
+      const dedup = trailingCmd(args).opts().dedup === true;
+      await doctor({ ...toCliOptions(g), ...(dedup ? { dedup: true } : {}) });
     });
 
   // ----- new subcommand groups (wired by t4/t5/t6) -----

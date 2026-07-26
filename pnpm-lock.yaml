@@ -51,6 +51,9 @@ importers:
       '@noir-ai/adapters':
         specifier: workspace:*
         version: link:../adapters
+      '@noir-ai/context':
+        specifier: workspace:*
+        version: link:../context
       '@noir-ai/core':
         specifier: workspace:*
         version: link:../core

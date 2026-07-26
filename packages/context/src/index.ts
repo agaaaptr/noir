@@ -30,6 +30,13 @@ export {
 export { type ContextUserConfig, resolveEmbedderConfig } from './config.js';
 // --- Engine (the ctx.context service; constructed once per serve lifecycle) ---
 export { ContextEngine, type ContextEngineOptions, type ContextStatus } from './contextEngine.js';
+// --- Semantic duplicate detection (cosine over embedded file contents) ---
+export {
+  DEFAULT_DUP_THRESHOLD,
+  type DupCandidate,
+  type DupPair,
+  findSemanticDuplicates,
+} from './dedup.js';
 // --- Embedders (the EmbedFn seam) ---
 export {
   createEmbedFn,

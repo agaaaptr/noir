@@ -49,8 +49,12 @@ import {
   warn,
 } from '../output.js';
 
-/** Options accepted by `doctor` (the global flags only). */
-export interface DoctorOptions extends CliOptions {}
+/** Options accepted by `doctor`: the global flags + the opt-in `--dedup`. */
+export interface DoctorOptions extends CliOptions {
+  /** `--dedup`: scan host-context + `.noir/` docs for semantic near-duplicates.
+   *  Opt-in (loads the local embedder) so a default `noir doctor` stays fast. */
+  dedup?: boolean;
+}
 
 type Severity = 'ok' | 'warn' | 'fail';
 
@@ -583,6 +587,103 @@ export function checkNestedNoir(
 }
 
 // ---------------------------------------------------------------------------
+// SP-C deferred — semantic duplicate detection (`--dedup`; loads the embedder).
+// ---------------------------------------------------------------------------
+
+/** Local embedder shape (@noir-ai/context's `EmbedFn`). */
+type EmbedLike = (text: string) => Promise<Float32Array>;
+
+/**
+ * Collect dedup candidates: the host context files that exist at the root
+ * (CLAUDE.md / AGENTS.md / GEMINI.md — the hand-mirrored-overlap case) plus
+ * `.noir/rules/RULES.md`. `.noir/NOIR.md` is EXCLUDED because host context
+ * files `@import` it by design (their similarity is intentional, not a dup).
+ */
+export function collectDedupCandidates(root: string): { path: string; text: string }[] {
+  const rels = ['CLAUDE.md', 'AGENTS.md', 'GEMINI.md', '.noir/rules/RULES.md'];
+  const out: { path: string; text: string }[] = [];
+  for (const rel of rels) {
+    const abs = join(root, rel);
+    if (!existsSync(abs)) continue;
+    let text: string;
+    try {
+      text = readFileSync(abs, 'utf8');
+    } catch {
+      continue;
+    }
+    if (text.trim().length === 0) continue;
+    out.push({ path: rel, text });
+  }
+  return out;
+}
+
+/**
+ * `noir doctor --dedup`: embed the host-context + RULES.md candidates and
+ * report near-duplicate pairs (cosine ≥ 0.90). The ONLY mechanism that catches
+ * cross-file SEMANTIC overlap (e.g. a hand-mirrored CLAUDE.md ≈ AGENTS.md) —
+ * exact content-hash cannot. Opt-in so a default `noir doctor` never pays the
+ * embedder-load cost; degrades to a `warn` skip when the embedder is
+ * unavailable (kind=none / native layer missing). `opts.embed` is a testability
+ * seam — tests inject a deterministic fake; production omits it and the local
+ * embedder is lazy-loaded via `@noir-ai/context`.
+ */
+export async function checkSemanticDupDoctor(
+  checks: CheckResult[],
+  root: string,
+  project: ProjectInfo | undefined,
+  opts: { embed?: EmbedLike } = {},
+): Promise<void> {
+  if (!project) {
+    checks.push({ name: 'semantic dup', status: 'warn', detail: 'skipped — not initialized' });
+    return;
+  }
+  const candidates = collectDedupCandidates(root);
+  if (candidates.length < 2) {
+    checks.push({
+      name: 'semantic dup',
+      status: 'ok',
+      detail: `${candidates.length} candidate file(s); nothing to compare`,
+    });
+    return;
+  }
+  const ctx = await import('@noir-ai/context');
+  let embed: EmbedLike | undefined = opts.embed;
+  if (!embed) {
+    const cfg = ctx.resolveEmbedderConfig(project.config.context);
+    if (cfg.kind === 'none') {
+      checks.push({
+        name: 'semantic dup',
+        status: 'warn',
+        detail: 'embedder kind=none — set context.embedder.kind=local to enable semantic dedup',
+      });
+      return;
+    }
+    try {
+      embed = ctx.createEmbedFn(cfg).embed as EmbedLike;
+    } catch (e) {
+      checks.push({
+        name: 'semantic dup',
+        status: 'warn',
+        detail: `embedder unavailable — skipped (${msg(e)})`,
+      });
+      return;
+    }
+  }
+  if (!embed) return;
+  const pairs = await ctx.findSemanticDuplicates(candidates, embed, ctx.DEFAULT_DUP_THRESHOLD);
+  checks.push({
+    name: 'semantic dup',
+    status: pairs.length > 0 ? 'warn' : 'ok',
+    detail:
+      pairs.length === 0
+        ? `no near-duplicates across ${candidates.length} file(s)`
+        : `${pairs.length} near-duplicate pair${pairs.length === 1 ? '' : 's'}: ${pairs
+            .map((p) => `${p.a}≈${p.b} (${p.similarity.toFixed(2)})`)
+            .join('; ')}`,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // S11 — publish-readiness check (advisory, repo-developer-facing).
 // ---------------------------------------------------------------------------
 
@@ -857,6 +958,9 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   const rules = checkRulesMdBudget(checks, root, project);
   const host = checkHostArtifacts(checks, root, project);
   checkNestedNoir(checks, root);
+  if (opts.dedup === true) {
+    await checkSemanticDupDoctor(checks, root, project);
+  }
   const publish = checkPublish(checks, resolveWorkspacePackagesDir());
 
   const summary = summarize(checks);
