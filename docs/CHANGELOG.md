@@ -2,6 +2,18 @@
 
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
+## 1.2.0-beta.2 (2026-07-26)
+
+**Critical fix: a global `noir` install was a silent no-op** (every published beta, including 1.2.0-beta.1). Two bugs:
+
+- **Symlinked-bin silent exit (critical):** the `isMainModule` guard compared `pathToFileURL(process.argv[1]).href` to `import.meta.url`. A global npm install invokes the bin through a symlink (`…/bin/noir` → `…/lib/node_modules/@noir-ai/cli/dist/bin.js`), so `argv[1]` is the symlink path while `import.meta.url` is the resolved real path — they never matched, `main()` never ran, and `noir` exited 0 with **no output**. **Fix:** `realpathSync(argv[1])` before comparing. (Direct `node bin.js` worked because `argv[1]` was already the real path — which is why the in-repo dogfood never caught it; the regression test now spawns the bin via a symlink.)
+- **`--version` exit code:** commander v12 throws error code `commander.version` (not `commander.versionDisplayed`); the exit-code mapper missed it, so `noir --version` exited 2 (usage) instead of 0. **Fix:** map `commander.version` → exit 0.
+
+### Fixed
+- `noir --version` / `--help` / `init` / `create` / bare `noir` now work when installed **globally** (symlink invocation). A regression test (`global-install symlink invocation`) guards both fixes.
+
+---
+
 ## 1.2.0-beta.1 (2026-07-26)
 
 **Multi-host (S10) ships on the beta channel.** Noir is now cross-CLI: Claude Code stays the default, and **Gemini, Cursor, OpenCode, and AGENTS.md** are one `--host` flag away. Supersedes `1.1.0-beta.1` on the `beta` dist-tag. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (unchanged); **1089/1089 tests** (was 966 at 1.1.0-beta.1); build / typecheck / lint (0 warnings) green. Design record: `docs/superpowers/specs/2026-07-25-s10-multihost-design.md`; the locked decisions in [ADR-0004](decisions/0004-multi-host-adapters.md).

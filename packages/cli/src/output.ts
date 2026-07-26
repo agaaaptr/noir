@@ -309,6 +309,7 @@ function commanderExitCode(err: CommanderError): number {
   switch (err.code) {
     case 'commander.helpDisplayed':
     case 'commander.versionDisplayed':
+    case 'commander.version': // commander v12 uses this code for --version (exit 0)
       return EXIT.OK;
     case 'commander.unknownCommand':
       return EXIT.NOT_FOUND;

@@ -2,9 +2,11 @@
 // per case, since commander parse state is mutable) and asserts the S9 exit-code
 // contract + stream discipline (data→stdout, diagnostics→stderr) + behavior
 // preservation of the migrated commands. Side-effecting modules are mocked.
-import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { CommanderError } from 'commander';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -480,5 +482,27 @@ describe('commander migration — wired subcommands (skills/daemon → module)',
     const r = await parse(['skills']);
     expect(r.exitCode).toBe(EXIT.USAGE);
     expect(r.stderr).toMatch(/Usage: noir skills/);
+  });
+});
+
+describe('global-install symlink invocation (regression)', () => {
+  // Reproduces the npm-global-install layout: .../bin/noir is a SYMLINK to
+  // .../lib/node_modules/@noir-ai/cli/dist/bin.js. Guards two regressions:
+  //   1. the isMainModule guard must realpath(process.argv[1]) so main() runs
+  //      under symlinked invocation (else a global `noir` install silently
+  //      exits 0 — main() never runs; this broke every published beta).
+  //   2. --version exits 0 (commander v12 throws code 'commander.version').
+  it('runs the bin via a symlink + --version exits 0 with output', () => {
+    const distBin = fileURLToPath(new URL('../dist/bin.js', import.meta.url));
+    const dir = mkdtempSync(join(tmpdir(), 'noir-symlink-regression-'));
+    const link = join(dir, 'noir');
+    symlinkSync(distBin, link);
+    try {
+      const r = spawnSync(process.execPath, [link, '--version'], { encoding: 'utf8' });
+      expect(r.status).toBe(0); // was 0-with-no-output (silent no-op) before the realpath fix
+      expect(r.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/); // version printed, NOT empty
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

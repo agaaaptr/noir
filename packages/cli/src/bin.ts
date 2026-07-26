@@ -9,6 +9,7 @@
 // thrown error to `process.exitCode` (Node then exits naturally with that code).
 // A main-module guard prevents auto-running when bin.ts is imported by tests.
 
+import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { type HostId, SUPPORTED_HOSTS } from '@noir-ai/adapters';
 import { NOIR_VERSION } from '@noir-ai/core';
@@ -612,9 +613,13 @@ export async function run(argv: readonly string[] = []): Promise<number> {
 const isMainModule = (() => {
   try {
     const entry = process.argv[1];
-    return typeof entry === 'string' && entry.length > 0
-      ? pathToFileURL(entry).href === import.meta.url
-      : false;
+    if (typeof entry !== 'string' || entry.length === 0) return false;
+    // Resolve symlinks: a global npm install invokes the bin via a symlink
+    // (.../bin/noir -> .../lib/node_modules/@noir-ai/cli/dist/bin.js), so argv[1]
+    // is the symlink path while import.meta.url is the RESOLVED real path. Compare
+    // the REAL paths so `noir` runs under BOTH direct + symlinked invocation.
+    // (Without this, a global `noir` install silently exits 0 — main() never runs.)
+    return pathToFileURL(realpathSync(entry)).href === import.meta.url;
   } catch {
     return false;
   }

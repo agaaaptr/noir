@@ -1,6 +1,6 @@
 {
   "name": "@noir-ai/daemon",
-  "version": "1.2.0-beta.1",
+  "version": "1.2.0-beta.2",
   "description": "Noir daemon — the runtime authority: owns the store write handle and exposes the single Noir MCP server (stdio + Streamable HTTP).",
   "license": "MIT",
   "author": "agaaaptr",
