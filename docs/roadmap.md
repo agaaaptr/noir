@@ -21,7 +21,7 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 
 ## Current status (living — update as slices ship)
 
-> **As of 2026-07-26. v1.3.0-beta.3 PUBLISHED on npm (dist-tag `beta`); supersedes 1.3.0-beta.2.** The single source of "where Noir is right now." Update this whenever a slice ships or direction shifts — so no session loses the thread.
+> **As of 2026-07-26. v1.3.0-beta.4 PUBLISHED on npm (dist-tag `beta`); supersedes 1.3.0-beta.3.** The single source of "where Noir is right now." Update this whenever a slice ships or direction shifts — so no session loses the thread.
 
 > **v1.3.0-beta.1 (on `develop`, pushed to origin — 2026-07-26 session):** eight sub-projects (SP-A…H) from the scaffold/TUI discovery — **SP-A** scaffold root-safety (the "noir init duplicates" bug is fixed) + already-init no-op + `noir doctor` nested-`.noir` detection; **SP-B** branded banner + host-aware home; **SP-C** regenerate conflict resolution; **SP-D** semantic dedup (`noir doctor --dedup`); **SP-E+SP-H** three-way managed-region merge (`noir sync --merge`, single + multi-region); **SP-F** content-hash dedup (`identical`); **SP-G** `--json`/`--no-input` conflict-prompt fix — plus an opus review fix wave. All TDD; full repo green (1154 tests). CHANGELOG §1.3.0-beta.1; specs in `docs/superpowers/specs/2026-07-26-*-design.md`. **No remaining follow-ups.** Next: validate the beta in a real project per host → promote to stable (`develop`→`main`, `node scripts/bump-version.mjs 1.3.0`, tag `v1.3.0` on `main`).
 

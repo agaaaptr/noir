@@ -2,6 +2,14 @@
 
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
+## 1.3.0-beta.4 (2026-07-26)
+
+**Published on npm (dist-tag `beta`)** — patch on 1.3.0-beta.3. One fix, found by a comprehensive (filesystem, not git-only) re-scan of svc-academic-activity-go:
+
+- **`noir doctor`'s nested-`.noir` check now detects nested ignore files too.** The fingerprint of a `noir init` run inside `.noir/` includes the ignore files Noir emits at the nested root (`.noir/.gitignore`/`.dockerignore`/`.npmignore`/`.prettierignore`), but the check only looked at `.noir/.noir`, `.noir/CLAUDE.md`, `.noir/.mcp.json`, `.noir/.claude` — so leftover nested ignore files (exact duplicates of the root ones) went undetected and reported "OK". Added the 4 ignore files to the candidate list.
+
+---
+
 ## 1.3.0-beta.3 (2026-07-26)
 
 **Published on npm (dist-tag `beta`)** — patch on 1.3.0-beta.2. One fix, found validating 1.3.0-beta.2 in svc-academic-activity-go:
