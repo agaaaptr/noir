@@ -258,6 +258,10 @@ export function createProgram(): Command {
       '--force',
       'overwrite differing regenerated files without prompting (bypasses the conflict menu)',
     )
+    .option(
+      '--merge',
+      'three-way merge managed regions (preserve hand-edits inside <!-- noir:* --> markers)',
+    )
     .addOption(
       // S10: optional `--host` override. When omitted, sync reads host from
       // `.noir/config.yml` (whatever `noir init --host <id>` persisted). The
@@ -267,21 +271,23 @@ export function createProgram(): Command {
         'override the configured host (advanced; default reads .noir/config.yml)',
       ).choices(SUPPORTED_HOSTS),
     )
-    .action(async (opts: { host?: string; force?: boolean }) => {
+    .action(async (opts: { host?: string; force?: boolean; merge?: boolean }) => {
       // Lazy import preserves the original dispatcher's deferred module load.
       const { sync } = await import('./sync.js');
       const host = parseHost(opts.host);
       const force = opts.force === true;
-      // Single-positional regression anchor: when no `--host`/`--force` is
-      // given, call `sync(cwd)` exactly (bin.test.ts pins this). Only spread
+      const merge = opts.merge === true;
+      // Single-positional regression anchor: when no `--host`/`--force`/`--merge`
+      // is given, call `sync(cwd)` exactly (bin.test.ts pins this). Only spread
       // the opts bag when a flag was explicit so the default-args snapshot
       // stays green.
-      if (host === undefined && !force) {
+      if (host === undefined && !force && !merge) {
         await sync(process.cwd());
       } else {
         await sync(process.cwd(), {
           ...(host !== undefined ? { host } : {}),
           ...(force ? { force } : {}),
+          ...(merge ? { merge } : {}),
         });
       }
     });

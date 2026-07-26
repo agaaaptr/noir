@@ -40,12 +40,21 @@ export interface SyncOptions {
   /** SP-C: overwrite differing regenerated files without prompting (bypasses
    *  the conflict menu). */
   force?: boolean;
+  /** SP-D: three-way merge managed regions (preserve hand-edits inside
+   *  `<!-- noir:* -->` markers across a template update). */
+  merge?: boolean;
 }
 
 export async function sync(root: string, opts: SyncOptions = {}): Promise<void> {
   const host = resolveSyncHost(root, opts);
 
-  await scaffold({ root, mode: 'sync', host, ...buildConflictOpts({ force: opts.force }) });
+  await scaffold({
+    root,
+    mode: 'sync',
+    host,
+    ...buildConflictOpts({ force: opts.force }),
+    ...(opts.merge ? { mergeManagedRegions: true } : {}),
+  });
 
   const adapter = resolveAdapter(host);
   const skillsDir = adapter.skillsDir?.({ root });

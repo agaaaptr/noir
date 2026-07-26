@@ -1,12 +1,14 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { createProjectId, paths } from '@noir-ai/core';
+import { createProjectId, type ManagedBlock, paths, readManagedBlock } from '@noir-ai/core';
+import { readAncestors, writeAncestors } from './ancestors.js';
 import {
   type BuildManifestContext,
   buildManifest,
   type HostTag,
   type ManifestEntry,
 } from './manifest.js';
+import { mergeThreeWay } from './merge.js';
 import { runMigrations } from './migrations/index.js';
 import {
   CURRENT_SCAFFOLD_VERSION,
@@ -80,6 +82,13 @@ export interface ScaffoldOptions {
    *    the cli injects a @clack-based resolver). Called when a `regenerate`
    *    file exists and differs from the template. */
   onConflict?: (ctx: ConflictContext) => Promise<ConflictResolution> | ConflictResolution;
+  /** SP-D follow-up: three-way merge managed regions (base/ours/theirs) using a
+   *  persisted ancestor snapshot (`.noir/ancestors.json`) instead of
+   *  strip-replace, so a hand-edit inside a `<!-- noir:* -->` region survives a
+   *  template update. Opt-in (default false ⇒ current strip-replace, no
+   *  ancestor file). Single-region managed files only (NOIR.md, ignores);
+   *  multi-region (CLAUDE.md) is a follow-up. */
+  mergeManagedRegions?: boolean;
 }
 
 export interface ScaffoldResult {
@@ -190,6 +199,10 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   // 3. Stack detect (read-only, never throws). Always populated so callers
   //    (TUI, doctor) get a single source of truth regardless of mode.
   const stack = detectStack(opts.root);
+
+  // SP-D: ancestor map for three-way managed-region merge (opt-in). Read once;
+  // written back at the end only when mergeManagedRegions is set.
+  const ancestors = opts.mergeManagedRegions ? readAncestors(opts.root) : {};
 
   // SP-A — already-initialized guard: a bare `noir init`/`noir create` on a
   // project that already carries a .noir/scaffold-version stamp is a NO-OP,
@@ -308,7 +321,12 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
         // single brief. (Pre-Slice-S NOIR.md was 100% auto-generated, so
         // there is no user content to preserve in that legacy shape.)
         if (isNoirMdPath(entry.path)) healLegacyNoirMd(abs);
-        managedBlock(abs, block, buildRegion(block, body));
+        const theirs = buildRegion(block, body);
+        const regionText = opts.mergeManagedRegions
+          ? mergeManagedRegion(abs, entry.path, block, theirs, ancestors)
+          : theirs;
+        managedBlock(abs, block, regionText);
+        if (opts.mergeManagedRegions) ancestors[`${entry.path}::${block.begin}`] = theirs;
         written.push(entry.path);
       } else {
         const out = skipIfExists(abs, body);
@@ -322,6 +340,11 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   //    crash leaves the previous stamp. Upgrade rewrites it to current.
   if ((opts.mode === 'init' || opts.mode === 'create') && !opts.dryRun) {
     writeScaffoldVersion(opts.root, CURRENT_SCAFFOLD_VERSION);
+  }
+
+  // SP-D: persist the ancestor map (only when three-way merge is opted in).
+  if (opts.mergeManagedRegions && !opts.dryRun) {
+    writeAncestors(opts.root, ancestors);
   }
 
   return {
@@ -338,6 +361,31 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
 }
 
 // --- helpers -----------------------------------------------------------------
+
+/** SP-D — three-way merge a managed region against the persisted ancestor
+ *  (`base`). `theirs` is the freshly-rendered template region (with markers);
+ *  `ours` is the region currently on disk. With no ancestor / no existing
+ *  region this is a no-op (returns `theirs`). On conflict, inline markers are
+ *  written + a stderr note (never silently drops either side). */
+function mergeManagedRegion(
+  abs: string,
+  relPath: string,
+  block: ManagedBlock,
+  theirs: string,
+  ancestors: Record<string, string>,
+): string {
+  const base = ancestors[`${relPath}::${block.begin}`];
+  if (base === undefined) return theirs; // no ancestor yet → strip-replace (first merge run)
+  const ours = readManagedBlock(abs, block);
+  if (ours === null) return theirs; // no existing region → fresh
+  const res = mergeThreeWay(base, ours, theirs);
+  if (res.conflict) {
+    process.stderr.write(
+      `noir: managed-region conflict in ${relPath} — wrote inline markers; resolve manually.\n`,
+    );
+  }
+  return res.merged;
+}
 
 /** Read the `.noir/project.id` stamp ONCE and classify it for BOTH id
  *  resolution and the C1 corrupt-file heal. `absent` (ENOENT) and `valid`

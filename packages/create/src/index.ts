@@ -16,6 +16,8 @@
  * entry point is a later slice). It is engine-only: cli (S-T2) imports it.
  */
 
+// --- Ancestor store (three-way managed-region merge; opt-in) ---
+export { ancestorsPath, readAncestors, writeAncestors } from './ancestors.js';
 export {
   BRIEF_BLOCK,
   type BuildHostArtifactsContext,
@@ -26,6 +28,8 @@ export {
   MANIFEST_PATH_PARITY,
   type ManifestEntry,
 } from './manifest.js';
+// --- Three-way merge (diff3; pure) ---
+export { type MergeResult, mergeThreeWay } from './merge.js';
 export {
   applyInlineConflict,
   applyWithConflict,
