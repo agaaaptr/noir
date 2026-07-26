@@ -143,23 +143,19 @@ describe('noir create --host <id> — greenfield per host', () => {
 describe('noir sync — host round-trips from .noir/config.yml', () => {
   it('init --host gemini then bare sync re-emits GEMINI.md (host read from config)', async () => {
     await init(root, { transport: 'stdio', host: 'gemini' });
-    // Mutate GEMINI.md to prove sync re-emits the managed regions. User
-    // content OUTSIDE the markers is PRESERVED (the multi-region managedBlocks
-    // writer's contract — same as CLAUDE.md), so we keep a marker line and add
-    // a user note above it to assert both halves of the contract.
-    writeFileSync(
-      join(root, 'GEMINI.md'),
-      '# My gemini notes\n\n<!-- noir:context begin -->\nOLD\n<!-- noir:context end -->\n',
-      'utf8',
-    );
+    // Wipe GEMINI.md to USER-ONLY content (no managed regions) so the bare sync
+    // must RE-EMIT both regions. (B1: merge is now the default — a stale IN-REGION
+    // edit would be PRESERVED by the merge, so removing the regions entirely is
+    // the merge-default-compatible way to prove sync re-emits them. A missing
+    // region is always re-added fresh.)
+    writeFileSync(join(root, 'GEMINI.md'), '# My gemini notes\n', 'utf8');
 
     await sync(root); // no --host → reads config.host
 
     const md = readFileSync(join(root, 'GEMINI.md'), 'utf8');
-    // The managed region was re-emitted with the current @-import body.
+    // Both managed regions were re-emitted with the current @-import bodies.
     expect(md).toContain('<!-- noir:context begin -->');
     expect(md).toContain('@.noir/NOIR.md');
-    expect(md).not.toContain('\nOLD\n'); // the stale managed body was replaced
     // User content OUTSIDE the markers survives sync.
     expect(md).toContain('# My gemini notes');
     // Host was read from config (gemini), not the default claude — proven by

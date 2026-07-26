@@ -30,6 +30,7 @@ import { loadProjectInfo, paths } from '@noir-ai/core';
 import { scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 import { buildConflictOpts } from './conflict.js';
+import { resolveInteractive } from './output.js';
 
 export interface SyncOptions {
   /** S10 `--host <id>` override. When set, takes precedence over the
@@ -41,20 +42,37 @@ export interface SyncOptions {
    *  the conflict menu). */
   force?: boolean;
   /** SP-D: three-way merge managed regions (preserve hand-edits inside
-   *  `<!-- noir:* -->` markers across a template update). */
+   *  `<!-- noir:* -->` markers across a template update). DEFAULT TRUE since
+   *  B1; `--merge` is now a no-op (kept for backward compatibility). */
   merge?: boolean;
+  /** B1: opt OUT of managed-region merge (restore strip-replace). Exposed on
+   *  the bin as `--no-merge-regions`. When explicitly `false`, hand-edits
+   *  inside `<!-- noir:* -->` markers are discarded on a template upgrade. */
+  mergeManagedRegions?: boolean;
 }
 
 export async function sync(root: string, opts: SyncOptions = {}): Promise<void> {
   const host = resolveSyncHost(root, opts);
+  // B1: the engine reads ScaffoldOptions.interactive (hermetic — never
+  // process.env). The CLI derives it once from the bridge + TTY/CI/NO_COLOR gate.
+  const interactive = resolveInteractive();
 
-  await scaffold({
+  const res = await scaffold({
     root,
     mode: 'sync',
     host,
-    ...buildConflictOpts({ force: opts.force }),
-    ...(opts.merge ? { mergeManagedRegions: true } : {}),
+    interactive,
+    ...buildConflictOpts({ force: opts.force, interactive }),
+    // B1: merge defaults TRUE inside scaffold; only forward an explicit opt-out.
+    ...(opts.mergeManagedRegions === false ? { mergeManagedRegions: false } : {}),
   });
+
+  // B1: surface the no-op so users see sync was a true no-op on disk (the
+  // scaffold wrote nothing — every runtime file was content-hash identical).
+  // Skills emission below still runs (it has its own dedup).
+  if (res.written.length === 0 && res.identical.length > 0) {
+    process.stderr.write('Nothing to sync (Noir-managed files are up to date).\n');
+  }
 
   const adapter = resolveAdapter(host);
   const skillsDir = adapter.skillsDir?.({ root });

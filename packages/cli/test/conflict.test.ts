@@ -79,4 +79,24 @@ describe('buildConflictOpts (SP-C)', () => {
     expect(o.conflictPolicy).toBe('preserve');
     expect(o.onConflict).toBeUndefined();
   });
+
+  it('B1: explicit interactive:false wins over a TTY (hermetic — never prompts)', () => {
+    setTty(true, true); // TTY would normally prompt
+    const o = buildConflictOpts({ interactive: false });
+    expect(o.conflictPolicy).toBe('preserve');
+    expect(o.onConflict).toBeUndefined();
+  });
+
+  it('B1: explicit interactive:true wires the @clack resolver even in non-TTY', () => {
+    setTty(false, false); // non-TTY would normally preserve without a prompt
+    const o = buildConflictOpts({ interactive: true });
+    expect(o.conflictPolicy).toBe('preserve');
+    expect(typeof o.onConflict).toBe('function');
+  });
+
+  it('B1: force wins even when interactive:true (explicit re-scaffold)', () => {
+    const o = buildConflictOpts({ force: true, interactive: true });
+    expect(o.conflictPolicy).toBe('overwrite');
+    expect(o.onConflict).toBeUndefined();
+  });
 });

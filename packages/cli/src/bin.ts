@@ -268,7 +268,16 @@ export function createProgram(): Command {
     )
     .option(
       '--merge',
-      'three-way merge managed regions (preserve hand-edits inside <!-- noir:* --> markers)',
+      'three-way merge managed regions (default since 1.3.0; flag kept for compatibility)',
+    )
+    .addOption(
+      // B1: opt OUT of managed-region merge (restore strip-replace). Commander
+      // stores `--no-merge-regions` under `mergeRegions` (default true; flag →
+      // false). Bare `noir sync` keeps the merge default (true).
+      new Option(
+        '--no-merge-regions',
+        'strip-replace managed regions (discard hand-edits inside <!-- noir:* --> markers)',
+      ),
     )
     .addOption(
       // S10: optional `--host` override. When omitted, sync reads host from
@@ -279,26 +288,31 @@ export function createProgram(): Command {
         'override the configured host (advanced; default reads .noir/config.yml)',
       ).choices(SUPPORTED_HOSTS),
     )
-    .action(async (opts: { host?: string; force?: boolean; merge?: boolean }) => {
-      // Lazy import preserves the original dispatcher's deferred module load.
-      const { sync } = await import('./sync.js');
-      const host = parseHost(opts.host);
-      const force = opts.force === true;
-      const merge = opts.merge === true;
-      // Single-positional regression anchor: when no `--host`/`--force`/`--merge`
-      // is given, call `sync(cwd)` exactly (bin.test.ts pins this). Only spread
-      // the opts bag when a flag was explicit so the default-args snapshot
-      // stays green.
-      if (host === undefined && !force && !merge) {
-        await sync(process.cwd());
-      } else {
-        await sync(process.cwd(), {
-          ...(host !== undefined ? { host } : {}),
-          ...(force ? { force } : {}),
-          ...(merge ? { merge } : {}),
-        });
-      }
-    });
+    .action(
+      async (opts: { host?: string; force?: boolean; merge?: boolean; mergeRegions?: boolean }) => {
+        // Lazy import preserves the original dispatcher's deferred module load.
+        const { sync } = await import('./sync.js');
+        const host = parseHost(opts.host);
+        const force = opts.force === true;
+        const merge = opts.merge === true;
+        // B1: `--no-merge-regions` → commander stores `mergeRegions: false`.
+        const noMergeRegions = opts.mergeRegions === false;
+        // Single-positional regression anchor: when no `--host`/`--force`/`--merge`/
+        // `--no-merge-regions` is given, call `sync(cwd)` exactly (bin.test.ts pins
+        // this). Only spread the opts bag when a flag was explicit so the
+        // default-args snapshot stays green.
+        if (host === undefined && !force && !merge && !noMergeRegions) {
+          await sync(process.cwd());
+        } else {
+          await sync(process.cwd(), {
+            ...(host !== undefined ? { host } : {}),
+            ...(force ? { force } : {}),
+            ...(merge ? { merge } : {}),
+            ...(noMergeRegions ? { mergeManagedRegions: false } : {}),
+          });
+        }
+      },
+    );
 
   // `mcp` group — preserve legacy bare-`mcp` usage error.
   const mcpCmd = program.command('mcp').description('MCP server control');

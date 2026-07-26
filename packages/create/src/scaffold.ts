@@ -22,6 +22,8 @@ import {
   buildRegion,
   managedBlock,
   managedBlocks,
+  predictManagedBlock,
+  predictManagedBlocks,
   regenerate,
   skipIfExists,
   type WriteMode,
@@ -82,13 +84,21 @@ export interface ScaffoldOptions {
    *    the cli injects a @clack-based resolver). Called when a `regenerate`
    *    file exists and differs from the template. */
   onConflict?: (ctx: ConflictContext) => Promise<ConflictResolution> | ConflictResolution;
-  /** SP-D follow-up: three-way merge managed regions (base/ours/theirs) using a
-   *  persisted ancestor snapshot (`.noir/ancestors.json`) instead of
-   *  strip-replace, so a hand-edit inside a `<!-- noir:* -->` region survives a
-   *  template update. Opt-in (default false ⇒ current strip-replace, no
-   *  ancestor file). Single-region managed files only (NOIR.md, ignores);
-   *  multi-region (CLAUDE.md) is a follow-up. */
+  /** Three-way merge managed regions (base/ours/theirs) using a persisted
+   *  ancestor snapshot (`.noir/ancestors.json`) instead of strip-replace, so a
+   *  hand-edit inside a `<!-- noir:* -->` region survives a template update.
+   *  DEFAULT TRUE (B1): ancestor capture is unconditional, so the first merge
+   *  run always has a base. Set to `false` (CLI `--no-merge-regions`) to
+   *  restore strip-replace. Supports BOTH single-region (NOIR.md, ignores) AND
+   *  multi-region (CLAUDE.md CONTEXT+RULES) managed files — the multi-region
+   *  path shipped with SP-H (`managedBlocks` + `mergeManagedRegion` per block). */
   mergeManagedRegions?: boolean;
+  /** B1: explicit interactivity signal. The engine reads THIS (not
+   *  `process.env`), so a direct API/embedded caller in a TTY that does NOT
+   *  inject {@link onConflict} never hits a @clack prompt. The CLI sets it from
+   *  its global flags (via the `NOIR_NON_INTERACTIVE` bridge bin.ts owns);
+   *  `process.env` remains only a fallback bridge for the CLI layer. */
+  interactive?: boolean;
 }
 
 export interface ScaffoldResult {
@@ -208,27 +218,39 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   //    (TUI, doctor) get a single source of truth regardless of mode.
   const stack = detectStack(opts.root);
 
-  // SP-D: ancestor map for three-way managed-region merge (opt-in). Read once;
-  // written back at the end only when mergeManagedRegions is set.
-  const ancestors = opts.mergeManagedRegions ? readAncestors(opts.root) : {};
+  // B1: ancestor snapshot is read + captured UNCONDITIONALLY (not just under
+  // --merge) so the first merge run — now the DEFAULT — always has a base. The
+  // merge APPLICATION still keys off `mergeManagedRegions` below; ancestor
+  // CAPTURE is always-on. `writeAncestors` at the end dedups internally.
+  const ancestors = readAncestors(opts.root);
+  // B1 (task 6): mergeManagedRegions defaults to TRUE. `--no-merge-regions`
+  // (CLI) restores strip-replace by setting opts.mergeManagedRegions = false.
+  const mergeManagedRegions = opts.mergeManagedRegions !== false;
 
-  // SP-A — already-initialized guard: a bare `noir init`/`noir create` on a
-  // project that already carries a .noir/scaffold-version stamp is a NO-OP,
-  // not a silent re-emit (re-running init looked like it re-scaffolded, which
-  // is what made the nested-`.noir` bug feel like "init duplicates things").
-  // `--upgrade` is the explicit migrate+re-emit path; `--force` re-scaffolds
-  // without migrating. Both bypass this guard. sync is unaffected (it requires
-  // a valid project.id and emits the runtime subset only). dryRun returns the
-  // no-op shape silently (no stderr) so `noir doctor`/CI previews stay clean.
+  // B1 — widened no-op guard (was: scaffold-version present ONLY). A bare
+  // `noir init`/`noir create` is a NO-OP when the project carries EITHER a
+  // `.noir/scaffold-version` stamp (1.3.0+) OR a `.noir/project.id` (pre-1.3.0
+  // legacy). Previously a legacy project (id present, no stamp) re-scaffolded
+  // on every bare init; now it no-ops too. `--upgrade` stays the explicit
+  // migration entry (M4 skips synthetic migrations when fromVersion === null);
+  // `--force` re-scaffolds without migrating. Both bypass this guard. sync is
+  // unaffected (it requires a valid project.id and emits the runtime subset).
+  // dryRun returns the no-op shape silently so `noir doctor`/CI previews stay
+  // clean.
+  const hasIdentity = fromVersion !== null || idFile.state === 'valid';
   if (
-    fromVersion !== null &&
+    hasIdentity &&
     opts.upgrade !== true &&
     opts.force !== true &&
     (opts.mode === 'init' || opts.mode === 'create')
   ) {
     if (opts.dryRun !== true) {
+      const where =
+        fromVersion !== null
+          ? `at scaffold ${fromVersion}`
+          : '(pre-1.3.0 project; no scaffold-version stamp)';
       process.stderr.write(
-        `Noir is already initialized in ${opts.root} (scaffold ${fromVersion}). No-op. Use \`noir init --upgrade\` to migrate, or \`--force\` to re-scaffold.\n`,
+        `Noir already initialized in ${opts.root} ${where}; run \`noir init --upgrade\` to migrate.\n`,
       );
     }
     return {
@@ -301,20 +323,31 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
         continue;
       }
       mkdirSync(dirname(abs), { recursive: true });
+      const onDisk = readOptional(abs);
       const regions = managed.map((e) => {
         const block = e.block;
         if (!block) {
           throw new Error(`manifest entry ${e.path}: managedBlock mode missing 'block'`);
         }
         const theirs = buildRegion(block, renderEntry(e, vars));
-        const regionText = opts.mergeManagedRegions
+        const regionText = mergeManagedRegions
           ? mergeManagedRegion(abs, e.path, block, theirs, ancestors)
           : theirs;
-        if (opts.mergeManagedRegions) ancestors[`${e.path}::${block.begin}`] = theirs;
+        // B1: capture ancestor unconditionally (pre-write snapshot) so a later
+        // merge run has a base even if this run was strip-replace.
+        ancestors[`${e.path}::${block.begin}`] = theirs;
         return { block, regionText };
       });
-      managedBlocks(abs, regions);
-      written.push(relPath);
+      // B1 content-hash dedup: if the would-be-written bytes equal the on-disk
+      // file, skip the write entirely (no mtime/git churn). `noir sync` on an
+      // unchanged tree writes NOTHING.
+      const predicted = predictManagedBlocks(onDisk ?? '', regions);
+      if (onDisk !== undefined && predicted === onDisk) {
+        identical.push(relPath);
+      } else {
+        managedBlocks(abs, regions);
+        written.push(relPath);
+      }
       continue;
     }
 
@@ -346,12 +379,22 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
         // there is no user content to preserve in that legacy shape.)
         if (isNoirMdPath(entry.path)) healLegacyNoirMd(abs);
         const theirs = buildRegion(block, body);
-        const regionText = opts.mergeManagedRegions
+        const regionText = mergeManagedRegions
           ? mergeManagedRegion(abs, entry.path, block, theirs, ancestors)
           : theirs;
-        managedBlock(abs, block, regionText);
-        if (opts.mergeManagedRegions) ancestors[`${entry.path}::${block.begin}`] = theirs;
-        written.push(entry.path);
+        // B1: capture ancestor unconditionally (pre-write snapshot).
+        ancestors[`${entry.path}::${block.begin}`] = theirs;
+        // B1 content-hash dedup (post-heal: re-read, the heal may have wiped).
+        // If the would-be-written bytes equal the on-disk file, skip the write
+        // (no mtime/git churn) — a no-op `noir sync` writes NOTHING.
+        const onDisk = readOptional(abs);
+        const predicted = predictManagedBlock(onDisk ?? '', block, regionText);
+        if (onDisk !== undefined && predicted === onDisk) {
+          identical.push(entry.path);
+        } else {
+          managedBlock(abs, block, regionText);
+          written.push(entry.path);
+        }
       } else {
         const out = skipIfExists(abs, body);
         if (out.written) written.push(entry.path);
@@ -366,8 +409,12 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     writeScaffoldVersion(opts.root, CURRENT_SCAFFOLD_VERSION);
   }
 
-  // SP-D: persist the ancestor map (only when three-way merge is opted in).
-  if (opts.mergeManagedRegions && !opts.dryRun) {
+  // B1: persist the ancestor snapshot UNCONDITIONALLY (every init/create/sync
+  // seeds it) so the first merge run — now the default — has a base.
+  // `writeAncestors` dedups internally: when the serialized bytes equal the
+  // on-disk file, the rewrite is skipped, so a no-op sync leaves ancestors.json
+  // untouched too (true zero-write idempotency).
+  if (!opts.dryRun) {
     writeAncestors(opts.root, ancestors);
   }
 
@@ -404,7 +451,15 @@ function mergeManagedRegion(
   if (base === undefined) return theirs; // no ancestor yet → strip-replace (first merge run)
   const ours = readManagedBlock(abs, block);
   if (ours === null) return theirs; // no existing region → fresh
-  const res = mergeThreeWay(base, ours, theirs);
+  // B1: `readManagedBlock` returns the matched region WITHOUT the trailing `\n`
+  // after `end`, while `buildRegion`/`theirs` INCLUDE it. Feeding the raw `ours`
+  // into mergeThreeWay makes every merge return a region missing that newline,
+  // so the writer would drop it on each sync (byte drift) AND the content-hash
+  // dedup could never fire (predicted !== onDisk by one `\n`). Normalize `ours`
+  // to `theirs`'s shape (always end with `\n`) so an unchanged region stays
+  // byte-identical and `noir sync` on an unchanged tree is a true no-op.
+  const oursNormalized = ours.endsWith('\n') ? ours : `${ours}\n`;
+  const res = mergeThreeWay(base, oursNormalized, theirs);
   if (res.conflict) {
     process.stderr.write(
       `noir: managed-region conflict in ${relPath} — wrote inline markers; resolve manually.\n`,
@@ -582,4 +637,20 @@ function renderEntry(entry: ManifestEntry, vars: BuildManifestContext): string {
   }
   if (entry.content !== undefined) return entry.content;
   throw new Error(`manifest entry ${entry.path}: must define 'content' or 'template'`);
+}
+
+/** Read a file as UTF-8, returning `undefined` when it is absent (ENOENT).
+ *  Used by the B1 content-hash dedup to read the on-disk bytes ONCE per managed
+ *  target and feed them to the predictor + the byte-equality check. Any other
+ *  read error re-throws (a real IO failure should not be silenced into a
+ *  mistaken "identical → skip write"). */
+function readOptional(absPath: string): string | undefined {
+  try {
+    return readFileSync(absPath, 'utf8');
+  } catch (err) {
+    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return undefined;
+    }
+    throw err;
+  }
 }

@@ -150,16 +150,15 @@ describe('scaffold sync — runtime subset only', () => {
     rmSync(paths.config(root), { force: true });
 
     const res = await scaffold({ root, mode: 'sync' });
-    // sync's written list contains only runtime modes.
-    const allEntries = res.written;
-    // .mcp.json is a regenerate file, byte-identical after init → content-hash
-    // dedup reports it in `identical` (no rewrite), not `written`.
+    // B1: on an unchanged tree the entire runtime subset (regenerate +
+    // managedBlock) is content-hash dedup'd to `identical` — `noir sync` writes
+    // NOTHING. `.mcp.json` (regenerate) + the managed files all land here.
     expect(res.identical).toContain('.mcp.json');
-    expect(allEntries).not.toContain('.mcp.json');
-    expect(allEntries).toContain('.noir/NOIR.md');
-    expect(allEntries).toContain('CLAUDE.md');
-    expect(allEntries).toContain('.gitignore');
-    // skipIfExists seeds were NOT recreated.
+    expect(res.identical).toContain('.noir/NOIR.md');
+    expect(res.identical).toContain('CLAUDE.md');
+    expect(res.identical).toContain('.gitignore');
+    expect(res.written).toEqual([]);
+    // skipIfExists seeds were NOT recreated (sync's runtime subset excludes them).
     expect(existsSync(paths.rulesMd(root))).toBe(false);
     expect(existsSync(paths.config(root))).toBe(false);
     // No skipIfExists entries in written OR skipped (they were filtered out, not no-op'd).
@@ -195,8 +194,10 @@ describe('scaffold upgrade — migrations', () => {
 
     const res = await scaffold({ root, mode: 'init', upgrade: true });
     expect(res.migrationsRan).toContain('1.0.0→1.0.0');
+    // B1: on an unchanged tree the re-emitted runtime subset is content-hash
+    // dedup'd to `identical` (no disk write).
     expect(res.identical).toContain('.mcp.json');
-    expect(res.written).toContain('.noir/NOIR.md');
+    expect(res.identical).toContain('.noir/NOIR.md');
     // config.yml was deleted and upgrade did NOT re-seed it.
     expect(existsSync(paths.config(root))).toBe(false);
   });

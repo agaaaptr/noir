@@ -109,14 +109,22 @@ describe('scaffold — already-initialized guard (SP-A)', () => {
     const root = join(tmp, 'proj');
     await scaffold({ root, mode: 'init', transport: 'stdio' });
     const second = await scaffold({ root, mode: 'init', transport: 'stdio', force: true });
-    expect(second.written.length).toBeGreaterThan(0);
+    // B1: on an unchanged tree the runtime re-emit is content-hash dedup'd to
+    // `identical` (no disk write). The signal that --force bypassed the guard
+    // is `noop === false` AND the run reached the manifest (written ∪ identical
+    // non-empty) — NOT `written.length > 0` (that was the pre-dedup proxy).
     expect(second.noop).toBe(false);
+    expect(second.written.length + second.identical.length).toBeGreaterThan(0);
   });
 
   it('upgrade: true is NOT blocked by the already-initialized guard', async () => {
     const root = join(tmp, 'proj');
     await scaffold({ root, mode: 'init', transport: 'stdio' });
     const up = await scaffold({ root, mode: 'init', transport: 'stdio', upgrade: true });
-    expect(up.written.length).toBeGreaterThan(0);
+    // B1: upgrade ran (migrationsRan non-empty) and was NOT blocked by the
+    // already-init guard (noop === false). The re-emitted runtime subset is
+    // dedup'd to `identical` on an unchanged tree.
+    expect(up.noop).toBe(false);
+    expect(up.migrationsRan.length).toBeGreaterThan(0);
   });
 });

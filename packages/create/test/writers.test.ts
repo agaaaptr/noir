@@ -5,7 +5,10 @@ import { CONTEXT_BLOCK, type ManagedBlock, managedBlock } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   buildRegion,
+  managedBlocks,
   managedBlock as managedWrite,
+  predictManagedBlock,
+  predictManagedBlocks,
   regenerate,
   skipIfExists,
 } from '../src/writers.js';
@@ -94,6 +97,76 @@ describe('managedBlock writer (delegates to keystone-K writeManagedRegion)', () 
     // Body with a trailing newline (as a .tmpl file would load).
     expect(buildRegion(local, 'BODY\n')).toBe(`${local.begin}\nBODY\n${local.end}\n`);
     expect(buildRegion(local, 'BODY\n\n\n')).toBe(`${local.begin}\nBODY\n${local.end}\n`);
+  });
+});
+
+describe('predictManagedBlock / predictManagedBlocks (B1 content-hash dedup)', () => {
+  const ctx = CONTEXT_BLOCK;
+  const rules = managedBlock('rules', 'html');
+  const ctxRegion = buildRegion(ctx, '@import ".noir/NOIR.md"');
+  const rulesRegion = buildRegion(rules, '@import ".noir/rules/RULES.md"');
+
+  it('predictManagedBlock equals what managedBlock writes for a fresh (empty) file', () => {
+    // The writer (via core writeManagedRegion) on a missing file emits exactly
+    // regionText. The predictor on '' must agree byte-for-byte.
+    expect(predictManagedBlock('', ctx, ctxRegion)).toBe(ctxRegion);
+  });
+
+  it('predictManagedBlock equals what managedBlock writes when user content surrounds the region', () => {
+    const file = `# My project\n\n${ctxRegion}`;
+    // After a managedBlock re-emit of ctxRegion into `file`, the on-disk bytes
+    // are: stripped user content + "\n\n" + regionText. The predictor must match.
+    const predicted = predictManagedBlock(file, ctx, ctxRegion);
+    // Simulate the actual write via the writer and compare.
+    const tmp = join(dir, 'predict-single.md');
+    writeFileSync(tmp, file, 'utf8');
+    managedWrite(tmp, ctx, ctxRegion);
+    expect(readFileSync(tmp, 'utf8')).toBe(predicted);
+  });
+
+  it('predictManagedBlock detects an unchanged region (predict === current) for the dedup fast-path', () => {
+    // After the writer emits ctxRegion into a file holding user content, a
+    // re-emit produces the SAME bytes → predict === current ⇒ skip write.
+    const tmp = join(dir, 'predict-unchanged.md');
+    writeFileSync(tmp, '# Title\n\n', 'utf8');
+    managedWrite(tmp, ctx, ctxRegion);
+    const current = readFileSync(tmp, 'utf8');
+    expect(predictManagedBlock(current, ctx, ctxRegion)).toBe(current);
+  });
+
+  it('predictManagedBlocks equals what managedBlocks writes for a fresh multi-region file', () => {
+    expect(
+      predictManagedBlocks(
+        '',
+        [ctx, rules].map((b) => ({ block: b, regionText: buildRegion(b, 'X') })),
+      ),
+    ).toBe(`${buildRegion(ctx, 'X')}\n${buildRegion(rules, 'X')}`);
+  });
+
+  it('predictManagedBlocks equals what managedBlocks writes when user content is present', () => {
+    const file = `# Header\n\n${ctxRegion}\n${rulesRegion}`;
+    const predicted = predictManagedBlocks(file, [
+      { block: ctx, regionText: ctxRegion },
+      { block: rules, regionText: rulesRegion },
+    ]);
+    const tmp = join(dir, 'predict-multi.md');
+    writeFileSync(tmp, file, 'utf8');
+    managedBlocks(tmp, [
+      { block: ctx, regionText: ctxRegion },
+      { block: rules, regionText: rulesRegion },
+    ]);
+    expect(readFileSync(tmp, 'utf8')).toBe(predicted);
+  });
+
+  it('predictManagedBlocks throws on an empty regions array (contract guard)', () => {
+    expect(() => predictManagedBlocks('', [])).toThrow(/at least one region/);
+  });
+
+  it('predictManagedBlocks delegates to predictManagedBlock for a single region', () => {
+    const file = `# H\n\n${ctxRegion}`;
+    expect(predictManagedBlocks(file, [{ block: ctx, regionText: ctxRegion }])).toBe(
+      predictManagedBlock(file, ctx, ctxRegion),
+    );
   });
 });
 

@@ -10,6 +10,11 @@ import { isInteractive } from './output.js';
 export interface ConflictOptsInput {
   /** `--force`: explicit re-scaffold — overwrite differing files, no prompt. */
   force?: boolean;
+  /** B1: explicit interactivity signal. When set, wins over the env/TTY
+   *  heuristic. `false` ⇒ preserve (never prompt); `true` ⇒ allow the @clack
+   *  resolver. The CLI derives this from the `NOIR_NON_INTERACTIVE` bridge
+   *  bin.ts owns + the `isInteractive()` TTY/CI/NO_COLOR gate. */
+  interactive?: boolean;
 }
 
 export type ScaffoldConflictOpts = {
@@ -23,11 +28,11 @@ export type ScaffoldConflictOpts = {
  * template, so passing this on every init/create/sync is harmless on a first
  * run (no existing files → no conflict).
  *
- * NOTE: interactivity is decided via `isInteractive()` (TTY + CI + NO_COLOR).
- * `--no-input`/`--json` are global flags the init/create/sync modules don't
- * currently receive; closing that edge (so `noir sync --no-input` in a TTY
- * never prompts) is a documented follow-up — the common CI/pipe case is already
- * correct because non-TTY ⇒ preserve.
+ * B1: an explicit `interactive` flag (preferred) drives the prompt decision so
+ * the CLI's choice is hermetic — the engine itself never reads `process.env`
+ * for interactivity. The `NOIR_NON_INTERACTIVE` bridge + `isInteractive()`
+ * TTY/CI/NO_COLOR gate remain as the fallback when `interactive` is unset (kept
+ * so bin.ts's existing wiring stays intact).
  */
 /** True when the bin's preAction hook flagged this invocation non-interactive
  *  (`--json` / `--no-input`) so the conflict resolver never prompts under those. */
@@ -40,7 +45,14 @@ export function buildConflictOpts(input: ConflictOptsInput = {}): ScaffoldConfli
   if (input.force === true) {
     return { conflictPolicy: 'overwrite' };
   }
-  // SP-G: --json / --no-input (propagated via NOIR_NON_INTERACTIVE) OR the
+  // B1: explicit interactive flag wins over the env/TTY heuristic.
+  if (input.interactive === false) {
+    return { conflictPolicy: 'preserve' };
+  }
+  if (input.interactive === true) {
+    return { conflictPolicy: 'preserve', onConflict: clackConflictResolver };
+  }
+  // Fallback: NOIR_NON_INTERACTIVE bridge (--json/--no-input) OR the
   // isInteractive() TTY/CI/NO_COLOR gate — either ⇒ preserve, never prompt.
   if (flaggedNonInteractive() || !isInteractive()) {
     return { conflictPolicy: 'preserve' };

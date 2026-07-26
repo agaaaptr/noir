@@ -248,6 +248,18 @@ describe('commander migration — behavior preservation (migrated commands)', ()
     expect(sync).toHaveBeenCalledWith(process.cwd());
   });
 
+  it('sync --no-merge-regions passes mergeManagedRegions:false through to sync() (B1)', async () => {
+    const r = await parse(['sync', '--no-merge-regions']);
+    expect(r.exitCode).toBe(EXIT.OK);
+    expect(sync).toHaveBeenCalledWith(process.cwd(), { mergeManagedRegions: false });
+  });
+
+  it('sync --merge still passes merge:true (backward-compat no-op since B1 default)', async () => {
+    const r = await parse(['sync', '--merge']);
+    expect(r.exitCode).toBe(EXIT.OK);
+    expect(sync).toHaveBeenCalledWith(process.cwd(), { merge: true });
+  });
+
   it('init --upgrade passes upgrade:true through to init()', async () => {
     const r = await parse(['init', '--upgrade']);
     expect(r.exitCode).toBe(EXIT.OK);

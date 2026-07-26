@@ -29,6 +29,7 @@ import { type HostId, resolveAdapter } from '@noir-ai/adapters';
 import { scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 import { buildConflictOpts } from './conflict.js';
+import { resolveInteractive } from './output.js';
 
 export interface InitOptions {
   transport: 'stdio' | 'streamable-http';
@@ -51,16 +52,20 @@ export async function init(root: string, opts: InitOptions): Promise<void> {
   assertTransportUrl(opts);
 
   const host: HostId = opts.host ?? 'claude';
+  // B1: the engine reads ScaffoldOptions.interactive (hermetic — never
+  // process.env). The CLI derives it once from the bridge + TTY/CI/NO_COLOR gate.
+  const interactive = resolveInteractive();
 
   const res = await scaffold({
     root,
     mode: 'init',
     host,
     transport: opts.transport,
+    interactive,
     ...(opts.url !== undefined ? { url: opts.url } : {}),
     ...(opts.upgrade === true ? { upgrade: true } : {}),
     ...(opts.force === true ? { force: true } : {}),
-    ...buildConflictOpts({ force: opts.force }),
+    ...buildConflictOpts({ force: opts.force, interactive }),
   });
   // SP-A: if the already-initialized guard no-op'd scaffold, stop — don't re-emit
   // skills or print "initialized" (scaffold already printed the no-op message).

@@ -182,6 +182,48 @@ export function buildRegion(block: ManagedBlock, body: string): string {
   return `${block.begin}\n${body.trimEnd()}\n${block.end}\n`;
 }
 
+/** Compute the exact byte content a {@link managedBlock} write would produce,
+ *  WITHOUT touching disk. Mirrors core's `writeManagedRegion` byte-for-byte
+ *  (`stripManagedBlock` + `trimEnd` + `\n\n` separator + `regionText`) so the
+ *  orchestrator's content-hash dedup (B1: skip an unchanged managed region) and
+ *  the writer always agree on every byte. Pass the CURRENT on-disk content;
+ *  the predictor never reads the file itself (the orchestrator reads once and
+ *  reuses the bytes for both predict + compare). */
+export function predictManagedBlock(
+  currentContent: string,
+  block: ManagedBlock,
+  regionText: string,
+): string {
+  const stripped = stripManagedBlock(currentContent, block);
+  return stripped ? `${stripped.trimEnd()}\n\n${regionText}` : regionText;
+}
+
+/** Compute the exact byte content a {@link managedBlocks} (multi-region) write
+ *  would produce, WITHOUT touching disk. Mirrors the multi-region writer's
+ *  strip-all + append-all pass (the single-region case delegates to
+ *  {@link predictManagedBlock}). Used by the B1 content-hash dedup so a
+ *  multi-region file (CLAUDE.md CONTEXT+RULES) that is already up to date is
+ *  skipped — `noir sync` on an unchanged tree writes NOTHING. */
+export function predictManagedBlocks(
+  currentContent: string,
+  regions: ReadonlyArray<{ block: ManagedBlock; regionText: string }>,
+): string {
+  if (regions.length === 0) {
+    throw new Error('predictManagedBlocks requires at least one region');
+  }
+  if (regions.length === 1) {
+    const only = regions[0];
+    if (!only) throw new Error('predictManagedBlocks: undefined region');
+    return predictManagedBlock(currentContent, only.block, only.regionText);
+  }
+  let stripped = currentContent;
+  for (const r of regions) {
+    stripped = stripManagedBlock(stripped, r.block);
+  }
+  const regionsJoined = regions.map((r) => r.regionText).join('\n');
+  return stripped.trim().length > 0 ? `${stripped.trimEnd()}\n\n${regionsJoined}` : regionsJoined;
+}
+
 /** Write `content` to `absPath` only if no file exists there. Returns whether
  *  bytes were written. Parent dirs are NOT created (orchestrator's job). */
 export function skipIfExists(absPath: string, content: string): WriteOutcome {

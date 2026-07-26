@@ -109,6 +109,27 @@ export function isInteractive(opts: CliOptions = {}): boolean {
   return process.stdin.isTTY === true && process.stdout.isTTY === true;
 }
 
+/**
+ * B1 — derive the explicit `interactive` flag the scaffold engine reads (via
+ * {@link ScaffoldOptions.interactive}) from the bridge bin.ts owns. The bin's
+ * `preAction` sets `NOIR_NON_INTERACTIVE=1` under `--json`/`--no-input`; this
+ * helper folds that with the {@link isInteractive} TTY/CI/NO_COLOR gate so a
+ * single boolean flows into the engine + `buildConflictOpts`. The ENGINE itself
+ * never reads `process.env` for interactivity — only this CLI helper does.
+ */
+export function resolveInteractive(): boolean {
+  if (flaggedNonInteractiveCli()) return false;
+  return isInteractive();
+}
+
+/** True when the bin's `preAction` flagged this invocation non-interactive
+ *  (`--json` / `--no-input` → `NOIR_NON_INTERACTIVE`). CLI-internal; the engine
+ *  reads {@link ScaffoldOptions.interactive} instead. */
+function flaggedNonInteractiveCli(): boolean {
+  const v = process.env.NOIR_NON_INTERACTIVE;
+  return v !== undefined && v !== '';
+}
+
 // ---------------------------------------------------------------------------
 // Data output (stdout). The ONLY helper here that writes to stdout; under
 // `--json` a command calls this exactly once with its full payload and never
