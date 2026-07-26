@@ -117,6 +117,9 @@ importers:
 
   packages/create:
     dependencies:
+      '@noir-ai/adapters':
+        specifier: workspace:*
+        version: link:../adapters
       '@noir-ai/core':
         specifier: workspace:*
         version: link:../core
