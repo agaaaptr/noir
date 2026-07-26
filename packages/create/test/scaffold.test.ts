@@ -100,18 +100,21 @@ describe('scaffold init — full AI foundation', () => {
 });
 
 describe('scaffold init — idempotency', () => {
-  it('re-run preserves project.id (skipIfExists: store DB stays stable) — documented behavior change vs predecessor init.ts', async () => {
+  it('re-run is a NO-OP that preserves project.id (SP-A already-initialized guard)', async () => {
     const first = await init(root);
     const idAfterFirst = readFileSync(paths.projectId(root), 'utf8');
     expect(idAfterFirst.trim()).toBe(first.projectId);
     const second = await init(root);
     const idAfterSecond = readFileSync(paths.projectId(root), 'utf8');
-    // project.id is NOT regenerated on re-run.
+    // project.id is NOT regenerated on re-run (store DB stays stable).
     expect(idAfterSecond.trim()).toBe(first.projectId);
     expect(second.projectId).toBe(first.projectId);
-    expect(second.skipped).toEqual(
-      expect.arrayContaining(['.noir/project.id', '.noir/config.yml', '.noir/rules/RULES.md']),
-    );
+    // SP-A: a 2nd init at an already-initialized root is a NO-OP, not a silent
+    // re-emit. Nothing written, nothing skipped. Use --upgrade (migrate) or
+    // --force (re-scaffold) to re-emit. (Previously the 2nd run re-emit skipped
+    // the seeds; the guard supersedes that — see scaffold-safety.test.ts.)
+    expect(second.written).toEqual([]);
+    expect(second.skipped).toEqual([]);
   });
 
   it('re-run is byte-idempotent for single-region managed files (NOIR.md, ignore files) and regenerate (.mcp.json)', async () => {

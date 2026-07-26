@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { createProjectId, paths } from '@noir-ai/core';
 import {
   type BuildManifestContext,
@@ -64,6 +64,10 @@ export interface ScaffoldOptions {
    *    regenerate + managedBlock (skipIfExists left alone). Only meaningful
    *    with mode `'init'`. */
   upgrade?: boolean;
+  /** SP-A: re-scaffold even when the target is already initialized (bypasses
+   *    the already-initialized no-op guard). Does NOT bypass `assertSafeRoot`
+   *    — root-safety is hard, never bypassable. */
+  force?: boolean;
   /** Preview: compute the same written/skipped/migrated lists without touching
    *    disk. `noir doctor`/CI use this to report drift. */
   dryRun?: boolean;
@@ -95,7 +99,39 @@ const WRITER_BY_MODE: Record<WriteMode, 'all' | 'runtime'> = {
   skipIfExists: 'all',
 };
 
+/**
+ * Refuse to scaffold when `root` is — or is inside — a `.noir/` directory.
+ * (SP-A) Running `noir init`/`create`/`sync` while cwd = `.noir/` would
+ * otherwise mint a FRESH project id (because `<root>/.noir/project.id` is
+ * absent) and build a NESTED second project (`.noir/.noir/`, `.noir/CLAUDE.md`,
+ * `.noir/.claude/skills/`, …) — the duplicate-`.noir` bug. The walk ascends the
+ * ancestor chain only, so a legitimate project root that merely CONTAINS a
+ * `.noir/` store is never flagged. String-based: works whether or not `root`
+ * exists on disk yet (so `noir create <new-dir>` is still guarded).
+ *
+ * Hard safety — NOT bypassable. (`--force` is reserved for the
+ * already-initialized no-op; it does not weaken this guard.)
+ */
+export function assertSafeRoot(root: string): void {
+  let cur = root;
+  for (let i = 0; i < 64; i++) {
+    if (basename(cur) === '.noir') {
+      throw new Error(
+        `Refusing to scaffold inside a .noir/ directory (${root}). Run \`noir init\` from the project root, not from inside .noir/.`,
+      );
+    }
+    const parent = dirname(cur);
+    if (parent === cur) break; // reached the filesystem root
+    cur = parent;
+  }
+}
+
 export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
+  // Root-safety (SP-A): refuse to scaffold at/inside a .noir/ directory BEFORE
+  // any write (incl. `create`'s target mkdir). Prevents the nested .noir/.noir/
+  // re-init bug. Hard guard; not bypassable.
+  assertSafeRoot(opts.root);
+
   const host: HostTag = opts.host ?? 'claude';
   const transport: BuildManifestContext['transport'] = opts.transport ?? 'stdio';
   if (transport === 'streamable-http' && !opts.url) {
@@ -128,6 +164,38 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   // 3. Stack detect (read-only, never throws). Always populated so callers
   //    (TUI, doctor) get a single source of truth regardless of mode.
   const stack = detectStack(opts.root);
+
+  // SP-A — already-initialized guard: a bare `noir init`/`noir create` on a
+  // project that already carries a .noir/scaffold-version stamp is a NO-OP,
+  // not a silent re-emit (re-running init looked like it re-scaffolded, which
+  // is what made the nested-`.noir` bug feel like "init duplicates things").
+  // `--upgrade` is the explicit migrate+re-emit path; `--force` re-scaffolds
+  // without migrating. Both bypass this guard. sync is unaffected (it requires
+  // a valid project.id and emits the runtime subset only). dryRun returns the
+  // no-op shape silently (no stderr) so `noir doctor`/CI previews stay clean.
+  if (
+    fromVersion !== null &&
+    opts.upgrade !== true &&
+    opts.force !== true &&
+    (opts.mode === 'init' || opts.mode === 'create')
+  ) {
+    if (opts.dryRun !== true) {
+      process.stderr.write(
+        `Noir is already initialized in ${opts.root} (scaffold ${fromVersion}). No-op. Use \`noir init --upgrade\` to migrate, or \`--force\` to re-scaffold.\n`,
+      );
+    }
+    return {
+      written: [],
+      skipped: [],
+      migrationsRan: [],
+      migrationConflicts: [],
+      stack,
+      projectId,
+      fromVersion,
+      toVersion: CURRENT_SCAFFOLD_VERSION,
+      host,
+    };
+  }
 
   // 4. Migrations (only when explicitly upgrading). M4: a fresh project
   //    (`fromVersion === null`) has NO prior stamp → nothing to migrate. Skip

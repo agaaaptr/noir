@@ -41,6 +41,9 @@ export interface InitOptions {
    *  both scaffold emission (the manifest's host-specific half) and skills
    *  emission (skipped for hosts with no `skillsDir`). */
   host?: HostId;
+  /** SP-A: re-scaffold even if already initialized (bypasses the
+   *  already-initialized no-op guard in scaffold()). */
+  force?: boolean;
 }
 
 export async function init(root: string, opts: InitOptions): Promise<void> {
@@ -55,6 +58,7 @@ export async function init(root: string, opts: InitOptions): Promise<void> {
     transport: opts.transport,
     ...(opts.url !== undefined ? { url: opts.url } : {}),
     ...(opts.upgrade === true ? { upgrade: true } : {}),
+    ...(opts.force === true ? { force: true } : {}),
   });
 
   await emitHostSkills(root, host);

@@ -36,6 +36,7 @@ export {
   runMigrations,
 } from './migrations/index.js';
 export {
+  assertSafeRoot,
   type ScaffoldMode,
   type ScaffoldOptions,
   type ScaffoldResult,

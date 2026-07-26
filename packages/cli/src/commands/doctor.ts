@@ -552,6 +552,37 @@ function checkHostArtifacts(
 }
 
 // ---------------------------------------------------------------------------
+// SP-A — nested-`.noir` detection (read-only).
+// ---------------------------------------------------------------------------
+
+/**
+ * Detects the fingerprint of a `noir init`/`create` run from INSIDE `.noir/`
+ * (now PREVENTED by `assertSafeRoot` in @noir-ai/create, but legacy/already-
+ * nested projects still carry the damage): a nested `<root>/.noir/.noir/` store
+ * and/or host artifacts emitted into `.noir/` as if it were a project root
+ * (`.noir/CLAUDE.md`, `.noir/.mcp.json`, `.noir/.claude/`). Read-only `warn` —
+ * doctor never mutates; remediation is manual removal (a future `noir dedup`
+ * can automate it, SP-C). Never `fail`: a nested store wastes space + confuses
+ * tooling but does not break the outer project.
+ */
+export function checkNestedNoir(
+  checks: CheckResult[],
+  root: string,
+): { detected: boolean; paths: string[] } {
+  const candidates = ['.noir/.noir', '.noir/CLAUDE.md', '.noir/.mcp.json', '.noir/.claude'];
+  const found = candidates.filter((rel) => existsSync(join(root, rel)));
+  const detected = found.length > 0;
+  checks.push({
+    name: 'nested .noir',
+    status: detected ? 'warn' : 'ok',
+    detail: detected
+      ? `nested Noir artifacts inside .noir/ (${found.join(', ')}) — likely from running \`noir init\` inside .noir/. Remove them; the real project is at ${root}.`
+      : 'no nested .noir/ artifacts',
+  });
+  return { detected, paths: found };
+}
+
+// ---------------------------------------------------------------------------
 // S11 — publish-readiness check (advisory, repo-developer-facing).
 // ---------------------------------------------------------------------------
 
@@ -825,6 +856,7 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   const scaffold = checkScaffoldVersion(checks, root);
   const rules = checkRulesMdBudget(checks, root, project);
   const host = checkHostArtifacts(checks, root, project);
+  checkNestedNoir(checks, root);
   const publish = checkPublish(checks, resolveWorkspacePackagesDir());
 
   const summary = summarize(checks);

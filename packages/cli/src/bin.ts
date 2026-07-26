@@ -174,6 +174,7 @@ export function createProgram(): Command {
       '--upgrade',
       'run scaffold migrations before re-emitting (re-run on an existing project)',
     )
+    .option('--force', 're-scaffold even if already initialized (bypasses the already-init no-op)')
     .addOption(
       // S10: target host. Defaults to `'claude'` (the regression anchor). The
       // chosen host is forwarded to scaffold() + skills emission via
@@ -185,7 +186,13 @@ export function createProgram(): Command {
       ).choices(SUPPORTED_HOSTS),
     )
     .action(
-      async (opts: { transport?: string; url?: string; upgrade?: boolean; host?: string }) => {
+      async (opts: {
+        transport?: string;
+        url?: string;
+        upgrade?: boolean;
+        force?: boolean;
+        host?: string;
+      }) => {
         // Preserve the parseArgs coercion exactly: only 'streamable-http' is
         // special; any other value (incl. typos / future transports) → 'stdio'.
         const transport: 'stdio' | 'streamable-http' =
@@ -196,11 +203,13 @@ export function createProgram(): Command {
         // exactly `{transport, url}` for the default-invocation cases). Matches
         // the conditional-spread pattern used for task/memory options elsewhere.
         const upgrade = opts.upgrade === true;
+        const force = opts.force === true;
         const host = parseHost(opts.host);
         await init(process.cwd(), {
           transport,
           url: opts.url,
           ...(upgrade ? { upgrade } : {}),
+          ...(force ? { force } : {}),
           ...(host !== undefined ? { host } : {}),
         });
       },
@@ -214,6 +223,7 @@ export function createProgram(): Command {
     .description('bootstrap the Noir AI layer in a new or empty directory')
     .option('--transport <transport>', 'stdio | streamable-http (default: stdio)', 'stdio')
     .option('--url <url>', 'streamable-http daemon URL (localhost only)')
+    .option('--force', 're-scaffold even if already initialized (bypasses the already-init no-op)')
     .addOption(
       new Option(
         '--host <id>',
@@ -223,15 +233,17 @@ export function createProgram(): Command {
     .action(
       async (
         dir: string | undefined,
-        opts: { transport?: string; url?: string; host?: string },
+        opts: { transport?: string; url?: string; force?: boolean; host?: string },
       ) => {
         const transport: 'stdio' | 'streamable-http' =
           opts.transport === 'streamable-http' ? 'streamable-http' : 'stdio';
+        const force = opts.force === true;
         const host = parseHost(opts.host);
         const { create } = await import('./commands/create.js');
         await create(dir, {
           transport,
           url: opts.url,
+          ...(force ? { force } : {}),
           ...(host !== undefined ? { host } : {}),
         });
       },

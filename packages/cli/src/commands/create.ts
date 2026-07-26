@@ -38,6 +38,8 @@ export interface CreateOptions {
   url?: string;
   /** S10 target host. Defaults to `'claude'`. */
   host?: HostId;
+  /** SP-A: re-scaffold even if already initialized. */
+  force?: boolean;
 }
 
 /**
@@ -62,6 +64,7 @@ export async function create(dir: string | undefined, opts: CreateOptions): Prom
     host,
     transport: opts.transport,
     ...(opts.url !== undefined ? { url: opts.url } : {}),
+    ...(opts.force === true ? { force: true } : {}),
   });
 
   // Skills are out-of-manifest by design — same composition as init.
