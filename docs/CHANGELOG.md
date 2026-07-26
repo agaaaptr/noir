@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.3.0-beta.8 (2026-07-26)
+
+**Published on npm (dist-tag `beta`)** — Tier B of the 2026-07-26 overnight session: a fully idempotent scaffold, one universal conflict contract across every file-producing path, and write-path semantic duplicate detection.
+
+### Idempotent scaffold (B1)
+- `noir sync` on an unchanged tree now writes **nothing** (managed-region content-hash dedup; no mtime/git churn) — the perceived "noir init duplicates" was git-status churn, not real duplication.
+- `.noir/ancestors.json` seeded on **every** init/create/sync. `mergeManagedRegions` defaults to **TRUE** (bare `noir sync` preserves in-region user edits across template upgrades; `--no-merge-regions` escape). *(Latent fix: `mergeManagedRegion` dropped a trailing newline so dedup could never fire and every sync drifted the file by one byte.)*
+- Bare `noir init` on an initialized project **no-ops** without `--upgrade`; pre-1.3.0 projects (project.id present, no stamp) also no-op. The engine is **hermetic** for API/embedded callers (explicit `interactive` flag, decoupled from `process.env`). Fixed the stale comment that claimed multi-region merge was unshipped (it shipped in SP-H).
+
+### Universal conflict contract (B2)
+- Every file-producing path now routes through one `buildConflictOpts` + `onConflict` seam — including the three that previously blind-overwrote: `skills/compiler emitSkillsToDir` (the `rm -rf` orphan cleanup is now `assertNotUserOwned`-guarded — a hand-authored `noir-*` skill is preserved + reported, never silently deleted), `workflow/artifacts` (8 writers), `store/markdown exportMarkdown`.
+- `@clack` conflict resolver now shows a **colored unified diff** (stderr; `+`/`-` via the theme; `NO_COLOR`-gated) before the prompt. **Apply-to-all** scoped to artifact class (a `noir init --upgrade` over N pointers is now 1 prompt; managed blocks stay per-file). 6th option **"merge (with conflict markers)"** (zdiff3). `--json` emits a structured `ScaffoldResult.conflicts[]` (`{path, mode, similarity, existingSha, proposedSha, resolution}`); no prompt under `--no-input`.
+
+### Write-path semantic dedup (B3)
+- Before writing a host-context file, `noir init`/`create`/`sync` check it against existing host files (CLAUDE.md / AGENTS.md / GEMINI.md / RULES.md) via the S6 embedder and surface a near-duplicate as a **non-blocking recommendation** (Replace/Mirror/Skip/Create) — the dedup detector and the conflict resolver are now one connected system.
+- Two-tier (cosine ≥0.95 action, 0.85–0.95 info-only); content-hash cache at `.noir/dedup-cache.json` (no re-embed of unchanged files). **Graceful degradation:** if the embedder/model is unavailable or slow, it warn-skips — `noir init`/`sync` never block on a model download or fail because of a missing embedder. `init`/`sync`/`create` now return the `ScaffoldResult` (with `conflicts[]`).
+
+**1263/1263 tests green** (was 1181 → +82 across Tier A+B). Known residual (~5 lines, landing in 1.4.0): `bin.ts` does not yet emit `conflicts[]` to `--json` stdout for init/sync/create (data populated + tested at the function boundary).
+
 ## 1.3.0-beta.7 (2026-07-26)
 
 **Published on npm (dist-tag `beta`)** — Tier A of the 2026-07-26 overnight "runtime polish" session: a clean install (no deprecation noise) and a unified output design-system (no more red headers).
