@@ -1,6 +1,6 @@
 {
   "name": "@noir-ai/context",
-  "version": "1.3.0-beta.5",
+  "version": "1.3.0-beta.6",
   "description": "Noir context — SHA-256 incremental indexer and hybrid retrieval (BM25 + vector kNN + Reciprocal Rank Fusion).",
   "license": "MIT",
   "author": "agaaaptr",
