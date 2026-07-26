@@ -1,8 +1,8 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createProjectId } from '@noir-ai/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openStore } from '../src/sqlite-store.js';
 
 let root: string;
@@ -93,6 +93,60 @@ describe('markdown export', () => {
       // Files should exist and contain content
       const overviewContent = readFileSync(join(exportDir, 'noir-overview.md'), 'utf8');
       expect(overviewContent).toContain('Noir is a discipline layer');
+    } finally {
+      await store.close();
+    }
+  });
+});
+
+// B2 — universal conflict contract. exportMarkdown routes through the SAME
+// onConflict seam `regenerate` uses. Default behavior stays v1.2 (overwrite);
+// when a resolver is wired + interactive, a differing existing file consults
+// it; non-interactive guards prevent a prompt under CI/--json.
+describe('markdown export — B2 conflict seam', () => {
+  it('default (no opts) overwrites differing content (v1.2 behavior)', async () => {
+    const store = await openAndIndex();
+    try {
+      const exportDir = mkdtempSync(join(tmpdir(), 'noir-export-conflict-'));
+      mkdirSync(exportDir, { recursive: true });
+      // Pre-populate a user file that exportMarkdown would clobber.
+      writeFileSync(join(exportDir, 'noir-overview.md'), 'USER-EDIT', 'utf8');
+      const paths = await store.exportMarkdown(exportDir);
+      expect(paths).toContain(join(exportDir, 'noir-overview.md'));
+      // Overwritten with the rendered template bytes (default policy).
+      const after = readFileSync(join(exportDir, 'noir-overview.md'), 'utf8');
+      expect(after).toContain('Noir is a discipline layer');
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('onConflict=preserve keeps the user file (excluded from written paths)', async () => {
+    const store = await openAndIndex();
+    try {
+      const exportDir = mkdtempSync(join(tmpdir(), 'noir-export-preserve-'));
+      mkdirSync(exportDir, { recursive: true });
+      writeFileSync(join(exportDir, 'noir-overview.md'), 'USER-EDIT', 'utf8');
+      const onConflict = vi.fn((): 'preserve' => 'preserve');
+      const paths = await store.exportMarkdown(exportDir, { onConflict, interactive: true });
+      expect(onConflict).toHaveBeenCalledTimes(1);
+      // The preserved file is NOT in the written list.
+      expect(paths).not.toContain(join(exportDir, 'noir-overview.md'));
+      expect(readFileSync(join(exportDir, 'noir-overview.md'), 'utf8')).toBe('USER-EDIT');
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('does NOT consult under non-interactive (CI/--json never prompts)', async () => {
+    const store = await openAndIndex();
+    try {
+      const exportDir = mkdtempSync(join(tmpdir(), 'noir-export-ni-'));
+      mkdirSync(exportDir, { recursive: true });
+      writeFileSync(join(exportDir, 'noir-overview.md'), 'USER-EDIT', 'utf8');
+      const onConflict = vi.fn((): 'preserve' => 'preserve');
+      await store.exportMarkdown(exportDir, { onConflict, interactive: false });
+      expect(onConflict).not.toHaveBeenCalled();
     } finally {
       await store.close();
     }

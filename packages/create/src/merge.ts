@@ -29,7 +29,7 @@ function numAt(arr: readonly number[], i: number): number {
 }
 
 /** Longest-common-subsequence match pairs between two line arrays. */
-function lcsMatch(a: readonly string[], b: readonly string[]): Array<[number, number]> {
+export function lcsMatch(a: readonly string[], b: readonly string[]): Array<[number, number]> {
   const n = a.length;
   const m = b.length;
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
@@ -59,6 +59,117 @@ function lcsMatch(a: readonly string[], b: readonly string[]): Array<[number, nu
   return out;
 }
 
+/**
+ * B2 — unified line diff for the conflict resolver's stderr preview. Returns a
+ * sequence of {type:'eq'|'del'|'add', line} records, LCS-based, equivalent in
+ * shape to `git diff --no-color`. Pure (no IO) so it unit-tests cleanly and the
+ * resolver can render it through {@link packages/cli/src/theme.ts} (`+` green,
+ * `-` red, context dim). Reuses the SAME LCS machinery {@link mergeThreeWay}
+ * does so there is exactly one line-diff algorithm in the package.
+ *
+ * `context` (default 3) — number of unchanged lines to keep around each hunk
+ * (git-style). 0 → every non-equal line stands alone; large → whole-file blob.
+ * The resolver uses the default; tests pin to a specific shape.
+ */
+export interface DiffLine {
+  type: 'eq' | 'del' | 'add';
+  line: string;
+}
+export function lineDiff(base: string, head: string, context = 3): DiffLine[] {
+  const A = base.split('\n');
+  const B = head.split('\n');
+  const pairs = lcsMatch(A, B);
+  const inA = new Set<number>(pairs.map((p) => p[0]));
+  const inB = new Set<number>(pairs.map((p) => p[1]));
+  // Walk both sequences in lockstep, emitting del/eq/add per the LCS anchors.
+  const out: DiffLine[] = [];
+  let i = 0;
+  let j = 0;
+  // Build a baseIdx→headIdx map so we can advance along matched pairs.
+  const bToH = new Map<number, number>();
+  for (const [bi, hi] of pairs) bToH.set(bi, hi);
+  while (i < A.length || j < B.length) {
+    const matched = bToH.get(i);
+    if (matched !== undefined && matched === j) {
+      out.push({ type: 'eq', line: A[i] ?? '' });
+      i++;
+      j++;
+    } else if (matched !== undefined) {
+      // Head is behind — emit adds up to the matched head index.
+      out.push({ type: 'add', line: B[j] ?? '' });
+      j++;
+    } else if (i < A.length && !inA.has(i)) {
+      // A-only line (deleted).
+      out.push({ type: 'del', line: A[i] ?? '' });
+      i++;
+    } else if (j < B.length && !inB.has(j)) {
+      // B-only line (added).
+      out.push({ type: 'add', line: B[j] ?? '' });
+      j++;
+    } else {
+      // Both at matched anchors but not paired — advance the smaller index.
+      if (i < A.length) i++;
+      else j++;
+    }
+  }
+  return context > 0 ? collapseContext(out, context) : out;
+}
+
+/** Collapse runs of >2*`context` unchanged lines into a single `...` hunk
+ *  separator so the preview stays readable on long files. Pure trim — never
+ *  drops a del/add. */
+function collapseContext(lines: readonly DiffLine[], context: number): DiffLine[] {
+  const out: DiffLine[] = [];
+  const keep = new Array<boolean>(lines.length).fill(false);
+  // Mark `context` lines around each del/add.
+  for (let i = 0; i < lines.length; i++) {
+    const dl = lines[i];
+    if (dl && dl.type !== 'eq') {
+      for (let k = Math.max(0, i - context); k <= Math.min(lines.length - 1, i + context); k++) {
+        keep[k] = true;
+      }
+    }
+  }
+  let inRun = false;
+  for (let i = 0; i < lines.length; i++) {
+    const dl = lines[i];
+    if (!dl) continue;
+    if (keep[i]) {
+      out.push(dl);
+      inRun = false;
+    } else {
+      if (!inRun) {
+        out.push({ type: 'eq', line: '…' });
+        inRun = true;
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * B2 — zdiff3-style conflict markers for an unresolved overlap. Shape:
+ *   `<<<<<<< ours`
+ *   <ours lines>
+ *   `||||||| base`
+ *   <base lines>
+ *   `=======`
+ *   <theirs lines>
+ *   `>>>>>>> theirs`
+ *
+ * `diff3(zdiff3)` writes the SAME shape — included here so the engine + clack
+ * resolver have a single source of truth for marker layout. Returns the marked
+ * region body (no outer delimiters); the caller wraps it with surrounding
+ * context.
+ */
+export function zdiff3Region(
+  ours: readonly string[],
+  base: readonly string[],
+  theirs: readonly string[],
+): string[] {
+  return ['<<<<<<< ours', ...ours, '||||||| base', ...base, '=======', ...theirs, '>>>>>>> theirs'];
+}
+
 const eq = (a: readonly string[], b: readonly string[]): boolean =>
   a.length === b.length && a.every((v, k) => v === b[k]);
 
@@ -66,10 +177,19 @@ const eq = (a: readonly string[], b: readonly string[]): boolean =>
  * Three-way merge of `ours` (the user's current region) against `theirs` (the
  * new template) with `base` (the last-emitted ancestor). Line-level diff3:
  * changes in disjoint line ranges merge; overlapping changes become inline
- * conflict markers (`<<<<<<< ours` / `=======` / `>>>>>>> theirs`). Pure +
- * deterministic (no IO) so it's unit-testable.
+ * conflict markers. Default marker shape is the minimal diff3 form
+ * (`<<<<<<< ours` / `=======` / `>>>>>>> theirs`) — byte-identical to v1.2 so
+ * {@link mergeManagedRegion} stays regression-anchored. Pass `'zdiff3'` to
+ * include the base section (`||||||| base`) — used by the conflict resolver's
+ * 6th "merge (with conflict markers)" option (B2 task 4). Pure + deterministic
+ * (no IO) so it's unit-testable.
  */
-export function mergeThreeWay(base: string, ours: string, theirs: string): MergeResult {
+export function mergeThreeWay(
+  base: string,
+  ours: string,
+  theirs: string,
+  style: 'minimal' | 'zdiff3' = 'minimal',
+): MergeResult {
   const t = trivial(base, ours, theirs);
   if (t) return t;
 
@@ -105,7 +225,11 @@ export function mergeThreeWay(base: string, ours: string, theirs: string): Merge
     else if (eq(oSeg, tSeg)) out.push(...oSeg);
     else {
       conflict = true;
-      out.push('<<<<<<< ours', ...oSeg, '=======', ...tSeg, '>>>>>>> theirs');
+      if (style === 'zdiff3') {
+        out.push(...zdiff3Region(oSeg, baseSeg, tSeg));
+      } else {
+        out.push('<<<<<<< ours', ...oSeg, '=======', ...tSeg, '>>>>>>> theirs');
+      }
     }
     if (bBase < B.length) out.push(B[bBase] ?? '');
   }

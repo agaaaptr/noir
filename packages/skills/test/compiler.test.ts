@@ -252,8 +252,12 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     //   - noir-stale.mdc         (stale FLAT file — must be pruned)
     //   - noir-keep-legacy/      (legacy nested dir from pre-C3 cursor sync —
     //                             must be pruned even if name overlaps, since
-    //                             the flat layout has no noir-*/ dirs at all)
+    //                             the flat layout has no noir-{name}/ dirs at all)
     //   - my-custom-rule.mdc     (user-authored — UNTOUCHED, no noir- prefix)
+    // B2: the assertNotUserOwned guard skips entries that don't look Noir-emitted
+    // (no canonical cursor frontmatter). The stale fixtures below carry the
+    // `alwaysApply:` marker the compiler always writes, so they're recognized as
+    // Noir-managed and pruned; `my-custom-rule.mdc` lacks it and is preserved.
     await writeSkill(
       'noir-keep',
       '---\nname: noir-keep\ndescription: Use when keeping.\n---\n# keep',
@@ -265,9 +269,21 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     // `target/` with stale files BEFORE the emit call to assert the prune — so
     // it must mkdir `target/` itself (otherwise the writeFile below ENOENTs).
     await mkdir(target, { recursive: true });
-    await writeFile(join(target, 'noir-stale.mdc'), 'stale flat content', 'utf8');
+    // Stale FLAT .mdc — canonical cursor shape (alwaysApply frontmatter).
+    await writeFile(
+      join(target, 'noir-stale.mdc'),
+      '---\ndescription: Use when stale.\nglobs: ["**/*"]\nalwaysApply: false\n---\nold',
+      'utf8',
+    );
     await mkdir(join(target, 'noir-keep-legacy'), { recursive: true });
-    await writeFile(join(target, 'noir-keep-legacy', 'noir-keep-legacy.mdc'), 'legacy', 'utf8');
+    // Legacy pre-C3 cursor nested dir — also canonical shape so the guard
+    // recognizes it as Noir-emitted (the C3 flatLayout clear-unconditional
+    // branch fires for canonical nested dirs).
+    await writeFile(
+      join(target, 'noir-keep-legacy', 'noir-keep-legacy.mdc'),
+      '---\ndescription: Use when legacy.\nglobs: ["**/*"]\nalwaysApply: false\n---\nold',
+      'utf8',
+    );
     await writeFile(join(target, 'my-custom-rule.mdc'), 'user-authored', 'utf8');
 
     const summary = await emitSkillsToDir(target, { builtinDir: fixture, target: 'cursor' });
@@ -275,13 +291,13 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     expect(summary.emitted).toContain('noir-keep');
     // Stale flat .mdc pruned; legacy nested dir pruned.
     // Cursor flat layout prunes stale `.mdc` FILES (reported WITH extension)
-    // + legacy nested `noir-*/` DIRS (reported as dir names, no extension).
+    // + legacy nested `noir-{name}/` DIRS (reported as dir names, no extension).
     expect(summary.pruned.sort()).toEqual(['noir-keep-legacy', 'noir-stale.mdc']);
     expect(existsSync(join(target, 'noir-stale.mdc'))).toBe(false);
     expect(existsSync(join(target, 'noir-keep-legacy'))).toBe(false);
     // The fresh flat .mdc is in place.
     expect(existsSync(join(target, 'noir-keep.mdc'))).toBe(true);
-    // User-authored rule UNTOUCHED.
+    // User-authored rule UNTOUCHED (no noir- prefix → never Noir's to manage).
     expect(await readFile(join(target, 'my-custom-rule.mdc'), 'utf8')).toBe('user-authored');
   });
   it('emitSkillsToDir writes every skill + reference, idempotently', async () => {
@@ -346,5 +362,98 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     const target = join(fixture, '_out');
     const summary = await emitSkillsToDir(target, { builtinDir: fixture });
     expect(summary.pruned).toEqual([]);
+  });
+
+  // B2 — assertNotUserOwned guard. A `noir-*` entry the user hand-authored
+  // (non-canonical content) MUST survive the prune. Real-world: a user rolls
+  // their own `noir-myown/SKILL.md` without canonical frontmatter.
+  it('B2: assertNotUserOwned preserves a hand-authored noir-* dir (no canonical frontmatter)', async () => {
+    await writeSkill(
+      'noir-shipped',
+      '---\nname: noir-shipped\ndescription: Use when shipped.\n---\n# shipped',
+    );
+    const target = join(fixture, '_out');
+    const { mkdir, writeFile } = await import('node:fs/promises');
+    await mkdir(join(target, 'noir-user-handrolled'), { recursive: true });
+    // User-authored shape: a markdown body with NO YAML frontmatter.
+    await writeFile(
+      join(target, 'noir-user-handrolled', 'SKILL.md'),
+      '# my hand-rolled skill\nNo frontmatter at all.',
+      'utf8',
+    );
+    const summary = await emitSkillsToDir(target, { builtinDir: fixture });
+    expect(summary.preservedUserOwned).toContain('noir-user-handrolled');
+    expect(existsSync(join(target, 'noir-user-handrolled', 'SKILL.md'))).toBe(true);
+  });
+
+  it('B2: assertNotUserOwned prunes a Noir-emitted noir-* dir that has canonical frontmatter', async () => {
+    // Pack previously shipped noir-stale; current pack drops it. The dir on
+    // disk carries canonical `name: noir-stale` frontmatter → Noir-managed →
+    // pruned (not preserved).
+    await writeSkill(
+      'noir-shipped',
+      '---\nname: noir-shipped\ndescription: Use when shipped.\n---\n# shipped',
+    );
+    const target = join(fixture, '_out');
+    const { mkdir, writeFile } = await import('node:fs/promises');
+    await mkdir(join(target, 'noir-stale'), { recursive: true });
+    await writeFile(
+      join(target, 'noir-stale', 'SKILL.md'),
+      '---\nname: noir-stale\ndescription: Use when stale.\n---\nold',
+      'utf8',
+    );
+    const summary = await emitSkillsToDir(target, { builtinDir: fixture });
+    expect(summary.pruned).toContain('noir-stale');
+    expect(summary.preservedUserOwned ?? []).not.toContain('noir-stale');
+  });
+
+  // B2 — non-interactive guard. A stub onConflict must NEVER be consulted
+  // under `interactive: false` (CI / --json / --no-input never hangs a prompt).
+  it('B2: non-interactive guard — onConflict is NOT consulted when interactive=false', async () => {
+    await writeSkill('noir-x', '---\nname: noir-x\ndescription: Use when x.\n---\n# x');
+    const target = join(fixture, '_out');
+    const { mkdir, writeFile } = await import('node:fs/promises');
+    await mkdir(join(target, 'noir-x'), { recursive: true });
+    // Pre-populate the EXACT file Noir will emit, with different bytes.
+    await writeFile(
+      join(target, 'noir-x', 'SKILL.md'),
+      '---\nname: noir-x\ndescription: Use when x.\n---\n# USER',
+      'utf8',
+    );
+    let called = false;
+    await emitSkillsToDir(target, {
+      builtinDir: fixture,
+      interactive: false,
+      onConflict: () => {
+        called = true;
+        return 'preserve';
+      },
+    });
+    expect(called).toBe(false);
+  });
+
+  // B2 — the SAME seam as regenerate. A stub onConflict returning `preserve`
+  // leaves the user's bytes intact; the structured `conflicts[]` field records
+  // the choice.
+  it('B2: onConflict=preserve keeps user edits + records into summary.conflicts', async () => {
+    await writeSkill('noir-x', '---\nname: noir-x\ndescription: Use when x.\n---\n# x');
+    const target = join(fixture, '_out');
+    const { mkdir, writeFile } = await import('node:fs/promises');
+    await mkdir(join(target, 'noir-x'), { recursive: true });
+    await writeFile(
+      join(target, 'noir-x', 'SKILL.md'),
+      '---\nname: noir-x\ndescription: Use when x.\n---\n# USER',
+      'utf8',
+    );
+    const summary = await emitSkillsToDir(target, {
+      builtinDir: fixture,
+      interactive: true,
+      onConflict: () => 'preserve',
+    });
+    expect(summary.conflicts).toHaveLength(1);
+    expect(summary.conflicts?.[0]?.resolution).toBe('preserve');
+    expect(summary.conflicts?.[0]?.mode).toBe('skill');
+    expect(summary.conflicts?.[0]?.existingSha).toMatch(/^[0-9a-f]{12}$/);
+    expect(await readFile(join(target, 'noir-x', 'SKILL.md'), 'utf8')).toContain('# USER');
   });
 });

@@ -202,7 +202,8 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     knn,
     countDocs,
     countVecs,
-    exportMarkdown: (dir: string) => exportMarkdown(db, dir),
+    exportMarkdown: (dir: string, conflict?: import('./markdown.js').MarkdownConflictOpts) =>
+      exportMarkdown(db, dir, conflict),
     close: async () => {
       db.close();
     },

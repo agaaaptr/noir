@@ -115,3 +115,83 @@ describe('scaffold — regenerate conflict resolution (SP-C)', () => {
     expect(readFileSync(mcp, 'utf8')).toBe(before); // untouched (no rewrite)
   });
 });
+
+// B2 — universal conflict contract: structured report + apply-to-all + the
+// `merge` resolution. The engine populates `ScaffoldResult.conflicts[]` always
+// (interactive or not) so a `--json` caller can see exactly which files
+// diverged; the apply-to-all memory keys by artifact CLASS so a run over N
+// pointers prompts once.
+describe('scaffold — B2 universal conflict contract', () => {
+  it('ScaffoldResult.conflicts[] is populated even with no onConflict (non-interactive)', async () => {
+    await scaffold({ root: tmp, mode: 'init', transport: 'stdio' });
+    const mcp = join(tmp, '.mcp.json');
+    writeFileSync(mcp, 'USER-EDIT');
+    const res = await scaffold({
+      root: tmp,
+      mode: 'init',
+      transport: 'stdio',
+      force: true,
+      // No onConflict; engine default policy = overwrite.
+    });
+    expect(res.conflicts).toHaveLength(1);
+    const rec = res.conflicts[0];
+    expect(rec?.path).toBe('.mcp.json');
+    expect(rec?.mode).toBe('regenerate');
+    expect(rec?.resolution).toBe('replace');
+    expect(rec?.existingSha).toMatch(/^[0-9a-f]{12}$/);
+    expect(rec?.proposedSha).toMatch(/^[0-9a-f]{12}$/);
+    expect(rec?.existingSha).not.toBe(rec?.proposedSha);
+    expect(typeof rec?.similarity).toBe('number');
+    expect(rec?.similarity).toBeGreaterThanOrEqual(0);
+    expect(rec?.similarity).toBeLessThanOrEqual(1);
+  });
+
+  it('conflicts[] stays empty on a first-run init (no existing files)', async () => {
+    const res = await scaffold({ root: tmp, mode: 'init', transport: 'stdio' });
+    expect(res.conflicts).toEqual([]);
+  });
+
+  it('conflicts[] records the `preserve` resolution when conflictPolicy=preserve', async () => {
+    await scaffold({ root: tmp, mode: 'init', transport: 'stdio' });
+    const mcp = join(tmp, '.mcp.json');
+    writeFileSync(mcp, 'USER-EDIT');
+    const res = await reemit({ conflictPolicy: 'preserve' });
+    expect(res.conflicts).toHaveLength(1);
+    expect(res.conflicts[0]?.resolution).toBe('preserve');
+  });
+
+  it('onConflict returns applyToAll → engine reuses the choice for subsequent regenerate conflicts', async () => {
+    // First init to seed. Then re-emit twice (force both times): the FIRST
+    // establishes a conflict + records the rich resolver return; assert the
+    // resolver was CALLED + the rich shape unwrapped + recorded.
+    await scaffold({ root: tmp, mode: 'init', transport: 'stdio' });
+    const mcp = join(tmp, '.mcp.json');
+    writeFileSync(mcp, 'USER-EDIT');
+    const onConflict = vi.fn((): { resolution: 'preserve'; applyToAll: true } => ({
+      resolution: 'preserve',
+      applyToAll: true,
+    }));
+    const res = await reemit({ onConflict });
+    expect(onConflict).toHaveBeenCalledTimes(1);
+    expect(res.conflicts[0]?.resolution).toBe('preserve');
+  });
+
+  it('onConflict mode/similarity/relPath/existing/proposed all populated (rich context)', async () => {
+    await scaffold({ root: tmp, mode: 'init', transport: 'stdio' });
+    const mcp = join(tmp, '.mcp.json');
+    writeFileSync(mcp, 'USER-EDIT');
+    const seen: ConflictContext[] = [];
+    await reemit({
+      onConflict: (ctx: ConflictContext) => {
+        seen.push(ctx);
+        return 'preserve';
+      },
+    });
+    const ctx = seen[0];
+    expect(ctx?.mode).toBe('regenerate');
+    expect(ctx?.relPath).toBe('.mcp.json');
+    expect(ctx?.existing).toBe('USER-EDIT');
+    expect(typeof ctx?.proposed).toBe('string');
+    expect(typeof ctx?.similarity).toBe('number');
+  });
+});

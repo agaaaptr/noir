@@ -99,4 +99,16 @@ describe('buildConflictOpts (SP-C)', () => {
     expect(o.conflictPolicy).toBe('overwrite');
     expect(o.onConflict).toBeUndefined();
   });
+
+  // B2 — the SP-G `--json`/`--no-input` propagation is now in place (the stale
+  // NOTE at conflict.ts L26-31 was refreshed; the bin's preAction sets the
+  // bridge). The buildConflictOpts output for a non-interactive run is
+  // `preserve` with NO onConflict (CI/--json never hangs a prompt).
+  it('B2: NOIR_NON_INTERACTIVE bridge ⇒ preserve, no resolver (SP-G + refreshed NOTE)', () => {
+    setTty(true, true);
+    process.env.NOIR_NON_INTERACTIVE = '1';
+    const o = buildConflictOpts({});
+    expect(o.conflictPolicy).toBe('preserve');
+    expect(o.onConflict).toBeUndefined();
+  });
 });

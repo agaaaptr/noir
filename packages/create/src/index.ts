@@ -28,8 +28,14 @@ export {
   MANIFEST_PATH_PARITY,
   type ManifestEntry,
 } from './manifest.js';
-// --- Three-way merge (diff3; pure) ---
-export { type MergeResult, mergeThreeWay } from './merge.js';
+// --- Three-way merge (diff3; pure) + B2 unified line-diff ---
+export {
+  type DiffLine,
+  lineDiff,
+  type MergeResult,
+  mergeThreeWay,
+  zdiff3Region,
+} from './merge.js';
 export {
   applyInlineConflict,
   applyWithConflict,
@@ -42,7 +48,9 @@ export {
 export {
   assertSafeRoot,
   type ConflictContext,
+  type ConflictRecord,
   type ConflictResolution,
+  type ConflictResolverReturn,
   type ScaffoldMode,
   type ScaffoldOptions,
   type ScaffoldResult,

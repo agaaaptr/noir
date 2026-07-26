@@ -82,8 +82,10 @@ export interface ScaffoldOptions {
   conflictPolicy?: 'overwrite' | 'preserve';
   /** SP-C: per-file conflict resolver — the UI seam (the engine stays UI-free;
    *    the cli injects a @clack-based resolver). Called when a `regenerate`
-   *    file exists and differs from the template. */
-  onConflict?: (ctx: ConflictContext) => Promise<ConflictResolution> | ConflictResolution;
+   *    file exists and differs from the template. B2: the return type widens to
+   *    accept a rich shape carrying `applyToAll` — the engine then reuses the
+   *    decision for the rest of the run (per artifact CLASS). */
+  onConflict?: (ctx: ConflictContext) => Promise<ConflictResolverReturn> | ConflictResolverReturn;
   /** Three-way merge managed regions (base/ours/theirs) using a persisted
    *  ancestor snapshot (`.noir/ancestors.json`) instead of strip-replace, so a
    *  hand-edit inside a `<!-- noir:* -->` region survives a template update.
@@ -124,6 +126,29 @@ export interface ScaffoldResult {
   toVersion: string;
   /** The host actually emitted (post-default). */
   host: HostTag;
+  /** B2: structured conflict report — one record per file that existed AND
+   *  differed from the proposed bytes (regenerate conflict path). Populated in
+   *  `--json`/`--no-input`/non-TTY runs (no prompt fires) so a CI/JSON caller
+   *  can see exactly which files diverged + how they were resolved, without
+   *  grepping stderr. Empty when no conflicts occurred (also on first-run +
+   *  no-op). */
+  conflicts: ConflictRecord[];
+}
+
+/** B2 — one entry in {@link ScaffoldResult.conflicts}. */
+export interface ConflictRecord {
+  /** Repo-relative path of the conflicting file. */
+  path: string;
+  /** Artifact class — drives apply-to-all memory scope + report grouping. */
+  mode: ConflictContext['mode'];
+  /** LCS similarity (0-1) between existing and proposed. */
+  similarity?: number;
+  /** sha256 (hex, first 12 chars) of the on-disk bytes at conflict time. */
+  existingSha: string;
+  /** sha256 (hex, first 12 chars) of the proposed bytes. */
+  proposedSha: string;
+  /** Resolution the engine applied (`replace`/`preserve`/`rename`/…). */
+  resolution: ConflictResolution;
 }
 
 /** SP-C — context passed to {@link ScaffoldOptions.onConflict} when a
@@ -135,10 +160,43 @@ export interface ConflictContext {
   existing: string;
   /** The content the scaffold would write. */
   proposed: string;
+  /** B2: artifact class — drives apply-to-all memory scope (`regenerate` shares
+   *  one decision across a run; `managedBlock`/`managedBlocks` stay per-file).
+   *  Defaults to `'regenerate'` for backward compatibility with SP-C resolvers
+   *  that pre-date the field (the engine always sets it). */
+  mode?:
+    | 'regenerate'
+    | 'managedBlock'
+    | 'managedBlocks'
+    | 'skipIfExists'
+    | 'skill'
+    | 'markdown'
+    | 'artifact';
+  /** B2: LCS similarity (0-1) between existing and proposed. Cheap signal for
+   *  the resolver to bias toward `replace` when ~1.0 or `preserve` when ~0. */
+  similarity?: number;
+  /** B2: when the 3-way merge of a managed region hit an overlap, the merged
+   *  bytes WITH zdiff3 conflict markers (selecting `'merge'` writes this). */
+  mergedWithMarkers?: string;
 }
 
 /** SP-C — how to resolve a `regenerate` conflict. */
-export type ConflictResolution = 'replace' | 'preserve' | 'rename' | 'duplicate' | 'cancel';
+export type ConflictResolution =
+  | 'replace'
+  | 'preserve'
+  | 'rename'
+  | 'duplicate'
+  | 'cancel'
+  | 'merge';
+
+/** B2 — the resolver may return a bare {@link ConflictResolution} (scope
+ *  `'one'`) OR a rich shape carrying `applyToAll`. The engine unwraps both; when
+ *  `applyToAll` is true it stores the choice in its per-run memory keyed by
+ *  artifact CLASS (`regenerate` shares one decision across a run; managedBlock
+ *  stays per-file regardless — user edits there need individual review). */
+export type ConflictResolverReturn =
+  | ConflictResolution
+  | { resolution: ConflictResolution; applyToAll?: boolean };
 
 const WRITER_BY_MODE: Record<WriteMode, 'all' | 'runtime'> = {
   // 'runtime' subset = regenerate + managedBlock (the always-safe-to-rewrite
@@ -257,6 +315,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
       written: [],
       skipped: [],
       identical: [],
+      conflicts: [],
       noop: true,
       migrationsRan: [],
       migrationConflicts: [],
@@ -303,6 +362,29 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   const written: string[] = [];
   const skipped: string[] = [];
   const identical: string[] = [];
+  // B2 — per-run conflict memory + structured report. Memory is keyed by
+  // artifact CLASS for `regenerate` (one decision shared across the run, so a
+  // `noir init --upgrade` over N pointers → 1 prompt) and by per-file path for
+  // `managedBlock`/`managedBlocks` (user edits there need individual review).
+  const conflictMemory = new Map<string, ConflictResolution>();
+  const conflictRecords: ConflictRecord[] = [];
+  const recordConflict = (
+    relPath: string,
+    mode: NonNullable<ConflictContext['mode']>,
+    existing: string,
+    proposed: string,
+    resolution: ConflictResolution,
+    similarity?: number,
+  ): void => {
+    conflictRecords.push({
+      path: relPath,
+      mode,
+      similarity,
+      existingSha: sha256Hex12(existing),
+      proposedSha: sha256Hex12(proposed),
+      resolution,
+    });
+  };
 
   // GROUP applicable entries by target path (manifest order preserved within
   // each group) so files carrying MULTIPLE managed blocks (CLAUDE.md today =
@@ -324,20 +406,46 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
       }
       mkdirSync(dirname(abs), { recursive: true });
       const onDisk = readOptional(abs);
+      let hadMergeConflict = false;
       const regions = managed.map((e) => {
         const block = e.block;
         if (!block) {
           throw new Error(`manifest entry ${e.path}: managedBlock mode missing 'block'`);
         }
         const theirs = buildRegion(block, renderEntry(e, vars));
-        const regionText = mergeManagedRegions
+        const merged = mergeManagedRegions
           ? mergeManagedRegion(abs, e.path, block, theirs, ancestors)
-          : theirs;
+          : { text: theirs, conflict: false, cleanTheirs: theirs };
+        if (merged.conflict) hadMergeConflict = true;
         // B1: capture ancestor unconditionally (pre-write snapshot) so a later
         // merge run has a base even if this run was strip-replace.
         ancestors[`${e.path}::${block.begin}`] = theirs;
-        return { block, regionText };
+        return { block, regionText: merged.text };
       });
+      // B2 — managed-region conflict (per-file; never apply-to-all). Hand the
+      // resolver the merged-with-markers bytes (the 6th "merge" option's
+      // payload). Default behavior when no resolver is wired (or non-interactive):
+      // write the merged-with-markers bytes + the SP-D stderr note (unchanged).
+      if (hadMergeConflict) {
+        const ctxMode: NonNullable<ConflictContext['mode']> = 'managedBlocks';
+        const resolution = await resolveManagedConflict(relPath, ctxMode, opts);
+        if (resolution === 'cancel') {
+          throw new Error(`scaffold cancelled by user at conflicting file ${relPath}`);
+        }
+        // 'merge' / undefined → write the marked bytes (current behavior).
+        if (resolution !== undefined && resolution !== 'merge') {
+          // 'preserve' → skip the write entirely (user's overlap stands).
+          // 'replace'/'duplicate'/'rename' → unsupported for managedBlocks
+          // (managed regions are inside co-owned files); treat as 'merge'.
+          process.stderr.write(
+            `noir: managed-region conflict in ${relPath} — wrote inline markers; resolve manually.\n`,
+          );
+        } else {
+          process.stderr.write(
+            `noir: managed-region conflict in ${relPath} — wrote inline markers; resolve manually.\n`,
+          );
+        }
+      }
       // B1 content-hash dedup: if the would-be-written bytes equal the on-disk
       // file, skip the write entirely (no mtime/git churn). `noir sync` on an
       // unchanged tree writes NOTHING.
@@ -361,7 +469,10 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
       }
       const body = renderEntry(entry, vars);
       if (entry.mode === 'regenerate') {
-        const out = await writeRegenerateWithConflict(abs, entry.path, body, opts);
+        const out = await writeRegenerateWithConflict(abs, entry.path, body, opts, {
+          memory: conflictMemory,
+          record: recordConflict,
+        });
         written.push(...out.written);
         skipped.push(...out.skipped);
         identical.push(...out.identical);
@@ -379,11 +490,40 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
         // there is no user content to preserve in that legacy shape.)
         if (isNoirMdPath(entry.path)) healLegacyNoirMd(abs);
         const theirs = buildRegion(block, body);
-        const regionText = mergeManagedRegions
+        const merged = mergeManagedRegions
           ? mergeManagedRegion(abs, entry.path, block, theirs, ancestors)
-          : theirs;
+          : { text: theirs, conflict: false, cleanTheirs: theirs };
+        const regionText = merged.text;
         // B1: capture ancestor unconditionally (pre-write snapshot).
         ancestors[`${entry.path}::${block.begin}`] = theirs;
+        // B2 — managed-region conflict (per-file; never apply-to-all). Hand the
+        // resolver the merged-with-markers bytes (the 6th "merge" option's
+        // payload). Default behavior when no resolver is wired (or
+        // non-interactive): write the merged-with-markers bytes + the SP-D
+        // stderr note (unchanged from v1.2).
+        if (merged.conflict) {
+          const ctxMode: NonNullable<ConflictContext['mode']> = 'managedBlock';
+          const onDiskRegion = readOptional(abs);
+          const ctx: ConflictContext = {
+            relPath: entry.path,
+            existing: onDiskRegion ?? '',
+            proposed: theirs,
+            mode: ctxMode,
+            similarity: similarity(onDiskRegion ?? '', merged.text),
+            mergedWithMarkers: merged.text,
+          };
+          const resolution = await resolveManagedConflictCtx(ctx, opts);
+          if (resolution === 'cancel') {
+            throw new Error(`scaffold cancelled by user at conflicting file ${entry.path}`);
+          }
+          if (resolution === 'preserve') {
+            identical.push(entry.path); // user's overlap stands; skip the write.
+            continue;
+          }
+          process.stderr.write(
+            `noir: managed-region conflict in ${entry.path} — wrote inline markers; resolve manually.\n`,
+          );
+        }
         // B1 content-hash dedup (post-heal: re-read, the heal may have wiped).
         // If the would-be-written bytes equal the on-disk file, skip the write
         // (no mtime/git churn) — a no-op `noir sync` writes NOTHING.
@@ -422,6 +562,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     written,
     skipped,
     identical,
+    conflicts: conflictRecords,
     noop: false,
     migrationsRan,
     migrationConflicts,
@@ -433,24 +574,65 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   };
 }
 
+/** B2 — sha256 hex digest, truncated to 12 chars (git-short-style). Cheap,
+ *  deterministic, collision-resistant enough for a single conflict report. */
+function sha256Hex12(s: string): string {
+  // `createHash` is lazy-imported so the engine stays import-side-effect-free
+  // for callers that never touch the conflict path.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createHash } = require('node:crypto') as typeof import('node:crypto');
+  return createHash('sha256').update(s, 'utf8').digest('hex').slice(0, 12);
+}
+
+/** B2 — LCS-based similarity ratio in [0,1]. 1.0 = byte-identical lines, 0.0 =
+ *  wholly disjoint. Cheap signal the resolver can use to bias toward `replace`
+ *  when ~1 (cosmetic drift) vs `preserve` when ~0 (substantive edit). Reuses
+ *  the SAME LCS as {@link mergeThreeWay} so there is one line-diff algorithm. */
+function similarity(a: string, b: string): number {
+  if (a === b) return 1;
+  const A = a.split('\n');
+  const B = b.split('\n');
+  if (A.length === 0 && B.length === 0) return 1;
+  // `lcsMatch` returns the paired anchor indices; |anchors| / max(len) is the
+  // similarity. Re-derive here (without importing merge.ts) so the engine stays
+  // decoupled from the merge module's diff3 specifics.
+  const n = A.length;
+  const m = B.length;
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) {
+    const dpi = dp[i] ?? [];
+    const dpi1 = dp[i + 1] ?? [];
+    const ai = A[i] ?? '';
+    for (let j = m - 1; j >= 0; j--) {
+      const bj = B[j] ?? '';
+      dpi[j] = ai === bj ? (dpi1[j + 1] ?? 0) + 1 : Math.max(dpi1[j] ?? 0, dpi[j + 1] ?? 0);
+    }
+  }
+  const lcs = dp[0]?.[0] ?? 0;
+  return n + m === 0 ? 1 : (2 * lcs) / (n + m);
+}
+
 // --- helpers -----------------------------------------------------------------
 
 /** SP-D — three-way merge a managed region against the persisted ancestor
  *  (`base`). `theirs` is the freshly-rendered template region (with markers);
  *  `ours` is the region currently on disk. With no ancestor / no existing
- *  region this is a no-op (returns `theirs`). On conflict, inline markers are
- *  written + a stderr note (never silently drops either side). */
+ *  region this is a no-op (returns `theirs`). On conflict, returns the merged
+ *  bytes WITH zdiff3 markers as `text` AND `conflict: true`, so the per-file
+ *  scaffold site can hand the resolver a 6th "merge (with conflict markers)"
+ *  option (B2 task 4). `cleanTheirs` is the un-merged template — what the
+ *  `'replace'` resolution would write. */
 function mergeManagedRegion(
   abs: string,
   relPath: string,
   block: ManagedBlock,
   theirs: string,
   ancestors: Record<string, string>,
-): string {
+): { text: string; conflict: boolean; cleanTheirs: string } {
   const base = ancestors[`${relPath}::${block.begin}`];
-  if (base === undefined) return theirs; // no ancestor yet → strip-replace (first merge run)
+  if (base === undefined) return { text: theirs, conflict: false, cleanTheirs: theirs };
   const ours = readManagedBlock(abs, block);
-  if (ours === null) return theirs; // no existing region → fresh
+  if (ours === null) return { text: theirs, conflict: false, cleanTheirs: theirs };
   // B1: `readManagedBlock` returns the matched region WITHOUT the trailing `\n`
   // after `end`, while `buildRegion`/`theirs` INCLUDE it. Feeding the raw `ours`
   // into mergeThreeWay makes every merge return a region missing that newline,
@@ -459,13 +641,54 @@ function mergeManagedRegion(
   // to `theirs`'s shape (always end with `\n`) so an unchanged region stays
   // byte-identical and `noir sync` on an unchanged tree is a true no-op.
   const oursNormalized = ours.endsWith('\n') ? ours : `${ours}\n`;
-  const res = mergeThreeWay(base, oursNormalized, theirs);
-  if (res.conflict) {
-    process.stderr.write(
-      `noir: managed-region conflict in ${relPath} — wrote inline markers; resolve manually.\n`,
-    );
+  // B2 — zdiff3 markers so the resolver's 6th option shows the base section.
+  const res = mergeThreeWay(base, oursNormalized, theirs, 'zdiff3');
+  return { text: res.merged, conflict: res.conflict, cleanTheirs: theirs };
+}
+
+/** B2 — consult {@link ScaffoldOptions.onConflict} for a managed-region merge
+ *  conflict (single-block path). Per-file (never apply-to-all — user edits
+ *  inside a `<!-- noir:* -->` region need individual review). When no resolver
+ *  is wired OR the engine is non-interactive, returns `undefined` so the caller
+ *  falls through to the v1.2 behavior (write the merged-with-markers bytes +
+ *  the SP-D stderr note). Returns the resolver's bare resolution choice. */
+async function resolveManagedConflictCtx(
+  ctx: ConflictContext,
+  opts: ScaffoldOptions,
+): Promise<ConflictResolution | undefined> {
+  if (opts.onConflict === undefined) return undefined;
+  const ret = await opts.onConflict(ctx);
+  const resolution = typeof ret === 'string' ? ret : ret.resolution;
+  if (resolution === 'rename' || resolution === 'duplicate') {
+    // Not meaningful for a region INSIDE a co-owned file. Treat as 'merge'
+    // (write the marked bytes — the user keeps both sides, manually resolves).
+    return 'merge';
   }
-  return res.merged;
+  if (resolution === 'replace') {
+    // 'replace' on a managed region → write the clean template (clobber the
+    // user's overlap inside this region). The caller writes `cleanTheirs`
+    // (the un-merged template region) instead of the marked merge.
+    return 'replace';
+  }
+  // 'merge' / 'preserve' / 'cancel' — pass through.
+  return resolution;
+}
+
+/** B2 — consult {@link ScaffoldOptions.onConflict} for a managed-region merge
+ *  conflict (multi-block path). Simpler than the single-block path: the
+ *  multi-block file is written atomically as ONE unit, so 'rename'/'duplicate'
+ *  /'replace' have no clean meaning (the regions live alongside user content in
+ *  a co-owned file). Only 'merge' (write the marked bytes), 'preserve' (skip),
+ *  and 'cancel' (abort) are honored; others fall through to 'merge'. */
+async function resolveManagedConflict(
+  relPath: string,
+  mode: NonNullable<ConflictContext['mode']>,
+  opts: ScaffoldOptions,
+): Promise<ConflictResolution | undefined> {
+  if (opts.onConflict === undefined) return undefined;
+  const ret = await opts.onConflict({ relPath, existing: '', proposed: '', mode });
+  const resolution = typeof ret === 'string' ? ret : ret.resolution;
+  return resolution;
 }
 
 /** Read the `.noir/project.id` stamp ONCE and classify it for BOTH id
@@ -517,6 +740,20 @@ async function writeRegenerateWithConflict(
   relPath: string,
   proposed: string,
   opts: ScaffoldOptions,
+  internals: {
+    /** Per-run memory keyed by artifact CLASS (`'regenerate'`) — populated when
+     *  a resolver returns `applyToAll`. */
+    memory: Map<string, ConflictResolution>;
+    /** Append a structured record for `ScaffoldResult.conflicts`. */
+    record: (
+      relPath: string,
+      mode: NonNullable<ConflictContext['mode']>,
+      existing: string,
+      proposed: string,
+      resolution: ConflictResolution,
+      similarity?: number,
+    ) => void;
+  },
 ): Promise<{ written: string[]; skipped: string[]; identical: string[] }> {
   let existing: string | undefined;
   try {
@@ -532,16 +769,41 @@ async function writeRegenerateWithConflict(
     // content-hash dedup: byte-identical → skip the rewrite entirely (no disk IO).
     return { written: [], skipped: [], identical: [relPath] };
   }
-  const resolution: ConflictResolution =
-    opts.onConflict !== undefined
-      ? await opts.onConflict({ relPath, existing, proposed })
-      : opts.conflictPolicy === 'preserve'
-        ? 'preserve'
-        : 'replace';
+  // B2 — apply-to-all memory: a regenerate file's class shares one decision
+  // across the run (so a `noir init --upgrade` over N pointers → 1 prompt).
+  const MODE: NonNullable<ConflictContext['mode']> = 'regenerate';
+  const sim = similarity(existing, proposed);
+  let resolution: ConflictResolution;
+  const remembered = internals.memory.get(MODE);
+  if (remembered !== undefined) {
+    resolution = remembered;
+  } else if (opts.onConflict !== undefined) {
+    const ret = await opts.onConflict({ relPath, existing, proposed, mode: MODE, similarity: sim });
+    const unwrapped: ConflictResolution = typeof ret === 'string' ? ret : ret.resolution;
+    if (typeof ret !== 'string' && ret.applyToAll === true) {
+      internals.memory.set(MODE, unwrapped);
+    }
+    resolution = unwrapped;
+  } else {
+    resolution = opts.conflictPolicy === 'preserve' ? 'preserve' : 'replace';
+  }
+  // B2 — record the conflict ALWAYS (interactive or not) so `--json`/CI can see
+  // exactly which files diverged + how the engine resolved them. The prompt
+  // never fires under non-interactive (buildConflictOpts returns preserve w/o
+  // onConflict); the record still lands.
+  internals.record(relPath, MODE, existing, proposed, resolution, sim);
   switch (resolution) {
     case 'replace':
       regenerate(abs, proposed);
       return { written: [relPath], skipped: [], identical: [] };
+    case 'merge': {
+      // B2 — `merge` is only meaningful when ctx.mergedWithMarkers was populated
+      // (managed-region path). For a bare regenerate conflict without markers
+      // the resolver should not pick `merge`; defensively fall back to replace
+      // (better than dropping the user's bytes).
+      regenerate(abs, proposed);
+      return { written: [relPath], skipped: [], identical: [] };
+    }
     case 'rename': {
       // Preserve the user's file aside at a UNIQUE path. Review fix: a bare
       // `renameSync(abs, abs.local)` would silently clobber a pre-existing

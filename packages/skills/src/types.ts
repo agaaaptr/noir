@@ -100,7 +100,77 @@ export interface EmitSummary {
    *  array when nothing was stale; undefined on callers that pre-date the
    *  field (additive — old callers still get the rest of the summary). */
   pruned?: string[];
+  /** B2 — `noir-*` entries the prune step REFRAINED from removing because they
+   *  look user-authored (hand-rolled noir-foo/SKILL.md without canonical Noir
+   *  frontmatter). `assertNotUserOwned` guard. Names only — never user skills
+   *  without the `noir-` prefix (those are always left alone). */
+  preservedUserOwned?: string[];
+  /** B2 — one record per emitted skill file that existed AND differed from the
+   *  compiled bytes, with the resolution applied. Mirrors {@link ConflictContext}
+   *  / {@link ConflictRecord} in @noir-ai/create so the CLI can lift the same
+   *  structured report under `--json`. */
+  conflicts?: SkillConflict[];
 }
+
+/**
+ * B2 — resolution choice for a skill-file conflict. Mirrors
+ * @noir-ai/create's `ConflictResolution` literally so the CLI's
+ * `buildConflictOpts().onConflict` is structurally compatible, WITHOUT the
+ * skills package gaining a create dependency.
+ */
+export type SkillConflictResolution = 'replace' | 'preserve' | 'rename' | 'duplicate' | 'cancel';
+
+/**
+ * B2 — context passed to {@link SkillConflictResolver}. Mirrors
+ * @noir-ai/create's `ConflictContext` (relPath/existing/proposed/mode) so the
+ * CLI's clack resolver handles skill conflicts with the SAME code path as
+ * regenerate conflicts.
+ */
+export interface SkillConflictContext {
+  /** Path relative to the skills target dir (e.g. `noir-brainstorm/SKILL.md`). */
+  relPath: string;
+  /** The skill file's current on-disk bytes. */
+  existing: string;
+  /** The compiled bytes Noir would write. */
+  proposed: string;
+  /** Always `'skill'` — the artifact class (apply-to-all is per-class). */
+  mode: 'skill';
+}
+
+/**
+ * B2 — one record per skill file that existed AND differed from the compiled
+ * bytes. Mirrors @noir-ai/create's `ConflictRecord` (additive — old callers
+ * ignore it).
+ */
+export interface SkillConflict {
+  /** Path relative to the skills target dir. */
+  path: string;
+  /** Always `'skill'`. */
+  mode: 'skill';
+  /** LCS similarity ratio (0-1). */
+  similarity?: number;
+  /** sha256 hex (12 chars) of the on-disk bytes. */
+  existingSha: string;
+  /** sha256 hex (12 chars) of the proposed bytes. */
+  proposedSha: string;
+  /** Resolution applied. */
+  resolution: SkillConflictResolution;
+}
+
+/**
+ * B2 — the resolver callback the CLI injects (clack menu, diff preview,
+ * apply-to-all). Returns a bare resolution OR a rich `{resolution, applyToAll}`
+ * shape; the engine unwraps both. Structurally compatible with
+ * @noir-ai/create's `ConflictResolverReturn` so the CLI passes its single
+ * resolver through unchanged.
+ */
+export type SkillConflictResolverReturn =
+  | SkillConflictResolution
+  | { resolution: SkillConflictResolution; applyToAll?: boolean };
+
+export type SkillConflictResolver = (
+  ctx: SkillConflictContext,
+) => Promise<SkillConflictResolverReturn> | SkillConflictResolverReturn;
 
 /**
  * The set of host-shaped compile targets the compiler knows how to emit. Was

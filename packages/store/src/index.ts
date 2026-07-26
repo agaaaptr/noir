@@ -1,3 +1,10 @@
+export type {
+  MarkdownConflictContext,
+  MarkdownConflictOpts,
+  MarkdownConflictResolution,
+  MarkdownConflictResolver,
+  MarkdownConflictResolverReturn,
+} from './markdown.js';
 export { migrate } from './migrations.js';
 export { openStore } from './sqlite-store.js';
 export type {

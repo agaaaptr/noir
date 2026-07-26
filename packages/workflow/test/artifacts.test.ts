@@ -1,8 +1,8 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { paths } from '@noir-ai/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   writeAuditExport,
   writeChangelogStub,
@@ -223,5 +223,67 @@ describe('ArtifactWriter', () => {
       expect(parsed).toHaveLength(1);
       expect(parsed[0].phase).toBe('plan');
     });
+  });
+});
+
+// B2 — universal conflict contract. The artifact writers route through the
+// SAME onConflict seam `regenerate` uses. Default behavior (no opts) stays
+// v1.2 (overwrite); when a resolver is wired + interactive, differing files
+// consult it; non-interactive guards prevent a prompt under CI/--json.
+describe('B2: artifact writers route through the conflict seam', () => {
+  let root: string;
+  const taskId = 'task-x';
+  const slug = 'slug-x';
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'noir-artifacts-b2-'));
+  });
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('writeIntake default (no opts) overwrites differing content (v1.2 behavior)', () => {
+    mkdirSync(join(root, '.noir', 'intake'), { recursive: true });
+    writeFileSync(join(root, '.noir', 'intake', `${taskId}.md`), 'USER', 'utf8');
+    writeIntake(root, taskId, 'FRESH');
+    expect(readFileSync(join(root, '.noir', 'intake', `${taskId}.md`), 'utf8')).toBe('FRESH');
+  });
+
+  it('writeIntake consults onConflict on a differing file (preserve keeps user bytes)', () => {
+    mkdirSync(join(root, '.noir', 'intake'), { recursive: true });
+    writeFileSync(join(root, '.noir', 'intake', `${taskId}.md`), 'USER', 'utf8');
+    const onConflict = vi.fn((): 'preserve' => 'preserve');
+    writeIntake(root, taskId, 'FRESH', { onConflict, interactive: true });
+    expect(onConflict).toHaveBeenCalledTimes(1);
+    expect(readFileSync(join(root, '.noir', 'intake', `${taskId}.md`), 'utf8')).toBe('USER');
+  });
+
+  it('writeIntake does NOT consult under non-interactive (CI/--json never prompts)', () => {
+    mkdirSync(join(root, '.noir', 'intake'), { recursive: true });
+    writeFileSync(join(root, '.noir', 'intake', `${taskId}.md`), 'USER', 'utf8');
+    const onConflict = vi.fn((): 'preserve' => 'preserve');
+    writeIntake(root, taskId, 'FRESH', { onConflict, interactive: false });
+    expect(onConflict).not.toHaveBeenCalled();
+  });
+
+  it('writeSpec consults onConflict; rename moves the user aside then writes fresh', () => {
+    // Pre-seed so the specFile exists with user bytes.
+    const specPath = paths.specFile(root, taskId, slug);
+    mkdirSync(join(root, '.noir', 'specs'), { recursive: true });
+    writeFileSync(specPath, 'USER', 'utf8');
+    const onConflict = vi.fn((): 'rename' => 'rename');
+    writeSpec(root, taskId, slug, 'BODY', { onConflict, interactive: true });
+    expect(onConflict).toHaveBeenCalled();
+    // The user's bytes moved to <specPath>.local; the fresh spec written in place.
+    expect(existsSync(`${specPath}.local`)).toBe(true);
+    expect(readFileSync(`${specPath}.local`, 'utf8')).toBe('USER');
+    expect(readFileSync(specPath, 'utf8')).toContain('BODY');
+  });
+
+  it('writeIntake with no existing file always writes (no conflict)', () => {
+    const onConflict = vi.fn((): 'preserve' => 'preserve');
+    writeIntake(root, taskId, 'FRESH', { onConflict, interactive: true });
+    expect(onConflict).not.toHaveBeenCalled();
+    expect(readFileSync(join(root, '.noir', 'intake', `${taskId}.md`), 'utf8')).toContain('FRESH');
   });
 });
