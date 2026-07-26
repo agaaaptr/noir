@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import {
   AGENTS_MD_FILENAME,
@@ -16,6 +17,7 @@ import {
   paths,
   RULES_BLOCK,
 } from '@noir-ai/core';
+import type { StackInfo } from './stack-detect.js';
 import type { WriteMode } from './writers.js';
 
 /**
@@ -81,6 +83,10 @@ export type BuildManifestContext = {
   transport: 'stdio' | 'streamable-http';
   /** Required when transport is `streamable-http`. */
   url?: string;
+  /** Detected stack — drives stack-aware ignore emission (.npmignore /
+   *  .prettierignore only for JS; .dockerignore only when a Dockerfile is
+   *  present; an unknown/empty stack ⇒ all four, for backward compat). */
+  stack?: StackInfo;
 };
 
 // --- named managed blocks ----------------------------------------------------
@@ -145,7 +151,7 @@ export function buildManifest(ctx: BuildManifestContext): ManifestEntry[] {
  *  isolation and so the doctor's host-artifacts check can reason about the
  *  host-specific half alone. */
 function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
-  return [
+  const entries: ManifestEntry[] = [
     {
       path: P.projectId,
       mode: 'skipIfExists',
@@ -202,6 +208,25 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
       description: '.prettierignore noir managed block',
     },
   ];
+  // Stack-aware ignore emission (SP-D validation fix). Only emit the ignore
+  // files relevant to the detected stack. An unknown/empty stack (no language
+  // markers, no package manager — e.g. a blank dir or undetectable project) ⇒
+  // emit all four (backward-compatible with the pre-fix behavior).
+  const isEmpty = (ctx.stack?.languages?.length ?? 0) === 0 && !ctx.stack?.packageManager;
+  const isJs =
+    isEmpty ||
+    (ctx.stack?.languages?.some((l) => l === 'typescript' || l === 'javascript') ?? false) ||
+    ['npm', 'pnpm', 'yarn'].includes(ctx.stack?.packageManager ?? '');
+  const hasDocker =
+    isEmpty ||
+    existsSync(join(ctx.root, 'Dockerfile')) ||
+    existsSync(join(ctx.root, 'docker-compose.yml')) ||
+    existsSync(join(ctx.root, 'compose.yaml'));
+  return entries.filter((e) => {
+    if (e.path === '.npmignore' || e.path === '.prettierignore') return isJs;
+    if (e.path === '.dockerignore') return hasDocker;
+    return true;
+  });
 }
 
 // ---------------------------------------------------------------------------

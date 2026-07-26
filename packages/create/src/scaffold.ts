@@ -261,7 +261,14 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   }
 
   // 5. Build manifest + filter by host + mode.
-  const manifest = buildManifest({ root: opts.root, projectId, host, transport, url: opts.url });
+  const manifest = buildManifest({
+    root: opts.root,
+    projectId,
+    host,
+    transport,
+    url: opts.url,
+    stack,
+  });
   const emitRuntimeOnly = opts.mode === 'sync' || (opts.mode === 'init' && opts.upgrade === true);
   const vars: BuildManifestContext = {
     root: opts.root,
