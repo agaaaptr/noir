@@ -58,7 +58,7 @@ describe('complete() — null-degradation (blueprint D5, first-class)', () => {
   });
 
   it('returns null when the provider is named but NOT configured — even if its env var is set', async () => {
-    // Provider-explicit (DS-6): ANTHROPIC_API_KEY may be set in the host env
+    // Provider-explicit: ANTHROPIC_API_KEY may be set in the host env
     // for another tool. Noir MUST NOT infer Anthropic from its presence. The
     // provider is unconfigured here (only `openai` is in providers{}) ⇒ null.
     await withEnv('ANTHROPIC_API_KEY', 'sk-from-another-tool', async () => {
@@ -71,7 +71,7 @@ describe('complete() — null-degradation (blueprint D5, first-class)', () => {
   });
 
   it('returns null with a fully-empty config even when common provider env vars are set (no env inference)', async () => {
-    // The purest DS-6 guard (blueprint D5 — NEVER silent paid calls): both
+    // The purest guard (blueprint D5 — NEVER silent paid calls): both
     // ANTHROPIC_API_KEY and OPENAI_API_KEY may be set in the host env for OTHER
     // tools. With NO `model:` block configured, complete() MUST NOT infer either
     // provider from env presence — it degrades to null on every call (the offline
@@ -131,7 +131,7 @@ describe('complete() — provider-explicit resolution + dispatch', () => {
     }));
     registerProviderAdapter('anthropic', a);
     // The secret VALUE is read from env and passed to the adapter as `key`;
-    // config held only the NAME — the value never touches disk via Noir (DS-8).
+    // config held only the NAME — the value never touches disk via Noir.
     await withEnv('NOIR_TEST_OK_KEY', 'sk-secret-value', async () => {
       const r = await complete(
         { provider: 'anthropic', model: 'claude-haiku', prompt: 'hi' },
@@ -261,7 +261,7 @@ describe('complete() — adapter resolution: free-form local name → openai-com
 });
 
 describe('complete() — per-tier maxTokens defaults (FR-10)', () => {
-  // A tier ONLY selects the output cap; provider/model stay explicit (DS-6).
+  // A tier ONLY selects the output cap; provider/model stay explicit.
   // Defaults: draft 2048 / title 64 / summarize 512 / consolidate 2048.
   async function expectTierDefault(tier: Tier, want: number): Promise<void> {
     const a = fakeAdapter('anthropic', () => ({ ok: true, text: 'ok' }));

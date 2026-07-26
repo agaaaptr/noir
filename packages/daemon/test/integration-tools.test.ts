@@ -1,4 +1,4 @@
-// MCP round-trip + cassette tests for the slice-X integration tools (X-T3):
+// MCP round-trip + cassette tests for the integration tools:
 // `integrations_auth` + `noir.clickup_write`. Mirrors packages/daemon/test/memory-
 // tools.test.ts (InMemoryTransport + @modelcontextprotocol/client Client).
 //
@@ -149,7 +149,7 @@ describe('integration MCP tools — registration', () => {
     expect(names).toContain('noir.clickup_write');
   });
 
-  it('I2: honors integrations.clickup.runtime "none" — noir.clickup_write is NOT registered but integrations_auth still is', async () => {
+  it('honors integrations.clickup.runtime "none" — noir.clickup_write is NOT registered but integrations_auth still is', async () => {
     // A user opts out of writes for a read-only run by downgrading the runtime
     // to `none` locally. The declaration still ships `gated-write-proxy`, so the
     // gate must read the EFFECTIVE runtime (config overlay wins), not the
@@ -179,7 +179,7 @@ describe('integration MCP tools — registration', () => {
     expect(names).not.toContain('noir.clickup_write');
   });
 
-  it('I2: explicit runtime "gated-write-proxy" registers both tools (parity with the unset/declaration default)', async () => {
+  it('explicit runtime "gated-write-proxy" registers both tools (parity with the unset/declaration default)', async () => {
     // The positive case: an explicit `gated-write-proxy` overlay behaves the
     // same as the declaration default (both tools register). Locks the
     // effectiveRuntime === declaration.runtime path.

@@ -1,4 +1,4 @@
-// S9 t5 — `noir memory {recall,save,sessions,forget,consolidate}` tests.
+// S9 — `noir memory {recall,save,sessions,forget,consolidate}` tests.
 // daemon-client is mocked at the module boundary (no real daemon) and
 // @clack/prompts is mocked so the interactive `save` prompt is deterministic.
 // These pin the contract:

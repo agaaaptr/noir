@@ -34,7 +34,7 @@ import type { WriteMode } from './writers.js';
  * entries + a {@link buildHostArtifacts} call that materializes per-host files
  * (CLAUDE.md/GEMINI.md for claude/gemini; AGENTS.md + .cursor/.../opencode.json
  * for agents-md/cursor/opencode) via the resolved adapter. The claude default
- * `noir init` stays BYTE-IDENTICAL to v1.1 — fix-wave I1 REMOVED the additive
+ * `noir init` stays BYTE-IDENTICAL to v1.1 — REMOVED the additive
  * root `AGENTS.md` (it was double-importing `.noir/NOIR.md` + RULES.md via
  * CLAUDE.md's existing @-imports; claude's native surface is CLAUDE.md alone).
  *
@@ -127,7 +127,7 @@ export const MANIFEST_PATH_PARITY: ReadonlyArray<
  * S10 structure: the manifest is now `[...hostAgnosticEntries(ctx), ...hostSpecificEntries(ctx)]`
  * where the host-specific half comes from {@link buildHostArtifacts} (driven by
  * `resolveAdapter(ctx.host)`). The host-agnostic half is unchanged from v1.1
- * (canonical `.noir/` store + ignore files). Fix-wave I1: {@link buildHostArtifacts}
+ * (canonical `.noir/` store + ignore files). {@link buildHostArtifacts}
  * emits AGENTS.md ONLY for agents-md/cursor/opencode (claude/gemini use their
  * own CLAUDE.md/GEMINI.md — emitting AGENTS.md too would double-import .noir/).
  *
@@ -272,7 +272,7 @@ export interface BuildHostArtifactsContext {
  *      gemini's in GEMINI.md, agents-md/cursor/opencode's in AGENTS.md — NO
  *      host emits a separate rules file. (The prior cursor
  *      `.cursor/rules/noir-contract.mdc` host-rules pointer was REMOVED: it
- *      collided with the C3 cursor flat-skill prune of `noir-*.mdc` under
+ *      collided with the cursor flat-skill prune of `noir-*.mdc` under
  *      `.cursor/rules/`, and cursor's rules are already delivered via
  *      AGENTS.md's `@.noir/rules/RULES.md` import.)
  *   3. **Host MCP config** — `regenerate` at `adapter.mcpConfigPath(ctx)`
@@ -284,7 +284,7 @@ export interface BuildHostArtifactsContext {
  *
  * Skills are OUT OF SCOPE here — the cli composes `emitSkillsToDir` with
  * `adapter.skillsDir` + the host's `CompileTarget` (claude → `.claude/skills/`
- * as SKILL.md; cursor → `.cursor/rules/<skill>.mdc` FLAT per C3; gemini/
+ * as SKILL.md; cursor → `.cursor/rules/<skill>.mdc` FLAT; gemini/
  * agents-md/opencode have no skill dir → skip).
  */
 export function buildHostArtifacts(

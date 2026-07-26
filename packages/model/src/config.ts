@@ -8,14 +8,14 @@
 // the permissive {@link ModelUserConfig} mirror below, so the mapper accepts a
 // `NoirConfig['model']` directly — callers pass `resolveModelConfig(cfg.model)`.
 //
-// Provider-EXPLICIT, never silent paid (DS-6): this mapper is a PURE projection
+// Provider-EXPLICIT, never silent paid: this mapper is a PURE projection
 // of what the user wrote — it never selects a provider from env-var presence.
 // Whether a configured provider is actually USABLE (key present) is reported as
 // `hasKey` for inspection (`noir doctor`); it does NOT change the provider set.
 // The first-class `null`-degradation decision lives in `complete()`, which reads
 // the same env at call time — both readings are idempotent and stay in-process.
 //
-// Secrets stay in env (DS-8): `apiKeyEnv` is the env-var NAME (passthrough, safe
+// Secrets stay in env: `apiKeyEnv` is the env-var NAME (passthrough, safe
 // to print); `apiKey` is the VALUE resolved here from `process.env[apiKeyEnv]`,
 // materialized so doctor / direct consumers can branch without each re-reading
 // env. The value never touches disk via Noir and is never logged with usage.
@@ -71,7 +71,7 @@ export interface ResolvedProviderConfig {
   model?: string;
   /** Base URL passthrough (openai-compatible endpoints). */
   baseURL?: string;
-  /** Env-var NAME passthrough — doctor prints this, NEVER the value (DS-8). */
+  /** Env-var NAME passthrough — doctor prints this, NEVER the value. */
   apiKeyEnv?: string;
   /** VALUE resolved from `process.env[apiKeyEnv]`; `undefined` if anonymous or unset. */
   apiKey?: string;
@@ -123,7 +123,7 @@ export interface ResolvedModelConfig {
  * - Anonymous providers (no `apiKeyEnv`) keep `apiKey: undefined` but report
  *   `hasKey: true` (ready — no key needed, e.g. local Ollama).
  *
- * This mapper NEVER infers a provider from env-var presence (DS-6) and NEVER
+ * This mapper NEVER infers a provider from env-var presence and NEVER
  * mutates `raw` or `process.env` — it only READS env to resolve keys. It never
  * throws; an unusable config degrades to empty, not an exception.
  */

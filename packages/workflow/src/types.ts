@@ -49,7 +49,7 @@ export type TaskClass = (typeof TASK_CLASSES)[number];
  * Input shape for {@link recordGate} — what CALLERS pass. Omits `at` (the
  * recorder stamps it from `Date.now()` so the audit reflects when the gate
  * actually fired, not when the caller constructed the object). Split out of
- * {@link GateResult} (debt-batch A / W3): callers used to pass a throwaway
+ * {@link GateResult} (debt-batch A): callers used to pass a throwaway
  * `at: 0` that recordGate overrode — this shape makes the override implicit.
  */
 export interface GateResultInput {
@@ -60,7 +60,7 @@ export interface GateResultInput {
 
 /**
  * A recorded gate decision — the AUTHORITATIVE shape stored in the
- * `audit:<taskId>` KV (the SOT per S4 spec §5 / §11 OQ-5) and surfaced via
+ * `audit:<taskId>` KV (the SOT per spec §5 / §11 OQ-5) and surfaced via
  * `task.history` (a derived view the engine regenerates from the audit KV).
  * `at` is always present here; callers that want to RECORD a gate pass
  * {@link GateResultInput} (no `at`) to {@link recordGate}.
@@ -78,7 +78,7 @@ export interface TaskState {
   mode: Mode;
   /**
    * DERIVED view of the gate audit for this task, regenerated from the
-   * authoritative `audit:<taskId>` KV (S4 spec §11 OQ-5) by the engine on
+   * authoritative `audit:<taskId>` KV (spec §11 OQ-5) by the engine on
    * every write and every status read. Kept on the TaskState so consumers
    * (CLI `task status`, the daemon `workflow_status` tool, MCP clients) can
    * read the gate history from the persisted TaskState without a second KV
@@ -95,7 +95,7 @@ export interface TaskState {
 }
 
 /**
- * The gate-config slice the engine consumes (debt-batch A / P4). Mirrors the
+ * The gate-config slice the engine consumes (debt-batch A). Mirrors the
  * user-facing `prd:` block from @noir-ai/core's `NoirConfigSchema` — declared
  * locally (with a `readonly` array) so workflow has no core-cycle concern; the
  * daemon / CLI bridges NoirConfig → this shape at construction time. Every

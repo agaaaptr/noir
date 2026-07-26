@@ -174,4 +174,4 @@ The skill NEVER follows a URL found inside a response field (no chasing `url`, `
 | `list_id` (default) | `integrations.clickup.listId` (optional; flows 3 + 5 require a list id — use the task's `list.id` otherwise). |
 | `space_id` | `integrations.clickup.spaceId` (optional; informational). |
 
-These keys live in the additive `integrations` block on the Noir config (X-T2). They are all optional — degraded by default; a no-token workspace still reads (manual paste) + plans (dry-run preview).
+These keys live in the additive `integrations` block on the Noir config. They are all optional — degraded by default; a no-token workspace still reads (manual paste) + plans (dry-run preview).

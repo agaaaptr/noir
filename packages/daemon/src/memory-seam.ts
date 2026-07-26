@@ -18,7 +18,7 @@ import type { Store } from '@noir-ai/store';
  *
  * The provider is resolved ONLY from an explicit opt-in: the `consolidate` tier
  * key, falling back to `defaultProvider`. Env-var presence is NEVER consulted
- * (DS-6) — `ANTHROPIC_API_KEY` being set for another tool does NOT activate
+ * — `ANTHROPIC_API_KEY` being set for another tool does NOT activate
  * consolidation here. A provider is "consolidation-capable" only when that key
  * resolves to a configured provider block that itself declares a `model` id;
  * otherwise this returns `null`.
@@ -90,7 +90,7 @@ export function resolveConsolidationCapability(
  * Adapt S8's {@link complete} (single-shot, provider-explicit) into the
  * {@link MemoryModel} shape the memory engine consumes. This is the ONLY LLM
  * entry point in the memory layer, and it is reached ONLY after the engine's
- * provider gate passes (DS-6: never a silent paid call). `null` degrades to the
+ * provider gate passes (never a silent paid call). `null` degrades to the
  * engine's `model-unavailable` refusal; `{ok:false}` wraps as the same — both
  * are logged, neither crashes, neither is a surprise bill.
  *
@@ -133,7 +133,7 @@ function bindMemoryModel(modelCfg: ResolvedModelConfig): MemoryModel {
  * a second connection, so the daemon's single-writer discipline is preserved
  * (blueprint D6: in-process, no sidecar, canonical `ProjectId`).
  *
- * Consolidation is OPT-IN + provider-explicit (DS-6 / §9 — NEVER a silent paid
+ * Consolidation is OPT-IN + provider-explicit (§9 — NEVER a silent paid
  * call). The capability gate is {@link resolveConsolidationCapability} — the AND
  * of the user's `memory.consolidation.enabled` master switch (the load-bearing
  * gate), a usable provider+model (preferring the `memory:` block, falling back
@@ -166,7 +166,7 @@ export function buildMemoryEngine(
   storeDegraded?: boolean,
   resolvedMemory?: MemoryConfig,
 ): MemoryEngine {
-  // Consolidation capability gate (DS-6 / §9). The AND of the user's master
+  // Consolidation capability gate (§9). The AND of the user's master
   // switch + a usable provider+model. `null` ⇒ consolidation fully OFF: no model
   // wired, `memory_consolidate` not registered, and `engine.consolidate` refuses
   // `'no-provider'` WITHOUT a model call — regardless of `model.defaultProvider`.

@@ -1,11 +1,11 @@
-// Slice X — `integration.json` schema. Each integration ships a declaration
+// `integration.json` schema. Each integration ships a declaration
 // alongside its `SKILL.md` so the compiler can validate the auth/runtime/SDD
 // contract uniformly and so the host adapter knows whether to widen emission
 // (host MCP config) or stay skill-only.
 //
 // Doctrine (slice-x spec §architecture + v1x §4.4): skill-only by default;
 // `gated-write-proxy` for stateless writes routed through a Noir MCP tool
-// (X-T3); `mcp-stdio` for a Noir-spawned stateful runtime (deferred, gated on
+// `mcp-stdio` for a Noir-spawned stateful runtime (deferred, gated on
 // keychain); `external-mcp` for a config-only pointer at a first-party/community
 // MCP server (emits a host `.mcp.json` server entry, no Noir runtime).
 //

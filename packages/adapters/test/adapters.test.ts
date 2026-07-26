@@ -143,7 +143,7 @@ describe('cursor adapter', () => {
 
   it('has NO emitRules (cursor rules are delivered via AGENTS.md — no separate host-rules .mdc)', () => {
     // The prior `noir-contract.mdc` host-rules pointer was REMOVED: it
-    // collided with the C3 cursor flat-skill prune of `noir-*.mdc` under
+    // collided with the cursor flat-skill prune of `noir-*.mdc` under
     // `.cursor/rules/`. Cursor's rules now come via AGENTS.md's
     // `@.noir/rules/RULES.md` import (same universal surface as agents-md/
     // opencode), so the cursor adapter no longer owns a rules emission.
@@ -206,7 +206,7 @@ describe('opencode adapter', () => {
     expect(json.mcpServers).toBeUndefined();
   });
 
-  it('emitMcpConfig (http) produces {type:"remote", url} — opencode spells it "remote", NOT "http" (C1)', () => {
+  it('emitMcpConfig (http) produces {type:"remote", url} — opencode spells it "remote", NOT "http"', () => {
     // Verified against https://opencode.ai/docs/mcp-servers/: "Add remote MCP
     // servers by setting `type` to \"remote\"". The prior `type:'http'` shape
     // was wrong — opencode has no `'http'`/`'sse'` enum value.
@@ -240,7 +240,7 @@ describe('opencode adapter', () => {
     });
   });
 
-  it('emitMcpConfig merges an external-mcp http integration (type:"remote"; C1)', () => {
+  it('emitMcpConfig merges an external-mcp http integration (type:"remote")', () => {
     const integration: IntegrationMcpEmission = {
       serverName: 'noir-linear',
       transport: 'http',
@@ -252,7 +252,7 @@ describe('opencode adapter', () => {
     expect(json.mcp['noir-linear']).toEqual({ type: 'remote', url: 'https://mcp.linear.app/sse' });
   });
 
-  it('C2: opencode env vars land under `environment:` (NOT `env:`) — verified verbatim from opencode docs', () => {
+  it('opencode env vars land under `environment:` (NOT `env:`) — verified verbatim from opencode docs', () => {
     // Opencode's server entries use the `environment:` key for env vars (the
     // `.mcp.json` / `.cursor/mcp.json` / `.gemini/mcp.json` family keeps `env:`
     // — correct for THOSE hosts; this assertion guards opencode's spelling).

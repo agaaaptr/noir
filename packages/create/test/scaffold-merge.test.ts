@@ -1,4 +1,4 @@
-// SP-D follow-up + B1 — three-way managed-region merge (default since B1).
+// Three-way managed-region merge (default).
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -26,14 +26,14 @@ function injectUserLine(noirMd: string): void {
   );
 }
 
-describe('scaffold — mergeManagedRegions (SP-D; DEFAULT TRUE since B1)', () => {
-  it('init (default) writes .noir/ancestors.json — seeding is unconditional (B1)', async () => {
+describe('scaffold — mergeManagedRegions (DEFAULT TRUE)', () => {
+  it('init (default) writes .noir/ancestors.json — seeding is unconditional', async () => {
     // No mergeManagedRegions flag: ancestor capture is unconditional now.
     await scaffold({ root: tmp, mode: 'init', transport: 'stdio' });
     expect(existsSync(join(tmp, '.noir', 'ancestors.json'))).toBe(true);
   });
 
-  it('mergeManagedRegions defaults to true (B1): a user edit inside a region survives sync', async () => {
+  it('mergeManagedRegions defaults to true: a user edit inside a region survives sync', async () => {
     // No flags → merge on (the new default).
     await scaffold({ root: tmp, mode: 'init', transport: 'stdio' });
     const noirMd = paths.noirMd(tmp);
@@ -44,7 +44,7 @@ describe('scaffold — mergeManagedRegions (SP-D; DEFAULT TRUE since B1)', () =>
 
   it('mergeManagedRegions:false (CLI --no-merge-regions) restores strip-replace; ancestors still seeded', async () => {
     await scaffold({ root: tmp, mode: 'init', transport: 'stdio', mergeManagedRegions: false });
-    // Ancestor seeding is UNCONDITIONAL (B1) — the file exists even under
+    // Ancestor seeding is UNCONDITIONAL — the file exists even under
     // strip-replace, so a later merge run has a base.
     expect(existsSync(join(tmp, '.noir', 'ancestors.json'))).toBe(true);
     const noirMd = paths.noirMd(tmp);
@@ -54,7 +54,7 @@ describe('scaffold — mergeManagedRegions (SP-D; DEFAULT TRUE since B1)', () =>
     expect(readFileSync(noirMd, 'utf8')).not.toContain('USER-EDITED-LINE');
   });
 
-  it('multi-region (CLAUDE.md) merge preserves a user edit inside one region (B1 regression guard)', async () => {
+  it('multi-region (CLAUDE.md) merge preserves a user edit inside one region (regression guard)', async () => {
     await scaffold({ root: tmp, mode: 'init', transport: 'stdio', mergeManagedRegions: true });
     const claude = join(tmp, 'CLAUDE.md');
     // Inject a user line INSIDE the CONTEXT region (before its end marker).

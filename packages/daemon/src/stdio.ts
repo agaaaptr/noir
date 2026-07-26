@@ -42,7 +42,7 @@ export async function startStdioServer(ctx: ServerContext): Promise<void> {
         daemonStore.degraded,
       )
     : undefined;
-  // Consolidation is OPT-IN + provider-explicit (D5/D6/DS-6 — NEVER a silent
+  // Consolidation is OPT-IN + provider-explicit (D5/D6 — NEVER a silent
   // paid call, the Agent-Memory anti-pattern §9). The master switch is the
   // user's `memory.consolidation.enabled`; only when it is true does the
   // model-derived provider+model even get considered. `resolveMemoryConfig` is
@@ -64,7 +64,7 @@ export async function startStdioServer(ctx: ServerContext): Promise<void> {
         resolvedMemory,
       )
     : undefined;
-  // Slice X — integration service (X-T3). Built once per serve lifecycle (no
+  // Integration service. Built once per serve lifecycle (no
   // store dependency) so `integrations_auth` works even under a read-only store.
   const integrations = buildIntegrationService(ctx.project.root, ctx.project.config.integrations);
   const server = createNoirServer({

@@ -24,7 +24,7 @@ describe('observable gates + audit recording', () => {
     const store = await openStore({ projectId: id, root });
     try {
       const t0 = Date.now();
-      // W3 GateResultInput split: callers omit `at` (recordGate stamps it).
+      // GateResultInput split: callers omit `at` (recordGate stamps it).
       // approved — happy path through the spec gate
       recordGate(store, 'task-1', { phase: 'spec', decision: 'approved' });
       // forced — carries a reason (e.g. user override of the plan gate)
@@ -124,10 +124,10 @@ describe('observable gates + audit recording', () => {
   });
 });
 
-// Debt-batch A / W1 — readGateHistory is the bridge consumers use to derive
+// Debt-batch A — readGateHistory is the bridge consumers use to derive
 // `task.history` from the authoritative audit KV. Mirrors recordGate's
 // append-only semantics: returns [] for a task with no gates (never null).
-describe('readGateHistory — authoritative audit-KV reader (W1)', () => {
+describe('readGateHistory — authoritative audit-KV reader', () => {
   it('returns [] when no gate has fired for the task (never null)', async () => {
     const store = await openStore({ projectId: id, root });
     try {

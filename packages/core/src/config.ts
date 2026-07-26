@@ -55,15 +55,15 @@ export const NoirConfigSchema = z.object({
   // a top-level object with `.default({})` so a config with NO `model:` block
   // still parses and behaves as fully-degraded (every `complete()` call returns
   // `null`; callers substitute a template — the always-available offline path,
-  // blueprint D5 / DS-5). `resolveModelConfig` (@noir-ai/model) is the single
+  // blueprint D5). `resolveModelConfig` (@noir-ai/model) is the single
   // bridge from this user-facing schema to the runtime shape `complete()`
   // consumes, so core never imports model (no core→model cycle).
   //
-  // Provider-EXPLICIT, never silent paid (blueprint D5 / DS-6): the provider is
+  // Provider-EXPLICIT, never silent paid (blueprint D5): the provider is
   // resolved ONLY from explicit `defaultProvider` / a tier's provider key. Env-
   // var presence is NEVER consulted to pick a provider — `ANTHROPIC_API_KEY`
   // being set for another tool does NOT activate Anthropic in Noir. No explicit,
-  // configured provider ⇒ `null`. Secrets live in env vars only (DS-8):
+  // configured provider ⇒ `null`. Secrets live in env vars only:
   // `apiKeyEnv` stores the env-var NAME (`ANTHROPIC_API_KEY`), never the value,
   // so `.noir/config.yml` stays safe to commit and share; `complete()` reads the
   // value at call time. `tiers` map a tier name → provider block key; each
@@ -104,7 +104,7 @@ export const NoirConfigSchema = z.object({
     // degradation (offline, free, the default). Inner fields are `.optional()`
     // (no inner `.default()`) so a present-but-empty block also degrades.
     .default({}),
-  // Slice S7 cross-session memory (@noir-ai/memory). Mirrors the `daemon` idiom —
+  // Cross-session memory (@noir-ai/memory). Mirrors the `daemon` idiom —
   // a top-level object with `.default({})` so a config with NO `memory:` block
   // still parses and behaves as consolidation-disabled (the safe default —
   // capture/store/retrieve are always local + free; consolidation is the ONLY
@@ -113,7 +113,7 @@ export const NoirConfigSchema = z.object({
   // runtime `MemoryConfig` the engine consumes, so core never imports memory
   // (no core→memory cycle; mirrors @noir-ai/context + @noir-ai/model).
   //
-  // Provider-EXPLICIT, never silent paid (blueprint D6 / DS-6): the provider is
+  // Provider-EXPLICIT, never silent paid (blueprint D6): the provider is
   // resolved ONLY from explicit `consolidation.provider`. Env-var presence is
   // NEVER consulted to pick a provider — `ANTHROPIC_API_KEY` being set for
   // another tool does NOT activate consolidation. No explicit, enabled provider

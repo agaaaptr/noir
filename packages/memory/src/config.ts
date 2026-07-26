@@ -1,4 +1,4 @@
-// Memory config resolver for @noir-ai/memory (slice S7, task t6).
+// Memory config resolver for @noir-ai/memory.
 //
 // The single bridge from @noir-ai/core's user-facing `memory` zod schema to the
 // runtime {@link MemoryConfig} the memory engine (and `runConsolidation`) consume.
@@ -10,7 +10,7 @@
 // {@link MemoryUserConfig} mirror below, so the mapper accepts a
 // `NoirConfig['memory']` directly — callers pass `resolveMemoryConfig(cfg.memory)`.
 //
-// Provider-EXPLICIT, never silent paid (blueprint D5/D6, DS-6): this mapper is a
+// Provider-EXPLICIT, never silent paid (blueprint D5/D6): this mapper is a
 // PURE projection of what the user wrote — it NEVER infers a provider from
 // env-var presence. No explicit `consolidation.provider` ⇒ a disabled runtime
 // config ⇒ `runConsolidation` refuses with `'no-provider'` + writes a miss audit
@@ -23,7 +23,7 @@ import type { MemoryConfig } from './types.js';
 
 /**
  * User-facing memory config shape — mirrors `NoirConfig['memory']` (the zod block
- * @noir-ai/core ships, slice S7 / task t6). Declared LOCALLY with every field
+ * @noir-ai/core ships). Declared LOCALLY with every field
  * optional so this module type-checks WITHOUT a forward dependency on a core
  * type (core never imports memory — no cycle; @noir-ai/core is not even
  * consulted here), AND so a config with no `memory:` block (or a partial one)
@@ -32,7 +32,7 @@ import type { MemoryConfig } from './types.js';
  * `NoirConfig['memory']` directly.
  */
 export interface MemoryUserConfig {
-  /** Consolidation gate (provider-explicit — never silent paid, DS-6). */
+  /** Consolidation gate (provider-explicit — never silent paid). */
   consolidation?: {
     /** Master switch (default false). When false, `consolidate` refuses + logs. */
     enabled?: boolean;
@@ -66,7 +66,7 @@ export interface MemoryUserConfig {
  * always-present objects.
  *
  * This mapper is a PURE projection — it copies fields through unchanged, NEVER
- * infers a provider from env-var presence (DS-6), reads NO environment, holds NO
+ * infers a provider from env-var presence, reads NO environment, holds NO
  * secrets, and never throws. Whether a configured provider is actually USABLE is
  * decided at call time inside `complete()` (S8, which re-reads env idempotently),
  * NOT here.

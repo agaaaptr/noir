@@ -10,8 +10,8 @@ import type Database from 'better-sqlite3';
  * keeps the schema the single source of truth right next to the runner.
  *
  * NOTE on `vec`: the `vec0` virtual table requires the `sqlite-vec` extension
- * to be loaded into the connection, which T1 does NOT do. Its DDL is therefore
- * intentionally omitted from v1 and will be added in T4 (via a v2 migration or
+ * to be loaded into the connection, which v1 does NOT do. Its DDL is therefore
+ * intentionally omitted from v1 and will be added later (via a v2 migration or
  * a load-time create once `sqliteVec.load(db)` runs).
  */
 const V1_SQL = /* sql */ `

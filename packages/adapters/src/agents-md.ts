@@ -28,7 +28,7 @@ export const AGENTS_MD_FILENAME = 'AGENTS.md';
  *   @.noir/NOIR.md
  *   @.noir/rules/RULES.md
  *
- * The inline 3-line fallback (I2) sits BEFORE the `@`-imports so AGENTS.md
+ * The inline 3-line fallback sits BEFORE the `@`-imports so AGENTS.md
  * readers that do NOT resolve `@`-imports (e.g. plain markdown viewers, some
  * GA dashboards) still get a one-glance summary of where to edit. The
  * `@`-imports remain canonical for the hosts that DO resolve them (Cursor,

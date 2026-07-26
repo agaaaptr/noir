@@ -1,4 +1,4 @@
-// ContextEngine for @noir-ai/context (slice S6, task t8).
+// ContextEngine for @noir-ai/context.
 //
 // The single object that ties the embedder, indexer, and retriever together and
 // that the daemon injects as `ctx.context` — the new optional ServerContext
@@ -30,7 +30,7 @@
 //     independent and both honest: `status()` describes the configured state;
 //     `search()` describes the actual outcome.
 //
-// kNN-only hydration (spec F7, C1): the Store interface exposes no read-by-id
+// kNN-only hydration: the Store interface exposes no read-by-id
 // and vec0 carries no meta column, so a purely-semantic hit (kNN-only, no BM25
 // snippet) cannot be windowed without a content source. The engine wires the
 // indexer's `readChunkContent` as the retriever's `readDoc` hydrator — the
@@ -40,7 +40,7 @@
 // (mirroring FTS5). When it misses (chunk unindexed, file deleted, content
 // drift), the hit degrades to an empty snippet AND the search result's `mode`
 // becomes `'knn'` so the caller knows the snippet quality is degraded (the
-// retriever's honest-mode logic, C1).
+// retriever's honest-mode logic).
 
 import { createEmbedFn } from './embedders/index.js';
 import { CTX_REGISTRY_KEY, createIndexer, type Indexer, type IndexPathOptions } from './indexer.js';
@@ -169,7 +169,7 @@ export class ContextEngine {
     // repo-relative; the retriever is read-only and uses the retriever defaults
     // (RRF k=60 / [0.5,0.5], budget 4096). The retriever's `readDoc` hydrator
     // is wired to the indexer's `readChunkContent` so kNN-only hits hydrate to
-    // a real windowed snippet from the source file (C1); a miss surfaces as
+    // a real windowed snippet from the source file; a miss surfaces as
     // mode:'knn' on the per-call SearchResult (degraded but honest).
     this.indexer = createIndexer({ store: opts.store, embed, info, root: opts.root });
     this.retriever = createRetriever({

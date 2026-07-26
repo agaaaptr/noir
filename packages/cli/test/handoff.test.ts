@@ -11,7 +11,8 @@
 //   • missing-embedder → bounded extraction degrades to a note, exit 0.
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Hoisted bridges between per-test setup and the mock factory (factory reads at
@@ -300,8 +301,16 @@ describe('noir handoff --write — persists under .noir/handoff/ (gitignored)', 
     expect(gi).toContain('/.noir/handoff/');
     expect(gi).toContain(IGNORE_BLOCK.end);
     // The scaffold template carries it too (first-init correctness).
+    // Resolve from this test file (not process.cwd()) so the path is stable
+    // regardless of the directory vitest was invoked from.
     const tmpl = readFileSync(
-      join(process.cwd(), 'packages/create/templates/gitignore.tmpl'),
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        '..',
+        'packages/create/templates/gitignore.tmpl',
+      ),
       'utf8',
     );
     expect(tmpl).toContain('/.noir/handoff/');

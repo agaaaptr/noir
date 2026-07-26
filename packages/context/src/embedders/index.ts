@@ -6,7 +6,7 @@
 // single factory the engine calls; it dispatches on the `EmbedderConfig`
 // discriminated union (from ../types) and returns `{ embed, info }`.
 //
-// Provider matrix (spec DS-2):
+// Provider matrix:
 //   local    — @huggingface/transformers + all-MiniLM-L6-v2 (DEFAULT; lazy load)
 //   remote   — OpenAI / Voyage / Cohere (OPT-IN, provider-explicit, paid)
 //   ollama   — local Ollama server (OPT-IN, provider-explicit)

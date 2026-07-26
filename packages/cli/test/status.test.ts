@@ -27,7 +27,7 @@ const { callerHolder, probeHolder } = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/daemon-client.js', () => ({
-  // status is probe-only (C1): probeDaemon reports liveness WITHOUT starting a
+  // status is probe-only: probeDaemon reports liveness WITHOUT starting a
   // daemon; withRunningDaemon reuses the probed daemon (never starts either).
   // Both stubbed → no real daemon / HTTP (NF4).
   probeDaemon: vi.fn(async () => probeHolder.current),
@@ -36,7 +36,7 @@ vi.mock('../src/daemon-client.js', () => ({
   ),
 }));
 
-// Project info is assembled in-process now (C1): loadProjectInfo + NOIR_VERSION
+// Project info is assembled in-process now: loadProjectInfo + NOIR_VERSION
 // are stubbed so status never needs host_status for project identity, and no
 // test-cwd coupling to whether the real repo is initialized leaks in.
 vi.mock('@noir-ai/core', () => ({
@@ -64,7 +64,7 @@ let currentCaller: Caller;
 
 function resetPayloads(): void {
   for (const k of Object.keys(PAYLOADS)) delete PAYLOADS[k];
-  // C1: project id/name/host/version come from in-process loadProjectInfo +
+  // project id/name/host/version come from in-process loadProjectInfo +
   // NOIR_VERSION (mocked above), and daemon running/pid/uptime come from the
   // probe. host_status is now OPTIONAL and only enriches daemon.transport.
   PAYLOADS.host_status = { transport: 'streamable-http' };
@@ -325,7 +325,7 @@ describe('status — human table on stderr', () => {
     const { capture, restore } = captureStreams();
     try {
       await status({ ...baseOpts });
-      // TIER A2: the responsive Value column word-wraps the embedder string at a
+      // the responsive Value column word-wraps the embedder string at a
       // space boundary, so assert the two semantic pieces separately.
       const err = capture().err;
       expect(err).toContain('local · all-MiniLM-L6-v2');
@@ -366,7 +366,7 @@ describe('status — human table on stderr', () => {
     const { capture, restore } = captureStreams();
     try {
       await status({ ...baseOpts });
-      // TIER A2: the ad-hoc `[degraded: read-only]` marker is now a status badge
+      // the ad-hoc `[degraded: read-only]` marker is now a status badge
       // (`⚠ degraded: read-only`) — symbol + text label, colorblind/NO_COLOR-safe.
       const err = capture().err;
       expect(err).toContain('degraded: read-only');

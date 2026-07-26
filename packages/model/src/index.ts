@@ -1,16 +1,16 @@
 // @noir-ai/model — Noir's bounded single-shot model layer (slice S8).
 //
-// A thin LIBRARY (NOT a host/MCP surface — blueprint D5 / DS-1): one
+// A thin LIBRARY (NOT a host/MCP surface — blueprint D5): one
 // `complete()` function backed by provider adapters (`anthropic` / `openai` /
-// `openai-compatible`). It is consumed IN-PROCESS by S4 (artifact drafting),
-// S7 (memory consolidation), and S9 (home help) to fill bounded content slots
+// `openai-compatible`). It is consumed IN-PROCESS for artifact drafting,
+// memory consolidation, and home help to fill bounded content slots
 // on explicit request. It can express ONLY a single completion — there is no
 // `tools` / `stream` parameter, so an agent or tool-exec loop cannot be built
 // on it. When no provider is configured (or a keyed provider's env var is
 // missing) `complete()` returns `null` and callers substitute a template — the
 // always-available offline path (first-class, fully tested).
 //
-// No MCP tools are registered here (DS-1): the daemon `ServerContext` is NOT
+// No MCP tools are registered here: the daemon `ServerContext` is NOT
 // extended with a model service. Packages that need drafting import `complete`
 // directly; this keeps the model layer unreachable from the host and enforces
 // D5 at the boundary.

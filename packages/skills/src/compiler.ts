@@ -75,7 +75,7 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
  *
  *  - `claude` | `agents-md` | `gemini` | `opencode` (the AGENTS.md-aligned
  *    hosts): canonical format copied verbatim — `SKILL.md` plus its
- *    `references/` siblings (DS-4). These hosts read the same SKILL.md shape;
+ *    `references/` siblings. These hosts read the same SKILL.md shape;
  *    the EMIT-LOCATION (which dir they land in) is the cli/adapter's job, not
  *    the compiler's.
  *  - `cursor`: transform into a Cursor `.mdc` rule — ONE file `<name>.mdc`
@@ -181,18 +181,18 @@ export async function emitSkillsToDir(
      *  hosts have no skill concept, so emit is skipped upstream — but the
      *  default-verbatim policy keeps the signature total). */
     target?: CompileTarget;
-    /** B2 — policy for a skill file that exists AND differs from the compiled
+    /** Policy for a skill file that exists AND differs from the compiled
      *  bytes, when no {@link onConflict} resolver is wired (or non-interactive).
      *  Default `'overwrite'` preserves the v1.2 behavior (every sync clobbers).
      *  `'preserve'` skips the differing file (the CI / non-TTY default the CLI
      *  threads via `buildConflictOpts`). */
     conflictPolicy?: 'overwrite' | 'preserve';
-    /** B2 — per-file conflict resolver. The CLI passes its single
+    /** Per-file conflict resolver. The CLI passes its single
      *  `buildConflictOpts().onConflict` (clack menu + diff preview + apply-to-
      *  all) through unchanged; structurally compatible with @noir-ai/create's
      *  `ConflictResolverReturn`. */
     onConflict?: SkillConflictResolver;
-    /** B2 — explicit interactivity flag (the engine reads THIS, not process.env,
+    /** Explicit interactivity flag (the engine reads THIS, not process.env,
      *  matching @noir-ai/create's hermetic-interactive contract). When `false`,
      *  the resolver is NEVER consulted (CI / --json never hangs on a prompt). */
     interactive?: boolean;
@@ -220,12 +220,12 @@ export async function emitSkillsToDir(
   const emitted: string[] = [];
   const integrationNames: string[] = [];
   const conflicts: SkillConflict[] = [];
-  // B2 — apply-to-all memory keyed by artifact CLASS. Skill emission shares one
+  // Apply-to-all memory keyed by artifact CLASS. Skill emission shares one
   // decision across the run (a `noir sync` touching 8 skill files → 1 prompt)
   // when the resolver returns `{resolution, applyToAll: true}`.
   const memory = new Map<string, SkillConflictResolution>();
   const policy: 'overwrite' | 'preserve' = opts.conflictPolicy ?? 'overwrite';
-  // B2 — non-interactive guard. The bridge `NOIR_NON_INTERACTIVE` is set by the
+  // Non-interactive guard. The bridge `NOIR_NON_INTERACTIVE` is set by the
   // bin's preAction under --json/--no-input; the explicit `interactive: false`
   // wins over the env (mirrors @noir-ai/create's hermetic flag). When false,
   // the resolver is NEVER consulted — differing files fall back to `policy`.
@@ -233,7 +233,7 @@ export async function emitSkillsToDir(
     opts.interactive ??
     (process.env.NOIR_NON_INTERACTIVE === undefined || process.env.NOIR_NON_INTERACTIVE === '');
 
-  /** B2 — write a compiled skill file through the SAME conflict seam as
+  /** Write a compiled skill file through the SAME conflict seam as
    *  `regenerate`: read existing; if differs, consult the resolver (when
    *  interactive + wired); record the conflict for the structured report. */
   const writeWithConflict = async (
@@ -299,7 +299,7 @@ export async function emitSkillsToDir(
     if (isReference) references++;
   };
 
-  // C3: cursor skills land FLAT under targetDir (`.cursor/rules/<name>.mdc`) —
+  // Cursor skills land FLAT under targetDir (`.cursor/rules/<name>.mdc`) —
   // Cursor's rule loader scans `.cursor/rules/*.mdc` and does NOT recurse into
   // per-name subdirs. The verbatim branch (claude/agents-md/gemini/opencode)
   // keeps the canonical nested layout (`<name>/SKILL.md` + `<name>/references/`).
@@ -325,13 +325,13 @@ export async function emitSkillsToDir(
       }
       // `hostMcp` is NOT written per-skill — it is surfaced to the host adapter
       // (via discoverAll/compileIntegration) to merge into the host's single
-      // MCP config (e.g. `.mcp.json`). Wiring lives in cli/daemon (X-T2 seam).
+      // MCP config (e.g. `.mcp.json`). Wiring lives in cli/daemon.
       emitted.push(i.name);
       integrationNames.push(i.name);
     }
   }
 
-  // --- T2: prune stale `noir-*` entries from the managed namespace ----------
+  // --- Prune stale `noir-*` entries from the managed namespace ----------
   // Idempotent hygiene: a previous Noir version may have shipped a builtin that
   // was since renamed/removed (e.g. `noir-old-thing`). Each `noir sync`
   // re-writes the CURRENT pack but a stale entry would otherwise linger forever.
@@ -339,16 +339,16 @@ export async function emitSkillsToDir(
   // set and remove them. ONLY the `noir-` namespace — user skills without the
   // prefix are NEVER touched (they are not Noir's to manage).
   //
-  // B2 — `assertNotUserOwned` guard: a `noir-*` entry whose content does NOT
+  // `assertNotUserOwned` guard: a `noir-*` entry whose content does NOT
   // match the canonical Noir-emitted shape (SKILL.md with `name: noir-…`
   // frontmatter, OR a `.mdc` with the cursor frontmatter) is treated as
   // USER-AUTHORED and LEFT ALONE. A user hand-rolling `noir-myown/SKILL.md`
   // must never be silently deleted by a sync.
   //
-  // C3 shape awareness: the nested layout (claude/agents-md/gemini/opencode)
+  // Shape awareness: the nested layout (claude/agents-md/gemini/opencode)
   // writes one `noir-<name>/` DIR per skill → prune stale DIRS. The cursor flat
   // layout writes one `noir-<name>.mdc` FILE per skill → prune stale .mdc FILES.
-  // Cursor ALSO clears legacy pre-C3 `noir-<name>/` dirs (nesting residue) so an
+  // Cursor ALSO clears legacy `noir-<name>/` dirs (nesting residue) so an
   // upgrade from nested→flat does not leave orphans under `.cursor/rules/`.
   const keep = new Set(emitted);
   const pruned: string[] = [];
@@ -363,23 +363,23 @@ export async function emitSkillsToDir(
     if (!ent.name.startsWith('noir-')) continue;
     if (flat) {
       // Cursor flat layout — prune stale FILES (`noir-<name>.mdc`) + legacy
-      // nested DIRS (`noir-<name>/`) from a pre-C3 sync.
+      // nested DIRS (`noir-<name>/`) from a sync.
       if (ent.isFile()) {
         const mdcMatch = ent.name.match(/^(noir-[a-z0-9]+(?:-[a-z0-9]+)*)\.mdc$/);
         const skillName = mdcMatch?.[1];
         if (skillName && keep.has(skillName)) continue;
-        // B2 — `assertNotUserOwned`: a `.mdc` without canonical cursor
+        // `assertNotUserOwned`: a `.mdc` without canonical cursor
         // frontmatter (globs + alwaysApply) was hand-rolled by the user; skip.
         if (await isUserOwnedMdc(join(targetDir, ent.name))) {
           preservedUserOwned.push(ent.name);
           continue;
         }
       } else if (ent.isDirectory()) {
-        // Legacy pre-C3 cursor nested dir — clear unconditionally (the flat
+        // Legacy cursor nested dir — clear unconditionally (the flat
         // layout has NO `noir-{name}/` dirs under .cursor/rules/; any such dir
         // is stale by definition, regardless of name overlap with the current
         // pack — the fresh `.mdc` file is what's kept, not the dir).
-        // B2 guard: skip if NONE of the `.mdc` files inside look Noir-emitted
+        // Guard: skip if NONE of the `.mdc` files inside look Noir-emitted
         // (canonical cursor frontmatter) — a user hand-rolling a noir-X/ dir
         // with arbitrary content is preserved.
         if (await isUserOwnedCursorLegacyDir(join(targetDir, ent.name))) {
@@ -393,7 +393,7 @@ export async function emitSkillsToDir(
       // Nested layout — prune stale DIRS only (the canonical shape).
       if (!ent.isDirectory()) continue;
       if (keep.has(ent.name)) continue;
-      // B2 — `assertNotUserOwned`: a `noir-*/` dir whose SKILL.md does not
+      // `assertNotUserOwned`: a `noir-*/` dir whose SKILL.md does not
       // carry canonical Noir frontmatter (`name: noir-…`) is user-authored.
       if (await isUserOwnedSkillDir(join(targetDir, ent.name))) {
         preservedUserOwned.push(ent.name);
@@ -422,7 +422,7 @@ export async function emitSkillsToDir(
   };
 }
 
-/** B2 — `assertNotUserOwned` for the nested layout: a `noir-{name}/` dir is
+/** `assertNotUserOwned` for the nested layout: a `noir-{name}/` dir is
  *  Noir-managed iff it contains a SKILL.md whose YAML frontmatter carries a
  *  `name:` matching `noir-<dir>`. Missing SKILL.md, missing frontmatter, or a
  *  non-matching name ⇒ user-authored (left alone). Best-effort: any IO error
@@ -440,7 +440,7 @@ async function isUserOwnedSkillDir(dirAbs: string): Promise<boolean> {
   }
 }
 
-/** B2 — `assertNotUserOwned` for the cursor flat layout: a `noir-*.mdc` file
+/** `assertNotUserOwned` for the cursor flat layout: a `noir-*.mdc` file
  *  is Noir-managed iff its YAML frontmatter carries `alwaysApply:` (the cursor
  *  shape the compiler always emits). Missing frontmatter / no `alwaysApply` ⇒
  *  user-authored. */
@@ -456,8 +456,8 @@ async function isUserOwnedMdc(fileAbs: string): Promise<boolean> {
   }
 }
 
-/** B2 — `assertNotUserOwned` for the cursor flat-layout's legacy-nested-dir
- *  case: a pre-C3 Noir sync left `noir-{name}/noir-{name}.mdc` behind. The dir
+/** `assertNotUserOwned` for the cursor flat-layout's legacy-nested-dir
+ *  case: a Noir sync left `noir-{name}/noir-{name}.mdc` behind. The dir
  *  is Noir-managed iff at least one `.mdc` inside carries canonical cursor
  *  frontmatter (`alwaysApply:`). Absent / hand-rolled content ⇒ user-authored.
  *  Empty dir ⇒ treat as user-owned (safe — never silently delete). */
@@ -479,12 +479,12 @@ async function isUserOwnedCursorLegacyDir(dirAbs: string): Promise<boolean> {
   }
 }
 
-/** B2 — sha256 hex, first 12 chars (matches @noir-ai/create's sha256Hex12). */
+/** sha256 hex, first 12 chars (matches @noir-ai/create's sha256Hex12). */
 function sha256Hex12(s: string): string {
   return createHash('sha256').update(s, 'utf8').digest('hex').slice(0, 12);
 }
 
-/** B2 — LCS similarity in [0,1]. Local copy (skills has no create dependency)
+/** LCS similarity in [0,1]. Local copy (skills has no create dependency)
  *  so the structured report's `similarity` matches the engine's algorithm. */
 function similarity(a: string, b: string): number {
   if (a === b) return 1;
@@ -507,7 +507,7 @@ function similarity(a: string, b: string): number {
   return n + m === 0 ? 1 : (2 * lcs) / (n + m);
 }
 
-/** B2 — pick a fresh `<abs><suffix>` aside path that does NOT exist (mirrors
+/** Pick a fresh `<abs><suffix>` aside path that does NOT exist (mirrors
  *  @noir-ai/create's `uniqueAside`). Used by the `rename`/`duplicate` resolutions
  *  so the user's bytes never get silently clobbered. */
 async function renameAside(abs: string, suffix: string): Promise<void> {

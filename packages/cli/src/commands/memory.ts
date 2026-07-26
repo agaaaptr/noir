@@ -1,6 +1,6 @@
-// S9 t5 — `noir memory {recall,save,sessions,forget,consolidate}`.
+// S9 — `noir memory {recall,save,sessions,forget,consolidate}`.
 //
-// Thin MCP-client commands over the running daemon's S7 memory engine. Each is
+// Thin MCP-client commands over the running daemon's memory engine. Each is
 // a `callDaemonTool` round-trip (or `withDaemon` when capability discovery is
 // needed); the daemon owns the sole store handle, so the CLI never opens it
 // in-process. Daemon-unreachable ⇒ exit 4 (DAEMON_DOWN) from daemon-client.
@@ -12,7 +12,7 @@
 // (USAGE) naming the missing flag — NO blocking prompt on a pipe. A cancel at
 // the prompt ⇒ exit 5 (CANCELLED).
 //
-// `memory consolidate` is opt-in + provider-explicit (blueprint D5/D6/DS-6): the
+// `memory consolidate` is opt-in + provider-explicit (blueprint D5/D6): the
 // daemon registers the `memory_consolidate` tool ONLY when the user set
 // `memory.consolidation.enabled: true` AND a provider+model resolved. Calling a
 // tool the daemon doesn't register would mis-map onto exit 4 (daemon-down), so
@@ -209,7 +209,7 @@ function renderRecall(
     info('(no memories matched)', opts);
     return;
   }
-  // Full content per hit (DS-9: never truncate the DATA; display shows it whole
+  // Full content per hit (never truncate the DATA; display shows it whole
   // in a readable block rather than a cramped table cell). The block-list shape
   // is load-bearing — do NOT sweep this into the responsive table().
   for (let i = 0; i < hits.length; i++) {

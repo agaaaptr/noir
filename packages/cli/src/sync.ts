@@ -43,10 +43,10 @@ export interface SyncOptions {
    *  the conflict menu). */
   force?: boolean;
   /** SP-D: three-way merge managed regions (preserve hand-edits inside
-   *  `<!-- noir:* -->` markers across a template update). DEFAULT TRUE since
-   *  B1; `--merge` is now a no-op (kept for backward compatibility). */
+   *  `<!-- noir:* -->` markers across a template update). DEFAULT TRUE;
+   *  `--merge` is now a no-op (kept for backward compatibility). */
   merge?: boolean;
-  /** B1: opt OUT of managed-region merge (restore strip-replace). Exposed on
+  /** Opt OUT of managed-region merge (restore strip-replace). Exposed on
    *  the bin as `--no-merge-regions`. When explicitly `false`, hand-edits
    *  inside `<!-- noir:* -->` markers are discarded on a template upgrade. */
   mergeManagedRegions?: boolean;
@@ -54,12 +54,12 @@ export interface SyncOptions {
 
 export async function sync(root: string, opts: SyncOptions = {}): Promise<ScaffoldResult> {
   const host = resolveSyncHost(root, opts);
-  // B1: the engine reads ScaffoldOptions.interactive (hermetic — never
+  // The engine reads ScaffoldOptions.interactive (hermetic — never
   // process.env). The CLI derives it once from the bridge + TTY/CI/NO_COLOR gate.
   const interactive = resolveInteractive();
   const conflictOpts = buildConflictOpts({ force: opts.force, interactive });
 
-  // TIER B3 — load project info once for both the dedup hook (embedder config)
+  // Load project info once for both the dedup hook (embedder config)
   // and the existing config-host fallback. Best-effort: a missing/corrupt file
   // is left to scaffold's "not initialized" gate below.
   let projectInfo: ReturnType<typeof loadProjectInfo> | undefined;
@@ -75,11 +75,11 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
     host,
     interactive,
     ...conflictOpts,
-    // B1: merge defaults TRUE inside scaffold; only forward an explicit opt-out.
+    // Merge defaults TRUE inside scaffold; only forward an explicit opt-out.
     ...(opts.mergeManagedRegions === false ? { mergeManagedRegions: false } : {}),
   });
 
-  // B1: surface the no-op so users see sync was a true no-op on disk (the
+  // Surface the no-op so users see sync was a true no-op on disk (the
   // scaffold wrote nothing — every runtime file was content-hash identical).
   // Skills emission below still runs (it has its own dedup).
   if (res.written.length === 0 && res.identical.length > 0) {
@@ -94,7 +94,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
     process.stderr.write(`host '${host}' has no skill emitter; skipping skills\n`);
   } else {
     const target: CompileTarget = host;
-    // B3 TASK 1 — forward conflictOpts so the skills-emit conflict flow is
+    // Forward conflictOpts so the skills-emit conflict flow is
     // live in interactive mode (mirrors init.ts). --json/--no-input stays
     // prompt-free via the `interactive: false` guard.
     type SkillEmitOpts = NonNullable<Parameters<typeof emitSkillsToDir>[1]>;
@@ -112,7 +112,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
     process.stderr.write(
       `Synced ${summary.emitted.length} Noir skills to ${relDir}/ (target: ${target}).\n`,
     );
-    // T2: surface stale-dir pruning so a user can see when a previous Noir
+    // Surface stale-dir pruning so a user can see when a previous Noir
     // version's builtin was removed (the dir was deleted from .claude/skills/).
     // Pure hygiene; never affects correctness of the freshly-emitted pack.
     const pruned = summary.pruned ?? [];
@@ -123,7 +123,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
     }
   }
 
-  // TIER B3 TASK 2 — write-path semantic dedup. Non-blocking; degrades to a
+  // Write-path semantic dedup. Non-blocking; degrades to a
   // stderr warn-skip when the embedder is unavailable. Records near-dups on
   // `res.conflicts` so `--json` consumers see them without a prompt.
   const dedup = await checkWritePathDedup(root, res, { interactive, project: projectInfo });

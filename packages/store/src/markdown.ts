@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 
 /**
- * B2 — the SAME conflict-resolution seam @noir-ai/create's `regenerate` uses,
+ * The SAME conflict-resolution seam @noir-ai/create's `regenerate` uses,
  * local to this package so store does NOT add a create dependency. Default
  * behavior is unchanged from v1.2 (overwrite): the seam fires only when a
  * caller wires `onConflict`/`conflictPolicy`.
@@ -41,14 +41,14 @@ export interface MarkdownConflictOpts {
  * Each document is written to `<dir>/<id>.md` with YAML frontmatter
  * containing `id` and `source`, followed by the document content.
  *
- * B2 — routes through the SAME conflict seam as `regenerate`. When the target
+ * Routes through the SAME conflict seam as `regenerate`. When the target
  * file exists AND differs from the proposed bytes AND a resolver is wired +
  * interactive, the resolver is consulted (Replace/Rename/Duplicate/Keep/
  * Cancel). Default (no opts / non-interactive): overwrite (v1.2 behavior).
  *
  * @param db - The SQLite database connection.
  * @param dir - The directory to write markdown files to.
- * @param conflict - Optional conflict-resolution opts (B2).
+ * @param conflict - Optional conflict-resolution opts.
  * @returns Array of written file paths.
  */
 export async function exportMarkdown(
@@ -72,7 +72,7 @@ export async function exportMarkdown(
   return written;
 }
 
-/** B2 — consult the conflict seam before clobbering an existing differing
+/** Consult the conflict seam before clobbering an existing differing
  *  file. Returns true when the caller should proceed with the write. Mirrors
  *  `workflow/artifacts.ts`'s `resolveAndWrite` (kept duplicated so neither
  *  package gains a cross-dep). */

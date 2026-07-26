@@ -1,6 +1,6 @@
 // Opt-in OLLAMA embeddings (local Ollama server).
 //
-// DESIGN (spec DS-2 / blueprint D6):
+// DESIGN:
 //   - Provider-explicit and NEVER the default. The caller selects `kind:'ollama'`
 //     with a concrete `baseURL`; the blueprint rejects an always-on Ollama
 //     sidecar, so this is the supported opt-in path for users who already run
@@ -78,7 +78,7 @@ export function ollamaEmbedder(opts: OllamaEmbedderOptions): EmbedFn {
       );
     }
 
-    // Matryoshka truncate to the vec0 width, then re-normalize (DS-8).
+    // Matryoshka truncate to the vec0 width, then re-normalize.
     const truncated =
       vec.length > targetDim ? Float32Array.from(vec.slice(0, targetDim)) : Float32Array.from(vec);
     return l2normalize(truncated);

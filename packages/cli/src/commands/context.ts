@@ -1,4 +1,4 @@
-// S9 t5 — `noir context {search,index,status}`.
+// S9 — `noir context {search,index,status}`.
 //
 // Thin MCP-client commands over the running daemon's S6 context engine. Every
 // read/write here is a single `callDaemonTool` round-trip; the daemon is the
@@ -12,7 +12,7 @@
 // cleanly, so this module surfaces it honestly as exit 1 (ERROR) with the
 // daemon's message, rather than re-packaging it as daemon-down.
 //
-// Stream discipline (S9 DS-4): `--json` emits the versioned `{ok:true,data}`
+// Stream discipline (S9): `--json` emits the versioned `{ok:true,data}`
 // envelope to STDOUT (the only stdout write); human tables / snippets go to
 // STDERR via the centralized `table()` / `log()` helpers (auto-stripped under
 // NO_COLOR / non-TTY / --json). `--limit` is coerced here; an invalid value is a

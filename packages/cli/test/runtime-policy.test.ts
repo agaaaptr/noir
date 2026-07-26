@@ -1,8 +1,8 @@
-// TIER C1 — TUI runtime policy tests.
+// TUI runtime policy tests.
 //
 // Pins the three new global flags (`--tui` / `--no-tui` / `--no-tips`), the
 // deprecation-hint wiring (registry-driven, suppressed by --no-tips / --json),
-// and the B3 gap close (init/sync/create emit their ScaffoldResult on stdout
+// and the ScaffoldResult gap close (init/sync/create emit their ScaffoldResult on stdout
 // under --json). home.test.ts pins the --no-tui home-routing arm; these tests
 // cover the bin-level wiring + the structured stdout emission.
 import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// init is the real module for the B3 dogfood case (mkdtemp). create/sync are
+// init is the real module for the dogfood case (mkdtemp). create/sync are
 // mocked at the boundary; their bin-level emission is the same code path as
 // init, exercised here via the mocked return value. status is mocked so the
 // parse-recognition tests don't do real daemon work.
@@ -77,7 +77,7 @@ beforeEach(() => {
   DEPRECATIONS.length = 0;
 });
 
-describe('C1 — global flags parse + route bare noir', () => {
+describe('global flags parse + route bare noir', () => {
   it('--no-tui + --no-tips + --tui parse without "unknown option" (additive)', async () => {
     // status is mocked at the module boundary inside createProgram (real
     // module). Reach exit 0 => all three flags parsed as known globals.
@@ -94,7 +94,7 @@ describe('C1 — global flags parse + route bare noir', () => {
   });
 });
 
-describe('C1 — deprecation / redirect hints', () => {
+describe('deprecation / redirect hints', () => {
   it('tip() writes to stderr when no --no-tips, suppressed under --no-tips', async () => {
     const captured: string[] = [];
     const orig = process.stderr.write.bind(process.stderr);
@@ -184,7 +184,7 @@ describe('C1 — deprecation / redirect hints', () => {
   });
 });
 
-describe('C1 / B3 gap close — init/sync/create emit ScaffoldResult under --json', () => {
+describe('ScaffoldResult gap close — init/sync/create emit ScaffoldResult under --json', () => {
   it('noir init --json (mkdtemp dogfood) emits the ScaffoldResult with conflicts[] to stdout', async () => {
     const dir = realpathSync(mkdtempSync(join(tmpdir(), 'noir-c1-init-')));
     const origCwd = process.cwd();

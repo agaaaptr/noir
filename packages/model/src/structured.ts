@@ -1,7 +1,7 @@
 // Structured output — prompt-based JSON + validate + at most ONE repair retry
-// (slice S8 / t4, blueprint D5 / DS-4).
+// (slice S8 / t4, blueprint D5).
 //
-// This module is the ONLY retry site in the model layer (DS-12: SDK retries are
+// This module is the ONLY retry site in the model layer (SDK retries are
 // 0; bounded wall-clock + cost). It does NOT call a provider directly — it is
 // given a resolved {@link ProviderAdapter} by `complete()` and orchestrates the
 // JSON round-trip on top of the adapter's single-shot `complete()`. Because the
@@ -9,7 +9,7 @@
 // an agent loop either: it makes at most TWO adapter calls (initial + one
 // repair), parses + validates each, and returns.
 //
-// Strategy (DS-4 / FR-3, v1 — provider-native strict modes deferred):
+// Strategy (FR-3, v1 — provider-native strict modes deferred):
 //   1. Inject a "respond with ONLY JSON matching the schema" system addendum.
 //   2. Call the adapter once (single shot).
 //   3. Extract JSON from the text (tolerant: direct, markdown-fence, span).
@@ -30,7 +30,7 @@ import type { CompleteRequest, CompleteResult, CompleteSchema, ProviderAdapter }
 
 // The JSON contract appended to the system prompt. Strong + specific so the
 // model emits parseable JSON without relying on a provider-native JSON mode
-// (deferred per DS-4). "single valid JSON value" (not "object") so an array or
+// (deferred). "single valid JSON value" (not "object") so an array or
 // scalar schema is also honored.
 const JSON_INSTRUCTION =
   'Respond with ONLY a single valid JSON value that matches the requested schema. ' +
@@ -185,9 +185,9 @@ function parseAndValidate(text: string, schema: CompleteSchema): ParseOutcome {
  * Run the structured (prompt-JSON) flow against a resolved adapter.
  *
  * Makes at most TWO adapter calls: an initial attempt, plus ONE repair retry on
- * parse/validate failure (DS-4). An adapter/transport failure (`{ ok: false }`
+ * parse/validate failure. An adapter/transport failure (`{ ok: false }`
  * or `null`) is propagated immediately — the retry budget is for JSON repair,
- * NOT for transient network errors (those stay bounded at one call, DS-12).
+ * NOT for transient network errors (those stay bounded at one call).
  *
  * On success the validated object is returned as `value` (FR-1), with `text`
  * kept as the raw model output of the successful call and `usage` from that
@@ -208,7 +208,7 @@ export async function runStructured(
   // --- Attempt 1: the initial JSON request. ---
   const first = await adapter.complete(withJsonInstruction(req), key);
   // Adapter/transport failure (incl. null degradation) — propagate, do NOT spend
-  // the retry budget on a non-JSON failure (DS-12: transport stays single-shot).
+  // the retry budget on a non-JSON failure (transport stays single-shot).
   if (!first?.ok) return first;
 
   const parsed1 = parseAndValidate(first.text, schema);

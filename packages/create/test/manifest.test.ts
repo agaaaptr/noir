@@ -17,7 +17,7 @@ describe('buildManifest', () => {
   it('returns the expected entries with correct modes (snapshot)', () => {
     // Snapshot the (path, mode, host) triples — the contract S-T2 depends on.
     //
-    // Fix-wave I1 REVERTED the S10 additive AGENTS.md row for claude: claude's
+    // REVERTED the S10 additive AGENTS.md row for claude: claude's
     // native CLAUDE.md already @-imports `.noir/NOIR.md` + `.noir/rules/RULES.md`,
     // so emitting AGENTS.md too double-imported those sources into Claude's
     // context (2× tokens, drift risk). AGENTS.md is now emitted ONLY for the
@@ -41,7 +41,7 @@ describe('buildManifest', () => {
       { path: '.dockerignore', mode: 'managedBlock', host: null, hasBlock: true },
       { path: '.npmignore', mode: 'managedBlock', host: null, hasBlock: true },
       { path: '.prettierignore', mode: 'managedBlock', host: null, hasBlock: true },
-      // --- claude host-specific — v1.1 set (NO AGENTS.md — I1) ---
+      // --- claude host-specific — v1.1 set (NO AGENTS.md) ---
       { path: 'CLAUDE.md', mode: 'managedBlock', host: 'claude', hasBlock: true },
       { path: 'CLAUDE.md', mode: 'managedBlock', host: 'claude', hasBlock: true },
       { path: '.mcp.json', mode: 'regenerate', host: 'claude', hasBlock: false },
@@ -136,8 +136,8 @@ describe('buildHostArtifacts — emission contract per adapter (S10)', () => {
     return entries(host).map((e) => e.path);
   }
 
-  it('I1: AGENTS.md is emitted ONLY for agents-md/cursor/opencode (NOT claude/gemini)', () => {
-    // Fix-wave I1: claude/gemini skip AGENTS.md (their native context file
+  it('AGENTS.md is emitted ONLY for agents-md/cursor/opencode (NOT claude/gemini)', () => {
+    // claude/gemini skip AGENTS.md (their native context file
     // already @-imports .noir/; a root AGENTS.md would double-import). The
     // three AGENTS.md-native hosts still emit it as their single context surface.
     for (const h of ['agents-md', 'cursor', 'opencode'] as const) {
@@ -148,7 +148,7 @@ describe('buildHostArtifacts — emission contract per adapter (S10)', () => {
     }
   });
 
-  it('claude emits CLAUDE.md (CONTEXT+RULES) + .mcp.json (template); NO AGENTS.md (I1)', () => {
+  it('claude emits CLAUDE.md (CONTEXT+RULES) + .mcp.json (template); NO AGENTS.md', () => {
     const e = entries('claude');
     expect(e.filter((x) => x.path === 'CLAUDE.md')).toHaveLength(2);
     expect(e.filter((x) => x.path === 'CLAUDE.md').every((x) => x.template !== undefined)).toBe(
@@ -157,11 +157,11 @@ describe('buildHostArtifacts — emission contract per adapter (S10)', () => {
     expect(pathsFor('claude')).toContain('.mcp.json');
     // .mcp.json keeps the template path (byte-identical to v1.1).
     expect(e.find((x) => x.path === '.mcp.json')?.template).toBe('mcp.stdio.json.tmpl');
-    // I1 regression anchor: NO AGENTS.md entry for claude.
+    // Regression anchor: NO AGENTS.md entry for claude.
     expect(pathsFor('claude')).not.toContain('AGENTS.md');
   });
 
-  it('gemini emits GEMINI.md (CONTEXT+RULES) + .gemini/mcp.json; NO AGENTS.md (I1)', () => {
+  it('gemini emits GEMINI.md (CONTEXT+RULES) + .gemini/mcp.json; NO AGENTS.md', () => {
     const e = entries('gemini');
     expect(e.filter((x) => x.path === 'GEMINI.md')).toHaveLength(2);
     // Gemini uses bare `@.noir/...` import syntax (no @import, no quotes).
@@ -170,13 +170,13 @@ describe('buildHostArtifacts — emission contract per adapter (S10)', () => {
     expect(pathsFor('gemini')).toContain('.gemini/mcp.json');
     // No CLAUDE.md leakage.
     expect(pathsFor('gemini')).not.toContain('CLAUDE.md');
-    // I1 regression anchor: NO AGENTS.md entry for gemini.
+    // Regression anchor: NO AGENTS.md entry for gemini.
     expect(pathsFor('gemini')).not.toContain('AGENTS.md');
   });
 
   it('cursor emits AGENTS.md + .cursor/mcp.json; NO separate host-rules .mdc (rules via AGENTS.md @-import)', () => {
     // The prior `.cursor/rules/noir-contract.mdc` host-rules pointer was
-    // REMOVED: it was `noir-`-prefixed, so the C3 cursor flat-skill prune
+    // REMOVED: it was `noir-`-prefixed, so the cursor flat-skill prune
     // deleted it on every `noir init/create/sync --host cursor`. Cursor's
     // rules ride AGENTS.md's `@.noir/rules/RULES.md` import instead (same
     // universal surface as agents-md/opencode).

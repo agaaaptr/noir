@@ -1,4 +1,4 @@
-// draft.ts — bounded PRD drafting helper (debt-batch A / P3, slice P).
+// draft.ts — bounded PRD drafting helper (debt-batch A, slice P).
 //
 // The PRD is the pre-SDD product artifact (`.noir/prd/<taskId>-<slug>.md`) the
 // spec later `@import`s. This helper drafts it from the intake + clarification
@@ -9,7 +9,7 @@
 // Questions) so a model-drafted PRD drops cleanly into the artifact the skill
 // writes via `@noir-ai/workflow`'s `writePrd`.
 //
-// Graceful degradation is FIRST-CLASS (DS-5): when `complete()` returns `null`
+// Graceful degradation is FIRST-CLASS: when `complete()` returns `null`
 // (no provider configured, or a keyed provider's env var is missing) `draftPrd`
 // returns `null` too and the caller substitutes {@link PRD_FALLBACK_TEMPLATE}.
 // This is the always-available offline path — the full Noir test suite runs
@@ -43,7 +43,7 @@ export interface DraftPrdInput {
 
 /**
  * Options for a PRD draft call. `provider` + `model` are EXPLICIT (blueprint D5
- * / DS-6 — the provider is never inferred from env-var presence). `signal`
+ * — the provider is never inferred from env-var presence). `signal`
  * bounds wall-clock further; there is never a stream to cancel.
  */
 export interface DraftPrdOptions {
@@ -159,7 +159,7 @@ const PRD_SYSTEM_PROMPT =
  *  - the drafted PRD text on success (`{ ok: true }` from `complete()`);
  *  - `null` when no provider/key is configured OR an attempted call failed —
  *    callers substitute {@link PRD_FALLBACK_TEMPLATE} in both cases (the offline
- *    path is first-class; blueprint D5 / DS-5).
+ *    path is first-class; blueprint D5).
  *
  * Never throws — `complete()`'s adapter try/catch surfaces failures as
  * `{ ok: false, reason }`, which this helper collapses to `null` (a missed

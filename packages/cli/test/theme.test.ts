@@ -1,4 +1,4 @@
-// TIER A2 — design-system tests. Covers the theme module (badge / useColor /
+// Design-system tests. Covers the theme module (badge / useColor /
 // terminalWidth / accessibleMode) AND the real cli-table3 rendering of `table()`
 // (the existing output.test.ts MOCKS cli-table3, so it can't exercise the actual
 // header-color / responsive-width behavior these tests exist to lock down).

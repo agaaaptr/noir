@@ -1,6 +1,6 @@
-// Slice X — integration runtime seam (X-T3). The daemon-side companion to the
-// shipped `integration.json` declarations (X-T1) + the core `integrations` config
-// block (X-T2). This module is deliberately split into THREE concerns so the
+// Integration runtime seam. The daemon-side companion to the
+// shipped `integration.json` declarations + the core `integrations` config
+// block. This module is deliberately split into THREE concerns so the
 // security-critical paths can be unit-tested in isolation:
 //
 //   1. `IntegrationService` — the per-serve-lifecycle handle built ONCE from the
@@ -14,7 +14,7 @@
 //      stderr/audit bodies (the token travels only in the tool RESULT to the
 //      trusted host + the outbound `Authorization` header).
 //   3. `writeIntegrationAudit` — append-only JSONL into the SAME `.noir/audit/`
-//      dir as the S4 gate export (X-OQ2 resolved: REUSE, do not invent a new
+//      dir as the gate export (X-OQ2 resolved: REUSE, do not invent a new
 //      audit location). One executed write ⇒ one line; dry-runs are NOT audited.
 //
 // Doctrine: graceful degradation (no-token ⇒ manual-paste / no-token refuse,
@@ -192,7 +192,7 @@ export function resolveToken(
   return { ok: false, reason: 'no-token', envVar: '' };
 }
 
-/** One executed-write audit record (X-T3, X-OQ2). Append-only JSONL — one line
+/** One executed-write audit record. Append-only JSONL — one line
  *  per executed write. Dry-runs are NOT audited (no write happened). */
 export interface IntegrationAuditEntry {
   /** Fixed discriminator so a future `.noir/audit/` reader can filter mixed
@@ -220,7 +220,7 @@ export interface IntegrationAuditEntry {
 
 /**
  * Append one integration audit record to `.noir/audit/integration-<short>.jsonl`
- * (the SAME `.noir/audit/` dir as the S4 gate export — X-OQ2 resolved: REUSE).
+ * (the SAME `.noir/audit/` dir as the gate export — X-OQ2 resolved: REUSE).
  * Append-only JSONL so concurrent/sequential writes don't clobber each other and
  * the file grows linearly with executed writes. Creates the dir if missing.
  *
@@ -235,7 +235,7 @@ export function writeIntegrationAudit(
   integrationName: string,
   entry: IntegrationAuditEntry,
 ): void {
-  // X-OQ2 resolved: REUSE the S4 `.noir/audit/` dir (SOT — no second audit
+  // X-OQ2 resolved: REUSE the `.noir/audit/` dir (SOT — no second audit
   // location). Integration writes are append-only + cross-task (not keyed by a
   // Noir task id), so a per-integration JSONL file is the natural shape: one
   // executed write ⇒ one line. The `.jsonl` extension keeps it distinct from

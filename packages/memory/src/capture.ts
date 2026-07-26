@@ -1,4 +1,4 @@
-// Host-neutral capture schema for @noir-ai/memory (slice S7, task t7).
+// Host-neutral capture schema for @noir-ai/memory.
 //
 // The bridge between a HOST's auto-capture surface and Noir's `memory_save`. A
 // host hook (Claude Code PreToolUse / PostToolUse / UserPromptSubmit / Stop, or
@@ -6,7 +6,7 @@
 // module's pure {@link toSaveInput} mapper projects it into a {@link SaveInput}
 // that flows through the SAME `MemoryEngine.save` path as a deliberate save.
 //
-// Capture is ALWAYS local + free (blueprint D6 / DS-10): {@link toSaveInput} is
+// Capture is ALWAYS local + free (blueprint D6): {@link toSaveInput} is
 // a PURE function — no I/O, no network, no LLM, no store. It builds the input;
 // the engine's `save` performs the write. There is deliberately NO source field
 // on {@link SaveInput} (it is set at save time), so an event routed through
@@ -16,7 +16,7 @@
 //
 // This module does NOT install anything. Auto-capture is OPT-IN: the user wires
 // a host hooks block deliberately (see templates/claude-hooks.md). `noir init` /
-// `noir sync` NEVER install hooks (DS-4 — no surprise captures, no privacy
+// `noir sync` NEVER install hooks (no surprise captures, no privacy
 // surface the user did not ask for).
 //
 // Canonical ProjectId (D6): {@link CaptureEvent.project} is the canonical id the
@@ -31,7 +31,7 @@ import type { MemorySource, MemoryType, ProjectId, SaveInput } from './types.js'
 
 /**
  * Known host hook events Noir can capture (the four Claude Code hooks the v1
- * template targets, DS-4 / spec §5). The list is intentionally NOT closed:
+ * template targets, spec §5). The list is intentionally NOT closed:
  * {@link CaptureEventType} also accepts any unknown string so a future host's
  * hook names round-trip through the mapper without a code change (mirrors the
  * open-enum taxonomy in types.ts).
@@ -46,7 +46,7 @@ export type CaptureEventType = (typeof CAPTURE_HOOKS)[number] | (string & {});
 // ---------------------------------------------------------------------------
 
 /**
- * Hook events captured by DEFAULT (DS-4). Persist session-end summaries + the
+ * Hook events captured by DEFAULT. Persist session-end summaries + the
  * prompts a user submits; SKIP the noisy per-tool events (`PreToolUse` /
  * `PostToolUse` fire on every tool call and would flood memory + leak tool
  * inputs the user did not ask to remember). A user opts INTO tool-event capture
@@ -136,7 +136,7 @@ export interface CapturePolicy {
  * event with no usable content).
  *
  * The mapper is PURE: it reads no environment, holds no secrets, performs NO I/O
- * and NO LLM call (capture is always local + free, DS-10). It applies the
+ * and NO LLM call (capture is always local + free). It applies the
  * opinionated defaults from spec §5:
  *   • only the policy's `hooks` are captured (default: Stop + UserPromptSubmit);
  *   • content is built from the event's payload fields (summary / prompt / a
@@ -241,7 +241,7 @@ export function describeToolCall(payload: CapturePayload): string | null {
 
 /**
  * Light type inference for a captured event (a heuristic — the user can override
- * by editing the saved row; no LLM is involved, DS-10). Decision-shaped prompts
+ * by editing the saved row; no LLM is involved). Decision-shaped prompts
  * → `'decision'`; tool hooks → `'workflow'`; otherwise `'fact'` (the engine's
  * default type). Pure.
  */

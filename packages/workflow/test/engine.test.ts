@@ -392,10 +392,10 @@ describe('WorkflowEngine', () => {
       }
     });
 
-    // W3: setBlocked now requires a non-empty (post-trim) reason when one is
+    // SetBlocked now requires a non-empty (post-trim) reason when one is
     // supplied — mirrors --force's whitespace rejection. Omitting reason stays
     // valid (clears nothing, just flips state).
-    it('W3: setBlocked rejects a whitespace-only reason (consistent with --force)', async () => {
+    it('setBlocked rejects a whitespace-only reason (consistent with --force)', async () => {
       const store = await openStore({ projectId, root });
       try {
         const engine = new WorkflowEngine(store, root, projectId);
@@ -420,10 +420,10 @@ describe('WorkflowEngine', () => {
     });
   });
 
-  // Debt-batch A / W1 — collapse the dual source of truth. The audit:<id> KV is
-  // AUTHORITATIVE (S4 §11 OQ-5); task.history is a DERIVED view regenerated
+  // Debt-batch A — collapse the dual source of truth. The audit:<id> KV is
+  // AUTHORITATIVE (§11 OQ-5); task.history is a DERIVED view regenerated
   // from it on every advance and every status() read. No drift, one timestamp.
-  describe('W1: history is derived from the authoritative audit KV', () => {
+  describe('history is derived from the authoritative audit KV', () => {
     it('advance mirrors the audit KV exactly (single timestamp, no drift)', async () => {
       const store = await openStore({ projectId, root });
       try {
@@ -470,12 +470,12 @@ describe('WorkflowEngine', () => {
     });
   });
 
-  // Debt-batch A / P4 — soft, escapable PRD recommendation at the spec gate.
+  // Debt-batch A — soft, escapable PRD recommendation at the spec gate.
   // The advance ALWAYS proceeds (never a hard block); the recommendation is
   // folded into the recorded spec gate's `reason` (observable in the audit).
   // --force <reason> is the explicit-override path; quick mode + unlisted
   // taskClasses skip the check entirely.
-  describe('P4: soft PRD recommendation at the spec gate', () => {
+  describe('soft PRD recommendation at the spec gate', () => {
     it('records the PRD recommendation on the spec gate when a feature task has no PRD', async () => {
       const store = await openStore({ projectId, root });
       try {
@@ -613,10 +613,10 @@ describe('WorkflowEngine', () => {
     });
   });
 
-  // Debt-batch A / W3 — jump-to-current-phase was a no-op that re-stamped the
+  // Debt-batch A — jump-to-current-phase was a no-op that re-stamped the
   // audit (a duplicate landing-gate entry). Guarded now: a jump whose target
   // equals the current phase returns the task unchanged.
-  describe('W3: jump-to-current-phase is a no-op (no spurious gate)', () => {
+  describe('jump-to-current-phase is a no-op (no spurious gate)', () => {
     it('returns the task unchanged when opts.to === task.phase (no gate re-stamp)', async () => {
       const store = await openStore({ projectId, root });
       try {
@@ -641,13 +641,13 @@ describe('WorkflowEngine', () => {
     });
   });
 
-  // Debt-batch A / W2 — checkpoint save was vestigial (just bumped updatedAt,
+  // Debt-batch A — checkpoint save was vestigial (just bumped updatedAt,
   // which advance already does; resumeTask consumes nothing from it). Now WIRED
-  // to the S4-spec'd audit JSON export — `checkpoint` flushes `.noir/audit/
+  // to the audit JSON export — `checkpoint` flushes `.noir/audit/
   // <taskId>.json` (writeAuditExport) so the public MCP tool leaves a real
   // cross-tool artifact, not just a timestamp bump.
-  describe('W2: checkpoint flushes the audit JSON export to disk', () => {
-    it('writes .noir/audit/<taskId>.json containing the audit KV (S4 §11 OQ-5)', async () => {
+  describe('checkpoint flushes the audit JSON export to disk', () => {
+    it('writes .noir/audit/<taskId>.json containing the audit KV (§11 OQ-5)', async () => {
       const store = await openStore({ projectId, root });
       try {
         const engine = new WorkflowEngine(store, root, projectId);

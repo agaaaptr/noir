@@ -3,7 +3,7 @@
 // Store-touching commands (`status`, `context *`, `memory *`, `task *`) are thin
 // MCP clients over the running Noir daemon rather than opening the store
 // in-process: that preserves the daemon's single-writer discipline and reuses
-// the MCP tool surface built in S4/S6/S7. This module is the single bridge from
+// the MCP tool surface built in S6. This module is the single bridge from
 // the CLI to that daemon — every command module calls {@link callDaemonTool} (or
 // the multi-call {@link withDaemon}) instead of importing the store directly.
 //
@@ -16,7 +16,7 @@
 // block whose `text` is `JSON.stringify(payload)` (see `textResult` in
 // packages/daemon/src/server.ts), so we parse it back into the payload object.
 //
-// Failure handling (S9 DS-4 exit-code contract): ANY failure to reach or use the
+// Failure handling (S9 exit-code contract): ANY failure to reach or use the
 // daemon — record missing/stale, ensure-start error, transport, connect,
 // protocol, or a tool call that rejects / returns no parseable text — maps to
 // exit code `4` (DAEMON_DOWN) with a stable remediation hint. `--verbose` surfaces
@@ -68,7 +68,7 @@ export interface DaemonToolCaller {
   listTools(): Promise<string[]>;
 }
 
-/** Daemon-down remediation hint (S9 DS-6). Stable across releases. */
+/** Daemon-down remediation hint (S9). Stable across releases. */
 export const DAEMON_DOWN_HINT = 'daemon not reachable — try `noir daemon start`';
 
 function describeCause(cause: unknown): string {

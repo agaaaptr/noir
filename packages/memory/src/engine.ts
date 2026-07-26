@@ -1,4 +1,4 @@
-// MemoryEngine for @noir-ai/memory (slice S7, task t2).
+// MemoryEngine for @noir-ai/memory.
 //
 // The single object that ties the store layer + the shared S6 embedder + the
 // optional S8 model layer together, and that the daemon injects as `ctx.memory`
@@ -12,13 +12,13 @@
 // Public surface (the {@link MemoryEngine} contract in types.ts):
 //   • save(input)     → indexDoc + upsertVec + KV(memory:obs:*) + sessions rollup
 //   • recall(query)   → BM25 ∪ kNN fused by RRF (k=60) scoped to source:'memory',
-//                       + cheap regex entity-boost, hydrated from KV (DS-5/DS-9).
+//                       + cheap regex entity-boost, hydrated from KV.
 //                       Implemented in recall.ts (t3); degrades to BM25-only when
 //                       the embedder is unavailable (F8).
-//   • search(query)   → store.searchFt BM25-only (the instant path, DS-7)
+//   • search(query)   → store.searchFt BM25-only (the instant path)
 //   • sessions()      → KV(memory:sessions) rollup
 //   • forget(ids)     → delete KV + best-effort doc/vec purge (A2)
-//   • consolidate()   → explicit, provider-gated job (DS-6); appends type:'lesson'
+//   • consolidate()   → explicit, provider-gated job; appends type:'lesson'
 //                       with provenance; originals never mutated
 //   • status()        → snapshot mirroring ContextStatus / StoreStatus
 //   • get(id)         → hydrate the full row from KV (engine-internal + tests)
@@ -51,7 +51,7 @@
 //     configured, and NEVER makes a paid call without one (the Agent-Memory
 //     anti-pattern, §9);
 //   • never truncate — `recall`/`search` hydrate the FULL `content` from the KV
-//     row; the FTS snippet is only a preview window (DS-9).
+//     row; the FTS snippet is only a preview window.
 
 import { randomUUID } from 'node:crypto';
 import type { FtsHit, Store } from '@noir-ai/store';
@@ -89,7 +89,7 @@ import {
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Source bucket for every memory row (keeps context + memory disjoint, DS-2). */
+/** Source bucket for every memory row (keeps context + memory disjoint). */
 const MEMORY_SOURCE = 'memory';
 
 /** Default recall/search hit cap (mirrors Store.searchFt's default). */
@@ -99,25 +99,25 @@ const DEFAULT_SEARCH_LIMIT = 10;
 const DEFAULT_TYPE: Observation['type'] = 'fact';
 
 // ---------------------------------------------------------------------------
-// S8 model injection (the ONLY LLM entry point — provider-gated, D5/DS-6)
+// S8 model injection (the ONLY LLM entry point — provider-gated, D5)
 // ---------------------------------------------------------------------------
 
 /**
  * Per-call request shape passed to {@link MemoryModel.complete}. A structural
  * subset of S8's `CompleteRequest` (provider-EXPLICIT; no `tools`/`stream` —
  * single-shot only, blueprint D5). Defined locally so the memory package has no
- * value-level dependency on `@noir-ai/model`; the daemon seam (t6) binds
+ * value-level dependency on `@noir-ai/model`; the daemon seam binds
  * `complete(req, cfg)` into this shape, and tests inject a fake.
  */
 export interface MemoryCompleteRequest {
   system?: string;
   prompt: string;
-  /** Provider block name — explicit, NEVER env-inferred (D5/DS-6). */
+  /** Provider block name — explicit, NEVER env-inferred (D5). */
   provider: string;
   /** Model id for this call. */
   model: string;
   maxTokens?: number;
-  /** Bounded task tier (DS-9). Selects a per-tier output cap; never a provider. */
+  /** Bounded task tier. Selects a per-tier output cap; never a provider. */
   tier?: 'draft' | 'title' | 'summarize' | 'consolidate';
 }
 
@@ -134,9 +134,9 @@ export type MemoryCompleteResult =
 /**
  * The optional S8 model injection. Its absence is the runtime signal that the
  * bounded model layer is not wired (consolidation then refuses
- * `'model-unavailable'` — the documented S7 stub, OQ-3/OQ-8). When present,
+ * `'model-unavailable'` — the documented stub, OQ-3/OQ-8). When present,
  * `complete` is the SOLE LLM entry point and is reached ONLY after the provider
- * gate passes (DS-6: never a silent paid call).
+ * gate passes (never a silent paid call).
  */
 export interface MemoryModel {
   complete(req: MemoryCompleteRequest): Promise<MemoryCompleteResult>;
@@ -259,7 +259,7 @@ export class MemoryEngineImpl implements MemoryEngine {
    * — skipped if the embedder or vec0 is unavailable, F8-style) + the
    * authoritative KV row (`memory:obs:<id>`) + the id index + the sessions
    * rollup. The `docs.meta` payload is the denormalized search projection
-   * (Observation minus content); the KV row is the source of truth (R4).
+   * (Observation minus content); the KV row is the source of truth.
    */
   private indexObservation(observation: Observation, vec: Float32Array | null): void {
     this.store.indexDoc({
@@ -289,13 +289,13 @@ export class MemoryEngineImpl implements MemoryEngine {
   }
 
   // -------------------------------------------------------------------------
-  // get (extra public method — hydrate the FULL row from KV, DS-9)
+  // get (extra public method — hydrate the FULL row from KV)
   // -------------------------------------------------------------------------
 
   /**
    * Hydrate the full {@link Observation} for `id` from the authoritative KV row.
    * Returns `null` for an unknown / forgotten id. This is the only correct way
-   * to read an observation's complete `content` (DS-9).
+   * to read an observation's complete `content`.
    */
   get(id: string): Observation | null {
     return getObservation(this.store, id);
@@ -309,7 +309,7 @@ export class MemoryEngineImpl implements MemoryEngine {
   async recall(query: string, opts?: RecallOptions): Promise<MemoryHit[]> {
     // Hybrid (t3): BM25 ∪ kNN fused by RRF (k=60, weights [0.5,0.5]) scoped to
     // source:'memory', + cheap regex entity-boost, hydrated to FULL content from
-    // the authoritative KV row (DS-5/DS-9). Degrades to BM25-only when the
+    // the authoritative KV row. Degrades to BM25-only when the
     // embedder is unavailable (F8) — `recallMemory` carries the `degraded` /
     // `mode` signal; the public {@link MemoryEngine.recall} contract returns the
     // hits. Read-only against the injected store; not serialized (concurrent
@@ -319,7 +319,7 @@ export class MemoryEngineImpl implements MemoryEngine {
   }
 
   // -------------------------------------------------------------------------
-  // search (BM25-only instant path — final design, DS-7)
+  // search (BM25-only instant path — final design)
   // -------------------------------------------------------------------------
 
   /** @inheritDoc MemoryEngine.search */
@@ -340,7 +340,7 @@ export class MemoryEngineImpl implements MemoryEngine {
   /**
    * Hydrate a ranked id list into {@link MemoryHit}s from the authoritative KV
    * row, applying the optional `type` / `sessionId` filters. Each hit carries
-   * the FULL `content` (DS-9). A ranked id with no KV row (a stale vec-only hit
+   * the FULL `content`. A ranked id with no KV row (a stale vec-only hit
    * whose row was forgotten) is dropped — never emitted with partial data.
    */
   private hydrateHits(
@@ -403,7 +403,7 @@ export class MemoryEngineImpl implements MemoryEngine {
   }
 
   // -------------------------------------------------------------------------
-  // consolidate (explicit, provider-gated — DS-6)
+  // consolidate (explicit, provider-gated)
   // -------------------------------------------------------------------------
 
   /** @inheritDoc MemoryEngine.consolidate */
@@ -412,7 +412,7 @@ export class MemoryEngineImpl implements MemoryEngine {
   }
 
   private async consolidateInternal(opts?: ConsolidateOptions): Promise<ConsolidationResult> {
-    // Delegate to the standalone consolidation module (task t5). The engine
+    // Delegate to the standalone consolidation module. The engine
     // supplies the single-writer store handle, the optional S8 model injection,
     // the provider-explicit config, the canonical projectId, and an
     // `indexDerived` callback that embeds the lesson best-effort then writes it
@@ -513,7 +513,7 @@ export function createMemoryEngine(opts: MemoryEngineOptions): MemoryEngineImpl 
 /**
  * Build the denormalized `docs.meta` search payload (Observation minus `content`
  * + `id`). Written alongside the authoritative KV row; the KV row is the source
- * of truth for hydration (R4).
+ * of truth for hydration.
  */
 function obsMeta(obs: Observation): Record<string, unknown> {
   const meta: Record<string, unknown> = {

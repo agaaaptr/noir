@@ -1,11 +1,11 @@
-// Indexer integration tests (slice S6, task t6).
+// Indexer integration tests.
 //
 // Exercises the SHA-256 content-hash incremental indexer against a REAL store
 // (sqlite-vec gated like packages/store/test/readonly.test.ts) with the
 // deterministic `fakeEmbedFn` — fully offline, no model download, no network
 // (spec §13 / NFR-2). Covers: new-tree index + KV state, content-hash skip
 // (AC-1), modify/delete/add reconciliation, binary/encoding failures, index-time
-// identifier explosion (DS-7), the degraded docs-only path (F8), model-swap
+// identifier explosion, the degraded docs-only path (F8), model-swap
 // warning, forget/reindex, and scoped reconciliation (other roots untouched).
 
 import { createHash } from 'node:crypto';
@@ -214,7 +214,7 @@ describeVec(describeLabel, () => {
     expect(res.indexed).toBe(0);
   });
 
-  it('appends identifier explosion so FTS matches a camelCase identifier (DS-7)', async () => {
+  it('appends identifier explosion so FTS matches a camelCase identifier', async () => {
     store = await openStore({ projectId, root });
     indexer = freshIndexer();
 
@@ -532,10 +532,10 @@ describeVec(describeLabel, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // readChunkContent (C1 — kNN-only-hit snippet hydration)
+  // readChunkContent (kNN-only-hit snippet hydration)
   // ---------------------------------------------------------------------------
 
-  it('C1: readChunkContent returns the CLEAN chunk content + meta for an indexed chunk', async () => {
+  it('readChunkContent returns the CLEAN chunk content + meta for an indexed chunk', async () => {
     store = await openStore({ projectId, root });
     const indexer = freshIndexer();
     // Two chunks in one file (parentDocId = sha256('src/hydrate.ts')).
@@ -561,7 +561,7 @@ describeVec(describeLabel, () => {
     expect(out.meta.chunkIndex).toBe(0);
   });
 
-  it('C1: readChunkContent returns null for a chunk id not in the registry (deleted/foreign)', async () => {
+  it('readChunkContent returns null for a chunk id not in the registry (deleted/foreign)', async () => {
     store = await openStore({ projectId, root });
     const indexer = freshIndexer();
     writeFile('src/one.ts', 'only file\n');
@@ -572,7 +572,7 @@ describeVec(describeLabel, () => {
     expect(indexer.readChunkContent('deadbeef#chunk-0')).toBeNull();
   });
 
-  it('C1: readChunkContent returns null when the source file is missing on disk', async () => {
+  it('readChunkContent returns null when the source file is missing on disk', async () => {
     store = await openStore({ projectId, root });
     const indexer = freshIndexer();
     writeFile('src/gone.ts', 'alpha indexed then deleted from disk\n');
@@ -589,7 +589,7 @@ describeVec(describeLabel, () => {
     expect(indexer.readChunkContent(id)).toBeNull();
   });
 
-  it('C1: readChunkContent returns null when the file content drifted (chunkId no longer re-chunks)', async () => {
+  it('readChunkContent returns null when the file content drifted (chunkId no longer re-chunks)', async () => {
     store = await openStore({ projectId, root });
     const indexer = freshIndexer();
     writeFile('src/drift.ts', 'alpha original content here\n');

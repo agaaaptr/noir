@@ -4,10 +4,10 @@
 //   • interactive (TTY && !CI && !NO_COLOR && !--json && !--no-input) → the
 //     @clack/prompts select menu (intro + quick actions), dispatching the
 //     chosen action through the SAME commander program the bin uses, so the
-//     menu automatically inherits t5/t6 implementations as they land.
+//     menu automatically inherits those implementations as they land.
 //   • non-interactive + --json → run `status --json` (machine snapshot).
 //   • non-interactive + no --json → run `status` (human snapshot). Safe now that
-//     `status` is probe-only (C1): it NEVER auto-starts a daemon and exits 0
+//     `status` is probe-only: it NEVER auto-starts a daemon and exits 0
 //     even when the daemon is down, so bare `noir` in CI / a pipe is a useful
 //     no-op snapshot instead of a noisy failure or a help dump.
 //
@@ -63,11 +63,11 @@ const COMMANDS_HINT =
  * Bare-`noir` router. See module header for the three dispatch arms. Never
  * blocks when input is disabled (the interactive branch is unreachable then).
  *
- * C1 TUI policy: `--no-tui` (`opts.tui === false`) forces the non-interactive
+ * TUI policy: `--no-tui` (`opts.tui === false`) forces the non-interactive
  * `status` path even when {@link isInteractive} would be true (a TTY). `--tui`
  * (`opts.tui === true`) is advisory only — it still requires a TTY, so the
  * `isInteractive(opts)` gate already encodes that. Auto (no flag) preserves the
- * pre-C1 behavior. Advisory only — `home` never hard-gates any subcommand.
+ * prior behavior. Advisory only — `home` never hard-gates any subcommand.
  */
 export async function home(opts: CliOptions, deps: HomeDeps): Promise<void> {
   if (isInteractive(opts) && opts.tui !== false) {
@@ -80,7 +80,7 @@ export async function home(opts: CliOptions, deps: HomeDeps): Promise<void> {
     return;
   }
   // Non-interactive, human: run `status` (human snapshot). status is probe-only
-  // (C1) — it never auto-starts a daemon and exits 0 even when down, so this is
+  // — it never auto-starts a daemon and exits 0 even when down, so this is
   // a useful bare-`noir` snapshot in CI / pipes instead of a help dump.
   await deps.dispatch(['status']);
 }

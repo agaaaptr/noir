@@ -98,7 +98,7 @@ function toCliOptions(g: Record<string, unknown>): CliOptions {
     quiet: g.quiet === true,
     verbose: g.verbose === true,
     input: g.input !== false,
-    // C1 TUI policy — additive only. `--tui`/`--no-tui` land on `tui`
+    // TUI policy — additive only. `--tui`/`--no-tui` land on `tui`
     // (true/false; absent when neither flag is given). Spread conditionally so
     // the default-args case (no flag) does NOT add a `tui` key — keeps the
     // exact-shape assertions in bin.test.ts green.
@@ -136,7 +136,7 @@ function parseHost(raw: string | undefined): HostId | undefined {
 }
 
 // ---------------------------------------------------------------------------
-// C1 — TUI policy + deprecation / redirect infrastructure.
+// TUI policy + deprecation / redirect infrastructure.
 //
 // Approach B (locked): TUI-primary UX, but NEVER hard-gate any subcommand. The
 // bare `noir` home menu is the documented human entry point; every subcommand
@@ -159,7 +159,7 @@ export interface DeprecationEntry {
 }
 
 /**
- * C1 deprecation registry. **Empty today** — no `noir` command is deprecated.
+ * Deprecation registry. **Empty today** — no `noir` command is deprecated.
  * When adding an entry, also update `docs/deprecation.md` (and, if the old
  * form still routes, add a redirect). {@link emitDeprecationHintsFor} scans
  * this on every dispatch and emits one `tip()` per match; `--no-tips` /
@@ -210,7 +210,7 @@ export function createProgram(): Command {
     .name('noir')
     .description('Noir — discipline, context, and memory layer for agentic CLIs.')
     .version(NOIR_VERSION, '-v, --version')
-    // Global flags (S9 DS-4). makeGlobal() propagates each to every subcommand so
+    // Global flags (S9). makeGlobal() propagates each to every subcommand so
     // they parse in any position (e.g. `noir status --json` as well as `noir
     // --json status`) and appear on subcommand --help.
     .addOption(new Option('--json', 'emit machine-readable JSON to stdout'))
@@ -218,7 +218,7 @@ export function createProgram(): Command {
     .addOption(new Option('--quiet', 'suppress non-essential diagnostics'))
     .addOption(new Option('--verbose', 'show additional diagnostic detail'))
     .addOption(new Option('--cwd <path>', 'run as if started in <path>'))
-    // C1 TUI policy — advisory routing for bare `noir` only (never hard-gates a
+    // TUI policy — advisory routing for bare `noir` only (never hard-gates a
     // subcommand). `--tui`/`--no-tui` are a commander negatable pair: parsed
     // onto a single `tui` attribute (true / false / absent=auto). Bare `noir`
     // in a TTY runs the home menu by default; `--no-tui` forces the
@@ -233,7 +233,7 @@ export function createProgram(): Command {
         'route bare `noir` to the non-interactive `status` path even in a TTY',
       ),
     )
-    // C1 deprecation / redirect hints — `--no-tips` silences the `tip()` helper
+    // Deprecation / redirect hints — `--no-tips` silences the `tip()` helper
     // for CI / log-friendly runs. No command is deprecated today; the flag is
     // the headless contract for quieting future notices (see docs/deprecation.md).
     .addOption(new Option('--no-tips', 'suppress redirect / deprecation hints on stderr'))
@@ -274,7 +274,7 @@ export function createProgram(): Command {
     const nonInteractive = opts.json === true || opts.input === false;
     if (nonInteractive) process.env.NOIR_NON_INTERACTIVE = '1';
     else delete process.env.NOIR_NON_INTERACTIVE;
-    // C1: deprecation / redirect hints. Scans {@link DEPRECATIONS} against the
+    // Deprecation / redirect hints. Scans {@link DEPRECATIONS} against the
     // dispatched command path; emits via `tip()` (suppressed by --no-tips /
     // --json). Empty registry today — no-op until an entry is added.
     emitDeprecationHintsFor(actionCmd, toCliOptions(opts));
@@ -332,7 +332,7 @@ export function createProgram(): Command {
           ...(force ? { force } : {}),
           ...(host !== undefined ? { host } : {}),
         });
-        // C1 / B3 gap close: surface the structured ScaffoldResult (with
+        // ScaffoldResult gap close: surface the structured ScaffoldResult (with
         // `conflicts[]`) on stdout under `--json`, wrapped in the versioned
         // `{ok, data}` envelope so it matches the headless contract every read
         // command uses. The args passed to init() are UNCHANGED (bin.test.ts
@@ -376,7 +376,7 @@ export function createProgram(): Command {
           ...(force ? { force } : {}),
           ...(host !== undefined ? { host } : {}),
         });
-        // C1 / B3 gap close: surface the structured ScaffoldResult (with
+        // ScaffoldResult gap close: surface the structured ScaffoldResult (with
         // `conflicts[]`) on stdout under `--json`, wrapped in the `{ok, data}`
         // envelope (headless contract). Skipped on the no-op return.
         if (cmd.optsWithGlobals().json === true && result !== undefined) {
@@ -399,7 +399,7 @@ export function createProgram(): Command {
       'three-way merge managed regions (default since 1.3.0; flag kept for compatibility)',
     )
     .addOption(
-      // B1: opt OUT of managed-region merge (restore strip-replace). Commander
+      // Opt OUT of managed-region merge (restore strip-replace). Commander
       // stores `--no-merge-regions` under `mergeRegions` (default true; flag →
       // false). Bare `noir sync` keeps the merge default (true).
       new Option(
@@ -426,7 +426,7 @@ export function createProgram(): Command {
         const host = parseHost(opts.host);
         const force = opts.force === true;
         const merge = opts.merge === true;
-        // B1: `--no-merge-regions` → commander stores `mergeRegions: false`.
+        // `--no-merge-regions` → commander stores `mergeRegions: false`.
         const noMergeRegions = opts.mergeRegions === false;
         // Single-positional regression anchor: when no `--host`/`--force`/`--merge`/
         // `--no-merge-regions` is given, call `sync(cwd)` exactly (bin.test.ts pins
@@ -441,7 +441,7 @@ export function createProgram(): Command {
                 ...(merge ? { merge } : {}),
                 ...(noMergeRegions ? { mergeManagedRegions: false } : {}),
               });
-        // C1 / B3 gap close: surface the structured ScaffoldResult (with
+        // ScaffoldResult gap close: surface the structured ScaffoldResult (with
         // `conflicts[]`) on stdout under `--json`, wrapped in the `{ok, data}`
         // envelope (headless contract). sync() always returns a ScaffoldResult
         // (never undefined), so the guard is the json flag only.
@@ -464,7 +464,7 @@ export function createProgram(): Command {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir mcp serve [--stdio]');
   });
 
-  // `daemon` group — foreground-honest start/stop/status/restart (S9 t6).
+  // `daemon` group — foreground-honest start/stop/status/restart (S9).
   // `start` accepts `--detach`, which is recognized (documented in --help) but
   // refused inside the action with exit 2 "not implemented (tracked: v1.x)".
   const daemonGrp = program.command('daemon').description('control the Noir daemon');
@@ -513,7 +513,7 @@ export function createProgram(): Command {
       await doctor({ ...toCliOptions(g), ...(dedup ? { dedup: true } : {}) });
     });
 
-  // ----- new subcommand groups (wired by t4/t5/t6) -----
+  // ----- new subcommand groups (wired by t4) -----
   // Signatures match S9 §7 so --help is accurate; every action dispatches to
   // its command module in ./commands/*.js.
 
@@ -580,7 +580,7 @@ export function createProgram(): Command {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir context search|index|status');
   });
 
-  const memoryGrp = program.command('memory').description('memory engine (S7)');
+  const memoryGrp = program.command('memory').description('memory engine');
   memoryGrp
     .command('recall')
     .description('recall memories for a query')
@@ -662,7 +662,7 @@ export function createProgram(): Command {
     );
   });
 
-  // `skills` group — list/sync the builtin pack in-process (S9 t6, S5).
+  // `skills` group — list/sync the builtin pack in-process (S9, S5).
   const skillsGrp = program.command('skills').description('builtin skills (S5)');
   skillsGrp
     .command('list')
@@ -680,7 +680,7 @@ export function createProgram(): Command {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir skills list|sync');
   });
 
-  const taskGrp = program.command('task').description('workflow task control (S4)');
+  const taskGrp = program.command('task').description('workflow task control');
   taskGrp
     .command('new')
     .description('start a new workflow task')
@@ -768,7 +768,7 @@ export function createProgram(): Command {
   // Bare `noir` (no subcommand): the home router (S9 t4). Interactive TTY →
   // @clack menu; non-interactive → `status` (human) or `status --json`
   // (machine). `dispatch` re-parses a fresh program so home/menu actions inherit
-  // t5/t6 work and own their own exit codes. status is probe-only (C1): bare
+  // own their own exit codes. status is probe-only: bare
   // `noir` in CI never auto-starts a daemon and exits 0 even when down.
   const homeDeps: HomeDeps = {
     dispatch: async (argv: readonly string[]): Promise<void> => {

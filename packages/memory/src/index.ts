@@ -1,4 +1,4 @@
-// @noir-ai/memory — Noir's cross-session memory layer (slice S7).
+// @noir-ai/memory — Noir's cross-session memory layer.
 //
 // Local-first, in-process memory: append-only observations (pattern /
 // preference / architecture / bug / workflow / fact / decision / lesson) stored
@@ -19,17 +19,16 @@
 //     anti-pattern, §9);
 //   • never truncate snippets — window-extract is inherited from the store/S6;
 //     the full observation `content` is hydrated from the authoritative KV row
-//     `memory:obs:<id>` on every recall (DS-9).
+//     `memory:obs:<id>` on every recall.
 //
-// Public surface (assembled across t2/t3/t5/t6/t7): the MemoryEngine (the
+// Public surface: the MemoryEngine (the
 // `ctx.memory` service) + the store-layer KV helpers + the data-model types.
 
 // --- Capture (host-neutral CaptureEvent → SaveInput mapper; opt-in, t7) ---
 // The bridge a host hook (Claude Code PreToolUse/PostToolUse/UserPromptSubmit/
 // Stop, or any future host) uses to turn its event into a `memory_save`-shaped
-// SaveInput. Pure — NO I/O, NO network, NO LLM (capture is always local + free,
-// DS-10). Auto-capture is OPT-IN: the user installs the hooks template
-// (templates/claude-hooks.md); `noir init`/`sync` NEVER wire it (DS-4).
+// SaveInput. Pure — NO I/O, NO network, NO LLM (capture is always local + free). Auto-capture is OPT-IN: the user installs the hooks template
+// (templates/claude-hooks.md); `noir init`/`sync` NEVER wire it.
 export {
   buildContent,
   CAPTURE_HOOKS,
@@ -46,19 +45,19 @@ export {
   toSaveInput,
 } from './capture.js';
 
-// --- Config resolver (the core→memory bridge; pure projection; t6) ---
+// --- Config resolver (the core→memory bridge; pure projection) ---
 // resolveMemoryConfig maps @noir-ai/core's user-facing `memory` zod block to the
 // runtime MemoryConfig the engine consumes. Lives HERE (not in core) so core
 // never imports memory (no core→memory cycle — mirrors @noir-ai/context's
 // resolveEmbedderConfig + @noir-ai/model's resolveModelConfig). Pure projection:
-// provider-EXPLICIT, reads NO env, never infers a provider (DS-6) — a missing
+// provider-EXPLICIT, reads NO env, never infers a provider — a missing
 // block resolves to consolidation-disabled, so runConsolidation refuses +
 // logs (`no-provider`) and makes NO paid S8 call.
 export {
   type MemoryUserConfig,
   resolveMemoryConfig,
 } from './config.js';
-// --- Consolidation (explicit, provider-gated, append-only job; t5) ---
+// --- Consolidation (explicit, provider-gated, append-only job) ---
 // runConsolidation is the standalone algorithm extracted from the engine — the
 // gate logic (no-provider / model-unavailable / no-candidates) + the derived
 // `type:'lesson'` append. Pure helpers (gatherCandidates / serializeCandidates

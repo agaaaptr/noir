@@ -1,6 +1,6 @@
-// Consolidation for @noir-ai/memory (slice S7, task t5).
+// Consolidation for @noir-ai/memory.
 //
-// The explicit, append-only, provider-gated consolidation job (DS-6). Extracted
+// The explicit, append-only, provider-gated consolidation job. Extracted
 // from the engine into its own module so the algorithm — gate → gather
 // candidates → synthesize ONE lesson via the S8 bounded model → append the
 // derived row — is unit-testable in isolation (no sqlite-vec, no embedder: the
@@ -16,7 +16,7 @@
 //     (LLM) — NEVER a silent paid call (the Agent-Memory anti-pattern, §9).
 //   • Append-only — on success a DERIVED `type:'lesson'` row is appended with
 //     `provenance:[candidate ids]`; the original observations are NEVER mutated
-//     or deleted (reversible + auditable, DS-6).
+//     or deleted (reversible + auditable).
 //   • Single-shot (D5) — one `complete()` call, free-text → lesson body. There
 //     is no `tools` / `stream` parameter on the request and no loop here.
 //   • Canonical ProjectId — the lesson's `project` is the engine's canonical
@@ -93,7 +93,7 @@ export interface ConsolidationDeps {
 }
 
 // ---------------------------------------------------------------------------
-// runConsolidation — the explicit, provider-gated job (DS-6)
+// runConsolidation — the explicit, provider-gated job
 // ---------------------------------------------------------------------------
 
 /**
@@ -104,7 +104,7 @@ export interface ConsolidationDeps {
  *  1. `no-provider` — consolidation not enabled OR no explicit `provider`
  *     configured. The provider is NEVER inferred from env-var presence (D5/D6).
  *  2. `model-unavailable` — enabled + provider set, but the S8 model injection
- *     is absent OR no explicit `model` id is configured (the documented S7 stub,
+ *     is absent OR no explicit `model` id is configured (the documented stub,
  *     OQ-3/OQ-8). Also the refusal when `complete()` returns `null` (provider
  *     not resolvable at call time — e.g. key missing) OR `{ok:false}` (an
  *     attempted call failed): both are wrapped as `'model-unavailable'`.
@@ -113,7 +113,7 @@ export interface ConsolidationDeps {
  *
  * On success: appends ONE derived `type:'lesson'` observation with
  * `provenance:[candidate ids]` via `indexDerived`; originals are NEVER mutated
- * (append-only — reversible + auditable, DS-6).
+ * (append-only — reversible + auditable).
  */
 export async function runConsolidation(
   deps: ConsolidationDeps,
@@ -123,7 +123,7 @@ export async function runConsolidation(
   const cons = config.consolidation;
   const provider = cons?.provider;
 
-  // GATE 1 — provider-explicit (D5/D6/DS-6). The provider is NEVER inferred
+  // GATE 1 — provider-explicit (D5/D6). The provider is NEVER inferred
   // from env-var presence; no explicit, enabled provider ⇒ refuse + log, and
   // NO S8 call is made. This is the line between free (store) and paid (LLM).
   if (!cons?.enabled || !provider) {
@@ -132,7 +132,7 @@ export async function runConsolidation(
   }
 
   // GATE 2 — the S8 bounded model layer must be injected AND an explicit model
-  // id configured. Its absence is the documented S7 stub (OQ-3/OQ-8): refuse +
+  // id configured. Its absence is the documented stub (OQ-3/OQ-8): refuse +
   // log, never crash, never a call.
   if (model === undefined || !cons.model) {
     appendConsolidationMiss(store, {
@@ -192,7 +192,7 @@ export async function runConsolidation(
     return { ok: false, reason: 'no-candidates', logged: true };
   }
 
-  // Append the derived lesson (originals UNTOUCHED — append-only, DS-6). The
+  // Append the derived lesson (originals UNTOUCHED — append-only). The
   // lesson inherits the baseline salience + the de-duplicated concept tags from
   // its sources; `files` is empty (a lesson is project-level, not file-scoped).
   const provenance = candidates.map((c) => c.id);

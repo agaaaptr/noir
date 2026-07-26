@@ -4,7 +4,7 @@ import { paths } from '@noir-ai/core';
 import type { GateResult } from './types.js';
 
 /**
- * B2 — the SAME conflict-resolution seam @noir-ai/create's `regenerate` uses,
+ * The SAME conflict-resolution seam @noir-ai/create's `regenerate` uses,
  * local to this package so workflow does NOT add a create dependency (mirrors
  * the @noir-ai/skills pattern). The CLI's `buildConflictOpts().onConflict` is
  * structurally compatible. Default behavior is unchanged from v1.2 (overwrite):
@@ -38,7 +38,7 @@ export interface WorkflowConflictOpts {
 }
 
 /**
- * B2 — consult the conflict seam before clobbering an existing differing file.
+ * Consult the conflict seam before clobbering an existing differing file.
  * Returns true when the caller should proceed with the write (resolution was
  * `replace` / `rename`), false when the user's bytes win (`preserve` /
  * `cancel`). On `rename`, the user's file is moved aside BEFORE this returns
@@ -54,7 +54,7 @@ function resolveAndWrite(
   opts: WorkflowConflictOpts | undefined,
 ): { write: boolean } {
   if (opts === undefined || opts.onConflict === undefined) return { write: true };
-  // B2 — non-interactive guard. The bin's preAction sets NOIR_NON_INTERACTIVE
+  // Non-interactive guard. The bin's preAction sets NOIR_NON_INTERACTIVE
   // under --json/--no-input; an explicit `interactive: false` wins. Either ⇒
   // fall back to policy (no prompt).
   const interactive =

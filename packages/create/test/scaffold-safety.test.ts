@@ -109,7 +109,7 @@ describe('scaffold — already-initialized guard (SP-A)', () => {
     const root = join(tmp, 'proj');
     await scaffold({ root, mode: 'init', transport: 'stdio' });
     const second = await scaffold({ root, mode: 'init', transport: 'stdio', force: true });
-    // B1: on an unchanged tree the runtime re-emit is content-hash dedup'd to
+    // On an unchanged tree the runtime re-emit is content-hash dedup'd to
     // `identical` (no disk write). The signal that --force bypassed the guard
     // is `noop === false` AND the run reached the manifest (written ∪ identical
     // non-empty) — NOT `written.length > 0` (that was the pre-dedup proxy).
@@ -121,7 +121,7 @@ describe('scaffold — already-initialized guard (SP-A)', () => {
     const root = join(tmp, 'proj');
     await scaffold({ root, mode: 'init', transport: 'stdio' });
     const up = await scaffold({ root, mode: 'init', transport: 'stdio', upgrade: true });
-    // B1: upgrade ran (migrationsRan non-empty) and was NOT blocked by the
+    // Upgrade ran (migrationsRan non-empty) and was NOT blocked by the
     // already-init guard (noop === false). The re-emitted runtime subset is
     // dedup'd to `identical` on an unchanged tree.
     expect(up.noop).toBe(false);

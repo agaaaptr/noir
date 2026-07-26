@@ -209,11 +209,11 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     }
   });
 
-  // C3 — cursor skills must emit FLAT (.cursor/rules/<name>.mdc), NOT nested.
+  // Cursor skills must emit FLAT (.cursor/rules/<name>.mdc), NOT nested.
   // Cursor's rule loader scans `.cursor/rules/*.mdc` and does NOT recurse into
   // per-name subdirs; the prior nested `<name>/<name>.mdc` layout left skills
   // invisible to Cursor. The verbatim branch keeps the canonical nested shape.
-  it('C3: emitSkillsToDir(cursor) writes .mdc FLAT under targetDir (no <name>/ subdir)', async () => {
+  it('emitSkillsToDir(cursor) writes .mdc FLAT under targetDir (no <name>/ subdir)', async () => {
     await writeSkill(
       'noir-x',
       '---\nname: noir-x\ndescription: Use when testing flat cursor.\n---\n# noir-x\nbody',
@@ -232,7 +232,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     expect(mdc).toContain('# noir-x');
   });
 
-  it('C3: emitSkillsToDir(claude) keeps the canonical NESTED layout (regression anchor)', async () => {
+  it('emitSkillsToDir(claude) keeps the canonical NESTED layout (regression anchor)', async () => {
     // The flat fix is cursor-only; the verbatim branch (claude/agents-md/gemini/
     // opencode) still lands at `<target>/<name>/SKILL.md` (+ references/).
     await writeSkill(
@@ -247,14 +247,14 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     expect(existsSync(join(target, 'noir-x.mdc', 'SKILL.md'))).toBe(false);
   });
 
-  it('C3+T2: cursor flat layout prunes stale .mdc FILES + legacy nested DIRS', async () => {
+  it('cursor flat layout prunes stale .mdc FILES + legacy nested DIRS', async () => {
     // Pack ships only noir-keep. Pre-populate targetDir with:
     //   - noir-stale.mdc         (stale FLAT file — must be pruned)
-    //   - noir-keep-legacy/      (legacy nested dir from pre-C3 cursor sync —
+    //   - noir-keep-legacy/      (legacy nested dir from a legacy cursor sync —
     //                             must be pruned even if name overlaps, since
     //                             the flat layout has no noir-{name}/ dirs at all)
     //   - my-custom-rule.mdc     (user-authored — UNTOUCHED, no noir- prefix)
-    // B2: the assertNotUserOwned guard skips entries that don't look Noir-emitted
+    // The assertNotUserOwned guard skips entries that don't look Noir-emitted
     // (no canonical cursor frontmatter). The stale fixtures below carry the
     // `alwaysApply:` marker the compiler always writes, so they're recognized as
     // Noir-managed and pruned; `my-custom-rule.mdc` lacks it and is preserved.
@@ -276,8 +276,8 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
       'utf8',
     );
     await mkdir(join(target, 'noir-keep-legacy'), { recursive: true });
-    // Legacy pre-C3 cursor nested dir — also canonical shape so the guard
-    // recognizes it as Noir-emitted (the C3 flatLayout clear-unconditional
+    // Legacy cursor nested dir — also canonical shape so the guard
+    // recognizes it as Noir-emitted (the flatLayout clear-unconditional
     // branch fires for canonical nested dirs).
     await writeFile(
       join(target, 'noir-keep-legacy', 'noir-keep-legacy.mdc'),
@@ -324,7 +324,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     );
   });
 
-  it('T2: prunes a stale noir-* dir left by a previous version (idempotent + safe)', async () => {
+  it('prunes a stale noir-* dir left by a previous version (idempotent + safe)', async () => {
     // Fresh pack ships only noir-keep. A prior version wrote noir-stale-thing
     // and a user-authored skill (no `noir-` prefix) lives alongside.
     await writeSkill(
@@ -357,17 +357,17 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     );
   });
 
-  it('T2: empty `pruned` array when nothing stale (clean sync)', async () => {
+  it('empty `pruned` array when nothing stale (clean sync)', async () => {
     await writeSkill('noir-a', '---\nname: noir-a\ndescription: Use when a.\n---\n# a');
     const target = join(fixture, '_out');
     const summary = await emitSkillsToDir(target, { builtinDir: fixture });
     expect(summary.pruned).toEqual([]);
   });
 
-  // B2 — assertNotUserOwned guard. A `noir-*` entry the user hand-authored
+  // AssertNotUserOwned guard. A `noir-*` entry the user hand-authored
   // (non-canonical content) MUST survive the prune. Real-world: a user rolls
   // their own `noir-myown/SKILL.md` without canonical frontmatter.
-  it('B2: assertNotUserOwned preserves a hand-authored noir-* dir (no canonical frontmatter)', async () => {
+  it('assertNotUserOwned preserves a hand-authored noir-* dir (no canonical frontmatter)', async () => {
     await writeSkill(
       'noir-shipped',
       '---\nname: noir-shipped\ndescription: Use when shipped.\n---\n# shipped',
@@ -386,7 +386,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     expect(existsSync(join(target, 'noir-user-handrolled', 'SKILL.md'))).toBe(true);
   });
 
-  it('B2: assertNotUserOwned prunes a Noir-emitted noir-* dir that has canonical frontmatter', async () => {
+  it('assertNotUserOwned prunes a Noir-emitted noir-* dir that has canonical frontmatter', async () => {
     // Pack previously shipped noir-stale; current pack drops it. The dir on
     // disk carries canonical `name: noir-stale` frontmatter → Noir-managed →
     // pruned (not preserved).
@@ -407,9 +407,9 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     expect(summary.preservedUserOwned ?? []).not.toContain('noir-stale');
   });
 
-  // B2 — non-interactive guard. A stub onConflict must NEVER be consulted
+  // Non-interactive guard. A stub onConflict must NEVER be consulted
   // under `interactive: false` (CI / --json / --no-input never hangs a prompt).
-  it('B2: non-interactive guard — onConflict is NOT consulted when interactive=false', async () => {
+  it('non-interactive guard — onConflict is NOT consulted when interactive=false', async () => {
     await writeSkill('noir-x', '---\nname: noir-x\ndescription: Use when x.\n---\n# x');
     const target = join(fixture, '_out');
     const { mkdir, writeFile } = await import('node:fs/promises');
@@ -432,10 +432,10 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     expect(called).toBe(false);
   });
 
-  // B2 — the SAME seam as regenerate. A stub onConflict returning `preserve`
+  // The SAME seam as regenerate. A stub onConflict returning `preserve`
   // leaves the user's bytes intact; the structured `conflicts[]` field records
   // the choice.
-  it('B2: onConflict=preserve keeps user edits + records into summary.conflicts', async () => {
+  it('onConflict=preserve keeps user edits + records into summary.conflicts', async () => {
     await writeSkill('noir-x', '---\nname: noir-x\ndescription: Use when x.\n---\n# x');
     const target = join(fixture, '_out');
     const { mkdir, writeFile } = await import('node:fs/promises');

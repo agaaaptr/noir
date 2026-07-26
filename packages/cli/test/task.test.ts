@@ -1,4 +1,4 @@
-// S9 t5 — `noir task {new,status,advance,next}` tests. daemon-client is mocked
+// S9 — `noir task {new,status,advance,next}` tests. daemon-client is mocked
 // at the module boundary. These pin the contract:
 //   • `status`/`next` read `workflow_status`; a logical-failure envelope
 //     (`{ok:false,error:'no active task'}` / `'unknown task'`) → exit 3

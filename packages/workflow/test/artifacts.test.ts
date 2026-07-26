@@ -226,11 +226,11 @@ describe('ArtifactWriter', () => {
   });
 });
 
-// B2 — universal conflict contract. The artifact writers route through the
+// Universal conflict contract. The artifact writers route through the
 // SAME onConflict seam `regenerate` uses. Default behavior (no opts) stays
 // v1.2 (overwrite); when a resolver is wired + interactive, differing files
 // consult it; non-interactive guards prevent a prompt under CI/--json.
-describe('B2: artifact writers route through the conflict seam', () => {
+describe('artifact writers route through the conflict seam', () => {
   let root: string;
   const taskId = 'task-x';
   const slug = 'slug-x';

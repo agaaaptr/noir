@@ -56,7 +56,7 @@ describe('openaiAdapter — request shape (blueprint D5: single-shot, no tools/s
     expect(messages.map((m) => m.role)).toEqual(['user']);
   });
 
-  it('constructs the SDK client with maxRetries: 0 (DS-12: never silently retry)', async () => {
+  it('constructs the SDK client with maxRetries: 0 (never silently retry)', async () => {
     mocks.createMock.mockResolvedValue({ choices: [{ message: { content: 'ok' } }] });
     await openaiAdapter.complete(baseReq(), 'sk-test');
     expect(mocks.ctorOpts[0]?.maxRetries).toBe(0);
@@ -138,7 +138,7 @@ describe('openaiAdapter — failure handling (never throws)', () => {
     }
   });
 
-  it('refuses to run without a key (DS-6: no silent SDK env fallback to OPENAI_API_KEY)', async () => {
+  it('refuses to run without a key (no silent SDK env fallback to OPENAI_API_KEY)', async () => {
     // Hosted OpenAI is always keyed. An anonymous `openai` block must NOT fall
     // through to the SDK's own env read — that would be a silent paid call.
     const r = await openaiAdapter.complete(baseReq(), undefined);

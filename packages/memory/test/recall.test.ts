@@ -1,4 +1,4 @@
-// Recall tests for @noir-ai/memory (slice S7, task t3).
+// Recall tests for @noir-ai/memory.
 //
 // Three layers:
 //   1. Pure unit (no store): `extractEntities` — path/qualified-token + camelCase
@@ -10,7 +10,7 @@
 //      fallback (embed throws / knn throws), stale-id dropping, type/sessionId
 //      filters, and limit truncation. Fully deterministic + offline.
 //   3. Real-store integration (gated on sqlite-vec): the engine's `recall()`
-//      path end-to-end — hybrid round-trip with FULL content (DS-9),
+//      path end-to-end — hybrid round-trip with FULL content,
 //      source:'memory' scoping (no context leak), the kNN leg contributing
 //      results BM25 alone would miss, and the entity-boost not breaking recall.
 //
@@ -62,7 +62,7 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// 1. Pure unit — extractEntities (cheap regex, NO LLM — DS-5)
+// 1. Pure unit — extractEntities (cheap regex, NO LLM)
 // ---------------------------------------------------------------------------
 
 describe('extractEntities', () => {
@@ -194,7 +194,7 @@ describe('recallMemory — RRF fusion + entity-boost', () => {
     );
     expect(mode).toBe('hybrid');
     expect(degraded).toBe(false);
-    // Both ids fused in; full content hydrated from KV (DS-9).
+    // Both ids fused in; full content hydrated from KV.
     expect(hits.map((h) => h.id).sort()).toEqual(['a', 'b']);
     expect(hits.find((h) => h.id === 'a')?.content).toBe(a.content);
     expect(hits.find((h) => h.id === 'b')?.content).toBe(b.content);
@@ -276,7 +276,7 @@ describe('recallMemory — kNN-only hydration + stale rows', () => {
     expect(degraded).toBe(false);
     expect(hits).toHaveLength(1);
     expect(hits[0]?.id).toBe('x');
-    // DS-9: FULL content, never the (absent) FTS snippet.
+    // FULL content, never the (absent) FTS snippet.
     expect(hits[0]?.content).toBe('the full kv hydrated content');
   });
 
@@ -355,7 +355,7 @@ describe('recallMemory — filters + truncation', () => {
 // ---------------------------------------------------------------------------
 
 describeStore(storeLabel, () => {
-  it('recall returns the FULL observation content via the hybrid path (DS-9)', async () => {
+  it('recall returns the FULL observation content via the hybrid path', async () => {
     const store = await openStore({ projectId, root });
     const engine = createMemoryEngine({ store, root, projectId, embed });
     await engine.save({
@@ -365,7 +365,7 @@ describeStore(storeLabel, () => {
     });
     const hits = await engine.recall('embedder lifecycle');
     expect(hits.length).toBeGreaterThan(0);
-    // DS-9: full content, never the truncated FTS snippet.
+    // Full content, never the truncated FTS snippet.
     expect(hits[0]?.content).toContain('resolved once per serve lifecycle');
   });
 

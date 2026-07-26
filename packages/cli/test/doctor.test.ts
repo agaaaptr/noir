@@ -1,4 +1,4 @@
-// S9 t6 — `noir doctor` behavior tests.
+// S9 — `noir doctor` behavior tests.
 //
 // Covers the check matrix + exit-code contract (exit 1 iff any CRITICAL fail)
 // and the --json `{ok,data}` envelope. Expectations are driven by
@@ -299,7 +299,7 @@ describe('noir doctor — scaffold-version drift (slice S-T2)', () => {
   });
 });
 
-describe('noir doctor — RULES.md budget (R5)', () => {
+describe('noir doctor — RULES.md budget', () => {
   it('absent RULES.md → ok informational, data.rules is null', async () => {
     // Initialize the project so the check runs (rather than skip-with-warn).
     mkdirSync(paths.noirDir(root), { recursive: true });
@@ -459,7 +459,7 @@ describe('noir doctor — host artifacts (S10)', () => {
     // Seed AGENTS.md + .cursor/mcp.json (what `noir init --host cursor` writes).
     // The prior `noir-contract.mdc` host-rules pointer was REMOVED — cursor's
     // rules ride AGENTS.md's @.noir/rules/RULES.md import (the .mdc collided
-    // with the C3 cursor flat-skill prune of `noir-*.mdc` under .cursor/rules/).
+    // with the cursor flat-skill prune of `noir-*.mdc` under .cursor/rules/).
     writeFileSync(join(root, 'AGENTS.md'), '# agents\n', 'utf8');
     mkdirSync(join(root, '.cursor'), { recursive: true });
     writeFileSync(join(root, '.cursor', 'mcp.json'), '{\n  "mcpServers": {}\n}\n', 'utf8');

@@ -7,16 +7,16 @@
 //   `model`, `max_tokens`, `messages`, and (optionally) `system`. There is no
 //   `tools`, `tool_choice`, or `stream` key — so this adapter cannot express an
 //   agent/tool loop even if a caller tried. One bounded call, then return.
-// - SDK retries DISABLED (`maxRetries: 0`, DS-12 / NFR-3): the hosted SDK
+// - SDK retries DISABLED (`maxRetries: 0` / NFR-3): the hosted SDK
 //   defaults to retrying transient failures; we opt out so one call can never
 //   silently multi-charge. The only retry lives in the structured path (t4).
 // - IMPORT-ISOLATED (NFR-2): the `@anthropic-ai/sdk` is imported DYNAMICALLY
 //   inside `complete()`. A bundle whose configured provider never resolves to
 //   this adapter pays zero SDK bytes — the SDK is only pulled in at call time.
-// - SECRETS stay in env (DS-8): `key` is the resolved VALUE that `complete()`
+// - SECRETS stay in env: `key` is the resolved VALUE that `complete()`
 //   read from `process.env[apiKeyEnv]`; this module never touches `process.env`
 //   and never logs the value. Only token COUNTS leave via `usage`.
-// - NO SILENT PAID CALLS (DS-6): if `key` is absent this adapter does NOT let
+// - NO SILENT PAID CALLS: if `key` is absent this adapter does NOT let
 //   the SDK fall back to `ANTHROPIC_API_KEY` in env — that would be a silent
 //   paid call. It returns `{ ok: false }` instead. (`complete()` normally
 //   degrades to `null` for a keyed provider whose env var is missing, so an
@@ -83,7 +83,7 @@ const DEFAULT_MAX_TOKENS = 2048;
 export const anthropicAdapter: ProviderAdapter = {
   name: 'anthropic',
   complete: async (req, key): Promise<CompleteResult> => {
-    // DS-6 defense: Anthropic is a hosted, keyed provider. If `key` is absent
+    // Defense: Anthropic is a hosted, keyed provider. If `key` is absent
     // the provider block was wired without `apiKeyEnv`; do NOT let the SDK fall
     // back to `ANTHROPIC_API_KEY` in env (silent paid call). complete() returns
     // null for a keyed provider whose env var is missing, so reaching here
@@ -100,8 +100,8 @@ export const anthropicAdapter: ProviderAdapter = {
       // to minor version churn).
       const sdk = (await import('@anthropic-ai/sdk')) as unknown as { default: AnthropicSDK };
       const client = new sdk.default({
-        apiKey: key, // the env VALUE resolved by complete() (DS-8).
-        maxRetries: 0, // DS-12: never silently retry (bounded cost).
+        apiKey: key, // the env VALUE resolved by complete().
+        maxRetries: 0, // Never silently retry (bounded cost).
       });
 
       // Single bounded Messages call. The body carries ONLY bounded fields — no

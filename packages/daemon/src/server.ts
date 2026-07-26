@@ -83,7 +83,7 @@ export interface ServerContext {
    * resolved (see `resolveConsolidationCapability` in `./memory-seam.js`, the AND
    * of the master switch + the provider derivation). Only when this is true is the
    * `memory_consolidate` tool registered: consolidation is OPT-IN +
-   * provider-explicit (blueprint D5/D6/DS-6 / §9), NEVER a silent paid call — a
+   * provider-explicit (blueprint D5/D6 / §9), NEVER a silent paid call — a
    * `model:` block set for summarize/title/draft does NOT flip this when the user
    * left `memory.consolidation.enabled` false. The engine's `consolidate`
    * self-refuses (`no-provider`/`model-unavailable`) when this flag is false, so
@@ -91,7 +91,7 @@ export interface ServerContext {
    */
   memoryConsolidation?: boolean;
   /**
-   * Optional integration service (slice X — X-T3). Built once per serve
+   * Optional integration service. Built once per serve
    * lifecycle from the discovered `integration.json` declarations
    * (@noir-ai/skills `discoverIntegrations`) merged with the user's
    * `integrations:<name>` config block. When present, the `integrations_auth`
@@ -532,7 +532,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
             .string()
             .min(1)
             .describe('The insight to remember (full text; never truncated).'),
-          // Open enum (DS-3): unknown types are accepted + stored, so this is a
+          // Open enum: unknown types are accepted + stored, so this is a
           // free-form string (with the known values described) rather than a
           // closed zod enum that would reject forward-compatible types.
           type: z
@@ -659,7 +659,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       },
     );
 
-    // Consolidation is OPT-IN + provider-explicit (blueprint D5/D6/DS-6 / §9):
+    // Consolidation is OPT-IN + provider-explicit (blueprint D5/D6 / §9):
     // the tool is registered ONLY when the daemon wired a consolidation-capable
     // engine — i.e. the user set `memory.consolidation.enabled: true` AND a usable
     // provider+model resolved (see `resolveConsolidationCapability`). The engine's
@@ -708,7 +708,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
     }
   }
 
-  // The integration service (slice X — X-T3) is optional: stdio/HTTP inject it
+  // The integration service is optional: stdio/HTTP inject it
   // once per serve lifecycle (mirrors the store/engine/memory/context handles).
   // `integrations_auth` is ALWAYS registered when the service is present — it
   // resolves an integration token VALUE from process.env at CALL TIME (never at
@@ -759,8 +759,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       },
     );
 
-    // `noir.clickup_write` — the gated-write-proxy for ClickUp (X-T3, X-OQ1
-    // resolved: per-integration tool). Registered ONLY when the shipped
+    // `noir.clickup_write` — the gated-write-proxy for ClickUp. Registered ONLY when the shipped
     // `noir-clickup` declaration is discovered AND the EFFECTIVE runtime resolves
     // to `gated-write-proxy`. The effective runtime is the user's
     // `integrations.clickup.runtime` overlay when set, else the declaration's
@@ -773,7 +772,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
     // defense. The confirm gate is HARD: unless `confirm === true`, NO `fetch`
     // is made; the tool returns a dry-run preview (method/allowlisted URL/
     // redacted headers/body). Executed writes append to `.noir/audit/`
-    // (X-OQ2: REUSE the S4 dir).
+    // (X-OQ2: REUSE the dir).
     const clickupBinding = findBinding(integrations, 'noir-clickup');
     if (clickupBinding && clickupBinding.effectiveRuntime === 'gated-write-proxy') {
       const binding = clickupBinding;
@@ -792,7 +791,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
                 'comment',
                 'batch',
                 // `task:`-prefixed aliases emitted by the LOCKED noir-clickup
-                // SKILL.md (X-T1+T2); normalized to the short form internally.
+                // SKILL.md; normalized to the short form internally.
                 'task:set-status',
                 'task:create-subtask',
                 'task:comment',
@@ -802,7 +801,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
                 "Write op. Short form ('status'|'subtask'|'comment'|'batch') or the task:-prefixed form the skill emits.",
               ),
             // Flat op-specific fields (matches the LOCKED skill's call shape;
-            // the X-T3 `payload` nesting is honored by also accepting a payload
+            // the `payload` nesting is honored by also accepting a payload
             // object — the handler reads both).
             taskId: z.string().optional().describe('status/comment: the ClickUp task id.'),
             status: z
@@ -850,7 +849,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
         },
         async (input) => {
           // Merge the flat input fields with the optional `payload` object so
-          // both the X-T3 `{op,payload}` shape and the LOCKED skill's flat call
+          // both the `{op,payload}` shape and the LOCKED skill's flat call
           // shape work. Flat fields take precedence (they're the explicit form).
           const payloadRaw: Record<string, unknown> = {
             ...(input.payload ?? {}),
@@ -928,7 +927,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           }
 
           // 5. Audit every EXECUTED request to .noir/audit/integration-clickup.jsonl
-          //    (X-OQ2: REUSE the S4 dir). Best-effort; the result envelope reports
+          //    (X-OQ2: REUSE the dir). Best-effort; the result envelope reports
           //    `audited:false` if the write failed.
           let audited = true;
           for (const r of results) {

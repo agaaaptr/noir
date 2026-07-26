@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { resolveMemoryConfig } from '../src/config.js';
 import type { MemoryConfig, MemoryUserConfig } from '../src/index.js';
 
-// resolveMemoryConfig reads NO environment (pure projection — DS-6), but the
+// resolveMemoryConfig reads NO environment (pure projection), but the
 // provider-EXPLICIT invariants below set ANTHROPIC_API_KEY to prove the mapper
 // ignores it. Each case restores env; withEnv mirrors complete.test.ts's helper
 // (kept local so both test files stay self-contained).
@@ -91,7 +91,7 @@ describe('resolveMemoryConfig — enabled block passthrough', () => {
   });
 });
 
-describe('resolveMemoryConfig — provider-EXPLICIT, never inferred (DS-6)', () => {
+describe('resolveMemoryConfig — provider-EXPLICIT, never inferred', () => {
   it('does not invent a provider from env-var presence', async () => {
     // ANTHROPIC_API_KEY may be set in the host env for another tool. The bridge
     // MUST NOT materialize a `provider` from its presence — it copies ONLY what

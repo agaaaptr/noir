@@ -100,7 +100,7 @@ describe('managedBlock writer (delegates to keystone-K writeManagedRegion)', () 
   });
 });
 
-describe('predictManagedBlock / predictManagedBlocks (B1 content-hash dedup)', () => {
+describe('predictManagedBlock / predictManagedBlocks (content-hash dedup)', () => {
   const ctx = CONTEXT_BLOCK;
   const rules = managedBlock('rules', 'html');
   const ctxRegion = buildRegion(ctx, '@import ".noir/NOIR.md"');

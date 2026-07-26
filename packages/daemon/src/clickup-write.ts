@@ -1,4 +1,4 @@
-// Slice X — `noir.clickup_write` gated-write-proxy (X-T3). The daemon-side
+// `noir.clickup_write` gated-write-proxy. The daemon-side
 // companion to the `noir-clickup` skill's write flows (2/3/4/5). SECURITY-CRITICAL.
 //
 // The proxy owns EXACTLY four responsibilities, and ONLY these:
@@ -52,11 +52,11 @@ export class InvalidOp extends Error {
 }
 
 // ---------------------------------------------------------------------------
-// Op vocabulary (X-T3 spec resolution). The proxy accepts BOTH the short verbs
-// (`status` | `subtask` | `comment` | `batch`) from the X-T3 spec AND the
+// Op vocabulary (spec resolution). The proxy accepts BOTH the short verbs
+// (`status` | `subtask` | `comment` | `batch`) from the spec AND the
 // `task:`-prefixed verbs (`task:set-status` | `task:create-subtask` |
 // `task:comment` | `task:batch-create`) that the LOCKED `noir-clickup` SKILL.md
-// documents. The skill is X-T1+T2-locked (cannot be edited), so the tool MUST
+// documents. The skill is locked (cannot be edited), so the tool MUST
 // honor the verbs the skill emits; the short forms are accepted as aliases for
 // ergonomics + spec alignment. Normalized to the short form internally.
 // ---------------------------------------------------------------------------

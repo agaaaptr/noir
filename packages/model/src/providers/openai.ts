@@ -7,13 +7,13 @@
 //   ONLY `model`, `messages`, and (optionally) `max_tokens`. There is no
 //   `tools`, `functions`, or `stream` key — so this adapter cannot express an
 //   agent/tool loop even if a caller tried. Single bounded call, then return.
-// - SDK retries DISABLED (`maxRetries: 0`, DS-12 / NFR-3): the hosted SDK
+// - SDK retries DISABLED (`maxRetries: 0` / NFR-3): the hosted SDK
 //   defaults to retrying transient failures; we opt out so one call can never
 //   silently multi-charge. The only retry lives in the structured path (t4).
 // - IMPORT-ISOLATED (NFR-2): the `openai` SDK is imported DYNAMICICALLY inside
 //   `complete()`. A bundle whose configured provider never resolves to this
 //   adapter pays zero `openai` bytes — the SDK is only pulled in at call time.
-// - SECRETS stay in env (DS-8): `key` is the resolved VALUE that `complete()`
+// - SECRETS stay in env: `key` is the resolved VALUE that `complete()`
 //   read from `process.env[apiKeyEnv]`; this module never touches `process.env`
 //   and never logs the value. Only token COUNTS leave via `usage`.
 //
@@ -38,7 +38,7 @@ type OpenAIChatCompletionsCreate = (
   },
   // Second options argument mirrors the real SDK's `(params, options?)` shape,
   // so this adapter can forward the caller's wall-clock bound (NFR-3) and
-  // re-assert no retries (DS-12) at the per-request level — same pattern the
+  // re-assert no retries at the per-request level — same pattern the
   // anthropic adapter uses for `messages.create`.
   options?: { signal?: AbortSignal; maxRetries?: number },
 ) => Promise<{
@@ -76,7 +76,7 @@ export const openaiAdapter: ProviderAdapter = {
     // Hosted OpenAI ALWAYS requires a key. Guard explicitly so a misconfigured
     // anonymous `openai` block (no `apiKeyEnv`) cannot fall through to the SDK's
     // OWN env fallback (`OPENAI_API_KEY`) — that would be a silent paid call via
-    // env presence, which DS-6 forbids. Anonymous LOCAL endpoints belong to the
+    // env presence, which is forbidden. Anonymous LOCAL endpoints belong to the
     // dedicated `openai-compatible` adapter, not this one.
     if (!key) {
       return { ok: false, reason: 'openai: missing API key (set apiKeyEnv on the provider block)' };
@@ -93,7 +93,7 @@ export const openaiAdapter: ProviderAdapter = {
         // custom OpenAI-shaped endpoint; the common local case uses the
         // dedicated `openai-compatible` adapter instead).
         ...(req.baseURL ? { baseURL: req.baseURL } : {}),
-        maxRetries: 0, // DS-12: never silently retry (bounded cost).
+        maxRetries: 0, // Never silently retry (bounded cost).
       });
 
       const res = await client.chat.completions.create(

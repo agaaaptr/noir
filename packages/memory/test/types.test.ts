@@ -26,7 +26,7 @@ import { MEMORY_TYPES } from '../src/types.js';
 // through the memory barrel without a cycle. No store, no network, no LLM.
 
 describe('@noir-ai/memory types (t1 scaffold)', () => {
-  describe('MEMORY_TYPES (open enum, DS-3)', () => {
+  describe('MEMORY_TYPES (open enum)', () => {
     it('lists the 8 dev-flavored known types in the documented order', () => {
       expect(MEMORY_TYPES).toEqual([
         'pattern',
@@ -46,7 +46,7 @@ describe('@noir-ai/memory types (t1 scaffold)', () => {
     });
 
     it('MemoryType accepts unknown strings (open enum — forward-compat)', () => {
-      // DS-3: unknown values accepted + stored. Both a known literal and an
+      // Unknown values accepted + stored. Both a known literal and an
       // arbitrary user-defined string must be assignable to MemoryType.
       const known: MemoryType = 'pattern';
       const unknown: MemoryType = 'cognitive-note';
@@ -55,7 +55,7 @@ describe('@noir-ai/memory types (t1 scaffold)', () => {
     });
   });
 
-  describe('MemorySource (DS-4)', () => {
+  describe('MemorySource', () => {
     it("'explicit' is the default capture provenance", () => {
       const source: MemorySource = 'explicit';
       expect(source).toBe('explicit');
@@ -69,7 +69,7 @@ describe('@noir-ai/memory types (t1 scaffold)', () => {
     });
   });
 
-  describe('Observation (canonical row, DS-2 / DS-9)', () => {
+  describe('Observation (canonical row)', () => {
     it('constructs with full (never-truncated) content; provenance optional', () => {
       const obs: Observation = {
         id: '01J00000000000000000000001',
@@ -137,7 +137,7 @@ describe('@noir-ai/memory types (t1 scaffold)', () => {
     });
   });
 
-  describe('recall / search options + MemoryHit (DS-9: full content)', () => {
+  describe('recall / search options + MemoryHit (full content)', () => {
     it('RecallOptions carries limit/type/sessionId filters', () => {
       const opts: RecallOptions = { limit: 5, type: 'bug', sessionId: 'sess-1' };
       expect(opts.limit).toBe(5);
@@ -161,7 +161,7 @@ describe('@noir-ai/memory types (t1 scaffold)', () => {
         importance: 0.5,
         source: 'explicit',
       };
-      // full content is present verbatim (DS-9) — not a windowed preview.
+      // full content is present verbatim — not a windowed preview.
       expect(hit.content).toBe('the full observation text, never the FTS snippet');
       expect(hit.score).toBeCloseTo(0.5 / 61, 10);
     });
@@ -180,7 +180,7 @@ describe('@noir-ai/memory types (t1 scaffold)', () => {
     });
   });
 
-  describe('MemoryConfig + consolidation gate (DS-6 / D5)', () => {
+  describe('MemoryConfig + consolidation gate (D5)', () => {
     it('defaults to no consolidation block (offline, free)', () => {
       const cfg: MemoryConfig = {};
       expect(cfg.consolidation).toBeUndefined();
@@ -261,7 +261,7 @@ describe('@noir-ai/memory types (t1 scaffold)', () => {
   describe('MemoryEngine contract', () => {
     it('is structurally implementable; consolidate is optional (no LLM by default)', () => {
       // The interface is the ctx.memory contract. `consolidate` is OPTIONAL —
-      // its absence is the static signal that no LLM surface is wired (DS-6).
+      // its absence is the static signal that no LLM surface is wired.
       // A mock without consolidate must satisfy the interface.
       const engine: MemoryEngine = {
         async save(input: SaveInput): Promise<Observation> {

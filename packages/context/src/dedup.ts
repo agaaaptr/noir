@@ -78,7 +78,7 @@ export async function findSemanticDuplicates(
  * embedding + cosine math, but O(n) (one proposed vs N candidates) instead of
  * O(n²), and returns a single best match (or null) rather than a pair list.
  *
- * Used by the `noir init`/`create`/`sync` write-path dedup hook (TIER B3):
+ * Used by the `noir init`/`create`/`sync` write-path dedup hook:
  * AFTER scaffold writes a host-context file, the CLI reads its bytes as
  * `proposed` and the OTHER existing host-context files as `candidates`. Empty-
  * text inputs (proposed or any candidate) are skipped. Returns the best pair

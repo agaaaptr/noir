@@ -1,6 +1,6 @@
 // S9 t2 — centralized output + exit-code infrastructure for `@noir-ai/cli`.
 //
-// Stream discipline (S9 DS-4): machine-readable data → stdout; every other
+// Stream discipline (S9): machine-readable data → stdout; every other
 // diagnostic (progress, warnings, errors, tables, help) → stderr. Under `--json`
 // the decorated stderr helpers are silenced so stdout stays pristine JSON, and
 // `fail()` emits a structured `{ok:false,error}` envelope to stdout instead.
@@ -9,7 +9,7 @@
 // `--quiet`, `CI`, `NO_COLOR`, or a non-TTY, so the same code path is safe in an
 // interactive shell, a pipe, and CI.
 //
-// Exit codes (S9 DS-4): 0 ok · 1 error · 2 usage · 3 not-found · 4 daemon-down ·
+// Exit codes (S9): 0 ok · 1 error · 2 usage · 3 not-found · 4 daemon-down ·
 // 5 cancelled. These constants live HERE (the single source of truth); bin.ts
 // re-exports them so existing imports from `./bin.js` keep working.
 
@@ -69,12 +69,12 @@ export interface CliOptions {
   readonly input?: boolean;
   /** Convenience alias matching the `--no-input` intent (`true` ⇒ no input). */
   readonly noInput?: boolean;
-  /** C1 TUI-policy flag. `false` (`--no-tui`) forces bare `noir` onto the
+  /** TUI-policy flag. `false` (`--no-tui`) forces bare `noir` onto the
    *  non-interactive `status` path even in a TTY; `true` (`--tui`) is an
    *  advisory hint that still requires a TTY; absent (auto) defers to
    *  {@link isInteractive}. Advisory only — never hard-gates a subcommand. */
   readonly tui?: boolean;
-  /** C1 hint-suppression flag (`--no-tips`). When `true`, redirect /
+  /** Hint-suppression flag (`--no-tips`). When `true`, redirect /
    *  deprecation hints (and any other {@link tip} output) are silenced for
    *  CI / log-friendly runs. */
   readonly noTips?: boolean;
@@ -108,7 +108,7 @@ function isCiEnv(): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Interactivity gate (DS-3/DS-7). Drives both the @clack home menu and the
+// Interactivity gate. Drives both the @clack home menu and the
 // decoration of every helper below. Requires BOTH stdin and stdout to be TTYs:
 // @clack reads keypresses from stdin while ora/picocolors render to stdout.
 // ---------------------------------------------------------------------------
@@ -119,7 +119,7 @@ export function isInteractive(opts: CliOptions = {}): boolean {
 }
 
 /**
- * B1 — derive the explicit `interactive` flag the scaffold engine reads (via
+ * Derive the explicit `interactive` flag the scaffold engine reads (via
  * {@link ScaffoldOptions.interactive}) from the bridge bin.ts owns. The bin's
  * `preAction` sets `NOIR_NON_INTERACTIVE=1` under `--json`/`--no-input`; this
  * helper folds that with the {@link isInteractive} TTY/CI/NO_COLOR gate so a
@@ -180,7 +180,7 @@ export function error(msg: string, opts: CliOptions = {}): void {
 }
 
 /**
- * C1 — redirect / deprecation hint (stderr). Silenced under `--json` (a CI
+ * Redirect / deprecation hint (stderr). Silenced under `--json` (a CI
  * consumer's stdout envelope must stay pristine) AND under `--no-tips`
  * ({@link CliOptions.noTips}). This is the ONLY helper deprecation / redirect
  * notices should use, so a single `--no-tips` flag quiets them all in CI / logs.
@@ -195,7 +195,7 @@ export function tip(msg: string, opts: CliOptions = {}): void {
 // Tables (stderr). Suppressed entirely under `--json` — the command has
 // already emitted the rows as a JSON array via `json()`.
 //
-// Design (TIER A2): cli-table3 styles headers/borders via `@colors/colors`
+// Design: cli-table3 styles headers/borders via `@colors/colors`
 // (whose NO_COLOR/TTY semantics differ from picocolors), which painted EVERY
 // header red while the body stripped — RED is now reserved strictly for ERROR.
 // We bypass `@colors/colors` entirely by passing EMPTY `style.head`/`style.border`

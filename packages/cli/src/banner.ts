@@ -46,7 +46,7 @@ export interface BannerOptions {
  * Render the Noir banner. Wide terminals (≥50 cols) get the full block
  * wordmark; narrow terminals get a compact `◆ noir` mark.
  *
- * Color gating (TIER A2): decoration is on only when the caller did not pass
+ * Color gating: decoration is on only when the caller did not pass
  * `color:false` AND `useColor()` agrees (honoring NO_COLOR / CLICOLOR_FORCE /
  * TTY uniformly via the theme — the single color authority). Under
  * `NOIR_ACCESSIBLE` the gradient is replaced with a solid accent render

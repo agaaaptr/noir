@@ -48,7 +48,7 @@ export interface CreateOptions {
 
 /**
  * Bootstrap Noir's AI layer in `dir`. Returns the {@link ScaffoldResult} (with
- * B2's structured `conflicts[]` + any TIER B3 dedup records appended); the bin
+ * structured `conflicts[]` + any dedup records appended); the bin
  * emits it under `--json`. `undefined` when the already-initialized guard
  * short-circuited (a no-op).
  *
@@ -67,7 +67,7 @@ export async function create(
 
   const root = resolve(dir ?? process.cwd());
   const host: HostId = opts.host ?? 'claude';
-  // B3 — derive interactive once (consistency with init/sync) so both scaffold
+  // Derive interactive once (consistency with init/sync) so both scaffold
   // and skills emission see the same hermetic flag.
   const interactive = resolveInteractive();
   const conflictOpts = buildConflictOpts({ force: opts.force, interactive });
@@ -94,7 +94,7 @@ export async function create(
     process.stderr.write(`host '${host}' has no skill emitter; skipping skills\n`);
   } else {
     const target: CompileTarget = host;
-    // B3 TASK 1 — forward conflictOpts so an interactive `noir create` with a
+    // Forward conflictOpts so an interactive `noir create` with a
     // conflicting skill emit consults the resolver (mirrors init/sync).
     type SkillEmitOpts = NonNullable<Parameters<typeof emitSkillsToDir>[1]>;
     const skillOpts: SkillEmitOpts = {
@@ -113,7 +113,7 @@ export async function create(
     );
   }
 
-  // TIER B3 TASK 2 — write-path semantic dedup. Greenfield create rarely has
+  // Write-path semantic dedup. Greenfield create rarely has
   // existing host-context candidates (the target dir is fresh), so the fast
   // path fires; `--force` on a pre-existing Noir project reads the config and
   // runs the full dedup. Best-effort: a missing/corrupt config warn-skips.

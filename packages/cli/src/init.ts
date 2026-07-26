@@ -51,8 +51,8 @@ export interface InitOptions {
 }
 
 /**
- * Initialize Noir in `root`. Returns the {@link ScaffoldResult} (with B2's
- * structured `conflicts[]` + any TIER B3 dedup records appended) so `--json`
+ * Initialize Noir in `root`. Returns the {@link ScaffoldResult} (with
+ * structured `conflicts[]` + any dedup records appended) so `--json`
  * callers can surface conflict detail. `undefined` when the already-initialized
  * guard short-circuited (a no-op).
  */
@@ -60,7 +60,7 @@ export async function init(root: string, opts: InitOptions): Promise<ScaffoldRes
   assertTransportUrl(opts);
 
   const host: HostId = opts.host ?? 'claude';
-  // B1: the engine reads ScaffoldOptions.interactive (hermetic — never
+  // The engine reads ScaffoldOptions.interactive (hermetic — never
   // process.env). The CLI derives it once from the bridge + TTY/CI/NO_COLOR gate.
   const interactive = resolveInteractive();
   const conflictOpts = buildConflictOpts({ force: opts.force, interactive });
@@ -80,13 +80,13 @@ export async function init(root: string, opts: InitOptions): Promise<ScaffoldRes
   // skills or print "initialized" (scaffold already printed the no-op message).
   if (res.noop) return res;
 
-  // TIER B3 TASK 1 — thread the SAME conflictOpts into skills emission so the
-  // skills-emit conflict flow is LIVE in interactive mode (B2 made the producer
-  // ACCEPT conflict opts; this closes the wiring gap). The safe-default
+  // Thread the SAME conflictOpts into skills emission so the
+  // skills-emit conflict flow is LIVE in interactive mode (the producer
+  // accepts conflict opts; this closes the wiring gap). The safe-default
   // `assertNotUserOwned` runs unconditionally inside the producer.
   await emitHostSkills(root, host, conflictOpts, interactive);
 
-  // TIER B3 TASK 2 — write-path semantic dedup. Non-blocking; degrades to a
+  // Write-path semantic dedup. Non-blocking; degrades to a
   // stderr warn-skip when the embedder is unavailable. Records near-dups on
   // `res.conflicts` so `--json` consumers see them without a prompt.
   // Best-effort project read: first-run init has no .noir/config.yml yet →
@@ -134,7 +134,7 @@ async function emitHostSkills(
     return;
   }
   const target: CompileTarget = host;
-  // B3 TASK 1 — forward conflictPolicy + onConflict + interactive so an
+  // Forward conflictPolicy + onConflict + interactive so an
   // interactive `noir init` with a conflicting skill emit consults the
   // resolver (clack menu + diff preview + apply-to-all); --json/--no-input
   // stays prompt-free via the `interactive: false` guard. The resolver shape

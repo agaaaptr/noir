@@ -6,7 +6,7 @@
 //   - non-TTY / CI / NO_COLOR → preserve (never silently clobber in a pipe)
 //   - --force → overwrite (explicit re-scaffold; no prompt)
 //
-// B2 — universal contract: this seam now drives EVERY file-producing path. The
+// Universal contract: this seam now drives EVERY file-producing path. The
 // engine's regenerate path consults `onConflict` (apply-to-all keyed by artifact
 // CLASS so an N-pointer `noir init --upgrade` → 1 prompt); managedBlock conflicts
 // stay PER-FILE. A unified line-diff preview (LCS-based, from
@@ -59,7 +59,7 @@ export function buildConflictOpts(input: ConflictOptsInput = {}): ScaffoldConfli
   if (input.force === true) {
     return { conflictPolicy: 'overwrite' };
   }
-  // B1: explicit interactive flag wins over the env/TTY heuristic.
+  // Explicit interactive flag wins over the env/TTY heuristic.
   if (input.interactive === false) {
     return { conflictPolicy: 'preserve' };
   }
@@ -128,7 +128,7 @@ async function clackConflictResolver(ctx: ConflictContext): Promise<ConflictReso
     { value: 'preserve', label: 'Keep mine', hint: 'skip; leave your file unchanged' },
     { value: 'cancel', label: 'Cancel', hint: 'abort the scaffold' },
   ];
-  // B2 task 4 — 6th "merge" option only when the engine has marked bytes ready.
+  // 6th "merge" option only when the engine has marked bytes ready.
   if (ctx.mergedWithMarkers !== undefined) {
     options.splice(4, 0, {
       value: 'merge',
@@ -143,7 +143,7 @@ async function clackConflictResolver(ctx: ConflictContext): Promise<ConflictReso
   });
   if (clack.isCancel(choice)) return 'cancel';
   const resolution = choice as ConflictResolution;
-  // B2 task 3 — apply-to-all. Only meaningful for `regenerate` (one decision
+  // Apply-to-all. Only meaningful for `regenerate` (one decision
   // shared across the run); managedBlock/managedBlocks stay per-file (the
   // engine keys memory by path::block there, not by class — so even if the
   // user picks "all", the engine won't reuse it across files).

@@ -17,8 +17,8 @@ import type {
 /**
  * Store KV layout. The TaskState lives at `workflow:<taskId>`; the gate audit
  * lives at `audit:<taskId>` and is the AUTHORITATIVE record for every gate
- * outcome (S4 spec §11 OQ-5). `task.history` on the TaskState is a DERIVED view
- * the engine regenerates from the audit KV (debt-batch A / W1 collapse) so
+ * outcome (spec §11 OQ-5). `task.history` on the TaskState is a DERIVED view
+ * the engine regenerates from the audit KV (debt-batch A collapse) so
  * there is a single write, single timestamp, single read-back — no drift.
  */
 const ACTIVE_KEY = 'workflow:active';
@@ -41,7 +41,7 @@ export interface AdvanceOpts {
    * (validated here, in the engine — `recordGate` is policy-free). The landing
    * gate, if any, is recorded with `decision: 'forced'`. Mutually exclusive
    * with {@link skip}. This is ALSO the explicit-override path for the soft
-   * PRD recommendation (debt-batch A / P4): supplying `--force <reason>` at the
+   * PRD recommendation (debt-batch A): supplying `--force <reason>` at the
    * spec gate of a mandatoryFor task with no PRD records `forced` with the
    * user's reason instead of the recommendation note.
    */
@@ -52,7 +52,7 @@ export interface AdvanceOpts {
    * TaskState; a landing gate-state (specified/planned/done) still records its
    * gate so the observable-checkpoint invariant holds. A no-op jump (target
    * equal to the current phase) returns the task unchanged without re-recording
-   * any gate (W3 guard — the prior behavior double-stamped the audit).
+   * any gate (guard — the prior behavior double-stamped the audit).
    */
   to?: Phase;
   /**
@@ -81,16 +81,16 @@ function gatePhaseForState(state: WorkflowState): Phase | null {
 /**
  * WorkflowEngine — drives an SDD task through its lifecycle.
  *
- * The engine is a thin orchestrator over three T1–T3 primitives:
+ * The engine is a thin orchestrator over three primitives:
  *   • the hand-rolled FSM ({@link applyTransition}) for legal forward moves,
  *   • {@link recordGate} for observable checkpoint audit, and
  *   • the store KV for persisted {@link TaskState}.
  *
- * Policy that did not belong in T1/T2 lives here:
+ * Policy that did not belong in those primitives lives here:
  *   • `--force` requires a non-empty reason (validated before any gate write),
  *   • `blocked` / `abandoned` have no incoming FSM edges and are set directly,
  *   • `opts.to` jumps past FSM edges and is recorded via `jumpEntry`,
- *   • (P4) the soft PRD recommendation at the spec gate for mandatoryFor tasks.
+ *   • the soft PRD recommendation at the spec gate for mandatoryFor tasks.
  *
  * Modes (Full/Quick) and cross-session resume are T5; MCP tools are T6 — the
  * engine stays mode-agnostic here and only stores `mode` on the TaskState.
@@ -109,7 +109,7 @@ export class WorkflowEngine {
     readonly root: string,
     private readonly projectId: ProjectId,
     /**
-     * Gate-config slice (debt-batch A / P4). Optional — the legacy 3-arg call
+     * Gate-config slice (debt-batch A). Optional — the legacy 3-arg call
      * shape (every existing consumer) resolves to {@link DEFAULT_GATE_CONFIG}
      * (PRD recommendation fires for feature/epic). The daemon / CLI bridge
      * passes the resolved `prd.mandatoryFor` from NoirConfig so user overrides
@@ -125,7 +125,7 @@ export class WorkflowEngine {
    * at it. Re-starting an existing taskId overwrites it (intentional — the KV is
    * the source of truth, not a journal).
    *
-   * `taskClass` (debt-batch A / P4) is optional and additive — legacy callers
+   * `taskClass` (debt-batch A) is optional and additive — legacy callers
    * (and existing tests) omit it; the soft PRD gate then never fires for the
    * task (consistent with the "additive, no-op when absent" rule). New callers
    * that want the recommendation pass `'feature'` / `'epic'` / etc.
@@ -161,9 +161,9 @@ export class WorkflowEngine {
    * supplied (quick mode). `force` and `skip` are mutually exclusive. Jumps
    * bypass the FSM and additionally stamp `jumpEntry`.
    *
-   * Single source of truth (W1): the gate is written ONCE to the audit KV via
+   * Single source of truth: the gate is written ONCE to the audit KV via
    * {@link recordGate}, and `task.history` is RE-DERIVED from that KV. No
-   * second write, no second timestamp — the S4 sub-ms drift is gone.
+   * second write, no second timestamp — the sub-ms drift is gone.
    */
   async advance(taskId: string, opts?: AdvanceOpts): Promise<TaskState> {
     const task = this.requireTask(taskId);
@@ -182,7 +182,7 @@ export class WorkflowEngine {
     const jump = opts?.to !== undefined;
     const targetPhase: Phase = jump ? (opts?.to as Phase) : this.nextPhaseOf(task);
 
-    // W3 guard: a jump to the CURRENT phase is a no-op. Previously the engine
+    // Guard: a jump to the CURRENT phase is a no-op. Previously the engine
     // re-stamped the audit (the landing gate fired again), producing a spurious
     // duplicate entry. Return the task unchanged — no gate, no state change.
     if (jump && targetPhase === task.phase) {
@@ -200,7 +200,7 @@ export class WorkflowEngine {
     const gatePhase = gatePhaseForState(targetState);
     if (gatePhase !== null) {
       const decision = opts?.force ? 'forced' : opts?.skip ? 'skipped' : 'approved';
-      // P4 soft PRD recommendation: when entering `specified` (the spec gate),
+      // Soft PRD recommendation: when entering `specified` (the spec gate),
       // the task is mandatoryFor-eligible, no PRD artifact exists, and the user
       // did NOT supply --force, fold a recommendation note into the recorded
       // gate's `reason`. The advance STILL PROCEEDS — this is the "quiet
@@ -220,7 +220,7 @@ export class WorkflowEngine {
             ? { reason: prdHint }
             : {}),
       };
-      // W1: record ONCE to the authoritative audit KV; derive history from it.
+      // Record ONCE to the authoritative audit KV; derive history from it.
       recordGate(this.store, taskId, input);
       task.history = readGateHistory(this.store, taskId);
     }
@@ -235,7 +235,7 @@ export class WorkflowEngine {
   }
 
   /**
-   * Compute the soft PRD-recommendation message (P4), or `null` when the
+   * Compute the soft PRD-recommendation message, or `null` when the
    * recommendation does NOT apply. The recommendation applies when ALL of:
    *   • the gate landing now is the spec gate (entering `specified`), AND
    *   • the task is in full mode (quick mode skips — quickPath writes a stub), AND
@@ -261,7 +261,7 @@ export class WorkflowEngine {
   status(taskId: string): TaskState | null {
     const task = this.store.getState<TaskState>(workflowKey(taskId));
     if (!task) return null;
-    // W1: re-derive history from the authoritative audit KV on every read, so
+    // Re-derive history from the authoritative audit KV on every read, so
     // consumers see any externally-mutated audit (e.g. a manual KV write or a
     // future audit-import path) without waiting for the next advance.
     task.history = readGateHistory(this.store, taskId);
@@ -280,12 +280,12 @@ export class WorkflowEngine {
 
   /**
    * Re-flush the current state to KV + flush the gate audit export to
-   * `.noir/audit/<taskId>.json`. W2 (debt-batch A): the prior implementation
+   * `.noir/audit/<taskId>.json` (debt-batch A): the prior implementation
    * only bumped `updatedAt`, which every advance already does — vestigial.
    * Cross-session resume (`resumeTask`) reads `workflow:<id>` straight from the
-   * KV and consumes nothing from this method; the S4 ledger noted the write was
+   * KV and consumes nothing from this method; the ledger noted the write was
    * dead. The fix is to WIRE the checkpoint to a real cross-tool artifact
-   * flush: the audit JSON on disk (the S4 spec §11 OQ-5 "export to
+   * flush: the audit JSON on disk (the spec §11 OQ-5 "export to
    * `.noir/audit/<taskId>.json`" that {@link writeAuditExport} already
    * implemented but nothing called). The MCP `checkpoint { action:'save' }`
    * tool stays the public surface; its save now leaves a human-inspectable
@@ -306,7 +306,7 @@ export class WorkflowEngine {
    * Set state directly to `blocked` (no FSM edge — the admin escape). The reason
    * is captured on the TaskState for surfacing in `noir.workflow_status`.
    *
-   * W3: a SUPPLIED reason must be non-empty after trimming (mirrors the
+   * A SUPPLIED reason must be non-empty after trimming (mirrors the
    * `--force` policy). `setBlocked(id)` with no reason stays valid — it clears
    * no field and just flips state. A whitespace-only reason is rejected as
    * malformed (consistent with `--force`'s whitespace rejection).

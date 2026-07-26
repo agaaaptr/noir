@@ -1,4 +1,4 @@
-// Indexer for @noir-ai/context (slice S6, task t6).
+// Indexer for @noir-ai/context.
 //
 // SHA-256 content-hash incremental indexer over the existing Store. The daemon
 // is the single writer; the indexer never opens a second connection — it walks
@@ -6,8 +6,8 @@
 // in-process, no sidecar, canonical ProjectId).
 //
 // Per file the indexer:
-//   1. chunks it (chunker.ts: markdown-heading | line/token windows, DS-5);
-//   2. appends the identifier-exploded token stream (DS-7) to form the CANONICAL
+//   1. chunks it (chunker.ts: markdown-heading | line/token windows);
+//   2. appends the identifier-exploded token stream to form the CANONICAL
 //      indexed content — the SAME string feeds `indexDoc` (FTS) and `upsertVec`
 //      (embedding) so BM25 and kNN join on identical material under the SAME
 //      chunk id;
@@ -15,7 +15,7 @@
 //      own SourceKind (`'docs'` | `'codebase'` | …) so the retriever's
 //      per-source filter stays meaningful.
 //
-// Incremental discipline (spec DS-4 / F1–F4): each file's UTF-8 SHA-256 is the
+// Incremental discipline: each file's UTF-8 SHA-256 is the
 // skip key. Unchanged files are skipped wholesale (their chunk count rolls into
 // `skipped`); changed files have their old chunks + vectors deleted, then
 // re-inserted; files removed since the last scan (and under a re-scanned root)
@@ -59,7 +59,7 @@ export const CTX_FILE_PREFIX = 'ctx:file:';
  * rows that belong to this file; `language` mirrors the chunker's inference.
  */
 export interface FileRecord {
-  /** SHA-256 of the file's UTF-8 content — the content-hash skip key (DS-4). */
+  /** SHA-256 of the file's UTF-8 content — the content-hash skip key. */
   sha256: string;
   /** Chunk ids belonging to this file (for exact delete on change/removal). */
   chunkIds: string[];
@@ -335,7 +335,7 @@ export interface Indexer {
    * (`<sha256(path)>#chunk-<n>`), so it is the natural place to look up a
    * chunk by id.
    *
-   * Used by the engine to hydrate kNN-only retriever hits (C1) — wired as the
+   * Used by the engine to hydrate kNN-only retriever hits — wired as the
    * retriever's `readDoc`. Returns `null` when:
    *   • the chunk id is not in any tracked FileRecord (deleted, or never
    *     indexed — e.g. a vec row whose `docs` row came from a foreign source);
@@ -595,7 +595,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
       const chunkIds: string[] = [];
       let language = inferLanguage(key);
       for (const chunk of chunks) {
-        // Canonical indexed content: clean text + identifier explosion (DS-7).
+        // Canonical indexed content: clean text + identifier explosion.
         // Both FTS and the embedding consume this exact string; chunk.meta.sha256
         // (computed by the chunker) is the hash of this same form.
         const indexedContent = withIdentifierExplosion(chunk.content);

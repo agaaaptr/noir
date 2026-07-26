@@ -1,6 +1,6 @@
 // Opt-in REMOTE embeddings (OpenAI / Voyage / Cohere).
 //
-// DESIGN (spec DS-2 / blueprint D6 / NFR-1):
+// DESIGN:
 //   - Provider-explicit and NEVER the default. The caller selects `kind:'remote'`
 //     with a concrete `provider` in config; there is no inference from env vars,
 //     so source text is never silently sent to a cloud endpoint (D6 hard rule).
@@ -10,8 +10,8 @@
 //     (F8) rather than crashing. This makes a misconfigured key observable
 //     instead of fatal.
 //   - Vectors are Matryoshka-truncated client-side to `dim` (default 384) and
-//     re-normalized via the shared `l2normalize` (truncation shrinks the norm;
-//     DS-8). A vector SHORTER than `dim` is a hard config error (wrong model).
+//     re-normalized via the shared `l2normalize` (truncation shrinks the norm).
+//     A vector SHORTER than `dim` is a hard config error (wrong model).
 //
 // This is a deliberately thin stub: it fetches the provider's embeddings
 // endpoint directly with the global `fetch`. Full provider SDKs (streaming,
@@ -130,7 +130,7 @@ export function remoteEmbedder(opts: RemoteEmbedderOptions): EmbedFn {
       );
     }
 
-    // Matryoshka truncate to the vec0 width, then re-normalize (DS-8).
+    // Matryoshka truncate to the vec0 width, then re-normalize.
     const truncated =
       vec.length > targetDim ? Float32Array.from(vec.slice(0, targetDim)) : Float32Array.from(vec);
     return l2normalize(truncated);

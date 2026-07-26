@@ -1,4 +1,4 @@
-// S9 t6 — `noir skills {list,sync}`.
+// S9 — `noir skills {list,sync}`.
 //
 // Both sub-commands are IN-PROCESS (no daemon, no store): the builtin skill
 // pack is a filesystem artifact shipped with `@noir-ai/skills`, so `list` reads
@@ -220,7 +220,7 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
     `Synced ${summary.emitted.length} Noir skill${summary.emitted.length === 1 ? '' : 's'} to ${dir}.`,
     opts,
   );
-  // T2: surface stale-dir pruning in both human + JSON modes for parity with
+  // Surface stale-dir pruning in both human + JSON modes for parity with
   // `noir sync` (the structured `pruned` field above covers --json).
   if (pruned.length > 0) {
     warn(

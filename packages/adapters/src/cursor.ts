@@ -13,7 +13,7 @@ import type {
  * for context (same content as every other host); that file's
  * `@.noir/rules/RULES.md` import IS the Noir working-rules surface for cursor
  * (NO separate `.cursor/rules/noir-contract.mdc` host-rules pointer — that
- * file was REMOVED: it was `noir-`-prefixed and the C3 cursor flat-skill prune
+ * file was REMOVED: it was `noir-`-prefixed and the cursor flat-skill prune
  * in `emitSkillsToDir` deleted it on every `noir init/create/sync --host
  * cursor`). Skills compile to FLAT `.mdc` in `.cursor/rules/` via
  * `compileSkill(_, 'cursor')` (one file per skill, no per-name subdir). MCP

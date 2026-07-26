@@ -54,9 +54,9 @@ describe('mergeThreeWay — overlapping changes conflict', () => {
   });
 });
 
-// B2 task 4 — zdiff3 marker shape (`<<<<<<< / ||||||| base / ======= / >>>>>>>`).
+// zdiff3 marker shape (`<<<<<<< / ||||||| base / ======= / >>>>>>>`).
 // Minimal stays byte-identical to v1.2 (no base section); zdiff3 includes it.
-describe('mergeThreeWay — B2 zdiff3 markers', () => {
+describe('mergeThreeWay — zdiff3 markers', () => {
   it('minimal (default) → no base section (byte-identical to v1.2)', () => {
     const r = mergeThreeWay('L', 'O', 'T');
     expect(r.merged).toBe('<<<<<<< ours\nO\n=======\nT\n>>>>>>> theirs');
@@ -79,9 +79,9 @@ describe('mergeThreeWay — B2 zdiff3 markers', () => {
   });
 });
 
-// B2 task 2 — lineDiff: LCS-based unified line diff for the resolver's stderr
+// lineDiff: LCS-based unified line diff for the resolver's stderr
 // preview. Pure; mirrors git diff's add/del/eq shape.
-describe('lineDiff — B2 unified line diff', () => {
+describe('lineDiff — unified line diff', () => {
   it('identical content → all eq', () => {
     const d = lineDiff('a\nb', 'a\nb');
     expect(d.every((x) => x.type === 'eq')).toBe(true);

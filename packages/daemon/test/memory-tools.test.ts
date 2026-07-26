@@ -1,4 +1,4 @@
-// MCP round-trip tests for the memory tools (slice S7, task t4).
+// MCP round-trip tests for the memory tools.
 //
 // Mirrors packages/daemon/test/context-tools.test.ts: open a real tmp store,
 // build the MemoryEngine via the daemon seam, register the tools through
@@ -10,7 +10,7 @@
 // — memory_save still succeeds (the embedder throw is caught best-effort; the
 // row is BM25-searchable + hydrated from KV), and memory_recall degrades to
 // BM25-only. This exercises the FULL MCP plumbing (registerTool schema +
-// handlers), the DS-9 full-content hydration, the sessions rollup, forget, the
+// handlers), the full-content hydration, the sessions rollup, forget, the
 // read-only error envelope, and the provider-gated consolidation registration +
 // refusal (never a silent paid call). The hybrid/real-vector paths are covered
 // by packages/memory/test (recall unit tests use fakeEmbedFn directly).
@@ -137,7 +137,7 @@ describeVec(describeLabel, () => {
       expect(saved.ok).toBe(true);
       expect(typeof saved.id).toBe('string');
       expect((saved.observation as Record<string, unknown>).type).toBe('pattern');
-      // DS-9: the full content round-trips untruncated.
+      // The full content round-trips untruncated.
       expect((saved.observation as Record<string, unknown>).content).toBe(
         'always resolve the embedder once per serve lifecycle',
       );
@@ -152,7 +152,7 @@ describeVec(describeLabel, () => {
       const top = results[0];
       if (!top) throw new Error('expected a recall hit');
       expect(top.id).toBe(obsId);
-      // DS-9: full content hydrated from the authoritative KV row.
+      // Full content hydrated from the authoritative KV row.
       expect(top.content).toBe('always resolve the embedder once per serve lifecycle');
       expect(top.type).toBe('pattern');
 
@@ -241,7 +241,7 @@ describeVec(describeLabel, () => {
     }
   });
 
-  // OQ-5 / DS-6: memory_consolidate is registered ONLY when a consolidation-
+  // OQ-5: memory_consolidate is registered ONLY when a consolidation-
   // capable engine is present (an explicit provider+model resolved from the
   // model config). With no model config ⇒ not registered; the five core tools
   // still are.
@@ -277,21 +277,21 @@ describeVec(describeLabel, () => {
     }
   });
 
-  // DS-6 / §9 hard rule — the consent boundary is `memory.consolidation.enabled`,
+  // §9 hard rule — the consent boundary is `memory.consolidation.enabled`,
   // NOT `model.defaultProvider`. The `memory:` block is the user's master switch;
   // the `model:` block only provides the provider+key the bound S8 `complete`
   // uses once the switch is ON. Two cases:
   //  (a) enabled + provider+model under `memory:` ⇒ `memory_consolidate` IS
   //      registered, and refuses `model-unavailable` when the provider's key env
   //      is unset (S8 wired but can't actually call — no paid call);
-  //  (b) the C1 inverse: `enabled:false` + `model.defaultProvider:'anthropic'`
+  //  (b) the inverse: `enabled:false` + `model.defaultProvider:'anthropic'`
   //      (set for summarize/title/draft, NOT memory) ⇒ `memory_consolidate` is
   //      NOT registered, and the engine refuses without a model call. This is the
   //      line against the Agent-Memory "silent paid consolidation" leak — the
   //      exact bug this test replaces (the prior green encoded the bypass: it
   //      registered the tool from `model:` alone, ignoring the absent `memory:`
   //      consent, which is blueprint §9's anti-pattern).
-  it('gates memory_consolidate on memory.consolidation.enabled — no silent paid call (C1)', async () => {
+  it('gates memory_consolidate on memory.consolidation.enabled — no silent paid call', async () => {
     // Provider block reused across both cases: an anthropic block whose key env
     // is intentionally unset (a name nothing in the test env provides).
     const modelCfg = resolveModelConfig({
@@ -340,7 +340,7 @@ describeVec(describeLabel, () => {
       await store.close();
     }
 
-    // --- (b) C1 inverse: enabled:false + model.defaultProvider set ---
+    // --- (b) inverse: enabled:false + model.defaultProvider set ---
     // The blueprint §9 leak: a user who set `model.defaultProvider:'anthropic'`
     // for summarize/title/draft but opted OUT of memory consolidation
     // (`enabled:false`) must NOT get a paid Anthropic consolidation call. The

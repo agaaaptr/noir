@@ -1,4 +1,4 @@
-// @noir-ai/memory types (slice S7, task t1).
+// @noir-ai/memory types.
 //
 // The observation data model + the MemoryEngine contract. These are the
 // package's OWN interfaces — the storage surface (`Store`, `ProjectId`) is
@@ -9,7 +9,7 @@
 // for S6 — memory takes `{store, embed, ...}`, no embedder duplication.
 //
 // There is deliberately NO zod here: core owns the user-facing schema
-// (`NoirConfigSchema.memory`, task t6) and memory owns this engine/type
+// (`NoirConfigSchema.memory`) and memory owns this engine/type
 // surface, which keeps the dependency graph acyclic (core never imports memory
 // — mirrors @noir-ai/context types.ts).
 //
@@ -19,10 +19,10 @@
 //     or LLM call;
 //   • ANY LLM touch (consolidation) is opt-in + provider-explicit — the ONLY
 //     LLM entry point is the optional `MemoryEngine.consolidate`, gated on
-//     `MemoryConfig.consolidation.provider` (task t5). It refuses + logs when
+//     `MemoryConfig.consolidation.provider`. It refuses + logs when
 //     no provider is configured — NEVER a silent paid call;
 //   • never truncate — `Observation.content` and `MemoryHit.content` carry the
-//     FULL text; the FTS snippet is only a preview window (DS-9).
+//     FULL text; the FTS snippet is only a preview window.
 //
 // Conventions mirror @noir-ai/store / @noir-ai/context types: JSDoc on every
 // interface/field, `as const` source tables → derived unions, `.js` extensions
@@ -31,12 +31,12 @@
 import type { ProjectId } from '@noir-ai/core';
 
 // ---------------------------------------------------------------------------
-// Taxonomy (DS-3: dev-flavored OPEN enum; unknown values accepted + stored)
+// Taxonomy (dev-flavored OPEN enum; unknown values accepted + stored)
 // ---------------------------------------------------------------------------
 
 /**
- * Known observation types (dev-flavored, DS-3). `lesson` is reserved for
- * consolidation output (task t5); the others are user-supplied on save. This
+ * Known observation types (dev-flavored). `lesson` is reserved for
+ * consolidation output; the others are user-supplied on save. This
  * list is intentionally NOT a closed set: {@link MemoryType} also accepts any
  * unknown string so forward-compatible / user-defined types round-trip through
  * the store without a migration.
@@ -55,14 +55,14 @@ export const MEMORY_TYPES = [
 /**
  * Open enum: one of {@link MEMORY_TYPES} OR any string. The `(string & {})`
  * intersection preserves literal autocompletion for the known values while
- * permitting arbitrary user-defined types (DS-3: unknown values accepted +
+ * permitting arbitrary user-defined types (unknown values accepted +
  * stored). `lesson` is reserved for consolidation output.
  */
 export type MemoryType = (typeof MEMORY_TYPES)[number] | (string & {});
 
 /**
  * Provenance of a capture. `'explicit'` = a deliberate `memory_save` (the v1
- * default, DS-4). `'auto:<hook>'` = an opt-in Claude Code hooks template
+ * default). `'auto:<hook>'` = an opt-in Claude Code hooks template
  * capture (e.g. `'auto:stop'`, `'auto:posttooluse'`); the template ships as
  * files the user installs deliberately — never auto-wired by `noir init`/`sync`.
  */
@@ -81,23 +81,23 @@ export type MemorySource = 'explicit' | `auto:${string}`;
 export const DEFAULT_IMPORTANCE = 0.5;
 
 // ---------------------------------------------------------------------------
-// Observation (the canonical row, DS-2 / DS-9)
+// Observation (the canonical row)
 // ---------------------------------------------------------------------------
 
 /**
- * The canonical memory row. Realized ON TOP of the store (DS-2): the full row
+ * The canonical memory row. Realized ON TOP of the store: the full row
  * lives in KV `memory:obs:<id>` (the authoritative source of truth — the line
- * between it and the indexes is R4's mitigation), with
+ * between it and the indexes is the mitigation), with
  * `indexDoc({source:'memory'})` (FTS5) + `upsertVec({source:'memory'})`
- * (sqlite-vec) as search indexes. `content` is NEVER truncated (DS-9) — the
+ * (sqlite-vec) as search indexes. `content` is NEVER truncated — the
  * FTS snippet is only a preview window hydrated-around on recall.
  */
 export interface Observation {
   /** Unique id (crypto.randomUUID()). Key into KV `memory:obs:<id>`. */
   id: string;
-  /** Open enum (DS-3). `lesson` is reserved for consolidation output. */
+  /** Open enum. `lesson` is reserved for consolidation output. */
   type: MemoryType;
-  /** Full text — never truncated (DS-9). Indexed into FTS5 + embedded into vec0. */
+  /** Full text — never truncated. Indexed into FTS5 + embedded into vec0. */
   content: string;
   /** Canonical project id (NEVER a filesystem path — blueprint D6). */
   project: ProjectId;
@@ -113,12 +113,12 @@ export interface Observation {
   concepts: string[];
   /** Repo-relative paths mentioned. */
   files: string[];
-  /** Capture provenance (DS-4). */
+  /** Capture provenance. */
   source: MemorySource;
   /**
    * Source observation ids, set ONLY on derived `type:'lesson'` rows produced
-   * by consolidation (task t5). Absent on user-saved observations. Originals
-   * are never mutated or deleted (append-only — reversible + auditable, DS-6).
+   * by consolidation. Absent on user-saved observations. Originals
+   * are never mutated or deleted (append-only — reversible + auditable).
    */
   provenance?: string[];
 }
@@ -131,12 +131,12 @@ export interface Observation {
  * Input to {@link MemoryEngine.save} / the `memory_save` MCP tool. Only
  * `content` is required; the engine applies defaults (`type`, `importance`,
  * `source:'explicit'`, `ts`, `id`) at save time. No field here triggers a
- * network or LLM call — capture is always local + free (DS-10).
+ * network or LLM call — capture is always local + free.
  */
 export interface SaveInput {
   /** Full text to remember. Required. */
   content: string;
-  /** Open enum (DS-3); a default is applied at save time when omitted. */
+  /** Open enum; a default is applied at save time when omitted. */
   type?: MemoryType;
   /** User tags. */
   concepts?: string[];
@@ -149,7 +149,7 @@ export interface SaveInput {
 }
 
 // ---------------------------------------------------------------------------
-// Recall / search hits (DS-9: full content, never truncated)
+// Recall / search hits (full content, never truncated)
 // ---------------------------------------------------------------------------
 
 /**
@@ -173,14 +173,14 @@ export interface SearchOptions {
 
 /**
  * A ranked recall/search hit. `content` is the FULL observation text hydrated
- * from the authoritative KV row — never the truncated FTS snippet (DS-9).
+ * from the authoritative KV row — never the truncated FTS snippet.
  * `score` is the RRF-fused rank score (recall, k=60) or the BM25 score
  * (search); it is rank-based, not a normalized similarity.
  */
 export interface MemoryHit {
   id: string;
   type: MemoryType;
-  /** Full text — never truncated (DS-9). */
+  /** Full text — never truncated. */
   content: string;
   /** RRF-fused rank score (recall) or BM25 score (search). */
   score: number;
@@ -216,7 +216,7 @@ export interface SessionInfo {
 // ---------------------------------------------------------------------------
 
 /**
- * Consolidation config block. Provider-EXPLICIT (blueprint D5/D6, DS-6): the
+ * Consolidation config block. Provider-EXPLICIT (blueprint D5/D6): the
  * provider is NEVER inferred from env-var presence — no explicit `provider`
  * ⇒ {@link MemoryEngine.consolidate} refuses + logs
  * (`{ok:false, reason:'no-provider'}`) and writes a `memory:consolidation:miss`
@@ -237,7 +237,7 @@ export interface ConsolidationConfig {
  * Runtime memory config consumed by the engine (the subset of the core
  * `memory:` block that affects engine behavior). The full user-facing schema
  * (capture / hooksTemplate / recall / consolidation) lives in
- * `NoirConfigSchema.memory` (@noir-ai/core, task t6); this is its runtime
+ * `NoirConfigSchema.memory` (@noir-ai/core); this is its runtime
  * projection. Defaults to `{}` ⇒ consolidation disabled (offline, free).
  */
 export interface MemoryConfig {
@@ -268,7 +268,7 @@ export interface ConsolidateOptions {
 }
 
 /**
- * Result of {@link MemoryEngine.consolidate} (DS-6). Either a success appending
+ * Result of {@link MemoryEngine.consolidate}. Either a success appending
  * one or more derived `type:'lesson'` rows (originals never mutated), or a
  * documented refusal. A refusal is NEVER a crash and NEVER a silent paid call:
  * `logged:true` records the miss so the user can see why nothing happened.
@@ -310,8 +310,8 @@ export interface MemoryStatus {
  * embedder duplication (plan §Architecture).
  *
  * `consolidate` is OPTIONAL: registered only when consolidation is enabled AND
- * a provider is configured (task t5, OQ-5). Its absence is the static signal
- * that no LLM surface is wired (DS-6/D5).
+ * a provider is configured (OQ-5). Its absence is the static signal
+ * that no LLM surface is wired (D5).
  *
  * Single-writer discipline: the engine — like the context indexer — is the
  * ONLY thing that writes `source:'memory'` rows through the injected handle; it
@@ -323,7 +323,7 @@ export interface MemoryEngine {
   save(input: SaveInput): Promise<Observation>;
   /**
    * Hybrid recall: BM25 ∪ kNN fused by RRF (k=60), scoped to `source:'memory'`,
-   * + cheap regex entity-boost, hydrated from KV (DS-5/DS-9). Degrades to
+   * + cheap regex entity-boost, hydrated from KV. Degrades to
    * BM25-only when the embedder is unavailable.
    */
   recall(query: string, opts?: RecallOptions): Promise<MemoryHit[]>;
@@ -334,7 +334,7 @@ export interface MemoryEngine {
   /** Remove observations: KV row + best-effort doc/vec purge. */
   forget(ids: string[]): ForgetResult;
   /**
-   * Explicit consolidation job (DS-6). Provider-gated: refuses + logs if no
+   * Explicit consolidation job. Provider-gated: refuses + logs if no
    * provider is configured — NEVER a silent paid call. Appends derived
    * `type:'lesson'` rows; originals are never mutated.
    */
@@ -347,7 +347,7 @@ export interface MemoryEngine {
 // Re-exports (single import surface — mirrors @noir-ai/context types.ts)
 // ---------------------------------------------------------------------------
 
-// The embedder seam S7 reuses: recall embeds the query via the SAME `EmbedFn`
+// The embedder seam reuses: recall embeds the query via the SAME `EmbedFn`
 // the daemon already resolved for S6. Re-exported from @noir-ai/context so the
 // memory package has a single import surface for both the seam + its config.
 export type { EmbedderConfig, EmbedFn } from '@noir-ai/context';

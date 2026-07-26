@@ -1,4 +1,4 @@
-// Engine integration tests for @noir-ai/memory (slice S7, task t2).
+// Engine integration tests for @noir-ai/memory.
 //
 // Two layers:
 //   1. describeStore (gated on sqlite-vec): a REAL store exercises the full
@@ -72,7 +72,7 @@ function fakeModel(text: string): MemoryModel & { calls: number } {
 /**
  * A model that FAILS the test if reached (proves the provider gate holds), AND
  * tracks `calls` so the gate can also be asserted as `model.calls === 0`
- * (DS-6: never a silent paid call on no-provider / no-candidates). Mirrors
+ * (never a silent paid call on no-provider / no-candidates). Mirrors
  * {@link fakeModel}'s closure-counter + getter shape so both fakes are
  * interchangeable in tests that read `.calls`.
  */
@@ -90,7 +90,7 @@ function boobyTrappedModel(): MemoryModel & { calls: number } {
 }
 
 describeStore(storeLabel, () => {
-  it('save persists the full observation; get hydrates it verbatim (DS-9)', async () => {
+  it('save persists the full observation; get hydrates it verbatim', async () => {
     const store = await openStore({ projectId, root });
     const engine = createMemoryEngine({ store, root, projectId, embed });
 
@@ -134,7 +134,7 @@ describeStore(storeLabel, () => {
     });
     const hits = await engine.recall('embedder lifecycle');
     expect(hits.length).toBeGreaterThan(0);
-    // DS-9: full content, never the truncated FTS snippet.
+    // Full content, never the truncated FTS snippet.
     expect(hits[0]?.content).toContain('resolved once per serve lifecycle');
   });
 
@@ -268,7 +268,7 @@ describeStore(storeLabel, () => {
       expect(res.reason).toBe('no-provider');
       expect(res.logged).toBe(true);
     }
-    expect(model.calls).toBe(0); // never a silent paid call (DS-6)
+    expect(model.calls).toBe(0); // never a silent paid call
     const misses = getConsolidationMisses(store);
     expect(misses).toHaveLength(1);
     expect(misses[0]?.reason).toBe('no-provider');

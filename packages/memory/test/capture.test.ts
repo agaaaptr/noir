@@ -1,12 +1,12 @@
-// Capture unit tests for @noir-ai/memory (slice S7, task t7).
+// Capture unit tests for @noir-ai/memory.
 //
 // These exercise the PURE mapper surface in src/capture.ts — `toSaveInput`,
 // `buildContent`, `describeToolCall`, `inferType`, `extractFiles`,
 // `captureSource` — with NO store, NO embedder, NO network, NO LLM. They lock
-// the host-neutral CaptureEvent → SaveInput contract (DS-4) and the opinionated
+// the host-neutral CaptureEvent → SaveInput contract and the opinionated
 // default policy (capture Stop + UserPromptSubmit, skip noisy tool events).
 //
-// Privacy invariant (blueprint D6 / DS-10): the mapper is pure — it performs no
+// Privacy invariant (blueprint D6): the mapper is pure — it performs no
 // I/O and triggers no paid call. These tests assert that directly by never
 // touching the store or any provider.
 

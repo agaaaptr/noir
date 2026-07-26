@@ -8,7 +8,7 @@
 //   - Determinism comes from a SHA-256 of the text (no RNG, no clock) —
 //     identical inputs produce bit-identical vectors (NFR-5).
 //   - Output is L2-normalized through the shared helper so it is
-//     indistinguishable from a real embedder at the store boundary (DS-8).
+//     indistinguishable from a real embedder at the store boundary.
 
 import { createHash } from 'node:crypto';
 import type { EmbedFn } from '../types.js';

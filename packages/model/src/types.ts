@@ -7,7 +7,7 @@
 //   or `stream` field. Without a tool parameter there is no way to construct a
 //   tool/exec loop here; the type itself is the tripwire.
 // - Provider-EXPLICIT — `provider` is a REQUIRED field, and resolution in
-//   `complete()` never reads env-var presence to pick one (DS-6). No explicit,
+//   `complete()` never reads env-var presence to pick one. No explicit,
 //   configured provider ⇒ `null`.
 // - null-degradation FIRST-CLASS — {@link CompleteResult} includes `null` as a
 //   peer variant (no provider configured ⇒ degrade to a caller template). It
@@ -32,10 +32,10 @@ import type * as z from 'zod/v4';
 export type CompleteSchema = z.ZodType | ((raw: unknown) => unknown);
 
 /**
- * The four bounded task tiers (DS-9). A tier is an OPTIONAL budget hint on a
+ * The four bounded task tiers. A tier is an OPTIONAL budget hint on a
  * request — it selects a per-tier `maxTokens` default when the caller omits
  * `maxTokens` (FR-10). A tier NEVER selects a provider or model: those stay
- * explicit on the request (DS-6 — provider-explicit, never inferred from env).
+ * explicit on the request (provider-explicit, never inferred from env).
  * Tier→provider/model resolution is the caller's job (it reads resolved config);
  * `complete()` only consumes the tier for the output-cap default.
  */
@@ -61,9 +61,9 @@ export interface CompleteRequest {
   /** Output cap in tokens; omit to use the adapter/tier default (FR-10). */
   maxTokens?: number;
   /**
-   * Optional task tier (DS-9). When `maxTokens` is absent AND a tier is set,
+   * Optional task tier. When `maxTokens` is absent AND a tier is set,
    * `complete()` applies the per-tier output cap (FR-10: draft 2048 / title 64 /
-   * summarize 512 / consolidate 2048). Never selects provider/model (DS-6).
+   * summarize 512 / consolidate 2048). Never selects provider/model.
    */
   tier?: Tier;
   /**
@@ -115,7 +115,7 @@ export type CompleteResult =
  * `complete.ts` and dispatch by `CompleteRequest.provider`. `key` is the
  * resolved secret (read from env by `complete()`, never by the adapter), or
  * `undefined` for anonymous local providers (Ollama). Adapters MUST NOT retry
- * beyond the bounded single shot + ≤1 JSON-repair retry (DS-12).
+ * beyond the bounded single shot + ≤1 JSON-repair retry.
  */
 export interface ProviderAdapter {
   name: string;
@@ -126,7 +126,7 @@ export interface ProviderAdapter {
  * One configured provider block — mirrors a `model.providers[name]` entry in
  * `.noir/config.yml`. `apiKeyEnv` is the NAME of the environment variable that
  * holds the secret, NEVER the value itself, so the config file stays safe to
- * commit and share (blueprint D5 / DS-8); `complete()` reads the value at call
+ * commit and share (blueprint D5); `complete()` reads the value at call
  * time only.
  */
 export interface ProviderConfig {
@@ -140,10 +140,10 @@ export interface ProviderConfig {
 
 /**
  * The model-layer config slice. Mirrors the user-facing `model:` block added to
- * `NoirConfigSchema` in slice t5; every field is optional so an absent
+ * `NoirConfigSchema`; every field is optional so an absent
  * `model:` block resolves to `{}` — full degradation, offline, the default.
  * `complete(req, cfg)` consumes this directly with no dependency on `@noir-ai/core`
- * (the core→model bridge lives in t5, avoiding a cycle), and the fully-resolved
+ * (the core→model bridge is kept external, avoiding a cycle), and the fully-resolved
  * zod output is structurally assignable to this permissive shape.
  */
 export interface ModelConfig {

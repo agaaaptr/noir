@@ -4,7 +4,7 @@
 //   • Markdown (`.md`/`.mdx`) → one chunk per ATX-heading-delimited section
 //     (code-fence-aware, so `#`-comment lines inside ``` blocks are NOT treated
 //     as headings). The heading line is kept with its body so the heading text
-//     carries a BM25 signal (spec DS-5).
+//     carries a BM25 signal.
 //   • Everything else → line/token-bounded windows (~512 tokens, 64-token
 //     overlap by default) via a cheap whitespace token estimate. Windows align
 //     to line boundaries (never split mid-line); consecutive windows overlap by
@@ -13,9 +13,9 @@
 // `id = \`${sha256(path)}#chunk-${n}\`` and `meta.parentDocId = sha256(path)`
 // are stable across re-indexing — same path + content always yields the same
 // chunk ids, which is what makes the indexer's content-hash skip/delete exact
-// (spec DS-4, §7).
+// (spec §7).
 //
-// `explodeIdentifiers` (DS-7) is exported here and used to derive
+// `explodeIdentifiers` is exported here and used to derive
 // `meta.sha256` (post-identifier-explosion, per the ChunkMeta contract): the
 // indexer appends the same explosion stream to chunk content before
 // `indexDoc`/`upsertVec` so camelCase/snake_case identifier queries get a BM25
@@ -31,10 +31,10 @@ import type { Chunk, SourceKind } from './types.js';
 // Tunable defaults (mirror the `context.chunk` config block, task t10)
 // ---------------------------------------------------------------------------
 
-/** Default maximum estimated tokens per non-markdown chunk (spec DS-5). */
+/** Default maximum estimated tokens per non-markdown chunk. */
 export const DEFAULT_CHUNK_MAX_TOKENS = 512;
 
-/** Default token overlap between consecutive non-markdown chunks (spec DS-5). */
+/** Default token overlap between consecutive non-markdown chunks. */
 export const DEFAULT_CHUNK_OVERLAP = 64;
 
 /**
@@ -77,7 +77,7 @@ export interface ChunkOptions {
 }
 
 // ---------------------------------------------------------------------------
-// Identifier explosion (DS-7)
+// Identifier explosion
 // ---------------------------------------------------------------------------
 
 /**
@@ -124,7 +124,7 @@ export function explodeIdentifiers(text: string): string {
  * match the `ChunkMeta.sha256` contract ("post-identifier-explosion").
  *
  * `chunk.content` itself stays CLEAN (no explosion) so FTS5 window-extracted
- * snippets read naturally — explosion is index-time-only (spec §7, DS-7).
+ * snippets read naturally — explosion is index-time-only (spec §7).
  */
 export function withIdentifierExplosion(content: string): string {
   const exploded = explodeIdentifiers(content);
@@ -203,7 +203,7 @@ function isMarkdown(path: string, language?: string): boolean {
 
 /**
  * Default {@link SourceKind}: markdown → `'docs'`, everything else →
- * `'codebase'`. Callers indexing the spec tree or (S7) memory override via
+ * `'codebase'`. Callers indexing the spec tree or memory override via
  * {@link ChunkOptions.source}.
  */
 function defaultSource(path: string, language?: string): SourceKind {

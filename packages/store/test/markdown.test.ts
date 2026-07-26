@@ -99,11 +99,11 @@ describe('markdown export', () => {
   });
 });
 
-// B2 — universal conflict contract. exportMarkdown routes through the SAME
+// Universal conflict contract. exportMarkdown routes through the SAME
 // onConflict seam `regenerate` uses. Default behavior stays v1.2 (overwrite);
 // when a resolver is wired + interactive, a differing existing file consults
 // it; non-interactive guards prevent a prompt under CI/--json.
-describe('markdown export — B2 conflict seam', () => {
+describe('markdown export — conflict seam', () => {
   it('default (no opts) overwrites differing content (v1.2 behavior)', async () => {
     const store = await openAndIndex();
     try {

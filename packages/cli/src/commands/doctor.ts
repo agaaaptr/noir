@@ -1,10 +1,10 @@
-// S9 t6 — `noir doctor`.
+// S9 — `noir doctor`.
 //
 // Environment + project health. Runs a fixed set of checks and renders a
 // results table (human, stderr) or the versioned `{ok,data}` envelope (--json,
 // stdout). Exit 1 if any CRITICAL (fail) check is unhealthy, else 0.
 //
-// Severity model (S9 spec F8 / t6):
+// Severity model (S9 spec F8):
 //   - ok   — healthy.
 //   - warn — degraded but usable (daemon down, onnx missing, provider key
 //            missing, project not initialized). NEVER triggers exit 1.
@@ -14,7 +14,7 @@
 //
 // Honesty rules: provider status uses `resolveModelConfig` — a PURE projection
 // of the user's config + env-var NAME presence; it makes NO live call (blueprint
-// D5/DS-6). Native-dep probes are best-effort try/catch (the store's native
+// D5). Native-dep probes are best-effort try/catch (the store's native
 // binaries are probed via `vecAvailability`, the single cross-package surface;
 // onnxruntime-node is the context engine's own dep and is probed separately).
 //
@@ -23,7 +23,7 @@
 // never pays the native-bindings cost. @noir-ai/model is imported eagerly — its
 // provider self-registration is light (SDKs load lazily inside `complete()`).
 //
-// Stream discipline (S9 DS-4): `--json` writes `{ok:true, data:{checks,summary}}`
+// Stream discipline (S9): `--json` writes `{ok:true, data:{checks,summary}}`
 // to stdout (the only stdout write). Doctor always emits `ok:true` because the
 // COMMAND succeeded in producing a diagnosis; the system-health pass/fail is
 // signaled by the EXIT CODE (0 healthy / 1 critical failure) — the same shape
@@ -75,7 +75,7 @@ export interface DoctorPayload {
    *  absent (uninitialized or pre-Slice-S project); `drift` is true only when
    *  a stamp is present AND differs from the engine's current version. */
   scaffold: { onDisk: string | null; current: string; drift: boolean };
-  /** RULES.md budget measurement (R5). `null` when the project isn't
+  /** RULES.md budget measurement. `null` when the project isn't
    *  initialized OR `.noir/rules/RULES.md` is absent — in either case there
    *  is nothing to measure and the check row stays informational (warn skip
    *  or ok "no RULES.md"). Never drives `fail` — over-budget is a `warn`. */
@@ -397,7 +397,7 @@ function checkScaffoldVersion(
 }
 
 /**
- * Soft RULES.md budget cap (R5). Mirrors the Failure-Backed Rules doctrine:
+ * Soft RULES.md budget cap. Mirrors the Failure-Backed Rules doctrine:
  * an over-budget RULES.md tends to accumulate stale / speculative clauses, so
  * doctor warns (NEVER fails — purely a hygiene nudge) when the file exceeds
  * the configured `lengthBudgetKb` (default 6 KB) OR a 150-line ceiling. The

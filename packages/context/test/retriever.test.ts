@@ -148,7 +148,7 @@ describe('retriever (degraded paths, stubbed store)', () => {
 
     // No readDoc → the vec hit is unhydrated (empty snippet) but still ranked.
     // Mode truthfully reports 'knn' (kNN leg ran, but the hit could not be
-    // hydrated to a real snippet — C1).
+    // hydrated to a real snippet).
     expect(res.degraded).toBe(true);
     expect(res.mode).toBe('knn');
     expect(res.results.map((h) => h.id)).toContain('v1');
@@ -159,7 +159,7 @@ describe('retriever (degraded paths, stubbed store)', () => {
 // Store-backed hybrid search (gated on sqlite-vec)
 // ---------------------------------------------------------------------------
 
-// Build a ChunkMeta exactly as the indexer (t6) will, so the retriever's
+// Build a ChunkMeta exactly as the indexer will, so the retriever's
 // backfill path is exercised against the real shape.
 function chunkMeta(path: string, chunkIndex = 0): ChunkMeta {
   return {
@@ -225,7 +225,7 @@ describeStore(storeLabel, () => {
     }
   });
 
-  it('DS-6 / budget: a small budget caps the packed set and sets truncated:true (top hit always admitted)', async () => {
+  it('budget: a small budget caps the packed set and sets truncated:true (top hit always admitted)', async () => {
     const store = await openStore({ projectId: id, root });
     try {
       // Two distinct files, each lexically matching the query.
@@ -255,7 +255,7 @@ describeStore(storeLabel, () => {
     }
   });
 
-  it('DS-6 / collapse: duplicate parentDocId collapses to the top-scoring chunk per file', async () => {
+  it('collapse: duplicate parentDocId collapses to the top-scoring chunk per file', async () => {
     const store = await openStore({ projectId: id, root });
     try {
       const path = 'src/same.ts';
@@ -381,7 +381,7 @@ describeStore(storeLabel, () => {
       const r = createRetriever({ store, embed: embedBase });
       const res = await r.search('alpha');
 
-      // C1: the kNN leg ran but n2 could not be hydrated → mode truthfully
+      // The kNN leg ran but n2 could not be hydrated → mode truthfully
       // reports 'knn' (NOT 'hybrid'), and the search is marked degraded.
       expect(res.mode).toBe('knn');
       expect(res.degraded).toBe(true);
@@ -397,7 +397,7 @@ describeStore(storeLabel, () => {
     }
   });
 
-  it('C1: readDoc MISS (returns null) demotes mode to knn (honest about the empty snippet)', async () => {
+  it('readDoc MISS (returns null) demotes mode to knn (honest about the empty snippet)', async () => {
     const store = stubStore({
       searchFt: () => [],
       knn: () => [{ id: 'orphan1', source: 'codebase', score: 0.2 }],
@@ -418,7 +418,7 @@ describeStore(storeLabel, () => {
     expect(res.results[0]?.snippet).toBe('');
   });
 
-  it('C1: readDoc HIT keeps mode hybrid (full hybrid snippet quality)', async () => {
+  it('readDoc HIT keeps mode hybrid (full hybrid snippet quality)', async () => {
     const store = stubStore({
       searchFt: () => [],
       knn: () => [{ id: 'h1', source: 'codebase', score: 0.2 }],

@@ -302,7 +302,7 @@ describe('callDaemonTool — diagnostics', () => {
   });
 
   it('--json emits the SINGLE {ok:false,error:{code,message}} envelope on stdout (no double-encoding)', async () => {
-    // C2 regression guard: failDaemonDown must pass the PLAIN hint to fail() and
+    // Regression guard: failDaemonDown must pass the PLAIN hint to fail() and
     // let output.ts shape ONE envelope on stdout. The prior bug pre-stringified
     // an inner {ok,error} and passed it as `message`, so fail() wrapped it again
     // and `error.message` was itself a JSON string.
@@ -322,7 +322,7 @@ describe('callDaemonTool — diagnostics', () => {
     expect(env.error.message).toBe(DAEMON_DOWN_HINT); // the plain hint string
     expect(env.error.message).toMatch(/noir daemon start/);
     // Regression guard: the message must NOT itself be valid JSON — that would
-    // mean it was pre-stringified into an inner envelope (the C2 bug).
+    // mean it was pre-stringified into an inner envelope (the prior bug).
     expect(() => JSON.parse(env.error.message)).toThrow(SyntaxError);
   });
 

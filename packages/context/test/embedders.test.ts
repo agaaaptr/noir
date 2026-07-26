@@ -170,9 +170,9 @@ describeHf(hfLabel, () => {
     const e = localEmbedder();
     const v = await e.embed('Noir hybrid retrieval over a codebase.');
     expect(v).toBeInstanceOf(Float32Array);
-    // 384-dim → matches the S1 vec0 table with ZERO migration (DS-2/DS-8).
+    // 384-dim → matches the S1 vec0 table with ZERO migration.
     expect(v.length).toBe(EMBED_DIM);
-    // L2-normalized by the shared helper so vec0's default L2 ≈ cosine (DS-8).
+    // L2-normalized by the shared helper so vec0's default L2 ≈ cosine.
     let sum = 0;
     for (let i = 0; i < v.length; i++) sum += (v[i] ?? 0) ** 2;
     expect(Math.sqrt(sum)).toBeCloseTo(1, 4);

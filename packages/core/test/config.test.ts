@@ -86,7 +86,7 @@ describe('parseConfig', () => {
   // Slice S8 `model:` block (blueprint D5): a config with NO model block parses
   // to `{}` and degrades every `complete()` call to `null` (offline, free, the
   // default). An explicit block round-trips; `apiKeyEnv` carries the env-var
-  // NAME only (DS-8 — never the value). Inner fields are `.optional()` so a
+  // NAME only (never the value). Inner fields are `.optional()` so a
   // present-but-empty block also degrades cleanly.
   it('defaults the model block to an empty object when absent (full degradation)', () => {
     const cfg = parseConfig({ host: 'claude' });
@@ -140,7 +140,7 @@ describe('parseConfig', () => {
     ).toThrow();
   });
 
-  // Slice S7 `memory:` block (blueprint D6 / DS-6): a config with NO memory
+  // The `memory:` block (blueprint D6): a config with NO memory
   // block parses to consolidation-disabled (capture/store/retrieve are always
   // local + free; consolidation is the ONLY LLM touch and it is opt-in +
   // provider-explicit — refuse + log if no provider, NEVER a silent paid call).
@@ -174,7 +174,7 @@ describe('parseConfig', () => {
 
   it('applies the enabled default for a partial consolidation block', () => {
     // A consolidation block with only provider/model written still defaults
-    // `enabled` to false — the master switch is opt-in (DS-6).
+    // `enabled` to false — the master switch is opt-in.
     const cfg = parseConfig({
       host: 'claude',
       memory: { consolidation: { provider: 'anthropic', model: 'claude-haiku' } },
@@ -243,10 +243,10 @@ describe('parseConfig — Slice X integrations block', () => {
   });
 });
 
-// Debt-batch A — `rules:` block (R4). Additive, schema-validated, no-op until
+// Debt-batch A — `rules:` block. Additive, schema-validated, no-op until
 // the rule registry ships. The outer default resolves to enabled/6 so a config
 // with NO `rules:` block still parses to the registry-active shape.
-describe('parseConfig — rules block (R4)', () => {
+describe('parseConfig — rules block', () => {
   it('defaults the rules block to enabled + 6KB when absent (no-op carrier)', () => {
     const cfg = parseConfig({ host: 'claude' });
     expect(cfg.rules.enabled).toBe(true);
@@ -278,11 +278,11 @@ describe('parseConfig — rules block (R4)', () => {
   });
 });
 
-// Slice P (PRD) — `prd:` block (P4). The mandatoryFor default mirrors the
+// Slice P (PRD) — `prd:` block. The mandatoryFor default mirrors the
 // noir-prd skill ("feature/epic"); the workflow engine reads it to decide when
 // a missing PRD warrants an observable, escapable recommendation at the spec
 // gate. Additive — a config with NO `prd:` block parses to the default.
-describe('parseConfig — prd block (P4)', () => {
+describe('parseConfig — prd block', () => {
   it('defaults prd.mandatoryFor to ["feature", "epic"] when absent', () => {
     const cfg = parseConfig({ host: 'claude' });
     expect(cfg.prd.mandatoryFor).toEqual(['feature', 'epic']);

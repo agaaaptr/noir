@@ -8,7 +8,7 @@
 
 There is no "interactive-only" *subcommand*. The only interactive *surface* is the bare-`noir` home picker. A non-interactive / headless run (CI, a pipe, `--no-input`, `--json`, `NO_COLOR`, or simply no TTY) is **never blocked** — it is simply routed around the picker to the same scriptable command the picker would have dispatched to. Interactive commands are *absent* from headless, not refused by it. This mirrors the framing of Claude Code's own command surface: the interactive entry exists for humans, and the same actions are reachable as plain commands for scripts.
 
-## The three global flags (C1)
+## The three global flags
 
 | Flag | Effect | Headless-safe? |
 |---|---|---|

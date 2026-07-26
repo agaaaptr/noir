@@ -1,11 +1,11 @@
-// Hybrid recall pipeline for @noir-ai/memory (slice S7, task t3).
+// Hybrid recall pipeline for @noir-ai/memory.
 //
-// Reuses the S6 hybrid retriever's recipe (DS-5) — BM25 (`Store.searchFt`) ∪
+// Reuses the S6 hybrid retriever's recipe — BM25 (`Store.searchFt`) ∪
 // cosine kNN (`Store.knn`) fused by Reciprocal Rank Fusion (rank-based, k=60,
 // weights [0.5, 0.5] — raw BM25+cosine scores are NEVER summed) — scoped to
 // `source:'memory'` so context (S6) and memory never collide. Adds a cheap
 // regex **entity-boost** (identifiers / file-paths extracted from the query,
-// NO LLM — DS-5) that promotes hits whose `content` / `concepts` / `files`
+// NO LLM) that promotes hits whose `content` / `concepts` / `files`
 // mention a queried entity.
 //
 // Pipeline (spec §6):
@@ -17,8 +17,8 @@
 //     │    each fused row's score (needs the obs → hydrated first), then re-sort
 //     │    by boosted score desc (stable — RRF order preserved on ties).
 //     └─ hydrate each fused id into a MemoryHit from the authoritative KV row
-//          `memory:obs:<id>` (FULL content — never the truncated FTS snippet,
-//          DS-9), applying the optional `type` / `sessionId` filters.
+//          `memory:obs:<id>` (FULL content — never the truncated FTS snippet),
+//          applying the optional `type` / `sessionId` filters.
 //
 // Degradation (mirrors the S6 retriever's F8): if `embed()` throws (the
 // embedder is `kind:'none'`, a native load failure, a provider error) OR `knn()`
@@ -47,7 +47,7 @@ import type { EmbedFn, MemoryHit, Observation, RecallOptions } from './types.js'
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Source bucket for every memory row (keeps context + memory disjoint, DS-2). */
+/** Source bucket for every memory row (keeps context + memory disjoint). */
 const MEMORY_SOURCE = 'memory';
 
 /** Default recall hit cap (mirrors Store.searchFt + the S6 retriever default). */
@@ -127,7 +127,7 @@ export interface RecallDeps {
 
 /** Internal outcome of {@link recallMemory} (the engine projects this to `MemoryHit[]`). */
 export interface RecallMemoryResult {
-  /** Ranked, hydrated hits (FULL content — DS-9), truncated to `limit`. */
+  /** Ranked, hydrated hits (FULL content), truncated to `limit`. */
   hits: MemoryHit[];
   /** True when the kNN OR BM25 leg failed this call (honest per-query signal). */
   degraded: boolean;
@@ -136,12 +136,11 @@ export interface RecallMemoryResult {
 }
 
 // ---------------------------------------------------------------------------
-// Entity extraction (cheap regex, NO LLM — DS-5)
+// Entity extraction (cheap regex, NO LLM)
 // ---------------------------------------------------------------------------
 
 /**
- * Cheap regex extraction of identifiers + file/path tokens from a query (NO LLM
- * — DS-5). Two kinds of entity are collected, de-duplicated:
+ * Cheap regex extraction of identifiers + file/path tokens from a query (NO LLM). Two kinds of entity are collected, de-duplicated:
  *
  *   1. **Qualified tokens** — whitespace-delimited tokens that contain a `/`,
  *      `.`, or `:` (e.g. `packages/memory/src/recall.ts`, `memory:obs`,
@@ -209,7 +208,7 @@ function splitIdentifier(token: string): string[] {
  * substring), `concepts` (exact, case-insensitive), or `files` (case-insensitive
  * substring, so a bare `recall.ts` matches `packages/memory/src/recall.ts`).
  * Each entity contributes at most once (no double-count across fields). Cheap
- * + LLM-free (DS-5).
+ * + LLM-free.
  */
 function entityBoostForObs(obs: Observation, entities: ReadonlyArray<string>): number {
   if (entities.length === 0) return 0;
@@ -241,7 +240,7 @@ function entityBoostForObs(obs: Observation, entities: ReadonlyArray<string>): n
  * no network, no LLM (blueprint D6).
  *
  * The returned hits carry the FULL `content` hydrated from the authoritative KV
- * row (DS-9 — never the truncated FTS snippet). `degraded`/`mode` describe the
+ * row (never the truncated FTS snippet). `degraded`/`mode` describe the
  * actual outcome of THIS call: `mode:'bm25-only'` + `degraded:true` when the
  * embedder was unavailable and recall fell back to BM25.
  */
@@ -313,7 +312,7 @@ export async function recallMemory(
 
 /**
  * Project an {@link Observation} into a {@link MemoryHit} at a given (already
- * boosted) score. Carries the FULL `content` (DS-9). Mirrors the engine's
+ * boosted) score. Carries the FULL `content`. Mirrors the engine's
  * private `toMemoryHit` shape exactly so recall + search hits read the same.
  */
 function toMemoryHit(obs: Observation, score: number): MemoryHit {

@@ -47,7 +47,7 @@ describe('draftPrd — graceful degradation (blueprint D5, first-class null)', (
   });
 
   it('returns null when the provider is named but NOT configured (env presence is irrelevant)', async () => {
-    // DS-6: ANTHROPIC_API_KEY may be set for another tool; draftPrd must not
+    // ANTHROPIC_API_KEY may be set for another tool; draftPrd must not
     // infer the provider from its presence. The provider block is absent here.
     await withEnv('ANTHROPIC_API_KEY', 'sk-from-another-tool', async () => {
       const out = await draftPrd(

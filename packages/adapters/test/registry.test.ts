@@ -109,7 +109,7 @@ describe('emitAgentsMd — the universal shared helper', () => {
     expect(md).toContain('`noir sync`');
   });
 
-  it('I2: carries an inline fallback summary BEFORE the @-imports (for readers that do not resolve @)', () => {
+  it('carries an inline fallback summary BEFORE the @-imports (for readers that do not resolve @)', () => {
     // The fallback sits BEFORE the @-imports so a viewer that does NOT resolve
     // `@`-imports still gets a one-glance pointer to .noir/. Order matters:
     // fallback first, then the canonical imports.

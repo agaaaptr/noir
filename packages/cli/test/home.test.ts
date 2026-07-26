@@ -94,7 +94,7 @@ describe('home — non-interactive routing (scriptable)', () => {
     expect(clackMock.select).not.toHaveBeenCalled();
   });
 
-  it('no json + non-TTY → dispatch(["status"]) (I2: status is probe-only, safe bare)', async () => {
+  it('no json + non-TTY → dispatch(["status"]) (status is probe-only, safe bare)', async () => {
     const deps = makeDeps();
     await home({}, deps);
     expect(deps.dispatch).toHaveBeenCalledTimes(1);
@@ -111,11 +111,11 @@ describe('home — non-interactive routing (scriptable)', () => {
   });
 });
 
-// C1 TUI policy — `--no-tui` (opts.tui === false) forces the non-interactive
+// TUI policy — `--no-tui` (opts.tui === false) forces the non-interactive
 // `status` path even when isInteractive() would be true (a TTY). `--tui`
 // (opts.tui === true) is advisory only — it still requires a TTY, so a non-TTY
 // run stays on the non-interactive path. Auto (no flag) preserves S9 behavior.
-describe('home — C1 TUI policy routing', () => {
+describe('home — TUI policy routing', () => {
   it('--no-tui forces dispatch(["status"]) even in a TTY (no menu)', async () => {
     setTty(true, true); // interactive by TTY alone
     const deps = makeDeps();

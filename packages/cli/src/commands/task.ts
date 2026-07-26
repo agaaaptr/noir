@@ -1,6 +1,6 @@
-// S9 t5 — `noir task {new,status,advance,next}`.
+// S9 — `noir task {new,status,advance,next}`.
 //
-// Thin MCP-client commands over the daemon's S4 workflow surface. The daemon
+// Thin MCP-client commands over the daemon's workflow surface. The daemon
 // registers four workflow tools (packages/daemon/src/server.ts): `workflow_status`
 // (read the active or named task), `checkpoint` (save/restore in-flight state),
 // `workflow_start` (start a task), and `workflow_advance` (advance/jump a task).

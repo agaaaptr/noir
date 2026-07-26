@@ -1,4 +1,4 @@
-// S9 t6 — `noir daemon {start,stop,status,restart}` behavior tests.
+// S9 — `noir daemon {start,stop,status,restart}` behavior tests.
 //
 // Covers the foreground-honest UX without starting a real Noir daemon:
 //   - `start --detach` → exit 2 (USAGE) "not implemented (tracked: v1.x)"

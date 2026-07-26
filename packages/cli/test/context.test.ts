@@ -1,4 +1,4 @@
-// S9 t5 — `noir context {search,index,status}` tests. daemon-client is mocked
+// S9 — `noir context {search,index,status}` tests. daemon-client is mocked
 // at the module boundary (no real daemon / HTTP — NF4): `callDaemonTool` returns
 // a per-test payload. These pin the contract:
 //   • --json emits `{ok:true,data}` to STDOUT only (stderr pristine);
@@ -202,7 +202,7 @@ describe('context search — human table on stderr', () => {
     try {
       await contextSearch({ ...base, query: 'x' });
       const err = capture().err;
-      // TIER A2: the ad-hoc `[degraded: BM25-only]` marker is now a status badge
+      // the ad-hoc `[degraded: BM25-only]` marker is now a status badge
       // (`⚠ degraded: BM25-only`) — symbol + text label, colorblind/NO_COLOR-safe.
       expect(err).toContain('degraded: BM25-only');
       expect(err).toContain('⚠');

@@ -1,4 +1,4 @@
-// S9 t6 — `noir skills {list,sync}` behavior tests.
+// S9 — `noir skills {list,sync}` behavior tests.
 //
 // Both sub-commands are in-process (no daemon), so these are plain unit tests
 // over the module functions: stdout/stderr stream discipline + --json schema +

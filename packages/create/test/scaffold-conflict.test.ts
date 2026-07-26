@@ -116,12 +116,12 @@ describe('scaffold — regenerate conflict resolution (SP-C)', () => {
   });
 });
 
-// B2 — universal conflict contract: structured report + apply-to-all + the
+// Universal conflict contract: structured report + apply-to-all + the
 // `merge` resolution. The engine populates `ScaffoldResult.conflicts[]` always
 // (interactive or not) so a `--json` caller can see exactly which files
 // diverged; the apply-to-all memory keys by artifact CLASS so a run over N
 // pointers prompts once.
-describe('scaffold — B2 universal conflict contract', () => {
+describe('scaffold — universal conflict contract', () => {
   it('ScaffoldResult.conflicts[] is populated even with no onConflict (non-interactive)', async () => {
     await scaffold({ root: tmp, mode: 'init', transport: 'stdio' });
     const mcp = join(tmp, '.mcp.json');

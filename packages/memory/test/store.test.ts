@@ -1,4 +1,4 @@
-// Store-layer unit tests for @noir-ai/memory (slice S7, task t2).
+// Store-layer unit tests for @noir-ai/memory.
 //
 // These exercise ONLY the KV helpers in src/store.ts against an in-memory mock
 // store — no sqlite-vec native binary, no FTS, no network. They lock the KV
@@ -88,7 +88,7 @@ describe('@noir-ai/memory store layer (KV helpers)', () => {
   });
 
   describe('observation row (authoritative KV)', () => {
-    it('round-trips the full row through set/get (DS-9 — content intact)', () => {
+    it('round-trips the full row through set/get (content intact)', () => {
       const store = mockStore();
       const obs = makeObs('o1', { content: 'never truncated, full text' });
       expect(getObservation(store, 'o1')).toBeNull();
@@ -191,7 +191,7 @@ describe('@noir-ai/memory store layer (KV helpers)', () => {
       expect(getConsolidationMisses(mockStore())).toEqual([]);
     });
 
-    it('appendConsolidationMiss accumulates entries (refuse + LOG, DS-6)', () => {
+    it('appendConsolidationMiss accumulates entries (refuse + LOG)', () => {
       const store = mockStore();
       appendConsolidationMiss(store, { ts: 1, reason: 'no-provider' });
       appendConsolidationMiss(store, {

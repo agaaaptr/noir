@@ -2,26 +2,26 @@
 
 ## 1.3.0-beta.8 (2026-07-26)
 
-**Published on npm (dist-tag `beta`)** — Tier B of the 2026-07-26 overnight session: a fully idempotent scaffold, one universal conflict contract across every file-producing path, and write-path semantic duplicate detection.
+**Published on npm (dist-tag `beta`)** — second 2026-07-26 overnight release: a fully idempotent scaffold, one universal conflict contract across every file-producing path, and write-path semantic duplicate detection.
 
-### Idempotent scaffold (B1)
+### Idempotent scaffold
 - `noir sync` on an unchanged tree now writes **nothing** (managed-region content-hash dedup; no mtime/git churn) — the perceived "noir init duplicates" was git-status churn, not real duplication.
 - `.noir/ancestors.json` seeded on **every** init/create/sync. `mergeManagedRegions` defaults to **TRUE** (bare `noir sync` preserves in-region user edits across template upgrades; `--no-merge-regions` escape). *(Latent fix: `mergeManagedRegion` dropped a trailing newline so dedup could never fire and every sync drifted the file by one byte.)*
 - Bare `noir init` on an initialized project **no-ops** without `--upgrade`; pre-1.3.0 projects (project.id present, no stamp) also no-op. The engine is **hermetic** for API/embedded callers (explicit `interactive` flag, decoupled from `process.env`). Fixed the stale comment that claimed multi-region merge was unshipped (it shipped in SP-H).
 
-### Universal conflict contract (B2)
+### Universal conflict contract
 - Every file-producing path now routes through one `buildConflictOpts` + `onConflict` seam — including the three that previously blind-overwrote: `skills/compiler emitSkillsToDir` (the `rm -rf` orphan cleanup is now `assertNotUserOwned`-guarded — a hand-authored `noir-*` skill is preserved + reported, never silently deleted), `workflow/artifacts` (8 writers), `store/markdown exportMarkdown`.
 - `@clack` conflict resolver now shows a **colored unified diff** (stderr; `+`/`-` via the theme; `NO_COLOR`-gated) before the prompt. **Apply-to-all** scoped to artifact class (a `noir init --upgrade` over N pointers is now 1 prompt; managed blocks stay per-file). 6th option **"merge (with conflict markers)"** (zdiff3). `--json` emits a structured `ScaffoldResult.conflicts[]` (`{path, mode, similarity, existingSha, proposedSha, resolution}`); no prompt under `--no-input`.
 
-### Write-path semantic dedup (B3)
+### Write-path semantic dedup
 - Before writing a host-context file, `noir init`/`create`/`sync` check it against existing host files (CLAUDE.md / AGENTS.md / GEMINI.md / RULES.md) via the S6 embedder and surface a near-duplicate as a **non-blocking recommendation** (Replace/Mirror/Skip/Create) — the dedup detector and the conflict resolver are now one connected system.
 - Two-tier (cosine ≥0.95 action, 0.85–0.95 info-only); content-hash cache at `.noir/dedup-cache.json` (no re-embed of unchanged files). **Graceful degradation:** if the embedder/model is unavailable or slow, it warn-skips — `noir init`/`sync` never block on a model download or fail because of a missing embedder. `init`/`sync`/`create` now return the `ScaffoldResult` (with `conflicts[]`).
 
-**1263/1263 tests green** (was 1181 → +82 across Tier A+B). Known residual (~5 lines, landing in 1.4.0): `bin.ts` does not yet emit `conflicts[]` to `--json` stdout for init/sync/create (data populated + tested at the function boundary).
+**1263/1263 tests green** (was 1181 → +82 across both overnight releases). Known residual (~5 lines, landing in 1.4.0): `bin.ts` does not yet emit `conflicts[]` to `--json` stdout for init/sync/create (data populated + tested at the function boundary).
 
 ## 1.3.0-beta.7 (2026-07-26)
 
-**Published on npm (dist-tag `beta`)** — Tier A of the 2026-07-26 overnight "runtime polish" session: a clean install (no deprecation noise) and a unified output design-system (no more red headers).
+**Published on npm (dist-tag `beta`)** — first 2026-07-26 overnight "runtime polish" release: a clean install (no deprecation noise) and a unified output design-system (no more red headers).
 
 ### Install — deprecation warnings fixed at the source
 - **`prebuild-install` removed entirely.** `better-sqlite3` `^12 → ^13` (the 2026-07-21 N-API rewrite) in `@noir-ai/store`; the deprecated `prebuild-install` is no longer a transitive dependency for Noir OR any consumer (`pnpm why -r prebuild-install` empty; 0 lockfile matches).
@@ -276,7 +276,7 @@ All MVP v1.0 acceptance criteria met. **Next: cut the v1.0 release (publish / ta
 ### Added
 - **New package `@noir-ai/memory`** (10th package — `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory}`). Cross-session memory layered **ON TOP of the store — no schema migration.**
 - **Observations** via `indexDoc({source:'memory'})` (FTS5) + `upsertVec({source:'memory'})` (sqlite-vec, 384-dim) + KV `memory:obs:<id>` (authoritative full row) + `memory:sessions` / `memory:index` rollups. Dev-flavored open-enum taxonomy: `pattern | preference | architecture | bug | workflow | fact | decision | lesson` (`lesson` reserved for consolidation output; unknown values accepted + stored).
-- **`save` / `recall` / `search` / `sessions` / `forget` / `consolidate`.** Recall **reuses S6's hybrid retrieval**: store `searchFt` + `knn` scoped to `source:'memory'` → `fuseRrf` (Reciprocal Rank Fusion, k=60 — imported from `@noir-ai/context`) → cheap regex entity-boost (identifiers / paths, no LLM) → hydrate FULL content from KV (never truncated, blueprint §9 / DS-9). BM25-only degraded fallback when no embedder.
+- **`save` / `recall` / `search` / `sessions` / `forget` / `consolidate`.** Recall **reuses S6's hybrid retrieval**: store `searchFt` + `knn` scoped to `source:'memory'` → `fuseRrf` (Reciprocal Rank Fusion, k=60 — imported from `@noir-ai/context`) → cheap regex entity-boost (identifiers / paths, no LLM) → hydrate FULL content from KV (never truncated, blueprint §9). BM25-only degraded fallback when no embedder.
 - **Daemon:** resolves the embedder ONCE and passes the same `EmbedFn` to both `ContextEngine` and `MemoryEngine`; new `packages/daemon/src/memory-seam.ts`. 5 MCP tools (`memory_save` / `memory_recall` / `memory_search` / `memory_sessions` / `memory_forget`) + conditional `memory_consolidate`, all gated on `ctx.memory` (mirrors `ctx.store` / `ctx.engine`).
 - **Consolidation:** append-only, explicitly-invoked job consuming S8 `complete()`. Emits derived `type:'lesson'` with `provenance:[ids]`; originals never mutated or deleted (reversible + auditable).
 - **Config:** new `memory:` block in `NoirConfigSchema` (`consolidation:{enabled, provider?, model?, types?}`); `resolveMemoryConfig` bridge (pure projection; no core→memory import cycle) wired through the daemon.
@@ -293,7 +293,7 @@ All MVP v1.0 acceptance criteria met. **Next: cut the v1.0 release (publish / ta
 ### Known v0 debt (deferred)
 - Graph expansion / temporal knowledge graph (Zep / Graphiti-style entities + edges) — v1.x; needs an extraction LLM + graph storage.
 - LLM auto-tagging (`concepts` / `type` on save) — v1.x; would be another silent LLM touch.
-- Auto-capture-by-default — **opt-in hooks template only**; never auto-wired (DS-4 / DS-10).
+- Auto-capture-by-default — **opt-in hooks template only**; never auto-wired.
 - Auto-install of the Claude Code hooks template (today the user copies the snippet manually).
 - Multi-user / org scoping (per-user memory namespaces) — v1.x; v1 is solo power-user.
 - Remote sync / cloud memory — never default (violates D6 local+free); a remote *embedding* provider is already opt-in via S6.

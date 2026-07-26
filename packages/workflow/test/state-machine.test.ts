@@ -39,8 +39,8 @@ describe('SDD state machine', () => {
     expect(STATES).toContain('abandoned');
   });
 
-  // W3 — beef up the thin FSM coverage the S4 ledger flagged.
-  describe('W3: FSM coverage gaps (exit-rejection + blocked escape)', () => {
+  // Beef up the thin FSM coverage the ledger flagged.
+  describe('FSM coverage gaps (exit-rejection + blocked escape)', () => {
     it('done is terminal — rejects every forward transition (no escape via the FSM)', () => {
       // The happy path ends at done; the only ways out are the admin escapes
       // (blocked/abandoned set directly by the engine, NOT via applyTransition).

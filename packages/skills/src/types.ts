@@ -74,7 +74,7 @@ export interface CompiledSkill {
 export interface CompiledIntegration extends CompiledSkill {
   /** Present only when `runtimeEmitsHostMcp(declaration.runtime)` AND a non-null
    *  `declaration.mcp` exists. The cli/daemon layer hands this to the host
-   *  adapter's `emitMcpConfig` overload (X-T2 seam); absent ⇒ skill-only. */
+   *  adapter's `emitMcpConfig` overload; absent ⇒ skill-only. */
   hostMcp?: {
     serverName: string;
     command: string;
@@ -93,19 +93,19 @@ export interface EmitSummary {
    *  Additive — callers that ignore it (existing cli) still get the builtins in
    *  `emitted`. */
   integrations?: string[];
-  /** Stale `noir-*` directories removed from `dir` after emit (T2 cleanup).
+  /** Stale `noir-*` directories removed from `dir` after emit (cleanup).
    *  Names a previous Noir version shipped but the current build no longer
    *  does (builtin renamed/removed). Only the `noir-` managed namespace is
    *  ever pruned — user skills without the prefix are NEVER touched. Empty
    *  array when nothing was stale; undefined on callers that pre-date the
    *  field (additive — old callers still get the rest of the summary). */
   pruned?: string[];
-  /** B2 — `noir-*` entries the prune step REFRAINED from removing because they
+  /** `noir-*` entries the prune step REFRAINED from removing because they
    *  look user-authored (hand-rolled noir-foo/SKILL.md without canonical Noir
    *  frontmatter). `assertNotUserOwned` guard. Names only — never user skills
    *  without the `noir-` prefix (those are always left alone). */
   preservedUserOwned?: string[];
-  /** B2 — one record per emitted skill file that existed AND differed from the
+  /** One record per emitted skill file that existed AND differed from the
    *  compiled bytes, with the resolution applied. Mirrors {@link ConflictContext}
    *  / {@link ConflictRecord} in @noir-ai/create so the CLI can lift the same
    *  structured report under `--json`. */
@@ -113,7 +113,7 @@ export interface EmitSummary {
 }
 
 /**
- * B2 — resolution choice for a skill-file conflict. Mirrors
+ * Resolution choice for a skill-file conflict. Mirrors
  * @noir-ai/create's `ConflictResolution` literally so the CLI's
  * `buildConflictOpts().onConflict` is structurally compatible, WITHOUT the
  * skills package gaining a create dependency.
@@ -121,7 +121,7 @@ export interface EmitSummary {
 export type SkillConflictResolution = 'replace' | 'preserve' | 'rename' | 'duplicate' | 'cancel';
 
 /**
- * B2 — context passed to {@link SkillConflictResolver}. Mirrors
+ * Context passed to {@link SkillConflictResolver}. Mirrors
  * @noir-ai/create's `ConflictContext` (relPath/existing/proposed/mode) so the
  * CLI's clack resolver handles skill conflicts with the SAME code path as
  * regenerate conflicts.
@@ -138,7 +138,7 @@ export interface SkillConflictContext {
 }
 
 /**
- * B2 — one record per skill file that existed AND differed from the compiled
+ * One record per skill file that existed AND differed from the compiled
  * bytes. Mirrors @noir-ai/create's `ConflictRecord` (additive — old callers
  * ignore it).
  */
@@ -158,7 +158,7 @@ export interface SkillConflict {
 }
 
 /**
- * B2 — the resolver callback the CLI injects (clack menu, diff preview,
+ * The resolver callback the CLI injects (clack menu, diff preview,
  * apply-to-all). Returns a bare resolution OR a rich `{resolution, applyToAll}`
  * shape; the engine unwraps both. Structurally compatible with
  * @noir-ai/create's `ConflictResolverReturn` so the CLI passes its single

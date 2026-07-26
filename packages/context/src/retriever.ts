@@ -10,7 +10,7 @@
 //     │                                                  L2-normalized vectors)
 //     │
 //     ├─ fuseRrf(bm25, knn, {k:60, weights:[0.5,0.5]})  → rank-based RRF fusion
-//     │                                                  (DS-3; NEVER sums raw
+//     │                                                  (NEVER sums raw
 //     │                                                  BM25+cosine scores)
 //     │
 //     ├─ enrich each fused id:
@@ -23,14 +23,14 @@
 //     │                       never drop a ranked semantic hit on a missing window)
 //     │
 //     ├─ collapse duplicate parentDocId (keep the top-scoring chunk per parent —
-//     │    DS-6; one file can't flood the result set). Unhydrated kNN-only hits
+//     │    one file can't flood the result set). Unhydrated kNN-only hits
 //     │    (empty parentDocId) collapse on their unique id, so they never merge.
 //     │
 //     └─ greedy token-budget fill (default 4096) over the collapsed list:
 //          accumulate estimateTokens(snippet) until budgetTokens; the top hit is
 //          always admitted even if it alone exceeds the budget (avoid returning
 //          zero results for one large hit). truncated:true if the list is
-//          exhausted before the budget (DS-6).
+//          exhausted before the budget.
 //
 // Degradation (F8): when the embedder is unavailable — `kind:'none'`, a native
 // load failure, a provider error, OR `knn()` itself threw — `search` falls back
@@ -41,7 +41,7 @@
 // read-only DB missing `docs_fts`) is also caught: search degrades to an empty
 // or vec-only result set rather than crashing.
 //
-// Mode truthfulness (C1): beyond the bm25-only fallback there is a softer
+// Mode truthfulness: beyond the bm25-only fallback there is a softer
 // degradation — `'knn'`. When the kNN leg ran successfully but a kNN-only hit
 // could not be hydrated (no `readDoc` wired, or the source doc was
 // deleted/degraded), the hit keeps its rank but carries an empty snippet, and
@@ -127,7 +127,7 @@ export interface RetrieverOptions {
    * prefix-windowed with `<<query-term>>` highlights (mirroring FTS5). When
    * omitted or it misses, the hit is emitted with an empty snippet — degraded
    * but ranked (F8) — AND the search result's `mode` becomes `'knn'` so the
-   * caller can tell the snippet quality is degraded (C1). The engine (t8)
+   * caller can tell the snippet quality is degraded. The engine
    * wires this from the indexer's `readChunkContent` when a content source
    * exists.
    */
@@ -301,7 +301,7 @@ interface PackedResult {
  * hit is always admitted even if it alone exceeds the budget (returning zero
  * results for one over-large top hit is worse than a small budget overshoot).
  * `truncated` is `true` iff the budget stopped the iteration before the list was
- * exhausted (DS-6).
+ * exhausted.
  */
 function packBudget(hits: ReadonlyArray<RetrieverHit>, budgetTokens: number): PackedResult {
   let consumed = 0;
@@ -439,7 +439,7 @@ export function createRetriever(deps: RetrieverDeps): Retriever {
         };
       });
 
-      // Mode truthfulness (C1): 'bm25-only' when the kNN leg failed entirely;
+      // Mode truthfulness: 'bm25-only' when the kNN leg failed entirely;
       // 'knn' when the kNN leg ran but at least one kNN-only hit couldn't be
       // hydrated (rank delivered, snippet not); 'hybrid' when both legs ran
       // and every hit got a real snippet.

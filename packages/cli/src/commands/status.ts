@@ -26,9 +26,9 @@
 // `withDaemon` (auto-start acceptable for commands that perform writes/reads with
 // side-effects); their daemon-down path is the same clean exit-4 envelope. Only
 // `status` is probe-only — in-process read fallback for the active commands is
-// deferred to v1.x (DS-5).
+// deferred to v1.x.
 //
-// Stream discipline (S9 DS-4): `--json` emits the versioned `{ok,data}` envelope
+// Stream discipline (S9): `--json` emits the versioned `{ok,data}` envelope
 // to STDOUT (the only stdout write); the human table + banner go to STDERR via
 // the centralized `table()` / `log()` helpers (auto-stripped under NO_COLOR /
 // non-TTY / --json).

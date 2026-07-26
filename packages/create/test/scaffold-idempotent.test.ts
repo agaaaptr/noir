@@ -1,4 +1,4 @@
-// B1 — scaffold idempotency (TDD). Pins the deliverables of TIER B1:
+// Scaffold idempotency (TDD). Pins the idempotency deliverables:
 //   - `noir sync` on an unchanged tree writes NOTHING (managedBlock content-hash dedup).
 //   - bare init on an initialized project no-ops (ScaffoldResult.noop=true) WITHOUT --upgrade.
 //   - `.noir/ancestors.json` is written on a plain init/sync (not only --merge).
@@ -39,7 +39,7 @@ function snapshot(dir: string): Map<string, { mtimeMs: number; size: number }> {
   return out;
 }
 
-describe('B1 — noir sync on an unchanged tree writes NOTHING', () => {
+describe('noir sync on an unchanged tree writes NOTHING', () => {
   it('a second sync leaves every file byte- and mtime-identical (no disk writes)', async () => {
     await scaffold({ root, mode: 'init', transport: 'stdio' });
     // First sync: establishes the post-init baseline (and seeds ancestors).
@@ -80,7 +80,7 @@ describe('B1 — noir sync on an unchanged tree writes NOTHING', () => {
   });
 });
 
-describe('B1 — bare init on an initialized project no-ops', () => {
+describe('bare init on an initialized project no-ops', () => {
   it('returns ScaffoldResult.noop=true WITHOUT --upgrade (and writes nothing)', async () => {
     const first = await scaffold({ root, mode: 'init', transport: 'stdio' });
     expect(first.noop).toBe(false);
@@ -93,7 +93,7 @@ describe('B1 — bare init on an initialized project no-ops', () => {
   });
 });
 
-describe('B1 — .noir/ancestors.json is seeded on every init/sync (unconditional)', () => {
+describe('.noir/ancestors.json is seeded on every init/sync (unconditional)', () => {
   it('a plain init (no merge flag) writes .noir/ancestors.json', async () => {
     await scaffold({ root, mode: 'init', transport: 'stdio' });
     expect(existsSync(join(root, '.noir', 'ancestors.json'))).toBe(true);
@@ -120,7 +120,7 @@ describe('B1 — .noir/ancestors.json is seeded on every init/sync (unconditiona
   });
 });
 
-describe('B1 — pre-1.3.0 legacy project (project.id present, no scaffold-version) no-ops', () => {
+describe('pre-1.3.0 legacy project (project.id present, no scaffold-version) no-ops', () => {
   it('bare init no-ops when project.id is present even without a scaffold-version stamp', async () => {
     // Seed a pre-1.3.0 legacy shape: a valid project.id but NO scaffold-version.
     await scaffold({ root, mode: 'init', transport: 'stdio' });
@@ -159,7 +159,7 @@ describe('B1 — pre-1.3.0 legacy project (project.id present, no scaffold-versi
   });
 });
 
-describe('B1 — direct scaffold() is hermetic (no @clack prompt from env)', () => {
+describe('direct scaffold() is hermetic (no @clack prompt from env)', () => {
   it('a TTY-mocked direct call without interactive/onConflict completes without prompting', async () => {
     // Mock a TTY environment. The bridge env is UNSET — a direct API caller
     // must not be prompted only because stdout/stdin look interactive.

@@ -3,7 +3,7 @@
 // All embedder implementations (local / remote / ollama / fake) funnel their
 // final vector through `l2normalize` so that:
 //   - the existing S1 `vec0` table (created with the DEFAULT distance metric)
-//     yields cosine-equivalent ranking when vectors are unit-norm (spec DS-8),
+//     yields cosine-equivalent ranking when vectors are unit-norm,
 //   - remote/ollama vectors that were Matryoshka-truncated to `EMBED_DIM` are
 //     re-normalized client-side (truncation shrinks the norm),
 //   - the kNN path sees a single, consistent scale regardless of provider.

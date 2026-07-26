@@ -1,4 +1,4 @@
-// TIER A2 — single owner of the Noir CLI's semantic palette + status badges.
+// Single owner of the Noir CLI's semantic palette + status badges.
 //
 // Built on `picocolors` (the SAME lib the rest of the CLI already uses), so the
 // decoration strips consistently under NO_COLOR / non-TTY. cli-table3 styles

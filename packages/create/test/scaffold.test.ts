@@ -150,7 +150,7 @@ describe('scaffold sync — runtime subset only', () => {
     rmSync(paths.config(root), { force: true });
 
     const res = await scaffold({ root, mode: 'sync' });
-    // B1: on an unchanged tree the entire runtime subset (regenerate +
+    // On an unchanged tree the entire runtime subset (regenerate +
     // managedBlock) is content-hash dedup'd to `identical` — `noir sync` writes
     // NOTHING. `.mcp.json` (regenerate) + the managed files all land here.
     expect(res.identical).toContain('.mcp.json');
@@ -194,7 +194,7 @@ describe('scaffold upgrade — migrations', () => {
 
     const res = await scaffold({ root, mode: 'init', upgrade: true });
     expect(res.migrationsRan).toContain('1.0.0→1.0.0');
-    // B1: on an unchanged tree the re-emitted runtime subset is content-hash
+    // On an unchanged tree the re-emitted runtime subset is content-hash
     // dedup'd to `identical` (no disk write).
     expect(res.identical).toContain('.mcp.json');
     expect(res.identical).toContain('.noir/NOIR.md');
@@ -282,7 +282,7 @@ describe('scaffold result shape', () => {
 // Fix-wave coverage (adversarial review of Slice S).
 // ---------------------------------------------------------------------------
 
-describe('scaffold — project.id integrity (C1)', () => {
+describe('scaffold — project.id integrity', () => {
   it('heals a corrupt (empty) .noir/project.id so the file and NOIR.md agree', async () => {
     // Pre-seed a corrupt stamp: the file EXISTS but trims to empty. The
     // manifest's `skipIfExists` would preserve this empty file while NOIR.md's
@@ -315,7 +315,7 @@ describe('scaffold — project.id integrity (C1)', () => {
   });
 });
 
-describe('scaffold — CLAUDE.md multi-region byte stability (I1)', () => {
+describe('scaffold — CLAUDE.md multi-region byte stability', () => {
   it('5 consecutive inits leave CLAUDE.md byte-identical; CONTEXT before RULES; no duplication', async () => {
     await init(root);
     const snapshot = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
@@ -356,7 +356,7 @@ describe('scaffold — CLAUDE.md multi-region byte stability (I1)', () => {
   });
 });
 
-describe('scaffold — legacy NOIR.md self-heal (I2)', () => {
+describe('scaffold — legacy NOIR.md self-heal', () => {
   it('legacy unmarked NOIR.md → init → exactly ONE brief, inside markers', async () => {
     // Pre-seed a legacy whole-file auto-brief with NO BRIEF_BLOCK markers,
     // matching a pre-Slice-S .noir/NOIR.md.
@@ -429,27 +429,27 @@ describe('scaffold — migrations skip on fresh project (M4)', () => {
 
 // ---------------------------------------------------------------------------
 // S10 — host-parametric scaffold. The default (claude) is BYTE-IDENTICAL to
-// v1.1 (fix-wave I1 REMOVED the additive root AGENTS.md — claude's CLAUDE.md
+// v1.1 (REMOVED the additive root AGENTS.md — claude's CLAUDE.md
 // already @-imports .noir/; emitting AGENTS.md too double-imported them). Each
 // non-claude host emits its own native context surface + the host MCP config.
 // AGENTS.md is emitted only for agents-md/cursor/opencode (whose native context
 // surface IS AGENTS.md); claude/gemini use their own CLAUDE.md/GEMINI.md.
 // ---------------------------------------------------------------------------
 describe('scaffold — host-parametric (--host <id>)', () => {
-  it('default host (no opts.host) is claude; CLAUDE.md + .mcp.json present; NO AGENTS.md (I1)', async () => {
+  it('default host (no opts.host) is claude; CLAUDE.md + .mcp.json present; NO AGENTS.md', async () => {
     const res = await scaffold({ root, mode: 'init', transport: 'stdio' });
     expect(res.host).toBe('claude');
     expect(existsSync(join(root, 'CLAUDE.md'))).toBe(true);
     expect(existsSync(join(root, '.mcp.json'))).toBe(true);
-    // I1 regression anchor: claude NO LONGER emits AGENTS.md (would double-
+    // Regression anchor: claude NO LONGER emits AGENTS.md (would double-
     // import .noir/ sources via CLAUDE.md's existing @-imports).
     expect(existsSync(join(root, 'AGENTS.md'))).toBe(false);
   });
 
-  it('host:gemini → GEMINI.md + .gemini/mcp.json; NO AGENTS.md (I1); no CLAUDE.md leakage', async () => {
+  it('host:gemini → GEMINI.md + .gemini/mcp.json; NO AGENTS.md; no CLAUDE.md leakage', async () => {
     await scaffold({ root, mode: 'init', transport: 'stdio', host: 'gemini' });
     expect(existsSync(join(root, 'GEMINI.md'))).toBe(true);
-    // I1: gemini NO LONGER emits AGENTS.md (would double-import via GEMINI.md).
+    // Gemini NO LONGER emits AGENTS.md (would double-import via GEMINI.md).
     expect(existsSync(join(root, 'AGENTS.md'))).toBe(false);
     expect(existsSync(join(root, '.gemini', 'mcp.json'))).toBe(true);
     // The canonical store is host-agnostic.
@@ -480,7 +480,7 @@ describe('scaffold — host-parametric (--host <id>)', () => {
     expect(existsSync(join(root, 'GEMINI.md'))).toBe(false);
     // Regression anchor: NO host-rules .mdc emitted. The prior
     // `noir-contract.mdc` pointer was REMOVED — it was `noir-`-prefixed, so
-    // the C3 cursor flat-skill prune deleted it on every
+    // the cursor flat-skill prune deleted it on every
     // `noir init/create/sync --host cursor`. Cursor's rules ride AGENTS.md's
     // `@.noir/rules/RULES.md` import instead.
     expect(existsSync(join(root, '.cursor', 'rules', 'noir-contract.mdc'))).toBe(false);
@@ -516,7 +516,7 @@ describe('scaffold — host-parametric (--host <id>)', () => {
   it('M1: AGENTS.md byte-equals emitAgentsMd({root}) for an AGENTS.md-emitting host (agents-md)', async () => {
     // M1 parity anchor: when a host DOES emit AGENTS.md, the bytes on disk
     // equal the shared `emitAgentsMd({root})` helper output (single source of
-    // truth). For claude/gemini the file is ABSENT — covered by the I1 cases.
+    // truth). For claude/gemini the file is ABSENT — covered by those cases.
     await scaffold({ root, mode: 'init', transport: 'stdio', host: 'agents-md' });
     const expected = emitAgentsMd({ root });
     expect(readFileSync(join(root, 'AGENTS.md'), 'utf8')).toBe(expected);

@@ -1,6 +1,6 @@
 // Local in-process embedder: `@huggingface/transformers` + all-MiniLM-L6-v2.
 //
-// DESIGN (spec DS-2 / NFR-4):
+// DESIGN:
 //   - The `@huggingface/transformers` module is imported LAZILY via dynamic
 //     `import()` on the FIRST `embed()` call, never at module top level. This
 //     keeps CLI startup and every non-context code path offline and fast, and
@@ -16,7 +16,7 @@
 //     `MODELS_DIR` const re-exports that value so this module's existing
 //     imports keep resolving to the identical path.
 //   - Output is mean-pooled then L2-normalized through the shared `l2normalize`
-//     so every provider path funnels through one normalization (DS-8).
+//     so every provider path funnels through one normalization.
 
 import { mkdirSync } from 'node:fs';
 import { modelsDir } from '@noir-ai/core';
@@ -71,7 +71,7 @@ async function loadPipeline(model: string): Promise<LoadedEmbedder> {
     const extractor = await mod.pipeline('feature-extraction', model);
     return async (text: string): Promise<Float32Array> => {
       // mean-pool the token embeddings; `l2normalize` (not normalize:true) is
-      // the single normalization every provider funnels through (DS-8).
+      // the single normalization every provider funnels through.
       const out = await extractor(text, { pooling: 'mean' });
       // transformers.js `Tensor.data` is a typed array; copy into a fresh
       // Float32Array of exactly the model's embedding width.

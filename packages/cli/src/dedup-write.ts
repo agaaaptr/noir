@@ -1,4 +1,4 @@
-// TIER B3 — write-path semantic dedup. After `scaffold()` writes host-context
+// Write-path semantic dedup. After `scaffold()` writes host-context
 // files (CLAUDE.md / AGENTS.md / GEMINI.md / .noir/rules/RULES.md), embed the
 // just-written file and compare it against the OTHER existing host-context
 // files. Surface a near-duplicate as a NON-BLOCKING recommendation:
@@ -26,7 +26,7 @@
 // `noir sync` that re-emits byte-identical content does NOT re-embed. Cache
 // entries are scoped to the resolved model id (a model change invalidates them).
 //
-// Connect to B2: when a near-dup is found, the conflict record (mode 'artifact'
+// When a near-dup is found, the conflict record (mode 'artifact'
 // — the closest generic in ConflictContext['mode']) is appended to the
 // ScaffoldResult.conflicts[] the caller returns, so `--json` consumers see the
 // near-dup with its cosine `similarity` without a prompt.
@@ -60,7 +60,7 @@ export const EMBEDDER_PING_TIMEOUT_MS = 5000;
 const DEDUP_CACHE_VERSION = 1;
 
 export interface DedupWriteOpts {
-  /** B1/B2 explicit interactivity flag (the engine + skills emit read the same). */
+  /** Explicit interactivity flag (the engine + skills emit read the same). */
   interactive: boolean;
   /** Project info — read from `.noir/config.yml` by the caller. When undefined
    *  OR when the resolved embedder is `kind:'none'`, the hook warn-skips. */
@@ -162,10 +162,10 @@ export async function checkWritePathDedup(
       );
     }
 
-    // Connect to B2: append a structured record so --json consumers see the
+    // Append a structured record so --json consumers see the
     // near-dup with its cosine similarity without a prompt. The path is the
-    // file we just wrote (consistent with B2's "path = the file being
-    // written"); existingSha is the MATCHED file's hash, proposedSha the new
+    // file we just wrote (consistent with the "path = the file being
+    // written" convention); existingSha is the MATCHED file's hash, proposedSha the new
     // bytes'. Resolution 'preserve' = we kept both as-is under Create-anyway.
     const matchedText = safeRead(join(root, matchedRel));
     result.conflicts.push({
@@ -366,7 +366,7 @@ function makeCachedEmbed(cache: DedupCache, embed: EmbedLike): EmbedLike {
 // Small helpers.
 // ---------------------------------------------------------------------------
 
-/** SHA-256 hex of content, first 12 chars (matches B2's sha convention). */
+/** SHA-256 hex of content, first 12 chars (matches the sha convention). */
 function sha256Hex12(text: string): string {
   return createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 12);
 }

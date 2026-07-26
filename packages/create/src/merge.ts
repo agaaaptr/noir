@@ -60,7 +60,7 @@ export function lcsMatch(a: readonly string[], b: readonly string[]): Array<[num
 }
 
 /**
- * B2 — unified line diff for the conflict resolver's stderr preview. Returns a
+ * Unified line diff for the conflict resolver's stderr preview. Returns a
  * sequence of {type:'eq'|'del'|'add', line} records, LCS-based, equivalent in
  * shape to `git diff --no-color`. Pure (no IO) so it unit-tests cleanly and the
  * resolver can render it through {@link packages/cli/src/theme.ts} (`+` green,
@@ -148,7 +148,7 @@ function collapseContext(lines: readonly DiffLine[], context: number): DiffLine[
 }
 
 /**
- * B2 — zdiff3-style conflict markers for an unresolved overlap. Shape:
+ * zdiff3-style conflict markers for an unresolved overlap. Shape:
  *   `<<<<<<< ours`
  *   <ours lines>
  *   `||||||| base`
@@ -181,7 +181,7 @@ const eq = (a: readonly string[], b: readonly string[]): boolean =>
  * (`<<<<<<< ours` / `=======` / `>>>>>>> theirs`) — byte-identical to v1.2 so
  * {@link mergeManagedRegion} stays regression-anchored. Pass `'zdiff3'` to
  * include the base section (`||||||| base`) — used by the conflict resolver's
- * 6th "merge (with conflict markers)" option (B2 task 4). Pure + deterministic
+ * 6th "merge (with conflict markers)" option. Pure + deterministic
  * (no IO) so it's unit-testable.
  */
 export function mergeThreeWay(

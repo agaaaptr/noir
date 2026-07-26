@@ -112,7 +112,7 @@ describe('runStructured — tolerant JSON extraction', () => {
   });
 });
 
-describe('runStructured — the single repair retry (DS-4)', () => {
+describe('runStructured — the single repair retry', () => {
   it('retries once on malformed JSON and succeeds on the repair', async () => {
     // A genuinely unparseable first response (no JSON anywhere) so the retry is
     // actually exercised; the repair then emits valid JSON.
@@ -178,7 +178,7 @@ describe('runStructured — the single repair retry (DS-4)', () => {
   });
 });
 
-describe('runStructured — transport failures are NOT retried (DS-12)', () => {
+describe('runStructured — transport failures are NOT retried', () => {
   it('propagates an adapter { ok:false } immediately — retry budget is for JSON repair only', async () => {
     const a = scriptedAdapter([{ ok: false, reason: 'HTTP 500' }]);
     const r = await runStructured(a, baseReq(objSchema), 'sk');
@@ -211,7 +211,7 @@ describe('runStructured — transport failures are NOT retried (DS-12)', () => {
   });
 });
 
-describe('runStructured — prompt injection (DS-4 / FR-3)', () => {
+describe('runStructured — prompt injection (FR-3)', () => {
   it('appends the JSON instruction to a caller-supplied system prompt', async () => {
     const a = scriptedAdapter([{ ok: true, text: '{"title":"t","count":0}' }]);
     await runStructured(a, baseReq(objSchema, 'you are a helpful assistant'), 'sk');

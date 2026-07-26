@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../src/init.js', () => ({ init: vi.fn(async () => {}) }));
 vi.mock('../src/sync.js', () => ({ sync: vi.fn(async () => {}) }));
 vi.mock('../src/serve.js', () => ({ serve: vi.fn(async () => {}) }));
-// t6: doctor/daemon/skills are real modules now; mock them at the boundary so
+// doctor/daemon/skills are real modules now; mock them at the boundary so
 // the bin dispatch tests stay focused on wiring (argv → action → module).
 // Their dedicated behavior (--json shape, exit codes, foreground honesty,
 // health checks) is covered in doctor.test / daemon.test / skills.test.
@@ -37,7 +37,7 @@ vi.mock('../src/commands/create.js', () => ({ create: vi.fn(async () => {}) }));
 // daemon. Their dedicated behavior is covered in status.test / home.test.
 vi.mock('../src/commands/status.js', () => ({ status: vi.fn(async () => {}) }));
 vi.mock('../src/commands/home.js', () => ({ home: vi.fn(async () => {}) }));
-// t5: context/memory/task are real modules now; same boundary mock. Their
+// context/memory/task are real modules now; same boundary mock. Their
 // dedicated behavior (--json shape, daemon envelopes, prompts) is covered in
 // context.test / memory.test / task.test; here we only assert argv → module.
 vi.mock('../src/commands/context.js', () => ({
@@ -248,13 +248,13 @@ describe('commander migration — behavior preservation (migrated commands)', ()
     expect(sync).toHaveBeenCalledWith(process.cwd());
   });
 
-  it('sync --no-merge-regions passes mergeManagedRegions:false through to sync() (B1)', async () => {
+  it('sync --no-merge-regions passes mergeManagedRegions:false through to sync()', async () => {
     const r = await parse(['sync', '--no-merge-regions']);
     expect(r.exitCode).toBe(EXIT.OK);
     expect(sync).toHaveBeenCalledWith(process.cwd(), { mergeManagedRegions: false });
   });
 
-  it('sync --merge still passes merge:true (backward-compat no-op since B1 default)', async () => {
+  it('sync --merge still passes merge:true (backward-compat no-op, merge is the default)', async () => {
     const r = await parse(['sync', '--merge']);
     expect(r.exitCode).toBe(EXIT.OK);
     expect(sync).toHaveBeenCalledWith(process.cwd(), { merge: true });

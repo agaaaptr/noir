@@ -84,12 +84,12 @@ describe('anthropicAdapter — request shape (blueprint D5: single-shot, no tool
     expect(params.max_tokens).toBe(2048);
   });
 
-  it('constructs the SDK client with apiKey=value + maxRetries: 0 (DS-8 / DS-12)', async () => {
+  it('constructs the SDK client with apiKey=value + maxRetries: 0', async () => {
     mocks.createMock.mockResolvedValue(message('ok'));
     await anthropicAdapter.complete(baseReq(), 'sk-secret-value');
     // The env VALUE is passed (resolved by complete()), never the env-var NAME.
     expect(mocks.ctorOpts[0]?.apiKey).toBe('sk-secret-value');
-    // DS-12: never silently retry (bounded cost).
+    // Never silently retry (bounded cost).
     expect(mocks.ctorOpts[0]?.maxRetries).toBe(0);
   });
 
@@ -157,7 +157,7 @@ describe('anthropicAdapter — result mapping', () => {
   });
 });
 
-describe('anthropicAdapter — failure handling + DS-6 (never throws, never silent paid)', () => {
+describe('anthropicAdapter — failure handling (never throws, never silent paid)', () => {
   it('turns an SDK rejection into { ok: false, reason } (complete() backstop aside)', async () => {
     mocks.createMock.mockRejectedValue(new Error('rate limited'));
     const r = await anthropicAdapter.complete(baseReq(), 'sk-test');
@@ -175,7 +175,7 @@ describe('anthropicAdapter — failure handling + DS-6 (never throws, never sile
     if (r && r.ok === false) expect(r.reason).toContain('boom-string');
   });
 
-  it('returns { ok: false } when key is absent — does NOT let the SDK fall back to ANTHROPIC_API_KEY (DS-6)', async () => {
+  it('returns { ok: false } when key is absent — does NOT let the SDK fall back to ANTHROPIC_API_KEY', async () => {
     // A missing key here means the provider block was wired without apiKeyEnv.
     // The adapter MUST refuse rather than read env silently (silent paid call).
     // No create call should be made at all.

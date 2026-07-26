@@ -1,9 +1,9 @@
-// Consolidation unit tests for @noir-ai/memory (slice S7, task t5).
+// Consolidation unit tests for @noir-ai/memory.
 //
 // These exercise `runConsolidation` + its pure helpers DIRECTLY against an
 // in-memory mock store + a fake model + a recording `indexDerived` callback —
 // NO sqlite-vec native binary, NO embedder, NO network. They lock the
-// provider-gated, append-only consolidation contract (DS-6) at the algorithm
+// provider-gated, append-only consolidation contract at the algorithm
 // layer: the engine end-to-end path (real store + real embed) is covered by
 // engine.test.ts.
 //
@@ -164,10 +164,10 @@ const ENABLED: MemoryConfig = {
 };
 
 // ===========================================================================
-// runConsolidation — provider gate (the line between free and paid, DS-6)
+// runConsolidation — provider gate (the line between free and paid)
 // ===========================================================================
 
-describe('runConsolidation — provider gate (DS-6)', () => {
+describe('runConsolidation — provider gate', () => {
   it('refuses no-provider when consolidation is disabled', async () => {
     const store = mockStore();
     seed(store, [makeObs('a', { type: 'bug', content: 'candidate' })]);
@@ -217,7 +217,7 @@ describe('runConsolidation — provider gate (DS-6)', () => {
     });
 
     await runConsolidation(d);
-    // The miss is recorded so the refusal is never silent (DS-6).
+    // The miss is recorded so the refusal is never silent.
     const misses = getConsolidationMisses(store);
     expect(misses).toHaveLength(1);
     expect(misses[0]?.reason).toBe('no-provider');
@@ -331,7 +331,7 @@ describe('runConsolidation — candidate gate', () => {
 });
 
 // ===========================================================================
-// runConsolidation — success (append-only, DS-6)
+// runConsolidation — success (append-only)
 // ===========================================================================
 
 describe('runConsolidation — success (append-only lesson)', () => {
@@ -384,7 +384,7 @@ describe('runConsolidation — success (append-only lesson)', () => {
     const res = await runConsolidation(d);
     expect(res.ok).toBe(true);
 
-    // The original row in KV is byte-identical after consolidation (DS-6).
+    // The original row in KV is byte-identical after consolidation.
     const after = getObservation(store, 'a');
     expect(after).toEqual(before);
     // The original keeps its own type (NOT promoted to 'lesson').

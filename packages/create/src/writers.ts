@@ -111,7 +111,7 @@ export function managedBlock(
  *  pass. Used when a co-owned target carries more than one managed block —
  *  today only `CLAUDE.md` (CONTEXT + RULES).
  *
- *  WHY this exists (I1): calling {@link managedBlock} twice on the same file is
+ *  WHY this exists: calling {@link managedBlock} twice on the same file is
  *  NOT byte-idempotent. The 2nd call strips ONLY its own block, treats the 1st
  *  region (and the `\n\n` separator) as user content, `trimEnd`s it, and
  *  re-appends a fresh `\n\n` separator. Re-runs therefore accumulate ~2 leading
@@ -185,7 +185,7 @@ export function buildRegion(block: ManagedBlock, body: string): string {
 /** Compute the exact byte content a {@link managedBlock} write would produce,
  *  WITHOUT touching disk. Mirrors core's `writeManagedRegion` byte-for-byte
  *  (`stripManagedBlock` + `trimEnd` + `\n\n` separator + `regionText`) so the
- *  orchestrator's content-hash dedup (B1: skip an unchanged managed region) and
+ *  orchestrator's content-hash dedup (skip an unchanged managed region) and
  *  the writer always agree on every byte. Pass the CURRENT on-disk content;
  *  the predictor never reads the file itself (the orchestrator reads once and
  *  reuses the bytes for both predict + compare). */
@@ -201,7 +201,7 @@ export function predictManagedBlock(
 /** Compute the exact byte content a {@link managedBlocks} (multi-region) write
  *  would produce, WITHOUT touching disk. Mirrors the multi-region writer's
  *  strip-all + append-all pass (the single-region case delegates to
- *  {@link predictManagedBlock}). Used by the B1 content-hash dedup so a
+ *  {@link predictManagedBlock}). Used by the content-hash dedup so a
  *  multi-region file (CLAUDE.md CONTEXT+RULES) that is already up to date is
  *  skipped — `noir sync` on an unchanged tree writes NOTHING. */
 export function predictManagedBlocks(

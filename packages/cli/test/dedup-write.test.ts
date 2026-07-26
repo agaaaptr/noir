@@ -1,11 +1,11 @@
-// TIER B3 — write-path semantic dedup + CLI-wiring tests.
+// Write-path semantic dedup + CLI-wiring tests.
 //
 // Two surfaces:
 //   1. `checkWritePathDedup` (the hook) — direct unit tests with hand-crafted
 //      ScaffoldResults + injected fake embedders (no onnx). Covers the two-tier
 //      threshold, the content-hash cache gate, graceful-degrade when the
-//      embedder throws, the fresh-project fast path, and the B2 connect
-//      (conflicts[] record with similarity).
+//      embedder throws, the fresh-project fast path, and the conflict
+//      connect (conflicts[] record with similarity).
 //   2. `init`/`sync` TASK 1 wiring — pre-populate a skill target with a
 //      differing file, then assert the clack resolver fires under interactive
 //      and is bypassed under --no-input.
@@ -148,7 +148,7 @@ describe('checkWritePathDedup — two-tier threshold', () => {
     expect(readFileSync(join(tmp, 'AGENTS.md'), 'utf8')).toBe('FRESH-BYTES');
   });
 
-  it('0.85–0.95: INFO-only hint, write proceeds, no @clack prompt (B2 record still lands)', async () => {
+  it('0.85–0.95: INFO-only hint, write proceeds, no @clack prompt (conflict record still lands)', async () => {
     writeFileSync(join(tmp, 'CLAUDE.md'), 'A', 'utf8');
     writeFileSync(join(tmp, 'AGENTS.md'), 'B', 'utf8'); // cosine ≈ 0.9
     const embed = fakeEmbedAtSim(0.9);
@@ -161,7 +161,7 @@ describe('checkWritePathDedup — two-tier threshold', () => {
     expect(result.found[0]?.similarity).toBeLessThan(0.95);
     expect(result.found[0]?.similarity).toBeGreaterThanOrEqual(0.85);
     expect(clackMock.select).not.toHaveBeenCalled();
-    // Connect-to-B2 records EVERY near-dup (info tier too), so a --json caller
+    // The conflict connect records EVERY near-dup (info tier too), so a --json caller
     // sees the 0.85–0.95 band with its cosine without a prompt.
     expect(result.conflicts).toHaveLength(1);
     expect(result.conflicts[0]?.similarity).toBeGreaterThanOrEqual(0.85);
@@ -289,7 +289,7 @@ describe('checkWritePathDedup — content-hash cache', () => {
 // ---------------------------------------------------------------------------
 // 5. --json connect: near-dup recorded in conflicts[] with similarity.
 // ---------------------------------------------------------------------------
-describe('checkWritePathDedup — B2 connect (conflicts[])', () => {
+describe('checkWritePathDedup — conflict connect (conflicts[])', () => {
   it('action tier records a ConflictRecord (mode=artifact, similarity set, 12-char shas)', async () => {
     writeFileSync(join(tmp, 'CLAUDE.md'), 'A', 'utf8');
     writeFileSync(join(tmp, 'AGENTS.md'), 'A', 'utf8');

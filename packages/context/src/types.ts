@@ -15,7 +15,7 @@
 // ---------------------------------------------------------------------------
 
 /**
- * Logical source buckets a chunk can belong to. Reused by S7 (memory) —
+ * Logical source buckets a chunk can belong to. Reused for memory —
  * `'memory'` is reserved for that slice. The store treats `source` as a
  * free-form string; this enum is the context package's contract for what a
  * well-formed `source` value is.

@@ -47,7 +47,7 @@ describe('resolveModelConfig — degradation + passthrough', () => {
   });
 });
 
-describe('resolveModelConfig — key resolution from env (DS-8)', () => {
+describe('resolveModelConfig — key resolution from env', () => {
   it('materializes the key VALUE from process.env[apiKeyEnv] for a keyed provider', async () => {
     await withEnv('NOIR_TEST_MODEL_KEY', 'sk-resolved-secret', async () => {
       const r = resolveModelConfig({
@@ -79,7 +79,7 @@ describe('resolveModelConfig — key resolution from env (DS-8)', () => {
 
   it('treats an anonymous provider (no apiKeyEnv) as ready — hasKey true, no key needed', () => {
     // Local Ollama / LM Studio: omit apiKeyEnv entirely; the openai-compatible
-    // adapter then sends no auth header (DS-8). hasKey is vacuously true.
+    // adapter then sends no auth header. hasKey is vacuously true.
     const r = resolveModelConfig({
       providers: { ollama: { model: 'llama3.1', baseURL: 'http://localhost:11434/v1' } },
     });
@@ -103,7 +103,7 @@ describe('resolveModelConfig — key resolution from env (DS-8)', () => {
   });
 });
 
-describe('resolveModelConfig — provider-EXPLICIT, never inferred (DS-6)', () => {
+describe('resolveModelConfig — provider-EXPLICIT, never inferred', () => {
   it('does not add providers that the user did not write, even when their env var is set', async () => {
     // ANTHROPIC_API_KEY may be set in the host env for another tool. The bridge
     // MUST NOT invent an `anthropic` provider from its presence — it maps only

@@ -28,7 +28,7 @@ export {
   MANIFEST_PATH_PARITY,
   type ManifestEntry,
 } from './manifest.js';
-// --- Three-way merge (diff3; pure) + B2 unified line-diff ---
+// --- Three-way merge (diff3; pure) + unified line-diff ---
 export {
   type DiffLine,
   lineDiff,

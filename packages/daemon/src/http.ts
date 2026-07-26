@@ -75,7 +75,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
   // One memory engine per lifecycle, built from the same shared store handle +
   // the SAME `EmbedFn` already materialized for S6 (the daemon owns one
   // embedder; memory takes `{store, embed, ...}` — no embedder duplication).
-  // Consolidation is OPT-IN + provider-explicit (D5/D6/DS-6 — NEVER a silent
+  // Consolidation is OPT-IN + provider-explicit (D5/D6 — NEVER a silent
   // paid call, the Agent-Memory anti-pattern §9). The master switch is the
   // user's `memory.consolidation.enabled`; only when it is true does the
   // model-derived provider+model even get considered. `resolveMemoryConfig` is
@@ -96,7 +96,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
         resolvedMemory,
       )
     : undefined;
-  // Slice X — integration service (X-T3). Built once per serve lifecycle from
+  // Integration service. Built once per serve lifecycle from
   // the discovered declarations + the user's `integrations:` config overlay.
   // Discovery is best-effort; an empty service still registers
   // `integrations_auth` (env-var resolution needs no declaration) and simply

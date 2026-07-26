@@ -98,7 +98,7 @@ describeVec(describeLabel, () => {
     const store = await openStore({ projectId: id, root });
     try {
       // Seed a tiny tree. `contextEngine` appears as a camelCase identifier;
-      // the indexer's index-time identifier explosion (DS-7) gives the bare
+      // the indexer's index-time identifier explosion gives the bare
       // token a BM25 signal under porter unicode61, so the query hits.
       writeFile(
         'src/util.ts',

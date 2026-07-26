@@ -1,7 +1,7 @@
-// Memory store layer for @noir-ai/memory (slice S7, task t2).
+// Memory store layer for @noir-ai/memory.
 //
 // A thin KV + index facade over the existing @noir-ai/store. Observations are
-// realized ON TOP of the store (DS-2 — NO schema migration): the authoritative
+// realized ON TOP of the store (NO schema migration): the authoritative
 // full row lives in KV `memory:obs:<id>`, with `indexDoc({source:'memory'})`
 // (FTS5) + `upsertVec({source:'memory'})` (sqlite-vec) as search indexes. This
 // module owns ONLY the KV layout + single-key accessors (+ the two
@@ -10,16 +10,16 @@
 // lives in engine.ts.
 //
 // KV layout (namespaced `memory:` — disjoint from `ctx:` / `workflow:*`):
-//   memory:obs:<id>            → Observation        (authoritative full row, DS-9)
+//   memory:obs:<id>            → Observation        (authoritative full row)
 //   memory:sessions            → SessionInfo[]      (per-project rollup, A3)
 //   memory:index               → string[]           (all obs ids; status count +
 //                                                    consolidate candidate source)
-//   memory:consolidation:miss  → ConsolidationMiss[] (refusal audit log, DS-6)
+//   memory:consolidation:miss  → ConsolidationMiss[] (refusal audit log)
 //
-// Authoritative-source discipline (R4 mitigation): the KV row
+// Authoritative-source discipline (mitigation): the KV row
 // `memory:obs:<id>` is the source of truth; `docs.meta` is a denormalized
 // search payload written alongside it. Recall hydrates the FULL `Observation`
-// from KV (never the truncated FTS snippet — DS-9). `forget` clears the KV row
+// from KV (never the truncated FTS snippet). `forget` clears the KV row
 // (tombstone, mirroring the context indexer) AND purges the doc/vec indexes
 // best-effort (A2's acceptable v1 behavior).
 //
@@ -42,7 +42,7 @@ export const OBS_PREFIX = 'memory:obs:';
 export const SESSIONS_KEY = 'memory:sessions';
 /** KV key holding the sorted list of all observation ids (status + candidates). */
 export const INDEX_KEY = 'memory:index';
-/** KV key holding the consolidation refusal audit log (DS-6: refuse + LOG). */
+/** KV key holding the consolidation refusal audit log (refuse + LOG). */
 export const CONSOLIDATION_MISS_KEY = 'memory:consolidation:miss';
 
 /** Build a `memory:obs:<id>` KV key. */
@@ -58,13 +58,13 @@ export function obsKey(id: string): string {
  * Hydrate the FULL {@link Observation} for `id` from the authoritative KV row.
  * Returns `null` when the id was never saved (or has been forgotten — the
  * tombstone reads back as `null`). This is the ONLY correct way to read an
- * observation's complete `content` (DS-9: never the truncated FTS snippet).
+ * observation's complete `content` (never the truncated FTS snippet).
  */
 export function getObservation(store: Store, id: string): Observation | null {
   return store.getState<Observation>(obsKey(id));
 }
 
-/** Write the authoritative full row (the source of truth — DS-2/R4). */
+/** Write the authoritative full row (the source of truth). */
 export function setObservation(store: Store, obs: Observation): void {
   store.setState(obsKey(obs.id), obs);
 }
@@ -150,7 +150,7 @@ export function decrementSession(store: Store, sessionId: string): void {
 }
 
 // ---------------------------------------------------------------------------
-// Consolidation refusal audit (KV `memory:consolidation:miss`) — DS-6
+// Consolidation refusal audit (KV `memory:consolidation:miss`)
 // ---------------------------------------------------------------------------
 
 /**
@@ -175,7 +175,7 @@ export function getConsolidationMisses(store: Store): ConsolidationMiss[] {
 
 /**
  * Append a refusal record to the audit log. RMW — called ONLY from the engine's
- * serialized `consolidate`, so the append cannot race itself. DS-6: a refusal is
+ * serialized `consolidate`, so the append cannot race itself. A refusal is
  * never silent — the miss is recorded so the user can see why no lesson was
  * written (and that NO paid call was made).
  */

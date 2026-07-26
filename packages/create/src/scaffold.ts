@@ -82,20 +82,20 @@ export interface ScaffoldOptions {
   conflictPolicy?: 'overwrite' | 'preserve';
   /** SP-C: per-file conflict resolver — the UI seam (the engine stays UI-free;
    *    the cli injects a @clack-based resolver). Called when a `regenerate`
-   *    file exists and differs from the template. B2: the return type widens to
+   *    file exists and differs from the template. The return type widens to
    *    accept a rich shape carrying `applyToAll` — the engine then reuses the
    *    decision for the rest of the run (per artifact CLASS). */
   onConflict?: (ctx: ConflictContext) => Promise<ConflictResolverReturn> | ConflictResolverReturn;
   /** Three-way merge managed regions (base/ours/theirs) using a persisted
    *  ancestor snapshot (`.noir/ancestors.json`) instead of strip-replace, so a
    *  hand-edit inside a `<!-- noir:* -->` region survives a template update.
-   *  DEFAULT TRUE (B1): ancestor capture is unconditional, so the first merge
+   *  DEFAULT TRUE: ancestor capture is unconditional, so the first merge
    *  run always has a base. Set to `false` (CLI `--no-merge-regions`) to
    *  restore strip-replace. Supports BOTH single-region (NOIR.md, ignores) AND
    *  multi-region (CLAUDE.md CONTEXT+RULES) managed files — the multi-region
    *  path shipped with SP-H (`managedBlocks` + `mergeManagedRegion` per block). */
   mergeManagedRegions?: boolean;
-  /** B1: explicit interactivity signal. The engine reads THIS (not
+  /** Explicit interactivity signal. The engine reads THIS (not
    *  `process.env`), so a direct API/embedded caller in a TTY that does NOT
    *  inject {@link onConflict} never hits a @clack prompt. The CLI sets it from
    *  its global flags (via the `NOIR_NON_INTERACTIVE` bridge bin.ts owns);
@@ -126,7 +126,7 @@ export interface ScaffoldResult {
   toVersion: string;
   /** The host actually emitted (post-default). */
   host: HostTag;
-  /** B2: structured conflict report — one record per file that existed AND
+  /** Structured conflict report — one record per file that existed AND
    *  differed from the proposed bytes (regenerate conflict path). Populated in
    *  `--json`/`--no-input`/non-TTY runs (no prompt fires) so a CI/JSON caller
    *  can see exactly which files diverged + how they were resolved, without
@@ -135,7 +135,7 @@ export interface ScaffoldResult {
   conflicts: ConflictRecord[];
 }
 
-/** B2 — one entry in {@link ScaffoldResult.conflicts}. */
+/** One entry in {@link ScaffoldResult.conflicts}. */
 export interface ConflictRecord {
   /** Repo-relative path of the conflicting file. */
   path: string;
@@ -160,7 +160,7 @@ export interface ConflictContext {
   existing: string;
   /** The content the scaffold would write. */
   proposed: string;
-  /** B2: artifact class — drives apply-to-all memory scope (`regenerate` shares
+  /** Artifact class — drives apply-to-all memory scope (`regenerate` shares
    *  one decision across a run; `managedBlock`/`managedBlocks` stay per-file).
    *  Defaults to `'regenerate'` for backward compatibility with SP-C resolvers
    *  that pre-date the field (the engine always sets it). */
@@ -172,10 +172,10 @@ export interface ConflictContext {
     | 'skill'
     | 'markdown'
     | 'artifact';
-  /** B2: LCS similarity (0-1) between existing and proposed. Cheap signal for
+  /** LCS similarity (0-1) between existing and proposed. Cheap signal for
    *  the resolver to bias toward `replace` when ~1.0 or `preserve` when ~0. */
   similarity?: number;
-  /** B2: when the 3-way merge of a managed region hit an overlap, the merged
+  /** When the 3-way merge of a managed region hit an overlap, the merged
    *  bytes WITH zdiff3 conflict markers (selecting `'merge'` writes this). */
   mergedWithMarkers?: string;
 }
@@ -189,7 +189,7 @@ export type ConflictResolution =
   | 'cancel'
   | 'merge';
 
-/** B2 — the resolver may return a bare {@link ConflictResolution} (scope
+/** The resolver may return a bare {@link ConflictResolution} (scope
  *  `'one'`) OR a rich shape carrying `applyToAll`. The engine unwraps both; when
  *  `applyToAll` is true it stores the choice in its per-run memory keyed by
  *  artifact CLASS (`regenerate` shares one decision across a run; managedBlock
@@ -255,11 +255,11 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   }
 
   // 2. Resolve project id. Read the on-disk stamp ONCE and reuse the result
-  //    for the corrupt-file heal below (C1). sync requires a VALID existing id.
+  //    for the corrupt-file heal below. sync requires a VALID existing id.
   const idFile = readProjectIdFile(opts.root);
   const projectId = resolveProjectId(opts, idFile);
 
-  // C1: a `project.id` that EXISTS but is empty/unparseable is CORRUPT, not
+  // A `project.id` that EXISTS but is empty/unparseable is CORRUPT, not
   // absent. The manifest writes project.id via `skipIfExists`, which would
   // preserve the empty file while NOIR.md's BRIEF_BLOCK renders the freshly
   // resolved/generated id → silent identity split (NOIR.md states an id the
@@ -276,16 +276,16 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   //    (TUI, doctor) get a single source of truth regardless of mode.
   const stack = detectStack(opts.root);
 
-  // B1: ancestor snapshot is read + captured UNCONDITIONALLY (not just under
+  // Ancestor snapshot is read + captured UNCONDITIONALLY (not just under
   // --merge) so the first merge run — now the DEFAULT — always has a base. The
   // merge APPLICATION still keys off `mergeManagedRegions` below; ancestor
   // CAPTURE is always-on. `writeAncestors` at the end dedups internally.
   const ancestors = readAncestors(opts.root);
-  // B1 (task 6): mergeManagedRegions defaults to TRUE. `--no-merge-regions`
+  // mergeManagedRegions defaults to TRUE. `--no-merge-regions`
   // (CLI) restores strip-replace by setting opts.mergeManagedRegions = false.
   const mergeManagedRegions = opts.mergeManagedRegions !== false;
 
-  // B1 — widened no-op guard (was: scaffold-version present ONLY). A bare
+  // Widened no-op guard (was: scaffold-version present ONLY). A bare
   // `noir init`/`noir create` is a NO-OP when the project carries EITHER a
   // `.noir/scaffold-version` stamp (1.3.0+) OR a `.noir/project.id` (pre-1.3.0
   // legacy). Previously a legacy project (id present, no stamp) re-scaffolded
@@ -362,7 +362,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   const written: string[] = [];
   const skipped: string[] = [];
   const identical: string[] = [];
-  // B2 — per-run conflict memory + structured report. Memory is keyed by
+  // Per-run conflict memory + structured report. Memory is keyed by
   // artifact CLASS for `regenerate` (one decision shared across the run, so a
   // `noir init --upgrade` over N pointers → 1 prompt) and by per-file path for
   // `managedBlock`/`managedBlocks` (user edits there need individual review).
@@ -388,7 +388,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
 
   // GROUP applicable entries by target path (manifest order preserved within
   // each group) so files carrying MULTIPLE managed blocks (CLAUDE.md today =
-  // CONTEXT + RULES) get ONE atomic multi-region write (I1). Single-entry
+  // CONTEXT + RULES) get ONE atomic multi-region write. Single-entry
   // paths keep the existing per-entry writer — byte-stable for the NOIR.md
   // brief, the ignore files, and the regenerated `.mcp.json`. dryRun uses the
   // SAME grouping so its reported paths match what a real run would write
@@ -417,12 +417,12 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
           ? mergeManagedRegion(abs, e.path, block, theirs, ancestors)
           : { text: theirs, conflict: false, cleanTheirs: theirs };
         if (merged.conflict) hadMergeConflict = true;
-        // B1: capture ancestor unconditionally (pre-write snapshot) so a later
+        // Capture ancestor unconditionally (pre-write snapshot) so a later
         // merge run has a base even if this run was strip-replace.
         ancestors[`${e.path}::${block.begin}`] = theirs;
         return { block, regionText: merged.text };
       });
-      // B2 — managed-region conflict (per-file; never apply-to-all). Hand the
+      // Managed-region conflict (per-file; never apply-to-all). Hand the
       // resolver the merged-with-markers bytes (the 6th "merge" option's
       // payload). Default behavior when no resolver is wired (or non-interactive):
       // write the merged-with-markers bytes + the SP-D stderr note (unchanged).
@@ -446,7 +446,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
           );
         }
       }
-      // B1 content-hash dedup: if the would-be-written bytes equal the on-disk
+      // Content-hash dedup: if the would-be-written bytes equal the on-disk
       // file, skip the write entirely (no mtime/git churn). `noir sync` on an
       // unchanged tree writes NOTHING.
       const predicted = predictManagedBlocks(onDisk ?? '', regions);
@@ -481,7 +481,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
         if (!block) {
           throw new Error(`manifest entry ${entry.path}: managedBlock mode missing 'block'`);
         }
-        // I2: a legacy (pre-Slice-S) .noir/NOIR.md is a whole-file auto-brief
+        // A legacy (pre-Slice-S) .noir/NOIR.md is a whole-file auto-brief
         // with NO managed markers. The normal path would treat the old brief
         // as user content and append a SECOND managed brief → two "Project
         // id:" lines. Self-heal: when the existing file has NO noir managed
@@ -494,9 +494,9 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
           ? mergeManagedRegion(abs, entry.path, block, theirs, ancestors)
           : { text: theirs, conflict: false, cleanTheirs: theirs };
         const regionText = merged.text;
-        // B1: capture ancestor unconditionally (pre-write snapshot).
+        // Capture ancestor unconditionally (pre-write snapshot).
         ancestors[`${entry.path}::${block.begin}`] = theirs;
-        // B2 — managed-region conflict (per-file; never apply-to-all). Hand the
+        // Managed-region conflict (per-file; never apply-to-all). Hand the
         // resolver the merged-with-markers bytes (the 6th "merge" option's
         // payload). Default behavior when no resolver is wired (or
         // non-interactive): write the merged-with-markers bytes + the SP-D
@@ -524,7 +524,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
             `noir: managed-region conflict in ${entry.path} — wrote inline markers; resolve manually.\n`,
           );
         }
-        // B1 content-hash dedup (post-heal: re-read, the heal may have wiped).
+        // Content-hash dedup (post-heal: re-read, the heal may have wiped).
         // If the would-be-written bytes equal the on-disk file, skip the write
         // (no mtime/git churn) — a no-op `noir sync` writes NOTHING.
         const onDisk = readOptional(abs);
@@ -549,7 +549,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     writeScaffoldVersion(opts.root, CURRENT_SCAFFOLD_VERSION);
   }
 
-  // B1: persist the ancestor snapshot UNCONDITIONALLY (every init/create/sync
+  // Persist the ancestor snapshot UNCONDITIONALLY (every init/create/sync
   // seeds it) so the first merge run — now the default — has a base.
   // `writeAncestors` dedups internally: when the serialized bytes equal the
   // on-disk file, the rewrite is skipped, so a no-op sync leaves ancestors.json
@@ -574,7 +574,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   };
 }
 
-/** B2 — sha256 hex digest, truncated to 12 chars (git-short-style). Cheap,
+/** sha256 hex digest, truncated to 12 chars (git-short-style). Cheap,
  *  deterministic, collision-resistant enough for a single conflict report. */
 function sha256Hex12(s: string): string {
   // `createHash` is lazy-imported so the engine stays import-side-effect-free
@@ -584,7 +584,7 @@ function sha256Hex12(s: string): string {
   return createHash('sha256').update(s, 'utf8').digest('hex').slice(0, 12);
 }
 
-/** B2 — LCS-based similarity ratio in [0,1]. 1.0 = byte-identical lines, 0.0 =
+/** LCS-based similarity ratio in [0,1]. 1.0 = byte-identical lines, 0.0 =
  *  wholly disjoint. Cheap signal the resolver can use to bias toward `replace`
  *  when ~1 (cosmetic drift) vs `preserve` when ~0 (substantive edit). Reuses
  *  the SAME LCS as {@link mergeThreeWay} so there is one line-diff algorithm. */
@@ -620,7 +620,7 @@ function similarity(a: string, b: string): number {
  *  region this is a no-op (returns `theirs`). On conflict, returns the merged
  *  bytes WITH zdiff3 markers as `text` AND `conflict: true`, so the per-file
  *  scaffold site can hand the resolver a 6th "merge (with conflict markers)"
- *  option (B2 task 4). `cleanTheirs` is the un-merged template — what the
+ *  option. `cleanTheirs` is the un-merged template — what the
  *  `'replace'` resolution would write. */
 function mergeManagedRegion(
   abs: string,
@@ -633,7 +633,7 @@ function mergeManagedRegion(
   if (base === undefined) return { text: theirs, conflict: false, cleanTheirs: theirs };
   const ours = readManagedBlock(abs, block);
   if (ours === null) return { text: theirs, conflict: false, cleanTheirs: theirs };
-  // B1: `readManagedBlock` returns the matched region WITHOUT the trailing `\n`
+  // `readManagedBlock` returns the matched region WITHOUT the trailing `\n`
   // after `end`, while `buildRegion`/`theirs` INCLUDE it. Feeding the raw `ours`
   // into mergeThreeWay makes every merge return a region missing that newline,
   // so the writer would drop it on each sync (byte drift) AND the content-hash
@@ -641,12 +641,12 @@ function mergeManagedRegion(
   // to `theirs`'s shape (always end with `\n`) so an unchanged region stays
   // byte-identical and `noir sync` on an unchanged tree is a true no-op.
   const oursNormalized = ours.endsWith('\n') ? ours : `${ours}\n`;
-  // B2 — zdiff3 markers so the resolver's 6th option shows the base section.
+  // zdiff3 markers so the resolver's 6th option shows the base section.
   const res = mergeThreeWay(base, oursNormalized, theirs, 'zdiff3');
   return { text: res.merged, conflict: res.conflict, cleanTheirs: theirs };
 }
 
-/** B2 — consult {@link ScaffoldOptions.onConflict} for a managed-region merge
+/** Consult {@link ScaffoldOptions.onConflict} for a managed-region merge
  *  conflict (single-block path). Per-file (never apply-to-all — user edits
  *  inside a `<!-- noir:* -->` region need individual review). When no resolver
  *  is wired OR the engine is non-interactive, returns `undefined` so the caller
@@ -674,7 +674,7 @@ async function resolveManagedConflictCtx(
   return resolution;
 }
 
-/** B2 — consult {@link ScaffoldOptions.onConflict} for a managed-region merge
+/** Consult {@link ScaffoldOptions.onConflict} for a managed-region merge
  *  conflict (multi-block path). Simpler than the single-block path: the
  *  multi-block file is written atomically as ONE unit, so 'rename'/'duplicate'
  *  /'replace' have no clean meaning (the regions live alongside user content in
@@ -692,7 +692,7 @@ async function resolveManagedConflict(
 }
 
 /** Read the `.noir/project.id` stamp ONCE and classify it for BOTH id
- *  resolution and the C1 corrupt-file heal. `absent` (ENOENT) and `valid`
+ *  resolution and the corrupt-file heal. `absent` (ENOENT) and `valid`
  *  (non-empty) are the normal cases; `corrupt` (file exists but trims to empty)
  *  is healed by the orchestrator before the manifest loop so `skipIfExists`
  *  writes the resolved id fresh instead of preserving the empty file. */
@@ -769,7 +769,7 @@ async function writeRegenerateWithConflict(
     // content-hash dedup: byte-identical → skip the rewrite entirely (no disk IO).
     return { written: [], skipped: [], identical: [relPath] };
   }
-  // B2 — apply-to-all memory: a regenerate file's class shares one decision
+  // Apply-to-all memory: a regenerate file's class shares one decision
   // across the run (so a `noir init --upgrade` over N pointers → 1 prompt).
   const MODE: NonNullable<ConflictContext['mode']> = 'regenerate';
   const sim = similarity(existing, proposed);
@@ -787,7 +787,7 @@ async function writeRegenerateWithConflict(
   } else {
     resolution = opts.conflictPolicy === 'preserve' ? 'preserve' : 'replace';
   }
-  // B2 — record the conflict ALWAYS (interactive or not) so `--json`/CI can see
+  // Record the conflict ALWAYS (interactive or not) so `--json`/CI can see
   // exactly which files diverged + how the engine resolved them. The prompt
   // never fires under non-interactive (buildConflictOpts returns preserve w/o
   // onConflict); the record still lands.
@@ -797,7 +797,7 @@ async function writeRegenerateWithConflict(
       regenerate(abs, proposed);
       return { written: [relPath], skipped: [], identical: [] };
     case 'merge': {
-      // B2 — `merge` is only meaningful when ctx.mergedWithMarkers was populated
+      // `merge` is only meaningful when ctx.mergedWithMarkers was populated
       // (managed-region path). For a bare regenerate conflict without markers
       // the resolver should not pick `merge`; defensively fall back to replace
       // (better than dropping the user's bytes).
@@ -871,13 +871,13 @@ function groupApplicableByPath(
 }
 
 /** True for the canonical NOIR.md path the manifest emits (the BRIEF_BLOCK
- *  target). Scoped so the I2 legacy-heal only fires for that one file — we must
+ *  target). Scoped so the legacy-heal only fires for that one file — we must
  *  not wipe arbitrary co-owned managed files. */
 function isNoirMdPath(relPath: string): boolean {
   return relPath === '.noir/NOIR.md';
 }
 
-/** I2 self-heal: wipe a legacy (pre-Slice-S) NOIR.md before the managed write.
+/** Self-heal: wipe a legacy (pre-Slice-S) NOIR.md before the managed write.
  *  Legacy shape = file exists but contains NO `<!-- noir:<name> begin -->`
  *  managed marker (the whole file was the auto-brief). Files that already have
  *  markers, or are absent, are left untouched (normal managed-block path or
@@ -902,7 +902,7 @@ function renderEntry(entry: ManifestEntry, vars: BuildManifestContext): string {
 }
 
 /** Read a file as UTF-8, returning `undefined` when it is absent (ENOENT).
- *  Used by the B1 content-hash dedup to read the on-disk bytes ONCE per managed
+ *  Used by the content-hash dedup to read the on-disk bytes ONCE per managed
  *  target and feed them to the predictor + the byte-equality check. Any other
  *  read error re-throws (a real IO failure should not be silenced into a
  *  mistaken "identical → skip write"). */

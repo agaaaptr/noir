@@ -11,10 +11,10 @@
 // - SINGLE-SHOT (D5 / FR-8): the POST body carries ONLY `model`, `messages`,
 //   and (optionally) `max_tokens`. No `tools` / `functions` / `stream` — this
 //   adapter cannot express an agent/tool loop. One request, parse, return.
-// - NO SDK, NO RETRY MACHINERY (DS-12 / NFR-2/3): raw `fetch` is a single shot;
+// - NO SDK, NO RETRY MACHINERY (NFR-2/3): raw `fetch` is a single shot;
 //   the only retry lives in the structured path (t4). Uses the GLOBAL `fetch`
 //   (Node ≥20, per `engines.node ">=20"`) — zero added dependency.
-// - SECRETS stay in env (DS-8): `key` is the VALUE resolved by `complete()`; an
+// - SECRETS stay in env: `key` is the VALUE resolved by `complete()`; an
 //   ANONYMOUS local provider (Ollama with no `apiKeyEnv`) reaches here with
 //   `key === undefined` and we simply omit the `Authorization` header. This
 //   module never reads `process.env` and never logs the value.

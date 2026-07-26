@@ -14,7 +14,7 @@ afterEach(() => {
 
 describe('init --url localhost validation (security hardening)', () => {
   it('accepts http://127.0.0.1:4321/mcp', async () => {
-    // init() returns a ScaffoldResult on success (B3 widened the surface so
+    // init() returns a ScaffoldResult on success (the surface was widened so
     // --json callers can read conflicts[]); the URL-validation contract is
     // that the call RESOLVES without throwing.
     await expect(

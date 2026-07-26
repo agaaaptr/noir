@@ -2,12 +2,12 @@
 //
 // HARD RULES enforced here, by construction:
 //
-// - Provider-EXPLICIT, never silent paid calls (DS-6): the provider is resolved
+// - Provider-EXPLICIT, never silent paid calls: the provider is resolved
 //   ONLY from the explicit `req.provider` (or `cfg.defaultProvider`). Env-var
 //   presence is NEVER read to infer a provider — `ANTHROPIC_API_KEY` being set
 //   for another tool does NOT make Anthropic active in Noir. No explicit,
 //   configured provider ⇒ `null`.
-// - null-degradation FIRST-CLASS (DS-5): the unconfigured / missing-key paths
+// - null-degradation FIRST-CLASS: the unconfigured / missing-key paths
 //   return `null` (NEVER throw), so callers branch on presence and the full
 //   Noir test suite runs offline + free. `null` is the always-available default.
 // - SINGLE-SHOT (D5): there is no loop here — `complete()` dispatches one
@@ -55,7 +55,7 @@ export function clearProviderAdapters(): void {
 
 // --- Key resolution ---------------------------------------------------------
 //
-// Secrets live in env vars; config holds only the env-var NAME (DS-8). A
+// Secrets live in env vars; config holds only the env-var NAME. A
 // provider block with no `apiKeyEnv` is an ANONYMOUS local provider (Ollama,
 // LM Studio) and is allowed to proceed with `undefined` — no auth header.
 function resolveKey(providerCfg: ProviderConfig): string | undefined {
@@ -66,7 +66,7 @@ function resolveKey(providerCfg: ProviderConfig): string | undefined {
 // --- Per-tier output caps (FR-10) -------------------------------------------
 //
 // Applied when a request omits `maxTokens` AND signals a tier. A tier ONLY
-// picks the output cap — it never selects a provider or model (DS-6), so this
+// picks the output cap — it never selects a provider or model, so this
 // table is a flat budget map, not a routing table. When neither `maxTokens` nor
 // a tier is given, the request keeps `maxTokens: undefined` and each adapter
 // applies its own last-resort bound (e.g. the Anthropic Messages API's required
@@ -108,16 +108,16 @@ function resolveAdapterName(providerName: string, providerCfg: ProviderConfig): 
  * Resolution + degradation order (each `null` is the first-class offline path):
  *  1. provider name — `req.provider || cfg.defaultProvider`. Empty ⇒ `null`.
  *  2. provider block — `cfg.providers[name]`. Absent ⇒ `null` (NOT configured,
- *     so NO consent to spend; env presence is never consulted — DS-6).
+ *     so NO consent to spend; env presence is never consulted).
  *  3. key — `process.env[apiKeyEnv]`; `undefined` (anonymous) if no `apiKeyEnv`.
  *     A keyed provider whose env var is unset ⇒ `null` (the miss is observable
- *     via the `null` return; a structured usage/miss sink lands with t6).
+ *     via the `null` return; a structured usage/miss sink is planned).
  *  4. adapter — the provider NAME is mapped to an adapter (direct match, else a
  *     `baseURL` block routes to `openai-compatible`); unresolvable ⇒
  *     `{ ok: false, reason }`. The per-tier `maxTokens` default (FR-10) and the
  *     provider-block `baseURL` are folded onto the dispatched request here.
  *  5. dispatch — one call (or two via the structured repair retry when `schema`
- *     is set — DS-4); a throw becomes `{ ok: false, reason }` (never escapes).
+ *     is set); a throw becomes `{ ok: false, reason }` (never escapes).
  *
  * `null` (steps 1–3) is degradation → caller substitutes a template.
  * `{ ok: false }` (steps 4–5) is an attempted-call failure → caller may surface it.
@@ -171,7 +171,7 @@ export async function complete(
 
   // 5. Single bounded call; complete() never throws. When a `schema` is present
   //    the call routes through the structured path (prompt-JSON + validate + ≤1
-  //    repair retry — the ONLY retry in the model layer, DS-4/DS-12). Otherwise a
+  //    repair retry — the ONLY retry in the model layer). Otherwise a
   //    plain free-text adapter call. Either way at most two adapter invocations
   //    total, and no `tools`/`stream` exist on the request to loop on (FR-8).
   try {

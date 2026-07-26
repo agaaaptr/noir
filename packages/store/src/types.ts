@@ -74,7 +74,7 @@ export interface Store {
   /** Count rows in the `vec` table (live read from the single writer handle). */
   countVecs(): number;
   /** Export all `docs` rows to `<dir>/<id>.md` with YAML frontmatter.
-   *  B2: optional conflict opts route through the SAME seam as `regenerate`. */
+   *  Optional conflict opts route through the SAME seam as `regenerate`. */
   exportMarkdown(
     dir: string,
     conflict?: import('./markdown.js').MarkdownConflictOpts,

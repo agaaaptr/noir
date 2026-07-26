@@ -1,6 +1,6 @@
-// S9 t6 — `noir daemon {start,stop,status,restart}`.
+// S9 — `noir daemon {start,stop,status,restart}`.
 //
-// Honest foreground daemon UX (S9 DS-6 / spec §8). `noir daemon start` runs the
+// Honest foreground daemon UX (S9 / spec §8). `noir daemon start` runs the
 // daemon in-process FOREGROUND (it never silently forks): `ensureDaemonRunning`
 // (from @noir-ai/daemon) either starts a fresh in-process HTTP server — whose
 // listen handle + idle timer + SIGINT/SIGTERM handlers (installed inside
@@ -10,7 +10,7 @@
 // refuses with exit 2 (USAGE) and a stable "tracked: v1.x" message rather than
 // surprise-forking.
 //
-// Stream discipline (S9 DS-4): `--json` emits the versioned `{ok,data}` envelope
+// Stream discipline (S9): `--json` emits the versioned `{ok,data}` envelope
 // to stdout (the only stdout write); every human diagnostic goes to stderr via
 // the centralized helpers. Exit codes follow the S9 contract: a missing/stale
 // daemon record on `status` → exit 4 (DAEMON_DOWN); `--detach` → exit 2; an
