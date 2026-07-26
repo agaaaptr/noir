@@ -24,7 +24,7 @@
 //
 // Active commands (`context *`, `memory *`, `task *`) do real work and KEEP using
 // `withDaemon` (auto-start acceptable for commands that perform writes/reads with
-// side-effects); their daemon-down path is the C2-clean exit-4 envelope. Only
+// side-effects); their daemon-down path is the same clean exit-4 envelope. Only
 // `status` is probe-only — in-process read fallback for the active commands is
 // deferred to v1.x (DS-5).
 //
@@ -145,10 +145,18 @@ export interface StatusPayload {
  * the snapshot. A tool's own `{ok:false,…}` envelope is returned as data (the
  * caller normalizes it) — only transport / parse / not-registered failures map
  * to `null` here.
+ *
+ * Exported so `noir handoff` reuses the SAME fold-to-null pattern for its
+ * bounded `context_search` / `memory_recall` extraction — a missing embedder or
+ * a daemon-down degrades to `null` instead of failing the handoff artifact.
  */
-async function tryTool<T>(caller: DaemonToolCaller, name: string): Promise<T | null> {
+export async function tryTool<T>(
+  caller: DaemonToolCaller,
+  name: string,
+  args?: Record<string, unknown>,
+): Promise<T | null> {
   try {
-    return await caller.callTool<T>(name);
+    return await caller.callTool<T>(name, args);
   } catch {
     // Engine absent (tool not registered), transport hiccup, or non-JSON text.
     // All are non-fatal for an optional section; report it as unavailable.
@@ -303,22 +311,21 @@ function renderHuman(p: StatusPayload, opts: CliOptions): void {
 }
 
 /**
- * `noir status`: aggregate the snapshot and render it.
- *
- * Project info is read in-process; daemon state comes from a {@link probeDaemon}
- * (NEVER auto-starts). When the daemon is up, the optional count tools are
- * fetched over one {@link withRunningDaemon} connection; when it is down, those
- * sections are `null` and `daemon:{running:false}` is rendered with exit 0
- * (status is informational — a down daemon is not an error).
- *
- * `--json` emits `{ok:true, data: StatusPayload}` to stdout. The human path
- * renders a two-column table on stderr. Uninitialized project → exit 1 from
- * `loadProjectInfo` (same as every other command).
+ * Gather the live snapshot into the normalized {@link StatusPayload}. Extracted
+ * so `noir handoff` reuses the SAME aggregation path as `noir status`
+ * (single source for the multi-engine snapshot). Project info is read in-process
+ * (uninitialized → exit 1 propagated to the caller); daemon state comes from a
+ * {@link probeDaemon} (NEVER auto-starts). When the daemon is up, the optional
+ * count tools are fetched over one {@link withRunningDaemon} connection; when it
+ * is down, those sections are `null` and `daemon:{running:false}` — this function
+ * never throws on a down daemon (the handoff command degrades gracefully).
  */
-export async function status(opts: StatusOptions): Promise<void> {
-  // In-process project info — no daemon round-trip. Uninitialized → exit 1.
+export async function gatherStatusPayload(opts: StatusOptions): Promise<StatusPayload> {
+  // In-process project info — no daemon round-trip. Uninitialized → exit 1
+  // (propagated; both `status` and `handoff` treat an uninitialized project as a
+  // hard error — there is no project to snapshot).
   const project = loadProjectInfo(process.cwd());
-  // Probe — never starts a daemon. A down daemon is reported + exit 0.
+  // Probe — never starts a daemon. A down daemon is reported honestly.
   const probe = await probeDaemon(opts);
 
   let host: HostStatusResult | null = null;
@@ -348,8 +355,24 @@ export async function status(opts: StatusOptions): Promise<void> {
     );
   }
 
-  const payload = buildPayload(project, probe, host, store, context, workflow, memory);
+  return buildPayload(project, probe, host, store, context, workflow, memory);
+}
 
+/**
+ * `noir status`: aggregate the snapshot and render it.
+ *
+ * Project info is read in-process; daemon state comes from a {@link probeDaemon}
+ * (NEVER auto-starts). When the daemon is up, the optional count tools are
+ * fetched over one {@link withRunningDaemon} connection; when it is down, those
+ * sections are `null` and `daemon:{running:false}` is rendered with exit 0
+ * (status is informational — a down daemon is not an error).
+ *
+ * `--json` emits `{ok:true, data: StatusPayload}` to stdout. The human path
+ * renders a two-column table on stderr. Uninitialized project → exit 1 from
+ * `loadProjectInfo` (same as every other command).
+ */
+export async function status(opts: StatusOptions): Promise<void> {
+  const payload = await gatherStatusPayload(opts);
   if (opts.json === true) {
     // Single stdout write — the versioned S9 F11 success envelope.
     process.stdout.write(`${JSON.stringify({ ok: true, data: payload })}\n`);

@@ -10,10 +10,12 @@ export { agentsMdAdapter } from './agents-md-adapter.js';
 export { claudeAdapter } from './claude.js';
 export { cursorAdapter } from './cursor.js';
 export { geminiAdapter } from './gemini.js';
+export { defaultHandoffBlock, hostLaunchDirective } from './handoff.js';
 export { buildMcpServersJson } from './mcp.js';
 export { opencodeAdapter } from './opencode.js';
 export type {
   EmitContext,
+  HandoffPayload,
   HostAdapter,
   HostId,
   IntegrationMcpEmission,

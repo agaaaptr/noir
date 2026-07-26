@@ -45,7 +45,7 @@ describe('builtin pack: shared hygiene', () => {
   });
 });
 
-describe('builtin pack: SDD lifecycle (T2)', () => {
+describe('builtin pack: SDD lifecycle', () => {
   it('has all 7 lifecycle skills, each with a substantial body', () => {
     for (const name of FULL_LIFECYCLE) {
       const s = getOrFail(name);
@@ -64,7 +64,7 @@ const FULL_POWER = [
   'noir-context',
 ];
 
-describe('builtin pack: power skills (T3)', () => {
+describe('builtin pack: power skills', () => {
   it('has all 7 power skills, each with a substantial body', () => {
     for (const name of FULL_POWER) {
       const s = getOrFail(name);
@@ -75,7 +75,7 @@ describe('builtin pack: power skills (T3)', () => {
 
 const FULL_SESSION = ['noir-sync', 'noir-checkpoint', 'noir-explore'];
 
-describe('builtin pack: session skills (T4)', () => {
+describe('builtin pack: session skills', () => {
   it('has all 3 full session skills, each with a substantial body', () => {
     for (const name of FULL_SESSION) {
       const s = getOrFail(name);
@@ -86,7 +86,7 @@ describe('builtin pack: session skills (T4)', () => {
 
 const FULL_MEMORY = ['noir-recall', 'noir-remember'];
 
-describe('builtin pack: memory skills (S7)', () => {
+describe('builtin pack: memory skills', () => {
   it('has both memory skills, each with a substantial body', () => {
     for (const name of FULL_MEMORY) {
       const s = getOrFail(name);
@@ -95,8 +95,18 @@ describe('builtin pack: memory skills (S7)', () => {
   });
 });
 
+const FULL_HANDOFF = ['noir-wrap'];
+
+describe('builtin pack: handoff skills', () => {
+  it('has the noir-wrap skill with a substantial body (graduated from stub)', () => {
+    for (const name of FULL_HANDOFF) {
+      const s = getOrFail(name);
+      expect(bodyOf(s.skillMd).length, `${name} body too short`).toBeGreaterThan(300);
+    }
+  });
+});
+
 const STUBS = [
-  'noir-wrap',
   'noir-commit',
   'noir-pr',
   'noir-branch',
@@ -110,18 +120,18 @@ const STUBS = [
   'noir-readme',
 ];
 
-describe('builtin pack: stubs + totals (T5)', () => {
-  it('has all 12 stubs, each marked as a stub', () => {
+describe('builtin pack: stubs + totals', () => {
+  it('has all 11 stubs, each marked as a stub', () => {
     for (const name of STUBS) {
       const s = getOrFail(name);
       expect(s.skillMd, `${name} missing stub marker`).toContain('> **Stub:**');
     }
   });
-  it('pack total is 33 = 21 full + 12 stubs, all valid', () => {
+  it('pack total is 33 = 22 full + 11 stubs, all valid', () => {
     expect(skills.length).toBe(33);
     const stubCount = skills.filter((s) => s.skillMd.includes('> **Stub:**')).length;
-    expect(stubCount).toBe(12);
-    expect(skills.length - stubCount).toBe(21);
+    expect(stubCount).toBe(11);
+    expect(skills.length - stubCount).toBe(22);
     for (const s of skills) expect(validateSkill(s).ok, `${s.name} invalid`).toBe(true);
   });
 });

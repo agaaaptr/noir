@@ -179,11 +179,21 @@ describe('home — interactive @clack menu', () => {
     ['next', ['task', 'next']],
     ['daemon', ['daemon', 'start']],
     ['sync', ['sync']],
+    ['handoff', ['handoff']],
   ] as [string, string[]][])('choice %s dispatches %j', async (choice, argv) => {
     clackMock.select.mockResolvedValue(choice);
     const deps = makeDeps();
     await home({}, deps);
     expect(deps.dispatch).toHaveBeenCalledWith(argv);
+  });
+
+  it('"handoff" choice dispatches ["handoff"] (host-handoff quick action)', async () => {
+    clackMock.select.mockResolvedValue('handoff');
+    const deps = makeDeps();
+    await home({}, deps);
+    expect(deps.dispatch).toHaveBeenCalledTimes(1);
+    expect(deps.dispatch).toHaveBeenCalledWith(['handoff']);
+    expect(clackMock.outro).toHaveBeenCalledWith('done');
   });
 
   it('"recall" prompts for a query then dispatches ["memory","recall",<q>]', async () => {

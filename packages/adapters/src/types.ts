@@ -43,6 +43,25 @@ export interface IntegrationMcpEmission {
   env?: Record<string, string>;
 }
 
+/**
+ * The host-facing subset of a Noir handoff artifact. Defined HERE so the
+ * optional {@link HostAdapter.emitHandoff} hook has a typed payload without the
+ * adapters package taking a CLI dependency — the CLI conforms its richer
+ * snapshot to this shape before handing it to the adapter. Every field is
+ * nullable so a daemon-down / no-active-task handoff still type-checks.
+ */
+export interface HandoffPayload {
+  project: { id: string; name: string };
+  host: HostId;
+  /** Active workflow task, if any. Null when no task is active or daemon-down. */
+  task: {
+    taskId: string;
+    phase: string;
+    nextGate: string | null;
+    nextSkill: string | null;
+  } | null;
+}
+
 export interface HostAdapter {
   /** The host identifier — must match a `HostId` registry key. Tightened from
    *  `string` to `HostId` in S10 so the registry is type-safe end-to-end. */
@@ -84,4 +103,12 @@ export interface HostAdapter {
    *  it elsewhere. The shared `emitAgentsMd(ctx)` helper produces the CONTENT
    *  (byte-identical across hosts); the cli writes it to this path. */
   agentsMdPath?(ctx: EmitContext): string;
+  /** Host-handoff seam — the host-specific directive block for a Noir handoff
+   *  artifact (the "Open \`<host>\` …" portion). OPTIONAL so existing / third-party
+   *  adapters continue to type-check without implementing it; the CLI falls back
+   *  to {@link hostLaunchDirective} (the generic single-line directive) when this
+   *  is absent. A host that wants richer handoff wording (e.g. naming its native
+   *  context file or skill dir) implements this. TEXT ONLY — never launches the
+   *  host (doctrine: Noir never spawns the host; the directive is pasteable text). */
+  emitHandoff?(ctx: EmitContext, payload: HandoffPayload): string;
 }

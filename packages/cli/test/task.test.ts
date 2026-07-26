@@ -292,4 +292,55 @@ describe('task advance — wired to workflow_advance', () => {
     payloads.current.workflow_advance = { ok: false, error: 'no active task' };
     await expect(taskAdvance({ ...base })).rejects.toMatchObject({ exitCode: 1 });
   });
+
+  // Transition surfacing: `--to verify` prints the handoff hint to STDERR.
+  // `--no-tips` silences it (CI / log-friendly). `--json` silences it too (a CI
+  // consumer's stdout envelope must stay pristine). The hint is advisory only —
+  // it never blocks or changes the exit code.
+  it('--to verify prints the handoff hint to STDERR', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskAdvance({ ...base, to: 'verify' });
+      const c = capture();
+      expect(c.err).toContain('noir handoff');
+      expect(c.err).toContain('ready-to-paste host prompt');
+    } finally {
+      restore();
+    }
+  });
+
+  it('--no-tips silences the handoff hint', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskAdvance({ ...base, to: 'verify', noTips: true });
+      const c = capture();
+      expect(c.err).not.toContain('noir handoff');
+    } finally {
+      restore();
+    }
+  });
+
+  it('--to verify with --json: hint suppressed (stdout envelope stays pristine)', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskAdvance({ ...base, to: 'verify', json: true });
+      const c = capture();
+      // stdout is the JSON envelope only; stderr carries no hint under --json.
+      expect(c.err).not.toContain('noir handoff');
+      expect(JSON.parse(c.out).ok).toBe(true);
+    } finally {
+      restore();
+    }
+  });
+
+  it('--to spec (not verify) does NOT print the handoff hint', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskAdvance({ ...base, to: 'spec' });
+      const c = capture();
+      expect(c.err).not.toContain('noir handoff');
+    } finally {
+      restore();
+    }
+  });
 });

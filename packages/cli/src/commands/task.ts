@@ -20,7 +20,7 @@
 // envelope to `null` and stays exit 0).
 
 import { callDaemonTool, type DaemonClientOptions } from '../daemon-client.js';
-import { type CliOptions, definitionList, EXIT, fail, info, log } from '../output.js';
+import { type CliOptions, definitionList, EXIT, fail, info, log, tip } from '../output.js';
 import { badge } from '../theme.js';
 
 /** Options accepted by every `task` sub-command (globals + daemon knobs). */
@@ -53,8 +53,10 @@ interface WorkflowNotFound {
 // ---------------------------------------------------------------------------
 // Phase → skill suggestion (grounded in the real @noir-ai/skills builtin pack;
 // each phase maps to a shipped noir-* skill the host can invoke next).
+// Exported so `noir handoff` reuses the SAME phase→skill map when naming
+// the next gate's skill in the handoff artifact — single source.
 // ---------------------------------------------------------------------------
-const PHASE_SKILL: Readonly<Record<string, string>> = {
+export const PHASE_SKILL: Readonly<Record<string, string>> = {
   intake: 'noir-intake',
   clarify: 'noir-clarify',
   spec: 'noir-spec',
@@ -64,7 +66,9 @@ const PHASE_SKILL: Readonly<Record<string, string>> = {
   document: 'noir-document',
 };
 
-function skillFor(phase: string | null | undefined): string | null {
+/** Map a phase string to its shipped skill id (`null` if unknown / absent).
+ *  Exported for `noir handoff`. */
+export function skillFor(phase: string | null | undefined): string | null {
   if (typeof phase !== 'string') return null;
   return PHASE_SKILL[phase] ?? null;
 }
@@ -241,6 +245,13 @@ export async function taskAdvance(opts: TaskAdvanceOptions): Promise<void> {
     const detail =
       typeof res.error === 'string' && res.error.length > 0 ? res.error : 'advance failed';
     fail(EXIT.ERROR, `task advance: ${detail}`, opts);
+  }
+  // Surface (never auto-emit) the handoff command at the verify gate, the
+  // natural handoff point (work moves from Noir's planning into the host's
+  // execution). One-line stderr hint via `tip()` so `--no-tips` / `--json`
+  // silence it in CI / pipes. Never blocks; never writes to stdout.
+  if (typeof opts.to === 'string' && opts.to === 'verify') {
+    tip('run `noir handoff` for a ready-to-paste host prompt', opts);
   }
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: res })}\n`);

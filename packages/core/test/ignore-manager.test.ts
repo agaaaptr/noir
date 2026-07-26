@@ -21,6 +21,12 @@ describe('syncIgnores', () => {
     expect(gi).toContain(IGNORE_BLOCK.end);
   });
 
+  it('includes /.noir/handoff/ so `noir handoff --write` artifacts never pollute commits', () => {
+    syncIgnores(root);
+    const gi = readFileSync(join(root, '.gitignore'), 'utf8');
+    expect(gi).toContain('/.noir/handoff/');
+  });
+
   it('preserves user content outside the managed block and is idempotent', () => {
     writeFileSync(join(root, '.gitignore'), 'node_modules\nbuild\n', 'utf8');
     syncIgnores(root);

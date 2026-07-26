@@ -22,7 +22,7 @@
 // circular: bin imports home). That also makes the menu unit-testable without
 // commander — tests pass a fake callback + mock @clack.
 
-import { type HostId, SUPPORTED_HOSTS } from '@noir-ai/adapters';
+import { type HostId, hostLaunchDirective } from '@noir-ai/adapters';
 import { loadProjectInfo } from '@noir-ai/core';
 import { NOIR_TAGLINE, renderBanner, shouldShowBanner } from '../banner.js';
 import { type CliOptions, EXIT, fail, isInteractive } from '../output.js';
@@ -54,17 +54,10 @@ function tryProject(): { id: string; name: string; host: HostId } | null {
 const COMMANDS_HINT =
   'Commands: init · create · sync · status · context · memory · skills · task · daemon · doctor';
 
-/**
- * Host-direction line: tell the user to open their configured host CLI to do
- * the actual development (Noir is the orchestration/context/memory brain; the
- * host is the execution engine — blueprint D1 / BYO-agent). Host-agnostic via
- * the S10 `SUPPORTED_HOSTS` registry; lists the alternatives so a multi-host
- * user knows their options.
- */
-function hostDirection(host: HostId): string {
-  const others = SUPPORTED_HOSTS.filter((h) => h !== host);
-  return `→ host: ${host}. Open \`${host}\` to start development — Noir set the rules, skills, and memory; ${host} runs the code. (other hosts: ${others.join(', ')})`;
-}
+// The host-direction line is the shared `hostLaunchDirective` in
+// `@noir-ai/adapters` (single source): the home banner AND the handoff artifact
+// both call it, so the wording never drifts. The local `hostDirection` wrapper
+// is gone; `hostLaunchDirective(host)` is called directly at the render sites.
 
 /**
  * Bare-`noir` router. See module header for the three dispatch arms. Never
@@ -101,7 +94,7 @@ async function runMenu(opts: CliOptions, deps: HomeDeps): Promise<void> {
   if (shouldShowBanner(opts)) {
     const host = project?.host ?? 'claude';
     process.stderr.write(
-      `\n${renderBanner()}\n${NOIR_TAGLINE}\n\n${hostDirection(host)}\n${COMMANDS_HINT}\n\n`,
+      `\n${renderBanner()}\n${NOIR_TAGLINE}\n\n${hostLaunchDirective(host)}\n${COMMANDS_HINT}\n\n`,
     );
   }
   clack.intro(project ? `noir — ${project.name}` : 'noir');
@@ -114,6 +107,7 @@ async function runMenu(opts: CliOptions, deps: HomeDeps): Promise<void> {
       { value: 'index', label: 'Index project', hint: '(re)index files into context' },
       { value: 'recall', label: 'Recall memory', hint: 'search cross-session memory' },
       { value: 'next', label: 'Next task', hint: 'suggest next phase + skill' },
+      { value: 'handoff', label: 'Handoff', hint: 'ready-to-paste host prompt' },
       { value: 'daemon', label: 'Start daemon', hint: 'foreground daemon' },
       { value: 'sync', label: 'Sync skills', hint: 're-emit builtin skills' },
       { value: 'exit', label: 'Exit' },
@@ -154,6 +148,10 @@ async function argvForChoice(
       return ['context', 'index'];
     case 'next':
       return ['task', 'next'];
+    case 'handoff':
+      // The ready-to-paste host prompt. Dispatched through the same commander
+      // program as every other action, so it owns its own exit code.
+      return ['handoff'];
     case 'daemon':
       return ['daemon', 'start'];
     case 'sync':

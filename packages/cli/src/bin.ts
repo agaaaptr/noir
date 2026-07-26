@@ -17,6 +17,7 @@ import { Command, Option } from 'commander';
 import { contextIndex, contextSearch, contextStatus } from './commands/context.js';
 import { daemonRestart, daemonStart, daemonStatus, daemonStop } from './commands/daemon.js';
 import { doctor } from './commands/doctor.js';
+import { type HandoffOptions, handoff } from './commands/handoff.js';
 import { type HomeDeps, home } from './commands/home.js';
 import {
   memoryConsolidate,
@@ -736,6 +737,33 @@ export function createProgram(): Command {
   taskGrp.action(() => {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir task new|status|advance|next');
   });
+
+  // `noir handoff` + the `noir wrap` session-end alias. Both dispatch the
+  // SAME handler; the artifact reuses `gatherStatusPayload` (status.ts) +
+  // `PHASE_SKILL` (task.ts) for the snapshot, does a bounded context/memory
+  // extraction, and renders a pasteable host-handoff markdown block to STDOUT.
+  // `--write` persists to `.noir/handoff/<id>.md` (gitignored); `--json` emits
+  // the structured payload. Doctrine: the host-launch directive is TEXT ONLY —
+  // Noir never spawns the host.
+  function buildHandoffOptions(g: Record<string, unknown>): HandoffOptions {
+    return { ...toCliOptions(g), ...(g.write === true ? { write: true } : {}) };
+  }
+  program
+    .command('handoff')
+    .description('emit a ready-to-paste host handoff prompt')
+    .option('--write', 'persist to .noir/handoff/<id>.md (gitignored)')
+    .action(async (...args: unknown[]) => {
+      await handoff(buildHandoffOptions(trailingCmd(args).optsWithGlobals()));
+    });
+  // `noir wrap` — session-end alias (same handler, friendlier name at the end of
+  // a session). Same options; no separate code path.
+  program
+    .command('wrap')
+    .description('session-end alias for `noir handoff`')
+    .option('--write', 'persist to .noir/handoff/<id>.md (gitignored)')
+    .action(async (...args: unknown[]) => {
+      await handoff(buildHandoffOptions(trailingCmd(args).optsWithGlobals()));
+    });
 
   // Bare `noir` (no subcommand): the home router (S9 t4). Interactive TTY →
   // @clack menu; non-interactive → `status` (human) or `status --json`
