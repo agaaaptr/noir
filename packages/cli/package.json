@@ -63,10 +63,14 @@
     "cli-table3": "^0.6.5",
     "commander": "^12.1.0",
     "gradient-string": "^3.0.0",
+    "ink": "^7.1.1",
     "ora": "^8.1.0",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "react": "^19.2.0"
   },
   "devDependencies": {
-    "@types/node": "^26.1.1"
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.0",
+    "ink-testing-library": "^4.0.0"
   }
 }

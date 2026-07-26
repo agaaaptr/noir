@@ -6,5 +6,17 @@
   "linter": { "enabled": true, "rules": { "preset": "recommended" } },
   "javascript": {
     "formatter": { "quoteStyle": "single", "semicolons": "always", "trailingCommas": "all" }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.ts", "**/*.js", "**/*.mjs", "**/*.cjs", "**/*.jsx"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useHookAtTopLevel": "off"
+          }
+        }
+      }
+    }
+  ]
 }

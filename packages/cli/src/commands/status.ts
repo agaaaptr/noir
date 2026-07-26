@@ -251,14 +251,14 @@ function buildPayload(
 // readable shape for a status snapshot; cli-table3 is auto-stripped under
 // NO_COLOR / non-TTY and the whole call is a no-op under --json.
 // ---------------------------------------------------------------------------
-function formatDuration(sec?: number): string {
+export function formatDuration(sec?: number): string {
   if (typeof sec !== 'number' || sec < 0) return 'unknown';
   if (sec < 60) return `${sec}s`;
   if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
   return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
 }
 
-function describeDaemon(d: StatusPayload['daemon']): string {
+export function describeDaemon(d: StatusPayload['daemon']): string {
   if (!d.running) return 'not running (start with `noir daemon start`)';
   const pid = typeof d.pid === 'number' ? `pid ${d.pid}` : 'pid unknown';
   const up = typeof d.uptimeSec === 'number' ? `, up ${formatDuration(d.uptimeSec)}` : '';
@@ -266,26 +266,26 @@ function describeDaemon(d: StatusPayload['daemon']): string {
   return `running (${pid}${up}${transport})`;
 }
 
-function describeStore(s: StatusPayload['store']): string {
+export function describeStore(s: StatusPayload['store']): string {
   if (!s) return 'unavailable (store engine not wired)';
   const flag = s.degraded ? `  ${badge('warn', 'degraded: read-only')}` : '';
   return `${s.docCount} docs / ${s.vecCount} vecs${flag}`;
 }
 
-function describeContext(c: StatusPayload['context']): string {
+export function describeContext(c: StatusPayload['context']): string {
   if (!c) return 'unavailable (context engine not wired)';
   const flag = c.degraded ? `  ${badge('warn', 'degraded')}` : '';
   return `${c.docCount} docs, ${c.vecCount} vecs, ${c.indexedFiles} files · embedder ${c.embedder}${flag}`;
 }
 
-function describeWorkflow(w: StatusPayload['workflow']): string {
+export function describeWorkflow(w: StatusPayload['workflow']): string {
   if (!w) return 'no active task';
   const gate = w.nextGate ? ` → next gate: ${w.nextGate}` : '';
   const flag = w.degraded ? `  ${badge('warn', 'degraded')}` : '';
   return `${w.phase} (${w.state}, ${w.mode}) · task ${w.taskId}${gate}${flag}`;
 }
 
-function describeMemory(m: StatusPayload['memory']): string {
+export function describeMemory(m: StatusPayload['memory']): string {
   if (!m) return 'unavailable (memory engine not wired)';
   return `${m.observations} observations across ${m.sessions} session${m.sessions === 1 ? '' : 's'}`;
 }

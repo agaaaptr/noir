@@ -784,16 +784,7 @@ export function createProgram(): Command {
       // requireInteractive honors all the non-interactive conditions (no TTY,
       // --no-input, --json, CI, NO_COLOR) and fails exit 2 with a clear message.
       requireInteractive(opts, '`noir tui`');
-      // LAZY load the Ink dashboard. The import path is computed at runtime
-      // (not a string literal) so esbuild cannot statically follow it into the
-      // tui graph during the bin build — that static analysis is what hoists
-      // bin.ts's entry body (incl. the `isMainModule` realpath guard) into a
-      // shared chunk, turning dist/bin.js into a facade and breaking a global
-      // `noir` install under its symlink. The tui is built as a sibling entry
-      // (see the second tsup config) so its react/ink dependency tree never
-      // enters the main CLI graph; React stays out of `noir status` etc.
-      const tuiUrl = new URL('./tui/index.js', import.meta.url).href;
-      const { runTui } = await import(/* @vite-ignore */ tuiUrl);
+      const { runTui } = await import('./tui/index.js');
       // Same dispatch seam as homeDeps.dispatch above — a fresh program per
       // dispatched argv, errors mapped to process.exitCode (never thrown out).
       const dispatch = async (argv: readonly string[]): Promise<void> => {

@@ -22,11 +22,12 @@ These flags are **advisory routing for bare `noir` only**. They never disable, h
 
 ## Command matrix
 
-Every `noir` subcommand is in the **"works in both modes"** column. The bare home menu is the sole entry in the interactive-only column — and even it degrades gracefully to `status` headlessly.
+Every read/write `noir` subcommand is in the **"works in both modes"** column. Two surfaces are interactive-only: the bare home menu (which degrades gracefully to `status` headlessly) and `noir tui` (which requires a TTY and errors cleanly otherwise).
 
 | Command | Both modes? | Headless contract | Notes |
 |---|---|---|---|
-| `noir` (bare) | interactive surface (picker) | degrades to `noir status` (or `noir status --json`) | The only interactive *rendering*. `--no-tui` forces the non-interactive path even in a TTY. |
+| `noir` (bare) | interactive surface (picker) | degrades to `noir status` (or `noir status --json`) | Interactive *rendering*. `--no-tui` forces the non-interactive path even in a TTY. |
+| `noir tui` | **interactive-only** (Ink dashboard) | n/a — exit 2 under `--json` / `--no-input` / non-TTY / CI / `NO_COLOR` | The Ink dashboard. Requires a TTY; under any non-interactive condition it fails exit 2 with a clear message (JSON envelope under `--json`, plain text otherwise). Lazy-loaded — React/Ink never enter the main CLI startup path (`noir status`, `noir doctor`, bare `noir` stay React-free). `/<command>` inputs dispatch through the same routing as the prompt. |
 | `noir init` | yes | `--json` → `{ok, data: ScaffoldResult}` | Conflict resolution prompts only fire interactively; `--force` / `--json` / `--no-input` stay prompt-free. |
 | `noir create [dir]` | yes | `--json` → `{ok, data: ScaffoldResult}` | Same prompt rules as `init`. |
 | `noir sync` | yes | `--json` → `{ok, data: ScaffoldResult}` | `--force` / `--no-merge-regions` for non-interactive conflict handling. |
@@ -72,4 +73,4 @@ The success envelope is the versioned S9 F11 shape. Under `--json` the stderr de
 
 ## Future direction
 
-A richer Ink-based `noir tui` dashboard is planned (roadmap C3). When it lands it will join the home menu in the "interactive surface" row — never in the scriptable columns. The contract above is the stable headless surface any future TUI is built on top of.
+The Ink-based `noir tui` dashboard has landed as the second interactive surface (joining the bare-`noir` home menu). It stays in the interactive-only column — never in the scriptable columns. The contract above is the stable headless surface the dashboard is built on top of: `noir status --json` is the same payload the dashboard's snapshot pane renders. Richer widgets (multi-pane layout, scrollback history, in-dashboard conflict resolution) are deferred to later revisions; the MVP ships host · mode · phase · daemon status, `/<command>` dispatch through the same routing as the prompt, and the standard quit/help/scroll keybindings.
