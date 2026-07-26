@@ -21,7 +21,7 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 
 ## Current status (living — update as slices ship)
 
-> **As of 2026-07-26. v1.2.0-beta.1 PUBLISHED on npm (dist-tag `beta`).** The single source of "where Noir is right now." Update this whenever a slice ships or direction shifts — so no session loses the thread.
+> **As of 2026-07-26. v1.2.0-beta.2 TAGGED + CI green, but PUBLISH PENDING** the `release` environment approval (npm `beta` still resolves to the **broken `1.2.0-beta.1`** — global `noir` install is a silent no-op; fixed in beta.2 but not yet published). The single source of "where Noir is right now." Update this whenever a slice ships or direction shifts — so no session loses the thread.
 
 **Built & shipped (v1.0.0-beta.1 on npm, dist-tag `beta`):**
 - **Walking skeleton** (slices **S0 + S2 + S3-minimal**) — the integration thesis is *proven*: a host (Claude Code) connects to Noir over MCP and `host_status` round-trips over **stdio** (Gate 1) and a **daemon-backed Streamable HTTP** transport with stdio FS-fallback (Gate 2).

@@ -4,6 +4,8 @@ Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`d
 
 ## 1.2.0-beta.2 (2026-07-26)
 
+> **Publish status: TAGGED + CI build GREEN, but PUBLISH PENDING** — the `release.yml` publish job is gated on the `release` environment's `required_reviewers` (npm `beta` still resolves to the broken `1.2.0-beta.1`). See `docs/v1x-next-session.md` to complete the publish.
+
 **Critical fix: a global `noir` install was a silent no-op** (every published beta, including 1.2.0-beta.1). Two bugs:
 
 - **Symlinked-bin silent exit (critical):** the `isMainModule` guard compared `pathToFileURL(process.argv[1]).href` to `import.meta.url`. A global npm install invokes the bin through a symlink (`…/bin/noir` → `…/lib/node_modules/@noir-ai/cli/dist/bin.js`), so `argv[1]` is the symlink path while `import.meta.url` is the resolved real path — they never matched, `main()` never ran, and `noir` exited 0 with **no output**. **Fix:** `realpathSync(argv[1])` before comparing. (Direct `node bin.js` worked because `argv[1]` was already the real path — which is why the in-repo dogfood never caught it; the regression test now spawns the bin via a symlink.)
