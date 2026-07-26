@@ -22,7 +22,9 @@
 // circular: bin imports home). That also makes the menu unit-testable without
 // commander — tests pass a fake callback + mock @clack.
 
+import { type HostId, SUPPORTED_HOSTS } from '@noir-ai/adapters';
 import { loadProjectInfo } from '@noir-ai/core';
+import { NOIR_TAGLINE, renderBanner, shouldShowBanner } from '../banner.js';
 import { type CliOptions, EXIT, fail, isInteractive } from '../output.js';
 
 /** Callbacks home needs from the bin (injected → no circular import). */
@@ -37,15 +39,31 @@ export interface HomeDeps {
 }
 
 /** Try to read the project for a friendlier intro banner; never throws. */
-function tryProject(): { id: string; name: string } | null {
+function tryProject(): { id: string; name: string; host: HostId } | null {
   try {
     const info = loadProjectInfo(process.cwd());
-    return { id: info.id, name: info.name };
+    return { id: info.id, name: info.name, host: info.config.host };
   } catch {
     // Not initialized yet (no `.noir/project-id`) — the menu still works; it
     // just shows the generic intro. `Status` will surface the real error.
     return null;
   }
+}
+
+/** One-line summary of the CLI command surface (shown under the banner). */
+const COMMANDS_HINT =
+  'Commands: init · create · sync · status · context · memory · skills · task · daemon · doctor';
+
+/**
+ * Host-direction line: tell the user to open their configured host CLI to do
+ * the actual development (Noir is the orchestration/context/memory brain; the
+ * host is the execution engine — blueprint D1 / BYO-agent). Host-agnostic via
+ * the S10 `SUPPORTED_HOSTS` registry; lists the alternatives so a multi-host
+ * user knows their options.
+ */
+function hostDirection(host: HostId): string {
+  const others = SUPPORTED_HOSTS.filter((h) => h !== host);
+  return `→ host: ${host}. Open \`${host}\` to start development — Noir set the rules, skills, and memory; ${host} runs the code. (other hosts: ${others.join(', ')})`;
 }
 
 /**
@@ -74,8 +92,13 @@ async function runMenu(opts: CliOptions, deps: HomeDeps): Promise<void> {
   const clack = await import('@clack/prompts');
 
   const project = tryProject();
-  const banner = project ? `noir — ${project.name}` : 'noir';
-  clack.intro(banner);
+  if (shouldShowBanner(opts)) {
+    const host = project?.host ?? 'claude';
+    process.stderr.write(
+      `\n${renderBanner()}\n${NOIR_TAGLINE}\n\n${hostDirection(host)}\n${COMMANDS_HINT}\n\n`,
+    );
+  }
+  clack.intro(project ? `noir — ${project.name}` : 'noir');
 
   const choice = await clack.select({
     message: 'What would you like to do?',
