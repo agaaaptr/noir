@@ -26,9 +26,11 @@ const NOIR_BLOCK = [
   '╚═╝  ╚═══╝  ╚═════╝  ╚═╝ ╚═╝  ╚═╝',
 ];
 
-// "noir" aesthetic — a cool, dark gradient (purple → blue → cyan) applied
-// smoothly across the wordmark by gradient-string (vertical, top → bottom).
-const NOIR_GRADIENT = gradient('#a855f7', '#3b82f6', '#06b6d4');
+// "noir" aesthetic — Midnight Cobalt: a smooth gradient-string gradient (dark
+// cobalt → bright blue → sky) applied per-character across the wordmark
+// (vertical, top → bottom). All stops are bright enough to read on a dark
+// terminal; the deep-blue start evokes "midnight" without disappearing.
+const NOIR_GRADIENT = gradient('#2c5282', '#3b82f6', '#7dd3fc');
 
 /** One-line product tagline (shown under the wordmark). */
 export const NOIR_TAGLINE = 'discipline, context, and memory layer for agentic CLIs';
