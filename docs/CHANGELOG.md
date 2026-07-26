@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0-beta.6 (2026-07-26)
+
+**Published on npm (dist-tag `beta`)** — banner gradient refined to **Midnight Cobalt** (dark cobalt `#2c5282` → bright blue `#3b82f6` → sky `#7dd3fc`). Brighter than the beta.3 midnight preview, all-blue (no purple/cyan), smooth via gradient-string. User-chosen from a palette of 5 noir-inspired options.
+
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
 ## 1.3.0-beta.5 (2026-07-26)
