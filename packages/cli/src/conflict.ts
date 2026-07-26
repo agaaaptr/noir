@@ -29,11 +29,20 @@ export type ScaffoldConflictOpts = {
  * never prompts) is a documented follow-up — the common CI/pipe case is already
  * correct because non-TTY ⇒ preserve.
  */
+/** True when the bin's preAction hook flagged this invocation non-interactive
+ *  (`--json` / `--no-input`) so the conflict resolver never prompts under those. */
+function flaggedNonInteractive(): boolean {
+  const v = process.env.NOIR_NON_INTERACTIVE;
+  return v !== undefined && v !== '';
+}
+
 export function buildConflictOpts(input: ConflictOptsInput = {}): ScaffoldConflictOpts {
   if (input.force === true) {
     return { conflictPolicy: 'overwrite' };
   }
-  if (!isInteractive()) {
+  // SP-G: --json / --no-input (propagated via NOIR_NON_INTERACTIVE) OR the
+  // isInteractive() TTY/CI/NO_COLOR gate — either ⇒ preserve, never prompt.
+  if (flaggedNonInteractive() || !isInteractive()) {
     return { conflictPolicy: 'preserve' };
   }
   return { conflictPolicy: 'preserve', onConflict: clackConflictResolver };

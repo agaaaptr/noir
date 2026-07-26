@@ -161,6 +161,14 @@ export function createProgram(): Command {
         );
       }
     }
+    // SP-G: propagate --json / --no-input to the deep conflict resolver via env
+    // so a regenerate conflict never prompts under those flags (the @clack
+    // prompt writes to stdout — it would corrupt --json output and violate
+    // --no-input). Done here centrally so init/create/sync need no arg changes
+    // (no bin.test.ts arg-pin cascade). buildConflictOpts reads this flag.
+    const nonInteractive = opts.json === true || opts.input === false;
+    if (nonInteractive) process.env.NOIR_NON_INTERACTIVE = '1';
+    else delete process.env.NOIR_NON_INTERACTIVE;
   });
 
   // ----- migrated commands (behavior-preserving) -----
