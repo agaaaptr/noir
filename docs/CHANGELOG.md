@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.4.0 (2026-07-27)
+
+**Published on npm (dist-tag `beta`)** — the third overnight "runtime polish" release (Tier C): a TUI-primary command policy, on-demand host handoff, an Ink `noir tui` dashboard, and a repo-wide cleanup. **Minor** bump — the `engines.node` `>=22` floor from 1.3.0-beta.7 lands as a minor semver signal (Node 20 was already EOL).
+
+### TUI runtime policy
+- Bare `noir` is the documented primary UX. New global flags `--tui`/`--no-tui` (advisory routing; `--no-tui` sends bare `noir` to the status path even in a TTY) and `--no-tips` (suppresses redirect/deprecation hints in CI). **No command is hard-gated** — every subcommand stays 100% scriptable. Every read-side command emits the `{ok, data}` `--json` envelope. New `docs/command-policy.md` (interactive-vs-scriptable matrix) + `docs/deprecation.md` (warn → redirect → never-silently-remove; zero entries today).
+
+### Host handoff (`noir handoff` / `noir wrap`)
+- An on-demand, pasteable markdown handoff artifact (Task / Phase / next gate / Goal / extracted-context seed / "open `<host>`" directive / MCP references) to STDOUT; `--write` persists to gitignored `.noir/handoff/<id>.md`; `--json` emits the structured object. `hostLaunchDirective(host)` is the single source for the text-only host-launch directive (host-aware via `SUPPORTED_HOSTS`; called from the home banner AND the handoff); optional `HostAdapter.emitHandoff?` (back-compat). `noir-wrap` skill graduated stub→full. `noir task advance --to verify` surfaces a stderr tip (silenced by `--no-tips`). Daemon-down + missing-embedder degrade gracefully. Never writes into CLAUDE.md/AGENTS.md; never spawns the host.
+
+### Ink `noir tui` dashboard (MVP)
+- A lazy-loaded Ink (React 19) interactive dashboard: StatusBar (host/mode/phase/daemon), scrollable OutputPane, CommandInput (`/`-prefix dispatches native commands through the existing `home(opts,deps).dispatch` seam — not reimplemented), branded Header, Footer shortcuts. Hand-rolled widgets. The lazy load preserves the `isMainModule` symlink guard (the silent-no-op regression class) via a runtime-expression dynamic import + a two-config tsup build, so `dist/bin.js` stays a single 1890-line entry with the guard inline and **0 React refs** — the main CLI startup path stays React-free. Interactive-only (`--json`/non-TTY → exit 2). 12 ink-testing-library tests. Richer widgets documented as deferred.
+
+### Repo-wide cleanup
+- Stripped ~627 internal session/tier/task labels from source comments/JSDoc, test names, user-facing strings, and public docs; renamed 3 tier-prefixed test files; fixed a `handoff` test CWD-path bug; fixed tier-label leaks in skill content. (Internal labels remain only in `docs/superpowers/plans/*` + `docs/discovery/*`.)
+
+**1315/1315 tests green** (was 1181 at session start → +134 across the three releases).
+
 ## 1.3.0-beta.8 (2026-07-26)
 
 **Published on npm (dist-tag `beta`)** — second 2026-07-26 overnight release: a fully idempotent scaffold, one universal conflict contract across every file-producing path, and write-path semantic duplicate detection.

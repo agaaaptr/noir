@@ -1,30 +1,27 @@
 # Noir — next-session handoff & playbook
 
-> **Status (2026-07-26 overnight session): `1.3.0-beta.7` (install fixes + output design-system) and `1.3.0-beta.8` (idempotent scaffold + conflict contract + semantic dedup) shipped (local on `develop`, NOT yet pushed/tagged — push+tag at session end if all green).** This doc + `docs/CHANGELOG.md` + `docs/roadmap.md` + `docs/superpowers/plans/2026-07-26-overnight-runtime-polish.md` + `/recall noir` = full context.
+> **Status (2026-07-27): the overnight runtime-polish session is COMPLETE. `1.3.0-beta.7`, `1.3.0-beta.8`, and `1.4.0` shipped on `develop` (push+tag at session end). 1315/1315 tests green.** This doc + `docs/CHANGELOG.md` + `docs/roadmap.md` + `docs/superpowers/plans/2026-07-26-overnight-runtime-polish.md` + `/recall noir` = full context.
 
-## Session goal (autonomous, AFK)
-Overnight runtime-polish across 6 areas → 3 releases. The 10 locked decisions live in the session-decisions Agent Memory + the plan doc.
+## What shipped this session (all on `develop`)
+- **1.3.0-beta.7** — npm-warn fix (`engines >=22` + `better-sqlite3@13` removes `prebuild-install`; `boolean` muted; deprecation troubleshooting doc) + output design-system (`theme.ts`, red headers killed, responsive tables, `badge()`, `definitionList()`/`kv()`, NO_COLOR/CLICOLOR_FORCE/NOIR_ACCESSIBLE).
+- **1.3.0-beta.8** — idempotent scaffold (`noir sync` true no-op; `mergeManagedRegions` default TRUE; bare-init no-op; hermetic) + universal conflict contract (3 producers routed; diff preview; apply-to-all; zdiff3; structured `--json` `conflicts[]`) + write-path semantic dedup (two-tier, content-hash cache, graceful embedder degradation).
+- **1.4.0** — TUI runtime policy (`--tui`/`--no-tui`/`--no-tips`, command matrix, deprecation doc) + host handoff (`noir handoff`/`wrap` + `hostLaunchDirective` + optional `emitHandoff` + `noir-wrap` skill) + Ink `noir tui` MVP (lazy React 19, `isMainModule` guard preserved) + repo-wide cleanup (~627 internal labels stripped, 3 test files renamed, handoff path bug fixed).
 
-## Progress
-- ✅ **1.3.0-beta.7 (install + design-system)**: npm-warn (`engines >=22` + `better-sqlite3@13` removes prebuild-install + `boolean` muted + deprecation troubleshooting doc) + output design-system (`theme.ts`, red headers killed, responsive tables, `badge()`, `definitionList()`/`kv()`, NO_COLOR/CLICOLOR_FORCE/NOIR_ACCESSIBLE).
-- ✅ **1.3.0-beta.8 (scaffold + conflict + dedup)** (1263 green, was 1181):
-  - **Idempotent scaffold**: `noir sync` unchanged-tree true no-op (managed-region content-hash dedup); ancestors seeded every run; `mergeManagedRegions` default TRUE (`--no-merge-regions` escape); bare-init no-op (incl. pre-1.3.0 via `project.id`); hermetic `interactive` flag; latent newline-drift fix.
-  - **Universal conflict contract**: 3 bypass producers routed through `buildConflictOpts`+`onConflict` (skills `emitSkillsToDir` w/ `assertNotUserOwned` orphan guard, `workflow/artifacts`, `store/markdown`); colored diff preview (stderr); apply-to-all (regenerate); zdiff3 "merge with markers"; structured `--json` `conflicts[]`.
-  - **Write-path semantic dedup**: init/create/sync surface near-dup host files as non-blocking Replace/Mirror/Skip/Create (two-tier, `.noir/dedup-cache.json` hash cache, graceful embedder degradation). The conflict contract's CLI-wiring gap closed.
-- ⏳ **1.4.0 (NEXT)**: TUI runtime policy (`--tui/--no-tui/--no-tips`, command matrix, `--json` on read commands, deprecation policy doc, + close the ~5-line `bin.ts` `--json conflicts[]` emit gap from beta.8) · host handoff (`noir handoff`/`wrap` + `hostLaunchDirective` + `emitHandoff` + skill + menu) · Ink `noir tui` MVP (lazy, React 19, hand-rolled widgets).
+## Next-session candidates
+1. **Validate `1.4.0` in real projects per host** (`noir init --host gemini|cursor|opencode|agents-md`; exercise `noir tui`, `noir handoff`, the conflict/dedup flow).
+2. **Promote to stable `1.x`**: merge `develop`→`main`, tag `v1.4.0` on `main` → CI publishes `--tag latest`. (`latest` still points at `1.0.0-beta.1` until then.)
+3. **Richer `noir tui` widgets**: multi-pane layout, scrollback history, in-dashboard conflict resolution (documented as deferred in `docs/command-policy.md`).
+4. **Upstream tracking**: bump `@huggingface/transformers` when `transformers.js#1730`/`#1718` ship (removes `boolean` for consumers).
+5. **Optional polish**: the `noir doctor` Node `DEP0190` (`shell:true` in the native-deps probe); the onnxruntime-node CLI-probe workspace-hoisting artifact.
 
 ## Resume recipe
 1. `/recall noir` → session-decisions + checkpoint memories.
-2. `git -C …/noir log --oneline -10` + `pnpm test` (expect 1263 green at the `chore(release) 1.3.0-beta.8` commit).
-3. Continue at the 1.4.0 work in `docs/superpowers/plans/2026-07-26-overnight-runtime-polish.md`.
-4. Per release: `node scripts/bump-version.mjs <ver>` + CHANGELOG + roadmap + this doc + memory + `chore(release)` commit. At END (all green): `git tag v1.3.0-beta.7 && git tag v1.3.0-beta.8 && git tag v1.4.0 && git push origin develop --tags`. If `release.yml` `environment: release` approval gates `npm publish`, document it (do NOT bypass lawfully).
+2. `git -C …/noir log --oneline -15` + `pnpm test` (expect 1315 green at the `chore(release) 1.4.0` commit).
+3. `npx @noir-ai/cli@beta --version` → `1.4.0` (smoke the PUBLISHED package, not just `node bin.js`).
 
-## Known considerations (non-blocking)
-- Sub-agents **Opus/Sonnet only**.
-- `noir doctor` "onnxruntime-node: not resolvable from CLI probe" in the dev workspace = probe/hoisting artifact (context tests pass → dep works); published flattened layout resolves.
-- Node `DEP0190` (`shell:true` child-process args) = pre-existing in the doctor native-deps probe; deferred.
-- `better-sqlite3@13` may compile from source on the newest Node until prebuilt coverage fills in.
-- Residual (~5 lines, landing in 1.4.0): `bin.ts` `--json` doesn't yet emit `init/sync/create` `conflicts[]` to stdout.
+## Release-process notes
+- The `release.yml` `publish` job uses `environment: release` with `required_reviewers`. If the overnight push's npm publishes sat behind that approval gate, approve them in the GitHub Actions UI (or remove required reviewers for beta).
+- Tags `v1.3.0-beta.7`, `v1.3.0-beta.8`, `v1.4.0` were created on `develop` (→ `beta` dist-tag). To promote `1.4.0` to `latest`, tag `v1.4.0` on `main` after merging.
 
 ## Conventions (unchanged)
-Sub-agents Opus (design/review) + Sonnet (implementation) only; main loop runs all `pnpm` validation; commits local on `develop` until the release push; dogfood SDD; graceful degradation; no silent paid calls; adopt ideas, not copies.
+Sub-agents Opus (design/review) + Sonnet (implementation) only; main loop runs all `pnpm` validation; commits local on `develop` until the release push; dogfood SDD; graceful degradation; no silent paid calls; adopt ideas, not copies. **No internal session/tier labels in code** (a defect this session corrected repo-wide).
