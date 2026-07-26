@@ -564,7 +564,9 @@ function checkHostArtifacts(
  * (now PREVENTED by `assertSafeRoot` in @noir-ai/create, but legacy/already-
  * nested projects still carry the damage): a nested `<root>/.noir/.noir/` store
  * and/or host artifacts emitted into `.noir/` as if it were a project root
- * (`.noir/CLAUDE.md`, `.noir/.mcp.json`, `.noir/.claude/`). Read-only `warn` —
+ * (`.noir/CLAUDE.md`, `.noir/.mcp.json`, `.noir/.claude/`, and the ignore files
+ * `.noir/.gitignore` / `.dockerignore` / `.npmignore` / `.prettierignore`).
+ * Read-only `warn` —
  * doctor never mutates; remediation is manual removal (a future follow-up
  * slice can automate it). Never `fail`: a nested store wastes space + confuses
  * tooling but does not break the outer project.
@@ -573,7 +575,16 @@ export function checkNestedNoir(
   checks: CheckResult[],
   root: string,
 ): { detected: boolean; paths: string[] } {
-  const candidates = ['.noir/.noir', '.noir/CLAUDE.md', '.noir/.mcp.json', '.noir/.claude'];
+  const candidates = [
+    '.noir/.noir',
+    '.noir/CLAUDE.md',
+    '.noir/.mcp.json',
+    '.noir/.claude',
+    '.noir/.gitignore',
+    '.noir/.dockerignore',
+    '.noir/.npmignore',
+    '.noir/.prettierignore',
+  ];
   const found = candidates.filter((rel) => existsSync(join(root, rel)));
   const detected = found.length > 0;
   checks.push({

@@ -45,4 +45,15 @@ describe('checkNestedNoir (SP-A)', () => {
       expect.arrayContaining(['.noir/CLAUDE.md', '.noir/.mcp.json', '.noir/.claude']),
     );
   });
+
+  it('detects nested IGNORE files inside .noir/ (.gitignore/.npmignore/…)', () => {
+    mkdirSync(join(tmp, '.noir'), { recursive: true });
+    writeFileSync(join(tmp, '.noir', '.gitignore'), 'x');
+    writeFileSync(join(tmp, '.noir', '.npmignore'), 'x');
+    const checks: CheckResult[] = [];
+    const res = checkNestedNoir(checks, tmp);
+    expect(res.detected).toBe(true);
+    expect(res.paths).toEqual(expect.arrayContaining(['.noir/.gitignore', '.noir/.npmignore']));
+    expect(checks[0]?.status).toBe('warn');
+  });
 });
