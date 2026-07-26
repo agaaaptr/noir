@@ -293,7 +293,12 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
         if (!block) {
           throw new Error(`manifest entry ${e.path}: managedBlock mode missing 'block'`);
         }
-        return { block, regionText: buildRegion(block, renderEntry(e, vars)) };
+        const theirs = buildRegion(block, renderEntry(e, vars));
+        const regionText = opts.mergeManagedRegions
+          ? mergeManagedRegion(abs, e.path, block, theirs, ancestors)
+          : theirs;
+        if (opts.mergeManagedRegions) ancestors[`${e.path}::${block.begin}`] = theirs;
+        return { block, regionText };
       });
       managedBlocks(abs, regions);
       written.push(relPath);

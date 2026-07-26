@@ -2,7 +2,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { paths } from '@noir-ai/core';
+import { CONTEXT_BLOCK, paths } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { BRIEF_BLOCK } from '../src/manifest.js';
 import { scaffold } from '../src/scaffold.js';
@@ -48,5 +48,20 @@ describe('scaffold — mergeManagedRegions (SP-D, opt-in)', () => {
     injectUserLine(noirMd);
     await scaffold({ root: tmp, mode: 'sync', transport: 'stdio' });
     expect(readFileSync(noirMd, 'utf8')).not.toContain('USER-EDITED-LINE');
+  });
+
+  it('multi-region (CLAUDE.md) merge preserves a user edit inside one region (sync --merge)', async () => {
+    await scaffold({ root: tmp, mode: 'init', transport: 'stdio', mergeManagedRegions: true });
+    const claude = join(tmp, 'CLAUDE.md');
+    // Inject a user line INSIDE the CONTEXT region (before its end marker).
+    const content = readFileSync(claude, 'utf8');
+    writeFileSync(
+      claude,
+      content.replace(CONTEXT_BLOCK.end, `USER-CTX-LINE\n${CONTEXT_BLOCK.end}`),
+      'utf8',
+    );
+    // sync WITH merge: theirs (CONTEXT template) === base ⇒ keep ours (edited).
+    await scaffold({ root: tmp, mode: 'sync', transport: 'stdio', mergeManagedRegions: true });
+    expect(readFileSync(claude, 'utf8')).toContain('USER-CTX-LINE');
   });
 });
