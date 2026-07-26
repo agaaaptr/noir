@@ -2,6 +2,15 @@
 
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
+## 1.3.0-beta.5 (2026-07-26)
+
+**Published on npm (dist-tag `beta`)** — patch on 1.3.0-beta.4. Two banner fixes the user caught when running `noir`:
+
+- **The banner now reads "NOIR" (was "NOHA").** The hand-rolled ANSI Shadow "R" was malformed; regenerated from the standard figlet glyphs + verified letter-by-letter. Test asserts the correct "R" (`██████╔╝`) to guard the regression.
+- **Smooth gradient replaces the garish per-row rainbow.** Added `gradient-string` (purple → blue → cyan, vertical) — the modern AI-CLI banner look (cf. [GitHub Copilot CLI banner](https://github.blog/engineering/from-pixels-to-characters-the-engineering-behind-github-copilot-clis-animated-ascii-banner/)). `color:false` still emits zero ANSI.
+
+---
+
 ## 1.3.0-beta.4 (2026-07-26)
 
 **Published on npm (dist-tag `beta`)** — patch on 1.3.0-beta.3. One fix, found by a comprehensive (filesystem, not git-only) re-scan of svc-academic-activity-go:
