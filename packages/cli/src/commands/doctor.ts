@@ -561,8 +561,8 @@ function checkHostArtifacts(
  * nested projects still carry the damage): a nested `<root>/.noir/.noir/` store
  * and/or host artifacts emitted into `.noir/` as if it were a project root
  * (`.noir/CLAUDE.md`, `.noir/.mcp.json`, `.noir/.claude/`). Read-only `warn` —
- * doctor never mutates; remediation is manual removal (a future `noir dedup`
- * can automate it, SP-C). Never `fail`: a nested store wastes space + confuses
+ * doctor never mutates; remediation is manual removal (a future follow-up
+ * slice can automate it). Never `fail`: a nested store wastes space + confuses
  * tooling but does not break the outer project.
  */
 export function checkNestedNoir(

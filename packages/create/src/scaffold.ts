@@ -132,8 +132,11 @@ const WRITER_BY_MODE: Record<WriteMode, 'all' | 'runtime'> = {
  * `.noir/` store is never flagged. String-based: works whether or not `root`
  * exists on disk yet (so `noir create <new-dir>` is still guarded).
  *
- * Hard safety — NOT bypassable. (`--force` is reserved for the
- * already-initialized no-op; it does not weaken this guard.)
+ * Hard against literal `.noir` path segments — NOT bypassable by `--force`
+ * (which is reserved for the already-initialized no-op). NOTE: the walk is
+ * string-based, so a symlink whose TARGET is inside `.noir/` is not resolved
+ * (a local self-foot-gun only — the caller controls `root` — not externally
+ * exploitable); in practice `--cwd`/positional roots are literal paths.
  */
 export function assertSafeRoot(root: string): void {
   let cur = root;
@@ -406,19 +409,50 @@ async function writeRegenerateWithConflict(
     case 'replace':
       regenerate(abs, proposed);
       return { written: [relPath], skipped: [] };
-    case 'rename':
-      // Preserve the user's file aside, then write the template in place.
-      renameSync(abs, `${abs}.local`);
+    case 'rename': {
+      // Preserve the user's file aside at a UNIQUE path. Review fix: a bare
+      // `renameSync(abs, abs.local)` would silently clobber a pre-existing
+      // `.local` (POSIX rename replaces) or throw EEXIST mid-scaffold (win32) —
+      // the very data-loss SP-C exists to prevent. uniqueAside picks a fresh
+      // `.local` (then `.local.1`, …) so the move is always safe.
+      const aside = uniqueAside(abs, relPath, '.local');
+      renameSync(abs, aside.abs);
       regenerate(abs, proposed);
-      return { written: [relPath], skipped: [`${relPath}.local`] };
-    case 'duplicate':
-      regenerate(`${abs}.noir`, proposed);
-      return { written: [`${relPath}.noir`], skipped: [relPath] };
+      return { written: [relPath], skipped: [aside.rel] };
+    }
+    case 'duplicate': {
+      // Write the template ALONGSIDE at a unique path; keep the user's file
+      // untouched. (Same unique-suffix safeguard as `rename`.)
+      const aside = uniqueAside(abs, relPath, '.noir');
+      regenerate(aside.abs, proposed);
+      return { written: [aside.rel], skipped: [relPath] };
+    }
     case 'preserve':
+      return { written: [], skipped: [relPath] };
     case 'cancel':
+      // Review fix: Cancel ABORTS the whole scaffold. It used to fall through
+      // to "skip this file" and keep writing the remaining entries — a contract
+      // violation (Cancel/Escape must stop the run). Throwing propagates out of
+      // scaffold(); the cli reports it. Entries written before this conflict
+      // remain on disk, as with any cancelled operation.
+      throw new Error(`scaffold cancelled by user at conflicting file ${relPath}`);
     default:
       return { written: [], skipped: [relPath] };
   }
+}
+
+/** Pick a fresh `<abs><suffix>` aside path (plus its repo-relative form) that
+ *  does NOT exist: tries `<suffix>`, then `<suffix>.1`, `<suffix>.2`, … so the
+ *  `rename`/`duplicate` resolutions never silently overwrite a prior backup
+ *  (data-loss) and never hit win32 EEXIST. */
+function uniqueAside(abs: string, relPath: string, suffix: string): { abs: string; rel: string } {
+  const make = (s: string): { abs: string; rel: string } => ({
+    abs: `${abs}${s}`,
+    rel: `${relPath}${s}`,
+  });
+  let candidate = make(suffix);
+  for (let n = 1; existsSync(candidate.abs); n++) candidate = make(`${suffix}.${n}`);
+  return candidate;
 }
 
 /** Group applicable manifest entries by target path, preserving manifest order

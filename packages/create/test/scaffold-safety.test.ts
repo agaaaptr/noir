@@ -64,6 +64,20 @@ describe('scaffold — root-safety guard (regression: nested .noir/.noir bug)', 
     const root = join(outer, 'nested');
     await expect(scaffold({ root, mode: 'create', transport: 'stdio' })).rejects.toThrow(/\.noir/i);
   });
+
+  it('--force does NOT weaken root-safety (the hard guard): still refuses inside .noir/', async () => {
+    const root = join(tmp, 'proj', '.noir');
+    mkdirSync(root, { recursive: true });
+    await expect(scaffold({ root, mode: 'init', transport: 'stdio', force: true })).rejects.toThrow(
+      /\.noir/i,
+    );
+    expect(existsSync(join(root, '.noir'))).toBe(false); // no nested store created
+  });
+
+  it('assertSafeRoot rejects a root with a trailing slash', () => {
+    const root = `${join(tmp, 'proj', '.noir')}/`;
+    expect(() => assertSafeRoot(root)).toThrow(/\.noir/i);
+  });
 });
 
 describe('scaffold — already-initialized guard (SP-A)', () => {
