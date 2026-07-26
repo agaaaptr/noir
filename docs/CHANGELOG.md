@@ -2,6 +2,24 @@
 
 Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap.md`); per-slice design lives in `docs/superpowers/specs/`.
 
+## Unreleased (develop — local, not pushed; pre-review)
+
+Three sub-projects from the 2026-07-26 scaffold/TUI discovery session. All TDD; full repo green (1122 tests). Discovery: `docs/discovery/2026-07-26-scaffold-tui-discovery.md`; specs in `docs/superpowers/specs/2026-07-26-*-design.md`.
+
+### SP-A — Scaffold root-safety + already-init no-op + doctor nested-`.noir`
+- **Root-caused & fixed the "noir init duplicates" bug:** running `init`/`create`/`sync` with cwd inside `.noir/` minted a fresh project.id (whenever `<root>/.noir/project.id` was absent) and built a **nested `.noir/.noir/`** project. New `assertSafeRoot` (`@noir-ai/create`) hard-refuses to scaffold when `root` is or is inside a `.noir/` directory (not bypassable).
+- `noir init`/`create` on an already-initialized root is now a **no-op** (was a silent re-emit); `--upgrade`/`--force` bypass it. `--force` added to `init`/`create`.
+- `noir doctor`: new read-only `nested .noir` check detects the nested-re-init fingerprint (`.noir/.noir/`, `.noir/CLAUDE.md`, `.noir/.mcp.json`, `.noir/.claude`).
+
+### SP-B — Branded banner + host-aware home
+- Bare `noir` opens with a pre-rendered "noir" ASCII block wordmark + faux gradient (picocolors, **no new dep**) + tagline + host-direction ("open your host to develop", host-agnostic via the S10 registry) + the CLI command list, then the existing `@clack` action menu. Guardrails: skips under `--quiet`/`--json`/`NOIR_NO_BANNER`/non-TTY/CI; responsive width (≥50 cols → block wordmark, `<50` → compact `◆ noir`); no animation (accessibility).
+
+### SP-C — Regenerate conflict resolution
+- `regenerate` files (`.mcp.json`, `AGENTS.md`) are no longer silently overwritten on `sync` / `init --force` / `init --upgrade`. New engine hook `ScaffoldOptions.onConflict` + `conflictPolicy` (UI-free; the cli injects a `@clack` menu in TTY: Replace/Rename/Duplicate/Keep/Cancel); non-TTY/CI preserves; `--force` overwrites; `noir sync --force` added. Resolutions: replace / preserve / rename (`<path>.local`) / duplicate (`<path>.noir`) / cancel.
+- **Deferred to a follow-up slice (spec'd):** content-hash dedup, semantic dedup via S6 embeddings (the only thing that catches CLAUDE.md≈AGENTS.md overlap), three-way managed-block merge (ancestor snapshot), `noir doctor` exact/semantic dedup.
+
+---
+
 ## 1.2.0-beta.2 (2026-07-26)
 
 **Published on npm (dist-tag `beta`); verified working via global install** — `npx @noir-ai/cli@1.2.0-beta.2 --version` → `1.2.0-beta.2` (exit 0); `noir init` scaffolds. The critical global-install fix:

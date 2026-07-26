@@ -23,6 +23,8 @@ The ecosystem goal: a portable, extensible toolkit that works across every major
 
 > **As of 2026-07-26. v1.2.0-beta.2 PUBLISHED on npm (dist-tag `beta`); the global-install no-op is fixed + verified working.** The single source of "where Noir is right now." Update this whenever a slice ships or direction shifts — so no session loses the thread.
 
+> **Un-released on `develop` (LOCAL, not pushed — 2026-07-26 session):** three sub-projects from the scaffold/TUI discovery — **SP-A** scaffold root-safety (the "noir init duplicates" bug is fixed) + already-init no-op + `noir doctor` nested-`.noir` detection; **SP-B** branded banner + host-aware home (banner · tagline · host-direction · command list); **SP-C** regenerate conflict resolution (`onConflict` hook + `@clack` menu + `--force`). All TDD; full repo green (1122 tests). CHANGELOG §Unreleased; specs in `docs/superpowers/specs/2026-07-26-*-design.md`. **Deferred to a follow-up slice:** content-hash dedup, semantic dedup (S6 embeddings), three-way managed-block merge, doctor exact/semantic dedup.
+
 **Built & shipped (v1.0.0-beta.1 on npm, dist-tag `beta`):**
 - **Walking skeleton** (slices **S0 + S2 + S3-minimal**) — the integration thesis is *proven*: a host (Claude Code) connects to Noir over MCP and `host_status` round-trips over **stdio** (Gate 1) and a **daemon-backed Streamable HTTP** transport with stdio FS-fallback (Gate 2).
 - **S1 Stores** — `@noir-ai/store`: embedded `better-sqlite3` + FTS5 (BM25, window snippets) + `sqlite-vec` (384-dim kNN), daemon-owned single writer, `ProjectId`-keyed DB at `.noir/store/<projectId>.db`, read-only FS-fallback, `store_status` MCP tool. Acceptance (persistence exists + queryable) MET; final review = release-ready.
