@@ -62,6 +62,7 @@
     "@noir-ai/store": "workspace:*",
     "cli-table3": "^0.6.5",
     "commander": "^12.1.0",
+    "gradient-string": "^3.0.0",
     "ora": "^8.1.0",
     "picocolors": "^1.1.1"
   },

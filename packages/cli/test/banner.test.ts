@@ -8,6 +8,7 @@ describe('renderBanner', () => {
     const lines = out.split('\n');
     expect(lines.length).toBeGreaterThan(1);
     expect(out).toMatch(/█/); // block art present
+    expect(out).toContain('██████╔╝'); // correct "R" (guards the NOHA regression)
   });
 
   it('color:false output has NO ANSI escape codes (snapshot/CI safe)', () => {
