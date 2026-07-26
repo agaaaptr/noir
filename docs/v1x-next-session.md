@@ -1,6 +1,16 @@
 # Noir — next-session handoff & playbook
 
-> **Status (2026-07-27): the overnight runtime-polish session is COMPLETE. `1.3.0-beta.7`, `1.3.0-beta.8`, and `1.4.0` shipped on `develop` (push+tag at session end). 1315/1315 tests green.** This doc + `docs/CHANGELOG.md` + `docs/roadmap.md` + `docs/superpowers/plans/2026-07-26-overnight-runtime-polish.md` + `/recall noir` = full context.
+> **Status (2026-07-27): session work COMPLETE — 15 commits on `develop`, 1315/1315 tests green (full gate: typecheck + lint + build + symlink-guard smoke), tags `v1.3.0-beta.7` / `v1.3.0-beta.8` / `v1.4.0` created LOCALLY. The outward push (`develop` + the 3 tags) was BLOCKED by the Claude auto-mode guardrail (don't-push-without-asking + npm-publish implication) and is PENDING the user. npm publish is additionally gated by the GitHub `release` environment (required reviewers). See "Push status (blocked)" below.** This doc + `docs/CHANGELOG.md` + `docs/roadmap.md` + `docs/superpowers/plans/2026-07-26-overnight-runtime-polish.md` + `/recall noir` = full context.
+
+## Push status (blocked — pending user)
+The Claude session was not permitted to push to the public remote or push release tags (guardrail: out-of-place publication). To ship, run from a terminal (or via `!` in the Claude prompt):
+```bash
+cd /Users/agaaaptr/Documents/Personal/Project/AI/noir
+git push origin develop
+git push origin v1.3.0-beta.7 v1.3.0-beta.8 v1.4.0
+```
+Each tag triggers `release.yml` → publishes to the `beta` dist-tag (channel derived from the branch holding the tag; all three are on `develop` → `beta`). The `publish` job uses `environment: release` with required reviewers — **approve it in the GitHub Actions UI** (or remove required reviewers for beta). After publish, verify: `npm view @noir-ai/cli dist-tags` (expect `beta` → `1.4.0`) and `npx @noir-ai/cli@beta --version` → `1.4.0`. `latest`/stable stays at `1.0.0-beta.1` until you merge `develop`→`main` and tag `v1.4.0` on `main`.
+- Note: `v1.3.0-beta.7` / `v1.3.0-beta.8` were tagged at their natural commits (15s test timeout); `v1.4.0` is tagged at `f38513d` which includes the 40s testTimeout fix, so its CI test gate is reliable. If a beta.7/beta.8 CI doctor test times out, re-run it (the tests pass in isolation).
 
 ## What shipped this session (all on `develop`)
 - **1.3.0-beta.7** — npm-warn fix (`engines >=22` + `better-sqlite3@13` removes `prebuild-install`; `boolean` muted; deprecation troubleshooting doc) + output design-system (`theme.ts`, red headers killed, responsive tables, `badge()`, `definitionList()`/`kv()`, NO_COLOR/CLICOLOR_FORCE/NOIR_ACCESSIBLE).
