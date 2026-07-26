@@ -1,6 +1,6 @@
 {
   "name": "@noir-ai/create",
-  "version": "1.2.0-beta.2",
+  "version": "1.3.0-beta.1",
   "description": "Noir scaffold engine — the declarative three-mode writer, manifest, templates, stack-detect, and migrations that power `noir init`/`create`/`sync`.",
   "license": "MIT",
   "author": "agaaaptr",
