@@ -171,7 +171,7 @@ Design record: [`superpowers/specs/2026-07-25-s10-multihost-design.md`](superpow
 
 ## `@noir-ai/skills` — builtin skill pack + compiler
 
-The native skill library (**33 builtins + integrations**) and a copy-and-validate compiler that transforms each skill into a host's emission format. The `noir-*` namespace is managed: `noir init`/`sync` overwrite it idempotently.
+The native skill library (**33 builtins + 1 integration = 34 skills**) and a copy-and-validate compiler that transforms each skill into a host's emission format. The `noir-*` namespace is managed: `noir init`/`sync` overwrite it idempotently.
 
 **Key exports**
 

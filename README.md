@@ -2,6 +2,29 @@
 
 > The discipline, context, and memory layer for any agentic CLI — spec-driven workflow, native working-context, and cross-session memory, local-first by default.
 
+[![npm](https://img.shields.io/npm/v/@noir-ai/cli?include_prereleases&label=npm)](https://www.npmjs.com/package/@noir-ai/cli)
+[![CI](https://github.com/agaaaptr/noir/actions/workflows/ci.yml/badge.svg)](https://github.com/agaaaptr/noir/actions/workflows/ci.yml)
+[![Node](https://img.shields.io/node/v/@noir-ai/cli)](https://www.npmjs.com/package/@noir-ai/cli)
+[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+The `noir` home menu (interactive; `noir status` when non-interactive):
+
+```
+$ noir
+╭ noir — my-project ──────────────────────────────╮
+│                                                  │
+◆  What would you like to do?
+│  ● Status         project + daemon + store snapshot
+│  ○ Index project  (re)index files into context
+│  ○ Recall memory  search cross-session memory
+│  ○ Next task      suggest next phase + skill
+│  ○ Start daemon   foreground daemon
+│  ○ Sync skills    re-emit builtin skills
+│  ○ Exit
+│                                                  │
+╰──────────────────────────────────────────────────╯
+```
+
 **Noir** is a host-agnostic orchestration layer that makes an agentic CLI behave like a disciplined spec-driven engineer. **Claude Code is the default host; Gemini, Cursor, OpenCode, and AGENTS.md are one `--host` flag away** (bring-your-own-agent). It wires three capabilities every long-running agent loses without help:
 
 1. **Spec-driven workflow** — an escapable, observable lifecycle (idea → spec → plan → implement → verify → document) where every gate decision is recorded.
@@ -20,65 +43,118 @@ See [`docs/roadmap.md`](docs/roadmap.md) for the living current-status, [`docs/s
 
 ## Installation
 
-Noir ships as the npm package **`@noir-ai/cli`** (bin: `noir`). The recommended path is the native installer — a small `curl | sh` script that detects Node + npm and runs `npm install -g` on your behalf:
+Noir ships as the npm package **`@noir-ai/cli`** (bin: `noir`). *Each command below is its own copy-pasteable block — copy the one you want without grabbing the other channel.*
+
+### One-shot (fastest path)
+
+Run Noir once without a global install — `init` the project and exit. Beta channel (`v1.2.0-beta.1`):
+
+```bash
+npx @noir-ai/cli@beta init
+```
+
+Stable:
+
+```bash
+npx @noir-ai/cli init
+```
+
+Other one-shot runners (drop `@beta` for stable):
+
+```bash
+pnpm dlx @noir-ai/cli@beta init
+```
+
+```bash
+yarn dlx @noir-ai/cli@beta init
+```
+
+```bash
+bunx @noir-ai/cli@beta init
+```
+
+### Global install — npm
+
+Beta:
+
+```bash
+npm install -g @noir-ai/cli@beta
+```
+
+Stable:
+
+```bash
+npm install -g @noir-ai/cli
+```
+
+### Global install — pnpm
+
+Beta:
+
+```bash
+pnpm add -g @noir-ai/cli@beta
+```
+
+Stable:
+
+```bash
+pnpm add -g @noir-ai/cli
+```
+
+### Global install — yarn (classic)
+
+Beta:
+
+```bash
+yarn global add @noir-ai/cli@beta
+```
+
+Stable:
+
+```bash
+yarn global add @noir-ai/cli
+```
+
+### Global install — bun
+
+Beta:
+
+```bash
+bun add -g @noir-ai/cli@beta
+```
+
+Stable:
+
+```bash
+bun add -g @noir-ai/cli
+```
+
+### Native installer (`curl | sh`)
+
+A small script that detects Node + npm and runs `npm install -g` on your behalf. Idempotent (re-run = upgrade), prints a PATH hint if `noir` isn't on PATH, and verifies with `noir --version` at the end.
+
+Stable:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | bash
 ```
 
-Beta channel: append `| NOIR_CHANNEL=beta bash`. Pin a version: `| NOIR_VERSION=1.2.3 bash`. Safer than blind `curl | sh`: `curl -fsSL -o install.sh … && less install.sh && bash install.sh`.
+Beta channel:
 
-The alternatives — every command below lives in its own fenced block so each is copy-pasteable (Homebrew is stable-only; use npm for beta):
-
-**npm**
 ```bash
-# stable
-npm install -g @noir-ai/cli
-# beta
-npm install -g @noir-ai/cli@beta
+curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | NOIR_CHANNEL=beta bash
 ```
 
-**pnpm**
-```bash
-# stable
-pnpm add -g @noir-ai/cli
-# beta
-pnpm add -g @noir-ai/cli@beta
-```
+Pin a version with `| NOIR_VERSION=1.2.3 bash`. Safer than blind `curl | sh`: `curl -fsSL -o install.sh … && less install.sh && bash install.sh`.
 
-**yarn** (classic)
-```bash
-# stable
-yarn global add @noir-ai/cli
-# beta
-yarn global add @noir-ai/cli@beta
-```
+### Homebrew (stable-only)
 
-**bun**
-```bash
-# stable
-bun add -g @noir-ai/cli
-# beta
-bun add -g @noir-ai/cli@beta
-```
-
-**One-shot** (no install — run `init` and exit):
-```bash
-npx    @noir-ai/cli init          # npm, stable
-npx    @noir-ai/cli@beta init     # npm, beta
-pnpm   dlx @noir-ai/cli init      # pnpm, stable
-pnpm   dlx @noir-ai/cli@beta init # pnpm, beta
-yarn   dlx @noir-ai/cli init      # yarn (Berry), stable
-yarn   dlx @noir-ai/cli@beta init # yarn (Berry), beta
-bunx   @noir-ai/cli init          # bun, stable
-bunx   @noir-ai/cli@beta init     # bun, beta
-```
-
-**Homebrew** (advanced, stable-only — beta via npm):
 ```bash
 brew tap agaaaptr/noir https://github.com/agaaaptr/homebrew-noir
 brew install noir
 ```
+
+Homebrew is stable-only — use npm for the beta channel.
 
 **Requirements:** Node ≥ 20; native deps (better-sqlite3, sqlite-vec, onnxruntime-node) prebuilt on mac/linux/win x64 + arm64; first run downloads ~22 MB MiniLM to `~/.noir/models/`. Verify with `noir --version` / `noir doctor`. Full reference (every path, troubleshooting, the from-source build for repo developers) lives in **[docs/installation.md](docs/installation.md)**.
 
