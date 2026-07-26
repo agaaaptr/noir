@@ -27,9 +27,10 @@
 import { existsSync } from 'node:fs';
 import { type HostId, resolveAdapter } from '@noir-ai/adapters';
 import { loadProjectInfo, paths } from '@noir-ai/core';
-import { scaffold } from '@noir-ai/create';
+import { type ScaffoldResult, scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 import { buildConflictOpts } from './conflict.js';
+import { checkWritePathDedup } from './dedup-write.js';
 import { resolveInteractive } from './output.js';
 
 export interface SyncOptions {
@@ -51,18 +52,29 @@ export interface SyncOptions {
   mergeManagedRegions?: boolean;
 }
 
-export async function sync(root: string, opts: SyncOptions = {}): Promise<void> {
+export async function sync(root: string, opts: SyncOptions = {}): Promise<ScaffoldResult> {
   const host = resolveSyncHost(root, opts);
   // B1: the engine reads ScaffoldOptions.interactive (hermetic — never
   // process.env). The CLI derives it once from the bridge + TTY/CI/NO_COLOR gate.
   const interactive = resolveInteractive();
+  const conflictOpts = buildConflictOpts({ force: opts.force, interactive });
+
+  // TIER B3 — load project info once for both the dedup hook (embedder config)
+  // and the existing config-host fallback. Best-effort: a missing/corrupt file
+  // is left to scaffold's "not initialized" gate below.
+  let projectInfo: ReturnType<typeof loadProjectInfo> | undefined;
+  try {
+    projectInfo = loadProjectInfo(root);
+  } catch {
+    projectInfo = undefined;
+  }
 
   const res = await scaffold({
     root,
     mode: 'sync',
     host,
     interactive,
-    ...buildConflictOpts({ force: opts.force, interactive }),
+    ...conflictOpts,
     // B1: merge defaults TRUE inside scaffold; only forward an explicit opt-out.
     ...(opts.mergeManagedRegions === false ? { mergeManagedRegions: false } : {}),
   });
@@ -80,23 +92,44 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<void> 
     // N1: standardized wording — same phrase across init/sync/create so logs
     // grep uniformly. (Pre-N1 sync phrased this as "nothing to sync".)
     process.stderr.write(`host '${host}' has no skill emitter; skipping skills\n`);
-    return;
-  }
-  const target: CompileTarget = host;
-  const summary = await emitSkillsToDir(skillsDir, { includeIntegrations: true, target });
-  const relDir = skillsDir.replace(`${root}/`, '');
-  process.stderr.write(
-    `Synced ${summary.emitted.length} Noir skills to ${relDir}/ (target: ${target}).\n`,
-  );
-  // T2: surface stale-dir pruning so a user can see when a previous Noir
-  // version's builtin was removed (the dir was deleted from .claude/skills/).
-  // Pure hygiene; never affects correctness of the freshly-emitted pack.
-  const pruned = summary.pruned ?? [];
-  if (pruned.length > 0) {
+  } else {
+    const target: CompileTarget = host;
+    // B3 TASK 1 — forward conflictOpts so the skills-emit conflict flow is
+    // live in interactive mode (mirrors init.ts). --json/--no-input stays
+    // prompt-free via the `interactive: false` guard.
+    type SkillEmitOpts = NonNullable<Parameters<typeof emitSkillsToDir>[1]>;
+    const skillOpts: SkillEmitOpts = {
+      includeIntegrations: true,
+      target,
+      conflictPolicy: conflictOpts.conflictPolicy,
+      interactive,
+    };
+    if (conflictOpts.onConflict !== undefined) {
+      skillOpts.onConflict = conflictOpts.onConflict as SkillEmitOpts['onConflict'];
+    }
+    const summary = await emitSkillsToDir(skillsDir, skillOpts);
+    const relDir = skillsDir.replace(`${root}/`, '');
     process.stderr.write(
-      `Pruned ${pruned.length} stale noir-* skill dir${pruned.length === 1 ? '' : 's'}: ${pruned.join(', ')}\n`,
+      `Synced ${summary.emitted.length} Noir skills to ${relDir}/ (target: ${target}).\n`,
     );
+    // T2: surface stale-dir pruning so a user can see when a previous Noir
+    // version's builtin was removed (the dir was deleted from .claude/skills/).
+    // Pure hygiene; never affects correctness of the freshly-emitted pack.
+    const pruned = summary.pruned ?? [];
+    if (pruned.length > 0) {
+      process.stderr.write(
+        `Pruned ${pruned.length} stale noir-* skill dir${pruned.length === 1 ? '' : 's'}: ${pruned.join(', ')}\n`,
+      );
+    }
   }
+
+  // TIER B3 TASK 2 — write-path semantic dedup. Non-blocking; degrades to a
+  // stderr warn-skip when the embedder is unavailable. Records near-dups on
+  // `res.conflicts` so `--json` consumers see them without a prompt.
+  const dedup = await checkWritePathDedup(root, res, { interactive, project: projectInfo });
+  if (dedup.conflicts.length > 0) res.conflicts.push(...dedup.conflicts);
+
+  return res;
 }
 
 /** Resolve the sync host: explicit `--host` override > `.noir/config.yml`

@@ -35,7 +35,9 @@ export {
   DEFAULT_DUP_THRESHOLD,
   type DupCandidate,
   type DupPair,
+  findNearestDuplicate,
   findSemanticDuplicates,
+  NEAREST_DUP_DEFAULT_THRESHOLD,
 } from './dedup.js';
 // --- Embedders (the EmbedFn seam) ---
 export {

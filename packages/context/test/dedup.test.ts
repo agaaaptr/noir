@@ -1,8 +1,14 @@
-// SP-C (deferred slice) — findSemanticDuplicates (TDD). A deterministic fake
-// embedder maps each text to a hand-set unit vector so cosine + threshold +
-// ordering are tested without loading the real MiniLM embedder.
+// SP-C (deferred slice) — findSemanticDuplicates + findNearestDuplicate (TDD).
+// A deterministic fake embedder maps each text to a hand-set unit vector so
+// cosine + threshold + ordering are tested without loading the real MiniLM
+// embedder.
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_DUP_THRESHOLD, findSemanticDuplicates } from '../src/dedup.js';
+import {
+  DEFAULT_DUP_THRESHOLD,
+  findNearestDuplicate,
+  findSemanticDuplicates,
+  NEAREST_DUP_DEFAULT_THRESHOLD,
+} from '../src/dedup.js';
 
 /** Fake embedder: text → a fixed vector (caller pre-normalizes). Unknown texts → zero. */
 function fakeEmbed(map: Record<string, number[]>): (text: string) => Promise<Float32Array> {
@@ -57,5 +63,76 @@ describe('findSemanticDuplicates', () => {
 
   it('exposes a DEFAULT_DUP_THRESHOLD of 0.9', () => {
     expect(DEFAULT_DUP_THRESHOLD).toBe(0.9);
+  });
+});
+
+describe('findNearestDuplicate', () => {
+  it('returns null when no candidate reaches the threshold', async () => {
+    const embed = fakeEmbed({ P: [1, 0, 0], A: [0, 1, 0], B: [0, 0, 1] });
+    const proposed = { path: 'P.md', text: 'P' };
+    const candidates = [
+      { path: 'A.md', text: 'A' },
+      { path: 'B.md', text: 'B' },
+    ];
+    expect(await findNearestDuplicate(proposed, candidates, embed, 0.85)).toBeNull();
+  });
+
+  it('returns the single best match above threshold, ordered a ≤ b', async () => {
+    // cos([1,0,0], normalized([0.99,0.14,0])) ≈ 0.9901; cos([1,0,0],[0.8,0.6,0]) = 0.8
+    const embed = fakeEmbed({
+      P: [1, 0, 0],
+      near: [0.99, 0.14, 0],
+      far: [0.8, 0.6, 0],
+    });
+    const proposed = { path: 'proposed.md', text: 'P' };
+    const candidates = [
+      { path: 'zz-far.md', text: 'far' },
+      { path: 'aa-near.md', text: 'near' },
+    ];
+    const best = await findNearestDuplicate(proposed, candidates, embed, 0.85);
+    expect(best).not.toBeNull();
+    expect(best?.a).toBe('aa-near.md'); // ordered a ≤ b against 'proposed.md'
+    expect(best?.b).toBe('proposed.md');
+    expect(best?.similarity).toBeGreaterThan(0.95);
+  });
+
+  it('picks the HIGHER-similarity candidate when two both clear the threshold', async () => {
+    const embed = fakeEmbed({
+      P: [1, 0, 0],
+      lo: [0.9, 0.43, 0], // cos ≈ 0.902
+      hi: [0.99, 0.14, 0], // cos ≈ 0.990
+    });
+    const proposed = { path: 'P.md', text: 'P' };
+    const candidates = [
+      { path: 'lo.md', text: 'lo' },
+      { path: 'hi.md', text: 'hi' },
+    ];
+    const best = await findNearestDuplicate(proposed, candidates, embed, 0.85);
+    expect(best?.a).toBe('P.md');
+    expect(best?.b).toBe('hi.md'); // the higher-similarity one wins
+  });
+
+  it('skips empty/whitespace proposed + candidates (no signal invented)', async () => {
+    const embed = fakeEmbed({ P: [1, 0, 0] });
+    const proposed = { path: 'P.md', text: '   ' }; // empty → return null
+    const candidates = [{ path: 'A.md', text: 'A' }];
+    expect(await findNearestDuplicate(proposed, candidates, embed, 0.85)).toBeNull();
+
+    const proposed2 = { path: 'P.md', text: 'P' };
+    const candidates2 = [
+      { path: 'empty.md', text: '   ' },
+      { path: 'A.md', text: 'A' }, // map has no 'A' → zero vec → cosine 0 < 0.85
+    ];
+    expect(await findNearestDuplicate(proposed2, candidates2, embed, 0.85)).toBeNull();
+  });
+
+  it('returns null with zero candidates (fresh-project fast path)', async () => {
+    const embed = fakeEmbed({ P: [1, 0, 0] });
+    const proposed = { path: 'P.md', text: 'P' };
+    expect(await findNearestDuplicate(proposed, [], embed, 0.85)).toBeNull();
+  });
+
+  it('exposes NEAREST_DUP_DEFAULT_THRESHOLD of 0.85', () => {
+    expect(NEAREST_DUP_DEFAULT_THRESHOLD).toBe(0.85);
   });
 });

@@ -29,10 +29,13 @@
 
 import { resolve } from 'node:path';
 import { type HostId, resolveAdapter } from '@noir-ai/adapters';
-import { scaffold } from '@noir-ai/create';
+import { loadProjectInfo, type ProjectInfo } from '@noir-ai/core';
+import { type ScaffoldResult, scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 import { buildConflictOpts } from '../conflict.js';
+import { checkWritePathDedup } from '../dedup-write.js';
 import { assertTransportUrl } from '../init.js';
+import { resolveInteractive } from '../output.js';
 
 export interface CreateOptions {
   transport: 'stdio' | 'streamable-http';
@@ -44,12 +47,18 @@ export interface CreateOptions {
 }
 
 /**
- * Bootstrap Noir's AI layer in `dir`.
+ * Bootstrap Noir's AI layer in `dir`. Returns the {@link ScaffoldResult} (with
+ * B2's structured `conflicts[]` + any TIER B3 dedup records appended); the bin
+ * emits it under `--json`. `undefined` when the already-initialized guard
+ * short-circuited (a no-op).
  *
  * @param dir   Target directory (created if absent). Defaults to `process.cwd()`.
  * @param opts  Transport + URL + host (same semantics as `noir init`).
  */
-export async function create(dir: string | undefined, opts: CreateOptions): Promise<void> {
+export async function create(
+  dir: string | undefined,
+  opts: CreateOptions,
+): Promise<ScaffoldResult | undefined> {
   // M2: call assertTransportUrl directly so the SAME error class yields the SAME
   // exit code as `noir init` (plain Error → exit 1 for both missing-url and
   // non-localhost). The previous NoirCliError(EXIT.USAGE) wrapper made `create`
@@ -58,18 +67,23 @@ export async function create(dir: string | undefined, opts: CreateOptions): Prom
 
   const root = resolve(dir ?? process.cwd());
   const host: HostId = opts.host ?? 'claude';
+  // B3 — derive interactive once (consistency with init/sync) so both scaffold
+  // and skills emission see the same hermetic flag.
+  const interactive = resolveInteractive();
+  const conflictOpts = buildConflictOpts({ force: opts.force, interactive });
 
   const res = await scaffold({
     root,
     mode: 'create',
     host,
     transport: opts.transport,
+    interactive,
     ...(opts.url !== undefined ? { url: opts.url } : {}),
     ...(opts.force === true ? { force: true } : {}),
-    ...buildConflictOpts({ force: opts.force }),
+    ...conflictOpts,
   });
   // SP-A: a no-op (already-initialized guard) must not re-emit skills.
-  if (res.noop) return;
+  if (res.noop) return res;
 
   // Skills are out-of-manifest by design — same composition as init.
   const adapter = resolveAdapter(host);
@@ -80,13 +94,39 @@ export async function create(dir: string | undefined, opts: CreateOptions): Prom
     process.stderr.write(`host '${host}' has no skill emitter; skipping skills\n`);
   } else {
     const target: CompileTarget = host;
-    const summary = await emitSkillsToDir(skillsDir, { includeIntegrations: true, target });
+    // B3 TASK 1 — forward conflictOpts so an interactive `noir create` with a
+    // conflicting skill emit consults the resolver (mirrors init/sync).
+    type SkillEmitOpts = NonNullable<Parameters<typeof emitSkillsToDir>[1]>;
+    const skillOpts: SkillEmitOpts = {
+      includeIntegrations: true,
+      target,
+      conflictPolicy: conflictOpts.conflictPolicy,
+      interactive,
+    };
+    if (conflictOpts.onConflict !== undefined) {
+      skillOpts.onConflict = conflictOpts.onConflict as SkillEmitOpts['onConflict'];
+    }
+    const summary = await emitSkillsToDir(skillsDir, skillOpts);
     const relDir = skillsDir.replace(`${root}/`, '');
     process.stderr.write(
       `Emitted ${summary.emitted.length} Noir skills to ${relDir}/ (target: ${target}).\n`,
     );
   }
 
+  // TIER B3 TASK 2 — write-path semantic dedup. Greenfield create rarely has
+  // existing host-context candidates (the target dir is fresh), so the fast
+  // path fires; `--force` on a pre-existing Noir project reads the config and
+  // runs the full dedup. Best-effort: a missing/corrupt config warn-skips.
+  let projectInfo: ProjectInfo | undefined;
+  try {
+    projectInfo = loadProjectInfo(root);
+  } catch {
+    projectInfo = undefined;
+  }
+  const dedup = await checkWritePathDedup(root, res, { interactive, project: projectInfo });
+  if (dedup.conflicts.length > 0) res.conflicts.push(...dedup.conflicts);
+
   process.stderr.write(`Noir created in ${root} (host: ${host}, transport: ${opts.transport}).\n`);
   process.stderr.write('Next: cd into the new directory, then run `noir` to open the home menu.\n');
+  return res;
 }

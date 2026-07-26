@@ -24,8 +24,15 @@ export interface DupPair {
   similarity: number;
 }
 
-/** Default near-duplicate threshold (cosine). High → few false positives. */
+/** Default near-duplicate threshold (cosine) for the O(n²) pair scan. High →
+ *  few false positives. Used by `noir doctor --dedup` over the candidate set. */
 export const DEFAULT_DUP_THRESHOLD = 0.9;
+
+/** Default near-duplicate threshold (cosine) for the O(n) write-path scan
+ *  (`findNearestDuplicate`). Lower (0.85) so the write-path hook surfaces BOTH
+ *  the action tier (≥ 0.95) AND the info-only tier (0.85–0.95); the doctor's
+ *  0.90 would silently swallow the 0.85–0.90 info band. */
+export const NEAREST_DUP_DEFAULT_THRESHOLD = 0.85;
 
 /**
  * Find near-duplicate file pairs by cosine similarity over embedded contents.
@@ -63,6 +70,43 @@ export async function findSemanticDuplicates(
   }
   pairs.sort((x, y) => y.similarity - x.similarity);
   return pairs;
+}
+
+/**
+ * Find the single NEAREST duplicate of `proposed` among `candidates` by cosine
+ * similarity. The write-path analog of {@link findSemanticDuplicates}: same
+ * embedding + cosine math, but O(n) (one proposed vs N candidates) instead of
+ * O(n²), and returns a single best match (or null) rather than a pair list.
+ *
+ * Used by the `noir init`/`create`/`sync` write-path dedup hook (TIER B3):
+ * AFTER scaffold writes a host-context file, the CLI reads its bytes as
+ * `proposed` and the OTHER existing host-context files as `candidates`. Empty-
+ * text inputs (proposed or any candidate) are skipped. Returns the best pair
+ * with similarity ≥ `threshold`, ordered `a ≤ b`, or null when nothing matches.
+ *
+ * The caller owns embedding-caching policy (the CLI hook wraps `embed` with a
+ * SHA-256 content-hash cache so unchanged candidates skip the embedder on
+ * repeat `noir sync`). This pure function does NOT touch the cache itself.
+ */
+export async function findNearestDuplicate(
+  proposed: DupCandidate,
+  candidates: readonly DupCandidate[],
+  embed: EmbedFn,
+  threshold: number = NEAREST_DUP_DEFAULT_THRESHOLD,
+): Promise<DupPair | null> {
+  if (proposed.text.trim().length === 0) return null;
+  const proposedVec = l2normalize(await embed(proposed.text));
+  let best: DupPair | null = null;
+  for (const c of candidates) {
+    if (c.text.trim().length === 0) continue;
+    const v = l2normalize(await embed(c.text));
+    const sim = dot(proposedVec, v);
+    if (sim >= threshold && (best === null || sim > best.similarity)) {
+      const [a, b] = proposed.path <= c.path ? [proposed.path, c.path] : [c.path, proposed.path];
+      best = { a, b, similarity: sim };
+    }
+  }
+  return best;
 }
 
 /** Dot product (both vectors assumed L2-normalized ⇒ cosine similarity). */
