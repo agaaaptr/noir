@@ -1,6 +1,6 @@
 {
   "name": "@noir-ai/workflow",
-  "version": "1.3.0-beta.6",
+  "version": "1.3.0-beta.7",
   "description": "Noir workflow — the spec-driven lifecycle engine (intake → document) with observable, escapable gates.",
   "license": "MIT",
   "author": "agaaaptr",

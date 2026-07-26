@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.3.0-beta.7 (2026-07-26)
+
+**Published on npm (dist-tag `beta`)** — Tier A of the 2026-07-26 overnight "runtime polish" session: a clean install (no deprecation noise) and a unified output design-system (no more red headers).
+
+### Install — deprecation warnings fixed at the source
+- **`prebuild-install` removed entirely.** `better-sqlite3` `^12 → ^13` (the 2026-07-21 N-API rewrite) in `@noir-ai/store`; the deprecated `prebuild-install` is no longer a transitive dependency for Noir OR any consumer (`pnpm why -r prebuild-install` empty; 0 lockfile matches).
+- **`engines.node` `>=20 → >=22`** across all 11 packages (Node 20 reached EOL 2026-04-30; `>=22` enables `better-sqlite3@13` and covers Node 22–25, incl. 24 the dev/CI runtime). `>=24` was considered and rejected — it would drop still-supported Node 22 LTS for no benefit.
+- **`boolean@3.2.0` muted** dev-side via `allowedDeprecatedVersions` in `pnpm-workspace.yaml` (harmless transitive: `@huggingface/transformers` → `onnxruntime-node` → `global-agent` → `boolean`; no released upstream fix yet, tracked `transformers.js#1730`/`#1718`). New **"Deprecation warnings during install"** troubleshooting section.
+- Note: `better-sqlite3@13` is brand-new — on the very newest Node a matching prebuilt may not be published yet, so it may compile from source (needs a C/C++ toolchain). The `Unknown user config "python"` warning is from the user's own `~/.npmrc`, not Noir.
+- All Node-floor references updated to `>=22` (README, getting-started, installation, `scripts/install.sh`, `scripts/new-package.mjs` template, `docs/packaging.md`, `docs/releasing.md`).
+
+### Unified output design-system (no more red headers)
+- New `packages/cli/src/theme.ts` — single owner of the semantic palette (`c.{ok,warn,error,info,accent,dim,bold}`), `badge(state,label)` (always symbol + text label + color → NO_COLOR- and colorblind-safe), `useColor()` / `accessibleMode()` / `terminalWidth()`.
+- `output.ts table()` rewritten: the default **red headers are gone** — headers pre-colored via picocolors and cli-table3's `@colors/colors` path bypassed (empty `style.head`/`style.border`) so under `NO_COLOR` everything (head + border + body) strips consistently with no leak. Tables are **responsive** (greedy column-width shrink to `terminalWidth()`, `wordWrap` + `truncate`), TTY-gated.
+- New `definitionList()` / `kv()` helpers; `status`/`task`/`context`/`memory` render via `definitionList`; `doctor` Status column uses `badge()` (`✓ OK` / `⚠ WARN` / `✗ FAIL`) with **red reserved strictly for errors**.
+- Honors `NO_COLOR` (full strip), `CLICOLOR_FORCE=1` (force color when redirected), `NOIR_ACCESSIBLE` (symbol+text badges + solid banner). `--json` envelopes byte-identical; memory-recall non-table policy preserved. +23 design-system tests; **1181/1181 tests green** (was 1158).
+
 ## 1.3.0-beta.6 (2026-07-26)
 
 **Published on npm (dist-tag `beta`)** — banner gradient refined to **Midnight Cobalt** (dark cobalt `#2c5282` → bright blue `#3b82f6` → sky `#7dd3fc`). Brighter than the beta.3 midnight preview, all-blue (no purple/cyan), smooth via gradient-string. User-chosen from a palette of 5 noir-inspired options.
