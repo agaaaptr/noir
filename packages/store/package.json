@@ -23,7 +23,7 @@
     "persistence"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "publishConfig": {
     "access": "public",
@@ -48,7 +48,7 @@
   },
   "dependencies": {
     "@noir-ai/core": "workspace:*",
-    "better-sqlite3": "^12.0.0",
+    "better-sqlite3": "^13.0.0",
     "sqlite-vec": "^0.1.0"
   },
   "devDependencies": {
