@@ -4,7 +4,7 @@ Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`d
 
 ## Unreleased (develop — local, not pushed; pre-review)
 
-Three sub-projects from the 2026-07-26 scaffold/TUI discovery session. All TDD; full repo green (1122 tests). Discovery: `docs/discovery/2026-07-26-scaffold-tui-discovery.md`; specs in `docs/superpowers/specs/2026-07-26-*-design.md`.
+Four sub-projects (+ an opus whole-branch review fix wave) from the 2026-07-26 scaffold/TUI discovery session. All TDD; full repo green (1136 tests). Discovery: `docs/discovery/2026-07-26-scaffold-tui-discovery.md`; specs in `docs/superpowers/specs/2026-07-26-*-design.md`.
 
 ### SP-A — Scaffold root-safety + already-init no-op + doctor nested-`.noir`
 - **Root-caused & fixed the "noir init duplicates" bug:** running `init`/`create`/`sync` with cwd inside `.noir/` minted a fresh project.id (whenever `<root>/.noir/project.id` was absent) and built a **nested `.noir/.noir/`** project. New `assertSafeRoot` (`@noir-ai/create`) hard-refuses to scaffold when `root` is or is inside a `.noir/` directory (not bypassable).
@@ -16,7 +16,16 @@ Three sub-projects from the 2026-07-26 scaffold/TUI discovery session. All TDD; 
 
 ### SP-C — Regenerate conflict resolution
 - `regenerate` files (`.mcp.json`, `AGENTS.md`) are no longer silently overwritten on `sync` / `init --force` / `init --upgrade`. New engine hook `ScaffoldOptions.onConflict` + `conflictPolicy` (UI-free; the cli injects a `@clack` menu in TTY: Replace/Rename/Duplicate/Keep/Cancel); non-TTY/CI preserves; `--force` overwrites; `noir sync --force` added. Resolutions: replace / preserve / rename (`<path>.local`) / duplicate (`<path>.noir`) / cancel.
-- **Deferred to a follow-up slice (spec'd):** content-hash dedup, semantic dedup via S6 embeddings (the only thing that catches CLAUDE.md≈AGENTS.md overlap), three-way managed-block merge (ancestor snapshot), `noir doctor` exact/semantic dedup.
+- **Still deferred (spec'd):** content-hash dedup (the project convention counts identical re-writes as `written` for telemetry, so the disk-write optimization is marginal), three-way managed-block merge (ancestor snapshot).
+
+### SP-D — Semantic duplicate detection (`noir doctor --dedup`)
+- `@noir-ai/context` `findSemanticDuplicates(files, embed, threshold=0.9)` — embeds each file via an injected `EmbedFn`, L2-normalizes, finds near-duplicate pairs by cosine similarity. The ONLY mechanism that catches cross-file SEMANTIC overlap (e.g. a hand-mirrored CLAUDE.md ≈ AGENTS.md); exact content-hash cannot.
+- `noir doctor --dedup` (opt-in; default doctor stays fast) — collects host-context files (CLAUDE.md/AGENTS.md/GEMINI.md) + `.noir/rules/RULES.md`, lazy-loads the S6 local embedder, reports near-duplicate pairs (cosine ≥ 0.90) as a warn row. Degrades to a warn-skip when the embedder is unavailable. (cli now depends on `@noir-ai/context`.)
+
+### Review fix wave (opus whole-branch review of SP-A/B/C — 0 criticals)
+- `rename`/`duplicate` conflict resolutions now use a `uniqueAside` helper — never silently clobber a prior `.local`/`.noir` backup (data-loss) and win32-safe.
+- `cancel` aborts the whole scaffold (was: skip-one-file-and-continue — a contract violation).
+- Tests pin that `--force` never weakens root-safety; rename idempotency; trailing-slash; strengthened overwrite/conflict assertions. (`--json`/`--no-input` ⇒ conflict-prompt contract gap documented for a follow-up — cascades `bin.test.ts` arg-pins.)
 
 ---
 
