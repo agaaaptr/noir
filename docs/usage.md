@@ -148,8 +148,11 @@ Bare `noir` opens an interactive home screen (TTY) or prints `status` (non-inter
 | `--quiet` | Suppress non-essential diagnostics |
 | `--verbose` | Show additional diagnostic detail |
 | `--cwd <path>` | Run as if started in `<path>` |
+| `--tui` | Advisory: route bare `noir` to the interactive home / `noir tui` when the terminal supports it |
+| `--no-tui` | Advisory: route bare `noir` away from the interactive menu to the `status` snapshot |
+| `--no-tips` | Suppress redirect / deprecation hints on stderr (keep CI clean) |
 
-These parse in any position (`noir --json status` and `noir status --json` both work) and apply to subcommands. Data goes to **stdout**; diagnostics go to **stderr**.
+These parse in any position (`noir --json status` and `noir status --json` both work) and apply to subcommands. Data goes to **stdout**; diagnostics go to **stderr**. `--tui` / `--no-tui` are advisory routing hints for bare `noir` only (see [command-policy.md](command-policy.md)); every subcommand stays 100% scriptable in both modes.
 
 ### Exit codes
 
@@ -258,6 +261,22 @@ memory:
     provider: anthropic       # provider key; required alongside enabled
     model: claude-3-5-sonnet-latest   # consumed by the model layer
     types: [pattern, bug]     # optional: restrict candidates to these types
+
+rules:                        # additive; parsed + validated but no consumer reads it yet (reserved for the rule registry / future `noir check`)
+  enabled: true               # master switch (default true — opt OUT). `noir doctor` reports the RULES.md budget when on.
+  lengthBudgetKb: 6           # soft per-rule body budget in KB (doctor warns past 6 KB / 150 lines)
+
+prd:                          # additive, escapable-soft-gate for the pre-SDD PRD. advance() never hard-blocks; --force <reason> overrides.
+  mandatoryFor: [feature, epic]   # taskClasses that get an observable "missing PRD" recommendation at the spec gate
+
+integrations:                 # additive overlay keyed by integration name; default {} = no integrations wired (the skill playbook ships regardless)
+  noir-clickup:               # the integration declared in packages/skills/integrations/noir-clickup/integration.json
+    runtime: gated-write-proxy   # none | gated-write-proxy | mcp-stdio | external-mcp — downgrade locally (e.g. `none` for a read-only run)
+    auth:
+      tokenEnv: CLICKUP_API_TOKEN  # override the declaration's tokenEnv; the VALUE stays in env (never written here)
+    teamId: ""                # optional ClickUp workspace binding (flows 3 + 5 need a list_id)
+    listId: ""
+    spaceId: ""
 ```
 
 ### Privacy + provider-explicit rules
@@ -290,8 +309,12 @@ The project's single source of truth, keyed by a canonical `ProjectId`. Generate
 | `.noir/plans/` | Authored plans (SDD). |
 | `.noir/tasks/` | Task records. |
 | `.noir/decisions/` | Decision stubs. |
-| `.noir/audit/` | Per-task gate decisions (`<taskId>.json`). |
+| `.noir/audit/` | Per-task gate decisions (`<taskId>.json`) + per-integration write audit (`integration-*.jsonl`). |
 | `.noir/intake/` | Intake notes (SDD). |
+| `.noir/rules/RULES.md` | The Noir-curated rules seed (Slice R); wired into the host context file via `RULES_BLOCK`. |
+| `.noir/scaffold-version` | The scaffold-engine version stamp (Slice S); `noir doctor` reports drift, `noir init --upgrade` runs migrations. |
+| `.noir/handoff/` | Persisted `noir handoff --write` prompts. **Gitignore this** (session-local). |
+| `.noir/dedup-cache.json` | Content-hash cache for write-path semantic duplicate detection (`noir doctor --dedup`). |
 
 ### `~/.noir/` (per-user global)
 

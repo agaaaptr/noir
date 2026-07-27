@@ -52,6 +52,8 @@ noir init
 | `.noir/project.id` | A UUID — the project's canonical `ProjectId` (Noir keys everything on this, never on a filesystem path). |
 | `.noir/config.yml` | Project config. Starts as `host: claude` + `mode: full`. See [usage.md → Configuration](usage.md#configuration). |
 | `.noir/NOIR.md` | The canonical context file. The host merely `@import`s it. |
+| `.noir/rules/RULES.md` | The Noir-curated rules seed (Slice R); wired into the host context file via a managed `RULES_BLOCK`. |
+| `.noir/scaffold-version` | The scaffold-engine version stamp; `noir doctor` reports drift, `noir init --upgrade` runs migrations. |
 | `.mcp.json` | The MCP server entry Claude Code reads. |
 | `CLAUDE.md` | A managed `@import ".noir/NOIR.md"` block is inserted (existing content is preserved). |
 | `.claude/skills/noir-*` | The **34 native `noir-` skills** (33 builtins + 1 integration) are compiled and emitted here. |
