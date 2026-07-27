@@ -1,8 +1,11 @@
 # Changelog
 
-## 1.4.0 (2026-07-27)
+## 1.4.0-beta.1 (2026-07-27)
 
-**Published on npm (dist-tag `beta`)** — the third overnight "runtime polish" release (Tier C): a TUI-primary command policy, on-demand host handoff, an Ink `noir tui` dashboard, and a repo-wide cleanup. **Minor** bump — the `engines.node` `>=22` floor from 1.3.0-beta.7 lands as a minor semver signal (Node 20 was already EOL).
+**Published on npm (dist-tag `beta`)** — the first PUBLISHED version of the 2026-07-26/27 overnight "runtime polish" work: the Tier C surface (TUI-primary command policy, on-demand host handoff, an Ink `noir tui` dashboard, repo-wide cleanup) on top of the Tier A/B work from `1.3.0-beta.7`/`1.3.0-beta.8` (install fixes, output design-system, idempotent scaffold, universal conflict contract, write-path semantic dedup). The intermediate `1.3.0-beta.7` / `1.3.0-beta.8` / `1.4.0` tags failed CI (a `useColor()` leak under `CI=true` that broke the responsive-table width test — fixed here) and were never published. **Minor** bump — the `engines.node` `>=22` floor lands as a minor semver signal (Node 20 was already EOL).
+
+### CI color fix
+- Under `CI=true`, `picocolors.isColorSupported` flipped color ON, ANSI-wrapping table headers so the "table fits the terminal" width test measured the ANSI bytes and failed (also violating the auto-disable-under-CI contract). `useColor()` now returns false under CI; `CLICOLOR_FORCE=1` still forces color for CI viewers that want it.
 
 ### TUI runtime policy
 - Bare `noir` is the documented primary UX. New global flags `--tui`/`--no-tui` (advisory routing; `--no-tui` sends bare `noir` to the status path even in a TTY) and `--no-tips` (suppresses redirect/deprecation hints in CI). **No command is hard-gated** — every subcommand stays 100% scriptable. Every read-side command emits the `{ok, data}` `--json` envelope. New `docs/command-policy.md` (interactive-vs-scriptable matrix) + `docs/deprecation.md` (warn → redirect → never-silently-remove; zero entries today).
