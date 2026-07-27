@@ -9,21 +9,7 @@
 
 The `noir` home menu (interactive; `noir status` when non-interactive):
 
-```
-$ noir
-╭ noir — my-project ──────────────────────────────╮
-│                                                  │
-◆  What would you like to do?
-│  ● Status         project + daemon + store snapshot
-│  ○ Index project  (re)index files into context
-│  ○ Recall memory  search cross-session memory
-│  ○ Next task      suggest next phase + skill
-│  ○ Start daemon   foreground daemon
-│  ○ Sync skills    re-emit builtin skills
-│  ○ Exit
-│                                                  │
-╰──────────────────────────────────────────────────╯
-```
+![Noir interactive home TUI menu showing project actions such as Status, Index project, Recall memory, and Next task](docs/assets/tui/noir-home-menu.png)
 
 > Run bare `noir` (no arguments) to open this menu. `noir init` is the **scaffold** command — non-interactive; it writes `.noir/` + skills and prints a status line, not this menu.
 
