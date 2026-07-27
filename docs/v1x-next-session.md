@@ -5,7 +5,7 @@
 ## What shipped in `1.4.0-beta.1` (all on `develop`)
 - **Install + output (from the beta.7/beta.8 work):** `engines >=22` + `better-sqlite3@13` (removes `prebuild-install`) + `boolean` muted + deprecation troubleshooting doc; output design-system (`theme.ts`, red headers killed, responsive tables, `badge()`, `definitionList()`/`kv()`, NO_COLOR/CLICOLOR_FORCE/NOIR_ACCESSIBLE).
 - **Scaffold + conflict + dedup:** idempotent scaffold (`noir sync` true no-op, merge-default, hermetic); universal conflict contract (3 producers routed, diff preview, apply-to-all, zdiff3, `--json conflicts[]`); write-path semantic dedup (two-tier, content-hash cache, graceful embedder degradation).
-- **Tier C:** TUI runtime policy (`--tui`/`--no-tui`/`--no-tips`, command matrix, deprecation doc); host handoff (`noir handoff`/`wrap` + `hostLaunchDirective` + optional `emitHandoff`); Ink `noir tui` MVP (lazy React 19, `isMainModule` guard preserved).
+- **TUI runtime policy + host handoff:** TUI runtime policy (`--tui`/`--no-tui`/`--no-tips`, command matrix, deprecation doc); host handoff (`noir handoff`/`wrap` + `hostLaunchDirective` + optional `emitHandoff`); Ink `noir tui` MVP (lazy React 19, `isMainModule` guard preserved).
 - **Repo-wide cleanup:** ~627 internal tier/task labels stripped, 3 test files renamed, handoff CWD-path bug fixed.
 - **CI color fix:** `useColor()` returns false under `CI=true` (picocolors `isColorSupported` leak that broke the table-width test).
 

@@ -42,7 +42,7 @@ Every read/write `noir` subcommand is in the **"works in both modes"** column. T
 
 ## The `--json` envelope (headless contract)
 
-Every read-side command (and, since C1, `init` / `sync` / `create`) emits one of these on **stdout**, once, and writes nothing else to stdout:
+Every read-side command (and `init` / `sync` / `create`) emits one of these on **stdout**, once, and writes nothing else to stdout:
 
 ```jsonc
 // success

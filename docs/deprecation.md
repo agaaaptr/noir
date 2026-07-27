@@ -34,7 +34,7 @@ Deprecated forms are tracked in `packages/cli/src/bin.ts` as the `DEPRECATIONS` 
 
 ## Current deprecations
 
-_None. No `noir` command or flag is deprecated in v1.3.x._
+_None. No `noir` command or flag is deprecated in v1.4.x._
 
 When that changes, the table below will list each one:
 

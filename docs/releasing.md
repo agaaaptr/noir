@@ -188,11 +188,11 @@ After the `release.yml` job goes green:
 
 ```bash
 npm view @noir-ai/cli                  # registry metadata (version, dist-tags, provenance)
-npm view @noir-ai/cli dist-tags.beta   # → 1.1.0-beta.1 (current beta pointer)
+npm view @noir-ai/cli dist-tags.beta   # → 1.4.0-beta.1 (current beta pointer)
 npx @noir-ai/cli@beta init             # smoke: opt into the beta and run init in a throwaway dir
 ```
 
-> **Publish history:** `1.0.0-beta.1` was the first publish (2026-07-25); the 5 CI fixes it took to get the publish job green are documented in [§8 Troubleshooting](#8-troubleshooting). `1.1.0-beta.1` (2026-07-25, later same day) added the v1.x capability slices (K/R/I/P/S/X) and the consolidated debt batch. Stable `1.x` has not been cut yet — the beta dist-tag is the live pointer.
+> **Publish history:** `1.0.0-beta.1` was the first publish (2026-07-25); the 5 CI fixes it took to get the publish job green are documented in [§8 Troubleshooting](#8-troubleshooting). `1.1.0-beta.1` (2026-07-25, later same day) added the v1.x capability slices (K/R/I/P/S/X) and the consolidated debt batch. The beta line then iterated on runtime polish through `1.3.0-beta.6`. The intermediate tags `v1.3.0-beta.7`, `v1.3.0-beta.8`, and `v1.4.0` were pushed but their CI **failed** on a `useColor()` leak (picocolors' `isColorSupported` includes `|| env.CI`, so under `CI=true` table headers were ANSI-wrapped and the responsive-table width test measured ANSI bytes as overflow) and **never published**; fixed in `1.4.0-beta.1` (`useColor()` returns false under `CI=true`; `CLICOLOR_FORCE=1` still forces color). **`1.4.0-beta.1` (2026-07-26/27) is the current `beta` pointer.** Stable `1.x` has not been cut yet — the `latest` dist-tag still points at `1.0.0-beta.1`.
 
 ### Promoting beta → stable
 

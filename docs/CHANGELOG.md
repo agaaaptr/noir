@@ -2,10 +2,33 @@
 
 ## 1.4.0-beta.1 (2026-07-27)
 
-**Published on npm (dist-tag `beta`)** — the first PUBLISHED version of the 2026-07-26/27 overnight "runtime polish" work: the Tier C surface (TUI-primary command policy, on-demand host handoff, an Ink `noir tui` dashboard, repo-wide cleanup) on top of the Tier A/B work from `1.3.0-beta.7`/`1.3.0-beta.8` (install fixes, output design-system, idempotent scaffold, universal conflict contract, write-path semantic dedup). The intermediate `1.3.0-beta.7` / `1.3.0-beta.8` / `1.4.0` tags failed CI (a `useColor()` leak under `CI=true` that broke the responsive-table width test — fixed here) and were never published. **Minor** bump — the `engines.node` `>=22` floor lands as a minor semver signal (Node 20 was already EOL).
+**Published on npm (dist-tag `beta`)** — the 2026-07-26/27 overnight "runtime polish" release: install fixes, a unified output design-system, a fully idempotent scaffold, one universal conflict contract across every file-producing path, write-path semantic duplicate detection, a TUI-primary command policy, on-demand host handoff, and an Ink `noir tui` dashboard, plus repo-wide cleanup. This is the first PUBLISHED version of the session — the intermediate `1.3.0-beta.7` / `1.3.0-beta.8` / `1.4.0` tags failed CI on a `useColor()` leak under `CI=true` (picocolors `isColorSupported` includes `|| env.CI`, so table headers got ANSI-wrapped and the responsive-table "fits 60/80/120 cols" test measured ANSI bytes as overflow), were never published, and are superseded by this entry. A `develop` tag carries a `-beta` suffix (`develop`→`beta`, `main`→`latest`), hence 1.4.0 → 1.4.0-beta.1. **Minor** bump — the `engines.node` `>=22` floor lands as a minor semver signal (Node 20 was already EOL).
 
-### CI color fix
-- Under `CI=true`, `picocolors.isColorSupported` flipped color ON, ANSI-wrapping table headers so the "table fits the terminal" width test measured the ANSI bytes and failed (also violating the auto-disable-under-CI contract). `useColor()` now returns false under CI; `CLICOLOR_FORCE=1` still forces color for CI viewers that want it.
+### Install — deprecation warnings fixed at the source
+- **`prebuild-install` removed entirely.** `better-sqlite3` `^12 → ^13` (the 2026-07-21 N-API rewrite) in `@noir-ai/store`; the deprecated `prebuild-install` is no longer a transitive dependency for Noir OR any consumer (`pnpm why -r prebuild-install` empty; 0 lockfile matches).
+- **`engines.node` `>=20 → >=22`** across all 11 packages (Node 20 reached EOL 2026-04-30; `>=22` enables `better-sqlite3@13` and covers Node 22–25, incl. 24 the dev/CI runtime). `>=24` was considered and rejected — it would drop still-supported Node 22 LTS for no benefit.
+- **`boolean@3.2.0` muted** dev-side via `allowedDeprecatedVersions` in `pnpm-workspace.yaml` (harmless transitive: `@huggingface/transformers` → `onnxruntime-node` → `global-agent` → `boolean`; no released upstream fix yet, tracked `transformers.js#1730`/`#1718`). New **"Deprecation warnings during install"** troubleshooting section.
+- Note: `better-sqlite3@13` is brand-new — on the very newest Node a matching prebuilt may not be published yet, so it may compile from source (needs a C/C++ toolchain). The `Unknown user config "python"` warning is from the user's own `~/.npmrc`, not Noir.
+- All Node-floor references updated to `>=22` (README, getting-started, installation, `scripts/install.sh`, `scripts/new-package.mjs` template, `docs/packaging.md`, `docs/releasing.md`).
+
+### Output design-system (no more red headers)
+- New `packages/cli/src/theme.ts` — single owner of the semantic palette (`c.{ok,warn,error,info,accent,dim,bold}`), `badge(state,label)` (always symbol + text label + color → NO_COLOR- and colorblind-safe), `useColor()` / `accessibleMode()` / `terminalWidth()`.
+- `output.ts table()` rewritten: the default **red headers are gone** — headers pre-colored via picocolors and cli-table3's `@colors/colors` path bypassed (empty `style.head`/`style.border`) so under `NO_COLOR` everything (head + border + body) strips consistently with no leak. Tables are **responsive** (`colWidths` from `terminalWidth()`, `wordWrap` + `truncate`), TTY-gated.
+- New `definitionList()` / `kv()` helpers; `status`/`task`/`context`/`memory` render via `definitionList`; `doctor` Status column uses `badge()` (`✓ OK` / `⚠ WARN` / `✗ FAIL`) with **red reserved strictly for errors**.
+- Honors `NO_COLOR` (full strip), `CLICOLOR_FORCE=1` (force color when redirected), `NOIR_ACCESSIBLE` (symbol+text badges + solid banner). `--json` envelopes byte-identical; memory-recall non-table policy preserved.
+
+### Idempotent scaffold
+- `noir sync` on an unchanged tree now writes **nothing** (managed-region content-hash dedup via `predictManagedBlock(s)`; no mtime/git churn) — the perceived "noir init duplicates" was git-status churn, not real duplication.
+- `.noir/ancestors.json` seeded on **every** init/create/sync. `mergeManagedRegions` defaults to **TRUE** (bare `noir sync` preserves in-region user edits across template upgrades; `--no-merge-regions` escape). *(Latent fix: `mergeManagedRegion` dropped a trailing newline so dedup could never fire and every sync drifted the file by one byte.)*
+- Bare `noir init` on an initialized project **no-ops** without `--upgrade`; pre-1.3.0 projects (project.id present, no stamp) also no-op. The engine is **hermetic** for API/embedded callers (explicit `ScaffoldOptions.interactive` flag, decoupled from `process.env`). Fixed the stale comment that claimed multi-region merge was unshipped (it shipped in SP-H).
+
+### Universal conflict contract
+- Every file-producing path now routes through one `buildConflictOpts` + `onConflict` seam — including the three that previously blind-overwrote: `skills/compiler emitSkillsToDir` (the `rm -rf` orphan cleanup is now `assertNotUserOwned`-guarded — a hand-authored `noir-*` skill is preserved + reported, never silently deleted), `workflow/artifacts` (8 writers), `store/markdown exportMarkdown`.
+- `@clack` conflict resolver now shows a **colored unified diff** (stderr; `+`/`-` via the theme; `NO_COLOR`-gated) before the prompt. **Apply-to-all** scoped to artifact class (regenerate shares; managed blocks stay per-file; a `noir init --upgrade` over N pointers is now 1 prompt). 6th option **"merge (with conflict markers)"** (zdiff3). `--json` emits a structured `ScaffoldResult.conflicts[]` (`{path, mode, similarity, existingSha, proposedSha, resolution}`); no prompt under `--no-input`.
+
+### Write-path semantic dedup
+- Before writing a host-context file, `noir init`/`create`/`sync` check it against existing host files (CLAUDE.md / AGENTS.md / GEMINI.md / RULES.md) via the S6 embedder and surface a near-duplicate (e.g. CLAUDE.md ≈ AGENTS.md) as a **non-blocking recommendation** (Replace/Mirror/Skip/Create) via `findNearestDuplicate` — the dedup detector and the conflict resolver are now one connected system.
+- Two-tier (cosine ≥0.95 action, 0.85–0.95 info-only); content-hash gate at `.noir/dedup-cache.json` (no re-embed of unchanged files). **Graceful degradation:** if the embedder/model is unavailable or slow, it warn-skips — `noir init`/`sync` never block on a model download or fail because of a missing embedder. `init`/`sync`/`create` now return the `ScaffoldResult` (with `conflicts[]`).
 
 ### TUI runtime policy
 - Bare `noir` is the documented primary UX. New global flags `--tui`/`--no-tui` (advisory routing; `--no-tui` sends bare `noir` to the status path even in a TTY) and `--no-tips` (suppresses redirect/deprecation hints in CI). **No command is hard-gated** — every subcommand stays 100% scriptable. Every read-side command emits the `{ok, data}` `--json` envelope. New `docs/command-policy.md` (interactive-vs-scriptable matrix) + `docs/deprecation.md` (warn → redirect → never-silently-remove; zero entries today).
@@ -19,43 +42,10 @@
 ### Repo-wide cleanup
 - Stripped ~627 internal session/tier/task labels from source comments/JSDoc, test names, user-facing strings, and public docs; renamed 3 tier-prefixed test files; fixed a `handoff` test CWD-path bug; fixed tier-label leaks in skill content. (Internal labels remain only in `docs/superpowers/plans/*` + `docs/discovery/*`.)
 
-**1315/1315 tests green** (was 1181 at session start → +134 across the three releases).
+### CI color fix
+- Under `CI=true`, `picocolors.isColorSupported` flipped color ON (`|| env.CI`), ANSI-wrapping table headers so the responsive-table "fits 60/80/120 cols" width test measured the ANSI bytes as overflow and failed (also violating the auto-disable-under-CI contract). `useColor()` now returns false under `CI=true`; `CLICOLOR_FORCE=1` still forces color for CI viewers that want it. This was the release blocker that unpinned 1.4.0-beta.1.
 
-## 1.3.0-beta.8 (2026-07-26)
-
-**Published on npm (dist-tag `beta`)** — second 2026-07-26 overnight release: a fully idempotent scaffold, one universal conflict contract across every file-producing path, and write-path semantic duplicate detection.
-
-### Idempotent scaffold
-- `noir sync` on an unchanged tree now writes **nothing** (managed-region content-hash dedup; no mtime/git churn) — the perceived "noir init duplicates" was git-status churn, not real duplication.
-- `.noir/ancestors.json` seeded on **every** init/create/sync. `mergeManagedRegions` defaults to **TRUE** (bare `noir sync` preserves in-region user edits across template upgrades; `--no-merge-regions` escape). *(Latent fix: `mergeManagedRegion` dropped a trailing newline so dedup could never fire and every sync drifted the file by one byte.)*
-- Bare `noir init` on an initialized project **no-ops** without `--upgrade`; pre-1.3.0 projects (project.id present, no stamp) also no-op. The engine is **hermetic** for API/embedded callers (explicit `interactive` flag, decoupled from `process.env`). Fixed the stale comment that claimed multi-region merge was unshipped (it shipped in SP-H).
-
-### Universal conflict contract
-- Every file-producing path now routes through one `buildConflictOpts` + `onConflict` seam — including the three that previously blind-overwrote: `skills/compiler emitSkillsToDir` (the `rm -rf` orphan cleanup is now `assertNotUserOwned`-guarded — a hand-authored `noir-*` skill is preserved + reported, never silently deleted), `workflow/artifacts` (8 writers), `store/markdown exportMarkdown`.
-- `@clack` conflict resolver now shows a **colored unified diff** (stderr; `+`/`-` via the theme; `NO_COLOR`-gated) before the prompt. **Apply-to-all** scoped to artifact class (a `noir init --upgrade` over N pointers is now 1 prompt; managed blocks stay per-file). 6th option **"merge (with conflict markers)"** (zdiff3). `--json` emits a structured `ScaffoldResult.conflicts[]` (`{path, mode, similarity, existingSha, proposedSha, resolution}`); no prompt under `--no-input`.
-
-### Write-path semantic dedup
-- Before writing a host-context file, `noir init`/`create`/`sync` check it against existing host files (CLAUDE.md / AGENTS.md / GEMINI.md / RULES.md) via the S6 embedder and surface a near-duplicate as a **non-blocking recommendation** (Replace/Mirror/Skip/Create) — the dedup detector and the conflict resolver are now one connected system.
-- Two-tier (cosine ≥0.95 action, 0.85–0.95 info-only); content-hash cache at `.noir/dedup-cache.json` (no re-embed of unchanged files). **Graceful degradation:** if the embedder/model is unavailable or slow, it warn-skips — `noir init`/`sync` never block on a model download or fail because of a missing embedder. `init`/`sync`/`create` now return the `ScaffoldResult` (with `conflicts[]`).
-
-**1263/1263 tests green** (was 1181 → +82 across both overnight releases). Known residual (~5 lines, landing in 1.4.0): `bin.ts` does not yet emit `conflicts[]` to `--json` stdout for init/sync/create (data populated + tested at the function boundary).
-
-## 1.3.0-beta.7 (2026-07-26)
-
-**Published on npm (dist-tag `beta`)** — first 2026-07-26 overnight "runtime polish" release: a clean install (no deprecation noise) and a unified output design-system (no more red headers).
-
-### Install — deprecation warnings fixed at the source
-- **`prebuild-install` removed entirely.** `better-sqlite3` `^12 → ^13` (the 2026-07-21 N-API rewrite) in `@noir-ai/store`; the deprecated `prebuild-install` is no longer a transitive dependency for Noir OR any consumer (`pnpm why -r prebuild-install` empty; 0 lockfile matches).
-- **`engines.node` `>=20 → >=22`** across all 11 packages (Node 20 reached EOL 2026-04-30; `>=22` enables `better-sqlite3@13` and covers Node 22–25, incl. 24 the dev/CI runtime). `>=24` was considered and rejected — it would drop still-supported Node 22 LTS for no benefit.
-- **`boolean@3.2.0` muted** dev-side via `allowedDeprecatedVersions` in `pnpm-workspace.yaml` (harmless transitive: `@huggingface/transformers` → `onnxruntime-node` → `global-agent` → `boolean`; no released upstream fix yet, tracked `transformers.js#1730`/`#1718`). New **"Deprecation warnings during install"** troubleshooting section.
-- Note: `better-sqlite3@13` is brand-new — on the very newest Node a matching prebuilt may not be published yet, so it may compile from source (needs a C/C++ toolchain). The `Unknown user config "python"` warning is from the user's own `~/.npmrc`, not Noir.
-- All Node-floor references updated to `>=22` (README, getting-started, installation, `scripts/install.sh`, `scripts/new-package.mjs` template, `docs/packaging.md`, `docs/releasing.md`).
-
-### Unified output design-system (no more red headers)
-- New `packages/cli/src/theme.ts` — single owner of the semantic palette (`c.{ok,warn,error,info,accent,dim,bold}`), `badge(state,label)` (always symbol + text label + color → NO_COLOR- and colorblind-safe), `useColor()` / `accessibleMode()` / `terminalWidth()`.
-- `output.ts table()` rewritten: the default **red headers are gone** — headers pre-colored via picocolors and cli-table3's `@colors/colors` path bypassed (empty `style.head`/`style.border`) so under `NO_COLOR` everything (head + border + body) strips consistently with no leak. Tables are **responsive** (greedy column-width shrink to `terminalWidth()`, `wordWrap` + `truncate`), TTY-gated.
-- New `definitionList()` / `kv()` helpers; `status`/`task`/`context`/`memory` render via `definitionList`; `doctor` Status column uses `badge()` (`✓ OK` / `⚠ WARN` / `✗ FAIL`) with **red reserved strictly for errors**.
-- Honors `NO_COLOR` (full strip), `CLICOLOR_FORCE=1` (force color when redirected), `NOIR_ACCESSIBLE` (symbol+text badges + solid banner). `--json` envelopes byte-identical; memory-recall non-table policy preserved. +23 design-system tests; **1181/1181 tests green** (was 1158).
+**1315/1315 tests green** under `CI=true` (was 1181 at session start → +134 across the session).
 
 ## 1.3.0-beta.6 (2026-07-26)
 

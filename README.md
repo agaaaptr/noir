@@ -37,7 +37,7 @@ $ noir
 
 ## Status
 
-**v1.2.0-beta.1** is the current beta (dist-tag `beta`); stable `1.x` has not been cut yet. The beta ships the full v1.x capability set — the keystone refactor (K), five extensions (**R** rules, **I** ignore, **P** PRD, **S** scaffold, **X** integrations), and **multi-host adapters (S10)** — on top of the v1.0 release-ready baseline (slices S0–S9). Claude Code is the default host; **Gemini, Cursor, OpenCode, and AGENTS.md** (the 32-platform standard) are supported via `--host`. **1089/1089 tests green; 11 packages; 34 skills (33 builtins + 1 integration).**
+**1.4.0-beta.1** is the current beta (dist-tag `beta`); stable `1.x` has not been cut yet (the `latest` dist-tag still points at `1.0.0-beta.1`). The beta ships the full v1.x capability set — the keystone refactor (K), five extensions (**R** rules, **I** ignore, **P** PRD, **S** scaffold, **X** integrations), and **multi-host adapters (S10)** — on top of the v1.0 release-ready baseline (slices S0–S9), plus the `1.4.0-beta.1` runtime-polish layer (unified output design-system, idempotent scaffold, universal conflict contract, write-path semantic dedup, TUI runtime policy, `noir handoff`, and the Ink `noir tui` dashboard MVP). Claude Code is the default host; **Gemini, Cursor, OpenCode, and AGENTS.md** (the 32-platform standard) are supported via `--host`. **1315/1315 tests green; 11 packages; 34 skills (33 builtins + 1 integration).**
 
 Noir ships **only native builtin skills (+ opt-in integrations)** — there is no plugin and no marketplace.
 
@@ -49,7 +49,7 @@ Noir ships as the npm package **`@noir-ai/cli`** (bin: `noir`). *Each command be
 
 ### One-shot (fastest path)
 
-Run Noir once without a global install — `init` the project and exit. Beta channel (`v1.2.0-beta.1`):
+Run Noir once without a global install — `init` the project and exit. Beta channel (`1.4.0-beta.1`):
 
 ```bash
 npx @noir-ai/cli@beta init
@@ -162,7 +162,7 @@ Homebrew is stable-only — use npm for the beta channel.
 
 **Use as a library:** the `@noir-ai/*` workspace packages are also designed to embed — the workflow FSM, hybrid retrieval, cross-session memory, bounded model layer, and scaffold engine are all consumable as libraries. See **[docs/sdk.md](docs/sdk.md)** for the per-package stable API surface.
 
-> **Beta today, stable soon.** `v1.2.0-beta.1` is on npm under the `beta` dist-tag (cut from `develop`; stable `1.x` follows once the beta is validated in a real project). `1.0.0-beta.1` was the first publish; `1.1.0-beta.1` added the v1.x capability slices; `1.2.0-beta.1` adds multi-host. Repo developers can also run Noir from source — see [docs/installation.md → From source](docs/installation.md).
+> **Beta today, stable soon.** `1.4.0-beta.1` is on npm under the `beta` dist-tag (cut from `develop`; stable `1.x` follows once the beta is validated in a real project). `1.0.0-beta.1` was the first publish; `1.1.0-beta.1` added the v1.x capability slices; `1.2.0-beta.1` added multi-host; `1.3.0-beta.6` refined the banner gradient; `1.4.0-beta.1` (current) is the runtime-polish release — unified output design-system (no more red table headers), idempotent scaffold, universal conflict contract, write-path semantic dedup, TUI runtime policy, `noir handoff`, the Ink `noir tui` dashboard MVP, and the CI color fix that unpinned it. (The intermediate `1.3.0-beta.7` / `1.3.0-beta.8` / `1.4.0` tags failed CI and were never published.) Repo developers can also run Noir from source — see [docs/installation.md → From source](docs/installation.md).
 
 ## Getting started
 
