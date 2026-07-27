@@ -95,14 +95,39 @@ function envFlagSet(name: string): boolean {
 }
 
 /**
+ * True when running under a CI runner (GitHub Actions / GitLab / CircleCI /
+ * Drone set `CI=true` at the conventional value). Treats the explicit opt-outs
+ * `0` / `false` as "not CI" so a user can force-disable the guard. Owned here
+ * (the color authority) and re-exported so output.ts doesn't duplicate it.
+ */
+export function isCiEnv(): boolean {
+  const v = process.env.CI;
+  if (v === undefined || v === '') return false;
+  return v !== '0' && v !== 'false';
+}
+
+/**
  * The single authority on whether decoration should emit ANSI. Honors:
  *   - `NO_COLOR`           → always off (spec: present + non-empty).
  *   - `CLICOLOR_FORCE=1`   → always on (forces color on a redirected stream).
- *   - otherwise            → picocolors' detection (TTY / FORCE_COLOR / CI).
+ *   - `CI=true` (alone)    → always OFF. picocolors' `isColorSupported`
+ *                            snapshot turns color ON under `!!env.CI` (it
+ *                            assumes a CI viewer that renders ANSI). But ANSI
+ *                            escapes inflate the raw byte length of rendered
+ *                            lines, which breaks the responsive-width
+ *                            guarantee `max(line.length) <= terminalWidth()`
+ *                            that `table()` exists to uphold — and the
+ *                            regression test that locks it (fits 60/80/120 in
+ *                            theme.test.ts). The CLI's own top-of-file
+ *                            contract states decoration auto-disables under
+ *                            CI / non-TTY; this honors that. A CI viewer that
+ *                            wants color sets `CLICOLOR_FORCE=1` (above).
+ *   - otherwise            → picocolors' detection (TTY / FORCE_COLOR).
  */
 export function useColor(): boolean {
   if (envFlagSet('NO_COLOR')) return false;
   if (process.env.CLICOLOR_FORCE === '1') return true;
+  if (isCiEnv()) return false;
   return pc.isColorSupported;
 }
 

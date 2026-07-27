@@ -16,7 +16,7 @@
 import Table from 'cli-table3';
 import { CommanderError } from 'commander';
 import ora, { type Ora } from 'ora';
-import { c, terminalWidth } from './theme.js';
+import { c, isCiEnv, terminalWidth } from './theme.js';
 
 // ---------------------------------------------------------------------------
 // Exit-code contract + error types
@@ -99,13 +99,7 @@ function envFlagSet(name: string): boolean {
   return v !== undefined && v !== '';
 }
 
-function isCiEnv(): boolean {
-  // CI conventions: set to `true`, `1`, or a server name. Treat explicit
-  // opt-outs ("0"/"false") as "not CI" so users can force-disable the guard.
-  const v = process.env.CI;
-  if (v === undefined || v === '') return false;
-  return v !== '0' && v !== 'false';
-}
+// `isCiEnv` is imported from ./theme.js (the color authority) — see note there.
 
 // ---------------------------------------------------------------------------
 // Interactivity gate. Drives both the @clack home menu and the
