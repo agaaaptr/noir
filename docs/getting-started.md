@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.
 
 Two channels ship in parallel:
 
-- **Stable (default)** — `@noir-ai/cli@latest`. The command above.
+- **Default (`latest`)** — currently `1.0.0-beta.1`; no stable `1.x` package release has been published yet. The command above.
 - **Beta** — `@noir-ai/cli@beta`. Append `NOIR_CHANNEL=beta`:
 
   ```bash
@@ -118,7 +118,7 @@ The daemon is a **long-lived** Noir server that multiple clients can share — t
 - The daemon is **foreground-only** in v1 (`--detach` honestly returns exit code 2). Backgrounded / auto-restart daemons are v1.x.
 - A single global `~/.noir/daemon.json` records the running daemon; running Noir concurrently in two projects on the same machine will clobber that record (per-project records are v1.x).
 
-Pick the daemon **only** if you need a persistent shared server or terminal CLI access alongside the host. Otherwise, stdio. See [usage.md → Transports](usage.md#transports) for the full comparison.
+Pick the daemon **only** if you need a persistent shared server across host sessions. Active terminal commands start a daemon when needed; otherwise, stdio is the simplest host transport. See [usage.md → Transports](usage.md#transports) for the full comparison.
 
 ## Your first session in Claude Code
 
@@ -154,7 +154,7 @@ noir task new --slug csv-export --mode quick
 - **full** — spec + plan are authored **and reviewed** (gates), then execute, then verify (tests/build). Use this for real features and risky changes. This is the default.
 - **quick** — spec + plan are **skipped** (a `<quick-mode stub spec>` is written, and the spec/plan gates are recorded as `skipped`), execute runs, and the **verify gate still fires**. Use this for small, trivial, or spike tasks. It is not a free-for-all — it only skips formal planning, not verification.
 
-The host picks up the configured mode via the `noir-intake` skill / the `workflow_start` MCP tool. See [usage.md → SDD modes](usage.md#sdd-modes-full--quick) for the details.
+The host picks up the configured mode via the `noir-intake` skill / the `workflow_start` MCP tool. See [usage.md → SDD modes](usage.md#sdd-modes-full-vs-quick) for the details.
 
 ## Where to go next
 

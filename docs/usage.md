@@ -15,7 +15,7 @@ The Noir MCP server runs in one of two transport modes. This governs **how the s
 | How it runs | Claude Code spawns `noir mcp serve --stdio` per session | A long-lived `noir daemon start` process on `127.0.0.1:<port>` |
 | Lifecycle | Tied to the Claude Code session | Persists across host sessions |
 | Config | Zero — `noir init` writes `.mcp.json` | Pin the same port in `.noir/config.yml` (`daemon.port`) and in `--url` |
-| Shared by CLI? | No (CLI store-touching commands need the daemon) | Yes — host **and** `noir context`/`memory`/`task` share one server |
+| Shared by CLI? | Active store-touching CLI commands start a daemon when needed | Yes — host **and** `noir context`/`memory`/`task` share one server |
 | Setup effort | None | A few steps + a process to keep running |
 | When to use | Almost everyone | Persistent shared server, or terminal CLI access alongside the host |
 
@@ -110,28 +110,28 @@ Noir is cross-CLI. The `--host <id>` flag (on `noir init` / `noir create` / `noi
 |---|---|---|---|---|
 | `claude` (default) | `CLAUDE.md` (managed `@import` + `RULES_BLOCK`) | `.claude/skills/noir-*` | `.mcp.json` | The v1 host; existing projects unchanged. |
 | `agents-md` | `AGENTS.md` | — (no skill concept) | `.mcp.json` | The 32-platform universal standard; the minimal surface. |
-| `gemini` | `GEMINI.md` + root `AGENTS.md` | — | `.gemini/mcp.json` | Gemini CLI. |
+| `gemini` | `GEMINI.md` | — | `.gemini/mcp.json` | Gemini CLI. |
 | `cursor` | `AGENTS.md` | `.cursor/rules/*.mdc` (skills compile to flat `.mdc`) | `.cursor/mcp.json` | Cursor reads both `AGENTS.md` and `.cursor/rules/`. |
 | `opencode` | `AGENTS.md` | — | `opencode.json` (`mcp` block, distinct shape) | OpenCode's MCP entries are `type`-tagged (`local`/`remote`). |
 
-**The universal `AGENTS.md`.** Every host emits a root `AGENTS.md` with the **same byte-identical content** (a shared helper `@`-imports `.noir/NOIR.md` + `.noir/rules/RULES.md`) — it is the 32-platform baseline. Hosts that already have a native context file (`claude` → `CLAUDE.md`, `gemini` → `GEMINI.md`) keep it as the primary and **do not** duplicate content into `AGENTS.md`; the `AGENTS.md` carries only the canonical `@`-imports.
+**The universal `AGENTS.md`.** `agents-md`, Cursor, and OpenCode emit a root `AGENTS.md` with the **same byte-identical content** (a shared helper `@`-imports `.noir/NOIR.md` + `.noir/rules/RULES.md`) — it is the 32-platform baseline for hosts that use it. Claude and Gemini emit only their native context files (`CLAUDE.md` and `GEMINI.md`) to avoid duplicate imports and context tokens.
 
 ### Selecting a host
 
 ```bash
-noir init --host gemini          # scaffold for Gemini CLI
+noir init --host gemini          # GEMINI.md + .gemini/mcp.json
 noir init --host cursor          # scaffold for Cursor
 noir init --host opencode        # scaffold for OpenCode
-noir init --host agents-md       # universal AGENTS.md only
+noir init --host agents-md       # AGENTS.md + .mcp.json
 ```
 
 The chosen host is persisted in `.noir/config.yml` (`host: <id>`). `noir sync` re-emits for that host; pass `--host <id>` to `noir sync` to switch hosts on an existing project (advanced — the override is not written back to config).
 
-`noir doctor` reports the active host and verifies the host-specific artifacts exist. `noir skills list` is host-aware: only Claude and Cursor have a skills directory; for Gemini/OpenCode/agents-md the context file is the surface.
+`noir doctor` reports the active host and verifies the host-specific artifacts exist. `noir skills list` lists the shipped pack (33 builtins + 1 integration), not files emitted for the current project; only Claude and Cursor have a skills-emission surface.
 
 ### Deferred
 
-`qwen` and `agy` are not yet wired — they fall back to the universal `AGENTS.md` behavior until their adapters land.
+`qwen` and `agy` are not yet wired and are not accepted `--host` values.
 
 ---
 
@@ -166,7 +166,7 @@ These parse in any position (`noir --json status` and `noir status --json` both 
 
 | Command | What it does |
 |---|---|
-| `noir init` | Scaffold `.noir/` + emit the 34 skills (33 builtins + 1 integration) + write host wiring (`.mcp.json`, `CLAUDE.md` @import, managed `RULES_BLOCK`, ignore files). Flags: `--transport stdio\|streamable-http` (default `stdio`), `--url <url>` (required for HTTP, localhost only), `--upgrade` (run scaffold migrations against an existing `.noir/`), `--host <id>` (default `claude`; see [Multi-host](#multi-host) below). |
+| `noir init` | Scaffold `.noir/`, write host wiring, and emit the 34-skill pack for hosts with a skill surface (Claude or Cursor). Flags: `--transport stdio\|streamable-http` (default `stdio`), `--url <url>` (required for HTTP, localhost only), `--upgrade` (run scaffold migrations against an existing `.noir/`), `--host <id>` (default `claude`; see [Multi-host](#multi-host) below). |
 | `noir create [dir]` | AI-layer-only scaffold (Slice S): drop the Noir AI layer (`.noir/` + skills + host wiring) into a new or existing directory without touching the rest of the project. Flags: `--transport`, `--url`, `--host <id>` (default `claude`). |
 | `noir sync` | Re-emit skills + host config idempotently (the `noir-*` namespace is overwritten; stale `noir-*` skill dirs from a prior pack are cleaned up). Reads the configured host from `.noir/config.yml`; pass `--host <id>` to override (advanced). |
 | `noir status` | Probe-only health check. **Works daemon-down; never auto-starts the daemon.** |
@@ -184,14 +184,17 @@ These parse in any position (`noir --json status` and `noir status --json` both 
 | `noir memory sessions` | List recent sessions. |
 | `noir memory forget` | Delete observations (governed: delete-with-reason, audited). |
 | `noir memory consolidate` | Append-only LLM consolidation → derived `lesson` observations. **Refuses cleanly without an enabled provider; never silent.** |
-| `noir skills list` | List the emitted skills — **builtins + integrations** (a `Kind` column distinguishes them). |
-| `noir skills sync` | Re-emit the skill pack to `.claude/skills/`. |
+| `noir skills list` | List the shipped skills — **builtins + integrations** (a `Kind` column distinguishes them). |
+| `noir skills sync` | Re-emit the skill pack for the selected host (Claude `.claude/skills/`; Cursor `.cursor/rules/*.mdc`). |
 | `noir task new` | Start a workflow task. Flags: `--slug <s>` (required; doubles as the task id), `--mode full\|quick`. |
 | `noir task status` | Where the active task is in the lifecycle (phase / state / mode). |
 | `noir task advance` | Advance the active task. Flags: `--to <phase>`, `--force <reason>`. |
 | `noir task next` | Show the next gate / action for the active task. |
+| `noir handoff [--write]` | Emit a ready-to-paste host handoff prompt; `--write` persists it under gitignored `.noir/handoff/<id>.md`. |
+| `noir wrap [--write]` | Session-end alias for `noir handoff`. |
+| `noir tui` | Open the interactive Ink dashboard. Requires a TTY; exits 2 under `--json`, `--no-input`, CI, `NO_COLOR`, or a non-TTY. |
 
-Store-touching commands (`context`, `memory`, `task`) are **MCP clients to the daemon** — they need a running daemon (stdio or HTTP). `status` is the only probe-only command that works daemon-down.
+Store-touching commands (`context`, `memory`, `task`) are **MCP clients to the daemon** and start one when needed. `status` is the only probe-only command: it never starts a daemon and works when one is down.
 
 ### MCP tools (what the host sees)
 

@@ -1,7 +1,7 @@
 # Spec — Scaffold Idempotency & Root-Safety (SP-A)
 
 **Date:** 2026-07-26 · **Status:** design (implementation in progress, TDD) · **Slice:** A (first of A→B→C)
-**Discovery:** [`docs/discovery/2026-07-26-scaffold-tui-discovery.md`](../discovery/2026-07-26-scaffold-tui-discovery.md) §1.
+**Discovery:** [`docs/discovery/2026-07-26-scaffold-tui-discovery.md`](../../discovery/2026-07-26-scaffold-tui-discovery.md) §1.
 
 ## Problem (root-caused, confirmed on-disk in the reference project)
 

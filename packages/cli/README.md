@@ -13,34 +13,34 @@ Noir wires three capabilities every long-running agent loses without help:
 ## Install
 
 ```bash
-npm install -g @noir-ai/cli
+npm install -g @noir-ai/cli@beta
 # or use it on the fly:
-npx @noir-ai/cli init
+npx @noir-ai/cli@beta init
 ```
 
-Requires Node ≥ 20.
+Requires Node ≥ 22.
 
 ## Quick start
 
 ```bash
 # 1. Initialize a project (from the project you want Noir to manage)
 cd /path/to/your/project
-noir init                  # scaffolds .noir/ + emits 31 builtin skills + host wiring
+noir init                  # scaffolds .noir/ + host wiring + skills where supported
 
 # 2. Open the project in Claude Code (the v1 host) → it auto-spawns the Noir MCP server.
 ```
 
-`noir init` creates `.noir/` (project id, `config.yml`, `NOIR.md`, the SQLite store), root `.mcp.json`, a managed `CLAUDE.md` `@import` block, and the **31 native `noir-*` skills** in `.claude/skills/`. There is no plugin and no marketplace — `noir init` / `noir sync` overwrite the `noir-*` namespace idempotently.
+`noir init` defaults to Claude: it creates `.noir/` (project id, `config.yml`, `NOIR.md`, the SQLite store), root `.mcp.json`, a managed `CLAUDE.md` `@import` block, and the **34 native `noir-*` skills** (33 builtins + 1 integration) in `.claude/skills/`. Pass `--host` for agents-md, Gemini, Cursor, or OpenCode; only Claude and Cursor emit skills. There is no plugin and no marketplace — `noir init` / `noir sync` overwrite the managed `noir-*` namespace idempotently.
 
 ## Commands
 
-`noir` (home menu / `status --json`), `status [--json]`, `init`, `sync`, `mcp serve [--stdio]`, `daemon {start|stop|status|restart}`, `context {search|index|status}`, `memory {recall|save|sessions|forget|consolidate}`, `skills {list|sync}`, `task {new|status|advance|next}`, `doctor`.
+`noir` (home menu / `status --json`), `status [--json]`, `init`, `sync`, `mcp serve [--stdio]`, `daemon {start|stop|status|restart}`, `context {search|index|status}`, `memory {recall|save|sessions|forget|consolidate}`, `skills {list|sync}`, `task {new|status|advance|next}`, `handoff [--write]`, `wrap [--write]`, `tui`, `doctor`.
 
 Global flags: `--json`, `--no-input`, `--quiet`, `--verbose`, `--cwd`. Data → stdout, diagnostics → stderr. Exit codes: `0` ok · `1` error · `2` usage · `3` not-found · `4` daemon-down · `5` cancelled.
 
 ## The toolkit
 
-This package is the CLI shell. Noir is a pnpm monorepo of 10 `@noir-ai/*` packages: `core`, `store`, `workflow`, `skills`, `daemon`, `adapters`, `cli`, `context`, `model`, `memory`.
+This package is the CLI shell. Noir is a pnpm monorepo of 11 `@noir-ai/*` packages: `core`, `store`, `workflow`, `skills`, `daemon`, `adapters`, `cli`, `context`, `model`, `memory`, and `create`.
 
 - **Full toolkit overview:** [root README](../../README.md)
 - **Getting-started walkthrough:** [docs/getting-started.md](../../docs/getting-started.md)

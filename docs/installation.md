@@ -6,7 +6,7 @@
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | bash
 > ```
-> Beta channel: append `| NOIR_CHANNEL=beta bash`. Pin a version: append `| NOIR_VERSION=1.2.3 bash`.
+> This follows npm's `latest` tag, which currently resolves to `1.0.0-beta.1`; use the beta channel for the current `1.4.0-beta.1` release. Pin a version with `| NOIR_VERSION=1.2.3 bash`.
 
 ---
 
@@ -26,10 +26,10 @@ Two release **channels** ship in parallel from `.github/workflows/release.yml`:
 
 | Channel | npm dist-tag | How to ask for it | Version scheme |
 |---|---|---|---|
-| **Stable** | `latest` (the default) | `npm i @noir-ai/cli` | `X.Y.Z` |
+| **Default (`latest`)** | `latest` (currently `1.0.0-beta.1`) | `npm i @noir-ai/cli` | `X.Y.Z` after the first stable release |
 | **Beta** | `beta` (opt-in) | `npm i @noir-ai/cli@beta` | `X.Y.Z-beta.N` |
 
-The installer, `npm`, `npx`, and `pnpm`/`yarn`/`bun` flows below all support both channels. Homebrew is **stable-only**.
+The installer, `npm`, `npx`, and `pnpm`/`yarn`/`bun` flows below all support both channels. Homebrew is not available until the first stable release.
 
 ---
 
@@ -38,7 +38,7 @@ The installer, `npm`, `npx`, and `pnpm`/`yarn`/`bun` flows below all support bot
 A small POSIX/bash script (`scripts/install.sh`) that detects Node + npm, then runs `npm install -g @noir-ai/cli@<channel>` on your behalf. It is **idempotent** (re-running upgrades in place), prints a PATH hint when needed, and verifies with `noir --version` at the end.
 
 ```bash
-# Stable (the default)
+# Default (`latest`, currently 1.0.0-beta.1)
 curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | bash
 
 # Beta channel
@@ -77,7 +77,7 @@ If you already have a Node package manager you prefer, skip the script and insta
 
 At a glance (each command also appears in a block below):
 
-| Tool | Stable | Beta |
+| Tool | Default (`latest`, currently `1.0.0-beta.1`) | Beta |
 |---|---|---|
 | **npm** | `npm install -g @noir-ai/cli` | `npm install -g @noir-ai/cli@beta` |
 | **pnpm** | `pnpm add -g @noir-ai/cli` | `pnpm add -g @noir-ai/cli@beta` |
@@ -87,7 +87,7 @@ At a glance (each command also appears in a block below):
 ### npm
 
 ```bash
-# stable
+# default/latest (currently 1.0.0-beta.1)
 npm install -g @noir-ai/cli
 # beta
 npm install -g @noir-ai/cli@beta
@@ -96,7 +96,7 @@ npm install -g @noir-ai/cli@beta
 ### pnpm
 
 ```bash
-# stable
+# default/latest (currently 1.0.0-beta.1)
 pnpm add -g @noir-ai/cli
 # beta
 pnpm add -g @noir-ai/cli@beta
@@ -105,7 +105,7 @@ pnpm add -g @noir-ai/cli@beta
 ### yarn (classic)
 
 ```bash
-# stable
+# default/latest (currently 1.0.0-beta.1)
 yarn global add @noir-ai/cli
 # beta
 yarn global add @noir-ai/cli@beta
@@ -114,7 +114,7 @@ yarn global add @noir-ai/cli@beta
 ### bun
 
 ```bash
-# stable
+# default/latest (currently 1.0.0-beta.1)
 bun add -g @noir-ai/cli
 # beta
 bun add -g @noir-ai/cli@beta
@@ -132,7 +132,7 @@ Run Noir once without adding anything to your PATH. Each tool fetches the packag
 
 **npx** (npm)
 ```bash
-# stable
+# default/latest (currently 1.0.0-beta.1)
 npx @noir-ai/cli init
 # beta
 npx @noir-ai/cli@beta init
@@ -140,7 +140,7 @@ npx @noir-ai/cli@beta init
 
 **pnpm dlx** (pnpm)
 ```bash
-# stable
+# default/latest (currently 1.0.0-beta.1)
 pnpm dlx @noir-ai/cli init
 # beta
 pnpm dlx @noir-ai/cli@beta init
@@ -148,7 +148,7 @@ pnpm dlx @noir-ai/cli@beta init
 
 **yarn dlx** (yarn / Berry)
 ```bash
-# stable
+# default/latest (currently 1.0.0-beta.1)
 yarn dlx @noir-ai/cli init
 # beta
 yarn dlx @noir-ai/cli@beta init
@@ -156,7 +156,7 @@ yarn dlx @noir-ai/cli@beta init
 
 **bunx** (bun)
 ```bash
-# stable
+# default/latest (currently 1.0.0-beta.1)
 bunx @noir-ai/cli init
 # beta
 bunx @noir-ai/cli@beta init
@@ -166,23 +166,9 @@ This is the right choice when you want to try Noir in a throwaway project withou
 
 ---
 
-## Homebrew (advanced, stable-only)
+## Homebrew (not yet available)
 
-A Homebrew formula is maintained at [`packaging/homebrew/noir.rb`](../packaging/homebrew/noir.rb) with setup instructions in [`packaging/homebrew/README.md`](../packaging/homebrew/README.md).
-
-```bash
-brew tap agaaaptr/noir https://github.com/agaaaptr/homebrew-noir
-brew install noir
-```
-
-| Aspect | Note |
-|---|---|
-| **When to use it** | You already manage your dev stack through Homebrew and want `brew upgrade` to own Noir's lifecycle. |
-| **Channel** | **Stable only.** Taps are single-channel. For beta, use `npm i -g @noir-ai/cli@beta` (or any of the npm-family paths above). |
-| **Heavier than npm** | The formula depends on Homebrew's `node` and builds the native modules against it, so `brew install` is materially heavier than `npm i -g` against an existing Node. |
-| **Tap repo required** | The user must create `agaaaptr/homebrew-noir` and drop `Formula/noir.rb` in it — see [`packaging/homebrew/README.md`](../packaging/homebrew/README.md). The formula ships here ready-to-use. |
-
-Pick Homebrew only if it matches your existing workflow. For everyone else, the [native installer](#recommended-native-installer-curl--sh) or [npm](#npm--pnpm--yarn--bun) path is lighter and supports both channels.
+The Homebrew formula is deliberately not published yet: [`packaging/homebrew/noir.rb`](../packaging/homebrew/noir.rb) still contains a placeholder tarball URL and checksum. It will be completed only after the first stable release. Until then, use the [native installer](#recommended-native-installer-curl--sh) or [npm](#npm--pnpm--yarn--bun); both support the default and beta channels.
 
 ---
 
@@ -211,7 +197,7 @@ noir init            # scaffolds .noir/ + emits the 34 skills (33 builtins + 1 i
 
 | Requirement | Detail |
 |---|---|
-| **Node.js ≥ 22** | Noir's `package.json` declares `engines.node: ">=22"` (Node 20 reached EOL on 2026-04-30). The installer and CI use Node 22/24. |
+| **Node.js ≥ 22** | Noir's `package.json` declares `engines.node: ">=22"` (Node 20 reached EOL on 2026-04-30). The installer and CI use Node 22. |
 | **npm** (or pnpm/yarn/bun) | The installer uses npm for portability; pnpm/yarn/bun are documented alternatives. |
 | **Platform** | macOS, Linux, or Windows on **x64 or arm64** (native deps ship prebuilt). Other architectures fall back to a source build and need a C/C++ toolchain. |
 | **Disk** | ~150 MB for the install (node_modules + prebuilt native binaries + the CLI build output). |

@@ -6,7 +6,7 @@
 
 **Bare `noir` is the interactive home menu in a TTY and the `status` snapshot everywhere else; every subcommand works identically in both modes, and `--json` is the headless contract.**
 
-There is no "interactive-only" *subcommand*. The only interactive *surface* is the bare-`noir` home picker. A non-interactive / headless run (CI, a pipe, `--no-input`, `--json`, `NO_COLOR`, or simply no TTY) is **never blocked** — it is simply routed around the picker to the same scriptable command the picker would have dispatched to. Interactive commands are *absent* from headless, not refused by it. This mirrors the framing of Claude Code's own command surface: the interactive entry exists for humans, and the same actions are reachable as plain commands for scripts.
+The only interactive surfaces are the bare-`noir` home picker and `noir tui`. Every other subcommand remains scriptable. A non-interactive / headless run (CI, a pipe, `--no-input`, `--json`, `NO_COLOR`, or simply no TTY) is **never blocked** from a scriptable command — bare `noir` is routed around the picker to the same command it would have dispatched. This mirrors the framing of Claude Code's own command surface: interactive entry points exist for humans, while the underlying actions remain plain commands for scripts.
 
 ## The three global flags
 
@@ -22,7 +22,7 @@ These flags are **advisory routing for bare `noir` only**. They never disable, h
 
 ## Command matrix
 
-Every read/write `noir` subcommand is in the **"works in both modes"** column. Two surfaces are interactive-only: the bare home menu (which degrades gracefully to `status` headlessly) and `noir tui` (which requires a TTY and errors cleanly otherwise).
+Every subcommand except `noir tui` is in the **"works in both modes"** column. The bare home menu degrades gracefully to `status` headlessly; `noir tui` requires a TTY and errors cleanly otherwise.
 
 | Command | Both modes? | Headless contract | Notes |
 |---|---|---|---|
@@ -37,6 +37,8 @@ Every read/write `noir` subcommand is in the **"works in both modes"** column. T
 | `noir memory recall\|save\|sessions\|forget\|consolidate` | yes | `--json` → `{ok, data}` | `memory save` prompts for `--content` interactively, or exit 2 under `--no-input`/`--json` when omitted. |
 | `noir skills list\|sync` | yes | `--json` → `{ok, data}` | |
 | `noir task new\|status\|advance\|next` | yes | `--json` → `{ok, data}` | |
+| `noir handoff [--write]` | yes | `--json` → `{ok, data}` | Default output is a pasteable Markdown handoff on stdout; `--write` persists `.noir/handoff/<id>.md` (gitignored). |
+| `noir wrap [--write]` | yes | `--json` → `{ok, data}` | Session-end alias for `noir handoff`. |
 | `noir daemon start\|stop\|status\|restart` | yes | `--json` → `{ok, data}` | `daemon status` exit 4 (DAEMON_DOWN) when not running. `start --detach` exits 2 (not implemented v1.x). |
 | `noir mcp serve [--stdio]` | yes | n/a (server process) | Foreground server a host connects to. |
 

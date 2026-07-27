@@ -23,7 +23,7 @@ The `noir` home menu (interactive; `noir status` when non-interactive):
 
 ## Status
 
-**1.4.0-beta.1** is the current beta (dist-tag `beta`); stable `1.x` has not been cut yet (the `latest` dist-tag still points at `1.0.0-beta.1`). The beta ships the full v1.x capability set — the keystone refactor (K), five extensions (**R** rules, **I** ignore, **P** PRD, **S** scaffold, **X** integrations), and **multi-host adapters (S10)** — on top of the v1.0 release-ready baseline (slices S0–S9), plus the `1.4.0-beta.1` runtime-polish layer (unified output design-system, idempotent scaffold, universal conflict contract, write-path semantic dedup, TUI runtime policy, `noir handoff`, and the Ink `noir tui` dashboard MVP). Claude Code is the default host; **Gemini, Cursor, OpenCode, and AGENTS.md** (the 32-platform standard) are supported via `--host`. **1315/1315 tests green; 11 packages; 34 skills (33 builtins + 1 integration).**
+**1.4.0-beta.1** is the current beta (dist-tag `beta`); no stable `1.x` package release has been published to `@noir-ai/cli`'s `latest` tag, which still points at `1.0.0-beta.1`. The existing `v1.4.0` tag is a failed, unpublished release attempt and is not a stable release. The beta ships the full v1.x capability set — the keystone refactor (K), five extensions (**R** rules, **I** ignore, **P** PRD, **S** scaffold, **X** integrations), and **multi-host adapters (S10)** — on top of the v1.0 release-ready baseline (slices S0–S9), plus the `1.4.0-beta.1` runtime-polish layer (unified output design-system, idempotent scaffold, universal conflict contract, write-path semantic dedup, TUI runtime policy, `noir handoff`, and the Ink `noir tui` dashboard MVP). Claude Code is the default host; **Gemini, Cursor, OpenCode, and AGENTS.md** (the 32-platform standard) are supported via `--host`. **1315/1315 tests green; 11 packages; 34 skills (33 builtins + 1 integration).**
 
 Noir ships **only native builtin skills (+ opt-in integrations)** — there is no plugin and no marketplace.
 
@@ -41,13 +41,13 @@ Run Noir once without a global install — `init` the project and exit. Beta cha
 npx @noir-ai/cli@beta init
 ```
 
-Stable:
+Default (`latest`, currently `1.0.0-beta.1`; no stable `1.x` package release has been published):
 
 ```bash
 npx @noir-ai/cli init
 ```
 
-Other one-shot runners (drop `@beta` for stable):
+Other one-shot runners (omit `@beta` for the current `latest` channel):
 
 ```bash
 pnpm dlx @noir-ai/cli@beta init
@@ -69,7 +69,7 @@ Beta:
 npm install -g @noir-ai/cli@beta
 ```
 
-Stable:
+Default (`latest`, currently `1.0.0-beta.1`):
 
 ```bash
 npm install -g @noir-ai/cli
@@ -83,7 +83,7 @@ Beta:
 pnpm add -g @noir-ai/cli@beta
 ```
 
-Stable:
+Default (`latest`, currently `1.0.0-beta.1`):
 
 ```bash
 pnpm add -g @noir-ai/cli
@@ -97,7 +97,7 @@ Beta:
 yarn global add @noir-ai/cli@beta
 ```
 
-Stable:
+Default (`latest`, currently `1.0.0-beta.1`):
 
 ```bash
 yarn global add @noir-ai/cli
@@ -111,7 +111,7 @@ Beta:
 bun add -g @noir-ai/cli@beta
 ```
 
-Stable:
+Default (`latest`, currently `1.0.0-beta.1`):
 
 ```bash
 bun add -g @noir-ai/cli
@@ -121,7 +121,7 @@ bun add -g @noir-ai/cli
 
 A small script that detects Node + npm and runs `npm install -g` on your behalf. Idempotent (re-run = upgrade), prints a PATH hint if `noir` isn't on PATH, and verifies with `noir --version` at the end.
 
-Stable:
+Default (`latest`, currently `1.0.0-beta.1`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | bash
@@ -135,20 +135,15 @@ curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.
 
 Pin a version with `| NOIR_VERSION=1.2.3 bash`. Safer than blind `curl | sh`: `curl -fsSL -o install.sh … && less install.sh && bash install.sh`.
 
-### Homebrew (stable-only)
+### Homebrew (not yet available)
 
-```bash
-brew tap agaaaptr/noir https://github.com/agaaaptr/homebrew-noir
-brew install noir
-```
-
-Homebrew is stable-only — use npm for the beta channel.
+The Homebrew formula is intentionally a maintainer template until the first stable release; its tarball URL and checksum are still placeholders. Use an npm-family install for both the current `latest` and `beta` channels.
 
 **Requirements:** Node ≥ 22; native deps (better-sqlite3, sqlite-vec, onnxruntime-node) prebuilt on mac/linux/win x64 + arm64; first run downloads ~22 MB MiniLM to `~/.noir/models/`. Verify with `noir --version` / `noir doctor`. Full reference (every path, troubleshooting, the from-source build for repo developers) lives in **[docs/installation.md](docs/installation.md)**.
 
 **Use as a library:** the `@noir-ai/*` workspace packages are also designed to embed — the workflow FSM, hybrid retrieval, cross-session memory, bounded model layer, and scaffold engine are all consumable as libraries. See **[docs/sdk.md](docs/sdk.md)** for the per-package stable API surface.
 
-> **Beta today, stable soon.** `1.4.0-beta.1` is on npm under the `beta` dist-tag (cut from `develop`; stable `1.x` follows once the beta is validated in a real project). `1.0.0-beta.1` was the first publish; `1.1.0-beta.1` added the v1.x capability slices; `1.2.0-beta.1` added multi-host; `1.3.0-beta.6` refined the banner gradient; `1.4.0-beta.1` (current) is the runtime-polish release — unified output design-system (no more red table headers), idempotent scaffold, universal conflict contract, write-path semantic dedup, TUI runtime policy, `noir handoff`, the Ink `noir tui` dashboard MVP, and the CI color fix that unpinned it. (The intermediate `1.3.0-beta.7` / `1.3.0-beta.8` / `1.4.0` tags failed CI and were never published.) Repo developers can also run Noir from source — see [docs/installation.md → From source](docs/installation.md).
+> **Beta today, stable soon.** `1.4.0-beta.1` is on npm under the `beta` dist-tag (cut from `develop`; stable `1.x` follows once the beta is validated in a real project). `1.0.0-beta.1` was the first publish; the unpublished 1.1 work and multi-host support first shipped together in `1.2.0-beta.1`; `1.3.0-beta.6` refined the banner gradient; `1.4.0-beta.1` (current) is the runtime-polish release — unified output design-system (no more red table headers), idempotent scaffold, universal conflict contract, write-path semantic dedup, TUI runtime policy, `noir handoff`, the Ink `noir tui` dashboard MVP, and the CI color fix that unpinned it. (The intermediate `1.3.0-beta.7` / `1.3.0-beta.8` / `1.4.0` tags failed CI and were never published.) Repo developers can also run Noir from source — see [docs/installation.md → From source](docs/installation.md).
 
 ## Getting started
 
@@ -162,15 +157,13 @@ noir                                 # 3. open the home menu (the TUI preview ab
 
 `noir init` creates `.noir/` (`project.id`, `config.yml` as `host: claude` + `mode: full`, `NOIR.md`, the SQLite store, `.noir/scaffold-version`, `.noir/rules/RULES.md`), root `.mcp.json`, a managed `CLAUDE.md` `@import` block (plus a managed `RULES_BLOCK`), and the **34 native `noir-*` skills** in `.claude/skills/`. It prints a status line and exits — **non-interactive**. **There is no plugin and no marketplace** — `noir init`/`noir sync` overwrite the `noir-*` namespace idempotently. Then bare `noir` opens the interactive home menu.
 
-`noir init` creates `.noir/` (`project.id`, `config.yml` as `host: claude` + `mode: full`, `NOIR.md`, the SQLite store, `.noir/scaffold-version`, `.noir/rules/RULES.md`), root `.mcp.json`, a managed `CLAUDE.md` `@import` block (plus a managed `RULES_BLOCK`), and the **34 native `noir-*` skills** in `.claude/skills/`. **There is no plugin and no marketplace** — `noir init`/`noir sync` overwrite the `noir-*` namespace idempotently.
-
 **Other hosts:** Noir is cross-CLI. Pass `--host` to target a different agentic CLI — each emits that host's native context/rules/skills/MCP config:
 
 ```bash
-noir init --host gemini             # GEMINI.md + AGENTS.md + .gemini/mcp.json
+noir init --host gemini             # GEMINI.md + .gemini/mcp.json
 noir init --host cursor             # AGENTS.md + .cursor/rules/*.mdc + .cursor/mcp.json
 noir init --host opencode           # AGENTS.md + opencode.json
-noir init --host agents-md          # AGENTS.md only (the 32-platform universal standard)
+noir init --host agents-md          # AGENTS.md + .mcp.json
 ```
 
 The chosen host is persisted in `.noir/config.yml`; `noir sync` re-emits for it. See [usage.md → Multi-host](docs/usage.md#multi-host) for the per-host output table.
@@ -226,6 +219,9 @@ noir context {search,index,status}  store-touching commands are MCP clients to t
 noir memory {recall,save,sessions,forget,consolidate}
 noir skills {list,sync}             list shows builtins + integrations (Kind column)
 noir task {new,status,advance,next}
+noir handoff [--write]              emit a ready-to-paste host handoff prompt
+noir wrap [--write]                 session-end alias for `noir handoff`
+noir tui                            interactive Ink dashboard (TTY only)
 ```
 
 Global flags: `--json` (machine-readable output, the headless contract), `--no-input` (never prompt), `--quiet`, `--verbose`, `--cwd <dir>`, plus the TUI-policy trio `--tui` / `--no-tui` (advisory routing for bare `noir`) and `--no-tips` (suppress redirect/deprecation hints on stderr). See [docs/command-policy.md](docs/command-policy.md) for the interactive-vs-scriptable matrix and [docs/deprecation.md](docs/deprecation.md) for the deprecation process.
@@ -241,9 +237,9 @@ When a host connects via `noir mcp serve`, it gets a curated tool surface:
 - **Memory (5 + 1 conditional):** `memory_save`, `memory_recall`, `memory_search`, `memory_sessions`, `memory_forget`, and `memory_consolidate` (registered only when `memory.consolidation.enabled` is on)
 - **Integrations (Slice X):** `integrations_auth` (resolves an integration token env-var server-side at call time) and per-integration gated-write proxies — e.g. `noir.clickup_write` (HARD confirm gate, endpoint allowlist, id-charset validation, 429 backoff, audit JSONL). Registered only for integrations whose `integration.json` declares `runtime` other than `none`.
 
-## Native builtin skills
+## Native skills
 
-**The builtin skills ARE the only skills.** There is no plugin to install and no marketplace to add — Noir ships a pack of **34 native `noir-` skills** (33 builtins + 1 integration) in the Claude Code `SKILL.md` format. `noir init` / `noir sync` discover, compile, and emit them idempotently to the host's `.claude/skills/` via the `@noir-ai/skills` compiler; the `noir-*` namespace is managed and overwritten on every sync.
+**The skill pack is native-only.** There is no plugin to install and no marketplace to add — Noir ships **34 native `noir-` skills** (33 builtins + 1 integration) in the Claude Code `SKILL.md` format. `noir init` / `noir sync` discover and compile them for the selected host: Claude receives `.claude/skills/`, Cursor receives `.cursor/rules/*.mdc`, and agents-md, Gemini, and OpenCode have no skill-emission surface. The managed `noir-*` namespace is overwritten on every sync where skills are emitted.
 
 The pack spans the SDD lifecycle, power/session/git/domain skills, and utils (e.g. `noir-brainstorm`, `noir-spec`, `noir-plan`, `noir-execute`, `noir-review`, `noir-recall`, `noir-remember`, `noir-context`, `noir-commit`, `noir-pr`, …). Each skill's YAML `description` states **WHEN** to trigger (a leading cue like "Use when…"), never WHAT it does — so the host loads the body on demand instead of following a shortcut. Adding a skill is authoring a folder under `packages/skills/builtin/` (see [AGENTS.md](AGENTS.md)).
 

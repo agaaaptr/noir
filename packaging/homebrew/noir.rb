@@ -26,7 +26,7 @@ class Noir < Formula
   version "1.0.0"
   license "MIT"
 
-  # Noir requires Node >= 20 (the CLI's package.json `engines.node`).
+  # Noir requires Node >= 22 (the CLI's package.json `engines.node`).
   depends_on "node@22"
 
   # The native modules (better-sqlite3, sqlite-vec, onnxruntime-node) are

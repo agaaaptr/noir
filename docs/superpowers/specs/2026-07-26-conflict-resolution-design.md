@@ -1,7 +1,7 @@
 # Spec — File Conflict Resolution (SP-C)
 
 **Date:** 2026-07-26 · **Status:** core implementing (TDD); larger dedup pieces deferred to a follow-up slice · **Slice:** C (A→B→**C**)
-**Discovery:** [`docs/discovery/2026-07-26-scaffold-tui-discovery.md`](../discovery/2026-07-26-scaffold-tui-discovery.md) §2.
+**Discovery:** [`docs/discovery/2026-07-26-scaffold-tui-discovery.md`](../../discovery/2026-07-26-scaffold-tui-discovery.md) §2.
 
 ## Problem
 

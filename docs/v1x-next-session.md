@@ -11,7 +11,7 @@
 
 ## Next-session candidates
 1. **Validate `1.4.0-beta.1` in real projects per host** (`noir init --host gemini|cursor|opencode|agents-md`; exercise `noir tui`, `noir handoff`, the conflict/dedup flow).
-2. **Promote to stable `1.x`**: merge `develop`→`main`, tag `v1.4.0` on `main` → CI publishes `--tag latest`. (`latest` still points at `1.0.0-beta.1` until then.)
+2. **Keep beta after merging:** merge `develop`→`main` without a tag; this does not publish `latest`. A later stable promotion must use an unused stable version/tag, or deliberately delete the failed `v1.4.0` tag before using that version. (`latest` still points at `1.0.0-beta.1` until a new release tag is published from `main`.)
 3. **Richer `noir tui` widgets**: multi-pane layout, scrollback history, in-dashboard conflict resolution (documented as deferred in `docs/command-policy.md`).
 4. **Upstream tracking**: bump `@huggingface/transformers` when `transformers.js#1730`/`#1718` ship (removes `boolean` for consumers).
 5. **Optional polish**: the `noir doctor` Node `DEP0190` (`shell:true` in the native-deps probe); the onnxruntime-node CLI-probe workspace-hoisting artifact; the 3 unpublished failed tags (`v1.3.0-beta.7`/`beta.8`/`v1.4.0`) can be deleted from the remote if desired (they never published).

@@ -2,11 +2,13 @@
 
 ## 1.4.0-beta.1 (2026-07-27)
 
-**Published on npm (dist-tag `beta`)** — the 2026-07-26/27 overnight "runtime polish" release: install fixes, a unified output design-system, a fully idempotent scaffold, one universal conflict contract across every file-producing path, write-path semantic duplicate detection, a TUI-primary command policy, on-demand host handoff, and an Ink `noir tui` dashboard, plus repo-wide cleanup. This is the first PUBLISHED version of the session — the intermediate `1.3.0-beta.7` / `1.3.0-beta.8` / `1.4.0` tags failed CI on a `useColor()` leak under `CI=true` (picocolors `isColorSupported` includes `|| env.CI`, so table headers got ANSI-wrapped and the responsive-table "fits 60/80/120 cols" test measured ANSI bytes as overflow), were never published, and are superseded by this entry. A `develop` tag carries a `-beta` suffix (`develop`→`beta`, `main`→`latest`), hence 1.4.0 → 1.4.0-beta.1. **Minor** bump — the `engines.node` `>=22` floor lands as a minor semver signal (Node 20 was already EOL).
+**Published on npm (dist-tag `beta`)** — the 2026-07-26/27 overnight "runtime polish" release: install fixes, a unified output design-system, a fully idempotent scaffold, one universal conflict contract across every file-producing path, write-path semantic duplicate detection, a TUI-primary command policy, on-demand host handoff, and an Ink `noir tui` dashboard, plus repo-wide cleanup. This is the first PUBLISHED version of the session — the intermediate `1.3.0-beta.7` / `1.3.0-beta.8` / `1.4.0` tags failed CI on a `useColor()` leak under `CI=true` (picocolors `isColorSupported` includes `|| env.CI`, so table headers got ANSI-wrapped and the responsive-table "fits 60/80/120 cols" test measured ANSI bytes as overflow), were never published, and are superseded by this entry. The `1.4.0-beta.1` version was selected explicitly; its `develop` tag published under the `beta` dist-tag. **Minor** bump — the `engines.node` `>=22` floor lands as a minor semver signal (Node 20 was already EOL).
+
+The `1.4.0-beta.1` version was chosen explicitly for this release. The branch determines the npm dist-tag (`develop` → `beta`, `main` → `latest`); it does not add or remove a prerelease suffix.
 
 ### Install — deprecation warnings fixed at the source
 - **`prebuild-install` removed entirely.** `better-sqlite3` `^12 → ^13` (the 2026-07-21 N-API rewrite) in `@noir-ai/store`; the deprecated `prebuild-install` is no longer a transitive dependency for Noir OR any consumer (`pnpm why -r prebuild-install` empty; 0 lockfile matches).
-- **`engines.node` `>=20 → >=22`** across all 11 packages (Node 20 reached EOL 2026-04-30; `>=22` enables `better-sqlite3@13` and covers Node 22–25, incl. 24 the dev/CI runtime). `>=24` was considered and rejected — it would drop still-supported Node 22 LTS for no benefit.
+- **`engines.node` `>=20 → >=22`** across all 11 packages (Node 20 reached EOL 2026-04-30; `>=22` enables `better-sqlite3@13` and covers Node 22–25; CI uses Node 22). `>=24` was considered and rejected — it would drop still-supported Node 22 LTS for no benefit.
 - **`boolean@3.2.0` muted** dev-side via `allowedDeprecatedVersions` in `pnpm-workspace.yaml` (harmless transitive: `@huggingface/transformers` → `onnxruntime-node` → `global-agent` → `boolean`; no released upstream fix yet, tracked `transformers.js#1730`/`#1718`). New **"Deprecation warnings during install"** troubleshooting section.
 - Note: `better-sqlite3@13` is brand-new — on the very newest Node a matching prebuilt may not be published yet, so it may compile from source (needs a C/C++ toolchain). The `Unknown user config "python"` warning is from the user's own `~/.npmrc`, not Noir.
 - All Node-floor references updated to `>=22` (README, getting-started, installation, `scripts/install.sh`, `scripts/new-package.mjs` template, `docs/packaging.md`, `docs/releasing.md`).
@@ -141,7 +143,7 @@ Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`d
 
 ## 1.2.0-beta.1 (2026-07-26)
 
-**Multi-host (S10) ships on the beta channel.** Noir is now cross-CLI: Claude Code stays the default, and **Gemini, Cursor, OpenCode, and AGENTS.md** are one `--host` flag away. Supersedes `1.1.0-beta.1` on the `beta` dist-tag. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (unchanged); **1089/1089 tests** (was 966 at 1.1.0-beta.1); build / typecheck / lint (0 warnings) green. Design record: `docs/superpowers/specs/2026-07-25-s10-multihost-design.md`; the locked decisions in [ADR-0004](decisions/0004-multi-host-adapters.md).
+**Multi-host (S10) ships on the beta channel.** Noir is now cross-CLI: Claude Code stays the default, and **Gemini, Cursor, OpenCode, and AGENTS.md** are one `--host` flag away. This is the first published release of the previously untagged `1.1.0-beta.1` capability work. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (unchanged); **1089/1089 tests** (was 966 during the unpublished 1.1 work); build / typecheck / lint (0 warnings) green. Design record: `docs/superpowers/specs/2026-07-25-s10-multihost-design.md`; the locked decisions in [ADR-0004](decisions/0004-multi-host-adapters.md).
 
 ### Added — S10 multi-host adapters
 - **Adapter registry.** `resolveAdapter(host: HostId): HostAdapter` in `@noir-ai/adapters` — a `Record<HostId, HostAdapter>` map with an exhaustiveness guard. `HostId = 'claude' | 'agents-md' | 'gemini' | 'cursor' | 'opencode'` (one owner; core/skills redeclare the literals). `SUPPORTED_HOSTS` — a frozen iteration list the CLI `--host` flag's `.choices(...)` and `noir doctor` consume. The CLI's 8 direct `claudeAdapter` imports collapsed to one `resolveAdapter(host)` call; adding a host needs no CLI edits beyond the flag enum.
@@ -168,7 +170,7 @@ Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`d
 
 ---
 
-## 1.1.0-beta.1 (2026-07-25)
+## Unpublished 1.1.0-beta.1 work (2026-07-25)
 
 **v1.x capabilities ship on the beta channel.** All 6 v1.x capability slices (**K/R/I/P/S/X**) are done on `develop`, plus a consolidated debt batch. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (added `@noir-ai/create`); **966/966 tests** (was 729 at 1.0.0-beta.1); build / typecheck / lint (0 warnings) green. Design record: `docs/specs/2026-07-25-v1x-capabilities-design.md` + per-slice specs in `docs/superpowers/specs/`.
 

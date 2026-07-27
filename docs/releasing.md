@@ -9,7 +9,7 @@
 ## 0. Model (read once)
 
 - **Scope:** `@noir-ai/{core, store, workflow, skills, daemon, adapters, cli, context, model, memory, create}` — 11 packages.
-- **Unified versioning:** every release moves all 11 packages to the same version in lockstep. There are no per-package releases.
+- **Unified versioning:** every release moves all 11 published packages to the same version in lockstep. There are no per-package releases; the private workspace-root `package.json` version is outside that release set.
 - **Two channels (branch-based).** A tag push on **`main`** → npm dist-tag **`latest`** (stable; `npm i @noir-ai/cli` resolves here). A tag push on **`develop`** → npm dist-tag **`beta`** (opt-in; `npm i @noir-ai/cli@beta`). The publish job derives the channel from which branch holds the tagged commit. Versions: stable is `X.Y.Z`; beta is `X.Y.Z-beta.N`. Full mechanics in [§2b](#2b-beta-vs-stable-channels); consumer side in [installation.md](installation.md#what-youre-installing).
 - **Trigger:** pushing a `vX.Y.Z` git tag runs `.github/workflows/release.yml`, which builds all 11 packages and publishes them to the npm registry.
 - **Auth = npm automation token (Path A).** A granular npm access token scoped to `@noir-ai/*` (read + write) is stored as the `NPM_TOKEN` GitHub repo secret; the publish job runs `npm publish …` with `env: NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}`. **OIDC Trusted Publishing (tokenless) is the target alternative**, not the v1 path — see [§1e](#1e-alternative-path--oidc-trusted-publishing-later).
@@ -97,8 +97,8 @@ git push origin v1.0.0
 ### What CI does next (`.github/workflows/release.yml`)
 
 1. Checks out the tagged commit.
-2. Sets up Node 24 + pnpm; `pnpm install --frozen-lockfile`.
-3. `pnpm lint` → `pnpm typecheck` → `pnpm build` (all 11 packages → `dist/`).
+2. Sets up Node 22 + pnpm; `pnpm install --frozen-lockfile`.
+3. `pnpm lint` → `pnpm build` → `pnpm typecheck` → `pnpm test` (all 11 packages → `dist/`).
 4. **Derives the channel** from the branch (see [§2b](#2b-beta-vs-stable-channels)): if the tagged commit is reachable from `origin/main`, dist-tag = `latest` (stable); otherwise `beta`. For the §2 flow that is always `latest`.
 5. Packs, then publishes, all 11 packages. This is a deliberate **two-step** flow (see `.github/workflows/release.yml`):
    1. **Pack** — `pnpm -r --filter './packages/*' pack`
@@ -152,7 +152,7 @@ The publish job in `.github/workflows/release.yml` decides the dist-tag from **w
 
 That single `if` is the whole channel switch. Consequences:
 
-- **The branch IS the channel.** A tag reachable from `origin/main` → `latest`. Anything else (typically `develop`) → `beta`. There is no `--channel` flag and no per-package config.
+- **The branch selects the npm dist-tag, not the version.** A tag reachable from `origin/main` → `latest`. Anything else (typically `develop`) → `beta`. Maintainers choose the semver or prerelease version explicitly with `scripts/bump-version.mjs`; there is no `--channel` flag and no per-package config.
 - **Beta tags never leave `develop`** until you merge to `main`. Cutting `v1.0.0-beta.1` on `develop` publishes under `beta`; when `develop` merges to `main` and you cut `v1.0.0` there, the same content ships under `latest`.
 - **Semver-style tag names are not parsed** for the channel — only the branch matters. A `v1.0.0-beta.1` tag pushed on `main` by mistake would publish as `latest`. Keep beta tags on `develop`.
 
@@ -192,14 +192,15 @@ npm view @noir-ai/cli dist-tags.beta   # → 1.4.0-beta.1 (current beta pointer)
 npx @noir-ai/cli@beta init             # smoke: opt into the beta and run init in a throwaway dir
 ```
 
-> **Publish history:** `1.0.0-beta.1` was the first publish (2026-07-25); the 5 CI fixes it took to get the publish job green are documented in [§8 Troubleshooting](#8-troubleshooting). `1.1.0-beta.1` (2026-07-25, later same day) added the v1.x capability slices (K/R/I/P/S/X) and the consolidated debt batch. The beta line then iterated on runtime polish through `1.3.0-beta.6`. The intermediate tags `v1.3.0-beta.7`, `v1.3.0-beta.8`, and `v1.4.0` were pushed but their CI **failed** on a `useColor()` leak (picocolors' `isColorSupported` includes `|| env.CI`, so under `CI=true` table headers were ANSI-wrapped and the responsive-table width test measured ANSI bytes as overflow) and **never published**; fixed in `1.4.0-beta.1` (`useColor()` returns false under `CI=true`; `CLICOLOR_FORCE=1` still forces color). **`1.4.0-beta.1` (2026-07-26/27) is the current `beta` pointer.** Stable `1.x` has not been cut yet — the `latest` dist-tag still points at `1.0.0-beta.1`.
+> **Publish history:** `1.0.0-beta.1` was the first publish (2026-07-25); the 5 CI fixes it took to get the publish job green are documented in [§8 Troubleshooting](#8-troubleshooting). The v1.x capability work originally planned for `1.1.0-beta.1` first published with multi-host support as `1.2.0-beta.1`; no `1.1.0-beta.1` tag or npm package was published. The beta line then iterated on runtime polish through `1.3.0-beta.6`. The intermediate tags `v1.3.0-beta.7`, `v1.3.0-beta.8`, and `v1.4.0` were pushed but their CI **failed** on a `useColor()` leak (picocolors' `isColorSupported` includes `|| env.CI`, so under `CI=true` table headers were ANSI-wrapped and the responsive-table width test measured ANSI bytes as overflow) and **never published**; fixed in `1.4.0-beta.1` (`useColor()` returns false under `CI=true`; `CLICOLOR_FORCE=1` still forces color). **`1.4.0-beta.1` (2026-07-26/27) is the current `beta` pointer.** No stable `1.x` package release has been published to `@noir-ai/cli`'s `latest` tag, which still points at `1.0.0-beta.1`.
 
 ### Promoting beta → stable
 
 When the beta line is ready to ship to everyone:
 
 1. Merge `develop` into `main` (`git checkout main && git merge --ff-only develop && git push origin main`).
-2. Bump to the stable version (drop the `-beta.N` suffix):
+2. Choose an unused stable version and tag. **Never reuse an existing tag:** `v1.4.0` already exists as a failed, unpublished release attempt. Delete that tag locally and remotely before reusing `1.4.0`, or choose a new version instead.
+3. Bump to the selected stable version (drop the `-beta.N` suffix):
 
    ```bash
    git checkout main
@@ -209,7 +210,7 @@ When the beta line is ready to ship to everyone:
    git push origin main && git push origin v1.0.0
    ```
 
-3. CI derives `channel=stable` (commit is on `main`), publishes under `latest`. Now `npm i @noir-ai/cli` resolves to `1.0.0`; `npm i @noir-ai/cli@beta` keeps resolving to whatever the `beta` tag last pointed at (typically the last beta — move it forward with the next beta tag, or leave it).
+4. CI derives `channel=stable` (commit is on `main`), publishes under `latest`. Now `npm i @noir-ai/cli` resolves to the selected stable version; `npm i @noir-ai/cli@beta` keeps resolving to whatever the `beta` tag last pointed at (typically the last beta — move it forward with the next beta tag, or leave it).
 
 ### Irreversibility reminder for pre-releases
 
@@ -304,7 +305,7 @@ The very first release (`1.0.0`) has extra gating. Do not cut it until every box
 - [ ] `release` environment created on GitHub (optional required-reviewer added).
 
 **Readiness (§2 / §4)**
-- [ ] `pnpm lint && pnpm typecheck && pnpm build && pnpm test` all green on `main` (target the same Node 24 the CI uses).
+- [ ] `pnpm lint && pnpm build && pnpm typecheck && pnpm test` all green on `main` (target the same Node 22 the CI uses).
 - [ ] Every `packages/*/package.json` has `publishConfig: { access:"public", provenance:true }`, `engines.node >=22`, a one-line `description`, valid `repository`/`bugs`/`homepage`, and `files` including `dist` (+ `README.md`, and `builtin/` for skills).
 - [ ] `npm publish --dry-run` in `packages/cli` and at least one library package is sane (correct files, **no `src/`/tests/secrets**).
 - [ ] `docs/CHANGELOG.md` has a `1.0.0` entry.

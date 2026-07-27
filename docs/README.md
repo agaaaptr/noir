@@ -8,7 +8,7 @@ The Noir toolkit's architecture, the decisions behind it, the design blueprint, 
 
 | Path | Purpose |
 |---|---|
-| [`installation.md`](installation.md) | The install reference: native installer (`curl \| sh`), npm/pnpm/yarn/bun, `npx`, Homebrew, beta vs stable channels, requirements, troubleshooting. Start here for *installing* Noir. |
+| [`installation.md`](installation.md) | The install reference: native installer (`curl \| sh`), npm/pnpm/yarn/bun, `npx`, channel status, requirements, troubleshooting, and Homebrew availability. Start here for *installing* Noir. |
 | [`getting-started.md`](getting-started.md) | First-use walkthrough: `noir init`, transports, your first session, switching full/quick. Start here for *using* Noir. |
 | [`usage.md`](usage.md) | The reference: transports, SDD modes, the full command tree, the config schema, the `.noir/` + `~/.noir/` layout, privacy rules. |
 | [`command-policy.md`](command-policy.md) | The interactive-vs-scriptable contract (TUI runtime): bare `noir` is the primary UX, every subcommand works in both modes, `--json` is the headless contract, `--tui`/`--no-tui`/`--no-tips` flags. |

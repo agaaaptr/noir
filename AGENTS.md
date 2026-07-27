@@ -8,7 +8,7 @@ Noir is a host-agnostic, spec-driven-workflow + native-context + cross-session-m
 
 ## Toolchain + conventions (immutable)
 
-- pnpm workspace, `packages/*`. TypeScript ESM: target ES2022, module/moduleResolution NodeNext, `strict` + `noUncheckedIndexedAccess`, declaration. tsup build. Biome lint. Vitest (15s timeout, aliases `@noir-ai/*` → `packages/*/src/index.ts`). CI: ubuntu + macos, node 22. MIT. `engines.node ">=20"`, `packageManager pnpm@10.12.4`.
+- pnpm workspace, `packages/*`. TypeScript ESM: target ES2022, module/moduleResolution NodeNext, `strict` + `noUncheckedIndexedAccess`, declaration. tsup build. Biome lint. Vitest (15s timeout, aliases `@noir-ai/*` → `packages/*/src/index.ts`). CI: ubuntu + macos, node 22. MIT. `engines.node ">=22"`, `packageManager pnpm@10.12.4`.
 - The default dev loop:
 
   ```bash

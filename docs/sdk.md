@@ -8,14 +8,14 @@ Noir ships as the `@noir-ai/cli` npm package (bin: `noir`), but the eleven `@noi
 
 The **v1.x public surface** is the set of symbols each package re-exports from its `src/index.ts` barrel — that is what this document covers. Anything imported from a deeper path (e.g. `@noir-ai/core/dist/lib/foo.js` or `@noir-ai/store/src/sqlite-store.js`) is **internal** and may change between minor versions without notice. If you need a symbol that is not in the barrel, open an issue before depending on the deep path.
 
-Versioning: Noir follows the channel model documented in [`releasing.md`](releasing.md) — `beta` on `develop`, stable `1.x` on `main`. Within the `1.x` line the barrels are additive-only (new exports are minor-safe; removals/rename would be a major). The packages are versioned in lockstep (all `1.x.y` together).
+Versioning: Noir follows the channel model documented in [`releasing.md`](releasing.md) — `beta` on `develop`, stable `1.x` on `main`. Within the `1.x` line the barrels are additive-only (new exports are minor-safe; removals/rename would be a major). The published packages are versioned in lockstep (all `1.x.y` together); the private workspace-root `package.json` version is not part of that release set.
 
 ## Install
 
-The library packages are published to npm under the `@noir-ai` scope. Install the ones you need; they have small, explicit dependency surfaces (the store pulls `better-sqlite3` + `sqlite-vec`; the context engine pulls `@huggingface/transformers` + `onnxruntime-node` for local embeddings; the model layer dynamically imports provider SDKs only when their adapter is selected).
+The library packages are published to npm under the `@noir-ai` scope. The API documented here is in the current beta, so install the `beta` channel. Packages have small, explicit dependency surfaces (the store pulls `better-sqlite3` + `sqlite-vec`; the context engine pulls `@huggingface/transformers` + `onnxruntime-node` for local embeddings; the model layer dynamically imports provider SDKs only when their adapter is selected).
 
 ```bash
-npm install @noir-ai/core @noir-ai/store @noir-ai/workflow
+npm install @noir-ai/core@beta @noir-ai/store@beta @noir-ai/workflow@beta
 ```
 
 In a pnpm workspace (the layout this repo uses), depend on `workspace:*` and consume from source.
@@ -46,7 +46,7 @@ import { NoirConfigSchema, loadProjectInfo, paths, createProjectId } from '@noir
 
 const project = loadProjectInfo(process.cwd());          // { id, config, root }
 const cfg = NoirConfigSchema.parse(parsedYaml);           // validate a config shape
-const id = createProjectId();                              // '01J…' (ULID-shaped)
+const id = createProjectId();                              // UUID, e.g. '123e4567-e89b-42d3-a456-426614174000'
 const dbPath = paths.storeDb(project.root, project.id);   // .noir/store/<id>.db
 ```
 
@@ -85,7 +85,11 @@ import { openStore, vecAvailability } from '@noir-ai/store';
 const probe = vecAvailability();
 if (probe.ok !== true) throw new Error(`native layer unavailable: ${probe.reason}`);
 
-const store = await openStore({ projectId: '01J…', root: process.cwd(), readonly: false });
+const store = await openStore({
+  projectId: '123e4567-e89b-42d3-a456-426614174000',
+  root: process.cwd(),
+  readonly: false,
+});
 store.indexDoc({ id: 'doc-1', source: 'docs', content: '…' });
 const hits = store.searchFt('workflow', { limit: 5 });
 store.setState('my:key', { any: 'json' });
@@ -161,7 +165,7 @@ import { resolveAdapter, SUPPORTED_HOSTS, emitAgentsMd } from '@noir-ai/adapters
 const adapter = resolveAdapter('cursor');         // the cursor adapter
 const ectx = { root: process.cwd() };
 const mcpPath = adapter.mcpConfigPath?.(ectx);    // '.cursor/mcp.json'
-await emitAgentsMd(ectx, /* entries */);
+const agentsMd = emitAgentsMd(ectx);
 for (const h of SUPPORTED_HOSTS) console.log(h);  // iterate every host
 ```
 
@@ -198,7 +202,7 @@ for (const s of skills) {
   if (!v.ok) console.warn(v.errors);
 }
 const compiled = compileSkill(skills[0], 'cursor');      // CompiledSkill (host-shaped)
-await emitSkillsToDir('.cursor/skills', { target: 'cursor' });
+await emitSkillsToDir('.cursor/rules', { target: 'cursor' });
 ```
 
 Design records: [`specs/2026-07-23-noir-toolkit-design.md`](specs/2026-07-23-noir-toolkit-design.md) (builtin pack) and [`superpowers/specs/2026-07-25-slice-x-integration-design.md`](superpowers/specs/2026-07-25-slice-x-integration-design.md) (integrations).
@@ -333,9 +337,9 @@ The orchestrator behind `noir init` / `noir sync` / `noir create`. A three-mode 
 
 | Symbol | Shape | Notes |
 |---|---|---|
-| `scaffold(opts)` | `(opts: ScaffoldOptions) => Promise<ScaffoldResult>` | The orchestrator. `ScaffoldOptions = { root, mode: 'init' \| 'create' \| 'sync', host, projectId?, upgrade? }`. |
+| `scaffold(opts)` | `(opts: ScaffoldOptions) => Promise<ScaffoldResult>` | The orchestrator. `ScaffoldOptions` requires `root` and `mode`; it also accepts `host`, `transport`, `url`, `projectId`, `upgrade`, `force`, `dryRun`, `conflictPolicy`, `onConflict`, `mergeManagedRegions`, and `interactive`. |
 | `buildManifest(ctx)` | `(ctx: BuildManifestContext) => ManifestEntry[]` | The host-aware artifact manifest for the `init`/`sync` modes. |
-| `buildHostArtifacts(adapter, ctx)` | `(adapter: HostAdapter, ctx: BuildHostArtifactsContext) => ManifestEntry[]` | The host-specific emission list (AGENTS.md, host context file, MCP config, skill dir). |
+| `buildHostArtifacts(adapter, ctx)` | `(adapter: HostAdapter, ctx: BuildHostArtifactsContext) => ManifestEntry[]` | The host-specific artifact list (AGENTS.md where applicable, host context file, and MCP config). Skills are emitted separately. |
 | Three-mode writers | fns | `regenerate`, `managedBlock` (alias for the core marker helper), `skipIfExists`. The three write policies an entry can declare. |
 | `render` | fn | `{{var}}` template interpolation. |
 | `detectStack` | fn | Read-only stack detection (returns `StackInfo`). |
@@ -354,7 +358,7 @@ const result = await scaffold({
   root: process.cwd(),
   mode: 'init',
   host: 'claude',
-  projectId: '01J…',
+  projectId: '123e4567-e89b-42d3-a456-426614174000',
 });
 // buildManifest({ root, host: 'claude', projectId, transport: 'stdio' }) → ManifestEntry[]
 ```
