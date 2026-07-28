@@ -6,69 +6,76 @@ name: Release
 # attestation (--provenance), which uses GitHub OIDC (the `id-token: write`
 # permission) independent of the publish token. See docs/releasing.md §1.
 #
-# CHANNEL = branch-based (two channels only: beta + stable):
-#   - tag on `main`    → dist-tag `latest` (stable). `npm i @noir-ai/cli` gets it.
-#   - tag on `develop` → dist-tag `beta`.   `npm i @noir-ai/cli@beta` to opt in.
-# The publish job derives the channel from which branch holds the tagged commit.
+# CHANNEL = version-string-based (NOT branch-based):
+#   - tag `vX.Y.Z` (plain SemVer) → dist-tag `latest` (stable).
+#   - tag `vX.Y.Z-beta.N` (prerelease suffix) → dist-tag `beta` (beta).
+# The suffix is NEVER stored in source code — source stays at clean X.Y.Z.
+# The developer uses `pnpm release:tag` to create the correct tag; CI derives
+# the channel from the tag name pattern.
 #
 # Cut a release:
-#   beta:    node scripts/bump-version.mjs 1.0.0-beta.1 && commit && tag v1.0.0-beta.1 (on develop)
-#   stable:  merge develop→main, node scripts/bump-version.mjs 1.0.0 && commit && tag v1.0.0 (on main)
-#   then:    git push --tags
+#   beta:    pnpm release:tag (on develop) → creates vX.Y.Z-beta.N → git push
+#   stable:  pnpm release:tag (on main)    → creates vX.Y.Z        → git push
+#
+# The bump-version.mjs step temporarily injects the full version into
+# package.json files in the CI workspace so pnpm pack captures the correct
+# version in the tarball. The source in the repo is never committed with
+# the injected version — the next release starts from the clean base version.
 
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag to publish (e.g., v1.5.0-beta.1)'
+        required: true
 
 # Never run two publishes for the same tag; a new tag push cancels the in-flight one.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
 # `id-token: write` is REQUIRED for npm OIDC Trusted Publishing + provenance.
-# `contents: read` is enough to read the tagged source (the bump commit is already pushed).
+# `contents: write` is needed for:
+#   1. Creating GitHub Releases automatically.
+#   2. Pushing .noir/releases/ registry updates back to the repo.
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
   verify:
-    name: Build + test (tag ${{ github.ref_name }})
+    name: Build + test (${{ github.ref_name }})
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6  # pnpm version comes from package.json `packageManager` (single source — v4 errors if `version:` is also set here)
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
-      # Build BEFORE typecheck: each package's exports/types point at ./dist/*.d.ts,
-      # so tsc can't resolve inter-package imports until the dist artifacts exist.
       - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
 
   publish:
-    name: Publish @noir-ai/* (unified, provenance; main=stable, develop=beta)
+    name: Publish @noir-ai/* (unified, provenance; version-string-based channel)
     needs: verify
     runs-on: ubuntu-latest
     # `release` is the environment linked on npm as the Trusted Publisher.
     # Add a required reviewer here on GitHub to require human approval before publish.
     environment: release
     steps:
-      # fetch-depth: 0 so we can determine which branch holds the tagged commit (the channel).
+      # fetch-depth: 0 so we can determine which branch holds the tagged commit.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@v6  # pnpm version comes from package.json `packageManager` (single source — v4 errors if `version:` is also set here)
-      # `registry-url` + the NPM_TOKEN env (in the publish step) wire npm auth:
-      # setup-node writes an .npmrc that publishes to the registry using
-      # NODE_AUTH_TOKEN. The granular token is created once on npm + stored as the
-      # NPM_TOKEN repo secret (docs/releasing.md §1). Provenance (--provenance) is
-      # separate — it uses the GitHub OIDC token from the `id-token: write` permission.
+      - uses: pnpm/action-setup@v6
+      # `registry-url` + the NPM_TOKEN env (in the publish step) wire npm auth.
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -77,36 +84,103 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
-      - name: Determine release channel (tag on main → latest/stable; else → beta)
+      # ── 1. Extract version from tag name ──────────────────────
+      - name: Extract version from tag
+        id: extract
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"   # strip leading "v" → e.g. "1.4.0-beta.2" or "1.4.0"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Tag: $TAG → Version: $VERSION"
+
+      # ── 2. Determine channel (version-string-based) ──────────
+      - name: Determine release channel
         id: channel
         run: |
-          set -e
-          SHA="${{ github.sha }}"
-          # `git branch -r --contains` lists remote branches holding the tagged commit.
-          if git branch -r --contains "$SHA" 2>/dev/null | grep -q 'origin/main'; then
-            echo "tag=latest"   >> "$GITHUB_OUTPUT"
-            echo "channel=stable" >> "$GITHUB_OUTPUT"
-            echo "Channel: STABLE (npm dist-tag: latest — 'npm i @noir-ai/cli' resolves here)."
+          VERSION="${{ steps.extract.outputs.version }}"
+
+          # Version-string-based detection: a prerelease suffix means beta channel.
+          if echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-(beta|alpha|rc)\.[0-9]+$'; then
+            echo "tag=beta"          >> "$GITHUB_OUTPUT"
+            echo "channel=beta"      >> "$GITHUB_OUTPUT"
+            echo "type=prerelease"   >> "$GITHUB_OUTPUT"
+            echo "Channel: BETA (dist-tag: beta) — detected prerelease suffix in tag."
+          elif echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "tag=latest"        >> "$GITHUB_OUTPUT"
+            echo "channel=stable"    >> "$GITHUB_OUTPUT"
+            echo "type=stable"       >> "$GITHUB_OUTPUT"
+            echo "Channel: STABLE (dist-tag: latest) — plain SemVer tag."
           else
-            echo "tag=beta"   >> "$GITHUB_OUTPUT"
-            echo "channel=beta" >> "$GITHUB_OUTPUT"
-            echo "Channel: BETA (npm dist-tag: beta — 'npm i @noir-ai/cli@beta' to opt in)."
+            echo "Error: unrecognized version format: $VERSION"
+            echo "Expected plain X.Y.Z or X.Y.Z-<preid>.N"
+            exit 1
           fi
 
-      - name: Pack all workspace packages (pnpm rewrites workspace:* ranges into the tarballs)
-        # pnpm pack (NOT npm pack) rewrites workspace:* → concrete versions, so the
-        # published packages resolve on install. `npm publish` does NOT rewrite workspace
-        # ranges, and `pnpm publish` does NOT support --provenance — so we PACK with pnpm
-        # (correct deps) then PUBLISH the tarballs with npm (which adds the provenance attestation).
+      # ── 3. Pre-publish check (idempotency gate) ──────────────
+      - name: Check if version already published
+        id: check
+        run: |
+          VERSION="${{ steps.extract.outputs.version }}"
+          PUBLISHED=$(npm view @noir-ai/cli versions --json 2>/dev/null || echo "[]")
+
+          if echo "$PUBLISHED" | grep -q "\"$VERSION\""; then
+            echo "::warning::Version $VERSION is already published on npm."
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version $VERSION is not yet published. Proceeding."
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── 4. Cross-validate branch consistency (warning only) ──
+      - name: Cross-validate branch consistency
+        run: |
+          SHA="${{ github.sha }}"
+          CHANNEL="${{ steps.channel.outputs.channel }}"
+
+          ON_MAIN=$(git branch -r --contains "$SHA" 2>/dev/null | grep -q 'origin/main' && echo "yes" || echo "no")
+          ON_DEVELOP=$(git branch -r --contains "$SHA" 2>/dev/null | grep -q 'origin/develop' && echo "yes" || echo "no")
+
+          echo "Branch check: on main=$ON_MAIN, on develop=$ON_DEVELOP, channel=$CHANNEL"
+
+          if [ "$CHANNEL" = "stable" ] && [ "$ON_DEVELOP" = "yes" ] && [ "$ON_MAIN" = "no" ]; then
+            echo "::warning::Stable release tag pushed on develop branch (not main). Consider tagging on main."
+          fi
+          if [ "$CHANNEL" = "beta" ] && [ "$ON_DEVELOP" = "no" ] && [ "$ON_MAIN" = "yes" ]; then
+            echo "::warning::Beta release tag pushed on main branch (not develop)."
+          fi
+
+      # ── 5. Inject full version into package.json files ────────
+      - name: Apply publish version to package.json
+        if: steps.check.outputs.already_published == 'false'
+        run: |
+          VERSION="${{ steps.extract.outputs.version }}"
+          echo "Injecting version $VERSION into all package.json files (for pnpm pack)..."
+          node scripts/bump-version.mjs "$VERSION"
+          # Verify the change took effect
+          ACTUAL=$(node -e "console.log(require('./packages/cli/package.json').version)")
+          if [ "$ACTUAL" != "$VERSION" ]; then
+            echo "Error: version injection failed. Expected $VERSION, got $ACTUAL."
+            exit 1
+          fi
+          echo "✓ All package.json files updated to version $VERSION."
+
+      # ── 6. Pack (pnpm rewrites workspace:* ranges) ───────────
+      - name: Pack all workspace packages
+        if: steps.check.outputs.already_published == 'false'
         run: pnpm -r --filter './packages/*' pack --pack-destination artifacts
 
-      - name: Publish the packed tarballs (npm publish --provenance, NPM_TOKEN)
+      # ── 7. Publish ────────────────────────────────────────────
+      - name: Publish the packed tarballs
+        if: steps.check.outputs.already_published == 'false'
         env:
           DIST_TAG: ${{ steps.channel.outputs.tag }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -e
-          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then echo "NPM_TOKEN secret is not set — see docs/releasing.md §1"; exit 1; fi
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "NPM_TOKEN secret is not set — see docs/releasing.md §1"
+            exit 1
+          fi
           echo "Publishing with npm dist-tag: $DIST_TAG"
           mapfile -d '' tarballs < <(find artifacts -type f -name '*.tgz' -print0)
           if [ "${#tarballs[@]}" -eq 0 ]; then echo "No tarballs found"; exit 1; fi
@@ -114,3 +188,81 @@ jobs:
             echo "Publishing $tgz (dist-tag: $DIST_TAG)"
             npm publish "./$tgz" --provenance --access public --tag "$DIST_TAG"
           done
+        # Note: if this step fails mid-iteration (e.g. 5 of 11 packages published),
+        # npm has already accepted the published versions and they cannot be overwritten.
+        # Recovery: bump to next beta iteration and re-publish all 11 (see docs/releasing.md §8).
+
+      # ── 8. Generate release registry entry ────────────────────
+      - name: Update release registry
+        if: success() && steps.check.outputs.already_published == 'false'
+        env:
+          FULL_VERSION: ${{ steps.extract.outputs.version }}
+          CHANNEL: ${{ steps.channel.outputs.channel }}
+          BASE_VERSION: ${{ steps.extract.outputs.version }}
+          DIST_TAG: ${{ steps.channel.outputs.tag }}
+          GIT_TAG: ${{ github.ref_name }}
+          GIT_SHA: ${{ github.sha }}
+          GIT_BRANCH: ${{ steps.channel.outputs.channel == 'stable' && 'main' || 'develop' }}
+        run: |
+          node scripts/release-registry.mjs add
+
+      # ── 9. Commit and push registry update ────────────────────
+      - name: Commit release registry update
+        if: success() && steps.check.outputs.already_published == 'false'
+        env:
+          FULL_VERSION: ${{ steps.extract.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Determine which branch to push to
+          CHANNEL="${{ steps.channel.outputs.channel }}"
+          if [ "$CHANNEL" = "stable" ]; then
+            TARGET_BRANCH="main"
+          else
+            TARGET_BRANCH="develop"
+          fi
+
+          git add .noir/releases/
+          if git diff --staged --quiet; then
+            echo "No registry changes to commit."
+          else
+            git commit -m "chore(release): update release registry for $FULL_VERSION"
+            git push origin HEAD:"$TARGET_BRANCH"
+            echo "✓ Release registry updated on $TARGET_BRANCH."
+          fi
+
+      # ── 10. Create GitHub Release ─────────────────────────────
+      - name: Create GitHub Release
+        if: success() && steps.check.outputs.already_published == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: |
+            ## @noir-ai/* ${{ steps.extract.outputs.version }}
+
+            **Channel:** ${{ steps.channel.outputs.channel }}
+            **npm dist-tag:** `${{ steps.channel.outputs.tag }}`
+
+            Install:
+            ```bash
+            # If stable:
+            npm install -g @noir-ai/cli
+            # If beta:
+            npm install -g @noir-ai/cli@${{ steps.channel.outputs.tag }}
+            ```
+
+            See [CHANGELOG.md](./docs/CHANGELOG.md) for details.
+          draft: false
+          prerelease: ${{ steps.channel.outputs.type == 'prerelease' }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 11. Idempotent skip message ───────────────────────────
+      - name: Skip (already published)
+        if: steps.check.outputs.already_published == 'true'
+        run: |
+          echo "Version $VERSION is already published on npm. Skipping publish."
+          echo "This is expected on workflow re-runs — the version is immutable."

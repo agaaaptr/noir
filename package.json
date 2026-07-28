@@ -16,7 +16,12 @@
     "typecheck": "pnpm -r --filter './packages/*' run typecheck",
     "test": "pnpm build && vitest run",
     "test:watch": "vitest",
-    "release:bump": "node scripts/bump-version.mjs"
+    "release:bump": "node scripts/bump-version.mjs",
+    "release:tag": "node scripts/release-tag.mjs",
+    "release:compute": "node scripts/compute-version.mjs",
+    "release:history": "node scripts/release-registry.mjs history",
+    "release:rebuild": "node scripts/release-registry.mjs rebuild",
+    "release:validate": "node scripts/release-registry.mjs validate"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",

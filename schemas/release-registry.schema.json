@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/agaaaptr/noir/main/schemas/release-registry.schema.json",
+  "title": "Noir Release Registry",
+  "description": "Schema for .noir/releases/releases.json — the machine-readable release history.",
+  "type": "object",
+  "required": ["$schema", "generated", "source", "releases"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "generated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this registry was generated."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["npm", "manual", "ci"],
+      "description": "Source of truth used to build this registry."
+    },
+    "currentBaseVersion": {
+      "type": "string",
+      "description": "Current base version from source package.json (clean X.Y.Z)."
+    },
+    "latestStable": {
+      "type": ["string", "null"],
+      "description": "Latest stable release version."
+    },
+    "latestBeta": {
+      "type": ["string", "null"],
+      "description": "Latest beta release version."
+    },
+    "nextBeta": {
+      "type": ["string", "null"],
+      "description": "Predicted next beta version for the current base."
+    },
+    "releases": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/releaseEntry" }
+    }
+  },
+  "$defs": {
+    "releaseEntry": {
+      "type": "object",
+      "required": [
+        "baseVersion",
+        "fullVersion",
+        "type",
+        "channel",
+        "npmDistTag",
+        "timestamp",
+        "publishStatus"
+      ],
+      "properties": {
+        "baseVersion": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Clean X.Y.Z base version."
+        },
+        "fullVersion": {
+          "type": "string",
+          "description": "Full published version (may include prerelease suffix)."
+        },
+        "prereleaseIdentifier": {
+          "type": ["string", "null"],
+          "description": "Prerelease identifier (e.g. 'beta') or null for stable."
+        },
+        "betaIteration": {
+          "type": ["integer", "null"],
+          "description": "Beta iteration number or null for stable."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["stable", "prerelease"],
+          "description": "Release type."
+        },
+        "channel": {
+          "type": "string",
+          "enum": ["stable", "beta"],
+          "description": "Release channel."
+        },
+        "npmDistTag": {
+          "type": "string",
+          "enum": ["latest", "beta"],
+          "description": "npm dist-tag used for this release."
+        },
+        "gitTag": {
+          "type": ["string", "null"],
+          "description": "Git tag name."
+        },
+        "gitSha": {
+          "type": ["string", "null"],
+          "description": "Git commit SHA."
+        },
+        "gitBranch": {
+          "type": ["string", "null"],
+          "description": "Git branch the release was tagged on."
+        },
+        "timestamp": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Release timestamp in ISO 8601."
+        },
+        "publishStatus": {
+          "type": "string",
+          "enum": ["published", "failed", "unknown"],
+          "description": "Publish status."
+        },
+        "changelogRef": {
+          "type": ["string", "null"],
+          "description": "Reference to CHANGELOG.md entry."
+        }
+      }
+    }
+  }
+}
