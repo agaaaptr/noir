@@ -4,7 +4,7 @@ Guidance for AI coding agents (Claude Code, Cursor, Codex, …) working **on thi
 
 ## What this repo is
 
-Noir is a host-agnostic, spec-driven-workflow + native-context + cross-session-memory **layer** for agentic CLIs — not an LLM runtime (bring your own agent). v1 host = Claude Code, behind an abstract `HostAdapter`. It is a pnpm monorepo of **11 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`. Noir ships **only native `noir-` builtin skills (+ opt-in integrations)** — there is no plugin, no marketplace, no slash-command-installed skill surface. See [docs/architecture/](docs/architecture/).
+Noir is a host-agnostic, spec-driven-workflow + native-context + cross-session-memory **layer** for agentic CLIs — not an LLM runtime (bring your own agent). v1 host = Claude Code, behind an abstract `HostAdapter`. It is a pnpm monorepo of **11 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`. Noir ships **only native `noir-` builtin skills (+ opt-in integrations)** — there is no plugin, no marketplace, no slash-command-installed skill surface. See [docs/explanation/architecture.md](docs/explanation/architecture.md).
 
 ## Toolchain + conventions (immutable)
 
@@ -31,7 +31,7 @@ pnpm install && pnpm build && pnpm test
 
 The new package is **automatically** included in workspace detection, the root build/test, unified versioning (`scripts/bump-version.mjs`), and the `release.yml` publish — nothing to wire. Still manual: adding deps beyond the default `@noir-ai/core`, honoring the blueprint/privacy rules below, and (only if you migrate to OIDC later) registering the new package's Trusted Publisher on npm.
 
-**Add a package only for a genuinely new subsystem/domain.** Host adapters go **inside `@noir-ai/adapters`** (the S10 path), not in a new package; a feature in an existing domain extends the existing package. Full guide (what's automatic vs manual, when to add vs extend): [`docs/packaging.md`](docs/packaging.md).
+**Add a package only for a genuinely new subsystem/domain.** Host adapters go **inside `@noir-ai/adapters`** (the S10 path), not in a new package; a feature in an existing domain extends the existing package. Full guide (what's automatic vs manual, when to add vs extend): [`docs/how-to/packaging.md`](docs/how-to/packaging.md).
 
 ## Dogfood SDD — how work is specified here
 

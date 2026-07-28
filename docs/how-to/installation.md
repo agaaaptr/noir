@@ -6,7 +6,7 @@
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | bash
 > ```
-> This follows npm's `latest` tag, which currently resolves to `1.0.0-beta.1`; use the beta channel for the current `1.4.0-beta.1` release. Pin a version with `| NOIR_VERSION=1.2.3 bash`.
+> This follows npm's `latest` tag, which currently resolves to `1.5.0`; use the beta channel for the current `1.4.0-beta.2` release. Pin a version with `| NOIR_VERSION=1.2.3 bash`.
 
 ---
 
@@ -26,7 +26,7 @@ Two release **channels** ship in parallel from `.github/workflows/release.yml`:
 
 | Channel | npm dist-tag | How to ask for it | Version scheme |
 |---|---|---|---|
-| **Default (`latest`)** | `latest` (currently `1.0.0-beta.1`) | `npm i @noir-ai/cli` | `X.Y.Z` after the first stable release |
+| **Default (`latest`)** | `latest` (currently `1.5.0`) | `npm i @noir-ai/cli` | `X.Y.Z` stable release |
 | **Beta** | `beta` (opt-in) | `npm i @noir-ai/cli@beta` | `X.Y.Z-beta.N` |
 
 The installer, `npm`, `npx`, and `pnpm`/`yarn`/`bun` flows below all support both channels. Homebrew is not available until the first stable release.
@@ -38,7 +38,7 @@ The installer, `npm`, `npx`, and `pnpm`/`yarn`/`bun` flows below all support bot
 A small POSIX/bash script (`scripts/install.sh`) that detects Node + npm, then runs `npm install -g @noir-ai/cli@<channel>` on your behalf. It is **idempotent** (re-running upgrades in place), prints a PATH hint when needed, and verifies with `noir --version` at the end.
 
 ```bash
-# Default (`latest`, currently 1.0.0-beta.1)
+# Default (`latest`, currently 1.5.0)
 curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | bash
 
 # Beta channel
@@ -67,7 +67,7 @@ less install.sh            # review it
 bash install.sh            # then run it
 ```
 
-The script lives at [`scripts/install.sh`](../scripts/install.sh) in this repo and is meant to be readable end-to-end.
+The script lives at [`scripts/install.sh`](../../scripts/install.sh) in this repo and is meant to be readable end-to-end.
 
 ---
 
@@ -77,7 +77,7 @@ If you already have a Node package manager you prefer, skip the script and insta
 
 At a glance (each command also appears in a block below):
 
-| Tool | Default (`latest`, currently `1.0.0-beta.1`) | Beta |
+| Tool | Default (`latest`, currently `1.5.0`) | Beta |
 |---|---|---|
 | **npm** | `npm install -g @noir-ai/cli` | `npm install -g @noir-ai/cli@beta` |
 | **pnpm** | `pnpm add -g @noir-ai/cli` | `pnpm add -g @noir-ai/cli@beta` |
@@ -87,7 +87,7 @@ At a glance (each command also appears in a block below):
 ### npm
 
 ```bash
-# default/latest (currently 1.0.0-beta.1)
+# default/latest (currently 1.5.0)
 npm install -g @noir-ai/cli
 # beta
 npm install -g @noir-ai/cli@beta
@@ -96,7 +96,7 @@ npm install -g @noir-ai/cli@beta
 ### pnpm
 
 ```bash
-# default/latest (currently 1.0.0-beta.1)
+# default/latest (currently 1.5.0)
 pnpm add -g @noir-ai/cli
 # beta
 pnpm add -g @noir-ai/cli@beta
@@ -105,7 +105,7 @@ pnpm add -g @noir-ai/cli@beta
 ### yarn (classic)
 
 ```bash
-# default/latest (currently 1.0.0-beta.1)
+# default/latest (currently 1.5.0)
 yarn global add @noir-ai/cli
 # beta
 yarn global add @noir-ai/cli@beta
@@ -114,7 +114,7 @@ yarn global add @noir-ai/cli@beta
 ### bun
 
 ```bash
-# default/latest (currently 1.0.0-beta.1)
+# default/latest (currently 1.5.0)
 bun add -g @noir-ai/cli
 # beta
 bun add -g @noir-ai/cli@beta
@@ -132,7 +132,7 @@ Run Noir once without adding anything to your PATH. Each tool fetches the packag
 
 **npx** (npm)
 ```bash
-# default/latest (currently 1.0.0-beta.1)
+# default/latest (currently 1.5.0)
 npx @noir-ai/cli init
 # beta
 npx @noir-ai/cli@beta init
@@ -140,7 +140,7 @@ npx @noir-ai/cli@beta init
 
 **pnpm dlx** (pnpm)
 ```bash
-# default/latest (currently 1.0.0-beta.1)
+# default/latest (currently 1.5.0)
 pnpm dlx @noir-ai/cli init
 # beta
 pnpm dlx @noir-ai/cli@beta init
@@ -148,7 +148,7 @@ pnpm dlx @noir-ai/cli@beta init
 
 **yarn dlx** (yarn / Berry)
 ```bash
-# default/latest (currently 1.0.0-beta.1)
+# default/latest (currently 1.5.0)
 yarn dlx @noir-ai/cli init
 # beta
 yarn dlx @noir-ai/cli@beta init
@@ -156,7 +156,7 @@ yarn dlx @noir-ai/cli@beta init
 
 **bunx** (bun)
 ```bash
-# default/latest (currently 1.0.0-beta.1)
+# default/latest (currently 1.5.0)
 bunx @noir-ai/cli init
 # beta
 bunx @noir-ai/cli@beta init
@@ -168,7 +168,7 @@ This is the right choice when you want to try Noir in a throwaway project withou
 
 ## Homebrew (not yet available)
 
-The Homebrew formula is deliberately not published yet: [`packaging/homebrew/noir.rb`](../packaging/homebrew/noir.rb) still contains a placeholder tarball URL and checksum. It will be completed only after the first stable release. Until then, use the [native installer](#recommended-native-installer-curl--sh) or [npm](#npm--pnpm--yarn--bun); both support the default and beta channels.
+The Homebrew formula is deliberately not published yet: [`packaging/homebrew/noir.rb`](../../packaging/homebrew/noir.rb) still contains a placeholder tarball URL and checksum. It will be completed only after the first stable release. Until then, use the [native installer](#recommended-native-installer-curl--sh) or [npm](#npm--pnpm--yarn--bun); both support the default and beta channels.
 
 ---
 
@@ -189,7 +189,7 @@ Then, from the project you want Noir to manage:
 noir init            # scaffolds .noir/ + emits the 34 skills (33 builtins + 1 integration) + host wiring
 ```
 
-`noir init` is idempotent — see [getting-started.md](getting-started.md) for the walkthrough.
+`noir init` is idempotent — see [getting-started.md](../getting-started.md) for the walkthrough.
 
 ---
 
@@ -306,6 +306,6 @@ A couple of warnings may appear during `npm install -g @noir-ai/cli` — most ar
 
 ## See also
 
-- [getting-started.md](getting-started.md) — the post-install walkthrough: `noir init`, transports, your first session, switching full/quick SDD modes.
-- [usage.md](usage.md) — the full reference: every command, the config schema, the `.noir/` + `~/.noir/` layout.
+- [getting-started.md](../getting-started.md) — the post-install walkthrough: `noir init`, transports, your first session, switching full/quick SDD modes.
+- [usage.md](../reference/cli.md) — the full reference: every command, the config schema, the `.noir/` + `~/.noir/` layout.
 - [releasing.md](releasing.md) — how releases are cut, the beta-vs-stable channel model, and how CI derives the dist-tag from the branch.

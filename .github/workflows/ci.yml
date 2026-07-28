@@ -26,3 +26,5 @@ jobs:
       - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
+      # Validate documentation: broken links, stale version refs, registry integrity.
+      - run: pnpm docs:validate

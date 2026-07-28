@@ -1,11 +1,11 @@
 # Homebrew formula for Noir
 
-A future Homebrew tap for Noir, the discipline, context, and memory layer for any agentic CLI. **Not available yet:** this repository contains a maintainer template with a placeholder tarball URL and checksum, to be completed after Noir's first stable release. For all current installs, use the [native installer](../../docs/installation.md) or `npm i -g @noir-ai/cli`.
+A future Homebrew tap for Noir, the discipline, context, and memory layer for any agentic CLI. **Not available yet:** this repository contains a maintainer template with a placeholder tarball URL and checksum, to be completed after Noir's first stable release. For all current installs, use the [native installer](../../docs/how-to/installation.md) or `npm i -g @noir-ai/cli`.
 
 ## What this is
 
 - `Formula/noir.rb` — a template for a formula that will install `@noir-ai/cli` (the `noir` bin) via npm into the formula's `libexec`, then symlink `noir` into Homebrew's `bin`. It follows the standard [Node-for-Formula-Authors](https://docs.brew.sh/Node-for-Formula-Authors) pattern.
-- Once published, the tap will be stable-only. For the **beta** channel (`@noir-ai/cli@beta`), use npm directly — see [docs/installation.md](../../docs/installation.md#npm--pnpm--yarn--bun).
+- Once published, the tap will be stable-only. For the **beta** channel (`@noir-ai/cli@beta`), use npm directly — see [docs/installation.md](../../docs/how-to/installation.md#npm--pnpm--yarn--bun).
 
 ## Why a tap is heavier than npm/npx (be honest before you choose this)
 
@@ -68,5 +68,5 @@ brew update && brew upgrade noir
 
 ## See also
 
-- [docs/installation.md](../../docs/installation.md) — current install paths (native installer, npm/pnpm/yarn/bun, npx) and the Homebrew availability status.
-- [docs/releasing.md](../../docs/releasing.md) — how a stable release is cut and how the formula's `version` + `sha256` should be refreshed each release.
+- [docs/installation.md](../../docs/how-to/installation.md) — current install paths (native installer, npm/pnpm/yarn/bun, npx) and the Homebrew availability status.
+- [docs/releasing.md](../../docs/how-to/releasing.md) — how a stable release is cut and how the formula's `version` + `sha256` should be refreshed each release.

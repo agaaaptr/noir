@@ -1,31 +1,87 @@
 # Documentation
 
-The Noir toolkit's architecture, the decisions behind it, the design blueprint, the SDD spec/plan history, the living forward plan, and the changelog.
+> Auto-generated documentation index.
+> Last updated: 2026-07-28T04:56:52.122Z
 
-> **What Noir is:** a host-agnostic, spec-driven-workflow + native-context + cross-session-memory layer for agentic CLIs (bring your own agent). Design blueprint: [`specs/2026-07-23-noir-toolkit-design.md`](specs/2026-07-23-noir-toolkit-design.md). Living forward plan: [`roadmap.md`](roadmap.md).
+## Getting Started
 
-## Structure
+- [**Noir**](README.md) —  — Project overview
 
-| Path | Purpose |
-|---|---|
-| [`installation.md`](installation.md) | The install reference: native installer (`curl \| sh`), npm/pnpm/yarn/bun, `npx`, channel status, requirements, troubleshooting, and Homebrew availability. Start here for *installing* Noir. |
-| [`getting-started.md`](getting-started.md) | First-use walkthrough: `noir init`, transports, your first session, switching full/quick. Start here for *using* Noir. |
-| [`usage.md`](usage.md) | The reference: transports, SDD modes, the full command tree, the config schema, the `.noir/` + `~/.noir/` layout, privacy rules. |
-| [`command-policy.md`](command-policy.md) | The interactive-vs-scriptable contract (TUI runtime): bare `noir` is the primary UX, every subcommand works in both modes, `--json` is the headless contract, `--tui`/`--no-tui`/`--no-tips` flags. |
-| [`deprecation.md`](deprecation.md) | The deprecation process: warn for N → redirect for N → never silently remove. Zero entries today; `--no-tips` quiets hints in CI. |
-| [`releasing.md`](releasing.md) | The release runbook: unified versioning, npm auth (automation token + provenance), beta-on-develop / stable-on-main channels, irreversibility rules. |
-| [`packaging.md`](packaging.md) | How to add a new `@noir-ai/*` package (`scripts/new-package.mjs`), what's automatic vs manual, when to add vs extend. |
-| [`sdk.md`](sdk.md) | The framework API surface — using the `@noir-ai/*` packages as a library (per-package stable exports + snippets). Start here for *embedding* Noir. |
-| [`architecture/`](architecture/) | How the 11-package toolkit fits together and how a host connects. |
-| [`decisions/`](decisions/) | Architecture Decision Records (ADRs) — *why* a choice was made. |
-| [`specs/`](specs/) | The Noir design blueprint (`2026-07-23-noir-toolkit-design.md`). Per-slice design specs live under `superpowers/specs/`. |
-| [`superpowers/specs/`](superpowers/specs/) | Per-slice SDD design history (the brainstorm → spec record for each slice). |
-| [`superpowers/plans/`](superpowers/plans/) | Per-slice implementation + acceptance plans (the SDD plan history). **Active plans live here** — there is no separate `docs/plans/`. |
-| [`roadmap.md`](roadmap.md) | The living forward plan: current status, v1.x backlog, version targets. |
-| [`CHANGELOG.md`](CHANGELOG.md) | Notable changes, newest first. |
+## Tutorial
 
-## Conventions
+- [**Getting started**](getting-started.md) — 
 
-- Per-slice design specs → `superpowers/specs/YYYY-MM-DD-sN-<topic>-design.md`; implementation plans → `superpowers/plans/YYYY-MM-DD-sN-<topic>.md` (dated). See [ADR-0001](decisions/0001-doc-layout-and-spec-plan-paths.md) and [`../AGENTS.md`](../AGENTS.md).
-- **ADRs** are numbered `NNNN-<slug>.md` and append-only — supersede, don't rewrite.
-- Cross-link liberally: a spec should link to its plan and any related ADR.
+## How-To Guides
+
+- [**Installing Noir**](how-to/installation.md) — 
+- [**Adding a package**](how-to/packaging.md) — 
+- [**Releasing Noir**](how-to/releasing.md) — 
+
+## Reference
+
+- [**CLI Command Reference**](reference/cli-auto.md) — 
+- [**CLI Command Reference**](reference/cli.md) — 
+- [**Configuration Reference**](reference/config.md) — 
+- [**MCP Tools Reference**](reference/mcp-tools.md) — 
+- [**Package Inventory**](reference/packages.md) — 
+- [**Builtin Skills**](reference/skills.md) — 
+
+## Explanation
+
+- [**Architecture**](explanation/architecture.md) — 
+- [**Privacy & Security**](explanation/privacy.md) — 
+- [**Spec-Driven Development Workflow**](explanation/sdd-workflow.md) — 
+
+## Records
+
+- [**Changelog**](CHANGELOG.md) — 
+- [**Changelog**](CHANGELOG.md) — 
+- [**Noir — Roadmap & North Star**](roadmap.md) — 
+
+## Architecture Decision Records
+
+- [**ADR-0001: Documentation layout and spec/plan paths**](decisions/0001-doc-layout-and-spec-plan-paths.md) — 
+- [**ADR-0002: Native skills only — plugin + marketplace removed**](decisions/0002-native-skills-only-plugin-removed.md) — 
+- [**ADR-0003: v1.x capabilities — keystone refactor + five extensions**](decisions/0003-v1x-capabilities.md) — 
+- [**ADR-0004: Multi-host adapters — the `resolveAdapter(host)` registry + AGENTS.md universal**](decisions/0004-multi-host-adapters.md) — 
+- [**Architecture Decision Records**](decisions/README.md) — 
+
+## Internal (SDD History)
+
+- [**Noir — Discovery: Idempotent Scaffold, Conflict Resolution & AI-Native TUI**](internal/discovery/2026-07-26-scaffold-tui-discovery.md) — [ARCHIVED] 
+- [**Noir — next-session handoff & playbook**](internal/handoff/2026-07-27-runtime-polish-handoff.md) — [ARCHIVED] 
+- [**Noir Walking Skeleton — Manual Acceptance**](internal/plans/2026-07-23-noir-walking-skeleton-acceptance.md) — [ARCHIVED] 
+- [**Noir Walking Skeleton Implementation Plan**](internal/plans/2026-07-23-noir-walking-skeleton.md) — [ARCHIVED] 
+- [**S1 Stores — Manual Acceptance Checklist**](internal/plans/2026-07-24-s1-stores-acceptance.md) — [ARCHIVED] 
+- [**S1 Stores Implementation Plan (`@noir-ai/store`)**](internal/plans/2026-07-24-s1-stores.md) — [ARCHIVED] 
+- [**S4 SDD Engine — Manual Acceptance Checklist**](internal/plans/2026-07-24-s4-sdd-engine-acceptance.md) — [ARCHIVED] 
+- [**S4 SDD Workflow Engine Implementation Plan (`@noir-ai/workflow`)**](internal/plans/2026-07-24-s4-sdd-engine.md) — [ARCHIVED] 
+- [**S5 Skills — Manual Acceptance Checklist**](internal/plans/2026-07-24-s5-skills-acceptance.md) — [ARCHIVED] 
+- [**S5 Builtin Skills + Compiler Implementation Plan (`@noir-ai/skills`)**](internal/plans/2026-07-24-s5-skills.md) — [ARCHIVED] 
+- [**S6 Context Management — Implementation Plan (`@noir-ai/context`)**](internal/plans/2026-07-24-s6-context.md) — [ARCHIVED] 
+- [**NOIR v1.0 Execution Plan (2026-07-24)**](internal/plans/2026-07-24-v1.0-execution-plan.md) — [ARCHIVED] 
+- [**Keystone K — Foundation Refactor Implementation Plan**](internal/plans/2026-07-25-keystone-k.md) — [ARCHIVED] 
+- [**S7 — Memory Management (implementation plan, 2026-07-25)**](internal/plans/2026-07-25-s7-memory.md) — [ARCHIVED] 
+- [**S8 — Bounded Model Layer (implementation plan, 2026-07-25)**](internal/plans/2026-07-25-s8-model.md) — [ARCHIVED] 
+- [**S9 — CLI/TUI Home Screen (implementation plan, 2026-07-25)**](internal/plans/2026-07-25-s9-cli-tui.md) — [ARCHIVED] 
+- [**Noir v1.x — Overnight Execution Plan (S + X + debt → release 1.1.0-beta.1)**](internal/plans/2026-07-25-v1x-execution.md) — [ARCHIVED] 
+- [**Overnight Session — Runtime Polish, TUI, Idempotency, Handoff (2026-07-26)**](internal/plans/2026-07-26-overnight-runtime-polish.md) — [ARCHIVED] 
+- [**S10 + S11 remainder — execution plan (session 2)**](internal/plans/2026-07-26-s10-s11-execution.md) — [ARCHIVED] 
+- [**Noir — AI Toolkit Design Blueprint**](internal/specs/2026-07-23-noir-toolkit-design.md) — [ARCHIVED] 
+- [**Noir — Walking Skeleton Design (S0 → S2 → S3)**](internal/specs/2026-07-23-noir-walking-skeleton-design.md) — [ARCHIVED] 
+- [**Noir — S1 Stores Design (`@noir-ai/store`)**](internal/specs/2026-07-23-s1-stores-design.md) — [ARCHIVED] 
+- [**Noir — S4 SDD Workflow Engine Design**](internal/specs/2026-07-24-s4-sdd-engine-design.md) — [ARCHIVED] 
+- [**Noir — S5 Builtin Skills + Compiler Design (`@noir-ai/skills`)**](internal/specs/2026-07-24-s5-skills-design.md) — [ARCHIVED] 
+- [**Noir — S6 Context Management Design (`@noir-ai/context`)**](internal/specs/2026-07-24-s6-context-design.md) — [ARCHIVED] 
+- [**Noir — S7 Cross-Session Memory Design (`@noir-ai/memory`)**](internal/specs/2026-07-24-s7-memory-design.md) — [ARCHIVED] 
+- [**Noir — S8 Bounded Model Layer Design (`@noir-ai/model`)**](internal/specs/2026-07-24-s8-model-design.md) — [ARCHIVED] 
+- [**Noir — S9 CLI/TUI Home Screen Design (`@noir-ai/cli`)**](internal/specs/2026-07-24-s9-cli-tui-design.md) — [ARCHIVED] 
+- [**Keystone K — Foundation Refactor (spec)**](internal/specs/2026-07-25-keystone-k-design.md) — [ARCHIVED] 
+- [**Slice S10 — Multi-host adapters (+ S11 SDK remainder) — design spec**](internal/specs/2026-07-25-s10-multihost-design.md) — [ARCHIVED] 
+- [**Slice S — Intelligent Project Scaffolding (AI-layer) — design spec**](internal/specs/2026-07-25-slice-s-scaffold-design.md) — [ARCHIVED] 
+- [**Slice X — Integration skill system (ClickUp first) — design spec**](internal/specs/2026-07-25-slice-x-integration-design.md) — [ARCHIVED] 
+- [**Noir v1.x Capabilities — Design Analysis**](internal/specs/2026-07-25-v1x-capabilities-design.md) — [ARCHIVED] 
+- [**Spec — File Conflict Resolution (SP-C)**](internal/specs/2026-07-26-conflict-resolution-design.md) — [ARCHIVED] 
+- [**Spec — Scaffold Idempotency & Root-Safety (SP-A)**](internal/specs/2026-07-26-scaffold-idempotency-design.md) — [ARCHIVED] 
+- [**Documentation**](README.md) — 
+
