@@ -1,27 +1,29 @@
 # Noir Release Registry
 
 > Auto-generated on every successful release from npm registry + git tags.
-> Last updated: 2026-07-28T06:34:12.519Z
+> Last updated: 2026-07-28T06:35:23.851Z
 
 ## Current
 
 - **Base Version:** `1.6.0`
 - **Latest Stable:** `1.6.0`
-- **Latest Beta:** `1.4.0-beta.2`
-- **Next Beta:** `1.6.0-beta.1`
+- **Latest Beta:** `1.6.0-beta.1`
+- **Next Beta:** `1.6.0-beta.2`
 
 ## Stable Releases
 
 | Version | Date | Git Tag | Commit |
 |---|---|---|---|
-| 1.6.0 | 2026-07-28 | v1.6.0 | 28d8082c099dec295aa0c44e23a423afc948ef02 |
+| 1.6.0 | 2026-07-28 | v1.6.0 | bfc8a52 |
+| 1.5.0 | 2026-07-28 | v1.5.0 | b2d1bba |
 | 1.4.0 | 2026-07-27 | v1.4.0 | f1c5a23 |
 
 ## Beta Releases
 
 | Version | Base | Iteration | Date | Git Tag | Commit |
 |---|---|---|---|---|---|
-| 1.4.0-beta.2 | 1.4.0-beta.2 | 2 | 2026-07-28 | v1.4.0-beta.2 | 752d13da8cc0ca674b22d6d5f4e10027e089a1bd |
+| 1.6.0-beta.1 | 1.6.0 | 1 | 2026-07-28 | v1.6.0-beta.1 | 62fd55e |
+| 1.4.0-beta.2 | 1.4.0 | 2 | 2026-07-28 | v1.4.0-beta.2 | 61488f7 |
 | 1.4.0-beta.1 | 1.4.0 | 1 | 2026-07-27 | v1.4.0-beta.1 | d5107cb |
 | 1.3.0-beta.6 | 1.3.0 | 6 | 2026-07-26 | v1.3.0-beta.6 | e37aed4 |
 | 1.3.0-beta.5 | 1.3.0 | 5 | 2026-07-26 | v1.3.0-beta.5 | c5d5ff1 |
