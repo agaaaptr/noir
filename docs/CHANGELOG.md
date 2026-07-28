@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.4.0 (2026-07-27)
+
+**First stable release — published on npm (dist-tag `latest`).** `npm i @noir-ai/cli` now resolves here. This is the same content as `1.4.0-beta.1` (the last beta), promoted to stable: the `v1.4.0` tag was cut on `main`, so `release.yml` derived `channel=stable` → `npm publish --tag latest`. The `beta` dist-tag keeps pointing at `1.4.0-beta.1` for now (`npm i @noir-ai/cli@beta`).
+
+For consumers on the default install, `latest` had stayed at the first-ever publish (`1.0.0-beta.1`, 2026-07-25) throughout the beta line — so stable `1.4.0` lands the entire body of work that matured across `1.2.0-beta.1` → `1.3.0-beta.6` → `1.4.0-beta.1`. Per-release notes are below; the major arcs:
+
+- **v1.x capabilities (K/R/I/P/S/X)** — the keystone `managedBlock` refactor plus five capabilities on it: curated `.noir/rules/RULES.md`, `IgnoreManager`, PRD artifacts, the `@noir-ai/create` scaffold engine (`noir create` / `init --upgrade` / migrations), and a first-class integration layer (ClickUp reference integration, `gated-write-proxy`). First published in `1.2.0-beta.1`.
+- **Multi-host (S10)** — `resolveAdapter(host)` registry (claude / agents-md / gemini / cursor / opencode); `--host` on `init`/`create`/`sync`; a universal `AGENTS.md`; cursor `.mdc` skills; `opencode.json`. First published in `1.2.0-beta.1`.
+- **Scaffold idempotency + universal conflict contract (SP-A…H)** — `noir sync` on an unchanged tree writes nothing; root-safety (`assertSafeRoot`) prevents nested `.noir/`; one `buildConflictOpts`/`onConflict` seam across every file-producing path with diff preview, apply-to-all, and zdiff3 merge; three-way managed-region merge (`--merge`); semantic duplicate detection (`noir doctor --dedup`). Shipped `1.3.0-beta.1`…`6`.
+- **Runtime polish (`1.4.0-beta.1`)** — install deprecation fixes (`engines.node >=22`, `better-sqlite3 ^13` dropping `prebuild-install`); the unified output design-system (`theme.ts`, no more red headers, responsive tables, `NO_COLOR`/`CLICOLOR_FORCE`/`NOIR_ACCESSIBLE`); bare-`noir`-primary command policy (`--tui`/`--no-tui`/`--no-tips`); on-demand host handoff (`noir handoff`/`wrap`); the Ink `noir tui` MVP dashboard.
+
+The intermediate `1.3.0-beta.7` / `1.3.0-beta.8` / `1.4.0` tags failed CI on a `useColor()` leak under `CI=true` and were never published; their work landed in `1.4.0-beta.1` and therefore in this stable release. (The dead `v1.4.0` tag was deleted before re-tagging at the stable commit.)
+
+**Requirements:** Node `>=22` (Node 22–25; CI on Node 22). **1315/1315 tests** green under `CI=true`. SLSA provenance attached to all 11 `@noir-ai/*` packages.
+
+---
+
 ## 1.4.0-beta.1 (2026-07-27)
 
 **Published on npm (dist-tag `beta`)** — the 2026-07-26/27 overnight "runtime polish" release: install fixes, a unified output design-system, a fully idempotent scaffold, one universal conflict contract across every file-producing path, write-path semantic duplicate detection, a TUI-primary command policy, on-demand host handoff, and an Ink `noir tui` dashboard, plus repo-wide cleanup. This is the first PUBLISHED version of the session — the intermediate `1.3.0-beta.7` / `1.3.0-beta.8` / `1.4.0` tags failed CI on a `useColor()` leak under `CI=true` (picocolors `isColorSupported` includes `|| env.CI`, so table headers got ANSI-wrapped and the responsive-table "fits 60/80/120 cols" test measured ANSI bytes as overflow), were never published, and are superseded by this entry. The `1.4.0-beta.1` version was selected explicitly; its `develop` tag published under the `beta` dist-tag. **Minor** bump — the `engines.node` `>=22` floor lands as a minor semver signal (Node 20 was already EOL).
