@@ -17,6 +17,7 @@
     "test": "pnpm build && vitest run",
     "test:watch": "vitest",
     "release:bump": "node scripts/bump-version.mjs",
+    "release:docs": "node scripts/docs-generate.mjs generate",
     "release:tag": "node scripts/release-tag.mjs",
     "release:compute": "node scripts/compute-version.mjs",
     "release:history": "node scripts/release-registry.mjs history",
