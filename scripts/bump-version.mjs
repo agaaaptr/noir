@@ -1,13 +1,19 @@
 #!/usr/bin/env node
 // Unified version bumper for the @noir-ai/* monorepo.
 //
-// Noir uses UNIFIED versioning: all 10 packages share one version and release
+// Noir uses UNIFIED versioning: all 11 packages share one version and release
 // together. This script writes a single version into every package.json under
 // packages/* (and is the source of truth the release CI relies on).
 //
 // Usage:
-//   node scripts/bump-version.mjs <version>   # e.g. 1.0.0
+//   node scripts/bump-version.mjs <version>          # e.g. 1.0.0
+//   node scripts/bump-version.mjs <version> --dry-run # preview only
 //   node scripts/bump-version.mjs 1.0.0 --no-git-tag-version
+//
+// For manual version bumps (changing the base version), use clean SemVer:
+//   node scripts/bump-version.mjs 1.5.0
+// The CI injects prerelease versions (e.g. 1.5.0-beta.3) just before publish
+// so the tarball carries the full version. The source stays at clean X.Y.Z.
 //
 // The `--no-git-tag-version` flag is accepted (for npm-version-parity muscle
 // memory) and is a no-op — this script NEVER creates a git tag or commit by
@@ -31,7 +37,9 @@ function usage() {
   console.error('Example: node scripts/bump-version.mjs 1.0.0');
 }
 
-const args = process.argv.slice(2).filter((a) => a !== '--no-git-tag-version');
+const rawArgs = process.argv.slice(2);
+const DRY_RUN = rawArgs.includes('--dry-run');
+const args = rawArgs.filter((a) => a !== '--no-git-tag-version' && a !== '--dry-run');
 const version = args[0];
 
 if (!version) {
@@ -72,13 +80,20 @@ for (const dir of pkgDirs) {
   const previous = json.version;
   json.version = version;
   // Preserve 2-space indentation + trailing newline (matches the rest of the repo).
-  await writeFile(file, `${JSON.stringify(json, null, 2)}\n`, 'utf8');
+  if (!DRY_RUN) {
+    await writeFile(file, `${JSON.stringify(json, null, 2)}\n`, 'utf8');
+  }
   seen.add(json.name);
   changed += 1;
-  console.log(`bump  ${json.name.padEnd(20)} ${previous} -> ${version}`);
+  const label = DRY_RUN ? '(dry-run)' : 'bump';
+  console.log(`${label.padEnd(10)} ${json.name.padEnd(20)} ${previous} -> ${version}`);
 }
 
-console.log(`---\nWrote version ${version} to ${changed} package.json file(s).`);
-if (changed > 0) {
-  console.log('Next (manual): review the diff, commit, then tag — see docs/releasing.md.');
+if (DRY_RUN) {
+  console.log(`---\n[DRY RUN] Would write version ${version} to ${changed} package.json file(s).`);
+} else {
+  console.log(`---\nWrote version ${version} to ${changed} package.json file(s).`);
+  if (changed > 0) {
+    console.log('Next (manual): review the diff, commit, then tag — see docs/releasing.md.');
+  }
 }
