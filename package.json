@@ -21,7 +21,11 @@
     "release:compute": "node scripts/compute-version.mjs",
     "release:history": "node scripts/release-registry.mjs history",
     "release:rebuild": "node scripts/release-registry.mjs rebuild",
-    "release:validate": "node scripts/release-registry.mjs validate"
+    "release:validate": "node scripts/release-registry.mjs validate",
+    "docs:generate": "node scripts/docs-generate.mjs generate",
+    "docs:validate": "node scripts/docs-generate.mjs validate",
+    "docs:registry": "node scripts/docs-generate.mjs registry",
+    "docs:index": "node scripts/docs-generate.mjs index"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",

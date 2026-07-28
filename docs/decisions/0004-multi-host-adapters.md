@@ -67,6 +67,6 @@ The gating principle: a host with a native context file (claude/gemini) uses it 
 
 ## References
 
-- Design record: [`superpowers/specs/2026-07-25-s10-multihost-design.md`](../superpowers/specs/2026-07-25-s10-multihost-design.md)
+- Design record: [`superpowers/specs/2026-07-25-s10-multihost-design.md`](../internal/specs/2026-07-25-s10-multihost-design.md)
 - Release narrative: [`CHANGELOG.md`](../CHANGELOG.md) §`1.2.0-beta.1`
 - Related: [ADR-0003](0003-v1x-capabilities.md) (the keystone `HostAdapter.emitRules` seam S10 generalizes; K/R/I/P/S/X), [ADR-0002](0002-native-skills-only-plugin-removed.md) (native skills only), [ADR-0001](0001-doc-layout-and-spec-plan-paths.md) (doc layout)

@@ -176,7 +176,7 @@ Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`d
 
 ## 1.2.0-beta.1 (2026-07-26)
 
-**Multi-host (S10) ships on the beta channel.** Noir is now cross-CLI: Claude Code stays the default, and **Gemini, Cursor, OpenCode, and AGENTS.md** are one `--host` flag away. This is the first published release of the previously untagged `1.1.0-beta.1` capability work. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (unchanged); **1089/1089 tests** (was 966 during the unpublished 1.1 work); build / typecheck / lint (0 warnings) green. Design record: `docs/superpowers/specs/2026-07-25-s10-multihost-design.md`; the locked decisions in [ADR-0004](decisions/0004-multi-host-adapters.md).
+**Multi-host (S10) ships on the beta channel.** Noir is now cross-CLI: Claude Code stays the default, and **Gemini, Cursor, OpenCode, and AGENTS.md** are one `--host` flag away. This is the first published release of the previously untagged `1.1.0-beta.1` capability work. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (unchanged); **1089/1089 tests** (was 966 during the unpublished 1.1 work); build / typecheck / lint (0 warnings) green. Design record: `docs/superpowers/specs/2026-07-25-s10-multihost-design.md`; the locked decisions in [ADR-0004](docs/decisions/0004-multi-host-adapters.md).
 
 ### Added — S10 multi-host adapters
 - **Adapter registry.** `resolveAdapter(host: HostId): HostAdapter` in `@noir-ai/adapters` — a `Record<HostId, HostAdapter>` map with an exhaustiveness guard. `HostId = 'claude' | 'agents-md' | 'gemini' | 'cursor' | 'opencode'` (one owner; core/skills redeclare the literals). `SUPPORTED_HOSTS` — a frozen iteration list the CLI `--host` flag's `.choices(...)` and `noir doctor` consume. The CLI's 8 direct `claudeAdapter` imports collapsed to one `resolveAdapter(host)` call; adding a host needs no CLI edits beyond the flag enum.
@@ -191,7 +191,7 @@ Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`d
 - **No-duplication gating.** AGENTS.md is always emitted (every host reads it), but hosts with a native context file (`claude`→`CLAUDE.md`, `gemini`→`GEMINI.md`) keep it primary and **do not duplicate** content into AGENTS.md — the universal file carries only the canonical `@`-imports. One source (`.noir/`), never a drifting copy.
 
 ### Added — S11 remainder
-- **[`docs/reference/packages.md`](reference/packages.md)** — the per-package framework/library API surface ("usable as a framework"): the stable barrels of `@noir-ai/{core,store,workflow,adapters,skills,context,memory,model}` with versioning + stability stance. Includes the `@noir-ai/adapters` `HostAdapter`/`resolveAdapter`/`SUPPORTED_HOSTS` surface.
+- **[`docs/reference/packages.md`](docs/reference/packages.md)** — the per-package framework/library API surface ("usable as a framework"): the stable barrels of `@noir-ai/{core,store,workflow,adapters,skills,context,memory,model}` with versioning + stability stance. Includes the `@noir-ai/adapters` `HostAdapter`/`resolveAdapter`/`SUPPORTED_HOSTS` surface.
 - **`noir doctor` `publish` check** — advisory package-metadata validation across all `packages/*` (`name` `@noir-ai/*`, semver `version`, non-empty `files`, and `bin` for the cli). `warn` level, never `fail`.
 
 ### Fixed

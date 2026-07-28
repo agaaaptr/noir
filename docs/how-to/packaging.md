@@ -47,7 +47,7 @@ A package produced by the generator is automatically included in:
 - **Extend an existing package** when the work is a **feature inside a domain that already exists**. A new MCP tool that reads the store goes in `@noir-ai/daemon`; a new retrieval strategy goes in `@noir-ai/context`; a new skill goes under `packages/skills/builtin/`.
 - **Host adapters are special.** A new host (OpenCode, Gemini, …) goes **inside `@noir-ai/adapters`**, not in a new package — that is the S10 path. Do not spawn `@noir-ai/opencode`, `@noir-ai/gemini`, etc.
 
-If you find yourself reaching for a new package, check first that the capability doesn't already have a home: the package split was deliberate (see the [design blueprint](specs/2026-07-23-noir-toolkit-design.md)). The most recent addition was `@noir-ai/create` (Slice S) — added only when scaffolding graduated from a CLI-internal helper to a shared engine with its own public API and release contract.
+If you find yourself reaching for a new package, check first that the capability doesn't already have a home: the package split was deliberate (see the [design blueprint](../internal/specs/2026-07-23-noir-toolkit-design.md)). The most recent addition was `@noir-ai/create` (Slice S) — added only when scaffolding graduated from a CLI-internal helper to a shared engine with its own public API and release contract.
 
 ## Reference
 

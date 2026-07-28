@@ -2,12 +2,12 @@
 
 > The first-use walkthrough: install Noir, initialize a project, connect your host, and run your first spec-driven session. Concrete commands throughout.
 
-New to Noir? Read the [README](../README.md) first for the 30-second "what and why," then come back here. For the full reference (every command, the config schema, the filesystem layout), see [usage.md](usage.md).
+New to Noir? Read the [README](../README.md) first for the 30-second "what and why," then come back here. For the full reference (every command, the config schema, the filesystem layout), see [usage.md](reference/cli.md).
 
 ## What you need
 
 - **Node.js ≥ 22** (Node 22 is what CI uses). For the from-source dev install below you also need **pnpm 10** (`corepack enable && corepack prepare pnpm@10 --activate`).
-- **An agentic CLI host.** Noir targets **Claude Code by default**; Gemini, Cursor, OpenCode, and AGENTS.md are supported via `noir init --host <id>` (see [usage.md → Multi-host](usage.md#multi-host)). This walkthrough uses Claude Code. Noir is the workflow/context/memory *layer* — it is not an agent runtime. **Bring your own agent.**
+- **An agentic CLI host.** Noir targets **Claude Code by default**; Gemini, Cursor, OpenCode, and AGENTS.md are supported via `noir init --host <id>` (see [usage.md → Multi-host](reference/cli.md#multi-host)). This walkthrough uses Claude Code. Noir is the workflow/context/memory *layer* — it is not an agent runtime. **Bring your own agent.**
 - macOS, Linux, or Windows on x64 or arm64 (native deps ship prebuilt).
 
 ## Install
@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.
 
 Two channels ship in parallel:
 
-- **Default (`latest`)** — currently `1.0.0-beta.1`; no stable `1.x` package release has been published yet. The command above.
+- **Default (`latest`)** — currently `1.5.0` (stable). The command above.
 - **Beta** — `@noir-ai/cli@beta`. Append `NOIR_CHANNEL=beta`:
 
   ```bash
@@ -31,11 +31,11 @@ Two channels ship in parallel:
 
 - **Pin a version** — `NOIR_VERSION=1.2.3` (or `1.2.3-beta.1`) overrides the channel.
 
-The installer is idempotent (re-run = upgrade), prints a PATH hint if `noir` isn't on PATH, and verifies with `noir --version` at the end. The full reference — npm/pnpm/yarn/bun, one-shot `npx`, Homebrew, troubleshooting, the **beta vs stable** channel model in depth — lives in **[installation.md](installation.md)**.
+The installer is idempotent (re-run = upgrade), prints a PATH hint if `noir` isn't on PATH, and verifies with `noir --version` at the end. The full reference — npm/pnpm/yarn/bun, one-shot `npx`, Homebrew, troubleshooting, the **beta vs stable** channel model in depth — lives in **[installation.md](how-to/installation.md)**.
 
 ### From source (repo developers only)
 
-If you're developing Noir itself rather than using it, install from source: `git clone`, then `pnpm install && pnpm build`, then put `noir` on PATH via `pnpm --filter @noir-ai/cli link --global`. The `.mcp.json` written by `noir init` calls `command: "noir"`, so Claude Code needs `noir` resolvable on PATH. Full from-source walk-through (native deps, the first-run model download, the PATH papercut): **[installation.md](installation.md)**. End users should ignore this path and use the native installer or npm.
+If you're developing Noir itself rather than using it, install from source: `git clone`, then `pnpm install && pnpm build`, then put `noir` on PATH via `pnpm --filter @noir-ai/cli link --global`. The `.mcp.json` written by `noir init` calls `command: "noir"`, so Claude Code needs `noir` resolvable on PATH. Full from-source walk-through (native deps, the first-run model download, the PATH papercut): **[installation.md](how-to/installation.md)**. End users should ignore this path and use the native installer or npm.
 
 ## Initialize a project
 
@@ -50,7 +50,7 @@ noir init
 | Path | What it is |
 |---|---|
 | `.noir/project.id` | A UUID — the project's canonical `ProjectId` (Noir keys everything on this, never on a filesystem path). |
-| `.noir/config.yml` | Project config. Starts as `host: claude` + `mode: full`. See [usage.md → Configuration](usage.md#configuration). |
+| `.noir/config.yml` | Project config. Starts as `host: claude` + `mode: full`. See [configuration](reference/cli.md). |
 | `.noir/NOIR.md` | The canonical context file. The host merely `@import`s it. |
 | `.noir/rules/RULES.md` | The Noir-curated rules seed (Slice R); wired into the host context file via a managed `RULES_BLOCK`. |
 | `.noir/scaffold-version` | The scaffold-engine version stamp; `noir doctor` reports drift, `noir init --upgrade` runs migrations. |
@@ -120,7 +120,7 @@ The daemon is a **long-lived** Noir server that multiple clients can share — t
 - The daemon is **foreground-only** in v1 (`--detach` honestly returns exit code 2). Backgrounded / auto-restart daemons are v1.x.
 - A single global `~/.noir/daemon.json` records the running daemon; running Noir concurrently in two projects on the same machine will clobber that record (per-project records are v1.x).
 
-Pick the daemon **only** if you need a persistent shared server across host sessions. Active terminal commands start a daemon when needed; otherwise, stdio is the simplest host transport. See [usage.md → Transports](usage.md#transports) for the full comparison.
+Pick the daemon **only** if you need a persistent shared server across host sessions. Active terminal commands start a daemon when needed; otherwise, stdio is the simplest host transport. See [transports](explanation/sdd-workflow.md#transports) for the full comparison.
 
 ## Your first session in Claude Code
 
@@ -156,11 +156,11 @@ noir task new --slug csv-export --mode quick
 - **full** — spec + plan are authored **and reviewed** (gates), then execute, then verify (tests/build). Use this for real features and risky changes. This is the default.
 - **quick** — spec + plan are **skipped** (a `<quick-mode stub spec>` is written, and the spec/plan gates are recorded as `skipped`), execute runs, and the **verify gate still fires**. Use this for small, trivial, or spike tasks. It is not a free-for-all — it only skips formal planning, not verification.
 
-The host picks up the configured mode via the `noir-intake` skill / the `workflow_start` MCP tool. See [usage.md → SDD modes](usage.md#sdd-modes-full-vs-quick) for the details.
+The host picks up the configured mode via the `noir-intake` skill / the `workflow_start` MCP tool. See [SDD modes](explanation/sdd-workflow.md#modes) for the details.
 
 ## Where to go next
 
-- [installation.md](installation.md) — the full install reference (every path, troubleshooting, the channel model).
-- [usage.md](usage.md) — the full reference: every command, the config schema, the `.noir/` + `~/.noir/` layout, and the privacy rules.
-- [architecture/README.md](architecture/README.md) — how the 11 packages fit together (incl. the v1.x capability slices).
+- [installation.md](how-to/installation.md) — the full install reference (every path, troubleshooting, the channel model).
+- [usage.md](reference/cli.md) — the full reference: every command, the config schema, the `.noir/` + `~/.noir/` layout, and the privacy rules.
+- [architecture/README.md](explanation/architecture.md) — how the 11 packages fit together (incl. the v1.x capability slices).
 - [roadmap.md](roadmap.md) — current status, v1.x backlog, version targets.

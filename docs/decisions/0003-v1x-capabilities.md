@@ -47,7 +47,7 @@ ClickUp is delivered `skill-only + gated-write-proxy`. **2-way sync is at `/wrap
 
 ### `@noir-ai/create` is a new package, not a cli-internal module
 
-Scaffold graduated from an inline CLI concern to a subsystem with its own public API, its own consumers (`noir init`, `noir sync`, `noir create`, `noir doctor`), its own versioned output (`.noir/scaffold-version`), and its own migration contract. Per [ADR-0002](0002-native-skills-only-plugin-removed.md) and the [packaging guide](../packaging.md) ("add a package only for a genuinely new subsystem/domain"), that is the bar for a new package, so `@noir-ai/create` is its own package. `noir create [dir]` is constrained to the **AI layer only** — it never writes outside `.noir/`, the skills directory, and the host wiring; it is not a project generator.
+Scaffold graduated from an inline CLI concern to a subsystem with its own public API, its own consumers (`noir init`, `noir sync`, `noir create`, `noir doctor`), its own versioned output (`.noir/scaffold-version`), and its own migration contract. Per [ADR-0002](0002-native-skills-only-plugin-removed.md) and the [packaging guide](../how-to/packaging.md) ("add a package only for a genuinely new subsystem/domain"), that is the bar for a new package, so `@noir-ai/create` is its own package. `noir create [dir]` is constrained to the **AI layer only** — it never writes outside `.noir/`, the skills directory, and the host wiring; it is not a project generator.
 
 ### Locked Open Questions
 
@@ -79,7 +79,7 @@ These pre-date v1.x but are load-bearing for every slice above and were used as 
 
 ## References
 
-- Full design record: [`specs/2026-07-25-v1x-capabilities-design.md`](../specs/2026-07-25-v1x-capabilities-design.md)
-- Per-slice design + plans: [`superpowers/specs/`](../superpowers/specs/), [`superpowers/plans/`](../superpowers/plans/)
+- Full design record: [`specs/2026-07-25-v1x-capabilities-design.md`](../internal/specs/2026-07-25-v1x-capabilities-design.md)
+- Per-slice design + plans: [`superpowers/specs/`](../internal/specs/), [`superpowers/plans/`](../internal/plans/)
 - Release narrative: [`CHANGELOG.md`](../CHANGELOG.md) §`1.1.0-beta.1`
 - Related: [ADR-0002](0002-native-skills-only-plugin-removed.md) (native skills only — the foundation these slices extend), [ADR-0001](0001-doc-layout-and-spec-plan-paths.md) (doc/spec/plan layout)
