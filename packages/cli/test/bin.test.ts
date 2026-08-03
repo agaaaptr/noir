@@ -58,6 +58,22 @@ vi.mock('../src/commands/task.js', () => ({
   taskAdvance: vi.fn(async () => {}),
   taskNext: vi.fn(async () => {}),
 }));
+// C1 — install/migrate + update are real modules now; mock them at the
+// boundary so bin dispatch tests stay focused on argv → module wiring. Their
+// dedicated behavior (downgrade guard, native install, kill-switch) is covered
+// in install.test / update.test.
+vi.mock('../src/commands/install.js', () => ({ install: vi.fn(async () => {}) }));
+vi.mock('../src/commands/update.js', () => ({
+  update: vi.fn(async () => {}),
+  runAsyncUpdateCheck: vi.fn(async () => {}),
+  DEFAULT_UPDATE_CONFIG: {
+    checkEnabled: true,
+    checkIntervalHours: 24,
+    channel: 'latest',
+    minVersion: '1.6.0',
+    display: 'notice',
+  },
+}));
 
 import { createProgram, EXIT, inferExitCode, NoirCliError } from '../src/bin.js';
 import { contextIndex, contextSearch, contextStatus } from '../src/commands/context.js';
@@ -65,6 +81,7 @@ import { create } from '../src/commands/create.js';
 import { daemonRestart, daemonStart, daemonStatus, daemonStop } from '../src/commands/daemon.js';
 import { doctor } from '../src/commands/doctor.js';
 import { home } from '../src/commands/home.js';
+import { install } from '../src/commands/install.js';
 import {
   memoryConsolidate,
   memoryForget,
@@ -494,6 +511,70 @@ describe('commander migration — wired subcommands (skills/daemon → module)',
     const r = await parse(['skills']);
     expect(r.exitCode).toBe(EXIT.USAGE);
     expect(r.stderr).toMatch(/Usage: noir skills/);
+  });
+});
+
+// C1 — `noir install` / `noir migrate` parse-level wiring (T5 hardening).
+// Asserts argv → install() with the right option shape (positional spec,
+// --list, --uninstall-prev, migrate alias). install() is mocked at the
+// boundary; its real behavior (downgrade guard, native install) lives in
+// install.test.ts. This mirrors the it.each pattern used for the other
+// dispatched subcommands above.
+describe('noir install / migrate (C1) — parse-level wiring', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('`noir install --list` forwards list:true and defaults spec to undefined', async () => {
+    const r = await parse(['install', '--list']);
+    expect(r.exitCode).toBe(EXIT.OK);
+    expect(install).toHaveBeenCalledTimes(1);
+    expect(install).toHaveBeenLastCalledWith(
+      expect.objectContaining({ list: true, uninstallPrev: false, spec: undefined }),
+    );
+  });
+
+  it('`noir install latest` forwards spec="latest" (positional)', async () => {
+    const r = await parse(['install', 'latest']);
+    expect(r.exitCode).toBe(EXIT.OK);
+    expect(install).toHaveBeenLastCalledWith(
+      expect.objectContaining({ spec: 'latest', list: false, uninstallPrev: false }),
+    );
+  });
+
+  it('`noir install --uninstall-prev` forwards uninstallPrev:true', async () => {
+    const r = await parse(['install', '--uninstall-prev']);
+    expect(r.exitCode).toBe(EXIT.OK);
+    expect(install).toHaveBeenLastCalledWith(
+      expect.objectContaining({ uninstallPrev: true, list: false }),
+    );
+  });
+
+  it('`noir migrate 1.6.0` (alias) forwards spec="1.6.0" to install()', async () => {
+    // `migrate` is an alias for `install` (installCmd.alias('migrate')); it must
+    // route to the SAME handler with the positional version pin.
+    const r = await parse(['migrate', '1.6.0']);
+    expect(r.exitCode).toBe(EXIT.OK);
+    expect(install).toHaveBeenCalledTimes(1);
+    expect(install).toHaveBeenLastCalledWith(
+      expect.objectContaining({ spec: '1.6.0', list: false, uninstallPrev: false }),
+    );
+  });
+
+  it('`noir install` (bare) forwards defaults: spec undefined, no flags', async () => {
+    const r = await parse(['install']);
+    expect(r.exitCode).toBe(EXIT.OK);
+    expect(install).toHaveBeenLastCalledWith(
+      expect.objectContaining({ spec: undefined, list: false, uninstallPrev: false }),
+    );
+  });
+
+  it('`noir install --json latest` forwards the global json flag', async () => {
+    const r = await parse(['--json', 'install', 'latest']);
+    expect(r.exitCode).toBe(EXIT.OK);
+    expect(install).toHaveBeenLastCalledWith(
+      expect.objectContaining({ json: true, spec: 'latest' }),
+    );
   });
 });
 

@@ -748,11 +748,15 @@ export function createProgram(): Command {
     )
     .option('--list', 'list detected install methods')
     .option('--uninstall-prev', 'after a successful migrate, uninstall the previous install method')
+    .option(
+      '--dismiss',
+      'dismiss the migration banner for the current version (persists in install.json)',
+    )
     .argument('[spec]', "channel ('latest'|'beta') or exact version (default: latest)")
     .action(
       async (
         spec: string | undefined,
-        opts: { list?: boolean; uninstallPrev?: boolean },
+        opts: { list?: boolean; uninstallPrev?: boolean; dismiss?: boolean },
         cmd: Command,
       ) => {
         const { install } = await import('./commands/install.js');
@@ -762,6 +766,7 @@ export function createProgram(): Command {
           spec,
           list: opts.list === true,
           uninstallPrev: opts.uninstallPrev === true,
+          dismiss: opts.dismiss === true,
         });
       },
     );

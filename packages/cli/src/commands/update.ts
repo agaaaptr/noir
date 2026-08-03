@@ -40,10 +40,16 @@ export function buildUpdateTarget(opts: {
   latestKnown: string | null;
 }): UpdateTarget {
   const targetSpec = opts.spec ?? opts.channel;
+  // Semver downgrade guard (T6 hardening): only treat the latest-known version
+  // as an upgrade when it is STRICTLY NEWER than the current one. The prior
+  // inequality check (`latestKnown !== currentVersion`) would treat a registry
+  // that returned an OLDER version (e.g. beta/prerelease channel lag, or a
+  // pinned `--spec` older than installed) as an "upgrade" and silently
+  // downgrade the install.
   const isUpgrade =
     opts.latestKnown != null &&
     opts.currentVersion != null &&
-    opts.latestKnown !== opts.currentVersion;
+    semverGt(opts.latestKnown, opts.currentVersion);
   return {
     method: opts.method,
     targetSpec,
@@ -53,7 +59,41 @@ export function buildUpdateTarget(opts: {
   };
 }
 
+/**
+ * Per-segment numeric semver comparison (major.minor.patch). Returns true when
+ * `a` is strictly greater than `b`. Pre-release suffixes are ignored — Noir
+ * versioning is `MAJOR.MINOR.PATCH` only, and the registry's dist-tag is the
+ * source of truth for "latest". Non-numeric segments coerce to 0. Used here
+ * instead of a full semver library to keep the CLI's dependency surface
+ * unchanged (the same helper lives in install.ts for the downgrade guard).
+ */
+function semverGt(a: string, b: string): boolean {
+  const pa = a.split('.').map((s) => Number(s) || 0);
+  const pb = b.split('.').map((s) => Number(s) || 0);
+  for (let i = 0; i < 3; i++) {
+    const x = pa[i] ?? 0;
+    const y = pb[i] ?? 0;
+    if (x !== y) return x > y;
+  }
+  return false;
+}
+
 export async function update(opts: UpdateOptions = {}): Promise<void> {
+  // NOIR_DISABLE_UPDATES is the hard kill-switch for the SELF-UPDATE surface
+  // (distinct from NOIR_DISABLE_UPDATE_CHECK, which only gags the background
+  // version check). When set, `noir update` refuses to run at all — enterprises
+  // can pin this in the environment to enforce "updates flow only through the
+  // package manager / image rebuild, never from inside the CLI". `fail` is
+  // `: never` (always throws) — the explicit `return` is defensive.
+  if (process.env.NOIR_DISABLE_UPDATES !== undefined) {
+    fail(
+      EXIT.USAGE,
+      'self-update is disabled (NOIR_DISABLE_UPDATES is set); update via your package manager or image rebuild.',
+      opts,
+    );
+    return;
+  }
+
   const method = detectActiveMethod();
   const rec = readInstallRecord();
   const currentVersion = rec?.version ?? null;
@@ -64,12 +104,21 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
       latest
         ? `Latest: ${latest} (you have ${currentVersion ?? 'unknown'})`
         : 'Could not reach the registry.',
+      opts,
     );
     return;
   }
 
   // Fetch latest (network; timeout-bound).
   const latest = await fetchLatestVersion('latest');
+  // T6 hardening: when the registry was unreachable (fetch returned null), say
+  // so explicitly — mirroring `--check` — instead of falling through to the
+  // "up to date" branch (which the old inequality-based isUpgrade would print
+  // because `null != currentVersion`).
+  if (latest === null) {
+    info('Could not reach the registry.', opts);
+    return;
+  }
   const target = buildUpdateTarget({
     method,
     channel: 'latest',
@@ -79,7 +128,7 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
   });
 
   if (!target.isUpgrade) {
-    info(`noir ${currentVersion} is up to date.`);
+    info(`noir ${currentVersion} is up to date.`, opts);
     return;
   }
 

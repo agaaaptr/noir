@@ -60,11 +60,14 @@ function tryProject(): { id: string; name: string; host: HostId } | null {
 /**
  * One-time nudge: shows only for non-native installs, once per version. The
  * "dismissed for this version" flag is stored in install.json's record
- * (`dismissedVersions` is added on demand); absence ⇒ show.
+ * (`dismissedVersions`); absence ⇒ show. Once the user dismisses (via
+ * `noir install --dismiss`), the current CLI version is appended and the
+ * banner stays silent until they next upgrade Noir.
  */
-export function shouldShowMigrationBanner(rec: InstallRecord, _currentVersion: string): boolean {
+export function shouldShowMigrationBanner(rec: InstallRecord, currentVersion: string): boolean {
   if (rec.method === 'native') return false;
-  return true; // naive v1: show whenever non-native; dismissal persists via a flag added in Task 11 hardening
+  if (rec.dismissedVersions?.includes(currentVersion)) return false;
+  return true;
 }
 
 /** One-line summary of the CLI command surface (shown under the banner). */

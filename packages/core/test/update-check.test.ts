@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   isUpdateCheckDisabled,
   isUpdateStale,
+  latestVersionFromCache,
   readUpdateCache,
   shouldCheckForUpdate,
   writeUpdateCache,
@@ -70,6 +71,39 @@ describe('isUpdateStale', () => {
     expect(isUpdateStale({ lastCheckAt: old, latestVersion: '1.7.0', channel: 'latest' }, 24)).toBe(
       true,
     );
+  });
+  it('stale (never suppressed) when lastCheckAt is unparseable garbage (NaN guard)', () => {
+    // A corrupt/hand-edited cache must NOT silently look "fresh" and suppress
+    // the check forever — `new Date('garbage').getTime()` is NaN, so the bare
+    // `elapsed >= interval` comparison would be false (NaN >= N === false).
+    // The NaN guard must flip this back to stale=true.
+    expect(
+      isUpdateStale({ lastCheckAt: 'not-a-date', latestVersion: '1.7.0', channel: 'latest' }, 24),
+    ).toBe(true);
+  });
+});
+
+describe('latestVersionFromCache', () => {
+  it('returns the cached version when the channel matches', () => {
+    expect(
+      latestVersionFromCache(
+        { lastCheckAt: '2026-08-03T00:00:00.000Z', latestVersion: '1.7.0', channel: 'latest' },
+        'latest',
+      ),
+    ).toBe('1.7.0');
+  });
+  it('returns null when the channel differs (cross-channel isolation)', () => {
+    expect(
+      latestVersionFromCache(
+        { lastCheckAt: '2026-08-03T00:00:00.000Z', latestVersion: '1.7.0', channel: 'latest' },
+        'beta',
+      ),
+    ).toBe(null);
+  });
+  it('returns null when no version is cached', () => {
+    expect(
+      latestVersionFromCache({ lastCheckAt: null, latestVersion: null, channel: null }, 'latest'),
+    ).toBe(null);
   });
 });
 

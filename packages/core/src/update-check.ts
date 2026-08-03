@@ -45,7 +45,14 @@ export function isUpdateCheckDisabled(env: NodeJS.ProcessEnv): boolean {
 
 export function isUpdateStale(cache: UpdateCache, intervalHours: number): boolean {
   if (!cache.lastCheckAt) return true;
-  const elapsed = Date.now() - new Date(cache.lastCheckAt).getTime();
+  const lastMs = new Date(cache.lastCheckAt).getTime();
+  // Guard against an unparseable / non-date `lastCheckAt` (e.g. corrupt cache,
+  // hand-edited file). `new Date('garbage').getTime()` returns NaN; any
+  // arithmetic with NaN is NaN, so the `>=` would be false — meaning a corrupt
+  // cache would silently look "fresh" and suppress the check forever. Treat
+  // NaN as "never checked" → stale.
+  if (Number.isNaN(lastMs)) return true;
+  const elapsed = Date.now() - lastMs;
   return elapsed >= intervalHours * 60 * 60 * 1000;
 }
 

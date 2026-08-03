@@ -5,6 +5,7 @@ import {
   type DetectResult,
   detectActiveMethod,
   detectInstallMethods,
+  NOIR_VERSION,
   noirHome,
   readInstallRecord,
   runManagerCmd,
@@ -16,6 +17,9 @@ export interface InstallOptions extends CliOptions {
   list?: boolean;
   uninstallPrev?: boolean;
   spec?: string;
+  /** Dismiss the migration banner for the current CLI version (persists in
+   *  install.json's `dismissedVersions`). Typically passed with `--list`. */
+  dismiss?: boolean;
 }
 
 export interface MigrationPlan {
@@ -132,6 +136,24 @@ export async function installManagedNode(opts: {
 }
 
 export async function install(opts: InstallOptions = {}): Promise<void> {
+  // --dismiss: append the current CLI version to install.json's
+  // `dismissedVersions` so the migration banner stops showing for this
+  // version. Idempotent (no duplicate entries). Typically combined with
+  // `--list`; works standalone too. Requires an existing install record —
+  // if there's none, there's nothing to dismiss (no banner was shown).
+  if (opts.dismiss === true) {
+    const rec = readInstallRecord();
+    if (!rec) {
+      info('No install record found; nothing to dismiss.');
+      return;
+    }
+    const dismissed = new Set(rec.dismissedVersions ?? []);
+    if (!dismissed.has(NOIR_VERSION)) dismissed.add(NOIR_VERSION);
+    writeInstallRecord({ ...rec, dismissedVersions: [...dismissed] });
+    success(`Migration banner dismissed for ${NOIR_VERSION}.`);
+    if (opts.list !== true) return; // --dismiss alone is done; --list continues below.
+  }
+
   if (opts.list === true) {
     const detected = await detectInstallMethods(process.env);
     const jsonOutput = { ok: true, data: { detected } };
@@ -191,5 +213,9 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
     if (code === 0) success('Previous install removed.');
     else warn('Previous install NOT removed (non-zero exit). You can remove it manually.');
   }
+  // Claude Code #41806/#27910 mitigation: the old npm bin may still resolve
+  // first in $PATH after migration (the shell hashes command paths, and a
+  // stale global install can shadow ~/.noir/bin). Hint the user to refresh.
+  info('If `noir` still points at the old install, run: hash -r && which -a noir');
   success(`noir ${result.version} installed via native. Run \`noir doctor\` to verify.`);
 }

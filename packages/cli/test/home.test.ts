@@ -254,4 +254,43 @@ describe('shouldShowMigrationBanner', () => {
       ),
     ).toBe(false);
   });
+
+  // C1 hardening (brief Step 2): banner dismissal persists per version.
+  it('returns false when the current version is in dismissedVersions', () => {
+    expect(
+      shouldShowMigrationBanner(
+        {
+          method: 'npm',
+          version: '1.6.0',
+          channel: 'latest',
+          installedAt: 'x',
+          dismissedVersions: ['1.6.0'],
+        },
+        '1.6.0',
+      ),
+    ).toBe(false);
+  });
+  it('returns true again after an upgrade (new version not yet dismissed)', () => {
+    // Dismissed for 1.6.0, but the user upgraded to 1.7.0 → nudge once more.
+    expect(
+      shouldShowMigrationBanner(
+        {
+          method: 'npm',
+          version: '1.6.0',
+          channel: 'latest',
+          installedAt: 'x',
+          dismissedVersions: ['1.6.0'],
+        },
+        '1.7.0',
+      ),
+    ).toBe(true);
+  });
+  it('absent dismissedVersions ⇒ show (backward-compatible with older records)', () => {
+    expect(
+      shouldShowMigrationBanner(
+        { method: 'npm', version: '1.6.0', channel: 'latest', installedAt: 'x' },
+        '1.6.0',
+      ),
+    ).toBe(true);
+  });
 });
