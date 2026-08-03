@@ -1,10 +1,10 @@
 # Capability 1 — Package Distribution & Release Management
 
-> **Status:** Partial — core shipped, distribution breadth + self-update are research
+> **Status:** Partial — core + native installer + self-update shipped; winget/Chocolatey deferred
 
 ## Overview
 
-How Noir is distributed (npm monorepo, installers, release channels) and how releases are versioned, published, and recorded. The npm/release-automation core is shipped; Scoop/Winget/native-binary/self-update are open.
+How Noir is distributed (npm monorepo, native installer, package-manager taps, release channels) and how releases are versioned, published, and recorded. The npm/release-automation core, the native managed-Node installer, the CLI self-update/migrate path, and the Homebrew/Scoop taps are shipped; winget/Chocolatey are deferred by decision (see ADR-0005).
 
 ## Shipped today
 
@@ -14,37 +14,53 @@ How Noir is distributed (npm monorepo, installers, release channels) and how rel
 - Auto-generated release registry `.noir/releases/releases.json` + `releases.md`, with rebuild/validate/history tooling and a JSON schema (`schemas/release-registry.schema.json`, `scripts/release-registry.mjs`).
 - Auto-computed beta numbering (`scripts/compute-version.mjs`, `scripts/release-tag.mjs`) and unified version bumping (`scripts/bump-version.mjs`).
 - Idempotent publish: CI pre-checks npm and skips re-publish; auto-creates a GitHub Release per tag — `.github/workflows/release.yml`.
-- `scripts/install.sh` native installer (curl|sh) supporting `NOIR_CHANNEL`/`NOIR_VERSION`, proxy pass-through, sudo policy, PATH hint, and version verify.
-- Homebrew formula template `packaging/homebrew/noir.rb` (Node-for-Formula-Authors) plus tap README — **NOT yet published/usable**.
+- **Native installer** — managed-Node, not single-binary (research-verified; see ADR-0005):
+  - `scripts/install.sh` (POSIX) + `scripts/install.ps1` (Windows PowerShell): provision a pinned Node 22.x runtime under `~/.noir/runtime/`, install `@noir-ai/cli` into an isolated prefix under `~/.noir/cli/`, write a `noir` shim at `~/.noir/bin/noir` (`.cmd` on Windows), record the install in `~/.noir/install.json` (`method: native`). No system Node prerequisite, no `sudo`/admin. Idempotent (re-run = upgrade). `NOIR_CHANNEL`/`NOIR_VERSION` env knobs; proxy pass-through; PATH hint; `noir --version` verify.
+  - Windows PowerShell (`install.ps1`) is the primary Windows path — no Git Bash/MSYS2/WSL needed.
+  - Trust: installers are published as Release artifacts with a `SHA256SUMS` file + a Sigstore build-time attestation (`actions/attest-build-provenance@v3`); consumers verify with `shasum -a 256` + `gh attestation verify install.sh --repo agaaaptr/noir`.
+- **CLI self-update + migration** (`packages/cli/src/commands/{install,update}.ts`, `packages/core/src/install-*.ts`):
+  - `noir install` / `noir migrate [spec]` — move an existing install to the native path; preserves all settings (`.noir/` + `~/.noir/` data untouched); `--list` detects every install; `--uninstall-prev` removes the prior method (never auto-uninstalls; prints the suggested command when omitted).
+  - `noir update [spec]` / `noir update --check` — self-update via the active install method (native → re-provision; npm/pnpm/yarn/bun/Homebrew/Scoop → reinstall via that manager).
+  - **Async startup version check** — non-blocking, cached (`~/.noir/update.json`), 24h interval default; honors `NOIR_DISABLE_UPDATE_CHECK` (background check only) and `NOIR_DISABLE_UPDATES` (hard kill-switch for the whole self-update surface).
+  - **Version-assert** — `noir install`/`update` refuses a silent downgrade (per-segment numeric semver comparison); explicit `--spec`/pin prints a warning.
+  - **Doctor install row** (`noir doctor`) — advisory `ok`/`warn` only, never `fail`, never a live network call; reports the detected method, installed version, latest-known version, and a `native recommended` nudge on non-native paths.
+- **Homebrew formula** — real `url`/`sha256`/`version` from the published 1.6.0 npm tarball (`packaging/homebrew/noir.rb`, Node-for-Formula-Authors pattern; stable-only; tap README at `packaging/homebrew/README.md`).
+- **Scoop manifest** — `packaging/scoop/noir.json` (Windows; depends on `nodejs-lts`; shims `dist/bin.js` as `noir`; stable-only single-channel).
 
 ## Gap / roadmap delta
 
-- CLI self-update / version management: no `noir update`/`upgrade`, no startup version check (asynchronous, cached, configurable).
-- Complete and publish the Homebrew formula (placeholder `url`/`sha256`/`version` today).
-- Scoop / Winget / Chocolatey manifests — none exist.
-- Native/binary installer path: `install.sh` delegates to `npm install -g`; bootstrap/rollback/uninstall/repair/self-update not implemented.
-- Migration-recommendation messaging in the CLI.
-- Richer release metadata: `changelogRef` is `null` on every registry entry; `migrationNotes`/`breakingChanges`/`securityAdvisory` not captured.
-- Surface dist-tag `latest`/`beta` detection to the CLI at runtime (release-only today).
-- Reconcile registry channel mislabels (1.4.0/1.5.0 rows say `beta` despite stable publishes).
+- **winget / Chocolatey** — deferred by decision (see ADR-0005). Windows is covered by `install.ps1` (primary), Scoop, and npm; winget/Chocolatey add breadth but no new capability. Will revisit if Windows user demand surfaces.
+- **Managed-Node auto-provisioning** — the CLI's `installManagedNode` expects the runtime already provisioned under `~/.noir/runtime/node/` by `install.sh`/`install.ps1`; a CLI-only bootstrap (no shell script) is not yet wired. Today, run the shell installer first.
+- **Richer release metadata** — `changelogRef` is `null` on every registry entry; `migrationNotes`/`breakingChanges`/`securityAdvisory` not captured.
+- **Reconcile registry channel mislabels** — 1.4.0/1.5.0 rows say `beta` despite stable publishes.
+- **Per-channel update cache** — `~/.noir/update.json` records a single channel; cross-channel isolation is enforced by `latestVersionFromCache(cache, channel)` (returns null on mismatch), but a `Record<channel, version>` shape was deliberately not adopted to preserve the committed `UpdateCache` interface (see Task 11 report).
 
 ## Acceptance criteria
 
 1. MET — `@noir-ai/*` monorepo publishes to npm with SLSA provenance, at a unified version, from CI.
 2. MET — Stable (`latest`) and prerelease (`beta`) dist-tags exist and are installable across npm/pnpm/yarn/bun and one-shot runners.
 3. MET — Release registry is auto-generated and validates against `schemas/release-registry.schema.json`.
-4. DONE-when — `noir update`/`upgrade` and a configurable, cached, async startup version check are shipped.
-5. DONE-when — Homebrew formula is published and installable (real url/sha256/version); Scoop/Winget/Chocolatey manifests or an explicit decision to omit them are recorded.
-6. DONE-when — registry rows carry accurate channel labels and non-null `changelogRef` for each release.
+4. MET — `noir update`/`migrate` and a configurable, cached, async startup version check are shipped; kill-switches `NOIR_DISABLE_UPDATE_CHECK`/`NOIR_DISABLE_UPDATES` honored; semver downgrade guard prevents silent downgrades.
+5. MET — Homebrew formula is published with real url/sha256/version; Scoop manifest ships; winget/Chocolatey are deferred by explicit decision (ADR-0005).
+6. MET — Native installer (`install.sh` + `install.ps1`) ships as managed-Node (no system Node, no admin); installers are Release artifacts with `SHA256SUMS` + Sigstore attestation.
+7. DONE-when — registry rows carry accurate channel labels and non-null `changelogRef` for each release.
 
 ## References
 
 - `docs/how-to/installation.md`
 - `docs/how-to/releasing.md`
 - `docs/how-to/packaging.md`
+- `docs/decisions/0005-native-installer-managed-node.md`
 - `scripts/install.sh`
+- `scripts/install.ps1`
+- `packages/cli/src/commands/install.ts`
+- `packages/cli/src/commands/update.ts`
+- `packages/core/src/install-method.ts`
+- `packages/core/src/install-detect.ts`
+- `packages/core/src/update-check.ts`
 - `scripts/release-registry.mjs`
 - `scripts/bump-version.mjs`
 - `packaging/homebrew/noir.rb`
+- `packaging/scoop/noir.json`
 - `.noir/releases/releases.json`
 - `schemas/release-registry.schema.json`

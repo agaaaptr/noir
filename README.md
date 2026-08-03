@@ -26,18 +26,28 @@ The `noir` home menu (interactive; `noir status` when non-interactive):
 **Current beta:** `1.6.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.6.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-03T07:39:41.309Z*
+*Last auto-generated: 2026-08-03T13:16:49.836Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
 
+**Recommended — native installer** (managed-Node runtime under `~/.noir/`; no system Node prerequisite, no `sudo`/admin):
+
 ```bash
-npm install -g @noir-ai/cli     # install (puts `noir` on your PATH)
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | bash
+# Windows (PowerShell)
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.ps1 | iex"
+```
+
+Then:
+
+```bash
 noir init                        # scaffold .noir/ + 34 skills + host wiring
 noir                             # open the home menu (screenshot above)
 ```
 
-Beta channel (`@beta`), other install paths, and native installer → [Installation](docs/how-to/installation.md).
+Other install paths (npm/pnpm/yarn/bun, npx one-shot, Homebrew, Scoop), beta channel, `noir install`/`migrate`, and `noir update` → [Installation](docs/how-to/installation.md).
 First-use walkthrough → [Getting Started](docs/getting-started.md).
 
 ## What's in the box
@@ -67,12 +77,14 @@ noir init [--host <id>]         scaffold .noir/ + skills + host wiring
 noir sync                       re-emit skills + host config
 noir create [dir]               AI-layer scaffold
 noir status                     probe-only health (daemon-down safe)
-noir doctor                     config / store / embedder / deps
+noir doctor                     config / store / embedder / deps / install
 noir daemon start|stop|status   persistent MCP server
 noir context {search,index}     hybrid retrieval
 noir memory {recall,save,forget} cross-session memory
 noir task {new,status,advance}  SDD workflow
 noir skills list                list 34 builtins + integrations
+noir install|migrate [spec]     native install / migrate from another method
+noir update [spec]              self-update via the active install method
 noir handoff                    pasteable host handoff artifact
 noir tui                        interactive Ink dashboard
 ```

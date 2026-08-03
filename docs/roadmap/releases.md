@@ -14,6 +14,9 @@
 
 **The platform today (shipped & working):**
 - **11 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`, unified versioning, npm with SLSA provenance, dist-tags `latest` + `beta`.
+- **Native installer** — managed-Node (not single-binary; ADR-0005): `install.sh` (POSIX) + `install.ps1` (Windows PowerShell) provision a pinned Node 22.x runtime under `~/.noir/`, install into an isolated prefix, write a `noir` shim, record `~/.noir/install.json`. No system Node, no `sudo`/admin. Release artifacts carry `SHA256SUMS` + a Sigstore build-time attestation (`gh attestation verify`).
+- **CLI self-update + migration** — `noir install`/`migrate` (move an existing install to native, settings preserved, `--uninstall-prev` explicit, never auto-uninstalls); `noir update` (reinstall via the active method); async cached startup version check (24h default) with `NOIR_DISABLE_UPDATE_CHECK` / `NOIR_DISABLE_UPDATES` kill-switches; semver downgrade guard; `noir doctor` install row (advisory, no network).
+- **Homebrew formula + Scoop manifest** — real `url`/`sha256`/`version` from the 1.6.0 tarball; stable-only (single-channel taps). winget/Chocolatey deferred (ADR-0005).
 - **33 builtin `noir-` skills** + **1 integration** (`noir-clickup`) — a copy+validate compiler with WHEN-led descriptions, emitted idempotently via `noir init`/`sync` (no plugin, no marketplace — see ADR-0002).
 - **SDD workflow engine** — FSM (Intake→Clarify→Spec→Plan→Execute→Verify→Document) with observable, escapable gates, Full/Quick modes, cross-session resume, `.noir/` artifacts, `workflow_*` MCP tools.
 - **Hybrid context retrieval** — BM25 ∪ kNN → RRF, local 384-dim embeddings by default (zero API key), remote/Ollama embedders opt-in.
@@ -21,8 +24,8 @@
 - **Bounded model layer** — single-shot `complete()`, 3 adapters, provider-explicit, agent loops impossible by construction.
 - **Local daemon** — single-writer store, stdio + Streamable HTTP transports, read-only FS fallback, 17+ MCP tools.
 - **5 host adapters** — `claude`/`agents-md`/`gemini`/`cursor`/`opencode` via `resolveAdapter(host)` + universal `AGENTS.md` emitter (ADR-0004).
-- **CLI** — commander command tree, `@clack` home menu, Ink `noir tui` MVP, `noir doctor`, stable exit codes, `data → stdout / diagnostics → stderr`.
-- **Release automation** — branch-based beta/stable dist-tag, auto-prerelease versioning, version registry, smart release tooling.
+- **CLI** — commander command tree, `@clack` home menu, Ink `noir tui` MVP, `noir doctor` (incl. install row), `noir install`/`migrate`/`update`, stable exit codes, `data → stdout / diagnostics → stderr`.
+- **Release automation** — branch-based beta/stable dist-tag, auto-prerelease versioning, version registry, smart release tooling, installer artifacts + checksums + Sigstore attestation.
 
 > The per-slice shipped record below is the historical narrative. Do not trust in-file test counts — always cross-check `.noir/releases/` and `CHANGELOG.md` for the current number.
 
@@ -41,6 +44,7 @@ All 15 published releases are in the registry; the milestone history is:
 - **v1.4.0-beta.2** — release automation: auto-prerelease versioning, version registry, smart release tooling.
 - **v1.5.0 — FIRST STABLE PUBLISHED on npm (dist-tag `latest`)** (2026-07-28) — `npm i @noir-ai/cli` now resolves to `1.5.0`. First publication of the `latest` channel from `main`.
 - **v1.6.0 — current stable** — released alongside `v1.6.0-beta.1` (beta channel).
+- **C1 native installer + migration + self-update (in flight on `develop`, not yet published)** — managed-Node installer (`install.sh` + `install.ps1`), `noir install`/`migrate`, `noir update` + async cached version check, doctor install row, real Homebrew formula, Scoop manifest, installer attestation (`SHA256SUMS` + Sigstore). Decision record: ADR-0005 (managed-Node, not single-binary; Windows = PowerShell + Scoop; winget/Chocolatey deferred). Commits stay local on `develop`; publish is a separate later phase.
 
 ---
 

@@ -6,7 +6,7 @@ New to Noir? Read the [README](../README.md) first for the 30-second "what and w
 
 ## What you need
 
-- **Node.js ≥ 22** (Node 22 is what CI uses). For the from-source dev install below you also need **pnpm 10** (`corepack enable && corepack prepare pnpm@10 --activate`).
+- **No system Node prerequisite** if you use the native installer (recommended) — it provisions a managed Node 22.x runtime under `~/.noir/`. If you install via npm/pnpm/yarn/bun directly, **Node.js ≥ 22** is required (Node 22 is what CI uses). For the from-source dev install below you also need **pnpm 10** (`corepack enable && corepack prepare pnpm@10 --activate`).
 - **An agentic CLI host.** Noir targets **Claude Code by default**; Gemini, Cursor, OpenCode, and AGENTS.md are supported via `noir init --host <id>` (see [usage.md → Multi-host](reference/cli.md#multi-host)). This walkthrough uses Claude Code. Noir is the workflow/context/memory *layer* — it is not an agent runtime. **Bring your own agent.**
 - macOS, Linux, or Windows on x64 or arm64 (native deps ship prebuilt).
 
@@ -14,24 +14,27 @@ New to Noir? Read the [README](../README.md) first for the 30-second "what and w
 
 ### Recommended: native installer
 
-For end users the install is one line — a small `curl | sh` script that detects Node + npm and runs `npm install -g @noir-ai/cli` on your behalf:
+For end users the install is one line. The installer provisions a managed Node 22.x runtime under `~/.noir/` (no system Node, no `sudo`/admin), installs `@noir-ai/cli` into an isolated prefix, and writes a `noir` shim at `~/.noir/bin/noir`:
 
 ```bash
+# macOS / Linux
 curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | bash
+# Windows (PowerShell — no Git Bash/MSYS2/WSL needed)
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.ps1 | iex"
 ```
 
 Two channels ship in parallel:
 
-- **Default (`latest`)** — currently `1.5.0` (stable). The command above.
-- **Beta** — `@noir-ai/cli@beta`. Append `NOIR_CHANNEL=beta`:
+- **Default (`latest`)** — currently `1.6.0` (stable). The command above.
+- **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
 
   ```bash
   curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | NOIR_CHANNEL=beta bash
   ```
 
-- **Pin a version** — `NOIR_VERSION=1.2.3` (or `1.2.3-beta.1`) overrides the channel.
+- **Pin a version** — `NOIR_VERSION=1.6.0` (or `1.6.0-beta.1`) overrides the channel.
 
-The installer is idempotent (re-run = upgrade), prints a PATH hint if `noir` isn't on PATH, and verifies with `noir --version` at the end. The full reference — npm/pnpm/yarn/bun, one-shot `npx`, Homebrew, troubleshooting, the **beta vs stable** channel model in depth — lives in **[installation.md](how-to/installation.md)**.
+The installer is idempotent (re-run = upgrade), prints a PATH hint if `noir` isn't on PATH, and verifies with `noir --version` at the end. To move an existing npm/Homebrew/Scoop install to the native path, run `noir migrate` (settings preserved). To update later, run `noir update`. The full reference — npm/pnpm/yarn/bun, one-shot `npx`, Homebrew, Scoop, troubleshooting, the **beta vs stable** channel model, and the trust/checksum/attestation story — lives in **[installation.md](how-to/installation.md)**.
 
 ### From source (repo developers only)
 
@@ -140,8 +143,10 @@ You can watch the lifecycle from a terminal at any time:
 ```bash
 noir status         # probe-only health; works even with the daemon down
 noir task status    # where the active task is in the lifecycle
-noir doctor         # config / store / embedder / native deps / provider status
+noir doctor         # config / store / embedder / native deps / provider / install status
 ```
+
+`noir doctor` includes an **install row** (advisory `ok`/`warn`, never `fail`, no network call) that reports the detected install method (`native`/`npm`/`pnpm`/…), the installed version, and the latest-known version from the update cache — a non-blocking `native recommended` nudge appears when you're on a non-native path.
 
 That's the whole loop. You don't drive the gates by hand — you talk to the host, and the host drives Noir.
 

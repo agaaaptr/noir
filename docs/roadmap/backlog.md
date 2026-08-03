@@ -65,11 +65,9 @@ This backlog is the consolidation of the former `docs/roadmap.md` "v1.x backlog"
 
 ## Distribution (from C1 grounding)
 
-- **CLI self-update / version management** — no `noir update`/`upgrade`, no startup version check.
-- **Complete + publish the Homebrew formula** — `packaging/homebrew/noir.rb` is a placeholder (Node-for-Formula-Authors; url/sha256/version TBD).
-- **Scoop / Winget / Chocolatey manifests** — none exist.
-- **Native/binary installer path** — today `scripts/install.sh` delegates to `npm install -g`; bootstrap/rollback/uninstall/repair/self-update are not implemented.
-- **Migration-recommendation messaging** in the CLI.
+- **winget / Chocolatey manifests** — deferred by decision (ADR-0005). Windows is covered by `install.ps1` (primary), Scoop, and npm; revisit if Windows user demand surfaces.
+- **CLI-only managed-Node bootstrap** — the CLI's `installManagedNode` expects the runtime already provisioned by `install.sh`/`install.ps1`; a no-shell-script bootstrap from inside the CLI is not yet wired.
+- **Per-channel update cache** — `~/.noir/update.json` records a single channel; cross-channel isolation is enforced by `latestVersionFromCache` (null on mismatch), but a `Record<channel, version>` shape was deliberately not adopted to preserve the committed `UpdateCache` interface.
 - **Richer release metadata** — `changelogRef` is null on every registry entry; migration notes / breaking changes / security advisory are not captured.
 - **Reconcile registry channel mislabels** — `1.4.0`/`1.5.0` rows carry `channel: beta` despite being stable publishes.
 
@@ -80,6 +78,7 @@ This backlog is the consolidation of the former `docs/roadmap.md` "v1.x backlog"
 - **Resolved in v1.1.0-beta.1:** K3 (skills-compiler generalization → `discoverIntegrations` + `integration.json`, landed in Slice X); R4/R5 (`rules:` config block + `noir doctor` RULES.md budget check); P3/P4 (`draftPrd` + `prd:` config + `advance()` soft PRD gate); Workflow dual-source-of-truth collapse (W1) + vestigial checkpoint (W2) + S4 nits (W3); Context kNN-only-hit snippet hydration (C1); Toolchain stale-skill-dir cleanup (T2) + `tsconfig.test.json` pilot (T1); lint → 0.
 - **Resolved in v1.2.0-beta.1:** S10 multi-host (`resolveAdapter`, `HostId` enum, `--host` flag, 4 new adapters, universal `AGENTS.md`); S11 SDK/doctor remainder (`docs/reference/packages.md`, `noir doctor` `publish` check).
 - **Resolved in 1.4.0-beta.1:** universal conflict contract routing every producer through one `onConflict` seam; `assertNotUserOwned`-guarded orphan cleanup.
+- **Resolved in the C1 native-installer line (local on `develop`, not yet published):** CLI self-update / version management — `noir update` + async cached startup version check (24h default; `NOIR_DISABLE_UPDATE_CHECK`/`NOIR_DISABLE_UPDATES` kill-switches; semver downgrade guard). Native installer path — managed-Node `install.sh` (POSIX) + `install.ps1` (Windows PowerShell): provision a pinned Node 22.x runtime under `~/.noir/`, isolated prefix, `noir` shim, `install.json` record; no system Node, no admin. `noir install`/`migrate` — move an existing install to native, settings preserved, `--uninstall-prev` explicit (never auto-uninstalls); one-time migration banner + `--dismiss`. `noir doctor` install row (advisory `ok`/`warn`, never `fail`, no network). Homebrew formula (`packaging/homebrew/noir.rb`) — real url/sha256/version from the 1.6.0 tarball (was a placeholder). Scoop manifest (`packaging/scoop/noir.json`). Installer trust — `SHA256SUMS` + Sigstore build-time attestation per release (`gh attestation verify`). Decision record: ADR-0005.
 
 ---
 

@@ -112,7 +112,29 @@ git push origin v1.4.0
 5. `pnpm pack` (captures the injected version in tarballs).
 6. `npm publish --provenance --access public --tag latest` for each tarball.
 7. Updates `.noir/releases/` registry and pushes back to the repo.
-8. Creates a GitHub Release with auto-generated release notes.
+8. **Generates installer artifacts + `SHA256SUMS` + Sigstore attestation** for `install.sh` and `install.ps1` (see [§2c](#2c-installer-artifacts-checksums--attestation)).
+9. Creates a GitHub Release with auto-generated release notes, attaching the installers + `SHA256SUMS` and pasting the `gh attestation verify` instructions into the body.
+
+### 2c. Installer artifacts, checksums & attestation
+
+Every stable release publishes the **native installers** as GitHub Release artifacts and binds them to the CI run that produced them via a Sigstore build-time attestation (the same SLSA predicate npm uses). The `release.yml` job:
+
+1. Copies `scripts/install.sh` + `scripts/install.ps1` into a `dist-installers/` tree.
+2. Generates `SHA256SUMS` (`shasum -a 256 install.sh install.ps1 > SHA256SUMS`) — pinned checksums users can verify offline.
+3. Runs [`actions/attest-build-provenance@v3`](https://github.com/actions/attest-build-provenance) over `install.sh`, `install.ps1`, and `SHA256SUMS`, persisting a Sigstore attestation to GitHub's attestations API (`attestations: write` permission).
+4. Uploads all three as Release assets and pastes the verification commands into the Release body.
+
+Consumer verification (also documented in [installation.md](installation.md#trust--verification-pinned-installers-checksums-attestation)):
+
+```bash
+# 1. Verify the checksum against SHA256SUMS
+shasum -a 256 install.sh            # compare to the install.sh line in SHA256SUMS
+
+# 2. Verify the build-time attestation (binds the file to this repo's CI run)
+gh attestation verify install.sh --repo agaaaptr/noir
+```
+
+`gh attestation verify` checks the cryptographic attestation minted for the file at publish time, so a tampered installer (even one with a matching checksum, if the checksum file itself were swapped) is caught. The attestation uses the GitHub OIDC token from `permissions: id-token: write` — independent of the npm token.
 
 ---
 
@@ -215,6 +237,24 @@ git push origin v1.5.0-beta.2
 ```
 
 No source changes needed — the CI handles the suffix.
+
+### 2d. Homebrew & Scoop (stable-only, manual bump on each stable)
+
+The Homebrew formula ([`packaging/homebrew/noir.rb`](../../packaging/homebrew/noir.rb)) and Scoop manifest ([`packaging/scoop/noir.json`](../../packaging/scoop/noir.json)) are **stable-only** — there is no beta channel on a tap/bucket. After each stable publish, refresh the `url`/`sha256`/`version` from the now-published npm tarball:
+
+```bash
+# Get the three values from npm (immutable once published)
+curl -sL https://registry.npmjs.org/@noir-ai/cli/latest | \
+  jq -r '.version, .dist.tarball, .dist.integrity'
+
+# sha256 of the tarball (Homebrew wants sha256; npm reports sha512-integrity)
+shasum -a 256 <(curl -sL "<tarball>")
+
+# Homebrew: update url/sha256/version in packaging/homebrew/noir.rb
+# Scoop:   update version/url/hash in packaging/scoop/noir.json
+```
+
+Then commit + push the bump on `main`. The tap repo (`brew tap agaaaptr/noir`) and the Scoop bucket both point at this repo, so a single commit updates both. The Homebrew README ([`packaging/homebrew/README.md`](../../packaging/homebrew/README.md)) documents the Node-for-Formula-Authors tradeoff (heavier than npm — the formula builds native modules against Homebrew's `node@22`).
 
 ---
 

@@ -14,3 +14,4 @@
 | `rules` | `unknown` | no | {"enabled":true,"lengthBudgetKb":6} |  |
 | `prd` | `unknown` | no | {"mandatoryFor":["feature","epic"]} |  |
 | `integrations` | `unknown` | no | {} |  |
+| `update` | `unknown` | no | {"checkEnabled":true,"checkIntervalHours":24,"channel":"latest","minVersion":"1.6.0","display":"notice"} |  |

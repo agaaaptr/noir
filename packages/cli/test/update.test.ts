@@ -7,15 +7,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // so the mock is inert for them.
 const coreMock = vi.hoisted(() => ({
   detectActiveMethod: vi.fn(() => 'unknown' as string),
-  readInstallRecord: vi.fn(():
-    | {
-        method: string;
-        version: string;
-        channel: string;
-        installedAt: string;
-        dismissedVersions?: string[];
-      }
-    | null => null),
+  readInstallRecord: vi.fn(
+    (): {
+      method: string;
+      version: string;
+      channel: string;
+      installedAt: string;
+      dismissedVersions?: string[];
+    } | null => null,
+  ),
   fetchLatestVersion: vi.fn(async () => null as string | null),
   runManagerCmd: vi.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
   shouldCheckForUpdate: vi.fn(() => false),

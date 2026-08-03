@@ -1,5 +1,45 @@
 # Changelog
 
+## Unreleased — C1 native installer + migration + self-update (local on `develop`, not yet published)
+
+The C1 capability-1 delta: a native (managed-Node) installer, CLI self-update/migrate, and package-manager taps. **All commits are local on `develop`; publish is a separate later phase.** Decision record: [ADR-0005](docs/decisions/0005-native-installer-managed-node.md) (managed-Node, not single-binary; Windows = PowerShell + Scoop; winget/Chocolatey deferred).
+
+### Added — native installer (managed-Node)
+- **`scripts/install.sh`** (POSIX) and **`scripts/install.ps1`** (Windows PowerShell): provision a pinned **Node 22.x LTS runtime** under `~/.noir/runtime/node/`, install `@noir-ai/cli` into an isolated prefix under `~/.noir/cli/`, write a `noir` shim at `~/.noir/bin/noir` (`.cmd` on Windows), and record the install in `~/.noir/install.json` (`method: native`). **No system Node prerequisite, no `sudo`/admin.** Idempotent (re-run = upgrade). Env knobs: `NOIR_CHANNEL`/`NOIR_VERSION`; proxy pass-through (`HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY`); PATH hint; `noir --version` verify.
+- **Windows PowerShell is the primary Windows path** — no Git Bash/MSYS2/WSL needed. Run from a normal PowerShell prompt.
+- **Trust & verification** — every release publishes the installers as Release artifacts with a `SHA256SUMS` file and a Sigstore build-time attestation (`actions/attest-build-provenance@v3`). Verify with `shasum -a 256 install.sh` + `gh attestation verify install.sh --repo agaaaptr/noir`.
+
+### Added — CLI self-update + migration
+- **`noir install` / `noir migrate [spec]`** — move an existing install (npm/pnpm/yarn/bun/Homebrew/Scoop) to the native path. Settings preserved (`.noir/` project data + `~/.noir/` user data never touched); `--list` detects every install; `--uninstall-prev` removes the prior method (never auto-uninstalls — the suggested uninstall command is always printed when omitted). PATH-hash hint printed after the swap (`hash -r && which -a noir`).
+- **`noir update [spec]`** — self-update via the active install method (native → re-provision; npm/pnpm/yarn/bun/Homebrew/Scoop → reinstall via that manager). `--check` prints the latest vs. installed and exits.
+- **Async startup version check** — non-blocking, cached (`~/.noir/update.json`), 24h interval default (configurable under `update:` in `.noir/config.yml`). Never blocks the CLI, never makes a paid call, silent under `--quiet`/CI/non-TTY.
+- **Version-assert (no silent downgrade)** — `noir install`/`update` refuses a silent downgrade via per-segment numeric semver comparison; explicit `--spec`/pin prints a warning. When the registry is unreachable, `noir update` prints "Could not reach the registry." and exits (never silently "up to date").
+- **Env kill-switches** — `NOIR_DISABLE_UPDATE_CHECK` suppresses the background startup check only; `NOIR_DISABLE_UPDATES` is a hard kill-switch for the entire self-update surface (`noir update` refuses with exit 2).
+- **One-time migration banner** — a non-blocking banner suggests `noir migrate` on non-native installs; `noir install --dismiss` persists the dismissal per version in `install.json`'s `dismissedVersions`.
+
+### Added — doctor install row
+- **`noir doctor` install row** — advisory `ok`/`warn` only (never `fail`), never a live network call. Reports the detected install method (`native`/`npm`/`pnpm`/…), the installed version, the latest-known version from the update cache, and a non-blocking `native recommended` nudge on non-native paths.
+
+### Added — config
+- **`update:` block** on `NoirConfigSchema` (additive; absent block ⇒ enabled/24h/`latest`/`notice` defaults): `checkEnabled`, `checkIntervalHours`, `channel`, `minVersion` (a floor — update never installs below it), `display`.
+
+### Added — package-manager taps
+- **Homebrew formula** ([`packaging/homebrew/noir.rb`](packaging/homebrew/noir.rb)) — real `url`/`sha256`/`version` from the published 1.6.0 npm tarball (was a placeholder). Node-for-Formula-Authors pattern; depends on `node@22`; stable-only (taps are single-channel). Tap README at `packaging/homebrew/README.md`.
+- **Scoop manifest** ([`packaging/scoop/noir.json`](packaging/scoop/noir.json)) — Windows; depends on `nodejs-lts`; shims `dist/bin.js` as `noir`; stable-only single-channel.
+
+### Added — release workflow
+- **Installer artifacts + checksums + attestation** in `.github/workflows/release.yml`: copies `install.sh`/`install.ps1` into `dist-installers/`, generates `SHA256SUMS`, runs `actions/attest-build-provenance@v3` over both + the checksums file, uploads them as Release assets, and pastes `gh attestation verify` instructions into the Release body. Windows CI matrix + an offline structural-lint test for both workflows.
+
+### Decisions
+- **ADR-0005** — native installer is **managed-Node, not a single binary** (research-verified). Windows = PowerShell + Scoop; winget/Chocolatey deferred (covered by `install.ps1`/Scoop/npm today). Commits local on `develop`; publish separate.
+
+### Deferred (documented in `docs/roadmap/backlog.md`)
+- winget / Chocolatey (decision; ADR-0005).
+- CLI-only managed-Node bootstrap (no shell script) — the CLI's `installManagedNode` expects the runtime already provisioned by `install.sh`/`install.ps1`.
+- Per-channel update cache (`Record<channel, version>` shape) — deliberately not adopted to preserve the committed `UpdateCache` interface; cross-channel isolation already enforced by `latestVersionFromCache`.
+
+---
+
 ## 1.5.0 (2026-07-28)
 
 **First stable release — published on npm (dist-tag `latest`).** `npm i @noir-ai/cli` now resolves to `1.5.0`. This is the first publication of the `latest` channel from `main` — prior releases all shipped under the `beta` dist-tag from `develop`.

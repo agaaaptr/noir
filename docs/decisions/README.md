@@ -14,3 +14,4 @@ ADRs record *why* a choice was made — not *what* the code does (the skills the
 - [ADR-0002 — Native skills only — plugin + marketplace removed](0002-native-skills-only-plugin-removed.md)
 - [ADR-0003 — v1.x capabilities — keystone refactor + five extensions](0003-v1x-capabilities.md)
 - [ADR-0004 — Multi-host adapters — the `resolveAdapter(host)` registry + AGENTS.md universal](0004-multi-host-adapters.md)
+- [ADR-0005 — Native installer is managed-Node, not a single binary](0005-native-installer-managed-node.md)

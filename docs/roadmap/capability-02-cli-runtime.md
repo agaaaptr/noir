@@ -8,7 +8,7 @@ The `noir` command-line surface: a Commander command tree with global flags, str
 
 ## Shipped today
 
-- Commander command tree (`packages/cli/src/bin.ts`): `init`, `create [dir]`, `sync`, `mcp serve`, `daemon start|stop|status|restart`, `doctor`, `status`, `context search|index|status`, `memory recall|save|sessions|forget|consolidate`, `skills list|sync`, `task new|status|advance|next`, `handoff`, `tui`.
+- Commander command tree (`packages/cli/src/bin.ts`): `init`, `create [dir]`, `sync`, `mcp serve`, `daemon start|stop|status|restart`, `doctor`, `status`, `context search|index|status`, `memory recall|save|sessions|forget|consolidate`, `skills list|sync`, `task new|status|advance|next`, `install`/`migrate` (C1), `update` (C1), `handoff`, `tui`.
 - Global flags on every subcommand: `--json`, `--no-input`, `--quiet`, `--verbose`, `--cwd`, `--tui`/`--no-tui` (advisory), `--no-tips`, `-v`/`--version`.
 - S9 exit-code + stream discipline: data → stdout, diagnostics → stderr; color auto-stripped under `--json`/`--quiet`/CI/`NO_COLOR`/non-TTY.
 - Bare `noir` home menu (`@clack/prompts` select, `packages/cli/src/commands/home.ts`) when TTY; routes to `status`/`status --json` when non-interactive (probe-only — never auto-starts the daemon).
@@ -16,7 +16,7 @@ The `noir` command-line surface: a Commander command tree with global flags, str
 - `noir handoff` — pasteable host handoff artifact (never spawns the host).
 - Scaffold engine (`packages/create/src/scaffold.ts`): `init`/`create`/`sync` modes, idempotent, scaffold-version stamp + `init --upgrade` migrations, three-mode writer.
 - Conflict UX (`packages/cli/src/conflict.ts`, `@clack` resolver), write-path semantic dedup (`packages/cli/src/dedup-write.ts`), ignore management (`packages/core/src/ignore-manager.ts` syncIgnores managed blocks).
-- `doctor`: 13 checks including scaffold-version drift, RULES.md budget, host artifacts, publish-readiness (`packages/cli/src/commands/doctor.ts`).
+- `doctor`: 13 checks including scaffold-version drift, RULES.md budget, host artifacts, publish-readiness, and a C1 **install row** (advisory `ok`/`warn`, never `fail`, no network call — reports detected install method + version + latest-known from the update cache) (`packages/cli/src/commands/doctor.ts`).
 - Scriptability: `--json` envelope, `--no-input` never blocks, stable exit codes (0/1/2/3/4/5).
 
 ## Gap / roadmap delta
@@ -47,4 +47,3 @@ The `noir` command-line surface: a Commander command tree with global flags, str
 - `packages/create/src/scaffold.ts`
 - `packages/core/src/ignore-manager.ts`
 - `docs/reference/cli.md`
-- `docs/reference/cli-auto.md`

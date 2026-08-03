@@ -6,7 +6,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 
 | Capability | Progress | Current Phase | Last Update |
 |------------|----------|---------------|-------------|
-| C1 Package Distribution | 🟦 Partial — core shipped | Ship (npm/release) + Research (Scoop/Winget/self-update) | 2026-08-03 |
+| C1 Package Distribution | 🟦 Partial — core + native installer + self-update shipped | Ship (npm/release/native-installer) + Research (winget/Chocolatey deferred) | 2026-08-03 |
 | C2 CLI Runtime & UX | 🟦 Partial — full CLI + TUI MVP shipped | Ship + Research (richer TUI, daemon detach) | 2026-08-03 |
 | C3 Built-in Skill System | 🟦 Partial — 33 skills + compiler shipped | Ship + Research (registry/versioning) | 2026-08-03 |
 | C4 AI Development Workflow | 🟩 Shipped core (SDD engine) | Ship | 2026-08-03 |
@@ -31,26 +31,28 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 
 ## Current sprint
 
+- **2026-08-03** — C1 native installer + migration + self-update shipped (Tasks 1–11): managed-Node installer (`install.sh` + `install.ps1`), `noir install`/`migrate`, `noir update` + async cached version check, doctor install row, Homebrew formula (real url/sha256), Scoop manifest, installer attestation (SHA256SUMS + Sigstore). ADR-0005 records the managed-Node-not-single-binary decision; winget/Chocolatey deferred.
 - **2026-08-03** — Roadmap restructure: capability docs rewritten grounded against the shipped codebase; `releases.md` + `backlog.md` created; roadmap made the project reference.
 
 ## Active capability
 
-- **C2 — CLI Runtime & UX** (active_slice: `cli-runtime`)
+- **C1 — Package Distribution** (active_slice: `c1-native-installer` — wrap-up / publish phase)
 
 ## Active slice
 
-- `cli-runtime`
+- `c1-native-installer` (commits local on `develop`; publish is a separate later phase)
 
 ## Next milestone
 
-- Ship the CLI self-update + `noir update` path (C1 delta) and richer TUI widgets (C2 delta).
+- Publish the C1 native-installer work as a beta (separate phase, explicit go-ahead required). Then return to the C2 TUI delta (richer widgets, command palette).
 
 ## Current technical debt
 
 - `docs/reference/config.md` + `mcp-tools.md` were stale skeletons — regenerated 2026-08-03.
-- `docs/reference/cli-auto.md` duplicate removed 2026-08-03 (single source: `cli.md`).
+- `docs/reference/cli-auto.md` duplicate removed 2026-08-03 (single source: `cli.md`; stale ref in `capability-02` also cleared).
 - `CHANGELOG.md` unified to root (docs/CHANGELOG.md is now a pointer) — 2026-08-03.
 - Stale doc path labels in `AGENTS.md` + ADR-0001 (`docs/superpowers/`/`docs/specs/` → real `docs/internal/{specs,plans}`) — tracked, not yet fixed.
+- C1 native-installer work is committed locally on `develop` (not pushed); publish is a separate phase.
 
 ## Notes
 
