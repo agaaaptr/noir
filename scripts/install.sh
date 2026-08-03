@@ -5,8 +5,11 @@
 # (https://github.com/agaaaptr/noir). It ships as the npm package
 # `@noir-ai/cli` (bin: `noir`) and needs Node.js + native modules
 # (better-sqlite3, sqlite-vec, onnxruntime-node). There is no single-binary
-# build yet, so this installer is an honest delegator: it detects node/npm,
-# then runs `npm install -g @noir-ai/cli@<channel|version>`.
+# build yet, so this installer is an honest delegator: it provisions a pinned
+# managed Node 22 LTS into ~/.noir/runtime/v<version>/ (fail-closed SHA-256
+# verified against nodejs.org's SHASUMS256.txt), then uses that node/npm to
+# `npm install -g @noir-ai/cli@<channel|version>` into an isolated prefix
+# (~/.noir/cli), and writes a shim at ~/.noir/bin/noir.
 #
 # Quick start:
 #   curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | bash
@@ -18,8 +21,10 @@
 #   less install.sh && bash install.sh
 #
 # Env knobs:
-#   NOIR_CHANNEL  npm dist-tag to install. Default: latest. Set to `beta` for the beta channel.
-#   NOIR_VERSION  Pin an exact version (e.g. 1.0.0 or 1.0.0-beta.1). Overrides NOIR_CHANNEL.
+#   NOIR_CHANNEL          npm dist-tag to install. Default: latest. `beta` for the beta channel.
+#   NOIR_VERSION          Pin an exact version (e.g. 1.0.0 or 1.0.0-beta.1). Overrides NOIR_CHANNEL.
+#   NOIR_NODE_DIST_URL    Override the Node dist root (default: https://nodejs.org/dist).
+#   NOIR_SKIP_NODE_PROVISION  Skip managed-Node provisioning; use system node >=22 only.
 #   HTTP_PROXY / HTTPS_PROXY / NO_PROXY  Passed through to npm verbatim.
 #
 # Re-running this script upgrades in place (idempotent). Tested with bash; no
@@ -31,7 +36,10 @@ PACKAGE="@noir-ai/cli"
 REPO_URL="https://github.com/agaaaptr/noir"
 NODEJS_URL="https://nodejs.org/"
 
-# --- Output helpers (NO_COLOR / CI → plain) -------------------------------------
+# --- Resolve the script's own dir so we can source node-version.env ----------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# --- Output helpers (NO_COLOR / CI → plain) ----------------------------------
 if [[ -n "${NO_COLOR:-}" || -n "${CI:-}" ]] || [[ ! -t 1 ]]; then
   C_RESET=""; C_BLUE=""; C_GREEN=""; C_YELLOW=""; C_RED=""; C_DIM=""
 else
@@ -45,58 +53,240 @@ good()  { printf "%s✓%s %s\n" "$C_GREEN" "$C_RESET" "$*"; }
 warn()  { printf "%s!%s %s\n" "$C_YELLOW" "$C_RESET" "$*" >&2; }
 die()   { printf "%s✗%s %s\n" "$C_RED" "$C_RESET" "$*" >&2; exit 1; }
 
-# --- OS + arch detection (diagnostics only; npm handles the platform) -----------
-detect_platform() {
+# --- Source the shared Node version + dist URL (mirrors @noir-ai/core) -------
+# node-version.env is plain KEY=VALUE (no `export`) so PowerShell can parse it
+# too. We import it into the environment via `set -a` so subprocesses (curl,
+# shasum) and downstream functions see the values.
+load_node_env() {
+  local env_file="$SCRIPT_DIR/node-version.env"
+  if [[ ! -f "$env_file" ]]; then
+    die "scripts/node-version.env not found next to install.sh ($env_file).
+      This file pins MANAGED_NODE_VERSION + NODE_DIST_BASE_URL and is required."
+  fi
+  # shellcheck disable=SC1090
+  set -a; . "$env_file"; set +a
+  # Allow the user / CI to override the dist root via the same env var the
+  # core module honors (NOIR_NODE_DIST_URL). node-version.env provides the default.
+  if [[ -z "${MANAGED_NODE_VERSION:-}" ]]; then
+    die "scripts/node-version.env did not set MANAGED_NODE_VERSION."
+  fi
+}
+
+# --- OS + arch detection -----------------------------------------------------
+# Maps the running host to the exact tokens nodejs.org uses in its archive
+# filenames: darwin/linux + x64/arm64, and `win` (NOT win32) for Windows.
+# Returns "NODER_OS" and "NODER_ARCH" on stdout, or exits via die() on
+# unsupported combinations (never silently pick a wrong archive).
+detect_node_target() {
   local os arch
   case "$(uname -s)" in
-    Darwin)            os="macos" ;;
+    Darwin)            os="darwin" ;;
     Linux)             os="linux" ;;
-    MINGW*|MSYS*|CYGWIN*) os="windows"
+    MINGW*|MSYS*|CYGWIN*)
       # C1: on Windows the canonical path is the native PowerShell installer.
-      # Don't run a bash-wrapped npm install here — redirect instead.
+      # Don't run a bash-wrapped provision here — redirect instead.
       warn "Windows detected - use the native PowerShell installer:"
       warn "  powershell -c \"irm https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.ps1 | iex\""
       exit 0
       ;;
-    *)                 os="unknown:$(uname -s)" ;;
+    *) die "unsupported OS for managed-Node provisioning: $(uname -s)." ;;
   esac
   case "$(uname -m)" in
-    x86_64|amd64)   arch="x64" ;;
-    aarch64|arm64)  arch="arm64" ;;
-    i386|i686)      arch="ia32" ;;
-    armv7l)         arch="arm" ;;
-    *)              arch="unknown:$(uname -m)" ;;
+    x86_64|amd64)  arch="x64" ;;
+    aarch64|arm64) arch="arm64" ;;
+    *) die "unsupported arch for managed-Node provisioning: $(uname -m)." ;;
   esac
-  note "Detected platform: ${os}/${arch} (npm handles the actual install)."
+  printf '%s\n%s\n' "$os" "$arch"
 }
 
-# --- Require node (>=22) + npm --------------------------------------------------
-require_node() {
-  command -v node >/dev/null 2>&1 || die "Node.js is not installed.
+# --- ~ home (HOME, not the project's .noir/) ---------------------------------
+noir_home() { printf '%s/.noir\n' "${HOME:?HOME is not set}"; }
+
+# --- require a command, else die with a hint ---------------------------------
+require_cmd() {  # $1 = cmd, $2 = hint
+  command -v "$1" >/dev/null 2>&1 || die "$1 is required but not on PATH. $2"
+}
+
+# --- Provision managed Node into ~/.noir/runtime/v<version>/ ------------------
+# Idempotent: if the runtime's bin/node already exists, reuse it. Otherwise:
+# fetch SHASUMS256.txt + the archive, verify SHA-256 (fail-closed), extract to
+# a staging dir, atomic-rename into v<version>/, and remove older v*/ dirs.
+#
+# On any failure, fall back to a system node >= 22 (warn) — never silent on
+# an unsupported Node. Sets globals RUNTIME_NODE_BIN / RUNTIME_NPM_BIN /
+# RUNTIME_SOURCE ('managed' | 'system') / RUNTIME_VERSION for the caller.
+provision_node() {
+  local target_os target_arch
+  { read -r target_os; read -r target_arch; } < <(detect_node_target)
+  note "Detected platform: ${target_os}/${target_arch}."
+
+  local home runtime_root version_dir node_bin
+  home="$(noir_home)"
+  runtime_root="${home}/runtime"
+  version_dir="${runtime_root}/v${MANAGED_NODE_VERSION}"
+  node_bin="${version_dir}/bin/node"
+
+  # Skip switch: caller asked to use system node only.
+  if [[ -n "${NOIR_SKIP_NODE_PROVISION:-}" ]]; then
+    note "NOIR_SKIP_NODE_PROVISION set; skipping managed-Node provisioning."
+    use_system_node_fallback "NOIR_SKIP_NODE_PROVISION set"
+    return
+  fi
+
+  # 1) Reuse: idempotent. Re-runs (noir init / upgrade) are no-ops.
+  if [[ -x "$node_bin" ]]; then
+    good "Reusing managed Node ${MANAGED_NODE_VERSION} at ${version_dir}."
+    RUNTIME_NODE_BIN="$node_bin"
+    RUNTIME_NPM_BIN="${version_dir}/bin/npm"
+    RUNTIME_SOURCE="managed"
+    RUNTIME_VERSION="$MANAGED_NODE_VERSION"
+    cleanup_old_runtimes "$runtime_root" "v${MANAGED_NODE_VERSION}"
+    return
+  fi
+
+  # 2) Download + verify + extract. Any error falls back to system node.
+  local archive_basename archive_url shasums_url dist_base archive_ext
+  dist_base="${NOIR_NODE_DIST_URL:-${NODE_DIST_BASE_URL:-https://nodejs.org/dist}}"
+  dist_base="${dist_base%/}"  # trim trailing slash; we add it below
+  archive_ext="tar.gz"
+  archive_basename="node-v${MANAGED_NODE_VERSION}-${target_os}-${target_arch}.${archive_ext}"
+  archive_url="${dist_base}/v${MANAGED_NODE_VERSION}/${archive_basename}"
+  shasums_url="${dist_base}/v${MANAGED_NODE_VERSION}/SHASUMS256.txt"
+
+  require_cmd curl "Install it (macOS: brew install curl; linux: apt install curl)."
+  require_cmd shasum "It ships with macOS/perl; on linux install perl or 'dpkg -S shasum'."
+  require_cmd tar "It ships with every OS; install 'tar'."
+
+  info "Provisioning managed Node ${MANAGED_NODE_VERSION} (fail-closed SHA-256 verified)."
+  note "Archive:  ${archive_url}"
+
+  local staging shasums_file archive_file expected_sha actual_sha extracted_dir
+  # mktemp -d on the SAME filesystem as the rename target (runtime_root), so
+  # the final rename is atomic (POSIX guarantees rename within a filesystem).
+  mkdir -p "$runtime_root"
+  staging="$(mktemp -d "${runtime_root}/.staging.${MANAGED_NODE_VERSION}.XXXXXX")"
+  # Always clean up staging, even on success (the rename moves the payload out).
+  trap 'rm -rf "$staging"' RETURN
+
+  shasums_file="${staging}/SHASUMS256.txt"
+  archive_file="${staging}/${archive_basename}"
+
+  # 2a) Fetch SHASUMS256.txt (the manifest is GPG-signed upstream; we verify
+  # the archive hash against the entry, which is the fail-closed gate).
+  note "Fetching SHASUMS256.txt ..."
+  if ! curl -fsSL "$shasums_url" -o "$shasums_file"; then
+    warn "Failed to fetch SHASUMS256.txt (curl exit $?); falling back to system Node."
+    use_system_node_fallback "SHASUMS256.txt fetch failed"
+    return
+  fi
+
+  # 2b) Find the entry for OUR archive basename.
+  expected_sha="$(awk -v f="$archive_basename" '
+    $2 == f { print $1; exit }
+    # Node SHASUMS lines may use the binary-mode form `<hex> *<name>`
+    $2 == ("*" f) { print $1; exit }
+  ' "$shasums_file")"
+  if [[ -z "$expected_sha" || ${#expected_sha} -ne 64 ]]; then
+    warn "No SHASUMS256.txt entry for ${archive_basename}; falling back to system Node."
+    use_system_node_fallback "missing SHASUMS256.txt entry"
+    return
+  fi
+
+  # 2c) Fetch the archive.
+  note "Fetching archive (~25 MB) ..."
+  if ! curl -fsSL "$archive_url" -o "$archive_file"; then
+    warn "Failed to fetch Node archive (curl exit $?); falling back to system Node."
+    use_system_node_fallback "archive fetch failed"
+    return
+  fi
+
+  # 2d) Verify SHA-256 — FAIL-CLOSED. Never install an unverified archive.
+  actual_sha="$(shasum -a 256 "$archive_file" | awk '{print $1}')"
+  if [[ "$actual_sha" != "$expected_sha" ]]; then
+    warn "Checksum mismatch for ${archive_basename}:"
+    warn "  expected: ${expected_sha}"
+    warn "  actual:   ${actual_sha}"
+    warn "Refusing to install an unverified archive; falling back to system Node."
+    use_system_node_fallback "checksum mismatch"
+    return
+  fi
+  good "Checksum verified: ${expected_sha}"
+
+  # 3) Extract into staging (produces staging/node-v<ver>-<os>-<arch>/).
+  note "Extracting ..."
+  if ! tar -xzf "$archive_file" -C "$staging" 2>/dev/null; then
+    warn "tar extraction failed; falling back to system Node."
+    use_system_node_fallback "tar extraction failed"
+    return
+  fi
+  extracted_dir="${staging}/node-v${MANAGED_NODE_VERSION}-${target_os}-${target_arch}"
+  if [[ ! -x "${extracted_dir}/bin/node" ]]; then
+    warn "Extraction produced no bin/node at ${extracted_dir}; falling back to system Node."
+    use_system_node_fallback "extraction incomplete"
+    return
+  fi
+
+  # 4) Atomic rename into v<version>/. Remove a stale version_dir first so the
+  # rename is unobstructed (concurrent provision / partial state).
+  if [[ -e "$version_dir" ]]; then rm -rf "$version_dir"; fi
+  mv "$extracted_dir" "$version_dir"
+  good "Installed Node ${MANAGED_NODE_VERSION} → ${version_dir}"
+
+  # 5) Cleanup older runtime dirs (keep current only).
+  cleanup_old_runtimes "$runtime_root" "v${MANAGED_NODE_VERSION}"
+
+  RUNTIME_NODE_BIN="${version_dir}/bin/node"
+  RUNTIME_NPM_BIN="${version_dir}/bin/npm"
+  RUNTIME_SOURCE="managed"
+  RUNTIME_VERSION="$MANAGED_NODE_VERSION"
+}
+
+# Remove ~/.noir/runtime/v*/ dirs other than the one named in $2. Best-effort.
+cleanup_old_runtimes() {  # $1 = runtime_root, $2 = keep dir name (e.g. v22.23.2)
+  local root="$1" keep="$2" entry
+  [[ -d "$root" ]] || return 0
+  for entry in "$root"/v*/; do
+    [[ -d "$entry" ]] || continue
+    local name; name="$(basename "$entry")"
+    [[ "$name" == "$keep" ]] && continue
+    rm -rf "$entry"
+    note "Cleaned up old runtime: ${name}"
+  done
+}
+
+# --- System-Node fallback -----------------------------------------------------
+# Probes PATH for `node` >= 22; sets RUNTIME_* globals. Dies if no usable node.
+use_system_node_fallback() {  # $1 = reason (for the warn message)
+  local reason="${1:-managed-Node provisioning failed}"
+  command -v node >/dev/null 2>&1 || die "${reason}; and no system Node on PATH.
     Noir needs Node >= 22. Install it from ${NODEJS_URL}
     or use a version manager: 'nvm' (https://github.com/nvm-sh/nvm),
-    'fnm' (https://github.com/Schniz/fnm), or 'brew install node'.
-    This installer will not install Node for you."
-  command -v npm >/dev/null 2>&1 || die "npm is not installed (it ships with Node).
-    Install Node >= 22 from ${NODEJS_URL} and retry."
-
-  local major
-  major="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
-  if [[ "$major" -lt 22 ]]; then
-    die "Node $(node --version) is too old — Noir requires Node >= 22.
+    'fnm' (https://github.com/Schniz/fnm), or 'brew install node'."
+  local major raw
+  raw="$(node --version 2>/dev/null || echo v0)"
+  major="${raw#v}"; major="${major%%.*}"
+  if [[ -z "$major" || "$major" -lt 22 ]]; then
+    die "${reason}; and system Node is ${raw} (< 22).
       Upgrade: https://nodejs.org/ (or nvm/fnm/'brew upgrade node')."
   fi
-  good "Node $(node --version) + npm $(npm --version) found."
+  warn "${reason}; using system Node ${raw} at $(command -v node)."
+  RUNTIME_NODE_BIN="$(command -v node)"
+  # npm lives next to node.
+  if command -v npm >/dev/null 2>&1; then
+    RUNTIME_NPM_BIN="$(command -v npm)"
+  else
+    die "npm is not installed (it ships with Node). Install Node >= 22 from ${NODEJS_URL} and retry."
+  fi
+  RUNTIME_SOURCE="system"
+  RUNTIME_VERSION="system-${raw#v}"
 }
 
-# --- Resolve the package specifier (@latest | @beta | @<version>) ---------------
+# --- Resolve the package specifier (@latest | @beta | @<version>) -------------
 resolve_spec() {
   if [[ -n "${NOIR_VERSION:-}" ]]; then
     echo "${PACKAGE}@${NOIR_VERSION}"
     return
   fi
-  # Capture once: NOIR_CHANNEL is unset by default, so we must NOT reference it
-  # bare under `set -u` after the case has matched. `:-latest` defaults safely.
   local channel="${NOIR_CHANNEL:-latest}"
   case "$channel" in
     latest|beta) echo "${PACKAGE}@${channel}" ;;
@@ -104,7 +294,7 @@ resolve_spec() {
   esac
 }
 
-# --- Pass proxies through to npm (npm also reads npm_config_proxy) --------------
+# --- Pass proxies through to npm (npm also reads npm_config_proxy) ------------
 export_proxies() {
   : "${HTTP_PROXY:="${http_proxy:-}"}";  export HTTP_PROXY
   : "${HTTPS_PROXY:="${https_proxy:-}"}"; export HTTPS_PROXY
@@ -112,67 +302,75 @@ export_proxies() {
   [[ -z "${HTTPS_PROXY:-}" ]] || note "Honoring HTTPS_PROXY."
 }
 
-# --- Decide if sudo is needed (only if prefix isn't user-writable + we can sudo)
-maybe_sudo_for() {  # $1 = npm global prefix
-  local prefix="$1"
-  if [[ -w "$prefix" ]]; then
-    echo ""
-  elif [[ "$(id -u)" -eq 0 ]]; then
-    echo ""            # already root
-  elif sudo -n true 2>/dev/null; then
-    echo "sudo"        # passwordless sudo available
-  else
-    echo ""            # don't surprise-prompt; print a hint instead
-  fi
+# --- Atomic write: write to a temp sibling, then rename ----------------------
+atomic_write() {  # $1 = path, $2 = content
+  local path="$1" content="$2" tmp
+  mkdir -p "$(dirname "$path")"
+  tmp="${path}.tmp.$$"
+  printf '%s' "$content" > "$tmp"
+  mv -f "$tmp" "$path"
 }
 
-# --- Main install ---------------------------------------------------------------
+# --- Main install -------------------------------------------------------------
 main() {
+  load_node_env
   info "Installing ${PACKAGE} via npm."
-  detect_platform
-  require_node
+
+  provision_node
   export_proxies
 
-  local spec prefix sudo_prefix npm_bin
+  local spec home cli_dir bin_dir shim cli_main ver record
   spec="$(resolve_spec)"
-  prefix="$(npm prefix -g 2>/dev/null || npm config get prefix 2>/dev/null || echo "")"
-  [[ -n "$prefix" ]] || die "Could not determine the npm global prefix.
-    Set it with 'npm config set prefix <dir>' and re-run."
-  note "npm global prefix: ${prefix}"
+  home="$(noir_home)"
+  cli_dir="${home}/cli"
+  bin_dir="${home}/bin"
+  mkdir -p "$cli_dir" "$bin_dir"
   note "Target spec:       ${spec}"
+  note "Install prefix:    ${cli_dir}  (isolated; never the system global, no sudo)"
+  note "Runtime node:      ${RUNTIME_NODE_BIN}  (${RUNTIME_SOURCE})"
 
-  sudo_prefix="$(maybe_sudo_for "$prefix")"
-  if [[ -z "$sudo_prefix" && ! -w "$prefix" && "$(id -u)" -ne 0 ]]; then
-    # Don't surprise the user with a password prompt — explain and bail.
-    die "The npm global prefix (${prefix}) is not writable by you.
-      Re-run with sudo (NOT recommended):
-        sudo HTTP_PROXY=\"${HTTP_PROXY:-}\" HTTPS_PROXY=\"${HTTPS_PROXY:-}\" npm install -g ${spec}
-      Or fix the prefix once (recommended):
-        mkdir -p ~/.npm-global && npm config set prefix ~/.npm-global
-        then ensure '~/.npm-global/bin' is on your PATH and re-run this installer."
-  fi
-
-  info "Running: ${sudo_prefix:+sudo }npm install -g ${spec}"
-  if [[ -n "$sudo_prefix" ]]; then
-    # Preserve proxy env across sudo (sudo scrubs env by default).
-    sudo -E npm install -g "$spec"
-  else
-    npm install -g "$spec"
+  # Install into the isolated prefix using the provisioned npm.
+  info "Running: npm install -g ${spec} --prefix=${cli_dir}"
+  if ! "$RUNTIME_NPM_BIN" install -g "$spec" "--prefix=${cli_dir}"; then
+    die "npm install failed (exit $?).
+      Re-run with NOIR_SKIP_NODE_PROVISION=1 to try the system Node instead."
   fi
   good "Installed ${spec}."
 
-  # --- PATH hint + verify -------------------------------------------------------
-  # `npm bin -g` was removed in npm 9; derive the global bin dir from the prefix.
-  npm_bin="${prefix}/bin"
+  # Shim: ~/.noir/bin/noir -> provisioned node + isolated prefix entry.
+  cli_main="${cli_dir}/lib/node_modules/@noir-ai/cli/dist/bin.js"
+  shim="${bin_dir}/noir"
+  atomic_write "$shim" "#!/usr/bin/env bash
+\"${RUNTIME_NODE_BIN}\" \"${cli_main}\" \"\$@\"
+"
+  chmod +x "$shim"
+
+  # Verify via the provisioned node.
+  ver="$("$RUNTIME_NODE_BIN" "$cli_main" --version 2>/dev/null || true)"
+  if [[ -n "$ver" ]]; then
+    good "Verified: noir ${ver}"
+  else
+    warn "Could not read 'noir --version' (the install may still be usable)."
+  fi
+
+  # Record install method: ~/.noir/install.json (same shape core's
+  # writeInstallRecord() writes). Reflects which runtime backs this install
+  # so `noir doctor` reports it accurately.
+  local now channel managed_rev
+  now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  channel="${NOIR_CHANNEL:-latest}"
+  managed_rev="$RUNTIME_VERSION"
+  record="$(printf '{"method":"native","version":"%s","channel":"%s","installedAt":"%s","managedRuntimeVersion":"%s"}\n' \
+    "${ver:-0.0.0}" "$channel" "$now" "$managed_rev")"
+  atomic_write "${home}/install.json" "$record"
+
+  # PATH hint + verify.
   if command -v noir >/dev/null 2>&1; then
     good "noir is on PATH at: $(command -v noir)"
-    if noir --version >/dev/null 2>&1; then
-      good "Verified: $(noir --version)"
-    fi
   else
     warn "noir is installed but NOT on your PATH."
-    note "Add the npm global bin to your shell profile:"
-    note "  export PATH=\"${npm_bin}:\$PATH\""
+    note "Add the shim dir to your shell profile:"
+    note "  export PATH=\"${bin_dir}:\$PATH\""
     note "Then start a new shell and run: noir --version"
   fi
 
