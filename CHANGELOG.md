@@ -1,8 +1,20 @@
 # Changelog
 
-## Unreleased — C1 native installer + migration + self-update (local on `develop`, not yet published)
+## Unreleased — C1 managed-Node provisioning + registry accuracy (local on `develop`, not yet published)
 
-The C1 capability-1 delta: a native (managed-Node) installer, CLI self-update/migrate, and package-manager taps. **All commits are local on `develop`; publish is a separate later phase.** Decision record: [ADR-0005](docs/decisions/0005-native-installer-managed-node.md) (managed-Node, not single-binary; Windows = PowerShell + Scoop; winget/Chocolatey deferred).
+The C1 capability-1 completion: managed-Node auto-provisioning from the CLI, release-registry accuracy, and C1 -> Completed. **All commits are local on `develop`; publish is a separate later phase.** Decision record: [ADR-0005](docs/decisions/0005-native-installer-managed-node.md) (managed-Node, not single-binary; Windows = PowerShell + Scoop; winget/Chocolatey deferred).
+
+### Added — managed-Node auto-provisioning
+- **`provisionManagedNode()`** in `@noir-ai/core` (`packages/core/src/node-provision.ts`) — downloads, verifies (SHA256 checksum, fail-closed), and extracts a pinned **Node 22.23.2 LTS** runtime under `~/.noir/runtime/node/`; atomic writes (staging-dir -> rename); auto-cleanup of old runtime versions (keep current only).
+- **`MANAGED_NODE_VERSION`** exported from `@noir-ai/core`; shared with `install.sh`/`install.ps1` via **`scripts/node-version.env`** (single source of truth for the pinned Node version).
+- **`downloadAndVerify()` / `extractNode()` / `detectNodeTarget()` / `nodeArchiveUrl()` / `NodeTarget` / `ProvisionedNode`** — the full provisioning pipeline as callable exports.
+- **`runtimeDir()`** added to `packages/core/src/layout.ts` — resolves `~/.noir/runtime/`.
+- **`noir install` / `noir migrate`** now calls `provisionManagedNode()` — the CLI can bootstrap the managed runtime without a shell script; no more "not provisioned" fail.
+- **CI `node-provision-smoke` job** (`.github/workflows/ci.yml`) validates a real Node download on each push.
+
+### Fixed — release registry
+- **Registry rebuilt** with accurate channel labels — `1.4.0` and `1.5.0` entries now correctly show `channel: stable` (were mislabeled as `beta`). Every entry carries a non-null `changelogRef`.
+- **`scripts/release-registry.mjs` `buildEntry`** now derives `channel` / `npmDistTag` from release type (stable → `stable`/`latest`, prerelease → `beta`/`beta`).
 
 ### Added — native installer (managed-Node)
 - **`scripts/install.sh`** (POSIX) and **`scripts/install.ps1`** (Windows PowerShell): provision a pinned **Node 22.x LTS runtime** under `~/.noir/runtime/node/`, install `@noir-ai/cli` into an isolated prefix under `~/.noir/cli/`, write a `noir` shim at `~/.noir/bin/noir` (`.cmd` on Windows), and record the install in `~/.noir/install.json` (`method: native`). **No system Node prerequisite, no `sudo`/admin.** Idempotent (re-run = upgrade). Env knobs: `NOIR_CHANNEL`/`NOIR_VERSION`; proxy pass-through (`HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY`); PATH hint; `noir --version` verify.
@@ -35,8 +47,8 @@ The C1 capability-1 delta: a native (managed-Node) installer, CLI self-update/mi
 
 ### Deferred (documented in `docs/roadmap/backlog.md`)
 - winget / Chocolatey (decision; ADR-0005).
-- CLI-only managed-Node bootstrap (no shell script) — the CLI's `installManagedNode` expects the runtime already provisioned by `install.sh`/`install.ps1`.
 - Per-channel update cache (`Record<channel, version>` shape) — deliberately not adopted to preserve the committed `UpdateCache` interface; cross-channel isolation already enforced by `latestVersionFromCache`.
+- `migrationNotes` / `breakingChanges` / `securityAdvisory` — structured release metadata beyond `changelogRef` not yet captured.
 
 ---
 

@@ -1,6 +1,6 @@
 # Capability 1 — Package Distribution & Release Management
 
-> **Status:** Partial — core + native installer + self-update shipped; winget/Chocolatey deferred
+> **Status:** 🟩 Completed — managed-Node provisioning, native installer, self-update, registry accuracy, package-manager taps all shipped; winget/Chocolatey deferred by decision
 
 ## Overview
 
@@ -24,16 +24,20 @@ How Noir is distributed (npm monorepo, native installer, package-manager taps, r
   - **Async startup version check** — non-blocking, cached (`~/.noir/update.json`), 24h interval default; honors `NOIR_DISABLE_UPDATE_CHECK` (background check only) and `NOIR_DISABLE_UPDATES` (hard kill-switch for the whole self-update surface).
   - **Version-assert** — `noir install`/`update` refuses a silent downgrade (per-segment numeric semver comparison); an explicit positional version pin prints a warning.
   - **Doctor install row** (`noir doctor`) — advisory `ok`/`warn` only, never `fail`, never a live network call; reports the detected method, installed version, latest-known version, and a `native recommended` nudge on non-native paths.
+- **Managed-Node auto-provisioning** (`packages/core/src/node-provision.ts`, `packages/core/src/layout.ts`, `scripts/node-version.env`):
+  - `provisionManagedNode()` — downloads, verifies (SHA256 checksum, fail-closed), and extracts a pinned Node 22.23.2 LTS runtime under `~/.noir/runtime/node/`; atomic writes (staging-dir → rename); auto-cleanup of old runtime versions (keep current only).
+  - `MANAGED_NODE_VERSION` exported from `@noir-ai/core`; shared with `install.sh`/`install.ps1` via `scripts/node-version.env`.
+  - `noir install`/`migrate` now calls `provisionManagedNode()` — the CLI can bootstrap the managed runtime without a shell script.
+  - `downloadAndVerify()` / `extractNode()` / `detectNodeTarget()` / `nodeArchiveUrl()` — the full provisioning pipeline as callable exports.
+  - CI smoke test (`.github/workflows/ci.yml` `node-provision-smoke` job) validates a real Node download on each push.
 - **Homebrew formula** — real `url`/`sha256`/`version` from the published 1.6.0 npm tarball (`packaging/homebrew/noir.rb`, Node-for-Formula-Authors pattern; stable-only; tap README at `packaging/homebrew/README.md`).
 - **Scoop manifest** — `packaging/scoop/noir.json` (Windows; depends on `nodejs-lts`; shims `dist/bin.js` as `noir`; stable-only single-channel).
 
 ## Gap / roadmap delta
 
 - **winget / Chocolatey** — deferred by decision (see ADR-0005). Windows is covered by `install.ps1` (primary), Scoop, and npm; winget/Chocolatey add breadth but no new capability. Will revisit if Windows user demand surfaces.
-- **Managed-Node auto-provisioning** — the CLI's `installManagedNode` expects the runtime already provisioned under `~/.noir/runtime/node/` by `install.sh`/`install.ps1`; a CLI-only bootstrap (no shell script) is not yet wired. Today, run the shell installer first.
-- **Richer release metadata** — `changelogRef` is `null` on every registry entry; `migrationNotes`/`breakingChanges`/`securityAdvisory` not captured.
-- **Reconcile registry channel mislabels** — 1.4.0/1.5.0 rows say `beta` despite stable publishes.
 - **Per-channel update cache** — `~/.noir/update.json` records a single channel; cross-channel isolation is enforced by `latestVersionFromCache(cache, channel)` (returns null on mismatch), but a `Record<channel, version>` shape was deliberately not adopted to preserve the committed `UpdateCache` interface (see Task 11 report).
+- **`migrationNotes` / `breakingChanges` / `securityAdvisory`** — structured release metadata beyond `changelogRef` is not yet captured in the registry. `changelogRef` is populated for every entry.
 
 ## Acceptance criteria
 
@@ -43,7 +47,7 @@ How Noir is distributed (npm monorepo, native installer, package-manager taps, r
 4. MET — `noir update`/`migrate` and a configurable, cached, async startup version check are shipped; kill-switches `NOIR_DISABLE_UPDATE_CHECK`/`NOIR_DISABLE_UPDATES` honored; semver downgrade guard prevents silent downgrades.
 5. MET — Homebrew formula is published with real url/sha256/version; Scoop manifest ships; winget/Chocolatey are deferred by explicit decision (ADR-0005).
 6. MET — Native installer (`install.sh` + `install.ps1`) ships as managed-Node (no system Node, no admin); installers are Release artifacts with `SHA256SUMS` + Sigstore attestation.
-7. DONE-when — registry rows carry accurate channel labels and non-null `changelogRef` for each release.
+7. MET — registry rows carry accurate channel labels and non-null `changelogRef` for each release (resolved 2026-08-03 by P4 registry rebuild).
 
 ## References
 
