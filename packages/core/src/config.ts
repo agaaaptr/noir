@@ -222,6 +222,29 @@ export const NoirConfigSchema = z.object({
       }),
     )
     .default({}),
+  // C1 — `update:` block. Additive, no-op when absent (defaults make it a
+  // pass-through). Configures the async startup version check + self-update
+  // surface (`noir update`). Mirrors the `daemon:`/`rules:`/`prd:` idiom: an
+  // absent `update:` block resolves to enabled/24h/latest/notice — the safe
+  // defaults. `minVersion` is a floor: update never installs below it. The
+  // env kill-switches NOIR_DISABLE_UPDATE_CHECK / NOIR_DISABLE_UPDATES are
+  // honored OUTSIDE config (process-level), so enterprise users can disable
+  // without a project file.
+  update: z
+    .object({
+      checkEnabled: z.boolean().default(true),
+      checkIntervalHours: z.number().int().positive().default(24),
+      channel: z.enum(['latest', 'beta']).default('latest'),
+      minVersion: z.string().default('1.6.0'),
+      display: z.enum(['notice', 'silent']).default('notice'),
+    })
+    .default({
+      checkEnabled: true,
+      checkIntervalHours: 24,
+      channel: 'latest',
+      minVersion: '1.6.0',
+      display: 'notice',
+    }),
 });
 
 export type NoirConfig = z.infer<typeof NoirConfigSchema>;

@@ -313,3 +313,38 @@ describe('parseConfig — prd block', () => {
     expect(() => parseConfig({ host: 'claude', prd: { mandatoryFor: ['story'] } })).toThrow();
   });
 });
+
+// C1 native installer — `update:` block. Additive, no-op when absent (the
+// defaults make it a pass-through): a config with NO `update:` block parses to
+// check-enabled/24h/latest/1.6.0/notice — the safe defaults for the async
+// startup version check + `noir update`. `minVersion` is a floor: update never
+// installs below it. The env kill-switches NOIR_DISABLE_UPDATE_CHECK /
+// NOIR_DISABLE_UPDATES are honored OUTSIDE config (process-level).
+describe('parseConfig — update block', () => {
+  it('parses update: block with defaults', () => {
+    const cfg = parseConfig({});
+    expect(cfg.update).toEqual({
+      checkEnabled: true,
+      checkIntervalHours: 24,
+      channel: 'latest',
+      minVersion: '1.6.0',
+      display: 'notice',
+    });
+  });
+
+  it('update: block overrides honored', () => {
+    const cfg = parseConfig({
+      update: {
+        checkEnabled: false,
+        channel: 'beta',
+        checkIntervalHours: 6,
+        minVersion: '1.5.0',
+        display: 'silent',
+      },
+    });
+    expect(cfg.update.channel).toBe('beta');
+    expect(cfg.update.checkEnabled).toBe(false);
+    expect(cfg.update.checkIntervalHours).toBe(6);
+    expect(cfg.update.display).toBe('silent');
+  });
+});
