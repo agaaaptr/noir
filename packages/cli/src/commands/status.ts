@@ -43,6 +43,7 @@ import {
 } from '../daemon-client.js';
 import { type CliOptions, definitionList, log } from '../output.js';
 import { badge } from '../theme.js';
+import { DEFAULT_UPDATE_CONFIG, runAsyncUpdateCheck } from './update.js';
 
 /** Options accepted by `status` (global flags + daemon-client knobs). */
 export interface StatusOptions extends CliOptions, DaemonClientOptions {}
@@ -372,6 +373,20 @@ export async function gatherStatusPayload(opts: StatusOptions): Promise<StatusPa
  * `loadProjectInfo` (same as every other command).
  */
 export async function status(opts: StatusOptions): Promise<void> {
+  // fire-and-forget; never blocks, never prints under --json/--quiet/CI/non-TTY.
+  void runAsyncUpdateCheck({
+    env: process.env,
+    configUpdate: (() => {
+      try {
+        const info = loadProjectInfo(process.cwd());
+        return info.config.update ?? DEFAULT_UPDATE_CONFIG;
+      } catch {
+        return DEFAULT_UPDATE_CONFIG;
+      }
+    })(),
+    quiet: opts.json === true || opts.quiet === true || !process.stdout.isTTY,
+  });
+
   const payload = await gatherStatusPayload(opts);
   if (opts.json === true) {
     // Single stdout write — the versioned S9 F11 success envelope.

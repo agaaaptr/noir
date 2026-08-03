@@ -26,6 +26,7 @@ import { type HostId, hostLaunchDirective } from '@noir-ai/adapters';
 import { loadProjectInfo } from '@noir-ai/core';
 import { NOIR_TAGLINE, renderBanner, shouldShowBanner } from '../banner.js';
 import { type CliOptions, EXIT, fail, isInteractive } from '../output.js';
+import { DEFAULT_UPDATE_CONFIG, runAsyncUpdateCheck } from './update.js';
 
 /** Callbacks home needs from the bin (injected → no circular import). */
 export interface HomeDeps {
@@ -91,6 +92,23 @@ async function runMenu(opts: CliOptions, deps: HomeDeps): Promise<void> {
   const clack = await import('@clack/prompts');
 
   const project = tryProject();
+
+  // fire-and-forget; never blocks, never prints under --json/--quiet/CI/non-TTY.
+  void runAsyncUpdateCheck({
+    env: process.env,
+    configUpdate: (() => {
+      // Try to read the project's update config block; fall back to defaults
+      // if the project isn't initialized or the block is absent.
+      try {
+        const info = loadProjectInfo(process.cwd());
+        return info.config.update ?? DEFAULT_UPDATE_CONFIG;
+      } catch {
+        return DEFAULT_UPDATE_CONFIG;
+      }
+    })(),
+    quiet: opts.json === true || opts.quiet === true || !process.stdout.isTTY,
+  });
+
   if (shouldShowBanner(opts)) {
     const host = project?.host ?? 'claude';
     process.stderr.write(

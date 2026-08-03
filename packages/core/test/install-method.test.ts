@@ -36,8 +36,8 @@ describe('install record', () => {
     });
     const rec = readInstallRecord();
     expect(rec).not.toBeNull();
-    expect(rec!.method).toBe('native');
-    expect(rec!.version).toBe('1.6.0');
+    expect(rec?.method).toBe('native');
+    expect(rec?.version).toBe('1.6.0');
     clearInstallRecord();
     expect(readInstallRecord()).toBeNull();
   });

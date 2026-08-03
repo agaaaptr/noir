@@ -768,6 +768,18 @@ export function createProgram(): Command {
   // `migrate` alias -- same behavior.
   installCmd.alias('migrate');
 
+  // C1 --- `noir update`: self-update via the active install method.
+  program
+    .command('update')
+    .description('update Noir to the latest version via the active install method')
+    .option('--check', 'check for a new version without changing anything')
+    .argument('[spec]', "channel ('latest'|'beta') or exact version (default: latest)")
+    .action(async (spec: string | undefined, opts: { check?: boolean }, cmd: Command) => {
+      const { update } = await import('./commands/update.js');
+      const cli = cmd.optsWithGlobals() as CliOptions;
+      await update({ ...cli, spec, check: opts.check === true });
+    });
+
   // `noir handoff` + the `noir wrap` session-end alias. Both dispatch the
   // SAME handler; the artifact reuses `gatherStatusPayload` (status.ts) +
   // `PHASE_SKILL` (task.ts) for the snapshot, does a bounded context/memory
