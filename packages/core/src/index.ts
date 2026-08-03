@@ -6,6 +6,15 @@ export {
 } from './block-writer.js';
 export { type NoirConfig, NoirConfigSchema, parseConfig } from './config.js';
 export { IGNORE_BLOCK, syncIgnores } from './ignore-manager.js';
+export {
+  atomicWriteFile,
+  clearInstallRecord,
+  type InstallMethod,
+  type InstallRecord,
+  installJsonPath,
+  readInstallRecord,
+  writeInstallRecord,
+} from './install-method.js';
 export { modelsDir, NOIR_DIR, noirHome, paths } from './layout.js';
 export {
   CONTEXT_BLOCK,

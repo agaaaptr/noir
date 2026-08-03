@@ -1,6 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { atomicWriteFile } from '@noir-ai/core';
 
 export interface DaemonRecord {
   pid: number;
@@ -32,7 +33,7 @@ export function readDaemonRecord(): DaemonRecord | null {
 
 export function writeDaemonRecord(rec: DaemonRecord): void {
   mkdirSync(noirHome(), { recursive: true });
-  writeFileSync(daemonJsonPath(), `${JSON.stringify(rec)}\n`, 'utf8');
+  atomicWriteFile(daemonJsonPath(), `${JSON.stringify(rec)}\n`);
 }
 
 export function clearDaemonRecord(): void {
