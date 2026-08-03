@@ -296,8 +296,11 @@ export async function provisionManagedNode(opts: ProvisionOptions = {}): Promise
   const env = opts.env ?? process.env;
   const root = runtimeDir();
   const versionDir = join(root, `v${version}`);
-  const nodeBin = join(versionDir, 'bin', binName('node', target));
-  const npmBin = join(versionDir, 'bin', binName('npm', target));
+  // Node archives on win32 extract `node.exe`/`npm.cmd` at the root (no `bin/`);
+  // POSIX archives extract into `bin/node` / `bin/npm`.
+  const binDir = target.os === 'win32' ? '' : 'bin';
+  const nodeBin = join(versionDir, binDir, binName('node', target));
+  const npmBin = join(versionDir, binDir, binName('npm', target));
 
   // 1) Reuse.
   if (existsSync(nodeBin)) {
