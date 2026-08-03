@@ -15,7 +15,7 @@ import { paths } from '@noir-ai/core';
 import { CURRENT_SCAFFOLD_VERSION, scaffoldVersionPath } from '@noir-ai/create';
 import { clearDaemonRecord } from '@noir-ai/daemon';
 import { openStore, vecAvailability } from '@noir-ai/store';
-import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { type CheckResult, checkPublish, doctor } from '../src/commands/doctor.js';
 import { EXIT, inferExitCode } from '../src/output.js';
 
@@ -526,6 +526,39 @@ describe('noir doctor — host artifacts (S10)', () => {
     expect(warnRow.detail).toMatch(/noir sync/);
     // Host-artifacts is warn-only — never escalates to a critical fail.
     expect(envWarn.data.summary.fail).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C1 — doctor install row (advisory; ok/warn only, never fail, never network).
+// ---------------------------------------------------------------------------
+describe('buildInstallCheck (pure)', () => {
+  // Import the function + the param type via dynamic import (tree-shaken by the
+  // entrypoint, but directly importable for a unit test).
+  let buildInstallCheck: typeof import('../src/commands/doctor.js')['buildInstallCheck'];
+  beforeAll(async () => {
+    ({ buildInstallCheck } = await import('../src/commands/doctor.js'));
+  });
+
+  it('reports method + recommendation without network', () => {
+    const o = buildInstallCheck({ method: 'npm', version: '1.5.0', latestKnown: '1.6.0' });
+    expect(o.status).toBe('warn'); // non-native advisory
+    expect(o.detail).toContain('native recommended');
+    expect(o.detail).toContain('update available');
+  });
+
+  it('native + current -> ok', () => {
+    const o = buildInstallCheck({ method: 'native', version: '1.6.0', latestKnown: '1.6.0' });
+    expect(o.status).toBe('ok');
+  });
+
+  it('never fails', () => {
+    for (const m of ['native', 'npm', 'homebrew', 'unknown'] as Array<
+      'native' | 'npm' | 'homebrew' | 'unknown'
+    >) {
+      const o = buildInstallCheck({ method: m, version: null, latestKnown: null });
+      expect(['ok', 'warn']).toContain(o.status);
+    }
   });
 });
 

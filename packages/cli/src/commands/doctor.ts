@@ -34,7 +34,17 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { type HostId, resolveAdapter } from '@noir-ai/adapters';
-import { loadProjectInfo, NOIR_VERSION, type ProjectInfo, paths } from '@noir-ai/core';
+import {
+  detectActiveMethod,
+  type InstallMethod,
+  latestVersionFromCache,
+  loadProjectInfo,
+  NOIR_VERSION,
+  type ProjectInfo,
+  paths,
+  readInstallRecord,
+  readUpdateCache,
+} from '@noir-ai/core';
 import { CURRENT_SCAFFOLD_VERSION, readScaffoldVersion } from '@noir-ai/create';
 import { pidAlive, readDaemonRecord } from '@noir-ai/daemon';
 import { resolveModelConfig } from '@noir-ai/model';
@@ -102,6 +112,13 @@ export interface DoctorPayload {
    *  are present, `ok` otherwise — NEVER `fail` (a missing field does not break
    *  the local install). */
   publish: { checked: number; issues: string[] } | null;
+  /** C1 install-method report. `method` from ~/.noir/install.json (fallback
+   *  unknown); `latestKnown` from the update cache (never a live call). */
+  install: {
+    method: InstallMethod;
+    installedVersion: string | null;
+    latestKnown: string | null;
+  } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -366,6 +383,44 @@ function checkProvider(checks: CheckResult[], project: ProjectInfo | undefined):
     status: missing ? 'warn' : 'ok',
     detail: parts.join(' · '),
   });
+}
+
+// ---------------------------------------------------------------------------
+// C1 — doctor install row (advisory; ok/warn only, never fail, cache-only).
+// ---------------------------------------------------------------------------
+
+export interface InstallCheckOutcome {
+  name: 'install';
+  status: 'ok' | 'warn';
+  detail: string;
+  method: InstallMethod;
+  installedVersion: string | null;
+  latestKnown: string | null;
+}
+
+/** Pure: build the doctor `install` row. NEVER `fail` — an install method issue
+ *  is advisory, not a broken host. Reads the cache only; no network. */
+export function buildInstallCheck(opts: {
+  method: InstallMethod;
+  version: string | null;
+  latestKnown: string | null;
+}): InstallCheckOutcome {
+  const { method, version, latestKnown } = opts;
+  const parts: string[] = [`method=${method}`];
+  if (version) parts.push(`v${version}`);
+  const advisory: string[] = [];
+  if (method !== 'native') advisory.push('native recommended');
+  if (latestKnown && version && latestKnown !== version) advisory.push('update available');
+  const status: 'ok' | 'warn' = advisory.length > 0 ? 'warn' : 'ok';
+  if (advisory.length > 0) parts.push(advisory.join(' + '));
+  return {
+    name: 'install',
+    status,
+    detail: parts.join(' · '),
+    method,
+    installedVersion: version,
+    latestKnown,
+  };
 }
 
 function checkScaffoldVersion(
@@ -984,6 +1039,14 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   }
   const publish = checkPublish(checks, resolveWorkspacePackagesDir());
 
+  // C1 — install-method check (advisory, cache-only, never fail).
+  const installCheck = buildInstallCheck({
+    method: detectActiveMethod(),
+    version: readInstallRecord()?.version ?? null,
+    latestKnown: latestVersionFromCache(readUpdateCache(), 'latest'),
+  });
+  checks.push(installCheck);
+
   const summary = summarize(checks);
   const payload: DoctorPayload = {
     noir: NOIR_VERSION,
@@ -993,6 +1056,11 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
     rules,
     host,
     publish,
+    install: {
+      method: installCheck.method,
+      installedVersion: installCheck.installedVersion,
+      latestKnown: installCheck.latestKnown,
+    },
   };
 
   if (opts.json === true) {
