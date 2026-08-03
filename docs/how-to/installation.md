@@ -161,8 +161,7 @@ If you started from a non-native install, a **one-time migration banner** is sho
 `noir install`/`migrate` refuses to downgrade unless you pin the version explicitly. If the target spec resolves to an **older** version than what's recorded, the command fails with a clear message (under `--no-input`) or prompts an interactive confirm. To pin a specific older version on purpose:
 
 ```bash
-noir install 1.5.0           # explicit pin (with a warning that it's older than 1.6.0)
-noir install --spec 1.5.0
+noir install 1.5.0           # explicit positional pin (with a warning that it's older than 1.6.0)
 ```
 
 ---
@@ -174,7 +173,7 @@ Once installed, update to the latest published version through the **active inst
 ```bash
 noir update                 # native → re-provisions; npm/pnpm/yarn/bun/Homebrew/Scoop → reinstall via that manager
 noir update --check         # one-shot: print the latest version vs. what you have, then exit
-noir update --spec 1.6.0    # pin a specific version
+noir update 1.6.0           # pin a specific version (positional)
 ```
 
 The check is **network-bound and timeout-bounded** (2s abort on the async path). When the registry is unreachable, `noir update` prints "Could not reach the registry." and exits — it never silently treats a network failure as "up to date".

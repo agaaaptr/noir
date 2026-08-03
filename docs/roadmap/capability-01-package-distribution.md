@@ -22,7 +22,7 @@ How Noir is distributed (npm monorepo, native installer, package-manager taps, r
   - `noir install` / `noir migrate [spec]` — move an existing install to the native path; preserves all settings (`.noir/` + `~/.noir/` data untouched); `--list` detects every install; `--uninstall-prev` removes the prior method (never auto-uninstalls; prints the suggested command when omitted).
   - `noir update [spec]` / `noir update --check` — self-update via the active install method (native → re-provision; npm/pnpm/yarn/bun/Homebrew/Scoop → reinstall via that manager).
   - **Async startup version check** — non-blocking, cached (`~/.noir/update.json`), 24h interval default; honors `NOIR_DISABLE_UPDATE_CHECK` (background check only) and `NOIR_DISABLE_UPDATES` (hard kill-switch for the whole self-update surface).
-  - **Version-assert** — `noir install`/`update` refuses a silent downgrade (per-segment numeric semver comparison); explicit `--spec`/pin prints a warning.
+  - **Version-assert** — `noir install`/`update` refuses a silent downgrade (per-segment numeric semver comparison); an explicit positional version pin prints a warning.
   - **Doctor install row** (`noir doctor`) — advisory `ok`/`warn` only, never `fail`, never a live network call; reports the detected method, installed version, latest-known version, and a `native recommended` nudge on non-native paths.
 - **Homebrew formula** — real `url`/`sha256`/`version` from the published 1.6.0 npm tarball (`packaging/homebrew/noir.rb`, Node-for-Formula-Authors pattern; stable-only; tap README at `packaging/homebrew/README.md`).
 - **Scoop manifest** — `packaging/scoop/noir.json` (Windows; depends on `nodejs-lts`; shims `dist/bin.js` as `noir`; stable-only single-channel).

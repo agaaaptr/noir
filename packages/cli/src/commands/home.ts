@@ -139,7 +139,7 @@ async function runMenu(opts: CliOptions, deps: HomeDeps): Promise<void> {
   const rec = readInstallRecord();
   if (rec && shouldShowMigrationBanner(rec, NOIR_VERSION)) {
     process.stderr.write(
-      `\n  ${c.warn(`noir installed via ${rec.method}`)} — consider \`noir install\` for the native path (auto-update, no npm prefix/PATH issues). Dismiss with: \`noir install --list\` (persisted per version).\n\n`,
+      `\n  ${c.warn(`noir installed via ${rec.method}`)} — consider \`noir install\` for the native path (auto-update, no npm prefix/PATH issues). Dismiss with: \`noir install --dismiss\` (persisted per version).\n\n`,
     );
   }
 

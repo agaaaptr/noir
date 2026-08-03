@@ -1,6 +1,7 @@
 import {
   detectActiveMethod,
   fetchLatestVersion,
+  loadProjectInfo,
   readInstallRecord,
   readUpdateCache,
   runManagerCmd,
@@ -8,7 +9,7 @@ import {
   type UpdateConfigLike,
   writeUpdateCache,
 } from '@noir-ai/core';
-import { type CliOptions, EXIT, fail, info, success } from '../output.js';
+import { type CliOptions, EXIT, fail, info, success, warn } from '../output.js';
 import { installManagedNode } from './install.js';
 
 export const DEFAULT_UPDATE_CONFIG: UpdateConfigLike = {
@@ -30,6 +31,13 @@ export interface UpdateTarget {
   currentVersion: string | null;
   latestKnown: string | null;
   isUpgrade: boolean;
+  /**
+   * I2 — `update.minVersion` floor (config.ts:238). True when the latest-known
+   * version the registry returned is below the configured floor (e.g. a
+   * beta/prerelease channel lag, or a yanked dist-tag). Enforced in
+   * {@link update} with the same warn/refuse pattern as the downgrade guard.
+   */
+  belowMinVersion: boolean;
 }
 
 export function buildUpdateTarget(opts: {
@@ -38,6 +46,11 @@ export function buildUpdateTarget(opts: {
   spec?: string;
   currentVersion: string | null;
   latestKnown: string | null;
+  /**
+   * The `update.minVersion` floor from config (default `'1.6.0'`). When
+   * omitted, the config default applies. See I2.
+   */
+  minVersion?: string;
 }): UpdateTarget {
   const targetSpec = opts.spec ?? opts.channel;
   // Semver downgrade guard (T6 hardening): only treat the latest-known version
@@ -50,12 +63,17 @@ export function buildUpdateTarget(opts: {
     opts.latestKnown != null &&
     opts.currentVersion != null &&
     semverGt(opts.latestKnown, opts.currentVersion);
+  // I2 — minVersion floor: refuse a registry-offered version below the floor.
+  // null latestKnown is handled separately (registry-unreachable branch).
+  const floor = opts.minVersion ?? '1.6.0';
+  const belowMinVersion = opts.latestKnown != null && semverLt(opts.latestKnown, floor);
   return {
     method: opts.method,
     targetSpec,
     currentVersion: opts.currentVersion,
     latestKnown: opts.latestKnown,
     isUpgrade,
+    belowMinVersion,
   };
 }
 
@@ -74,6 +92,22 @@ function semverGt(a: string, b: string): boolean {
     const x = pa[i] ?? 0;
     const y = pb[i] ?? 0;
     if (x !== y) return x > y;
+  }
+  return false;
+}
+
+/**
+ * Per-segment numeric semver `<` (I2 — minVersion floor). Same comparison
+ * discipline as {@link semverGt} / install.ts's downgrade guard: numeric per
+ * segment, non-numeric → 0. Returns true when `a` is strictly less than `b`.
+ */
+function semverLt(a: string, b: string): boolean {
+  const pa = a.split('.').map((s) => Number(s) || 0);
+  const pb = b.split('.').map((s) => Number(s) || 0);
+  for (let i = 0; i < 3; i++) {
+    const x = pa[i] ?? 0;
+    const y = pb[i] ?? 0;
+    if (x !== y) return x < y;
   }
   return false;
 }
@@ -119,13 +153,36 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
     info('Could not reach the registry.', opts);
     return;
   }
+  // I2 — read the `update.minVersion` floor from the project config (falls
+  // back to the config default '1.6.0' when the project isn't initialized or
+  // the block is absent). Same try/catch pattern as home.ts's update-config read.
+  let minVersion = DEFAULT_UPDATE_CONFIG.minVersion;
+  try {
+    minVersion = loadProjectInfo(process.cwd()).config.update.minVersion;
+  } catch {
+    // Not initialized yet — the config default applies.
+  }
   const target = buildUpdateTarget({
     method,
     channel: 'latest',
     spec: opts.spec,
     currentVersion,
     latestKnown: latest,
+    minVersion,
   });
+
+  // I2 — refuse to install a registry-offered version below the configured
+  // minVersion floor (same warn/refuse pattern as install.ts's downgrade guard).
+  // Checked before the isUpgrade branch: a below-floor offer is unsafe even if
+  // it happens to be newer than the (very old) current install.
+  if (target.belowMinVersion) {
+    warn(`Latest known ${target.latestKnown} is below the minVersion floor (${minVersion}).`);
+    fail(
+      EXIT.USAGE,
+      `refusing update to ${target.latestKnown} (below minVersion ${minVersion})`,
+      opts,
+    );
+  }
 
   if (!target.isUpgrade) {
     info(`noir ${currentVersion} is up to date.`, opts);

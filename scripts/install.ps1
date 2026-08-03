@@ -57,7 +57,7 @@ $cliMain = Join-Path $cliDir 'lib\node_modules\@noir-ai\cli\dist\bin.js'
 # Note: use -Value with an explicit string, never a pipeline value — on
 # PowerShell >= 7.3 a null pipeline value is a NO-OP for Set-Content, which
 # would silently leave a STALE shim on re-run.
-Set-Content -Path $shim -Value "@echo off`r`n`"%nodeBin%`" `"$cliMain`" %*" -Encoding ASCII -NoNewline
+Set-Content -Path $shim -Value "@echo off`r`n`"$nodeBin`" `"$cliMain`" %*" -Encoding ASCII -NoNewline
 
 # --- Verify (mirrors install.sh's `noir --version` check).
 $ver = & $nodeBin $cliMain --version

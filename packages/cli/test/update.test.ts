@@ -42,6 +42,7 @@ describe('buildUpdateTarget (pure)', () => {
       currentVersion: '1.5.0',
       latestKnown: '1.6.0',
       isUpgrade: true,
+      belowMinVersion: false, // 1.6.0 is at the default floor (1.6.0)
     });
   });
   it('isUpgrade false when already current', () => {
@@ -98,6 +99,83 @@ describe('buildUpdateTarget (pure)', () => {
         latestKnown: null,
       }).isUpgrade,
     ).toBe(false);
+  });
+
+  // I2 — update.minVersion floor (config.ts:238). The floor bounds the
+  // latest-known version the registry returned: if the registry ever offers a
+  // version below the configured floor (e.g. a beta/prerelease channel lag, or
+  // a yanked/stale dist-tag), the update must refuse rather than downgrade the
+  // install below the supported baseline. Mirrors the downgrade guard shape.
+  describe('minVersion floor', () => {
+    it('belowMinVersion true when latestKnown is below the floor', () => {
+      const t = buildUpdateTarget({
+        method: 'native',
+        channel: 'latest',
+        currentVersion: '1.6.0',
+        latestKnown: '1.5.0',
+        minVersion: '1.6.0',
+      });
+      expect(t.belowMinVersion).toBe(true);
+    });
+
+    it('belowMinVersion false when latestKnown is at the floor', () => {
+      expect(
+        buildUpdateTarget({
+          method: 'native',
+          channel: 'latest',
+          currentVersion: '1.6.0',
+          latestKnown: '1.6.0',
+          minVersion: '1.6.0',
+        }).belowMinVersion,
+      ).toBe(false);
+    });
+
+    it('belowMinVersion false when latestKnown is above the floor', () => {
+      expect(
+        buildUpdateTarget({
+          method: 'native',
+          channel: 'latest',
+          currentVersion: '1.6.0',
+          latestKnown: '1.7.0',
+          minVersion: '1.6.0',
+        }).belowMinVersion,
+      ).toBe(false);
+    });
+
+    it('belowMinVersion false when latestKnown is null (registry-unreachable handled separately)', () => {
+      expect(
+        buildUpdateTarget({
+          method: 'native',
+          channel: 'latest',
+          currentVersion: '1.6.0',
+          latestKnown: null,
+          minVersion: '1.6.0',
+        }).belowMinVersion,
+      ).toBe(false);
+    });
+
+    it('compares semantically, not lexically (1.10.0 >= 1.6.0)', () => {
+      expect(
+        buildUpdateTarget({
+          method: 'native',
+          channel: 'latest',
+          currentVersion: '1.6.0',
+          latestKnown: '1.10.0',
+          minVersion: '1.6.0',
+        }).belowMinVersion,
+      ).toBe(false);
+    });
+
+    it('defaults the floor to 1.6.0 when minVersion is omitted (matches config default)', () => {
+      expect(
+        buildUpdateTarget({
+          method: 'native',
+          channel: 'latest',
+          currentVersion: '1.6.0',
+          latestKnown: '1.5.0',
+        }).belowMinVersion,
+      ).toBe(true);
+    });
   });
 });
 

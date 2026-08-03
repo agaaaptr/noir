@@ -61,6 +61,92 @@ describe('buildMigrationPlan (pure)', () => {
     expect(plan.prevUninstallCmd).toBe('npm uninstall -g @noir-ai/cli'); // still NOT auto-run
     expect(plan.autoUninstall).toBe(false);
   });
+
+  // I2 — update.minVersion floor (config.ts:238). The floor is a hard lower
+  // bound on the resolved target version; an explicit pin below it is refused
+  // the same way a downgrade is. Mirrors the downgrade guard: only concrete
+  // X.Y.Z versions are compared — 'latest'/'beta' resolve to the newest at
+  // install time (always >= floor by definition), so they never trip the floor.
+  describe('minVersion floor', () => {
+    it('belowMinVersion true when target is a concrete version below the floor', () => {
+      const plan = buildMigrationPlan({
+        detected: [],
+        currentMethod: 'unknown',
+        targetSpec: '1.5.0',
+        installedVersion: null,
+        minVersion: '1.6.0',
+      });
+      expect(plan.belowMinVersion).toBe(true);
+    });
+
+    it('belowMinVersion false when target is at the floor', () => {
+      const plan = buildMigrationPlan({
+        detected: [],
+        currentMethod: 'unknown',
+        targetSpec: '1.6.0',
+        installedVersion: null,
+        minVersion: '1.6.0',
+      });
+      expect(plan.belowMinVersion).toBe(false);
+    });
+
+    it('belowMinVersion false when target is above the floor', () => {
+      const plan = buildMigrationPlan({
+        detected: [],
+        currentMethod: 'unknown',
+        targetSpec: '1.7.0',
+        installedVersion: null,
+        minVersion: '1.6.0',
+      });
+      expect(plan.belowMinVersion).toBe(false);
+    });
+
+    it('belowMinVersion false for channel targets (latest/beta) — resolved at install time', () => {
+      expect(
+        buildMigrationPlan({
+          detected: [],
+          currentMethod: 'unknown',
+          targetSpec: 'latest',
+          installedVersion: null,
+          minVersion: '1.6.0',
+        }).belowMinVersion,
+      ).toBe(false);
+      expect(
+        buildMigrationPlan({
+          detected: [],
+          currentMethod: 'unknown',
+          targetSpec: 'beta',
+          installedVersion: null,
+          minVersion: '1.6.0',
+        }).belowMinVersion,
+      ).toBe(false);
+    });
+
+    it('compares semantically, not lexically (1.10.0 >= 1.6.0)', () => {
+      // A naive string compare would call 1.10.0 < 1.6.0 ('1.1' < '1.6').
+      expect(
+        buildMigrationPlan({
+          detected: [],
+          currentMethod: 'unknown',
+          targetSpec: '1.10.0',
+          installedVersion: null,
+          minVersion: '1.6.0',
+        }).belowMinVersion,
+      ).toBe(false);
+    });
+
+    it('defaults the floor to 1.6.0 when minVersion is omitted (matches config default)', () => {
+      // Omitted minVersion ⇒ the config default '1.6.0' applies.
+      expect(
+        buildMigrationPlan({
+          detected: [],
+          currentMethod: 'unknown',
+          targetSpec: '1.5.0',
+          installedVersion: null,
+        }).belowMinVersion,
+      ).toBe(true);
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -5,6 +5,7 @@ import {
   type DetectResult,
   detectActiveMethod,
   detectInstallMethods,
+  loadProjectInfo,
   NOIR_VERSION,
   noirHome,
   readInstallRecord,
@@ -29,38 +30,20 @@ export interface MigrationPlan {
   installedVersion: string | null;
   shouldMigrate: boolean;
   isDowngrade: boolean;
+  /**
+   * I2 — `update.minVersion` floor (config.ts:238). True when the resolved
+   * target is a concrete version below the configured floor. Channel targets
+   * (`latest`/`beta`) resolve to the newest at install time and never trip it.
+   * Enforced in {@link install} with the same warn/refuse pattern as the
+   * downgrade guard.
+   */
+  belowMinVersion: boolean;
   nativeVersion: string;
   prevUninstallCmd: string | null;
   autoUninstall: boolean; // always false unless --uninstall-prev
 }
 
-/** Pure: build the migration plan from detection + target. No I/O. */
-export function buildMigrationPlan(opts: {
-  detected: DetectResult[];
-  currentMethod: string;
-  targetSpec: string;
-  installedVersion: string | null;
-}): MigrationPlan {
-  const detected = opts.detected;
-  const shouldMigrate = detected.length > 0 && opts.currentMethod !== 'native';
-  const nativeVersion = opts.targetSpec;
-  let isDowngrade = false;
-  if (opts.installedVersion && nativeVersion !== 'latest' && nativeVersion !== 'beta') {
-    isDowngrade = semverLt(nativeVersion, opts.installedVersion);
-  }
-  return {
-    detected,
-    currentMethod: opts.currentMethod,
-    targetSpec: opts.targetSpec,
-    installedVersion: opts.installedVersion,
-    shouldMigrate,
-    isDowngrade,
-    nativeVersion,
-    prevUninstallCmd: detected[0]?.uninstallCmd ?? null,
-    autoUninstall: false,
-  };
-}
-
+/** Per-segment numeric semver comparison. Returns true when `a < b`. */
 function semverLt(a: string, b: string): boolean {
   const pa = a.split('.').map(Number);
   const pb = b.split('.').map(Number);
@@ -70,6 +53,44 @@ function semverLt(a: string, b: string): boolean {
     if (x !== y) return x < y;
   }
   return false;
+}
+
+/** Pure: build the migration plan from detection + target. No I/O. */
+export function buildMigrationPlan(opts: {
+  detected: DetectResult[];
+  currentMethod: string;
+  targetSpec: string;
+  installedVersion: string | null;
+  /**
+   * The `update.minVersion` floor from config (default `'1.6.0'`). When
+   * omitted, the config default applies. See I2.
+   */
+  minVersion?: string;
+}): MigrationPlan {
+  const detected = opts.detected;
+  const shouldMigrate = detected.length > 0 && opts.currentMethod !== 'native';
+  const nativeVersion = opts.targetSpec;
+  let isDowngrade = false;
+  if (opts.installedVersion && nativeVersion !== 'latest' && nativeVersion !== 'beta') {
+    isDowngrade = semverLt(nativeVersion, opts.installedVersion);
+  }
+  // I2 — minVersion floor: only a concrete version below the floor trips it;
+  // 'latest'/'beta' resolve to the newest at install time (always >= floor).
+  const floor = opts.minVersion ?? '1.6.0';
+  const belowMinVersion =
+    nativeVersion !== 'latest' && nativeVersion !== 'beta' && semverLt(nativeVersion, floor);
+  return {
+    detected,
+    currentMethod: opts.currentMethod,
+    targetSpec: opts.targetSpec,
+    installedVersion: opts.installedVersion,
+    shouldMigrate,
+    isDowngrade,
+    belowMinVersion,
+    nativeVersion,
+    prevUninstallCmd: detected[0]?.uninstallCmd ?? null,
+    autoUninstall: false,
+  };
 }
 
 export async function installManagedNode(opts: {
@@ -169,12 +190,35 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
   const currentMethod = detectActiveMethod();
   const detected = await detectInstallMethods(process.env);
   const installedRecord = readInstallRecord();
+  // I2 — read the `update.minVersion` floor from the project config (falls
+  // back to the config default '1.6.0' when the project isn't initialized or
+  // the block is absent). Same try/catch pattern as home.ts's update-config read.
+  let minVersion = '1.6.0';
+  try {
+    minVersion = loadProjectInfo(process.cwd()).config.update.minVersion;
+  } catch {
+    // Not initialized yet — the config default applies.
+  }
   const plan = buildMigrationPlan({
     detected,
     currentMethod,
     targetSpec: opts.spec ?? 'latest',
     installedVersion: installedRecord?.version ?? null,
+    minVersion,
   });
+
+  // I2 — refuse to install a version below the configured minVersion floor
+  // (same warn/refuse pattern as the installed-version downgrade guard).
+  if (plan.belowMinVersion) {
+    warn(`Target ${plan.nativeVersion} is below the minVersion floor (${minVersion}).`);
+    if (opts.noInput === true || opts.input === false) {
+      fail(
+        EXIT.USAGE,
+        `refusing install of ${plan.nativeVersion} (below minVersion ${minVersion})`,
+        opts,
+      );
+    }
+  }
 
   if (plan.isDowngrade) {
     warn(`Target ${plan.nativeVersion} is OLDER than installed ${plan.installedVersion}.`);
