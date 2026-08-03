@@ -7,6 +7,13 @@ export {
 export { type NoirConfig, NoirConfigSchema, parseConfig } from './config.js';
 export { IGNORE_BLOCK, syncIgnores } from './ignore-manager.js';
 export {
+  type DetectResult,
+  detectActiveMethod,
+  detectInstallMethods,
+  runManagerCmd,
+  uninstallCommandFor,
+} from './install-detect.js';
+export {
   atomicWriteFile,
   clearInstallRecord,
   type InstallMethod,
