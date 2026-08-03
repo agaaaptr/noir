@@ -51,7 +51,13 @@ detect_platform() {
   case "$(uname -s)" in
     Darwin)            os="macos" ;;
     Linux)             os="linux" ;;
-    MINGW*|MSYS*|CYGWIN*) os="windows" ;;
+    MINGW*|MSYS*|CYGWIN*) os="windows"
+      # C1: on Windows the canonical path is the native PowerShell installer.
+      # Don't run a bash-wrapped npm install here — redirect instead.
+      warn "Windows detected - use the native PowerShell installer:"
+      warn "  powershell -c \"irm https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.ps1 | iex\""
+      exit 0
+      ;;
     *)                 os="unknown:$(uname -s)" ;;
   esac
   case "$(uname -m)" in

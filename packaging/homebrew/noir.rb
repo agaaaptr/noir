@@ -5,47 +5,59 @@
 # (better-sqlite3, sqlite-vec, onnxruntime-node). Because Noir needs Node,
 # there is no standalone single-binary build; this formula uses the
 # Node-for-Formula-Authors pattern (https://docs.brew.sh/Node-for-Formula-Authors):
-# it depends on Homebrew's `node`, installs the npm package into `libexec`,
+# it depends on Homebrew's `node@22`, installs the npm package into `libexec`,
 # and symlinks the `noir` bin into the Homebrew `bin`.
 #
-# After the first stable release, fill in `url` + `sha256` (and bump `version`)
-# using the values from:
-#   curl -sL https://registry.npmjs.org/@noir-ai/cli/latest | jq -r '.version, .dist.tarball, .dist.shasum'
-#   shasum -a 256 <(curl -sL <tarball>)   # sha256 of the tarball
+# `url`/`sha256`/`version` are the REAL values from the 1.6.0 npm tarball
+# (they are immutable once published). Refresh all three on each stable
+# release:
+#   curl -sL https://registry.npmjs.org/@noir-ai/cli/latest | \
+#     jq -r '.version, .dist.tarball, .dist.integrity'
+#   shasum -a 256 <(curl -sL "<tarball>")   # sha256 of the tarball
 #
 # Stable-only: Homebrew taps are single-channel. For the beta channel
 # (`@noir-ai/cli@beta`), install via npm directly — see docs/installation.md.
+#
+# Must pass `brew audit --strict` — Homebrew's lines.rb cop forbids the older
+# `std_npm_install_args` in favour of `std_npm_args`.
 
 class Noir < Formula
   desc "Discipline, context, and memory layer for any agentic CLI"
   homepage "https://github.com/agaaaptr/noir"
-  # TODO(first-release): replace the placeholder url/sha256/version below with
-  # the real tarball + checksum from the npm registry (instructions above).
-  url "https://registry.npmjs.org/@noir-ai/cli/-/@noir-ai/cli-1.0.0.tgz"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
-  version "1.0.0"
+  url "https://registry.npmjs.org/@noir-ai/cli/-/cli-1.6.0.tgz"
+  sha256 "e73bd74c94932d709ce947103d2c5fe7153cd718458f61d70dfb980cbb6ea7d8"
+  version "1.6.0"
   license "MIT"
 
   # Noir requires Node >= 22 (the CLI's package.json `engines.node`).
   depends_on "node@22"
 
-  # The native modules (better-sqlite3, sqlite-vec, onnxruntime-node) are
-  # prebuilt for mac/linux on x64 + arm64. On the common macOS/Linux paths
-  # `npm install` here is fast (it links prebuilt artifacts). On exotic
-  # platforms it falls back to a source build and needs a C/C++ toolchain
-  # (which Homebrew's `node` does not pull in); install Xcode CLT / build-essential first.
   def install
-    # `Language::Node.std_npm_install_args(libexec)` produces:
-    #   ["--prefix=#{libexec}", "--build-from-source", "--omit=dev", "--omit=peer",
-    #    "--no-audit", "--no-fund", "--no-progress"]
-    system "npm", "install", *Language::Node.std_npm_install_args(libexec)
-    # Symlink every bin the package ships (today: just `noir`) into Homebrew's bin.
+    # `std_npm_args(prefix: libexec)` delegates to
+    # `Language::Node.std_npm_install_args`, which produces roughly:
+    #   ["--loglevel=silly", "--global", "--build-from-source",
+    #    "--min-release-age=…", "--cache=#{HOMEBREW_CACHE}/npm_cache",
+    #    "--ignore-scripts", "--prefix=#{libexec}", "<tarball>"]
+    #
+    # Two deliberate behaviours:
+    #   * `--build-from-source` — Noir's native modules (better-sqlite3,
+    #     sqlite-vec, onnxruntime-node) link against Homebrew's node@22, not a
+    #     system-global prebuilt; the C/C++ toolchain comes from Homebrew's
+    #     `node` / Xcode CLT / build-essential on first install.
+    #   * `--ignore-scripts` — the tarball's postinstall is a no-op; install
+    #     scripts are stripped from the packed package.json by the helper's
+    #     `pack_for_installation`.
+    # The helper passes a real tarball archive to `npm install` (never a
+    # directory — `npm install <dir>` only symlinks, which would break
+    # Homebrew's disposable buildpath), installs under `libexec`, then we
+    # symlink every bin the package ships (today: just `noir`) into bin.
+    system "npm", "install", *std_npm_args(prefix: libexec)
     bin.install_symlink Dir["#{libexec}/bin/*"]
   end
 
   # Homebrew's `brew audit` / `brew test` runs this. Keep it offline (no daemon,
   # no model provider) — `noir --version` prints and exits without touching the
-  # network. The version string is the npm version (e.g. "1.0.0").
+  # network. The version string is the npm version (e.g. "1.6.0").
   test do
     assert_match version.to_s, shell_output("#{bin}/noir --version")
   end
