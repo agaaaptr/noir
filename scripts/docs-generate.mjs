@@ -216,19 +216,29 @@ function genConfigSchema() {
       import('${join(ROOT, 'packages', 'core', 'dist', 'index.js')}').then(m => {
         const schema = m.NoirConfigSchema;
         if (!schema) { console.log('{}'); return; }
-        // Extract shape from Zod object
-        const shape = schema._def?.shape?.() || {};
+        // Zod v4: _def.shape may be an object of fields (v4) or a function (v3).
+        const rawShape = schema._def?.shape;
+        const shape = typeof rawShape === 'function' ? rawShape() : (rawShape || {});
         const result = {};
         for (const [key, field] of Object.entries(shape)) {
+          // Zod v4 puts the schema on the field's own 'shape' too; the field may be
+          // wrapped (optional/nullable/default) — resolve to the inner schema.
+          const inner = field?.unwrap?.() || field;
+          const typeName = inner?._def?.typeName || field?._def?.typeName || 'unknown';
+          const dv = field?._def?.defaultValue;
+          let defaultValue;
+          if (typeof dv === 'function') defaultValue = JSON.stringify(dv());
+          else if (dv && typeof dv === 'object' && 'value' in dv) defaultValue = JSON.stringify(dv.value);
+          else if (dv !== undefined) defaultValue = JSON.stringify(dv);
           result[key] = {
-            type: field._def?.typeName || 'unknown',
-            required: !field.isOptional?.() ?? true,
-            description: field._def?.description || field.description || '',
-            default: field._def?.defaultValue ? JSON.stringify(field._def.defaultValue()) : undefined,
+            type: typeName,
+            required: !(field?.isOptional?.() ?? false),
+            description: inner?._def?.description || inner?.description || field?._def?.description || '',
+            default: defaultValue,
           };
         }
         console.log(JSON.stringify(result, null, 2));
-      }).catch(() => console.log('{}'));
+      }).catch((e) => { console.error('schema-reflection error:', e?.message); console.log('{}'); });
     `,
       ],
       { nullable: true },
@@ -331,15 +341,13 @@ function genMcpTools() {
       const content = readFile(join(daemonDir, file));
       if (!content) continue;
 
-      // Find tool registration: name: 'tool_name'
-      const toolMatches = content.matchAll(/name:\s*['"]([\w_]+)['"]/g);
+      // Find tool registration: server.registerTool('tool_name', { description: ... }, handler)
+      const toolMatches = content.matchAll(/registerTool\(\s*['"]([\w_]+)['"]/g);
       for (const m of toolMatches) {
         const name = m[1];
-        // Find the description nearby
-        const descIdx = content.indexOf(`name: '${name}'`);
-        if (descIdx === -1) continue;
-        const nearbySlice = content.slice(descIdx, descIdx + 300);
-        const descMatch = nearbySlice.match(/description:\s*['"]([^'"]+)['"]/);
+        // Find the description in the options object following the name
+        const afterName = content.slice(m.index + m[0].length, m.index + m[0].length + 500);
+        const descMatch = afterName.match(/description:\s*['"]([^'"]+)['"]/);
         const desc = descMatch ? descMatch[1] : '';
 
         // Determine category from file name
@@ -465,6 +473,15 @@ function findDocs(dir = DOCS_DIR, basePath = 'docs') {
     const fullPath = join(dir, entry.name);
     const relPath = `${basePath}/${entry.name}`;
 
+    // Skip the docs/CHANGELOG.md stub — the root CHANGELOG.md is the single source of
+    // truth and is added explicitly by buildRegistry(). Keeping a pointer file at
+    // docs/CHANGELOG.md would register it twice.
+    if (relPath === 'docs/CHANGELOG.md') continue;
+
+    // Skip docs/README.md — it is the auto-generated index itself; indexing it would
+    // self-reference (it appears as a spurious "Documentation" entry in the index).
+    if (relPath === 'docs/README.md') continue;
+
     if (entry.isDirectory() && !entry.name.startsWith('.') && !entry.name.startsWith('_')) {
       docs.push(...findDocs(fullPath, relPath));
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
@@ -481,8 +498,8 @@ function findDocs(dir = DOCS_DIR, basePath = 'docs') {
       else if (relPath.startsWith('docs/decisions/')) category = 'adr';
       else if (relPath.startsWith('docs/internal/')) category = 'internal';
       else if (relPath === 'docs/getting-started.md') category = 'tutorial';
-      else if (relPath === 'docs/roadmap.md') category = 'record';
-      else if (relPath === 'docs/CHANGELOG.md') category = 'record';
+      else if (relPath.startsWith('docs/roadmap/')) category = 'roadmap';
+      else if (relPath.startsWith('docs/CHANGELOG.md')) category = 'record';
       else if (relPath.startsWith('docs/') && basePath === 'docs' && !relPath.includes('/'))
         category = 'root-doc';
 
@@ -765,6 +782,7 @@ function cmdIndex() {
     explanation: { title: 'Explanation', docs: [] },
     record: { title: 'Records', docs: [] },
     adr: { title: 'Architecture Decision Records', docs: [] },
+    roadmap: { title: 'Roadmap', docs: [] },
     internal: { title: 'Internal (SDD History)', docs: [] },
   };
 

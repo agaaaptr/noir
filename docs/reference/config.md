@@ -2,6 +2,15 @@
 
 > Auto-generated from `NoirConfigSchema` (Zod v4) in `@noir-ai/core`.
 
-_(Schema reflection unavailable — run `pnpm build` first)_
-
-See `packages/core/src/config.ts` for the authoritative `NoirConfigSchema` definition.
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `host` | `unknown` | no | "claude" |  |
+| `name` | `unknown` | no | — |  |
+| `mode` | `unknown` | no | "full" |  |
+| `daemon` | `unknown` | no | {"idleTimeoutSec":900} |  |
+| `context` | `unknown` | no | {"embedder":{"kind":"local","dim":384},"roots":[],"budgetTokens":4096} |  |
+| `model` | `unknown` | no | {} |  |
+| `memory` | `unknown` | no | {"consolidation":{"enabled":false}} |  |
+| `rules` | `unknown` | no | {"enabled":true,"lengthBudgetKb":6} |  |
+| `prd` | `unknown` | no | {"mandatoryFor":["feature","epic"]} |  |
+| `integrations` | `unknown` | no | {} |  |

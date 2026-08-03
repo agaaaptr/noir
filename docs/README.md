@@ -1,7 +1,7 @@
 # Documentation
 
 > Auto-generated documentation index.
-> Last updated: 2026-07-28T04:56:52.122Z
+> Last updated: 2026-08-03T07:40:56.448Z
 
 ## Getting Started
 
@@ -19,7 +19,6 @@
 
 ## Reference
 
-- [**CLI Command Reference**](reference/cli-auto.md) — 
 - [**CLI Command Reference**](reference/cli.md) — 
 - [**Configuration Reference**](reference/config.md) — 
 - [**MCP Tools Reference**](reference/mcp-tools.md) — 
@@ -35,8 +34,6 @@
 ## Records
 
 - [**Changelog**](CHANGELOG.md) — 
-- [**Changelog**](CHANGELOG.md) — 
-- [**Noir — Roadmap & North Star**](roadmap.md) — 
 
 ## Architecture Decision Records
 
@@ -45,6 +42,26 @@
 - [**ADR-0003: v1.x capabilities — keystone refactor + five extensions**](decisions/0003-v1x-capabilities.md) — 
 - [**ADR-0004: Multi-host adapters — the `resolveAdapter(host)` registry + AGENTS.md universal**](decisions/0004-multi-host-adapters.md) — 
 - [**Architecture Decision Records**](decisions/README.md) — 
+
+## Roadmap
+
+- [**Backlog**](roadmap/backlog.md) — 
+- [**Capability 1 — Package Distribution & Release Management**](roadmap/capability-01-package-distribution.md) — 
+- [**Capability 2 — CLI Runtime & User Experience**](roadmap/capability-02-cli-runtime.md) — 
+- [**Capability 3 — Built-in Skill System**](roadmap/capability-03-builtin-skill-system.md) — 
+- [**Capability 4 — End-to-End AI Development Workflow**](roadmap/capability-04-ai-development-workflow.md) — 
+- [**Capability 5.5 — Host Abstraction Layer (HAL)**](roadmap/capability-05-5-host-abstraction-layer.md) — 
+- [**Capability 5 — Runtime Infrastructure & Local Daemon**](roadmap/capability-05-runtime-infrastructure.md) — 
+- [**Capability 6 — Documentation & Knowledge System**](roadmap/capability-06-documentation-knowledge-system.md) — 
+- [**Capability 7 — Engineering Governance & Project Operating System**](roadmap/capability-07-engineering-governance.md) — 
+- [**Capability 8 — Platform Engineering & Developer Experience (DX)**](roadmap/capability-08-platform-engineering-dx.md) — 
+- [**Capability 9 — AI Platform Evolution & Long-Term Vision**](roadmap/capability-09-platform-evolution.md) — 
+- [**Roadmap Changelog**](roadmap/CHANGELOG.md) — 
+- [**Contributing to the Noir Roadmap**](roadmap/CONTRIBUTING.md) — 
+- [**Noir Roadmap**](roadmap/README.md) — 
+- [**Releases & Version Targets**](roadmap/releases.md) — 
+- [**Noir Master Development Roadmap**](roadmap/ROADMAP.md) — 
+- [**Noir Roadmap Status**](roadmap/STATUS.md) — 
 
 ## Internal (SDD History)
 
@@ -83,5 +100,4 @@
 - [**Noir v1.x Capabilities — Design Analysis**](internal/specs/2026-07-25-v1x-capabilities-design.md) — [ARCHIVED] 
 - [**Spec — File Conflict Resolution (SP-C)**](internal/specs/2026-07-26-conflict-resolution-design.md) — [ARCHIVED] 
 - [**Spec — Scaffold Idempotency & Root-Safety (SP-A)**](internal/specs/2026-07-26-scaffold-idempotency-design.md) — [ARCHIVED] 
-- [**Documentation**](README.md) — 
 

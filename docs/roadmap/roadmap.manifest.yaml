@@ -1,0 +1,58 @@
+version: 2
+
+current_phase: shipped
+
+active_capability: 2
+
+active_slice: cli-runtime
+
+roadmap:
+  - id: C1
+    title: Package Distribution & Release Management
+    status: partial
+    priority: high
+
+  - id: C2
+    title: CLI Runtime & User Experience
+    status: partial
+    priority: high
+
+  - id: C3
+    title: Built-in Skill System
+    status: partial
+    priority: high
+
+  - id: C4
+    title: End-to-End AI Development Workflow
+    status: shipped
+    priority: high
+
+  - id: C5
+    title: Runtime Infrastructure & Local Daemon
+    status: shipped
+    priority: medium
+
+  - id: C5.5
+    title: Host Abstraction Layer
+    status: partial
+    priority: high
+
+  - id: C6
+    title: Documentation & Knowledge System
+    status: partial
+    priority: high
+
+  - id: C7
+    title: Engineering Governance & Project OS
+    status: partial
+    priority: high
+
+  - id: C8
+    title: Platform Engineering & Developer Experience
+    status: partial
+    priority: medium
+
+  - id: C9
+    title: AI Platform Evolution & Long-Term Vision
+    status: vision
+    priority: low

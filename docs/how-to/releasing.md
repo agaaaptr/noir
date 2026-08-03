@@ -81,7 +81,7 @@ git pull --ff-only
 node scripts/bump-version.mjs 1.4.0
 #    equivalent: pnpm release:bump 1.4.0
 
-# 2. (Recommended) update docs/CHANGELOG.md for the release.
+# 2. (Recommended) update CHANGELOG.md (root) for the release.
 
 # 3. Review the diff — all 11 packages should show the new version.
 git diff
@@ -339,7 +339,7 @@ The very first release (`1.0.0`) has extra gating. Do not cut it until every box
 - [ ] `pnpm lint && pnpm build && pnpm typecheck && pnpm test` all green on `main` (target the same Node 22 the CI uses).
 - [ ] Every `packages/*/package.json` has `publishConfig: { access:"public", provenance:true }`, `engines.node >=22`, a one-line `description`, valid `repository`/`bugs`/`homepage`, and `files` including `dist` (+ `README.md`, and `builtin/` for skills).
 - [ ] `npm publish --dry-run` in `packages/cli` and at least one library package is sane (correct files, **no `src/`/tests/secrets**).
-- [ ] `docs/CHANGELOG.md` has a `1.0.0` entry.
+- [ ] `CHANGELOG.md` (root) has a `1.0.0` entry.
 
 **Cut (§2)**
 - [ ] `node scripts/bump-version.mjs 1.0.0`; verify all 11 are `1.0.0` and identical.

@@ -26,7 +26,7 @@ The `noir` home menu (interactive; `noir status` when non-interactive):
 **Current beta:** `1.6.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.6.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-07-28T06:38:45.015Z*
+*Last auto-generated: 2026-08-03T07:39:41.309Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
@@ -88,14 +88,14 @@ MCP tools → [MCP Tools Reference](docs/reference/mcp-tools.md).
 | **How-to** | [Installation](docs/how-to/installation.md) · [Releasing](docs/how-to/releasing.md) · [Adding a Package](docs/how-to/packaging.md) |
 | **Reference** | [CLI Commands](docs/reference/cli.md) · [Configuration](docs/reference/config.md) · [MCP Tools](docs/reference/mcp-tools.md) · [Skills](docs/reference/skills.md) · [Packages](docs/reference/packages.md) |
 | **Explanation** | [Architecture](docs/explanation/architecture.md) · [Privacy](docs/explanation/privacy.md) · [SDD Workflow](docs/explanation/sdd-workflow.md) |
-| **Records** | [Roadmap](docs/roadmap.md) · [Changelog](CHANGELOG.md) · [Decisions (ADRs)](docs/decisions/) |
+| **Records** | [Roadmap](docs/roadmap/) · [Changelog](CHANGELOG.md) · [Decisions (ADRs)](docs/decisions/) |
 
 ## Development
 
 ```bash
 pnpm install && pnpm build    # build all 11 packages
 pnpm typecheck && pnpm lint   # type + format checks
-pnpm test                      # 1315 tests (vitest, Node ≥22)
+pnpm test                      # vitest suite (Node ≥22)
 ```
 
 This repo is developed with Claude Code; [AGENTS.md](AGENTS.md) holds the conventions.

@@ -163,4 +163,4 @@ The host picks up the configured mode via the `noir-intake` skill / the `workflo
 - [installation.md](how-to/installation.md) — the full install reference (every path, troubleshooting, the channel model).
 - [usage.md](reference/cli.md) — the full reference: every command, the config schema, the `.noir/` + `~/.noir/` layout, and the privacy rules.
 - [architecture/README.md](explanation/architecture.md) — how the 11 packages fit together (incl. the v1.x capability slices).
-- [roadmap.md](roadmap.md) — current status, v1.x backlog, version targets.
+- [roadmap/](roadmap/) — project direction, capability index, releases & version targets.
