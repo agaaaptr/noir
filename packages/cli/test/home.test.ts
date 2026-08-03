@@ -32,9 +32,10 @@ vi.mock('@noir-ai/core', () => ({
   loadProjectInfo: vi.fn(() => {
     throw new Error('not initialized');
   }),
+  readInstallRecord: vi.fn(() => null),
 }));
 
-import { type HomeDeps, home } from '../src/commands/home.js';
+import { type HomeDeps, home, shouldShowMigrationBanner } from '../src/commands/home.js';
 import { EXIT } from '../src/output.js';
 
 // --- TTY + env management (isInteractive = stdin&stdout TTY && !CI && !NO_COLOR)
@@ -235,5 +236,22 @@ describe('home — interactive @clack menu', () => {
     await expect(home({}, deps)).rejects.toMatchObject({ exitCode: EXIT.CANCELLED });
     expect(clackMock.cancel).toHaveBeenCalledTimes(1);
     expect(deps.dispatch).not.toHaveBeenCalled();
+  });
+});
+
+describe('shouldShowMigrationBanner', () => {
+  it('shows once for a non-native method, not for native', () => {
+    expect(
+      shouldShowMigrationBanner(
+        { method: 'npm', version: '1.6.0', channel: 'latest', installedAt: 'x' },
+        '1.6.0',
+      ),
+    ).toBe(true);
+    expect(
+      shouldShowMigrationBanner(
+        { method: 'native', version: '1.6.0', channel: 'latest', installedAt: 'x' },
+        '1.6.0',
+      ),
+    ).toBe(false);
   });
 });

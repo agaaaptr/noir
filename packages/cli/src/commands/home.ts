@@ -23,9 +23,15 @@
 // commander — tests pass a fake callback + mock @clack.
 
 import { type HostId, hostLaunchDirective } from '@noir-ai/adapters';
-import { loadProjectInfo } from '@noir-ai/core';
+import {
+  type InstallRecord,
+  loadProjectInfo,
+  NOIR_VERSION,
+  readInstallRecord,
+} from '@noir-ai/core';
 import { NOIR_TAGLINE, renderBanner, shouldShowBanner } from '../banner.js';
 import { type CliOptions, EXIT, fail, isInteractive } from '../output.js';
+import { c } from '../theme.js';
 import { DEFAULT_UPDATE_CONFIG, runAsyncUpdateCheck } from './update.js';
 
 /** Callbacks home needs from the bin (injected → no circular import). */
@@ -49,6 +55,16 @@ function tryProject(): { id: string; name: string; host: HostId } | null {
     // just shows the generic intro. `Status` will surface the real error.
     return null;
   }
+}
+
+/**
+ * One-time nudge: shows only for non-native installs, once per version. The
+ * "dismissed for this version" flag is stored in install.json's record
+ * (`dismissedVersions` is added on demand); absence ⇒ show.
+ */
+export function shouldShowMigrationBanner(rec: InstallRecord, _currentVersion: string): boolean {
+  if (rec.method === 'native') return false;
+  return true; // naive v1: show whenever non-native; dismissal persists via a flag added in Task 11 hardening
 }
 
 /** One-line summary of the CLI command surface (shown under the banner). */
@@ -115,6 +131,15 @@ async function runMenu(opts: CliOptions, deps: HomeDeps): Promise<void> {
       `\n${renderBanner()}\n${NOIR_TAGLINE}\n\n${hostLaunchDirective(host)}\n${COMMANDS_HINT}\n\n`,
     );
   }
+
+  // One-time migration nudge for non-native installs.
+  const rec = readInstallRecord();
+  if (rec && shouldShowMigrationBanner(rec, NOIR_VERSION)) {
+    process.stderr.write(
+      `\n  ${c.warn(`noir installed via ${rec.method}`)} — consider \`noir install\` for the native path (auto-update, no npm prefix/PATH issues). Dismiss with: \`noir install --list\` (persisted per version).\n\n`,
+    );
+  }
+
   clack.intro(project ? `noir — ${project.name}` : 'noir');
 
   const choice = await clack.select({
