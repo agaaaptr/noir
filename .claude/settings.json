@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"additionalContext\": \"[Noir session-starter] Load global project context before planning or implementing: run the session-starter skill (/session-starter) to read the roadmap index + status (docs/roadmap/README.md, STATUS.md, releases.md), recall cross-session memory (/recall noir), and query the knowledge base (ctx_search). For task-level context, use task-starter.\"}'\n"
+          }
+        ]
+      }
+    ]
+  }
+}
