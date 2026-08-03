@@ -739,6 +739,35 @@ export function createProgram(): Command {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir task new|status|advance|next');
   });
 
+  // C1 -- `noir install` / `noir migrate`: move to the native install path,
+  // preserving all settings. `migrate` is an alias (mirrors claude migrate-installer).
+  const installCmd = program
+    .command('install')
+    .description(
+      'install Noir via the native managed-Node path (or migrate from another install method)',
+    )
+    .option('--list', 'list detected install methods')
+    .option('--uninstall-prev', 'after a successful migrate, uninstall the previous install method')
+    .argument('[spec]', "channel ('latest'|'beta') or exact version (default: latest)")
+    .action(
+      async (
+        spec: string | undefined,
+        opts: { list?: boolean; uninstallPrev?: boolean },
+        cmd: Command,
+      ) => {
+        const { install } = await import('./commands/install.js');
+        const cli = cmd.optsWithGlobals() as CliOptions;
+        await install({
+          ...cli,
+          spec,
+          list: opts.list === true,
+          uninstallPrev: opts.uninstallPrev === true,
+        });
+      },
+    );
+  // `migrate` alias -- same behavior.
+  installCmd.alias('migrate');
+
   // `noir handoff` + the `noir wrap` session-end alias. Both dispatch the
   // SAME handler; the artifact reuses `gatherStatusPayload` (status.ts) +
   // `PHASE_SKILL` (task.ts) for the snapshot, does a bounded context/memory
