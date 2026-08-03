@@ -27,4 +27,16 @@ export {
 } from './markers.js';
 export { loadProjectInfo, type ProjectInfo } from './project.js';
 export { createProjectId, type ProjectId } from './project-id.js';
+export {
+  fetchLatestVersion,
+  isUpdateCheckDisabled,
+  isUpdateStale,
+  latestVersionFromCache,
+  readUpdateCache,
+  shouldCheckForUpdate,
+  type UpdateCache,
+  type UpdateConfigLike,
+  updateCachePath,
+  writeUpdateCache,
+} from './update-check.js';
 export { NOIR_VERSION } from './version.js';
