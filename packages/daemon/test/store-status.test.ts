@@ -137,7 +137,14 @@ describe('openStoreForDaemon', () => {
     }
   });
 
-  it('falls back to read-only (degraded:true) when the writable open fails', async () => {
+  // `chmodSync(dir, 0o555)` cannot make a directory unwritable on Windows:
+  // Node translates it to the DOS read-only attribute, which does NOT prevent
+  // file creation inside the directory (Windows ACLs gate that, not the mode
+  // bits). The degraded-path assertion would therefore fail on Windows, so
+  // the test is POSIX-only. The degraded CODE PATH itself is cross-platform —
+  // a genuinely-unwritable Windows dir (ACL-denied) still triggers it.
+  const itPosix = process.platform === 'win32' ? it.skip : it;
+  itPosix('falls back to read-only (degraded:true) when the writable open fails', async () => {
     // Seed an existing DB so the read-only fallback has data to report.
     const seed = await openStore({ projectId: id, root });
     seed.indexDoc({ id: 'd1', source: 'spec', content: 'seeded' });

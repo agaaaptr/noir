@@ -37,13 +37,17 @@ concurrency:
   group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
-# `id-token: write` is REQUIRED for npm OIDC Trusted Publishing + provenance.
+# `id-token: write` is REQUIRED for npm OIDC Trusted Publishing + provenance,
+# AND for artifact attestations (Sigstore OIDC → short-lived signing cert).
 # `contents: write` is needed for:
 #   1. Creating GitHub Releases automatically.
 #   2. Pushing .noir/releases/ registry updates back to the repo.
+# `attestations: write` is REQUIRED by `actions/attest-build-provenance` to
+# persist the installer attestations to the GH attestations API.
 permissions:
   contents: write
   id-token: write
+  attestations: write
 
 jobs:
   verify:
@@ -192,6 +196,34 @@ jobs:
         # npm has already accepted the published versions and they cannot be overwritten.
         # Recovery: bump to next beta iteration and re-publish all 11 (see docs/releasing.md §8).
 
+      # ── 7b. Generate installer artifacts + SHA256SUMS + attestations ──
+      # Pinned, versioned installers (Astral/uv model): copy the scripts to a
+      # release attachment so users fetch a specific tag's installer, not the
+      # mutable main branch. SHA256SUMS lets users verify the download, and the
+      # attestation binds the installer+checksums to this workflow run via a
+      # short-lived Sigstore cert (verify with `gh attestation verify`).
+      - name: Generate SHA256SUMS for installers
+        if: success() && steps.check.outputs.already_published == 'false'
+        run: |
+          set -e
+          mkdir -p dist-installers
+          cp scripts/install.sh  dist-installers/install.sh
+          cp scripts/install.ps1 dist-installers/install.ps1
+          # shasum -a 256 is available on ubuntu/macos GH runners by default.
+          ( cd dist-installers && shasum -a 256 install.sh install.ps1 > SHA256SUMS )
+          echo "Generated SHA256SUMS:"
+          cat dist-installers/SHA256SUMS
+
+      - name: Attest installers + checksums
+        if: success() && steps.check.outputs.already_published == 'false'
+        uses: actions/attest-build-provenance@v3
+        with:
+          # Attest all three subjects in one step (SLSA provenance predicate).
+          subject-path: |
+            dist-installers/install.sh
+            dist-installers/install.ps1
+            dist-installers/SHA256SUMS
+
       # ── 8. Generate release registry entry ────────────────────
       - name: Update release registry
         if: success() && steps.check.outputs.already_published == 'false'
@@ -250,7 +282,15 @@ jobs:
             **Channel:** ${{ steps.channel.outputs.channel }}
             **npm dist-tag:** `${{ steps.channel.outputs.tag }}`
 
-            Install:
+            Install (recommended — native installer):
+            ```bash
+            # macOS / Linux:
+            curl -fsSL https://github.com/agaaaptr/noir/releases/download/${{ github.ref_name }}/install.sh | bash
+            # Windows (PowerShell):
+            irm https://github.com/agaaaptr/noir/releases/download/${{ github.ref_name }}/install.ps1 | iex
+            ```
+
+            …or via npm:
             ```bash
             # If stable:
             npm install -g @noir-ai/cli
@@ -258,12 +298,32 @@ jobs:
             npm install -g @noir-ai/cli@${{ steps.channel.outputs.tag }}
             ```
 
+            Verify an installer against its attestation:
+            ```bash
+            gh attestation verify install.sh --repo agaaaptr/noir
+            ```
+            (See `SHA256SUMS` for the pinned checksums.)
+
             See [CHANGELOG.md](./docs/CHANGELOG.md) for details.
           draft: false
           prerelease: ${{ steps.channel.outputs.type == 'prerelease' }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 10b. Attach installer assets to the GitHub Release ────
+      # Runs AFTER the release is created (step 10) so it appends assets to the
+      # fully-formed release rather than creating a body-less one. The checksum
+      # + attestation (step 7b) already ran on the same `dist-installers/` tree.
+      - name: Attach installer assets to release
+        if: success() && steps.check.outputs.already_published == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            dist-installers/install.sh
+            dist-installers/install.ps1
+            dist-installers/SHA256SUMS
 
       # ── 11. Idempotent skip message ───────────────────────────
       - name: Skip (already published)

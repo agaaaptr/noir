@@ -10,7 +10,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # Windows joined the matrix in C1 (native installer + better-sqlite3@13
+        # N-API prebuilds ship win32-x64/arm64). The one POSIX-only unit test
+        # (chmod-based degraded store open) self-skips on win32.
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -28,3 +31,66 @@ jobs:
       - run: pnpm test
       # Validate documentation: broken links, stale version refs, registry integrity.
       - run: pnpm docs:validate
+
+  # ── C1: install smoke test ───────────────────────────────────
+  # Runs the REAL installers (scripts/install.sh on posix, install.ps1 on
+  # Windows) against the published @noir-ai/cli@latest, then asserts
+  # `noir --version` + `noir doctor` work. This is an ONLINE job (it installs
+  # from npm) — that's why it lives in CI, never in the offline unit suite.
+  # It verifies the INSTALLER WIRING cross-platform, not a specific commit's
+  # bits (the version on npm may lag the commit under test). `needs: verify`
+  # gates it on the offline gate passing first.
+  install-smoke:
+    name: Install smoke (${{ matrix.os }})
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      # No pnpm needed — the installer uses system npm.
+
+      - name: Run installer (posix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -e
+          # install.sh auto-detects passwordless sudo on the runner (npm global
+          # prefix /usr/local isn't user-writable); it runs `sudo -E npm i -g`.
+          bash scripts/install.sh
+
+      - name: Run installer (windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -e
+          # install.ps1 provisions ~/.noir/{runtime,cli,bin} + writes a shim at
+          # ~/.noir/bin/noir.cmd. It falls back to the system Node 22 provisioned
+          # above when no managed runtime is present (the smoke-test path).
+          powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+
+      - name: Verify noir --version + noir doctor
+        shell: bash
+        run: |
+          set -e
+          # posix: npm global bin is already on PATH. Windows: the installer
+          # wrote ~/.noir/bin; surface it for this step only.
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            export PATH="$HOME/.noir/bin:$PATH"
+          fi
+          echo "::group::noir --version"
+          noir --version
+          echo "::endgroup::"
+          # `noir doctor` exits 1 ONLY on a CRITICAL (fail) check. On a fresh
+          # global install (no .noir/ in the runner's cwd) every project-
+          # dependent check warns+skips and native deps are loadable, so the
+          # exit code is 0 — proving the binary + native bindings work on this OS.
+          echo "::group::noir doctor"
+          noir doctor || { echo "noir doctor exited $?" && exit 1; }
+          echo "::endgroup::"
+
