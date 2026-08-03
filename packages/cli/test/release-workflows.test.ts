@@ -76,6 +76,42 @@ describe('release pipeline workflows (offline structural lint)', () => {
       expect(smokeBlock).toContain('noir --version');
       expect(smokeBlock).toContain('noir doctor');
     });
+
+    // C1/P5 — the managed-Node provision smoke. These assert the structural
+    // invariants OFFLINE so a regression fails locally + in `pnpm test`; the
+    // job itself is online (the only place the REAL Node download runs) and is
+    // never in the unit suite.
+    it('declares the node-provision-smoke job and gates it on verify', () => {
+      expect(yaml).toMatch(/\n\s*node-provision-smoke:/);
+      expect(yaml).toContain('needs: verify');
+    });
+
+    it('node-provision-smoke runs on the full OS matrix', () => {
+      const block = yaml.split('node-provision-smoke')[1] ?? '';
+      expect(block).toMatch(/os:\s*\[ubuntu-latest,\s*macos-latest,\s*windows-latest\]/);
+    });
+
+    it('node-provision-smoke runs install.sh from a clean env (posix)', () => {
+      const block = yaml.split('node-provision-smoke')[1] ?? '';
+      expect(block).toContain('bash scripts/install.sh');
+      // The clean-env path is created by narrowing PATH to system dirs only,
+      // which excludes any runner-provided node/npm.
+      expect(block).toContain('PATH: /usr/bin:/bin:/usr/sbin:/sbin');
+    });
+
+    it('node-provision-smoke runs install.ps1 on Windows', () => {
+      const block = yaml.split('node-provision-smoke')[1] ?? '';
+      expect(block).toContain('powershell -ExecutionPolicy Bypass -File scripts/install.ps1');
+    });
+
+    it('node-provision-smoke asserts the provisioned runtime + noir --version', () => {
+      const block = yaml.split('node-provision-smoke')[1] ?? '';
+      // RegExp with an escaped \$ matches the literal `v${VER}` text in the
+      // workflow (a plain string `v${VER}` would be a template placeholder).
+      expect(block).toMatch(/\.noir\/runtime\/v\$\{VER\}\/bin\/node/);
+      expect(block).toMatch(/\.noir\/runtime\/v\$\{VER\}\/node\.exe/);
+      expect(block).toContain('noir --version');
+    });
   });
 
   describe('.github/workflows/release.yml', () => {

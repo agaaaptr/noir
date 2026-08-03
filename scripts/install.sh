@@ -160,13 +160,48 @@ provision_node() {
   info "Provisioning managed Node ${MANAGED_NODE_VERSION} (fail-closed SHA-256 verified)."
   note "Archive:  ${archive_url}"
 
+  provision_download_verify_extract \
+    "$runtime_root" "$version_dir" "$archive_basename" "$archive_url" "$shasums_url"
+  if [[ "${MANAGED_PROVISIONED:-0}" == "1" ]]; then
+    # Managed Node provisioned. Set the RUNTIME globals here (the helper is a
+    # plain function in this scope, but it only sets the flag so nothing leaks).
+    RUNTIME_NODE_BIN="${version_dir}/bin/node"
+    RUNTIME_NPM_BIN="${version_dir}/bin/npm"
+    RUNTIME_SOURCE="managed"
+    RUNTIME_VERSION="$MANAGED_NODE_VERSION"
+    return 0
+  fi
+  # The helper fell back to a system node (>=22) and already set RUNTIME_* to
+  # it, or died fail-closed on no usable node. Either way, return 0 so `set -e`
+  # in main() doesn't abort on the fallback success path.
+  return 0
+}
+
+# --- Download + verify + extract (the inner part of provisioning) -------------
+# Installs a `trap` whose command is a STRING that expands at EXIT time — the
+# staging path is baked into the trap text, NOT referenced through a shell var.
+# This avoids the trap-vs-scope trap: a `local` staging var is unset when the
+# function returns (so a `trap 'rm -rf "$staging"' RETURN` would read an
+# unbound var under `set -u`), and a `trap ... EXIT` inside a SUBSHELL would
+# strand RUNTIME_* writes (a subshell can't set caller globals). Baking the
+# path into the trap string keeps cleanup working AND keeps RUNTIME_* in the
+# caller's scope.
+# On success sets MANAGED_PROVISIONED=1 (and the staging dir is cleaned up by
+# the trap on EXIT). On any failure it warns + falls back to a system node via
+# use_system_node_fallback (which sets the RUNTIME_* globals) or dies
+# fail-closed on no usable node.
+provision_download_verify_extract() {  # $1=runtime_root $2=version_dir $3=archive_basename $4=archive_url $5=shasums_url
+  local runtime_root="$1" version_dir="$2" archive_basename="$3" archive_url="$4" shasums_url="$5"
   local staging shasums_file archive_file expected_sha actual_sha extracted_dir
+  MANAGED_PROVISIONED=0   # set to 1 on the managed-success path below
   # mktemp -d on the SAME filesystem as the rename target (runtime_root), so
   # the final rename is atomic (POSIX guarantees rename within a filesystem).
   mkdir -p "$runtime_root"
   staging="$(mktemp -d "${runtime_root}/.staging.${MANAGED_NODE_VERSION}.XXXXXX")"
   # Always clean up staging, even on success (the rename moves the payload out).
-  trap 'rm -rf "$staging"' RETURN
+  # The trap command is a fixed string with the path inlined — no var deref at
+  # trap-run time (which would be an unbound var after `local` loses scope).
+  trap "rm -rf '$staging'" EXIT
 
   shasums_file="${staging}/SHASUMS256.txt"
   archive_file="${staging}/${archive_basename}"
@@ -176,8 +211,10 @@ provision_node() {
   note "Fetching SHASUMS256.txt ..."
   if ! curl -fsSL "$shasums_url" -o "$shasums_file"; then
     warn "Failed to fetch SHASUMS256.txt (curl exit $?); falling back to system Node."
+    # Fallback: resolves a system node (>=22) or exits fail-closed. On success
+    # the RUNTIME_* globals are set here, so return 0 so main proceeds.
     use_system_node_fallback "SHASUMS256.txt fetch failed"
-    return
+    return 0
   fi
 
   # 2b) Find the entry for OUR archive basename.
@@ -189,7 +226,7 @@ provision_node() {
   if [[ -z "$expected_sha" || ${#expected_sha} -ne 64 ]]; then
     warn "No SHASUMS256.txt entry for ${archive_basename}; falling back to system Node."
     use_system_node_fallback "missing SHASUMS256.txt entry"
-    return
+    return 0
   fi
 
   # 2c) Fetch the archive.
@@ -197,7 +234,7 @@ provision_node() {
   if ! curl -fsSL "$archive_url" -o "$archive_file"; then
     warn "Failed to fetch Node archive (curl exit $?); falling back to system Node."
     use_system_node_fallback "archive fetch failed"
-    return
+    return 0
   fi
 
   # 2d) Verify SHA-256 — FAIL-CLOSED. Never install an unverified archive.
@@ -208,7 +245,7 @@ provision_node() {
     warn "  actual:   ${actual_sha}"
     warn "Refusing to install an unverified archive; falling back to system Node."
     use_system_node_fallback "checksum mismatch"
-    return
+    return 0
   fi
   good "Checksum verified: ${expected_sha}"
 
@@ -217,13 +254,13 @@ provision_node() {
   if ! tar -xzf "$archive_file" -C "$staging" 2>/dev/null; then
     warn "tar extraction failed; falling back to system Node."
     use_system_node_fallback "tar extraction failed"
-    return
+    return 0
   fi
   extracted_dir="${staging}/node-v${MANAGED_NODE_VERSION}-${target_os}-${target_arch}"
   if [[ ! -x "${extracted_dir}/bin/node" ]]; then
     warn "Extraction produced no bin/node at ${extracted_dir}; falling back to system Node."
     use_system_node_fallback "extraction incomplete"
-    return
+    return 0
   fi
 
   # 4) Atomic rename into v<version>/. Remove a stale version_dir first so the
@@ -234,11 +271,9 @@ provision_node() {
 
   # 5) Cleanup older runtime dirs (keep current only).
   cleanup_old_runtimes "$runtime_root" "v${MANAGED_NODE_VERSION}"
+  MANAGED_PROVISIONED=1
 
-  RUNTIME_NODE_BIN="${version_dir}/bin/node"
-  RUNTIME_NPM_BIN="${version_dir}/bin/npm"
-  RUNTIME_SOURCE="managed"
-  RUNTIME_VERSION="$MANAGED_NODE_VERSION"
+  return 0
 }
 
 # Remove ~/.noir/runtime/v*/ dirs other than the one named in $2. Best-effort.
@@ -328,6 +363,16 @@ main() {
   note "Target spec:       ${spec}"
   note "Install prefix:    ${cli_dir}  (isolated; never the system global, no sudo)"
   note "Runtime node:      ${RUNTIME_NODE_BIN}  (${RUNTIME_SOURCE})"
+
+  # Ensure the provisioned runtime's bin/ is on PATH for the npm install step.
+  # npm's wrapper in the Node dist is `#!/usr/bin/env node` (bin/npm -> npm-cli.js),
+  # so in a CLEAN environment (no system Node on PATH) it can't find a `node` to
+  # exec unless the runtime dir precedes PATH. Only do this for a MANAGED runtime
+  # (a system runtime's bin is already on PATH by construction). Setting PATH here
+  # also scopes the node that runs npm's lifecycle scripts to the provisioned one.
+  if [[ "$RUNTIME_SOURCE" == "managed" && -d "$(dirname "$RUNTIME_NODE_BIN")" ]]; then
+    export PATH="$(dirname "$RUNTIME_NODE_BIN"):$PATH"
+  fi
 
   # Install into the isolated prefix using the provisioned npm.
   info "Running: npm install -g ${spec} --prefix=${cli_dir}"

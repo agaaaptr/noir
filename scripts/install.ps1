@@ -370,6 +370,19 @@ function Main {
   Note "Install prefix:    $cliDir  (isolated; never the system global, no admin)"
   Note "Runtime node:      $($Script:RuntimeNodeBin)  ($($Script:RuntimeSource))"
 
+  # Ensure the provisioned runtime dir is on PATH for the npm install step.
+  # npm's wrapper in the Node dist is npm-cli.js invoked via node; in a CLEAN
+  # environment (no system Node on PATH) it can't find `node` unless the runtime
+  # dir precedes PATH. Only do this for a MANAGED runtime. Setting $env:Path here
+  # also scopes the node that runs npm's lifecycle scripts to the provisioned one.
+  if ($Script:RuntimeSource -eq 'managed') {
+    $runtimeDir = Split-Path -Parent $Script:RuntimeNodeBin
+    if (Test-Path $runtimeDir) {
+      $env:Path = "$runtimeDir;$env:Path"
+      Note "Runtime dir prepended to PATH (clean-env npm): $runtimeDir"
+    }
+  }
+
   # Install into the isolated prefix using the provisioned npm.
   Info "Running: npm install -g $Package$spec --prefix=$cliDir"
   & $Script:RuntimeNpmBin install -g "$Package$spec" "--prefix=$cliDir"

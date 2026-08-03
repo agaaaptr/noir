@@ -94,3 +94,95 @@ jobs:
           noir doctor || { echo "noir doctor exited $?" && exit 1; }
           echo "::endgroup::"
 
+  # ── C1/P5: managed-Node provision smoke ───────────────────────
+  # This is the ONLY job where the REAL Node 22 LTS download runs (the unit
+  # suite mocks the fetch/extract; install-smoke above installs from npm and
+  # falls back to the system Node). It runs scripts/install.sh / install.ps1
+  # from a CLEAN env — no system Node/npm on PATH where feasible — then asserts
+  # the provisioned managed runtime exists at ~/.noir/runtime/v<ver>/bin/node
+  # and that `noir --version` resolves through it. ONLINE by design (downloads
+  # nodejs.org), so it lives in CI only. `needs: verify` gates it on the
+  # offline gate passing first.
+  node-provision-smoke:
+    name: Node provision smoke (${{ matrix.os }})
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Provision + install from a clean env (posix)
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          # Narrow PATH to exclude any runner-provided node/npm, forcing the
+          # installer to actually download + verify + install the managed Node.
+          # (git-bash's own MSYS tools + system curl/tar/shasum remain.)
+          PATH: /usr/bin:/bin:/usr/sbin:/sbin
+        run: |
+          set -e
+          echo "node on PATH: $(command -v node || echo '<none>')"
+          echo "npm on PATH:  $(command -v npm || echo '<none>')"
+          echo "::group::install.sh (clean env)"
+          bash scripts/install.sh
+          echo "::endgroup::"
+
+      - name: Provision + install from a clean env (windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -e
+          echo "node on PATH: $(command -v node || echo '<none>')"
+          echo "npm on PATH:  $(command -v npm || echo '<none>')"
+          # install.ps1 (native PowerShell, no bash dependency). Node-version
+          # sourcing is done by install.ps1's Load-NodeEnv, which reads the env
+          # file line-by-line, so no PATH games are needed on Windows — the
+          # provisioned node.exe + npm.cmd resolve each other by absolute path.
+          powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+
+      - name: Assert managed runtime + noir --version
+        shell: bash
+        run: |
+          set -e
+          # The single source of truth for the pinned managed Node version.
+          . ./scripts/node-version.env
+          VER="$MANAGED_NODE_VERSION"
+          echo "pinned MANAGED_NODE_VERSION: $VER"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            # git-bash HOME is the user profile; install.ps1 uses $HOME\.noir.
+            NODE_BIN="$HOME/.noir/runtime/v${VER}/node.exe"
+          else
+            NODE_BIN="$HOME/.noir/runtime/v${VER}/bin/node"
+          fi
+          # Both installers write the noir shim to ~/.noir/bin (noir.cmd on
+          # Windows); on this clean env there is no npm-global noir on PATH, so
+          # surface the shim dir on every OS.
+          export PATH="$HOME/.noir/bin:$PATH"
+          echo "::group::managed runtime assertion"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            test -f "$NODE_BIN" && echo "OK: $NODE_BIN exists"
+          else
+            test -x "$NODE_BIN" && echo "OK: $NODE_BIN is executable"
+          fi
+          "$NODE_BIN" --version
+          echo "::endgroup::"
+          echo "::group::noir --version"
+          # On a clean env there is no noir on PATH until the installer shim is
+          # surfaced: ~/.noir/bin (posix) or ~/.noir/bin/noir.cmd (windows).
+          noir --version
+          echo "::endgroup::"
+          echo "::group::noir runs on the provisioned node"
+          # The installer shim embeds the runtime node it was provisioned with.
+          # Assert that embedded path IS the managed runtime — proving the smoke
+          # exercised the real managed-Node path, not a system-Node fallback.
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            grep -F "$HOME/.noir/runtime/v${VER}/node.exe" "$HOME/.noir/bin/noir.cmd" \
+              && echo "OK: noir.cmd is wired to the managed node.exe"
+          else
+            grep -F "$HOME/.noir/runtime/v${VER}/bin/node" "$HOME/.noir/bin/noir" \
+              && echo "OK: noir shim is wired to the managed node"
+          fi
+          echo "::endgroup::"
