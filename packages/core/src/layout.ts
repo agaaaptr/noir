@@ -28,6 +28,22 @@ export function modelsDir(): string {
   return join(noirHome(), 'models');
 }
 
+/**
+ * User-global managed-Node runtime root: `~/.noir/runtime/` by default.
+ *
+ * Each pinned Node LTS lives under here as `~/.noir/runtime/v<version>/`
+ * (with its own `bin/node`, `bin/npm`), provisioned by
+ * `@noir-ai/core`'s `provisionManagedNode()`. HOME-relative for the same
+ * portability reason as {@link modelsDir} — the runtime is machine-local, not
+ * per-project.
+ *
+ * `NOIR_RUNTIME_DIR` overrides the root (mirrors `NOIR_DAEMON_JSON` /
+ * `NOIR_INSTALL_JSON`) so the offline unit suite can point at a tmpdir.
+ */
+export function runtimeDir(): string {
+  return process.env.NOIR_RUNTIME_DIR ?? join(noirHome(), 'runtime');
+}
+
 export const paths = {
   noirDir: (root: string) => join(root, NOIR_DIR),
   noirMd: (root: string) => join(root, NOIR_DIR, 'NOIR.md'),

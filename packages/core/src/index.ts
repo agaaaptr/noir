@@ -22,7 +22,7 @@ export {
   readInstallRecord,
   writeInstallRecord,
 } from './install-method.js';
-export { modelsDir, NOIR_DIR, noirHome, paths } from './layout.js';
+export { modelsDir, NOIR_DIR, noirHome, paths, runtimeDir } from './layout.js';
 export {
   CONTEXT_BLOCK,
   CONTEXT_BLOCK_BEGIN,
@@ -32,6 +32,21 @@ export {
   managedBlock,
   RULES_BLOCK,
 } from './markers.js';
+export {
+  detectNodeTarget,
+  downloadAndVerify,
+  type ExecSeam,
+  extractNode,
+  type FetchSeam,
+  MANAGED_NODE_VERSION,
+  MIN_SYSTEM_NODE_MAJOR,
+  type NodeTarget,
+  nodeArchiveUrl,
+  nodeDistBaseUrl,
+  type ProvisionedNode,
+  type ProvisionOptions,
+  provisionManagedNode,
+} from './node-provision.js';
 export { loadProjectInfo, type ProjectInfo } from './project.js';
 export { createProjectId, type ProjectId } from './project-id.js';
 export {
