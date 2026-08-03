@@ -21,7 +21,7 @@
 //   node scripts/release-registry.mjs history
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,13 +37,27 @@ const args = process.argv.slice(2);
 const command = args[0];
 const QUIET = args.includes('--quiet');
 
+/**
+ * True when this module is the Node entry point (`node scripts/release-registry.mjs …`).
+ * When imported as a module (e.g. by the offline test), the CLI dispatch +
+ * `process.exit` paths are skipped so the pure helpers below are testable.
+ * Resolves symlinks (`node` may invoke via a realpath'd script path on some platforms).
+ */
+function isMainModule() {
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
 function usage() {
   console.error('Usage: node scripts/release-registry.mjs <command>');
   console.error('Commands: add | rebuild | validate [--quiet] | history');
   process.exit(1);
 }
 
-if (!command || !['add', 'rebuild', 'validate', 'history'].includes(command)) {
+if (isMainModule() && (!command || !['add', 'rebuild', 'validate', 'history'].includes(command))) {
   usage();
 }
 
@@ -96,6 +110,51 @@ function betaIteration(version) {
 function baseVersion(version) {
   const match = version.match(/^(\d+\.\d+\.\d+)/);
   return match ? match[1] : version;
+}
+
+/**
+ * Build the GitHub-generated anchor for a CHANGELOG.md version heading.
+ *
+ * CHANGELOG headings follow the style `## <version> (<YYYY-MM-DD>)` (verified
+ * against the actual headings — see `packages/cli/test/release-registry.test.ts`).
+ * GitHub derives heading anchors by: downcasing → stripping everything that
+ * isn't [a-z0-9 -] → spaces to hyphens. Applied to `1.4.0-beta.1 (2026-07-27)`
+ * that yields `140-beta1-2026-07-27`. We can't reproduce that from the version
+ * alone, so the publish date (YYYY-MM-DD) is required.
+ *
+ * When the date is unknown (null/empty/unparseable), we fall back to the
+ * version-only core (`140-beta1`) — still a useful human identifier even though
+ * it won't auto-resolve on github.com.
+ *
+ * Examples:
+ *   anchorFor('1.6.0',        '2026-07-28')           → '160-2026-07-28'
+ *   anchorFor('1.4.0-beta.1', '2026-07-27T00:30:23Z') → '140-beta1-2026-07-27'
+ *   anchorFor('1.4.0-beta.1', null)                   → '140-beta1'
+ */
+function anchorFor(version, dateStr) {
+  // Version core: strip everything that isn't alphanumeric or hyphen.
+  // `1.6.0` → `160`; `1.4.0-beta.1` → `140-beta1` (the dot inside the
+  // prerelease is stripped, the hyphen is kept).
+  const versionCore = version.toLowerCase().replace(/[^a-z0-9-]/g, '');
+
+  // Date core: accept a full ISO timestamp OR a bare YYYY-MM-DD; emit YYYY-MM-DD.
+  let dateCore = '';
+  if (dateStr) {
+    const d = new Date(dateStr);
+    if (!Number.isNaN(d.getTime())) {
+      dateCore = d.toISOString().slice(0, 10); // YYYY-MM-DD
+    }
+  }
+
+  return dateCore ? `${versionCore}-${dateCore}` : versionCore;
+}
+
+/**
+ * Build the canonical CHANGELOG.md deep link for a release.
+ * `main` is the only branch that carries published CHANGELOG rows.
+ */
+function changelogRefFor(version, dateStr) {
+  return `https://github.com/agaaaptr/noir/blob/main/CHANGELOG.md#${anchorFor(version, dateStr)}`;
 }
 
 /** SemVer sort: prerelease < release, numeric comparison */
@@ -168,20 +227,23 @@ function getGitTags() {
 /**
  * Build the complete release entry for one version.
  * Enriches npm data with git metadata where available.
+ *
+ * channel + npmDistTag are derived from the version's TYPE (stable vs
+ * prerelease), NOT from an npm dist-tags lookup — the dist-tags pointer is a
+ * moving target (it advances on every publish) and historically mislabeled
+ * already-shipped stable releases as `beta` (1.4.0/1.5.0 were tagged `latest`
+ * on npm but the old `distTags.latest === version` check left them `beta` in
+ * the registry). The version string is the immutable source of truth.
  */
-function buildEntry(version, distTags, timeData, gitTagMap) {
+function buildEntry(version, _distTags, timeData, gitTagMap) {
   const baseVer = baseVersion(version);
   const isStable = !version.includes('-');
   const preId = isStable ? null : 'beta';
   const betaIt = isStable ? null : betaIteration(version);
 
-  // Determine channel and dist-tag from npm dist-tags
-  let channel = 'beta';
-  let distTag = 'beta';
-  if (distTags.latest === version) {
-    channel = 'stable';
-    distTag = 'latest';
-  }
+  // Derive channel + dist-tag from the type (immutable), not distTags.
+  const channel = isStable ? 'stable' : 'beta';
+  const distTag = isStable ? 'latest' : 'beta';
 
   // Git metadata
   const gitTagName = `v${version}`;
@@ -204,7 +266,7 @@ function buildEntry(version, distTags, timeData, gitTagMap) {
     gitBranch: null, // we cannot reliably determine this from tags alone
     timestamp,
     publishStatus: 'published',
-    changelogRef: null,
+    changelogRef: changelogRefFor(version, timestamp),
   };
 }
 
@@ -455,8 +517,18 @@ async function cmdAdd() {
 
   const isStable = channel === 'stable';
 
+  // Derive channel + npmDistTag from the type (immutable), identical to
+  // buildEntry(). The env-supplied CHANNEL/DIST_TAG must agree with the
+  // version string — a `vX.Y.Z` tag is always stable/latest, a `-beta.N`
+  // suffix is always beta/beta — so we normalize to the type-derived values
+  // (the env values are kept only as a fallback for malformed inputs).
+  const derivedChannel = isStable ? 'stable' : 'beta';
+  const derivedDistTag = isStable ? 'latest' : 'beta';
+
   // Remove existing entry for this version (idempotent) and add new one
   data.releases = data.releases.filter((r) => r.fullVersion !== version);
+
+  const now = new Date().toISOString();
 
   const entry = {
     baseVersion: baseVer || baseVersion(version),
@@ -464,14 +536,14 @@ async function cmdAdd() {
     prereleaseIdentifier: isStable ? null : 'beta',
     betaIteration: isStable ? null : betaIteration(version),
     type: isStable ? 'stable' : 'prerelease',
-    channel,
-    npmDistTag: distTag || (isStable ? 'latest' : 'beta'),
+    channel: derivedChannel,
+    npmDistTag: distTag || derivedDistTag,
     gitTag: gitTag || null,
     gitSha: gitSha || null,
     gitBranch: gitBranch || null,
-    timestamp: new Date().toISOString(),
+    timestamp: now,
     publishStatus: 'published',
-    changelogRef: null,
+    changelogRef: changelogRefFor(version, now),
   };
 
   data.releases.push(entry);
@@ -597,19 +669,25 @@ function cmdHistory() {
 
 // ── Dispatch ───────────────────────────────────────────────────────
 
-switch (command) {
-  case 'add':
-    await cmdAdd();
-    break;
-  case 'rebuild':
-    cmdRebuild();
-    break;
-  case 'validate':
-    cmdValidate();
-    break;
-  case 'history':
-    cmdHistory();
-    break;
-  default:
-    usage();
+// Pure helpers exported for offline testing (see packages/cli/test/release-registry.test.ts).
+// When imported as a module the dispatch below is skipped.
+export { anchorFor, baseVersion, betaIteration, changelogRefFor };
+
+if (isMainModule()) {
+  switch (command) {
+    case 'add':
+      await cmdAdd();
+      break;
+    case 'rebuild':
+      cmdRebuild();
+      break;
+    case 'validate':
+      cmdValidate();
+      break;
+    case 'history':
+      cmdHistory();
+      break;
+    default:
+      usage();
+  }
 }

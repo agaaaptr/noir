@@ -1,7 +1,7 @@
 # Noir Release Registry
 
 > Auto-generated on every successful release from npm registry + git tags.
-> Last updated: 2026-07-28T06:35:23.851Z
+> Last updated: 2026-08-03T16:23:03.713Z
 
 ## Current
 
