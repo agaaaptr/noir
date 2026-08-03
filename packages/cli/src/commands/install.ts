@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   atomicWriteFile,
@@ -6,8 +6,12 @@ import {
   detectActiveMethod,
   detectInstallMethods,
   loadProjectInfo,
+  MANAGED_NODE_VERSION,
   NOIR_VERSION,
   noirHome,
+  type ProvisionedNode,
+  type ProvisionOptions,
+  provisionManagedNode,
   readInstallRecord,
   runManagerCmd,
   writeInstallRecord,
@@ -93,35 +97,74 @@ export function buildMigrationPlan(opts: {
   };
 }
 
-export async function installManagedNode(opts: {
+export interface InstallManagedNodeOptions {
   channel?: string;
   version?: string;
   env: NodeJS.ProcessEnv;
-}): Promise<{ ok: boolean; version: string | null; error?: string }> {
+  /**
+   * Forwarded into {@link provisionManagedNode} (P1). Carries the offline mock
+   * seams (`fetch`, `exec`, `target`, `signal`) so the install pipeline is
+   * unit-testable without network — same pattern as `provisionManagedNode`'s
+   * own suite in `packages/core/test/node-provision.test.ts`.
+   */
+  provision?: Pick<ProvisionOptions, 'fetch' | 'exec' | 'target' | 'signal'>;
+}
+
+/** Normalized record of which runtime backed an install (P2). */
+export interface InstallManagedNodeResult {
+  ok: boolean;
+  version: string | null;
+  /** What runtime backed this install: `'managed'` (downloaded into ~/.noir)
+   *  or `'system'` (used the system-Node fallback). */
+  runtimeSource?: ProvisionedNode['source'];
+  error?: string;
+}
+
+/**
+ * Provision the managed Node runtime (P1) and install `@noir-ai/cli` into an
+ * isolated `~/.noir/cli` prefix, shimmed from `~/.noir/bin/noir`.
+ *
+ * Replaces the prior "not provisioned" fail branch: instead of requiring the
+ * user to pre-run `install.sh`/`install.ps1`, this now delegates to
+ * {@link provisionManagedNode} (download + verify + extract, fail-closed), then
+ * installs the CLI with the provisioned npm. On a system-Node fallback the
+ * fallback node/npm paths are used and a warning is emitted; the install
+ * record's `managedRuntimeVersion` reflects which path was taken so `noir
+ * doctor` can report it accurately.
+ */
+export async function installManagedNode(
+  opts: InstallManagedNodeOptions,
+): Promise<InstallManagedNodeResult> {
   const spec = opts.version ?? opts.channel ?? 'latest';
   const home = noirHome();
-  const runtimeDir = join(home, 'runtime');
   const cliDir = join(home, 'cli');
   const binDir = join(home, 'bin');
-  mkdirSync(runtimeDir, { recursive: true });
   mkdirSync(cliDir, { recursive: true });
   mkdirSync(binDir, { recursive: true });
 
-  // Managed Node: pinned 22.x LTS, installed once into runtime/<v>.
-  // (Simplified for the plan; the exact download URL/pinning lands in Task 9's
-  // installer, and this JS path delegates to it. For the CLI's own native
-  // install we reuse the SAME runtime the installer provisions.)
-  const nodeBin = join(runtimeDir, 'node', 'bin', 'node');
-  const npmBin = join(runtimeDir, 'node', 'bin', 'npm');
-  if (!existsSync(nodeBin)) {
-    return {
-      ok: false,
-      version: null,
-      error: `managed Node not provisioned (expected ${nodeBin}) — run the native installer first (install.sh/install.ps1)`,
-    };
+  // Provision the managed Node runtime (P1). Idempotent — re-runs are no-ops.
+  // On any failure, provisionManagedNode either falls back to a system Node
+  // >=22 (returns { source: 'system' }) or throws — we surface the throw as an
+  // {ok:false} envelope rather than letting it kill the CLI.
+  let runtime: ProvisionedNode;
+  try {
+    runtime = await provisionManagedNode({
+      ...(opts.provision ?? {}),
+      env: opts.env,
+    });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    return { ok: false, version: null, error: `managed-Node provision failed: ${reason}` };
+  }
+  if (runtime.source === 'system') {
+    warn(
+      `managed-Node download failed; using system Node ${runtime.version} at ${runtime.nodeBin}.`,
+    );
   }
 
-  // Install @noir-ai/cli into the isolated prefix using the managed npm.
+  const { nodeBin, npmBin } = runtime;
+
+  // Install @noir-ai/cli into the isolated prefix using the provisioned npm.
   const { code, stderr } = await runManagerCmd(
     [npmBin, 'install', '-g', `@noir-ai/cli@${spec}`, `--prefix=${cliDir}`],
     { env: opts.env, timeoutMs: 120_000 },
@@ -130,13 +173,13 @@ export async function installManagedNode(opts: {
     return { ok: false, version: null, error: `npm install failed: ${stderr.slice(0, 300)}` };
   }
 
-  // Shim: ~/.noir/bin/noir -> managed node + isolated prefix.
+  // Shim: ~/.noir/bin/noir -> provisioned node + isolated prefix.
   const shim = join(binDir, 'noir');
   const shimBody = `#!/usr/bin/env bash\n"${nodeBin}" "${join(cliDir, 'lib', 'node_modules', '@noir-ai', 'cli', 'dist', 'bin.js')}" "$@"\n`;
   atomicWriteFile(shim, shimBody);
-  // (POSIX shim; Windows uses a .cmd wrapper -- Task 9.)
+  // (POSIX shim; Windows uses a .cmd wrapper -- install.sh/install.ps1, P3.)
 
-  // Resolve installed version via the shim.
+  // Resolve installed version via the provisioned node.
   const ver = await runManagerCmd(
     [
       nodeBin,
@@ -151,9 +194,13 @@ export async function installManagedNode(opts: {
     version: version ?? '0.0.0',
     channel: opts.channel ?? 'latest',
     installedAt: new Date().toISOString(),
-    managedRuntimeVersion: '22.x',
+    // Reflect which runtime backs this install: the pinned managed version
+    // (e.g. '22.23.2') for managed, or 'system-<v>' for the fallback so doctor
+    // can distinguish a fallback install from a real managed one.
+    managedRuntimeVersion:
+      runtime.source === 'managed' ? MANAGED_NODE_VERSION : `system-${runtime.version}`,
   });
-  return { ok: true, version };
+  return { ok: true, version, runtimeSource: runtime.source };
 }
 
 export async function install(opts: InstallOptions = {}): Promise<void> {

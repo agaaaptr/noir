@@ -1,25 +1,38 @@
-import type { DetectResult } from '@noir-ai/core';
+import type { DetectResult, ProvisionedNode } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock @noir-ai/core at the boundary for the dismiss integration test. The
-// pure buildMigrationPlan tests below don't touch any mocked symbol, so this
-// is inert for them.
+// Mock @noir-ai/core at the boundary for the dismiss + provision integration
+// tests. The pure buildMigrationPlan tests below don't touch any mocked
+// symbol, so this is inert for them.
 const coreMock = vi.hoisted(() => ({
   NOIR_VERSION: '1.6.0-test',
+  MANAGED_NODE_VERSION: '22.23.2',
   readInstallRecord: vi.fn(
     () => null as ReturnType<typeof import('@noir-ai/core')['readInstallRecord']>,
   ),
   writeInstallRecord: vi.fn(),
   detectInstallMethods: vi.fn(async () => [] as DetectResult[]),
   detectActiveMethod: vi.fn(() => 'unknown'),
-  runManagerCmd: vi.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
+  runManagerCmd: vi.fn(
+    async (_cmd: string[], _opts?: { cwd?: string; env?: NodeJS.ProcessEnv; timeoutMs?: number }) =>
+      ({ code: 0, stdout: '', stderr: '' }) as { code: number; stdout: string; stderr: string },
+  ),
   atomicWriteFile: vi.fn(),
   noirHome: vi.fn(() => '/tmp/noir-test-home'),
+  provisionManagedNode: vi.fn(
+    async (): Promise<ProvisionedNode> => ({
+      source: 'managed',
+      version: '22.23.2',
+      nodeBin: '/tmp/noir-test-home/runtime/v22.23.2/bin/node',
+      npmBin: '/tmp/noir-test-home/runtime/v22.23.2/bin/npm',
+      dir: '/tmp/noir-test-home/runtime/v22.23.2',
+    }),
+  ),
 }));
 vi.mock('@noir-ai/core', () => ({ ...coreMock }));
 
 import type { InstallRecord } from '@noir-ai/core';
-import { buildMigrationPlan, install } from '../src/commands/install.js';
+import { buildMigrationPlan, install, installManagedNode } from '../src/commands/install.js';
 
 describe('buildMigrationPlan (pure)', () => {
   it('targets native when a prior method is detected', () => {
@@ -219,5 +232,155 @@ describe('install() --dismiss (banner dismissal persistence)', () => {
     const { stderr } = await runStderr(() => install({ dismiss: true }));
     expect(coreMock.writeInstallRecord).not.toHaveBeenCalled();
     expect(stderr).toMatch(/nothing to dismiss/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// installManagedNode() -- P2: now delegates to provisionManagedNode (P1) and
+// proceeds (no "not provisioned" error) for both the managed path and the
+// system-Node fallback path. Records managedRuntimeVersion per source.
+// ---------------------------------------------------------------------------
+
+/** Capture stderr around `fn` (warn/info/success go to stderr per S9). */
+async function runStderrFn<T>(fn: () => Promise<T>): Promise<{ stderr: string; result: T }> {
+  const errChunks: string[] = [];
+  const origErr = process.stderr.write.bind(process.stderr);
+  process.stderr.write = ((c: unknown) => {
+    errChunks.push(typeof c === 'string' ? c : String(c));
+    return true;
+  }) as typeof process.stderr.write;
+  let result: T;
+  try {
+    result = await fn();
+  } finally {
+    process.stderr.write = origErr;
+  }
+  return { stderr: errChunks.join(''), result };
+}
+
+describe('installManagedNode() (P2 — provisions managed Node)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default: provision returns the managed Node, npm install succeeds, and
+    // the version probe returns a CLI version string.
+    coreMock.provisionManagedNode.mockResolvedValue({
+      source: 'managed',
+      version: '22.23.2',
+      nodeBin: '/tmp/noir-test-home/runtime/v22.23.2/bin/node',
+      npmBin: '/tmp/noir-test-home/runtime/v22.23.2/bin/npm',
+      dir: '/tmp/noir-test-home/runtime/v22.23.2',
+    });
+    coreMock.runManagerCmd.mockImplementation(async (cmd: string[]) => {
+      // The second call (the `--version` probe) returns a version string.
+      if (cmd.includes('--version')) return { code: 0, stdout: '1.6.0\n', stderr: '' };
+      return { code: 0, stdout: '', stderr: '' };
+    });
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('calls provisionManagedNode and proceeds (no "not provisioned" error) on the managed path', async () => {
+    const res = await installManagedNode({ env: {} });
+
+    expect(coreMock.provisionManagedNode).toHaveBeenCalledTimes(1);
+    expect(res.ok).toBe(true);
+    expect(res.error).toBeUndefined();
+    expect(res.runtimeSource).toBe('managed');
+    // The old behavior returned `{ ok:false, error: 'managed Node not provisioned …' }`.
+    // Asserting the absence of that string guards against regression.
+    expect(JSON.stringify(res)).not.toMatch(/not provisioned/);
+  });
+
+  it('uses the provisioned node/npm paths (from ProvisionedNode) for install + version probe', async () => {
+    await installManagedNode({ env: {} });
+
+    // First runManagerCmd call = `npm install -g` using the provisioned npm.
+    const installCall = coreMock.runManagerCmd.mock.calls[0]?.[0] as string[];
+    expect(installCall[0]).toBe('/tmp/noir-test-home/runtime/v22.23.2/bin/npm');
+    expect(installCall).toContain('install');
+    expect(installCall).toContain('-g');
+    expect(installCall.some((a) => /@noir-ai\/cli@/.test(a))).toBe(true);
+
+    // Second call = `node bin.js --version` using the provisioned node.
+    const verCall = coreMock.runManagerCmd.mock.calls[1]?.[0] as string[];
+    expect(verCall[0]).toBe('/tmp/noir-test-home/runtime/v22.23.2/bin/node');
+    expect(verCall).toContain('--version');
+  });
+
+  it('records managedRuntimeVersion = MANAGED_NODE_VERSION for the managed path', async () => {
+    await installManagedNode({ env: {} });
+
+    const written = coreMock.writeInstallRecord.mock.calls[0]?.[0] as InstallRecord;
+    expect(written.method).toBe('native');
+    // Version comes from the mocked version probe ('1.6.0\n' → trimmed).
+    expect(written.version).toBe('1.6.0');
+    expect(written.channel).toBe('latest');
+    expect(written.managedRuntimeVersion).toBe('22.23.2');
+  });
+
+  it('returns {ok:false, error} when npm install fails (non-zero exit)', async () => {
+    coreMock.runManagerCmd.mockImplementation(async (cmd: string[]) => {
+      if (cmd.includes('--version')) return { code: 0, stdout: '1.6.0\n', stderr: '' };
+      return { code: 1, stdout: '', stderr: 'EPERM: operation not permitted' };
+    });
+
+    const res = await installManagedNode({ env: {} });
+
+    expect(res.ok).toBe(false);
+    expect(res.version).toBeNull();
+    expect(res.error).toMatch(/npm install failed/);
+    expect(res.error).toMatch(/EPERM/);
+    // No install record written on failure.
+    expect(coreMock.writeInstallRecord).not.toHaveBeenCalled();
+  });
+
+  it('surfaces provisionManagedNode throw as {ok:false} (no unhandled rejection)', async () => {
+    coreMock.provisionManagedNode.mockRejectedValue(
+      new Error('managed-Node provision failed (network down) and no usable system Node'),
+    );
+
+    const res = await installManagedNode({ env: {} });
+
+    expect(res.ok).toBe(false);
+    expect(res.version).toBeNull();
+    expect(res.error).toMatch(/managed-Node provision failed/);
+    expect(res.error).toMatch(/network down/);
+    expect(coreMock.writeInstallRecord).not.toHaveBeenCalled();
+  });
+
+  describe('system-Node fallback', () => {
+    beforeEach(() => {
+      // Fallback: provisionManagedNode returned a system Node (P1's fallback path).
+      coreMock.provisionManagedNode.mockResolvedValue({
+        source: 'system',
+        version: '22.5.0',
+        nodeBin: '/usr/local/bin/node',
+        npmBin: '/usr/local/bin/npm',
+        dir: '/usr/local/bin',
+      });
+    });
+
+    it('warns and proceeds using the system node/npm paths', async () => {
+      const { stderr, result } = await runStderrFn(() => installManagedNode({ env: {} }));
+
+      expect(result.ok).toBe(true);
+      expect(result.runtimeSource).toBe('system');
+      expect(stderr).toMatch(/using system Node 22\.5\.0/);
+
+      // First runManagerCmd call uses the SYSTEM npm path, not the managed one.
+      const installCall = coreMock.runManagerCmd.mock.calls[0]?.[0] as string[];
+      expect(installCall[0]).toBe('/usr/local/bin/npm');
+
+      const verCall = coreMock.runManagerCmd.mock.calls[1]?.[0] as string[];
+      expect(verCall[0]).toBe('/usr/local/bin/node');
+    });
+
+    it('records managedRuntimeVersion = "system-<v>" so doctor can distinguish', async () => {
+      await installManagedNode({ env: {} });
+
+      const written = coreMock.writeInstallRecord.mock.calls[0]?.[0] as InstallRecord;
+      expect(written.managedRuntimeVersion).toBe('system-22.5.0');
+    });
   });
 });
