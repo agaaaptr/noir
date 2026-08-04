@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.7.2 (2026-08-04) — post-1.7.1 bugfixes
+
+Three fixes shipped in 1.7.2 (patch bump 1.7.1 → 1.7.2):
+
+### Fixed
+- **`noir init --upgrade` crashes with "Dynamic require of @noir-ai/create is not supported"** — `conflict.ts` used a lazy `require('@noir-ai/create')` that survived tsup bundling as an ESM-incompatible `__require` shim. It only fired on file conflicts (existing host files during `init --upgrade`), quietly succeeding on clean-dir init. Replaced with a static import — pre-existing since v1.7.0.
+- **`spawn noir ENOENT` from GUI MCP clients** — `.mcp.json` emitted `command: "noir"`, but GUI apps on macOS (VS Code launched from Dock) don't read shell profiles, so `~/.noir/bin` wasn't on the MCP client's PATH. When native-installed, `.mcp.json` now emits the absolute shim path (`~/.noir/bin/noir`), stable across upgrades. Non-native installs (npm/Homebrew) keep the bare `noir`.
+
+### Changed — installer UX
+- **install.sh now auto-adds `~/.noir/bin` to the shell profile** — detects the user's shell (zsh → `.zshrc`, bash → `.bashrc`, fish → `config.fish`, fallback `.profile`), appends an idempotent `# Noir CLI` + PATH export block, creates the file if missing.
+- **install.sh detects PATH shadowing** — after writing the shim, verifies `command -v noir` resolves to the new path, and warns with instructions when a legacy binary (nvm, npm global) shadows the native install (the user sees "✓ noir is on PATH" but runs the old version).
+
+> **Known limitation:** `noir install` is a 1.7.0+ command — users still on 1.6.0 must upgrade via the native installer one-liner first.
+
+---
+
 ## 1.7.1 (2026-08-04) — post-1.7.0 bugfixes (beta on `develop`, then stable)
 
 Two user-facing bugs were fixed after the 1.7.0 publish. Version bump 1.7.0 → 1.7.1 (patch). Cut as `1.7.1-beta.1` on `develop`, then promoted to stable `1.7.1` on `main`.
