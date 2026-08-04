@@ -442,9 +442,28 @@ main() {
     "${ver:-0.0.0}" "$channel" "$now" "$managed_rev")"
   atomic_write "${home}/install.json" "$record"
 
-  # PATH hint + verify.
+  # PATH hint + verify. The shim we just wrote is the new binary; `command -v
+  # noir` may resolve to an OLD installation (nvm, npm global, Homebrew) that
+  # precedes ~/.noir/bin on PATH — the user would then run the old version and
+  # think the install failed. Detect shadowing explicitly.
+  local shim_ver resolved_noir
+  shim_ver="$("$shim" --version 2>/dev/null || true)"
+  if [[ -n "$shim_ver" ]]; then
+    good "Shim verified: noir ${shim_ver} at ${shim}"
+  fi
   if command -v noir >/dev/null 2>&1; then
-    good "noir is on PATH at: $(command -v noir)"
+    resolved_noir="$(command -v noir)"
+    if [[ "$resolved_noir" == "$shim" ]]; then
+      good "noir is on PATH at: ${resolved_noir}"
+    else
+      warn "noir resolves to an older install (${resolved_noir}), NOT the new shim."
+      warn "Another noir installation shadows the native one. To fix:"
+      note "  1. Add the shim dir to your shell profile BEFORE any version-manager:"
+      note "     export PATH=\"${bin_dir}:\$PATH\""
+      note "  2. Then run: hash -r && which noir"
+      note "  Expected: ${bin_dir}/noir"
+      note "  Got:      ${resolved_noir}"
+    fi
   else
     warn "noir is installed but NOT on your PATH."
     note "Add the shim dir to your shell profile:"
