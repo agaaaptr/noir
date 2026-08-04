@@ -1,5 +1,5 @@
 // MCP round-trip + cassette tests for the integration tools:
-// `integrations_auth` + `noir.clickup_write`. Mirrors packages/daemon/test/memory-
+// `integrations_auth` + `noir_clickup_write`. Mirrors packages/daemon/test/memory-
 // tools.test.ts (InMemoryTransport + @modelcontextprotocol/client Client).
 //
 // OFFLINE / CASSETTE (NFR-2, X-OQ4): global `fetch` is replaced with a spy whose
@@ -136,20 +136,41 @@ async function listToolNames(server: ReturnType<typeof createNoirServer>): Promi
   }
 }
 
+/**
+ * MCP protocol guard — every registered tool name MUST match the spec charset
+ * /^[a-zA-Z0-9_-]{1,64}$/. A dotted name (`noir.clickup_write`) is INVALID at
+ * the protocol layer: the host rejects the tools/list, and the whole MCP session
+ * fails to connect (the `-32000` the user hit). This is the regression guard that
+ * would have caught it — register a dotted tool and this suite fails.
+ */
+const MCP_TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
+
 function newServer() {
   const integrations = buildIntegrationService(root, project.config.integrations ?? {});
   return createNoirServer({ project, transport: 'stdio', daemon: false, integrations });
 }
 
 describe('integration MCP tools — registration', () => {
-  it('registers integrations_auth always; noir.clickup_write when a gated-write-proxy declaration ships', async () => {
+  it('registers ONLY protocol-valid tool names ([a-z0-9_-])', async () => {
+    // MCP spec: tool names are restricted to [a-zA-Z0-9_-]. A dotted name
+    // (noir.clickup_write) makes the host reject tools/list and kills the whole
+    // session — the failure mode this suite guards against.
+    const server = newServer();
+    const names = await listToolNames(server);
+    expect(names.length).toBeGreaterThan(0);
+    for (const name of names) {
+      expect(name, `tool name "${name}" must match MCP charset`).toMatch(MCP_TOOL_NAME);
+    }
+  });
+
+  it('registers integrations_auth always; noir_clickup_write when a gated-write-proxy declaration ships', async () => {
     const server = newServer();
     const names = await listToolNames(server);
     expect(names).toContain('integrations_auth');
-    expect(names).toContain('noir.clickup_write');
+    expect(names).toContain('noir_clickup_write');
   });
 
-  it('honors integrations.clickup.runtime "none" — noir.clickup_write is NOT registered but integrations_auth still is', async () => {
+  it('honors integrations.clickup.runtime "none" — noir_clickup_write is NOT registered but integrations_auth still is', async () => {
     // A user opts out of writes for a read-only run by downgrading the runtime
     // to `none` locally. The declaration still ships `gated-write-proxy`, so the
     // gate must read the EFFECTIVE runtime (config overlay wins), not the
@@ -176,7 +197,7 @@ describe('integration MCP tools — registration', () => {
     });
     const names = await listToolNames(server);
     expect(names).toContain('integrations_auth');
-    expect(names).not.toContain('noir.clickup_write');
+    expect(names).not.toContain('noir_clickup_write');
   });
 
   it('explicit runtime "gated-write-proxy" registers both tools (parity with the unset/declaration default)', async () => {
@@ -204,7 +225,7 @@ describe('integration MCP tools — registration', () => {
     });
     const names = await listToolNames(server);
     expect(names).toContain('integrations_auth');
-    expect(names).toContain('noir.clickup_write');
+    expect(names).toContain('noir_clickup_write');
   });
 });
 
@@ -274,14 +295,14 @@ describe('integrations_auth — token resolution', () => {
   });
 });
 
-describe('noir.clickup_write — HARD confirm gate (dry-run)', () => {
+describe('noir_clickup_write — HARD confirm gate (dry-run)', () => {
   it('dry-run returns a preview and makes ZERO fetch calls (confirm gate is HARD)', async () => {
     const { fetchMock, history } = makeCassette({
       'PUT https://api.clickup.com/api/v2/task/abc': { status: 200, body: { id: 'abc' } },
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const server = newServer();
-    const res = await callTool(server, 'noir.clickup_write', {
+    const res = await callTool(server, 'noir_clickup_write', {
       op: 'status',
       taskId: 'abc',
       status: 'in progress',
@@ -305,7 +326,7 @@ describe('noir.clickup_write — HARD confirm gate (dry-run)', () => {
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const server = newServer();
-    const dry = await callTool(server, 'noir.clickup_write', {
+    const dry = await callTool(server, 'noir_clickup_write', {
       op: 'status',
       taskId: 'abc',
       status: 'done',
@@ -319,7 +340,7 @@ describe('noir.clickup_write — HARD confirm gate (dry-run)', () => {
     const { fetchMock, history } = makeCassette({});
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const server = newServer();
-    const res = await callTool(server, 'noir.clickup_write', {
+    const res = await callTool(server, 'noir_clickup_write', {
       op: 'status',
       taskId: 'abc',
       status: 'done',
@@ -332,7 +353,7 @@ describe('noir.clickup_write — HARD confirm gate (dry-run)', () => {
   });
 });
 
-describe('noir.clickup_write — confirm=true executes', () => {
+describe('noir_clickup_write — confirm=true executes', () => {
   it('status op: PUTs with pk_ auth (NO Bearer), audits, returns executed', async () => {
     process.env.CLICKUP_API_TOKEN = 'tk_real';
     const { fetchMock, history } = makeCassette({
@@ -343,7 +364,7 @@ describe('noir.clickup_write — confirm=true executes', () => {
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const server = newServer();
-    const res = await callTool(server, 'noir.clickup_write', {
+    const res = await callTool(server, 'noir_clickup_write', {
       op: 'status',
       taskId: 'abc',
       status: 'in progress',
@@ -371,7 +392,7 @@ describe('noir.clickup_write — confirm=true executes', () => {
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const server = newServer();
-    await callTool(server, 'noir.clickup_write', {
+    await callTool(server, 'noir_clickup_write', {
       op: 'status',
       taskId: 'abc',
       status: 'done',
@@ -406,7 +427,7 @@ describe('noir.clickup_write — confirm=true executes', () => {
     });
     globalThis.fetch = cassette.fetchMock as unknown as typeof fetch;
     const server = newServer();
-    const res = await callTool(server, 'noir.clickup_write', {
+    const res = await callTool(server, 'noir_clickup_write', {
       op: 'subtask',
       parentTaskId: 'abc',
       name: 'wire proxy',
@@ -433,7 +454,7 @@ describe('noir.clickup_write — confirm=true executes', () => {
     });
     globalThis.fetch = cassette.fetchMock as unknown as typeof fetch;
     const server = newServer();
-    const res = await callTool(server, 'noir.clickup_write', {
+    const res = await callTool(server, 'noir_clickup_write', {
       op: 'comment',
       taskId: 'abc',
       commentText: 'ship it',
@@ -450,13 +471,13 @@ describe('noir.clickup_write — confirm=true executes', () => {
   });
 });
 
-describe('noir.clickup_write — no-token refuse + batch 429 backoff', () => {
+describe('noir_clickup_write — no-token refuse + batch 429 backoff', () => {
   it('refuses with no-token and makes NO fetch when the env var is absent (even on confirm=true)', async () => {
     delete process.env.CLICKUP_API_TOKEN;
     const { fetchMock, history } = makeCassette({});
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const server = newServer();
-    const res = await callTool(server, 'noir.clickup_write', {
+    const res = await callTool(server, 'noir_clickup_write', {
       op: 'status',
       taskId: 'abc',
       status: 'done',
@@ -491,7 +512,7 @@ describe('noir.clickup_write — no-token refuse + batch 429 backoff', () => {
     const server = newServer();
     // Single-task batch so the 429+retry is deterministic (no concurrency race
     // on the shared `calls` counter). The retry logic is per-request regardless.
-    const res = await callTool(server, 'noir.clickup_write', {
+    const res = await callTool(server, 'noir_clickup_write', {
       op: 'batch',
       tasks: [{ name: 'A' }],
       confirm: true,
@@ -510,7 +531,7 @@ describe('noir.clickup_write — no-token refuse + batch 429 backoff', () => {
   }, 15_000);
 });
 
-describe('noir.clickup_write — prompt-injection defense (allowlist only)', () => {
+describe('noir_clickup_write — prompt-injection defense (allowlist only)', () => {
   it('ignores a caller-supplied url in the payload; URLs come ONLY from the op + binding', async () => {
     const { fetchMock, history } = makeCassette({
       'PUT https://api.clickup.com/api/v2/task/abc': { status: 200, body: { id: 'abc' } },
@@ -519,7 +540,7 @@ describe('noir.clickup_write — prompt-injection defense (allowlist only)', () 
     const server = newServer();
     // Adversary tries to redirect the proxy to an evil endpoint via a `url` field
     // (both top-level and nested under payload). The builders never read `url`.
-    const res = await callTool(server, 'noir.clickup_write', {
+    const res = await callTool(server, 'noir_clickup_write', {
       op: 'status',
       taskId: 'abc',
       status: 'done',
@@ -546,7 +567,7 @@ describe('noir.clickup_write — prompt-injection defense (allowlist only)', () 
   });
 });
 
-describe('noir.clickup_write — H2-markdown batch parsing', () => {
+describe('noir_clickup_write — H2-markdown batch parsing', () => {
   it('parses H2-per-task markdown into normalized tasks', () => {
     const md = `## Wire proxy
 body line one
@@ -571,7 +592,7 @@ body line one
     const { fetchMock, history } = makeCassette({});
     globalThis.fetch = fetchMock as unknown as typeof fetch; // never called
     const server = newServer();
-    const res = await callTool(server, 'noir.clickup_write', {
+    const res = await callTool(server, 'noir_clickup_write', {
       op: 'batch',
       markdown: '## A\n## B\n## C\n',
     });
@@ -584,7 +605,7 @@ body line one
   });
 });
 
-describe('noir.clickup_write — security: token never leaks', () => {
+describe('noir_clickup_write — security: token never leaks', () => {
   it('the token does not appear in any stderr output or the audit file after an executed write', async () => {
     // Capture stderr to assert the token never leaks there.
     const seized: string[] = [];
@@ -600,7 +621,7 @@ describe('noir.clickup_write — security: token never leaks', () => {
       });
       globalThis.fetch = cassette.fetchMock as unknown as typeof fetch;
       const server = newServer();
-      const res = await callTool(server, 'noir.clickup_write', {
+      const res = await callTool(server, 'noir_clickup_write', {
         op: 'status',
         taskId: 'abc',
         status: 'done',
@@ -644,7 +665,7 @@ describe('noir.clickup_write — security: token never leaks', () => {
       });
       globalThis.fetch = cassette.fetchMock as unknown as typeof fetch;
       const server = newServer();
-      const res = await callTool(server, 'noir.clickup_write', {
+      const res = await callTool(server, 'noir_clickup_write', {
         op: 'status',
         taskId: 'abc',
         status: 'done',
@@ -674,7 +695,7 @@ describe('noir.clickup_write — security: token never leaks', () => {
   });
 });
 
-describe('noir.clickup_write — I1: batch create-task uses plural `assignees`', () => {
+describe('noir_clickup_write — I1: batch create-task uses plural `assignees`', () => {
   it('POSTs the body with `assignees` (plural array), NOT `assignee` (silent data loss otherwise)', async () => {
     process.env.CLICKUP_API_TOKEN = 'tk_real';
     const cassette = makeCassette({
@@ -685,7 +706,7 @@ describe('noir.clickup_write — I1: batch create-task uses plural `assignees`',
     });
     globalThis.fetch = cassette.fetchMock as unknown as typeof fetch;
     const server = newServer();
-    const res = await callTool(server, 'noir.clickup_write', {
+    const res = await callTool(server, 'noir_clickup_write', {
       op: 'batch',
       tasks: [{ name: 'With assignees', assignees: [1337, 4242] }],
       confirm: true,
@@ -703,7 +724,7 @@ describe('noir.clickup_write — I1: batch create-task uses plural `assignees`',
   });
 });
 
-describe('noir.clickup_write — NIT coverage gaps (partial failure / 429 no-reset)', () => {
+describe('noir_clickup_write — NIT coverage gaps (partial failure / 429 no-reset)', () => {
   it('NIT(a): partial batch failure — per-request results[] reflect mixed success, ok is false, audit appends one line per executed request', async () => {
     process.env.CLICKUP_API_TOKEN = 'tk_real';
     // A 2-task batch where the FIRST POSTs 200 and the SECOND POSTs 400. The
@@ -720,7 +741,7 @@ describe('noir.clickup_write — NIT coverage gaps (partial failure / 429 no-res
     });
     globalThis.fetch = cassette.fetchMock as unknown as typeof fetch;
     const server = newServer();
-    const res = await callTool(server, 'noir.clickup_write', {
+    const res = await callTool(server, 'noir_clickup_write', {
       op: 'batch',
       tasks: [{ name: 'A' }, { name: 'B' }],
       confirm: true,
@@ -763,7 +784,7 @@ describe('noir.clickup_write — NIT coverage gaps (partial failure / 429 no-res
     globalThis.fetch = cassette.fetchMock as unknown as typeof fetch;
     const server = newServer();
     // Single-task batch so the retry count is deterministic.
-    const res = await callTool(server, 'noir.clickup_write', {
+    const res = await callTool(server, 'noir_clickup_write', {
       op: 'batch',
       tasks: [{ name: 'A' }],
       confirm: true,

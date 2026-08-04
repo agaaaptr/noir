@@ -100,7 +100,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
   // the discovered declarations + the user's `integrations:` config overlay.
   // Discovery is best-effort; an empty service still registers
   // `integrations_auth` (env-var resolution needs no declaration) and simply
-  // skips `noir.clickup_write`. Built unconditionally (no store dependency) so
+  // skips `noir_clickup_write`. Built unconditionally (no store dependency) so
   // `integrations_auth` works even under a read-only (daemon-down) store.
   const integrations = buildIntegrationService(opts.project.root, opts.project.config.integrations);
 

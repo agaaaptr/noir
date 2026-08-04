@@ -21,7 +21,7 @@ Noir is local-first by design. No data leaves your machine unless you explicitly
 
 ## Governance
 
-- **Audit trail:** every gated write (e.g., `noir.clickup_write`) appends to `.noir/audit/integration-*.jsonl`.
+- **Audit trail:** every gated write (e.g., `noir_clickup_write`) appends to `.noir/audit/integration-*.jsonl`.
 - **Memory operations:** `memory_forget` deletes with reason; `memory_export` exports all data as JSON.
 - **Never auto-captures.** Memory save is explicit; an opt-in hooks template is provided but never auto-wired.
 

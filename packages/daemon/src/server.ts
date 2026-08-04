@@ -96,7 +96,7 @@ export interface ServerContext {
    * (@noir-ai/skills `discoverIntegrations`) merged with the user's
    * `integrations:<name>` config block. When present, the `integrations_auth`
    * tool is ALWAYS registered (resolves a token by env var at call time — kills
-   * the non-interactive-shell gotcha), and `noir.clickup_write` is registered
+   * the non-interactive-shell gotcha), and `noir_clickup_write` is registered
    * when a `noir-clickup` declaration with `runtime:'gated-write-proxy'` is
    * discovered. Both tools degrade gracefully (`no-token`/`no-config`) when the
    * binding/env is absent — never a crash. Token values NEVER enter stderr or
@@ -719,7 +719,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
   //
   // SECURITY: the token travels ONLY in the tool RESULT to the trusted host +
   // the outbound `Authorization` header. It is never written to stderr, never
-  // persisted, never echoed into an audit body. `noir.clickup_write` (below) is
+  // persisted, never echoed into an audit body. `noir_clickup_write` (below) is
   // registered only when a `noir-clickup` declaration with
   // `runtime:'gated-write-proxy'` is discovered, and its dry-run path never even
   // resolves the token.
@@ -759,7 +759,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       },
     );
 
-    // `noir.clickup_write` — the gated-write-proxy for ClickUp. Registered ONLY when the shipped
+    // `noir_clickup_write` — the gated-write-proxy for ClickUp. Registered ONLY when the shipped
     // `noir-clickup` declaration is discovered AND the EFFECTIVE runtime resolves
     // to `gated-write-proxy`. The effective runtime is the user's
     // `integrations.clickup.runtime` overlay when set, else the declaration's
@@ -779,7 +779,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       const root = integrations.root;
 
       server.registerTool(
-        'noir.clickup_write',
+        'noir_clickup_write',
         {
           description:
             'ClickUp gated-write-proxy: renders a DRY-RUN preview of the exact HTTP request(s) for an op, and ONLY on explicit {confirm:true} executes them server-side with the pk_ token (NO Bearer). Ops: status (PUT /task/{id}), subtask (POST /list/{list_id}/task + optional PUT status), comment (POST /task/{id}/comment), batch (loop POST /list/{list_id}/task, concurrency 4, 429 backoff on X-RateLimit-Reset). URLs are allowlisted — a caller-supplied url is ignored (prompt-injection defense). Executed writes are audited to .noir/audit/.',

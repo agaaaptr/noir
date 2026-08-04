@@ -29,7 +29,7 @@ A first-class integration layer: **skill-only default** (read+playbook) + **gate
 - `@noir-ai/skills`: add `discoverIntegrations()` (sibling to `discoverBuiltin`) + `integration.json` Zod schema + validate; widen emit for host MCP config when `runtime∈{mcp-stdio,external-mcp}`. **(This is the deferred K3 — lands here.)**
 - `@noir-ai/adapters`: `HostAdapter.emitMcpConfig(integration?, ctx)` overload (S10-aware abstraction).
 - `@noir-ai/core`: `integrations: {[name]: {auth, runtime, …}}` config block.
-- **daemon:** `integrations_auth` MCP tool (resolve `CLICKUP_API_TOKEN` server-side at call time → kills the non-interactive-shell gotcha; skill never reads shell env) + `noir.clickup_write` gated-write-proxy (dry-run→confirm→POST + audit) + (config-only) emit host MCP for `external-mcp`.
+- **daemon:** `integrations_auth` MCP tool (resolve `CLICKUP_API_TOKEN` server-side at call time → kills the non-interactive-shell gotcha; skill never reads shell env) + `noir_clickup_write` gated-write-proxy (dry-run→confirm→POST + audit) + (config-only) emit host MCP for `external-mcp`.
 - `noir-prd` skill (built in P) + ClickUp intake bridge (`sdd.intakeFrom: 'task'`); `noir-wrap` write-back (`sdd.writeBack: ['status','subtasks']`).
 
 ## Verify-live before lock-in (NOT blockers; runtime checks)
@@ -42,7 +42,7 @@ A first-class integration layer: **skill-only default** (read+playbook) + **gate
 - 746+ tests green; cassette-based tests (mcp-record or MockServer).
 
 ## Open questions (next-session clarification)
-- **X-OQ1:** gated-write-proxy tool shape — generic `integrations_call(name, op, payload)` or per-integration `noir.clickup_*` tools? [lean: per-integration, clearer]
+- **X-OQ1:** gated-write-proxy tool shape — generic `integrations_call(name, op, payload)` or per-integration `noir_clickup_*` tools? [lean: per-integration, clearer]
 - **X-OQ2:** audit log location for write-proxy calls (`.noir/audit/` reuse, or a new integrations log)?
 - **X-OQ3:** 2-way sync trigger — at `/wrap` only, or also a standalone `noir clickup sync`? (SP-6)
 - **X-OQ4:** cassette strategy — `mcp-record` vs MockServer vs both?

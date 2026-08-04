@@ -275,7 +275,7 @@ The first integration, fully specified. **All 5 flows feasible with the `pk_` pe
 
 **Tier-model refinement (from ClickUp, Q-ClickUp 2):** integrations span THREE tiers —
 - **skill-only** (reads + playbook; agent calls REST directly);
-- **skill + gated write-proxy MCP tool** (stateless writes routed through a Noir tool like `noir.clickup_write` / generic `integrations_call` that enforces a dry-run→confirm gate + audit) — for write-heavy stateless integrations like ClickUp; NOT a full runtime (no OAuth/webhook/polling);
+- **skill + gated write-proxy MCP tool** (stateless writes routed through a Noir tool like `noir_clickup_write` / generic `integrations_call` that enforces a dry-run→confirm gate + audit) — for write-heavy stateless integrations like ClickUp; NOT a full runtime (no OAuth/webhook/polling);
 - **full runtime tier** (stateful: OAuth/webhook/polling) — gated on keychain.
 
 `integration.json` gains `runtime: 'none' | 'gated-write-proxy' | 'mcp-stdio' | 'external-mcp'`; ClickUp = `gated-write-proxy`. (Reads + the playbook remain skill-side; only writes go through the gated tool.)

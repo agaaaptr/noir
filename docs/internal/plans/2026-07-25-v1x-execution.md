@@ -102,9 +102,9 @@ Slice X (ClickUp) ───┘   (K3 lives inside X; P3/P4 depend on nothing new
 - `core/layout.ts`: `integrationsDir` if needed.
 - `adapters`: `HostAdapter.emitMcpConfig(integration?, ctx)` overload (S10-aware abstraction; Claude impl emits `.mcp.json` block for `external-mcp` runtime). No-op for ClickUp (`gated-write-proxy` needs no host MCP config).
 
-### X-T3 — Daemon: `integrations_auth` + `noir.clickup_write` gated-write-proxy
+### X-T3 — Daemon: `integrations_auth` + `noir_clickup_write` gated-write-proxy
 - `daemon`: `integrations_auth` MCP tool — resolve `CLICKUP_API_TOKEN` server-side at call time (kills non-interactive-shell gotcha; skill never reads shell env). Returns `{ok, hasToken}` (never the token value).
-- `noir.clickup_write` gated-write-proxy MCP tool — dry-run preview → **explicit confirm** → POST + audit. Per-integration shape (X-OQ1). Wraps ClickUp flows 2/3/4/5 (status update, subtask create, comment, batch create). Flow 5 batch: loop `POST /list/{id}/task`, concurrency cap 4–8, 429 backoff reading `X-RateLimit-Reset`; input = H2-per-task MD (+ CSV adapter).
+- `noir_clickup_write` gated-write-proxy MCP tool — dry-run preview → **explicit confirm** → POST + audit. Per-integration shape (X-OQ1). Wraps ClickUp flows 2/3/4/5 (status update, subtask create, comment, batch create). Flow 5 batch: loop `POST /list/{id}/task`, concurrency cap 4–8, 429 backoff reading `X-RateLimit-Reset`; input = H2-per-task MD (+ CSV adapter).
 - Audit → reuse `.noir/audit/` (S4 location), tagged `kind:'integration'` (X-OQ2). 2-way sync at `/wrap` only (X-OQ3).
 - Tests: `mcp-record`-style cassettes (X-OQ4) — record/replay HTTP, **no real network in CI**; confirm-gate enforcement (no POST without confirm); rate-limit backoff; audit write. Authored from spec'd request/response fixtures.
 

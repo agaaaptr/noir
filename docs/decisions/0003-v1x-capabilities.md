@@ -40,7 +40,7 @@ The slices are run **sequentially** (K → R → I → P → S → X), not in pa
 An integration declares one of three runtimes:
 
 1. **`skill-only`** (default) — the integration ships a `noir-<name>` skill + `references/`. No MCP tool, no proxy. The host does all the work through the skill.
-2. **`gated-write-proxy`** — the skill PLUS a daemon-exposed MCP tool (`<integration>.<verb>`, e.g. `noir.clickup_write`) that performs writes through a **HARD confirm gate**: dry-run → confirm → POST. Endpoint allowlist, id-charset validation, 429 `X-RateLimit-Reset` backoff, audit JSONL.
+2. **`gated-write-proxy`** — the skill PLUS a daemon-exposed MCP tool (`<integration>.<verb>`, e.g. `noir_clickup_write`) that performs writes through a **HARD confirm gate**: dry-run → confirm → POST. Endpoint allowlist, id-charset validation, 429 `X-RateLimit-Reset` backoff, audit JSONL.
 3. **`full-runtime`** — the integration owns its own runtime (reserved; no v1.x integration uses it).
 
 ClickUp is delivered `skill-only + gated-write-proxy`. **2-way sync is at `/wrap` only** (no standalone `noir clickup sync` for v1.x). OAuth is **refused until a keychain-backed secret store exists** — the only accepted credential path in v1.x is a personal API token resolved from an env-var at call time via the `integrations_auth` MCP tool (which kills the non-interactive-shell gotcha where the host's shell can't see the user's interactive shell env).
@@ -66,7 +66,7 @@ These pre-date v1.x but are load-bearing for every slice above and were used as 
 
 - **Adopt ideas, not copies.** The predecessor `noir-workflow` plugin and the various third-party plugins (Superpowers, context-mode, agentmemory) are *reference material*, not code to vendor. Slice X reintroduces ClickUp as a first-class Noir integration written from scratch — and the residue guard's ClickUp ban was lifted only because the new code is an original Noir re-implementation, not a port.
 - **Graceful degradation everywhere.** No key → pure orchestration. Daemon down → read-only store. Missing integration config → the integration is unregistered, never half-registered.
-- **No silent writes.** Every write path either is gated behind an explicit confirm (`noir.clickup_write`) or is a managed-block region the user can read and strip. There is no integration that writes to an external system on its own initiative.
+- **No silent writes.** Every write path either is gated behind an explicit confirm (`noir_clickup_write`) or is a managed-block region the user can read and strip. There is no integration that writes to an external system on its own initiative.
 
 ## Consequences
 

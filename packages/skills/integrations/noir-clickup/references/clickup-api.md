@@ -4,7 +4,7 @@ Base URL: `https://api.clickup.com/api/v2`
 Auth header: `Authorization: pk_<personal-token>` (NO `Bearer` prefix — a Bearer-prefixed header is rejected with `401`).
 Token env var: `CLICKUP_API_TOKEN` (resolved server-side via the `integrations_auth` MCP tool; manual-paste fallback when absent).
 
-This reference covers the 5 flows noir-clickup implements. It is the canonical source of truth for the skill playbook and the `noir.clickup_write` gated proxy (X-T3).
+This reference covers the 5 flows noir-clickup implements. It is the canonical source of truth for the skill playbook and the `noir_clickup_write` gated proxy (X-T3).
 
 ## Endpoints used
 

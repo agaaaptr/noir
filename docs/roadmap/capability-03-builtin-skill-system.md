@@ -14,7 +14,7 @@ Noir ships skills as a native, first-party capability: a compiler that validates
 - **Multi-host compilation** in `compileSkill`: `claude` / `agents-md` / `gemini` / `opencode` get verbatim `SKILL.md` + `references/`; `cursor` compiles to a flat `.cursor/rules/<name>.mdc` rule.
 - **Emission wired into the CLI** — `noir init` / `sync` / `create` / `skills sync`; emission is idempotent, prunes stale `noir-*` dirs, and is guarded by `assertNotUserOwned` (see `packages/skills/src/residue.ts`).
 - **`noir skills list` (with `--json`) and `noir skills sync`** commands in `packages/cli/src/commands/skills.ts`.
-- **Integration seam in the daemon** (`packages/daemon/src/integration-seam.ts` + `clickup-write.ts`): `integrations_auth` plus the `noir.clickup_write` gated-write-proxy, with an `integration.json` Zod schema (`packages/skills/src/integrations-schema.ts`) and runtime tiers (`none` / `gated-write-proxy` / `mcp-stdio` / `external-mcp`).
+- **Integration seam in the daemon** (`packages/daemon/src/integration-seam.ts` + `clickup-write.ts`): `integrations_auth` plus the `noir_clickup_write` gated-write-proxy, with an `integration.json` Zod schema (`packages/skills/src/integrations-schema.ts`) and runtime tiers (`none` / `gated-write-proxy` / `mcp-stdio` / `external-mcp`).
 - **`docs/reference/skills.md`** auto-generated covering 34 skills from `packages/skills/builtin/*/SKILL.md` + `integrations/*/SKILL.md`.
 
 ## Gap / roadmap delta
@@ -33,7 +33,7 @@ Noir ships skills as a native, first-party capability: a compiler that validates
 - **MET** — `noir skills list --json` and `noir skills sync` run against the live pack and report 33 builtins + 1 integration.
 - **MET** — `validateSkill` rejects a WHAT-style description, an over-limit description, and a `noir-` name/dir mismatch (verified in `packages/skills/src/compiler.ts`).
 - **MET** — `compileSkill` emits verbatim `SKILL.md`+`references/` for claude/agents-md/gemini/opencode and a single flat `.mdc` for cursor.
-- **MET** — `noir.clickup_write` is registered as a gated-write-proxy through the `integration.json` runtime-tier seam.
+- **MET** — `noir_clickup_write` is registered as a gated-write-proxy through the `integration.json` runtime-tier seam.
 - **Done when** — all 11 stubs compile without the `> **Stub:**` marker and pass the full pack validation.
 - **Done when** — a skill registry with id/version/owner/compatibility/lifecycle exists, and per-skill version + host compatibility are queryable by the CLI.
 - **Done when** — the Skill Quality Gate CLI reports a pass/fail per skill beyond metadata (body/reference/structure checks) and a benchmark suite (token/latency/determinism) has baseline numbers.

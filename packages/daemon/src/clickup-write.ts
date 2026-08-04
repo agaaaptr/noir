@@ -1,4 +1,4 @@
-// `noir.clickup_write` gated-write-proxy. The daemon-side
+// `noir_clickup_write` gated-write-proxy. The daemon-side
 // companion to the `noir-clickup` skill's write flows (2/3/4/5). SECURITY-CRITICAL.
 //
 // The proxy owns EXACTLY four responsibilities, and ONLY these:

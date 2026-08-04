@@ -11,7 +11,7 @@
 | `noir-branch` | builtin | Use when implementation is complete and tests pass — to decide how to integrate (merge, PR, or cleanup). |
 | `noir-checkpoint` | builtin | Use mid-session — to save in-flight state before a context-risky moment or interruption, so work survives. |
 | `noir-clarify` | builtin | Use when an idea or spec has ambiguities — to surface and resolve open questions before committing to an approach. |
-| `noir-clickup` | integration | Use when a task comes from or writes back to ClickUp — to read a task by id, update status, create subtasks, post a comment, or batch-create tasks from an H2-per-task markdown list; routes writes through the noir.clickup_write gated proxy and reads via the host fetch with the pk_ token resolved by integrations_auth. |
+| `noir-clickup` | integration | Use when a task comes from or writes back to ClickUp — to read a task by id, update status, create subtasks, post a comment, or batch-create tasks from an H2-per-task markdown list; routes writes through the noir_clickup_write gated proxy and reads via the host fetch with the pk_ token resolved by integrations_auth. |
 | `noir-commit` | builtin | Use when creating a git commit — to scope changes logically and write a conventional-commit message. |
 | `noir-context` | builtin | Use when a question spans more files than fit in context — to seed the repo into a hybrid index once, then query it for windowed snippets instead of reading whole files. |
 | `noir-debug` | builtin | Use when encountering any bug, test failure, or unexpected behavior — before proposing a fix. |

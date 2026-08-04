@@ -84,7 +84,7 @@ Built on one keystone refactor (`managedBlock` + shared `blockWriter` + `HostAda
 - **I** Ignore — `IgnoreManager` + `syncIgnores` into init/sync (managed-block idempotent across `.gitignore`/`.dockerignore`/`.npmignore`/`.prettierignore`).
 - **P** PRD — `prd` artifact kind + `writePrd`/`readPrd` + `noir-prd` skill (opt-in; no FSM change).
 - **S** Scaffold — the `@noir-ai/create` engine (see table above); `noir create [dir]` is AI-layer-only; `noir init --upgrade` runs migrations; `noir doctor` checks scaffold-version drift.
-- **X** Integration — first-class integration layer (skill-only / gated-write-proxy / full-runtime tiers). First integration: **ClickUp** (`noir-clickup` skill + `integration.json` + daemon `integrations_auth` / `noir.clickup_write` MCP tools).
+- **X** Integration — first-class integration layer (skill-only / gated-write-proxy / full-runtime tiers). First integration: **ClickUp** (`noir-clickup` skill + `integration.json` + daemon `integrations_auth` / `noir_clickup_write` MCP tools).
 - **S10** Multi-host — the adapter registry above; `--host` on `noir init`/`create`/`sync`; `noir doctor` reports the active host. (`v1.2.0-beta.1`.)
 - **S11** Distribution + SDK remainder — `docs/sdk.md` (the per-package framework/library API surface) and a `noir doctor` `publish` check (advisory package-metadata validation). (Distribution itself shipped at `1.0.0-beta.1`.)
 

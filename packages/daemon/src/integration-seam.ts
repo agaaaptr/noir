@@ -8,7 +8,7 @@
 //      on `ctx.integrations` (mirrors `ctx.store` / `ctx.engine` / `ctx.memory`).
 //      Discovery is best-effort: a missing/unreadable pack degrades to an empty
 //      service (the `integrations_auth` tool still resolves a caller-supplied
-//      `envVar`; `noir.clickup_write` is simply not registered).
+//      `envVar`; `noir_clickup_write` is simply not registered).
 //   2. `resolveToken` — the ONLY place a token value touches process.env. Read
 //      at call time, returned to the calling agent, NEVER logged/echoed to
 //      stderr/audit bodies (the token travels only in the tool RESULT to the
@@ -39,7 +39,7 @@ export interface IntegrationBinding {
   /** Full declaration name, e.g. `'noir-clickup'`. */
   name: string;
   /** Short name — declaration name with the `noir-` namespace stripped
-   *  (`'clickup'`). The `noir.clickup_write` tool segment + the documented
+   *  (`'clickup'`). The `noir_clickup_write` tool segment + the documented
    *  `integrations.clickup.*` config key both use this form. */
   shortName: string;
   declaration: IntegrationDeclaration;
@@ -81,7 +81,7 @@ export function shortNameOf(name: string): string {
  * Build the integration service for one serve lifecycle. Discovery is
  * best-effort: a missing/unreadable skills pack ⇒ an empty service (the tools
  * degrade gracefully — `integrations_auth` still resolves a caller `envVar`;
- * `noir.clickup_write` is simply not registered). Never throws.
+ * `noir_clickup_write` is simply not registered). Never throws.
  *
  * @param root project root (`.noir/audit/` anchor)
  * @param configIntegrations the parsed `integrations` block from `.noir/config.yml`

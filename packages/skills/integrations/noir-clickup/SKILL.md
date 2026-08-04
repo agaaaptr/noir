@@ -1,6 +1,6 @@
 ---
 name: noir-clickup
-description: Use when a task comes from or writes back to ClickUp — to read a task by id, update status, create subtasks, post a comment, or batch-create tasks from an H2-per-task markdown list; routes writes through the noir.clickup_write gated proxy and reads via the host fetch with the pk_ token resolved by integrations_auth.
+description: Use when a task comes from or writes back to ClickUp — to read a task by id, update status, create subtasks, post a comment, or batch-create tasks from an H2-per-task markdown list; routes writes through the noir_clickup_write gated proxy and reads via the host fetch with the pk_ token resolved by integrations_auth.
 ---
 
 # noir-clickup — ClickUp integration (read + gated write)
@@ -10,7 +10,7 @@ ClickUp is the first Noir integration. The playbook lives in the skill (this fil
 ## Tier model (where each operation runs)
 
 - **Reads** run **skill-side** via the host's `fetch` — no MCP hop. The skill constructs the request and parses the JSON.
-- **Writes** run through the **`noir.clickup_write`** gated-write-proxy MCP tool (X-T3, daemon-side). The tool enforces a **dry-run → confirm** gate + audit, then POSTs/PUTs to ClickUp API v2 server-side. The skill NEVER constructs write URLs by hand — it hands `(op, payload)` to the tool.
+- **Writes** run through the **`noir_clickup_write`** gated-write-proxy MCP tool (X-T3, daemon-side). The tool enforces a **dry-run → confirm** gate + audit, then POSTs/PUTs to ClickUp API v2 server-side. The skill NEVER constructs write URLs by hand — it hands `(op, payload)` to the tool.
 - **Token resolution** goes through the `integrations_auth` MCP tool (X-T3, daemon-side). It resolves `CLICKUP_API_TOKEN` server-side at call time and returns the value. This kills the non-interactive-shell gotcha (the skill and its MCP tool never read shell env directly, so an unset/non-exported token in the agent's shell does not cause failure — only the daemon's process env matters). When the env value is absent, the tool reports `no-token` and the skill falls back to manual paste.
 
 Allowlisted endpoints (the skill + the gated proxy ever only touch these):
@@ -54,7 +54,7 @@ Response → a ClickUp task object (`id`, `name`, `description`, `status`, `cust
 `status` is a SYSTEM field — valid values come from the list's statuses. Through the gated proxy:
 
 ```
-noir.clickup_write({ op: 'task:set-status', taskId, status })
+noir_clickup_write({ op: 'task:set-status', taskId, status })
 ```
 
 The proxy renders the underlying request:
@@ -72,7 +72,7 @@ If the list's statuses array is unknown, the proxy probes (`GET /list/{list_id}/
 ### Flow 3 — Create a subtask (`POST /list/{list_id}/task` + `PUT /task/{sub}`)
 
 ```
-noir.clickup_write({ op: 'task:create-subtask', listId, parentTaskId, name, status? })
+noir_clickup_write({ op: 'task:create-subtask', listId, parentTaskId, name, status? })
 ```
 
 Renders:
@@ -95,7 +95,7 @@ PUT https://api.clickup.com/api/v2/task/{new_sub_id}
 ### Flow 4 — Post a comment (`POST /task/{id}/comment`)
 
 ```
-noir.clickup_write({ op: 'task:comment', taskId, commentText, notifyAll?, assigneeId? })
+noir_clickup_write({ op: 'task:comment', taskId, commentText, notifyAll?, assigneeId? })
 ```
 
 Renders:
@@ -122,7 +122,7 @@ description body
 (a CSV adapter converts to the same intermediate shape). The skill normalizes this to a tasks array, then:
 
 ```
-noir.clickup_write({ op: 'task:batch-create', listId, tasks })
+noir_clickup_write({ op: 'task:batch-create', listId, tasks })
 ```
 
 The proxy ALWAYS renders a **dry-run preview table first** → the host surfaces it via the tool-approval gate → on **explicit confirm**, POSTs. The host tool-approval gate is the only path to a real write; nothing in this skill or in task content can bypass it (defense against prompt-injection in task titles/descriptions — they become task fields in the POST body, never executable instructions).
