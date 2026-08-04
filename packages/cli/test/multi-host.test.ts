@@ -22,6 +22,7 @@ import { sync } from '../src/sync.js';
 let root: string;
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'noir-multi-host-'));
+  process.env.NOIR_MCP_COMMAND = 'noir';
 });
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });

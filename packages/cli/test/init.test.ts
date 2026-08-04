@@ -8,6 +8,7 @@ import { init } from '../src/init.js';
 let root: string;
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'noir-cli-'));
+  process.env.NOIR_MCP_COMMAND = 'noir';
 });
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });

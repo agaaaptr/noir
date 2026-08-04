@@ -14,6 +14,7 @@ import { create } from '../src/commands/create.js';
 let tmp: string;
 beforeEach(() => {
   tmp = mkdtempSync(join(tmpdir(), 'noir-create-'));
+  process.env.NOIR_MCP_COMMAND = 'noir';
 });
 afterEach(() => {
   rmSync(tmp, { recursive: true, force: true });

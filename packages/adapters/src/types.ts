@@ -23,6 +23,12 @@ export interface EmitContext {
 export interface McpConfigOptions {
   transport: 'stdio' | 'streamable-http';
   url?: string;
+  /** The `command` a host MCP client should spawn for the stdio server.
+   *  Defaults to `'noir'`. When Noir is native-installed, the engine passes the
+   *  absolute shim path (`~/.noir/bin/noir`) here so GUI MCP clients (VS Code,
+   *  Cursor) that don't read shell profiles can still spawn the server — see
+   *  `resolveNoirCommand()` in @noir-ai/core. */
+  command?: string;
 }
 
 /**

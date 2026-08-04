@@ -26,9 +26,14 @@ export function buildMcpServersJson(
   // Always present: the Noir MCP server — `noir mcp serve --stdio` or the
   // streamable-http endpoint. The placeholder URL (`:0`) is a best-effort hint
   // the user edits; same behavior as the original claude implementation.
+  // For stdio, `command` defaults to 'noir' but the engine passes the absolute
+  // native-shim path when a native install is detected — GUI MCP clients (VS
+  // Code, Cursor) launch from the Dock/Finder and don't read shell profiles, so
+  // a bare 'noir' fails with `spawn noir ENOENT` even when ~/.noir/bin is on
+  // the user's shell PATH. See resolveNoirCommand() in @noir-ai/core.
   const noirServer =
     opts.transport === 'stdio'
-      ? { command: 'noir', args: ['mcp', 'serve', '--stdio'] }
+      ? { command: opts.command ?? 'noir', args: ['mcp', 'serve', '--stdio'] }
       : { type: 'http', url: opts.url ?? 'http://127.0.0.1:0/mcp' };
 
   const mcpServers: Record<string, unknown> = { noir: noirServer };

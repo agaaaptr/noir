@@ -10,6 +10,11 @@ import { CURRENT_SCAFFOLD_VERSION, readScaffoldVersion } from '../src/scaffold-v
 let root: string;
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'noir-scaffold-'));
+  // Pin the MCP command to 'noir' so scaffold tests are deterministic across
+  // developer machines (where a native install's absolute shim path would
+  // otherwise bleed into .mcp.json assertions). Integration tests that want
+  // the real resolveNoirCommand() behavior can set the override to '' first.
+  process.env.NOIR_MCP_COMMAND = 'noir';
 });
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });

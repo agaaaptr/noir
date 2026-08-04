@@ -19,7 +19,9 @@ export {
   type InstallMethod,
   type InstallRecord,
   installJsonPath,
+  nativeShimPath,
   readInstallRecord,
+  resolveNoirCommand,
   writeInstallRecord,
 } from './install-method.js';
 export { modelsDir, NOIR_DIR, noirHome, paths, runtimeDir } from './layout.js';

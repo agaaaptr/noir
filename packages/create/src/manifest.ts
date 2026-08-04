@@ -83,6 +83,12 @@ export type BuildManifestContext = {
   transport: 'stdio' | 'streamable-http';
   /** Required when transport is `streamable-http`. */
   url?: string;
+  /** The `command` value emitted into the host's MCP config for the stdio
+   *  server. Defaults to `'noir'`; the orchestrator passes the absolute native
+   *  shim path (`~/.noir/bin/noir`) when a native install is detected, so GUI
+   *  MCP clients that don't read shell profiles can spawn the server. See
+   *  `resolveNoirCommand()` in @noir-ai/core. */
+  command: string;
   /** Detected stack — drives stack-aware ignore emission (.npmignore /
    *  .prettierignore only for JS; .dockerignore only when a Dockerfile is
    *  present; an unknown/empty stack ⇒ all four, for backward compat). */
@@ -241,6 +247,10 @@ export interface BuildHostArtifactsContext {
   root: string;
   transport: 'stdio' | 'streamable-http';
   url?: string;
+  /** The `command` for the stdio MCP server entry (absolute native shim when a
+   *  native install is detected, else `'noir'`). Passed through to
+   *  `adapter.emitMcpConfig`. */
+  command: string;
 }
 
 /**
@@ -385,6 +395,7 @@ export function buildHostArtifacts(
   } else {
     const mcpContent = `${adapter.emitMcpConfig(ectx, {
       transport: ctx.transport,
+      command: ctx.command,
       ...(ctx.url !== undefined ? { url: ctx.url } : {}),
     })}\n`;
     entries.push({

@@ -1,6 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { createProjectId, type ManagedBlock, paths, readManagedBlock } from '@noir-ai/core';
+import {
+  createProjectId,
+  type ManagedBlock,
+  paths,
+  readManagedBlock,
+  resolveNoirCommand,
+} from '@noir-ai/core';
 import { readAncestors, writeAncestors } from './ancestors.js';
 import {
   type BuildManifestContext,
@@ -342,12 +348,17 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   }
 
   // 5. Build manifest + filter by host + mode.
+  // Resolve the MCP `command`: the absolute native shim when a native install
+  // is detected (GUI MCP clients don't read shell profiles → `spawn noir
+  // ENOENT`), else `'noir'`. Read-only + never throws; defaults to 'noir'.
+  const command = resolveNoirCommand();
   const manifest = buildManifest({
     root: opts.root,
     projectId,
     host,
     transport,
     url: opts.url,
+    command,
     stack,
   });
   const emitRuntimeOnly = opts.mode === 'sync' || (opts.mode === 'init' && opts.upgrade === true);
@@ -357,6 +368,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     host,
     transport,
     url: opts.url,
+    command,
   };
 
   const written: string[] = [];
