@@ -8,7 +8,7 @@
 # it depends on Homebrew's `node@22`, installs the npm package into `libexec`,
 # and symlinks the `noir` bin into the Homebrew `bin`.
 #
-# `url`/`sha256`/`version` are the REAL values from the 1.7.1 npm tarball
+# `url`/`sha256`/`version` are the REAL values from the 1.7.2 npm tarball
 # (they are immutable once published). Refresh all three on each stable
 # release:
 #   curl -sL https://registry.npmjs.org/@noir-ai/cli/latest | \
@@ -24,9 +24,9 @@
 class Noir < Formula
   desc "Discipline, context, and memory layer for any agentic CLI"
   homepage "https://github.com/agaaaptr/noir"
-  url "https://registry.npmjs.org/@noir-ai/cli/-/cli-1.7.1.tgz"
-  sha256 "59b12f39cf5354dc559843b38a06e350cda0fc32b3d39dc6fefbfe3d76ca56ee"
-  version "1.7.1"
+  url "https://registry.npmjs.org/@noir-ai/cli/-/cli-1.7.2.tgz"
+  sha256 "27fb864f43328a98aca6c0d02c362cb86482cd3b995066e13ec6e7bff5c56b83"
+  version "1.7.2"
   license "MIT"
 
   # Noir requires Node >= 22 (the CLI's package.json `engines.node`).
