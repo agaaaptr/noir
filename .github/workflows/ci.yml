@@ -83,11 +83,10 @@ jobs:
         shell: bash
         run: |
           set -e
-          # posix: npm global bin is already on PATH. Windows: the installer
-          # wrote ~/.noir/bin; surface it for this step only.
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            export PATH="$HOME/.noir/bin:$PATH"
-          fi
+          # The managed-Node installer writes the noir shim at ~/.noir/bin/noir
+          # (POSIX) or ~/.noir/bin/noir.cmd (Windows) — not the npm global bin.
+          # Surface it on every OS for this step only.
+          export PATH="$HOME/.noir/bin:$PATH"
           echo "::group::noir --version"
           noir --version
           echo "::endgroup::"

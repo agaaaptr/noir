@@ -222,7 +222,7 @@ function Provision-Node {
     # 2d) Verify SHA-256 — FAIL-CLOSED. Never install an unverified archive.
     $actualSha = (Get-FileHash -Algorithm SHA256 -Path $archiveFile).Hash.ToLower()
     if ($actualSha -ne $expectedSha) {
-      Warn "Checksum mismatch for $archiveBasename:"
+      Warn "Checksum mismatch for ${archiveBasename}:"
       Warn "  expected: $expectedSha"
       Warn "  actual:   $actualSha"
       Warn 'Refusing to install an unverified archive; falling back to system Node.'
