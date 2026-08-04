@@ -40,17 +40,21 @@ describe('release pipeline workflows (offline structural lint)', () => {
   describe('.github/workflows/ci.yml', () => {
     const yaml = readWorkflow('ci.yml');
 
-    it('runs the verify matrix on ubuntu, macos, AND windows', () => {
+    it('runs the verify matrix on ubuntu and macos (Windows excluded — better-sqlite3@13 source-only, node-gyp/VS 18 incompatibility on the runner)', () => {
       // The verify job's matrix is the first `os: [...]` block in the file.
       // Extract just that block so the install-smoke matrix (which also lists
-      // the three OSes) can't satisfy this assertion by accident.
+      // OSes) can't satisfy this assertion by accident.
+      // Windows is excluded from verify because better-sqlite3@13.0.1 is
+      // source-only (`node-gyp rebuild`) and node-gyp@11.1.0 cannot detect
+      // Visual Studio 18 on the `windows-latest` runner. Windows is still
+      // validated by the install-smoke and node-provision-smoke jobs.
       const verifyBlock = yaml.split('install-smoke')[0] ?? '';
       const osMatch = verifyBlock.match(/os:\s*\[([^\]]+)\]/);
       expect(osMatch, 'verify matrix has an os: [...] list').not.toBeNull();
       const osList = osMatch?.[1] ?? '';
       expect(osList).toContain('ubuntu-latest');
       expect(osList).toContain('macos-latest');
-      expect(osList).toContain('windows-latest');
+      expect(osList).not.toContain('windows-latest');
     });
 
     it('does not fail-fast the verify matrix (one OS flake must not abort the others)', () => {
