@@ -71,8 +71,16 @@ describe('release pipeline workflows (offline structural lint)', () => {
       expect(yaml).toContain('bash scripts/install.sh');
     });
 
-    it('install-smoke runs the PowerShell installer on Windows', () => {
-      expect(yaml).toContain('powershell -ExecutionPolicy Bypass -File scripts/install.ps1');
+    it('install-smoke excludes Windows (better-sqlite3@13 source-only, needs VS Build Tools not on runner)', () => {
+      // The install-smoke matrix (and node-provision-smoke matrix) only
+      // includes ubuntu-latest and macos-latest. Windows is excluded because
+      // better-sqlite3@13.0.1 compiles from source on the runner
+      // (`node-gyp rebuild`, needs Visual Studio Build Tools). Re-add when
+      // a matching Windows prebuild ships.
+      const smokeBlock = yaml.split('install-smoke')[1] ?? '';
+      const osP = smokeBlock.match(/os:\s*\[([^\]]+)\]/);
+      expect(osP, 'smoke matrix has an os: [...] list').not.toBeNull();
+      expect(osP?.[1] ?? '').not.toContain('windows-latest');
     });
 
     it('install-smoke asserts both noir --version and noir doctor', () => {
@@ -90,31 +98,31 @@ describe('release pipeline workflows (offline structural lint)', () => {
       expect(yaml).toContain('needs: verify');
     });
 
-    it('node-provision-smoke runs on the full OS matrix', () => {
+    it('node-provision-smoke runs on ubuntu and macos (Windows excluded: better-sqlite3 source-compile limitation)', () => {
       const block = yaml.split('node-provision-smoke')[1] ?? '';
-      expect(block).toMatch(/os:\s*\[ubuntu-latest,\s*macos-latest,\s*windows-latest\]/);
+      // Windows is excluded from smoke matrices; only ubuntu + macos run.
+      // See the comment block above install-smoke for the detailed explanation.
+      expect(block).toContain('ubuntu-latest');
+      expect(block).toContain('macos-latest');
+      expect(block).not.toContain('windows-latest');
     });
 
-    it('node-provision-smoke runs install.sh from a clean env (posix)', () => {
+    it('node-provision-smoke runs install.sh (POSIX only, no Windows)', () => {
       const block = yaml.split('node-provision-smoke')[1] ?? '';
       expect(block).toContain('bash scripts/install.sh');
-      // The clean-env path is created by narrowing PATH to system dirs only,
-      // which excludes any runner-provided node/npm.
+      // The clean-env PATH narrowing excludes runner-provided node/npm.
       expect(block).toContain('PATH: /usr/bin:/bin:/usr/sbin:/sbin');
-    });
-
-    it('node-provision-smoke runs install.ps1 on Windows', () => {
-      const block = yaml.split('node-provision-smoke')[1] ?? '';
-      expect(block).toContain('powershell -ExecutionPolicy Bypass -File scripts/install.ps1');
+      // No PowerShell step — Windows is excluded from smoke matrices.
+      expect(block).not.toContain('install.ps1');
     });
 
     it('node-provision-smoke asserts the provisioned runtime + noir --version', () => {
       const block = yaml.split('node-provision-smoke')[1] ?? '';
-      // RegExp with an escaped \$ matches the literal `v${VER}` text in the
-      // workflow (a plain string `v${VER}` would be a template placeholder).
+      // POSIX-only now: no Windows .exe paths. The clean env asserts the
+      // provisioned runtime exists + noir shim is wired correctly.
       expect(block).toMatch(/\.noir\/runtime\/v\$\{VER\}\/bin\/node/);
-      expect(block).toMatch(/\.noir\/runtime\/v\$\{VER\}\/node\.exe/);
       expect(block).toContain('noir --version');
+      expect(block).toContain('OK: noir shim is wired to the managed node');
     });
   });
 
