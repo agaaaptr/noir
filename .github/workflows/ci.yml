@@ -10,15 +10,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Ubuntu + macOS only. Windows is EXCLUDED from the verify gate because
-        # better-sqlite3@13.0.1 is source-only (`node-gyp rebuild`, no prebuilt
+        # Ubuntu + macOS only. Windows is EXCLUDED from the verify matrix because
+        # better-sqlite3@13.0.1 is source-only (node-gyp rebuild, no prebuilt
         # binaries), and node-gyp@11.1.0 cannot detect Visual Studio 18 (the
-        # 2026 version shipped on `windows-latest` runners) — its version map
+        # 2026 version shipped on windows-latest runners) — its version map
         # only goes up to VS 17 (2022). This is a node-gyp infrastructure issue,
-        # not a Noir code defect. Windows is still validated by the install-smoke
-        # and node-provision-smoke jobs below (they install the real CLI through
-        # `install.ps1` and exercise the full managed-Node pipeline on Windows).
-        # The one POSIX-only unit test (chmod-based degraded store open) self-skips.
+        # not a Noir code defect. Windows is still validated by the smoke-test
+        # jobs below (they exercise the full managed-Node pipeline on Windows).
+        # The one POSIX-only unit test (chmod-based degraded store open) skips.
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
