@@ -23,7 +23,7 @@ import {
   pidAlive,
   readDaemonRecord,
 } from '@noir-ai/daemon';
-import { type CliOptions, EXIT, fail, info, log } from '../output.js';
+import { type CliOptions, EXIT, fail, info, log, spinner } from '../output.js';
 
 /** Options accepted by `daemon` sub-commands (the global flags only). */
 export interface DaemonOptions extends CliOptions {}
@@ -75,6 +75,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
     fail(EXIT.USAGE, 'not implemented (tracked: v1.x)', opts);
   }
 
+  const ds = spinner('Starting Noir daemon...', opts).start();
   const project = loadProjectInfo(process.cwd());
   const ensured = await ensureDaemonRunning({
     project,
@@ -82,6 +83,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
   });
 
   if (ensured.started) {
+    ds.succeed('Daemon started');
     if (opts.json === true) {
       process.stdout.write(
         `${JSON.stringify({
@@ -106,6 +108,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
   }
 
   // Reused an already-running daemon — this process exits after reporting.
+  ds.succeed('Daemon already running');
   if (opts.json === true) {
     process.stdout.write(
       `${JSON.stringify({ ok: true, data: { url: ensured.url, port: ensured.port, reused: true } })}\n`,
@@ -138,6 +141,7 @@ export async function daemonStop(opts: DaemonOptions): Promise<void> {
     return;
   }
 
+  const ds = spinner(`Stopping daemon (pid ${rec.pid})...`, opts).start();
   let signalled = false;
   let errMsg: string | undefined;
   try {
@@ -165,8 +169,9 @@ export async function daemonStop(opts: DaemonOptions): Promise<void> {
     return;
   }
   if (signalled) {
-    log(`Stopped Noir daemon (pid ${rec.pid}).`, opts);
+    ds.succeed(`Stopped Noir daemon (pid ${rec.pid})`);
   } else {
+    ds.warn(`Daemon (pid ${rec.pid}) could not be signalled: ${errMsg}`);
     info(`Noir daemon (pid ${rec.pid}) could not be signalled: ${errMsg}`, opts);
   }
 }
@@ -197,6 +202,7 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
 
   // Live liveness probe: the daemon's HTTP server answers GET /health with
   // `{ok, pid, uptimeSec}`. A dead port / non-200 / unreachable host ⇒ stale.
+  const hs = spinner('Probing daemon health...', opts).start();
   let health: HealthBody | null = null;
   try {
     const res = await fetch(`http://127.0.0.1:${rec.port}/health`);
@@ -208,6 +214,7 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
     health = null;
   }
   if (health?.ok !== true) {
+    hs.fail('Daemon not responding');
     clearDaemonRecord();
     fail(
       EXIT.DAEMON_DOWN,
@@ -215,6 +222,8 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
       opts,
     );
   }
+
+  hs.succeed('Daemon healthy');
 
   // Prefer the daemon's own uptime count; fall back to the record's startedAt.
   const uptimeSec =

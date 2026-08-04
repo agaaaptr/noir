@@ -1,6 +1,13 @@
 import type { DetectResult, ProvisionedNode } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Mock node:fs so chmodSync doesn't throw ENOENT on the (never-written) shim
+// when the test mocks atomicWriteFile from @noir-ai/core.
+vi.mock('node:fs', async () => {
+  const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
+  return { ...actual, chmodSync: vi.fn() };
+});
+
 // Mock @noir-ai/core at the boundary for the dismiss + provision integration
 // tests. The pure buildMigrationPlan tests below don't touch any mocked
 // symbol, so this is inert for them.

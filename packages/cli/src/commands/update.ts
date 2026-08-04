@@ -9,7 +9,7 @@ import {
   type UpdateConfigLike,
   writeUpdateCache,
 } from '@noir-ai/core';
-import { type CliOptions, EXIT, fail, info, success, warn } from '../output.js';
+import { type CliOptions, EXIT, fail, info, spinner, success, warn } from '../output.js';
 import { installManagedNode } from './install.js';
 
 export const DEFAULT_UPDATE_CONFIG: UpdateConfigLike = {
@@ -133,26 +133,25 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
   const currentVersion = rec?.version ?? null;
 
   if (opts.check === true) {
+    const checkSpin = spinner('Checking for updates...', opts).start();
     const latest = await fetchLatestVersion('latest');
-    info(
-      latest
-        ? `Latest: ${latest} (you have ${currentVersion ?? 'unknown'})`
-        : 'Could not reach the registry.',
-      opts,
-    );
+    if (latest) {
+      checkSpin.succeed(`Latest: ${latest} (you have ${currentVersion ?? 'unknown'})`);
+    } else {
+      checkSpin.fail('Could not reach the registry.');
+    }
     return;
   }
 
   // Fetch latest (network; timeout-bound).
+  const fetchSpin = spinner('Checking for updates...', opts).start();
   const latest = await fetchLatestVersion('latest');
-  // T6 hardening: when the registry was unreachable (fetch returned null), say
-  // so explicitly — mirroring `--check` — instead of falling through to the
-  // "up to date" branch (which the old inequality-based isUpgrade would print
-  // because `null != currentVersion`).
   if (latest === null) {
+    fetchSpin.fail('Could not reach the registry.');
     info('Could not reach the registry.', opts);
     return;
   }
+  fetchSpin.succeed(`Latest: ${latest}`);
   // I2 — read the `update.minVersion` floor from the project config (falls
   // back to the config default '1.6.0' when the project isn't initialized or
   // the block is absent). Same try/catch pattern as home.ts's update-config read.
@@ -185,16 +184,25 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
   }
 
   if (!target.isUpgrade) {
+    fetchSpin.succeed(`noir ${currentVersion} is up to date`);
     info(`noir ${currentVersion} is up to date.`, opts);
     return;
   }
 
   if (method === 'native') {
+    const updateSpin = spinner(
+      `Updating to ${target.latestKnown} via native installer...`,
+      opts,
+    ).start();
     const res = await installManagedNode({
       version: target.targetSpec === 'latest' ? undefined : target.targetSpec,
       env: process.env,
     });
-    if (!res.ok) fail(EXIT.ERROR, res.error ?? 'update failed', opts);
+    if (!res.ok) {
+      updateSpin.fail('Update failed');
+      fail(EXIT.ERROR, res.error ?? 'update failed', opts);
+    }
+    updateSpin.succeed(`Updated to noir ${res.version}`);
     success(`Updated to ${res.version}.`);
     return;
   }
@@ -203,8 +211,13 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
   const cmd = updateCmdFor(method, target.targetSpec);
   if (!cmd)
     fail(EXIT.USAGE, `cannot auto-update a ${method} install; use the manager directly`, opts);
+  const mgrSpin = spinner(`Updating via ${method}...`, opts).start();
   const { code, stderr } = await runManagerCmd(cmd, { env: process.env });
-  if (code !== 0) fail(EXIT.ERROR, `update failed: ${stderr.slice(0, 300)}`, opts);
+  if (code !== 0) {
+    mgrSpin.fail(`Update failed`);
+    fail(EXIT.ERROR, `update failed: ${stderr.slice(0, 300)}`, opts);
+  }
+  mgrSpin.succeed('Updated');
   success('Updated.');
 }
 

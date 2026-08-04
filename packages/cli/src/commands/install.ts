@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { chmodSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   atomicWriteFile,
@@ -16,7 +16,7 @@ import {
   runManagerCmd,
   writeInstallRecord,
 } from '@noir-ai/core';
-import { type CliOptions, EXIT, fail, info, success, warn } from '../output.js';
+import { type CliOptions, EXIT, fail, info, spinner, success, warn } from '../output.js';
 
 export interface InstallOptions extends CliOptions {
   list?: boolean;
@@ -177,6 +177,7 @@ export async function installManagedNode(
   const shim = join(binDir, 'noir');
   const shimBody = `#!/usr/bin/env bash\n"${nodeBin}" "${join(cliDir, 'lib', 'node_modules', '@noir-ai', 'cli', 'dist', 'bin.js')}" "$@"\n`;
   atomicWriteFile(shim, shimBody);
+  chmodSync(shim, 0o755); // must be executable — atomicWriteFile sets 0o644 by default
   // (POSIX shim; Windows uses a .cmd wrapper -- install.sh/install.ps1, P3.)
 
   // Resolve installed version via the provisioned node.
@@ -280,6 +281,7 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
     // @clack confirm gate (lazy import) -- same pattern as home.ts.
   }
 
+  const installSpin = spinner('Installing Noir via native installer...', opts).start();
   const result = await installManagedNode({
     channel: plan.nativeVersion === 'beta' ? 'beta' : undefined,
     version: plan.nativeVersion.startsWith('v')
@@ -290,8 +292,10 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
     env: process.env,
   });
   if (!result.ok) {
+    installSpin.fail('Native install failed');
     fail(EXIT.ERROR, result.error ?? 'native install failed', opts);
   }
+  installSpin.succeed(`Installed noir ${result.version}`);
 
   info(`Installed native: ${result.version}.`);
   if (plan.prevUninstallCmd && opts.uninstallPrev !== true) {
