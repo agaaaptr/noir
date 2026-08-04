@@ -11,6 +11,7 @@ roadmap:
     title: Package Distribution & Release Management
     status: completed
     priority: high
+    note: "C1 shipped as 1.7.0 (published 2026-08-04). Two post-release bugfixes on develop pending next publish: noir_clickup_write MCP tool rename + piped install.sh fix."
 
   - id: C2
     title: CLI Runtime & User Experience

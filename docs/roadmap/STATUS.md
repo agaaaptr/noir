@@ -34,6 +34,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 - **2026-08-03** — C1 native installer + migration + self-update shipped (Tasks 1–11): managed-Node installer (`install.sh` + `install.ps1`), `noir install`/`migrate`, `noir update` + async cached version check, doctor install row, Homebrew formula (real url/sha256), Scoop manifest, installer attestation (SHA256SUMS + Sigstore). ADR-0005 records the managed-Node-not-single-binary decision; winget/Chocolatey deferred.
 - **2026-08-03** — Roadmap restructure: capability docs rewritten grounded against the shipped codebase; `releases.md` + `backlog.md` created; roadmap made the project reference.
 - **2026-08-03/04** — C1 managed-Node auto-provisioning (P1–P6): `provisionManagedNode()` in `@noir-ai/core` (`packages/core/src/node-provision.ts`) — download + verify (SHA256 checksum, fail-closed) + extract Node 22.23.2 LTS into `~/.noir/runtime/v<version>/`; atomic writes (staging → rename); auto-cleanup old runtime versions. `MANAGED_NODE_VERSION` constant exported from core, shared with `install.sh`/`install.ps1` via `scripts/node-version.env`. `noir install`/`migrate` now calls `provisionManagedNode()` (CLI can bootstrap without a shell script). CI `node-provision-smoke` job validates real Node download. Release registry rebuilt with accurate channel labels + non-null `changelogRef` for every entry. C1 → Completed.
+- **2026-08-04** — **C1 published on npm** as **1.7.0** (`latest`) + **1.7.0-beta.1** (`beta`); `main` + `develop` synced. Then two post-release bugfixes on `develop` (pending next publish): **`noir_clickup_write` MCP tool rename** — the dotted name violated the MCP tool-name charset (`[a-z0-9_-]` only) and broke the whole MCP session with `-32000`; renamed repo-wide + added a charset regression guard (`fix(daemon)` `368b766`). **Piped `install.sh` `curl | bash` fix** — `${BASH_SOURCE[0]}` is empty when piped, so `node-version.env` wasn't found; now fetched from the repo raw URL (`fix(dist)` `23d4f19`). Both gates green (1428 tests).
 
 ## Active capability
 
@@ -45,7 +46,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 
 ## Next milestone
 
-- Publish the C1 native-installer + managed-Node provisioning work as a beta (separate phase, explicit go-ahead required). Then return to the C2 TUI delta (richer widgets, command palette).
+- Return to the **C2 TUI delta** (richer widgets, command palette). The two post-release bugfixes are pending a next-publish phase (separate, explicit go-ahead required).
 
 ## Current technical debt
 
@@ -53,7 +54,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 - `docs/reference/cli-auto.md` duplicate removed 2026-08-03 (single source: `cli.md`; stale ref in `capability-02` also cleared).
 - `CHANGELOG.md` unified to root (docs/CHANGELOG.md is now a pointer) — 2026-08-03.
 - Stale doc path labels in `AGENTS.md` + ADR-0001 (`docs/internal/`/`docs/internal/specs/` → real `docs/internal/{specs,plans}`) — tracked, not yet fixed.
-- C1 native-installer work is committed locally on `develop` (not pushed); publish is a separate phase.
+- The two 2026-08-04 bugfixes (`noir_clickup_write` rename + piped `install.sh`) are committed locally on `develop` (not pushed); next publish is a separate phase.
 
 ## Notes
 

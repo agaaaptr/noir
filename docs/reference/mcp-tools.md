@@ -22,3 +22,4 @@
 | `memory_forget` | Remove observations from cross-session memory: deletes the authoritative KV row + best-effort FTS/vector purge. Returns the count actually removed. |
 | `memory_consolidate` | Explicitly consolidate recent memory observations into ONE derived lesson (append-only; originals are never mutated). Provider-gated: refuses + logs if no provider is configured — NEVER a silent paid call. Emits a type: |
 | `integrations_auth` | Resolve an integration token VALUE server-side at call time (kills the non-interactive-shell gotcha). Pass {integration: |
+| `noir_clickup_write` | — |

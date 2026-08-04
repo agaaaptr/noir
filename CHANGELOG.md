@@ -1,8 +1,20 @@
 # Changelog
 
-## 1.7.0 (2026-08-04) — C1 managed-Node provisioning + registry accuracy (completed on `develop`, ready for publish)
+## Unreleased (on `develop`, pending next publish) — 2026-08-04 bugfixes
 
-The C1 capability-1 completion: managed-Node auto-provisioning from the CLI, release-registry accuracy, and C1 -> Completed. **All commits are local on `develop`; publish is a separate later phase.** Decision record: [ADR-0005](docs/decisions/0005-native-installer-managed-node.md) (managed-Node, not single-binary; Windows = PowerShell + Scoop; winget/Chocolatey deferred).
+Two user-facing bugs were fixed after the 1.7.0 publish. Commits stay local on `develop` (`23d4f19`, `368b766`); they land in the next version publish.
+
+### Fixed
+- **`noir_clickup_write` (daemon MCP tool) — dotted name broke the whole MCP session.** The MCP protocol restricts tool names to `[a-z0-9_-]`; the daemon served `noir.clickup_write`, but the host (Claude Code) rejected it during `tools/list` and aborted the session with `-32000`. Renamed to `noir_clickup_write` repo-wide (daemon src, `noir-clickup` skill, specs, ADR-0003, capability docs, tests) and added a **protocol regression guard** in `integration-tools.test.ts` asserting every registered tool name matches the MCP charset.
+- **`install.sh` piped `curl | bash` now works.** `${BASH_SOURCE[0]}` is empty when the script is piped, so `SCRIPT_DIR` collapsed to `$PWD` and `node-version.env` was "not found next to install.sh" (plus a `set -u` unbound-variable error on the empty array element). When piped, the installer now fetches `node-version.env` from the repo raw URL (mirrors `install.ps1`'s `iex` fallback) and requires `NODE_DIST_BASE_URL`.
+
+> **Note for users still on 1.6.0:** `noir install` is a 1.7.0 command — the native-installer one-liner is the upgrade path, and this `curl | bash` fix is what makes the piped one-liner work.
+
+---
+
+## 1.7.0 (2026-08-04) — C1 managed-Node provisioning + registry accuracy (published)
+
+The C1 capability-1 completion: managed-Node auto-provisioning from the CLI, release-registry accuracy, and C1 -> Completed. **Published on npm as `1.7.0` (latest) + `1.7.0-beta.1` (beta) on 2026-08-04.** Decision record: [ADR-0005](docs/decisions/0005-native-installer-managed-node.md) (managed-Node, not single-binary; Windows = PowerShell + Scoop; winget/Chocolatey deferred).
 
 ### Added — managed-Node auto-provisioning
 - **`provisionManagedNode()`** in `@noir-ai/core` (`packages/core/src/node-provision.ts`) — downloads, verifies (SHA256 checksum, fail-closed), and extracts a pinned **Node 22.23.2 LTS** runtime under `~/var/.noir/runtime/v<version>/`; atomic writes (staging-dir -> rename); auto-cleanup of old runtime versions (keep current only).

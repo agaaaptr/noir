@@ -26,7 +26,7 @@ The `noir` home menu (interactive; `noir status` when non-interactive):
 **Current beta:** `1.7.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.7.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-04T03:31:46.335Z*
+*Last auto-generated: 2026-08-04T04:54:16.151Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
