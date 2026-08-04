@@ -37,7 +37,17 @@ REPO_URL="https://github.com/agaaaptr/noir"
 NODEJS_URL="https://nodejs.org/"
 
 # --- Resolve the script's own dir so we can source node-version.env ----------
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# When piped via `curl ... | bash`, ${BASH_SOURCE[0]} is EMPTY (the script is
+# read from stdin, not a file), so dirname "" collapses to "." → SCRIPT_DIR=$PWD
+# and the sibling node-version.env isn't found. Under `set -u` that also throws
+# "BASH_SOURCE[0]: unbound variable" (reproduced on bash 3.2 + 5.x). So:
+#   - when a real path is available, use it;
+#   - when piped, leave SCRIPT_DIR empty and let load_node_env() fetch
+#     node-version.env from the repo's raw URL (mirrors install.ps1's iex path).
+SCRIPT_DIR=""
+if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
 
 # --- Output helpers (NO_COLOR / CI → plain) ----------------------------------
 if [[ -n "${NO_COLOR:-}" || -n "${CI:-}" ]] || [[ ! -t 1 ]]; then
@@ -57,18 +67,41 @@ die()   { printf "%s✗%s %s\n" "$C_RED" "$C_RESET" "$*" >&2; exit 1; }
 # node-version.env is plain KEY=VALUE (no `export`) so PowerShell can parse it
 # too. We import it into the environment via `set -a` so subprocesses (curl,
 # shasum) and downstream functions see the values.
+#
+# Two resolution modes (mirrors install.ps1's Load-NodeEnv):
+#   - run from a file on disk: source the sibling node-version.env;
+#   - piped via `curl ... | bash` (SCRIPT_DIR empty): fetch node-version.env
+#     from the repo's raw URL — the one file that can't ride the stdin pipe.
+#     The URL is pinned to the SAME branch as this script, so a `beta`-branch
+#     install gets the matching version pin, never a main drift.
+NODE_VERSION_ENV_URL="https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/node-version.env"
 load_node_env() {
-  local env_file="$SCRIPT_DIR/node-version.env"
-  if [[ ! -f "$env_file" ]]; then
-    die "scripts/node-version.env not found next to install.sh ($env_file).
-      This file pins MANAGED_NODE_VERSION + NODE_DIST_BASE_URL and is required."
+  local env_file="" content
+  if [[ -n "$SCRIPT_DIR" ]]; then
+    env_file="$SCRIPT_DIR/node-version.env"
+    if [[ ! -f "$env_file" ]]; then
+      die "scripts/node-version.env not found next to install.sh ($env_file).
+        This file pins MANAGED_NODE_VERSION + NODE_DIST_BASE_URL and is required."
+    fi
+    content="$(cat "$env_file")"
+  else
+    # Piped-from-curl fallback: fetch node-version.env from the repo raw URL.
+    require_cmd curl "Install it (macOS: brew install curl; linux: apt install curl)."
+    note "Fetching node-version.env from ${NODE_VERSION_ENV_URL} ..."
+    if ! content="$(curl -fsSL "$NODE_VERSION_ENV_URL" 2>/dev/null)"; then
+      die "Failed to fetch node-version.env from ${NODE_VERSION_ENV_URL}.
+        Piped installs need network to fetch the version pin. Run 'curl -fsSL -o install.sh <url>' then 'bash install.sh' instead."
+    fi
   fi
   # shellcheck disable=SC1090
-  set -a; . "$env_file"; set +a
+  set -a; eval "$content"; set +a
   # Allow the user / CI to override the dist root via the same env var the
   # core module honors (NOIR_NODE_DIST_URL). node-version.env provides the default.
   if [[ -z "${MANAGED_NODE_VERSION:-}" ]]; then
     die "scripts/node-version.env did not set MANAGED_NODE_VERSION."
+  fi
+  if [[ -z "${NODE_DIST_BASE_URL:-}" ]]; then
+    die "scripts/node-version.env did not set NODE_DIST_BASE_URL."
   fi
 }
 
