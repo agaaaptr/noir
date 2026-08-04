@@ -1,12 +1,27 @@
 {
   "$schema": "https://raw.githubusercontent.com/agaaaptr/noir/main/schemas/release-registry.schema.json",
-  "generated": "2026-08-04T03:21:03.861Z",
+  "generated": "2026-08-04T05:39:38.947Z",
   "source": "npm",
-  "currentBaseVersion": "1.7.0",
+  "currentBaseVersion": "1.7.1",
   "latestStable": "1.7.0",
-  "latestBeta": "1.7.0-beta.1",
-  "nextBeta": "1.7.0-beta.2",
+  "latestBeta": "1.7.1-beta.1",
+  "nextBeta": "1.7.1-beta.2",
   "releases": [
+    {
+      "baseVersion": "1.7.1-beta.1",
+      "fullVersion": "1.7.1-beta.1",
+      "prereleaseIdentifier": "beta",
+      "betaIteration": 1,
+      "type": "prerelease",
+      "channel": "beta",
+      "npmDistTag": "beta",
+      "gitTag": "v1.7.1-beta.1",
+      "gitSha": "e3d5e8e24cc43a0abc08f98e2afaa5aff50576cd",
+      "gitBranch": "develop",
+      "timestamp": "2026-08-04T05:39:38.946Z",
+      "publishStatus": "published",
+      "changelogRef": "https://github.com/agaaaptr/noir/blob/main/CHANGELOG.md#171-beta1-2026-08-04"
+    },
     {
       "baseVersion": "1.7.0",
       "fullVersion": "1.7.0",
