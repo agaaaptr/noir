@@ -19,7 +19,7 @@ Read only what establishes direction; load detail on demand. Do **not** read eve
 1. **Read the roadmap index + status:**
    - `docs/roadmap/README.md` — capability index, canonical philosophy, dependency graph, "how to use".
    - `docs/roadmap/STATUS.md` — per-capability status (shipped / partial / vision), active capability (C2 CLI Runtime), active slice (`cli-runtime`).
-   - `docs/roadmap/releases.md` — current release (1.6.0), version targets, deferred features.
+   - `docs/roadmap/releases.md` — current release (1.7.0), version targets, deferred features.
    - Optionally `docs/roadmap/backlog.md` — consolidated debt, if the session may touch deferred work.
 2. **Recall cross-session memory** — run `/recall noir` (agentmemory) to load prior-session decisions, goals, and learnings for this project.
 3. **Query the knowledge base** — `ctx_search` (context-mode) for project knowledge indexed from prior sessions (e.g. architecture decisions, past fixes, design rationale). Query with project-specific terms.

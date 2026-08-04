@@ -30,7 +30,7 @@ How Noir is distributed (npm monorepo, native installer, package-manager taps, r
   - `noir install`/`migrate` now calls `provisionManagedNode()` — the CLI can bootstrap the managed runtime without a shell script.
   - `downloadAndVerify()` / `extractNode()` / `detectNodeTarget()` / `nodeArchiveUrl()` — the full provisioning pipeline as callable exports.
   - CI smoke test (`.github/workflows/ci.yml` `node-provision-smoke` job) validates a real Node download on each push.
-- **Homebrew formula** — real `url`/`sha256`/`version` from the published 1.6.0 npm tarball (`packaging/homebrew/noir.rb`, Node-for-Formula-Authors pattern; stable-only; tap README at `packaging/homebrew/README.md`).
+- **Homebrew formula** — real `url`/`sha256`/`version` from the published 1.7.0 npm tarball (`packaging/homebrew/noir.rb`, Node-for-Formula-Authors pattern; stable-only; tap README at `packaging/homebrew/README.md`).
 - **Scoop manifest** — `packaging/scoop/noir.json` (Windows; depends on `nodejs-lts`; shims `dist/bin.js` as `noir`; stable-only single-channel).
 
 ## Gap / roadmap delta

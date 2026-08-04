@@ -224,7 +224,7 @@ When the beta line is ready:
    git push origin v1.5.0
    ```
 
-4. CI detects plain SemVer → publishes under `latest`. Now `npm i @noir-ai/cli` resolves to `1.6.0`; `npm i @noir-ai/cli@beta` still resolves to the last beta.
+4. CI detects plain SemVer → publishes under `latest`. Now `npm i @noir-ai/cli` resolves to `1.7.0`; `npm i @noir-ai/cli@beta` still resolves to the last beta.
 
 ### Additional beta for the same base version
 

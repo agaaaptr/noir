@@ -1,7 +1,7 @@
 # Noir Master Development Roadmap
 
 > **Status:** Active
-> **Version:** v1.x (current stable 1.6.0)
+> **Version:** v1.x (current stable 1.7.0)
 > **Scope:** Long-term engineering direction
 > **Methodology:** Spec-Driven Development (SDD)
 > **Owner:** Core Engineering
