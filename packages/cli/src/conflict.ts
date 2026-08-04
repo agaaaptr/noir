@@ -14,7 +14,12 @@
 // A2 theme — `+` green / `-` red / context dim), so `--json`/piped stdout stays
 // pristine. The 6th "merge" option writes the engine-provided zdiff3-marked
 // bytes when a 3-way merge hit an overlap.
-import type { ConflictContext, ConflictResolution, ConflictResolverReturn } from '@noir-ai/create';
+import {
+  type ConflictContext,
+  type ConflictResolution,
+  type ConflictResolverReturn,
+  lineDiff,
+} from '@noir-ai/create';
 import { isInteractive } from './output.js';
 import { c } from './theme.js';
 
@@ -83,11 +88,14 @@ export function buildConflictOpts(input: ConflictOptsInput = {}): ScaffoldConfli
  * Honored by `theme.test.ts`'s NO_COLOR gate.
  */
 function renderDiffPreview(ctx: ConflictContext): void {
-  // Lazy-import the engine's line diff so this module stays import-side-effect
-  // free for callers that never hit a conflict.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { lineDiff: ld } = require('@noir-ai/create') as typeof import('@noir-ai/create');
-  const lines = ld(ctx.existing, ctx.proposed);
+  // `lineDiff` is imported statically at the top of this module. It used to be
+  // a lazy `require('@noir-ai/create')`, but tsup bundles every @noir-ai/*
+  // internal into dist/bin.js — a dynamic `require` survives bundling as an
+  // ESM-incompatible `__require` shim that throws "Dynamic require of
+  // @noir-ai/create is not supported" at runtime (broke `init --upgrade`
+  // whenever a file conflict triggered this preview). The static import is
+  // bundled correctly and runs in pure ESM with no side effects here.
+  const lines = lineDiff(ctx.existing, ctx.proposed);
   if (lines.length === 0) return;
   const out: string[] = [`noir: conflict in ${ctx.relPath}`];
   for (const dl of lines) {
