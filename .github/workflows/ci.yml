@@ -10,13 +10,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Windows joined the matrix in C1 (native installer + better-sqlite3@13
-        # N-API prebuilds ship win32-x64/arm64). The one POSIX-only unit test
-        # (chmod-based degraded store open) self-skips on win32.
+        # Windows joined the matrix in C1 (native installer + install.ps1).
+        # NOTE: better-sqlite3@13 is source-only (no prebuilt binaries — its
+        # install script is `node-gyp rebuild`), so the Windows job needs a
+        # C++ toolchain (MSVC) + Python to compile it. The setup steps below
+        # provide those. The one POSIX-only unit test (chmod-based degraded
+        # store open) self-skips on win32.
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+      # Windows: better-sqlite3@13 compiles from source → needs MSVC + Python.
+      # (macOS has Xcode CLT preinstalled; ubuntu has build-essential.)
+      - name: Set up MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Set up Python (Windows, for node-gyp)
+        if: runner.os == 'Windows'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - uses: pnpm/action-setup@v6  # pnpm version comes from package.json `packageManager` (single source — v4 errors if `version:` is also set here)
       - uses: actions/setup-node@v7
         with:
