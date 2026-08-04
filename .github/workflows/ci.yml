@@ -38,6 +38,12 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        env:
+          # node-gyp@11.1.0 doesn't recognize Visual Studio 18 (too new for its
+          # version map). Force msvs_version so node-gyp skips its own VS-finder
+          # and uses the MSVC tools already on PATH (configured by the MSVC step
+          # above). Harmless on macOS/Linux (ignored by node-gyp).
+          npm_config_msvs_version: 2022
       - run: pnpm lint
       # Build BEFORE typecheck: each package's exports/types point at ./dist/*.d.ts,
       # so tsc can't resolve inter-package imports until the dist artifacts exist.
