@@ -379,6 +379,48 @@ atomic_write() {  # $1 = path, $2 = content
   mv -f "$tmp" "$path"
 }
 
+# --- Ensure ~/.noir/bin is on PATH via shell profile -------------------------
+# Detects the user's shell, finds the right profile file, and adds the Noir
+# PATH export with a `# Noir CLI` marker — idempotent (won't duplicate).
+# Falls back to ~/.profile for unknown shells; creates the file if missing.
+#
+# On macOS, the default shell since Catalina (10.15) is zsh, and Terminal.app
+# + iTerm2 both launch login shells that read .zprofile or .zshrc. We prefer
+# .zshrc (interactive, always read). On Linux, ~/.profile is the portable
+# default; bash reads it from login shells.
+NOIR_PATH_BLOCK="# Noir CLI
+export PATH=\"\$HOME/.noir/bin:\$PATH\""
+
+ensure_path_in_shell_profile() {
+  local shell_name profile marker
+  shell_name="$(basename "${SHELL:-/bin/sh}")"
+
+  # Pick the right profile file per shell. Fish has its own config layout;
+  # zsh/bash/ksh/dash all accept a POSIX export line in their rc/profile.
+  case "$shell_name" in
+    zsh)  profile="${HOME}/.zshrc" ;;
+    bash) profile="${HOME}/.bashrc" ;;  # most distros source .bashrc for interactive shells
+    fish) profile="${HOME}/.config/fish/config.fish"; mkdir -p "$(dirname "$profile")" ;;
+    *)    profile="${HOME}/.profile" ;;  # portable POSIX fallback
+  esac
+
+  # Idempotent: skip if the marker comment is already present (tolerates
+  # minor whitespace variations in the export line; the comment is the key).
+  if [[ -f "$profile" ]] && grep -qF '# Noir CLI' "$profile" 2>/dev/null; then
+    return 0
+  fi
+
+  # Append with a marker so the user knows where it came from (and so
+  # re-running the installer doesn't duplicate the entry).
+  info "Adding ~/.noir/bin to PATH in ${profile} ..."
+  if [[ -f "$profile" ]]; then
+    printf '\n%s\n' "$NOIR_PATH_BLOCK" >> "$profile"
+  else
+    printf '%s\n' "$NOIR_PATH_BLOCK" > "$profile"
+  fi
+  good "Added Noir to ${profile} (start a new shell or run 'source ${profile}' to apply)."
+}
+
 # --- Main install -------------------------------------------------------------
 main() {
   load_node_env
@@ -442,10 +484,12 @@ main() {
     "${ver:-0.0.0}" "$channel" "$now" "$managed_rev")"
   atomic_write "${home}/install.json" "$record"
 
-  # PATH hint + verify. The shim we just wrote is the new binary; `command -v
-  # noir` may resolve to an OLD installation (nvm, npm global, Homebrew) that
-  # precedes ~/.noir/bin on PATH — the user would then run the old version and
-  # think the install failed. Detect shadowing explicitly.
+  # PATH hint + verify. Automatically add ~/.noir/bin to the shell profile so
+  # the next shell session picks up the native shim. Then check what `command -v
+  # noir` resolves to RIGHT NOW — a previous install (nvm, npm global, Homebrew)
+  # may shadow the new shim until the next shell.
+  ensure_path_in_shell_profile
+
   local shim_ver resolved_noir
   shim_ver="$("$shim" --version 2>/dev/null || true)"
   if [[ -n "$shim_ver" ]]; then
@@ -456,19 +500,14 @@ main() {
     if [[ "$resolved_noir" == "$shim" ]]; then
       good "noir is on PATH at: ${resolved_noir}"
     else
-      warn "noir resolves to an older install (${resolved_noir}), NOT the new shim."
-      warn "Another noir installation shadows the native one. To fix:"
-      note "  1. Add the shim dir to your shell profile BEFORE any version-manager:"
-      note "     export PATH=\"${bin_dir}:\$PATH\""
-      note "  2. Then run: hash -r && which noir"
+      warn "noir currently resolves to an older install (${resolved_noir}), NOT the new shim."
+      warn "~/.noir/bin was just added to your shell profile — start a new shell or run:"
+      note "  export PATH=\"${bin_dir}:\$PATH\" && hash -r"
+      note "Then verify: which noir"
       note "  Expected: ${bin_dir}/noir"
-      note "  Got:      ${resolved_noir}"
     fi
   else
-    warn "noir is installed but NOT on your PATH."
-    note "Add the shim dir to your shell profile:"
-    note "  export PATH=\"${bin_dir}:\$PATH\""
-    note "Then start a new shell and run: noir --version"
+    warn "noir is not on PATH yet. Start a new shell (or run 'source ${HOME}/.zshrc') to pick it up."
   fi
 
   printf "\n%sNext steps:%s\n" "$C_BLUE" "$C_RESET"
