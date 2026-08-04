@@ -1,6 +1,6 @@
 {
   "name": "@noir-ai/skills",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Noir skills — the builtin noir-* skill pack, the integrations pack (ClickUp first), and a copy-and-validate compiler.",
   "license": "MIT",
   "author": "agaaaptr",

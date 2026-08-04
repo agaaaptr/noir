@@ -46,7 +46,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 
 ## Next milestone
 
-- Return to the **C2 TUI delta** (richer widgets, command palette). The two post-release bugfixes are pending a next-publish phase (separate, explicit go-ahead required).
+- Cut the **1.7.1** patch release (beta on `develop`, then stable on `main`), then return to the **C2 TUI delta** (richer widgets, command palette).
 
 ## Current technical debt
 
@@ -54,7 +54,6 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 - `docs/reference/cli-auto.md` duplicate removed 2026-08-03 (single source: `cli.md`; stale ref in `capability-02` also cleared).
 - `CHANGELOG.md` unified to root (docs/CHANGELOG.md is now a pointer) — 2026-08-03.
 - Stale doc path labels in `AGENTS.md` + ADR-0001 (`docs/internal/`/`docs/internal/specs/` → real `docs/internal/{specs,plans}`) — tracked, not yet fixed.
-- The two 2026-08-04 bugfixes (`noir_clickup_write` rename + piped `install.sh`) are committed locally on `develop` (not pushed); next publish is a separate phase.
 
 ## Notes
 

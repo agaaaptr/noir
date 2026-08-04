@@ -10,7 +10,7 @@
 
 ## Current status
 
-> **As of 2026-08-04. `1.7.0` is `latest` on npm; `1.7.0-beta.1` is `beta`.** Source version is `1.7.0` across all 11 `@noir-ai/*` packages. (Registry: `currentBaseVersion 1.7.0`, `latestStable 1.7.0`, `latestBeta 1.7.0-beta.1`.) Two bugfixes are committed on `develop` (pending next publish): the daemon MCP tool rename + the piped `install.sh` fix — see CHANGELOG "Unreleased".
+> **As of 2026-08-04. `1.7.0` is `latest` on npm; `1.7.0-beta.1` is `beta`.** Source version is `1.7.1` (cutting the 1.7.1 patch release: beta on `develop`, then stable on `main`). (Registry: `currentBaseVersion 1.7.0`, `latestStable 1.7.0`, `latestBeta 1.7.0-beta.1`.) The two bugfixes ship in 1.7.1.
 
 **The platform today (shipped & working):**
 - **11 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`, unified versioning, npm with SLSA provenance, dist-tags `latest` + `beta`.
@@ -45,7 +45,7 @@ All 15 published releases are in the registry; the milestone history is:
 - **v1.5.0 — FIRST STABLE PUBLISHED on npm (dist-tag `latest`)** (2026-07-28) — `npm i @noir-ai/cli` now resolves to `1.5.0`. First publication of the `latest` channel from `main`.
 - **v1.6.0 — released alongside `v1.6.0-beta.1` (beta channel).**
 - **v1.7.0 — current stable** (published 2026-08-04, dist-tag `latest`), alongside **v1.7.0-beta.1** (`beta`). C1 native installer + migration + self-update: managed-Node installer (`install.sh` + `install.ps1`), `noir install`/`migrate`, `noir update` + async cached version check, doctor install row, real Homebrew formula, Scoop manifest, installer attestation (`SHA256SUMS` + Sigstore). Decision record: ADR-0005 (managed-Node, not single-binary; Windows = PowerShell + Scoop; winget/Chocolatey deferred).
-- **Bugfixes on `develop` (pending next publish)** — `noir_clickup_write` MCP tool rename (dotted name broke the MCP session; `fix(daemon)` `368b766`) + piped `install.sh` `curl | bash` fix (`fix(dist)` `23d4f19`). Commits local; land in the next version publish.
+- **v1.7.1 (2026-08-04)** — post-1.7.0 bugfixes: `noir_clickup_write` MCP tool rename (dotted name broke the MCP session; `fix(daemon)` `368b766`) + piped `install.sh` `curl | bash` fix (`fix(dist)` `23d4f19`). Beta `1.7.1-beta.1` on `develop`, then stable `1.7.1` on `main`.
 
 ---
 

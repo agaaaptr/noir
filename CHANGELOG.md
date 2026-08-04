@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased (on `develop`, pending next publish) — 2026-08-04 bugfixes
+## 1.7.1 (2026-08-04) — post-1.7.0 bugfixes (beta on `develop`, then stable)
 
-Two user-facing bugs were fixed after the 1.7.0 publish. Commits stay local on `develop` (`23d4f19`, `368b766`); they land in the next version publish.
+Two user-facing bugs were fixed after the 1.7.0 publish. Version bump 1.7.0 → 1.7.1 (patch). Cut as `1.7.1-beta.1` on `develop`, then promoted to stable `1.7.1` on `main`.
 
 ### Fixed
 - **`noir_clickup_write` (daemon MCP tool) — dotted name broke the whole MCP session.** The MCP protocol restricts tool names to `[a-z0-9_-]`; the daemon served `noir.clickup_write`, but the host (Claude Code) rejected it during `tools/list` and aborted the session with `-32000`. Renamed to `noir_clickup_write` repo-wide (daemon src, `noir-clickup` skill, specs, ADR-0003, capability docs, tests) and added a **protocol regression guard** in `integration-tools.test.ts` asserting every registered tool name matches the MCP charset.
