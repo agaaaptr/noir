@@ -2,12 +2,12 @@
 
 > The first-use walkthrough: install Noir, initialize a project, connect your host, and run your first spec-driven session. Concrete commands throughout.
 
-New to Noir? Read the [README](../README.md) first for the 30-second "what and why," then come back here. For the full reference (every command, the config schema, the filesystem layout), see [usage.md](reference/cli.md).
+New to Noir? Read the [README](../README.md) first for the 30-second "what and why," then come back here. For the full reference (every command, the config schema, the filesystem layout), see [CLI Reference](reference/cli.md).
 
 ## What you need
 
 - **No system Node prerequisite** if you use the native installer (recommended) — it provisions a managed Node 22.x runtime under `~/.noir/`. If you install via npm/pnpm/yarn/bun directly, **Node.js ≥ 22** is required (Node 22 is what CI uses). For the from-source dev install below you also need **pnpm 10** (`corepack enable && corepack prepare pnpm@10 --activate`).
-- **An agentic CLI host.** Noir targets **Claude Code by default**; Gemini, Cursor, OpenCode, and AGENTS.md are supported via `noir init --host <id>` (see [usage.md → Multi-host](reference/cli.md#multi-host)). This walkthrough uses Claude Code. Noir is the workflow/context/memory *layer* — it is not an agent runtime. **Bring your own agent.**
+- **An agentic CLI host.** Noir targets **Claude Code by default**; Gemini, Cursor, OpenCode, and AGENTS.md are supported via `noir init --host <id>` (see [usage.md](reference/cli.md#multi-host)). This walkthrough uses Claude Code. Noir is the workflow/context/memory *layer* — it is not an agent runtime. **Bring your own agent.**
 - macOS, Linux, or Windows on x64 or arm64 (native deps ship prebuilt).
 
 ## Install

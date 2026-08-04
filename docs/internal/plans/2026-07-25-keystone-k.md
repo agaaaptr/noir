@@ -423,12 +423,12 @@ Confirm (read-only) that a hypothetical Rules slice could now: (a) call `writeMa
 
 - [ ] **Step 3: Note the K3 deferral**
 
-Append to `docs/superpowers/specs/2026-07-25-keystone-k-design.md` (under a new "## Implementation notes" section): "K3 (skills-compiler generalization) deferred to the Integration slice — YAGNI until a second artifact family (integrations) exists. K shipped: markers factory (K1), shared blockWriter (K2), emitRules seam (K4)."
+Append to `docs/internal/specs/2026-07-25-keystone-k-design.md` (under a new "## Implementation notes" section): "K3 (skills-compiler generalization) deferred to the Integration slice — YAGNI until a second artifact family (integrations) exists. K shipped: markers factory (K1), shared blockWriter (K2), emitRules seam (K4)."
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/superpowers/specs/2026-07-25-keystone-k-design.md
+git add docs/internal/specs/2026-07-25-keystone-k-design.md
 git commit -m "docs(keystone-k): note K3 deferral to Integration slice"
 ```
 

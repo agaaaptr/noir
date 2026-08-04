@@ -4,7 +4,7 @@
 - **Status:** Reviewed (2026-07-24) — OQ-1…OQ-6 resolved (see §11); ready for implementation planning.
 - **Owner:** agaaaptr
 - **Spec type:** Implementation design (next slice after S1 Stores)
-- **Parent:** `docs/specs/2026-07-23-noir-toolkit-design.md` (blueprint §6.1, §9.1) + the delivered walking-skeleton & S1 specs
+- **Parent:** `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (blueprint §6.1, §9.1) + the delivered walking-skeleton & S1 specs
 - **Slice:** S4 (SDD Workflow Engine) — roadmap v1.0. Depends on `@noir-ai/core` + `@noir-ai/store` (S1).
 
 ---
@@ -168,9 +168,9 @@ interface GateResult { phase: Phase; decision: 'approved' | 'forced' | 'skipped'
 
 ## 12. References
 
-- SDD landscape 2026: [Spec Kit vs Kiro](https://codemyspec.com/blog/spec-kit-vs-kiro) · [Martin Fowler — SDD tools](https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html) · [Kiro specs docs](https://kiro.dev/docs/specs/) · [GitHub Spec Kit blog](https://github.blog/ai-and-ml/generative-ai/spec-driven-development-with-ai-get-started-with-a-new-open-source-toolkit/)
+- SDD landscape 2026: [Spec Kit vs Kiro](https://codemyspec.com/blog/spec-kit-vs-kiro) · [Martin Fowler — SDD tools](https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html) · [Kiro specs docs](https://kiro.dev/docs/internal/specs/) · [GitHub Spec Kit blog](https://github.blog/ai-and-ml/generative-ai/spec-driven-development-with-ai-get-started-with-a-new-open-source-toolkit/)
 - Gates/audit: [Framework for dev workflows with approval steps](https://blog.brightcoding.dev/2025/12/30/framework-for-development-workflows-with-approval-steps-a-complete-safety-first-guide) · [Audit trails for automated workflows](https://gsconsultingllc.com/insights/building-audit-trails-automated-workflows)
-- Parent: `docs/specs/2026-07-23-noir-toolkit-design.md` (§6.1 lifecycle, §9.1 observable-checkpoint).
+- Parent: `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (§6.1 lifecycle, §9.1 observable-checkpoint).
 
 ---
 

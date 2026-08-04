@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript ESM, vitest, Biome, tsup. Reuses `@noir-ai/core` (ProjectId, paths) + `@noir-ai/store` (KV + audit). No LLM (drafting is S8).
 
-**Spec:** `docs/superpowers/specs/2026-07-24-s4-sdd-engine-design.md` (OQ-1…6 resolved).
+**Spec:** `docs/internal/specs/2026-07-24-s4-sdd-engine-design.md` (OQ-1…6 resolved).
 
 ## Global Constraints
 
@@ -298,7 +298,7 @@ export type { Phase, WorkflowState, Mode, GateResult, TaskState } from './types.
 
 ## Task 7: Docs + final verification + roadmap bump
 
-**Files:** Modify `README.md` (workflow section); create `docs/superpowers/plans/2026-07-24-s4-sdd-engine-acceptance.md` (manual: start task → advance through gates → `--force` → resume across daemon restart); update `docs/roadmap.md` "Current status" (S4 → built).
+**Files:** Modify `README.md` (workflow section); create `docs/internal/plans/2026-07-24-s4-sdd-engine-acceptance.md` (manual: start task → advance through gates → `--force` → resume across daemon restart); update `docs/roadmap/` "Current status" (S4 → built).
 
 - [ ] **Step 1:** README "Noir workflow" subsection (the lifecycle, modes, observable gates, the 2 MCP tools).
 - [ ] **Step 2:** Manual acceptance checklist (lifecycle runs end-to-end on a real task; gates record decisions; resume across daemon restart; `--force` + quick mode).
@@ -323,4 +323,4 @@ export type { Phase, WorkflowState, Mode, GateResult, TaskState } from './types.
 - Type consistency: `Phase`/`WorkflowState`/`GateResult`/`TaskState` consistent across tasks; `paths` workflow helpers added to core once (T3).
 
 ## Execution handoff
-Plan saved to `docs/superpowers/plans/2026-07-24-s4-sdd-engine.md`. On approval → subagent-driven-development (implementer + reviewer per task + final whole-branch review), same as S1.
+Plan saved to `docs/internal/plans/2026-07-24-s4-sdd-engine.md`. On approval → subagent-driven-development (implementer + reviewer per task + final whole-branch review), same as S1.

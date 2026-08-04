@@ -12,7 +12,7 @@
 
 ## Why (grounded in audit)
 
-- Deep audit (2026-08-03) found **no Node-download code anywhere**: `installManagedNode` (install.ts:120) only *checks* `~/.noir/runtime/node/bin/node` and fails if absent; `install.sh` only `require_node()` (system Node); `install.ps1` falls back to `Get-Command node`. The "managed-Node, no system Node" claim in capability-01/installation.md/ADR-0005 was **stronger than reality** — misleading (violates CLAUDE.md "Docs reflect shipped reality").
+- Deep audit (2026-08-03) found **no Node-download code anywhere**: `installManagedNode` (install.ts:120) only *checks* `~/.noir/runtime/v<version>/bin/node` and fails if absent; `install.sh` only `require_node()` (system Node); `install.ps1` falls back to `Get-Command node`. The "managed-Node, no system Node" claim in capability-01/installation.md/ADR-0005 was **stronger than reality** — misleading (violates CLAUDE.md "Docs reflect shipped reality").
 - Scalability argument (user): managed-Node makes Noir resilient to future minimum-req bumps (Node 24 LTS). Noir controls its own runtime; users on older system Node are not forced to upgrade. This is exactly the volta/fnm/Claude-Code model.
 - Release registry: `buildEntry` (release-registry.mjs:179-183) sets `channel='stable'` only when `distTags.latest === version`. Because `latest` moved on, the stable 1.4.0/1.5.0 rows are mislabeled `beta`. `changelogRef` is hardcoded `null` (buildEntry:207, cmdAdd). Acceptance criterion #7 ("registry rows carry accurate channel labels and non-null changelogRef") is not MET.
 

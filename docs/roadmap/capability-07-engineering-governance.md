@@ -25,7 +25,7 @@ The governance ruleset that makes Noir a "project operating system": an ADR seri
 - Engineering/project-health metrics — test coverage, stale-doc automation, release frequency, CI stability.
 - Durable checkpoint registry (`docs/checkpoints/` or a manifest entry).
 - Migration-guide deliverable + automated rollback path in the release flow.
-- Correct stale doc path labels — `AGENTS.md` and ADR-0001 still point SDD specs/plans at nonexistent `docs/superpowers/` + `docs/specs/`; the real location is `docs/internal/{specs,plans}/`.
+- Correct stale doc path labels — `AGENTS.md` and ADR-0001 still point SDD specs/plans at nonexistent `docs/internal/` + `docs/internal/specs/`; the real location is `docs/internal/{specs,plans}/`.
 
 ## Acceptance criteria
 

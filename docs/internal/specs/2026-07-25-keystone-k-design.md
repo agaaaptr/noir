@@ -1,6 +1,6 @@
 # Keystone K — Foundation Refactor (spec)
 
-> Slice K of the v1.x capability series. Companion: `docs/specs/2026-07-25-v1x-capabilities-design.md` (§3 unifying pattern, §5 required changes). **Pure refactor — no user-facing behavior change.** Unblocks Rules (R), Ignore (I), PRD (P), Scaffold (S), Integration (X).
+> Slice K of the v1.x capability series. Companion: `docs/internal/specs/2026-07-25-v1x-capabilities-design.md` (§3 unifying pattern, §5 required changes). **Pure refactor — no user-facing behavior change.** Unblocks Rules (R), Ignore (I), PRD (P), Scaffold (S), Integration (X).
 
 ## Goal
 

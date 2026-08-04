@@ -4,7 +4,7 @@
 - **Status:** Reviewed (2026-07-24) — OQ-1…OQ-6 resolved (see §9); ready for implementation planning.
 - **Owner:** agaaaptr
 - **Spec type:** Implementation design (next slice after the walking skeleton)
-- **Parent:** `docs/specs/2026-07-23-noir-toolkit-design.md` (blueprint §5.3, §6.2, §6.3, §9.2, §9.3) + `docs/superpowers/specs/2026-07-23-noir-walking-skeleton-design.md` (delivered skeleton)
+- **Parent:** `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (blueprint §5.3, §6.2, §6.3, §9.2, §9.3) + `docs/internal/specs/2026-07-23-noir-walking-skeleton-design.md` (delivered skeleton)
 - **Slice:** S1 (Stores) — roadmap v0.x. Depends on the walking-skeleton packages (`core`, `daemon`).
 
 ---
@@ -198,7 +198,7 @@ Notes:
 - sqlite-vec (JS/Node usage): https://alexgarcia.xyz/sqlite-vec/js.html · https://github.com/asg017/sqlite-vec
 - Local embeddings (transformers.js + MiniLM): https://sachinsharma.dev/blogs/local-first-vector-embeddings-transformer-js-2026 · https://huggingface.co/Xenova/all-MiniLM-L6-v2
 - SQLite FTS5: https://www.sqlite.org/fts5.html
-- Parent blueprint: `docs/specs/2026-07-23-noir-toolkit-design.md` (§5.3, §6.2, §6.3, §9.2, §9.3)
+- Parent blueprint: `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (§5.3, §6.2, §6.3, §9.2, §9.3)
 
 ---
 

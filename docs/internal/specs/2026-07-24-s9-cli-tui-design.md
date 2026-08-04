@@ -1,6 +1,6 @@
 # Noir — S9 CLI/TUI Home Screen Design (`@noir-ai/cli`)
 
-> **Status: RESOLVED 2026-07-25 — implemented & validated (729/729 tests). OQs resolved per docs/superpowers/plans/2026-07-24-v1.0-execution-plan.md §1.**
+> **Status: RESOLVED 2026-07-25 — implemented & validated (729/729 tests). OQs resolved per docs/internal/plans/2026-07-24-v1.0-execution-plan.md §1.**
 
 - **Date:** 2026-07-24
 - **Slice:** S9 — roadmap v1.0 capstone. Depends on S6 (context), S7 (memory), S8 (bounded model) being landed.
@@ -295,7 +295,7 @@ All are dev + runtime; no native build steps; compatible with `pnpm.onlyBuiltDep
 ## 19. References
 
 - Digest: `.superpowers/sdd/2026-07-24-s6-s9-grounding-digest.md` §4 (daemon), §5 (config), §6 (CLI current state), §10 (S9 research).
-- Sibling spec: `docs/superpowers/specs/2026-07-24-s5-skills-design.md` (structure + DS/OQ format).
+- Sibling spec: `docs/internal/specs/2026-07-24-s5-skills-design.md` (structure + DS/OQ format).
 - [commander](https://github.com/tj/commander.js) · [@clack/prompts](https://github.com/bombshell-dev/clack) · [picocolors](https://github.com/alexeyraspopov/picocolors) · [cli-table3](https://github.com/cli-table/cli-table3) · [ora](https://github.com/sindresorhus/ora).
 - Blueprint §6.3 (CLI), §9 (adopt natively, don't import sprawl).
 

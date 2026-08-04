@@ -1,11 +1,11 @@
 # Noir — AI Toolkit Design Blueprint
 
 - **Date:** 2026-07-23
-- **Status:** Implemented (v1.0 feature-complete; see docs/roadmap.md). Note: this is a historical design doc — the illustrative package/structure details in §5.3/5.4/6.5 evolved during implementation; for the shipped reality see `docs/roadmap.md` + `packages/`.
+- **Status:** Implemented (v1.0 feature-complete; see docs/roadmap/). Note: this is a historical design doc — the illustrative package/structure details in §5.3/5.4/6.5 evolved during implementation; for the shipped reality see `docs/roadmap/` + `packages/`.
 - **Owner:** agaaaptr
 - **Session:** Discovery, architecture, and blueprint (implemented across S0–S9)
 - **Supersedes (direction):** the `ai-toolkit` marketplace / `ai-dev-workflow` plugin identity
-- **Companion docs:** `docs/roadmap.md` (living forward plan), `docs/decisions/` (ADR series, to be created at impl)
+- **Companion docs:** `docs/roadmap/` (living forward plan), `docs/decisions/` (ADR series, to be created at impl)
 
 ---
 
@@ -42,7 +42,7 @@ The repository today is a **Claude Code plugin marketplace**, not a product:
 - **The brain** = Noir (spec-driven lifecycle, working context, long-term memory, skills).
 - **Bring your own agent.** Noir adapts to whichever CLI the user already runs.
 
-**Long-term north star:** Noir becomes the foundation of the **Noir AI ecosystem** — a portable, extensible toolkit that works across every major agentic CLI, with native memory/context, and eventually team + ecosystem capabilities. v1 is deliberately scoped (solo, one host) to reach a sharp, competitive experience fast; the architecture is designed so the long-term vision is reachable without rework. See `docs/roadmap.md`.
+**Long-term north star:** Noir becomes the foundation of the **Noir AI ecosystem** — a portable, extensible toolkit that works across every major agentic CLI, with native memory/context, and eventually team + ecosystem capabilities. v1 is deliberately scoped (solo, one host) to reach a sharp, competitive experience fast; the architecture is designed so the long-term vision is reachable without rework. See `docs/roadmap/`.
 
 ---
 
@@ -369,6 +369,6 @@ Each slice is independently valuable, has clean interfaces, and gets its own spe
 
 ## 14. Next Steps (this session → impl)
 
-1. **This session:** write & commit this blueprint + `docs/roadmap.md`; await user review.
+1. **This session:** write & commit this blueprint + `docs/roadmap/`; await user review.
 2. **At impl start:** lock exact identifiers; rename repo + cut `develop` branch; promote roadmap/vision into durable root docs; create ADR series in `docs/decisions/`.
 3. **First implementation cycle:** brainstorming → spec → plan → implement the **S0→S2→S3 walking skeleton** (Noir dogfooding its own SDD).

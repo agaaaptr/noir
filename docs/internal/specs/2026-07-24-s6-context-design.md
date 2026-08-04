@@ -1,4 +1,4 @@
-> **Status: RESOLVED 2026-07-25 — implemented & validated (247/247 tests). OQs resolved per docs/superpowers/plans/2026-07-24-v1.0-execution-plan.md §1.**
+> **Status: RESOLVED 2026-07-25 — implemented & validated (247/247 tests). OQs resolved per docs/internal/plans/2026-07-24-v1.0-execution-plan.md §1.**
 
 # Noir — S6 Context Management Design (`@noir-ai/context`)
 

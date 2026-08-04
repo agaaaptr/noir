@@ -44,7 +44,7 @@ All 15 published releases are in the registry; the milestone history is:
 - **v1.4.0-beta.2** — release automation: auto-prerelease versioning, version registry, smart release tooling.
 - **v1.5.0 — FIRST STABLE PUBLISHED on npm (dist-tag `latest`)** (2026-07-28) — `npm i @noir-ai/cli` now resolves to `1.5.0`. First publication of the `latest` channel from `main`.
 - **v1.6.0 — current stable** — released alongside `v1.6.0-beta.1` (beta channel).
-- **C1 native installer + migration + self-update (in flight on `develop`, not yet published)** — managed-Node installer (`install.sh` + `install.ps1`), `noir install`/`migrate`, `noir update` + async cached version check, doctor install row, real Homebrew formula, Scoop manifest, installer attestation (`SHA256SUMS` + Sigstore). Decision record: ADR-0005 (managed-Node, not single-binary; Windows = PowerShell + Scoop; winget/Chocolatey deferred). Commits stay local on `develop`; publish is a separate later phase.
+- **C1 native installer + migration + self-update (completed on `develop`, ready for publish)** — managed-Node installer (`install.sh` + `install.ps1`), `noir install`/`migrate`, `noir update` + async cached version check, doctor install row, real Homebrew formula, Scoop manifest, installer attestation (`SHA256SUMS` + Sigstore). Decision record: ADR-0005 (managed-Node, not single-binary; Windows = PowerShell + Scoop; winget/Chocolatey deferred). Commits stay local on `develop`; publish is a separate later phase.
 
 ---
 

@@ -97,7 +97,7 @@ store.close();
 
 ## S1 Scope Reminder
 
-S1 (Stores) provides the persistence layer + the daemon→store seam + the `store_status` diagnostic tool. It does **not** include (later slices — see `docs/roadmap.md`):
+S1 (Stores) provides the persistence layer + the daemon→store seam + the `store_status` diagnostic tool. It does **not** include (later slices — see `docs/roadmap/`):
 - **Embeddings model** (transformers.js / MiniLM) — injected via `EmbedFn` in S6/S7.
 - **SDD workflow engine** (S4).
 - **Noir skill pack + host compiler** (S5).

@@ -52,7 +52,7 @@ Slice X (ClickUp) ───┘   (K3 lives inside X; P3/P4 depend on nothing new
 
 ## 2. Slice S — Intelligent Scaffold
 
-**Spec:** `docs/superpowers/specs/2026-07-25-slice-s-scaffold-design.md`. **Reuses keystone-K** `core/markers.ts` + `core/block-writer.ts`.
+**Spec:** `docs/internal/specs/2026-07-25-slice-s-scaffold-design.md`. **Reuses keystone-K** `core/markers.ts` + `core/block-writer.ts`.
 
 ### S-T1 — New `@noir-ai/create` package (engine)
 - `packages/create/` with `package.json` (`@noir-ai/create`, MIT, `files:["dist","templates","migrations"]`, `exports` map, tsup build, typecheck — mirror a sibling pkg).
@@ -87,7 +87,7 @@ Slice X (ClickUp) ───┘   (K3 lives inside X; P3/P4 depend on nothing new
 
 ## 3. Slice X — Integration layer (ClickUp first)
 
-**Spec:** `docs/superpowers/specs/2026-07-25-slice-x-integration-design.md` + umbrella §4.4/§4.4.1. **K3 lands here.**
+**Spec:** `docs/internal/specs/2026-07-25-slice-x-integration-design.md` + umbrella §4.4/§4.4.1. **K3 lands here.**
 
 ### X-T1 — Skills layer (K3) + ClickUp integration
 - `packages/skills/src/integrations/` sibling to `builtin/`.

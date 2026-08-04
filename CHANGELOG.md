@@ -1,11 +1,11 @@
 # Changelog
 
-## Unreleased — C1 managed-Node provisioning + registry accuracy (local on `develop`, not yet published)
+## 1.7.0 (2026-08-04) — C1 managed-Node provisioning + registry accuracy (completed on `develop`, ready for publish)
 
 The C1 capability-1 completion: managed-Node auto-provisioning from the CLI, release-registry accuracy, and C1 -> Completed. **All commits are local on `develop`; publish is a separate later phase.** Decision record: [ADR-0005](docs/decisions/0005-native-installer-managed-node.md) (managed-Node, not single-binary; Windows = PowerShell + Scoop; winget/Chocolatey deferred).
 
 ### Added — managed-Node auto-provisioning
-- **`provisionManagedNode()`** in `@noir-ai/core` (`packages/core/src/node-provision.ts`) — downloads, verifies (SHA256 checksum, fail-closed), and extracts a pinned **Node 22.23.2 LTS** runtime under `~/.noir/runtime/node/`; atomic writes (staging-dir -> rename); auto-cleanup of old runtime versions (keep current only).
+- **`provisionManagedNode()`** in `@noir-ai/core` (`packages/core/src/node-provision.ts`) — downloads, verifies (SHA256 checksum, fail-closed), and extracts a pinned **Node 22.23.2 LTS** runtime under `~/var/.noir/runtime/v<version>/`; atomic writes (staging-dir -> rename); auto-cleanup of old runtime versions (keep current only).
 - **`MANAGED_NODE_VERSION`** exported from `@noir-ai/core`; shared with `install.sh`/`install.ps1` via **`scripts/node-version.env`** (single source of truth for the pinned Node version).
 - **`downloadAndVerify()` / `extractNode()` / `detectNodeTarget()` / `nodeArchiveUrl()` / `NodeTarget` / `ProvisionedNode`** — the full provisioning pipeline as callable exports.
 - **`runtimeDir()`** added to `packages/core/src/layout.ts` — resolves `~/.noir/runtime/`.
@@ -17,7 +17,7 @@ The C1 capability-1 completion: managed-Node auto-provisioning from the CLI, rel
 - **`scripts/release-registry.mjs` `buildEntry`** now derives `channel` / `npmDistTag` from release type (stable → `stable`/`latest`, prerelease → `beta`/`beta`).
 
 ### Added — native installer (managed-Node)
-- **`scripts/install.sh`** (POSIX) and **`scripts/install.ps1`** (Windows PowerShell): provision a pinned **Node 22.x LTS runtime** under `~/.noir/runtime/node/`, install `@noir-ai/cli` into an isolated prefix under `~/.noir/cli/`, write a `noir` shim at `~/.noir/bin/noir` (`.cmd` on Windows), and record the install in `~/.noir/install.json` (`method: native`). **No system Node prerequisite, no `sudo`/admin.** Idempotent (re-run = upgrade). Env knobs: `NOIR_CHANNEL`/`NOIR_VERSION`; proxy pass-through (`HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY`); PATH hint; `noir --version` verify.
+- **`scripts/install.sh`** (POSIX) and **`scripts/install.ps1`** (Windows PowerShell): provision a pinned **Node 22.x LTS runtime** under `~/var/.noir/runtime/v<version>/`, install `@noir-ai/cli` into an isolated prefix under `~/.noir/cli/`, write a `noir` shim at `~/.noir/bin/noir` (`.cmd` on Windows), and record the install in `~/.noir/install.json` (`method: native`). **No system Node prerequisite, no `sudo`/admin.** Idempotent (re-run = upgrade). Env knobs: `NOIR_CHANNEL`/`NOIR_VERSION`; proxy pass-through (`HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY`); PATH hint; `noir --version` verify.
 - **Windows PowerShell is the primary Windows path** — no Git Bash/MSYS2/WSL needed. Run from a normal PowerShell prompt.
 - **Trust & verification** — every release publishes the installers as Release artifacts with a `SHA256SUMS` file and a Sigstore build-time attestation (`actions/attest-build-provenance@v3`). Verify with `shasum -a 256 install.sh` + `gh attestation verify install.sh --repo agaaaptr/noir`.
 
@@ -127,7 +127,7 @@ The `1.4.0-beta.1` version was chosen explicitly for this release. The branch de
 - A lazy-loaded Ink (React 19) interactive dashboard: StatusBar (host/mode/phase/daemon), scrollable OutputPane, CommandInput (`/`-prefix dispatches native commands through the existing `home(opts,deps).dispatch` seam — not reimplemented), branded Header, Footer shortcuts. Hand-rolled widgets. The lazy load preserves the `isMainModule` symlink guard (the silent-no-op regression class) via a runtime-expression dynamic import + a two-config tsup build, so `dist/bin.js` stays a single 1890-line entry with the guard inline and **0 React refs** — the main CLI startup path stays React-free. Interactive-only (`--json`/non-TTY → exit 2). 12 ink-testing-library tests. Richer widgets documented as deferred.
 
 ### Repo-wide cleanup
-- Stripped ~627 internal session/tier/task labels from source comments/JSDoc, test names, user-facing strings, and public docs; renamed 3 tier-prefixed test files; fixed a `handoff` test CWD-path bug; fixed tier-label leaks in skill content. (Internal labels remain only in `docs/superpowers/plans/*` + `docs/discovery/*`.)
+- Stripped ~627 internal session/tier/task labels from source comments/JSDoc, test names, user-facing strings, and public docs; renamed 3 tier-prefixed test files; fixed a `handoff` test CWD-path bug; fixed tier-label leaks in skill content. (Internal labels remain only in `docs/internal/plans/*` + `docs/discovery/*`.)
 
 ### CI color fix
 - Under `CI=true`, `picocolors.isColorSupported` flipped color ON (`|| env.CI`), ANSI-wrapping table headers so the responsive-table "fits 60/80/120 cols" width test measured the ANSI bytes as overflow and failed (also violating the auto-disable-under-CI contract). `useColor()` now returns false under `CI=true`; `CLICOLOR_FORCE=1` still forces color for CI viewers that want it. This was the release blocker that unpinned 1.4.0-beta.1.
@@ -138,7 +138,7 @@ The `1.4.0-beta.1` version was chosen explicitly for this release. The branch de
 
 **Published on npm (dist-tag `beta`)** — banner gradient refined to **Midnight Cobalt** (dark cobalt `#2c5282` → bright blue `#3b82f6` → sky `#7dd3fc`). Brighter than the beta.3 midnight preview, all-blue (no purple/cyan), smooth via gradient-string. User-chosen from a palette of 5 noir-inspired options.
 
-Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap/`); per-slice design lives in `docs/superpowers/specs/`.
+Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`docs/roadmap/`); per-slice design lives in `docs/internal/specs/`.
 
 ## 1.3.0-beta.5 (2026-07-26)
 
@@ -175,7 +175,7 @@ Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`d
 
 ## 1.3.0-beta.1 (2026-07-26)
 
-**Published on npm (dist-tag `beta`)** — cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. Eight sub-projects (SP-A…H) + an opus whole-branch review fix wave from the 2026-07-26 scaffold/TUI discovery session. All TDD; full repo green (1154 tests). Discovery: `docs/discovery/2026-07-26-scaffold-tui-discovery.md`; specs in `docs/superpowers/specs/2026-07-26-*-design.md`.
+**Published on npm (dist-tag `beta`)** — cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. Eight sub-projects (SP-A…H) + an opus whole-branch review fix wave from the 2026-07-26 scaffold/TUI discovery session. All TDD; full repo green (1154 tests). Discovery: `docs/discovery/2026-07-26-scaffold-tui-discovery.md`; specs in `docs/internal/specs/2026-07-26-*-design.md`.
 
 ### SP-A — Scaffold root-safety + already-init no-op + doctor nested-`.noir`
 - **Root-caused & fixed the "noir init duplicates" bug:** running `init`/`create`/`sync` with cwd inside `.noir/` minted a fresh project.id (whenever `<root>/.noir/project.id` was absent) and built a **nested `.noir/.noir/`** project. New `assertSafeRoot` (`@noir-ai/create`) hard-refuses to scaffold when `root` is or is inside a `.noir/` directory (not bypassable).
@@ -228,7 +228,7 @@ Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`d
 
 ## 1.2.0-beta.1 (2026-07-26)
 
-**Multi-host (S10) ships on the beta channel.** Noir is now cross-CLI: Claude Code stays the default, and **Gemini, Cursor, OpenCode, and AGENTS.md** are one `--host` flag away. This is the first published release of the previously untagged `1.1.0-beta.1` capability work. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (unchanged); **1089/1089 tests** (was 966 during the unpublished 1.1 work); build / typecheck / lint (0 warnings) green. Design record: `docs/superpowers/specs/2026-07-25-s10-multihost-design.md`; the locked decisions in [ADR-0004](docs/decisions/0004-multi-host-adapters.md).
+**Multi-host (S10) ships on the beta channel.** Noir is now cross-CLI: Claude Code stays the default, and **Gemini, Cursor, OpenCode, and AGENTS.md** are one `--host` flag away. This is the first published release of the previously untagged `1.1.0-beta.1` capability work. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (unchanged); **1089/1089 tests** (was 966 during the unpublished 1.1 work); build / typecheck / lint (0 warnings) green. Design record: `docs/internal/specs/2026-07-25-s10-multihost-design.md`; the locked decisions in [ADR-0004](docs/decisions/0004-multi-host-adapters.md).
 
 ### Added — S10 multi-host adapters
 - **Adapter registry.** `resolveAdapter(host: HostId): HostAdapter` in `@noir-ai/adapters` — a `Record<HostId, HostAdapter>` map with an exhaustiveness guard. `HostId = 'claude' | 'agents-md' | 'gemini' | 'cursor' | 'opencode'` (one owner; core/skills redeclare the literals). `SUPPORTED_HOSTS` — a frozen iteration list the CLI `--host` flag's `.choices(...)` and `noir doctor` consume. The CLI's 8 direct `claudeAdapter` imports collapsed to one `resolveAdapter(host)` call; adding a host needs no CLI edits beyond the flag enum.
@@ -249,7 +249,7 @@ Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`d
 ### Fixed
 - **`noir doctor` no longer reports a stale host list.** The host check is now adapter-driven (`resolveAdapter(host)` + each adapter's `agentsMdPath`/`mcpConfigPath`/`skillsDir`), so the expected-artifacts list matches the configured host exactly.
 
-### Deferred (documented in `docs/roadmap.md` §v1.x backlog)
+### Deferred (documented in `docs/roadmap/` §v1.x backlog)
 - `qwen` and `agy` adapters (the universal `AGENTS.md` covers them in the meantime).
 - Multi-host emit (`hosts:[...]` → emit for several hosts at once). v1.x is single-host select.
 
@@ -257,7 +257,7 @@ Notable changes to the Noir toolkit, newest first. Slices follow the roadmap (`d
 
 ## Unpublished 1.1.0-beta.1 work (2026-07-25)
 
-**v1.x capabilities ship on the beta channel.** All 6 v1.x capability slices (**K/R/I/P/S/X**) are done on `develop`, plus a consolidated debt batch. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (added `@noir-ai/create`); **966/966 tests** (was 729 at 1.0.0-beta.1); build / typecheck / lint (0 warnings) green. Design record: `docs/specs/2026-07-25-v1x-capabilities-design.md` + per-slice specs in `docs/superpowers/specs/`.
+**v1.x capabilities ship on the beta channel.** All 6 v1.x capability slices (**K/R/I/P/S/X**) are done on `develop`, plus a consolidated debt batch. Cut from `develop`; `release.yml` derived `channel=beta` from the tag living on `develop`. **11 packages** (added `@noir-ai/create`); **966/966 tests** (was 729 at 1.0.0-beta.1); build / typecheck / lint (0 warnings) green. Design record: `docs/internal/specs/2026-07-25-v1x-capabilities-design.md` + per-slice specs in `docs/internal/specs/`.
 
 The 6 v1.x capability slices extend one keystone refactor (`managedBlock` + shared `blockWriter` + `HostAdapter` emitters):
 - **K** Keystone — `managedBlock(name, commentStyle)` factory + shared `blockWriter` (`writeManagedRegion`/`readManagedBlock`/`stripManagedBlock`/`commentStyleFor`) + `HostAdapter.emitRules` seam (pure refactor).
@@ -288,7 +288,7 @@ Opus adversarial review (no CRITICAL; all IMPORTANT fixed + tested): confirm gat
 - `.noir/scaffold-version` (`noir-scaffold=1.0.0`) stamped on `noir init`/`create`.
 - `noir sync` widened: re-emits `.mcp.json` (regenerate) + the NOIR.md brief (managed) + CLAUDE.md blocks + ignore files; no longer seeds `RULES.md` (init owns seeds).
 
-### Deferred to a later beta (documented in `docs/roadmap.md` §v1.x backlog)
+### Deferred to a later beta (documented in `docs/roadmap/` §v1.x backlog)
 Embedding-model upgrade (`bge-small-en-v1.5` — needs a model-version stamp + re-index-on-change mechanism); S10 multi-host adapters; daemon detach/socket-activation/auth; full-screen TUI; in-process read-only store fallback; tree-sitter chunking; trigram tokenizer; full `.gitignore` parsing; graph/temporal KG; OS keychain; prompt caching; streaming (D5-forbidden); the `tsconfig.test.json` rollout to the remaining 9 packages; and the smaller S1/S5 micro-items.
 
 ---
@@ -331,7 +331,7 @@ Beta targets early testers; promote to stable `1.0.0` once validated in a real p
 
 **Finalization cleanups applied:** zod consolidated to **v4**; root **README rewritten** for the v1.0 toolkit; dead code + unused deps removed; biome / mcp-config / content-hash / jsdoc / re-export nits fixed.
 
-All MVP v1.0 acceptance criteria met. **Next: cut the v1.0 release (publish / tag).** Deferred items are consolidated in the **v1.x backlog** in `docs/roadmap.md` (S10 more hosts, S11 distribution/SDK, plus per-area debt lists — daemon, CLI/TUI, context, memory, model, toolchain).
+All MVP v1.0 acceptance criteria met. **Next: cut the v1.0 release (publish / tag).** Deferred items are consolidated in the **v1.x backlog** in `docs/roadmap/` (S10 more hosts, S11 distribution/SDK, plus per-area debt lists — daemon, CLI/TUI, context, memory, model, toolchain).
 
 ---
 

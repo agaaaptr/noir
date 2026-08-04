@@ -4,7 +4,7 @@ current_phase: shipped
 
 active_capability: 2
 
-active_slice: c1-native-installer
+active_slice: null  # C1 c1-native-installer complete; C2 not yet started
 
 roadmap:
   - id: C1

@@ -1,6 +1,6 @@
 # Slice S10 — Multi-host adapters (+ S11 SDK remainder) — design spec
 
-> v1.x capability slice (session 2). Companion: `docs/specs/2026-07-25-v1x-capabilities-design.md` §4.2 (Rules research) + §4.4 (Integration/host MCP). **Status: NOT started.** This spec is the implementation reference; the plan + execution follow.
+> v1.x capability slice (session 2). Companion: `docs/internal/specs/2026-07-25-v1x-capabilities-design.md` §4.2 (Rules research) + §4.4 (Integration/host MCP). **Status: NOT started.** This spec is the implementation reference; the plan + execution follow.
 > **Clarification APPROVED 2026-07-25 ("approve all"):** A1 (registry + `agents-md` + `gemini` + `cursor` + `opencode`; defer qwen/agy), B1–B4 (registry + config/CompileTarget widen + CLI refactor), C1–C4 (universal AGENTS.md + per-host skill/MCP + single-host select), D1–D2 (sdk docs + doctor publish check), E1 (release as `1.2.0-beta.1`).
 
 ## Goal

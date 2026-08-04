@@ -3,7 +3,7 @@
 > **Status:** Analysis / research / design exploration. **NOT an implementation spec.** Produced 2026-07-25.
 > **Scope:** Five candidate capabilities for post-v1.0 Noir — (1) PRD as core capability, (2) Rule generation at init, (3) Ignore management, (4) Integration skill system, (5) Intelligent scaffolding.
 > **Method:** Grounded in the actual on-disk v1.0.0-beta.1 architecture + 5 parallel web-research agents (≈150 sources) + codebase verification of load-bearing claims. No assumptions: every architectural claim about Noir was verified against the code; every external claim is cited.
-> **Companion docs:** `docs/specs/2026-07-23-noir-toolkit-design.md` (blueprint + §9 feature-adoption doctrine), `docs/roadmap.md` (living forward plan).
+> **Companion docs:** `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (blueprint + §9 feature-adoption doctrine), `docs/roadmap/` (living forward plan).
 
 ---
 
@@ -462,4 +462,4 @@ The keystone (K) unblocks all five; then order by dependency + leverage:
 
 **Scaffolding:** Copier (updating, configuring, comparisons) · Yeoman file-system + Conflicter · Plop.js · Nx migrate · Angular ng-update schematics · create-t3-app · shadcn CLI + components.json · Repomix · MADR · actions-template-sync.
 
-**Noir internal (grounding):** `docs/specs/2026-07-23-noir-toolkit-design.md` · `docs/roadmap.md` · `packages/core/src/{markers.ts, layout.ts, config.ts}` · `packages/skills/src/{types.ts, discover.ts, compiler.ts, residue.ts}` · `packages/adapters/src/{types.ts, claude.ts}` · `packages/cli/src/{init.ts, sync.ts}`.
+**Noir internal (grounding):** `docs/internal/specs/2026-07-23-noir-toolkit-design.md` · `docs/roadmap/` · `packages/core/src/{markers.ts, layout.ts, config.ts}` · `packages/skills/src/{types.ts, discover.ts, compiler.ts, residue.ts}` · `packages/adapters/src/{types.ts, claude.ts}` · `packages/cli/src/{init.ts, sync.ts}`.

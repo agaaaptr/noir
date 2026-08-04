@@ -1,6 +1,6 @@
 # Overnight Session — Runtime Polish, TUI, Idempotency, Handoff (2026-07-26)
 
-> Autonomous AFK session. Branch `develop` @ **1.3.0-beta.6** (1158 tests, 11 packages, typecheck green, **1 pre-existing lint warning**). Sub-agents **Opus/Sonnet only** (user constraint). This doc + `docs/roadmap.md` + `docs/CHANGELOG.md` + `docs/v1x-next-session.md` + `/recall noir` = full recovery context.
+> Autonomous AFK session. Branch `develop` @ **1.3.0-beta.6** (1158 tests, 11 packages, typecheck green, **1 pre-existing lint warning**). Sub-agents **Opus/Sonnet only** (user constraint). This doc + `docs/roadmap/` + `docs/CHANGELOG.md` + `docs/v1x-next-session.md` + `/recall noir` = full recovery context.
 
 ## Locked decisions (10-question clarification batch, all answered)
 
@@ -50,7 +50,7 @@ Each tier: **spec → sub-agent impl (Opus design / Sonnet mechanical) → main-
 Testing project (ground truth, read-only during discovery): `/Users/agaaaptr/Documents/Work/BSI/Project/Back-end/Akademik - Akad/UIIAkademik/svc-academic-activity-go` @ `experiment/ai-dev-workflow` (host claude, mode full, store live, `.noir/` untracked).
 
 ## Checkpoint protocol (per tier)
-Update `docs/roadmap.md` (current status) · `docs/CHANGELOG.md` · `docs/v1x-next-session.md` · Agent Memory (`memory_save`) · **local commit on `develop`**.
+Update `docs/roadmap/` (current status) · `docs/CHANGELOG.md` · `docs/v1x-next-session.md` · Agent Memory (`memory_save`) · **local commit on `develop`**.
 
 ## Release
 `1.3.0-beta.7` (Tier A) → `1.3.0-beta.8` (Tier B) → `1.4.0` (Tier C). **Push `develop` + tag at the very end, only if all targets met + validation green.** `release.yml` `publish` job uses `environment: release` with `required_reviewers` — if it gates npm publish, **document** the blocked publish (do NOT bypass lawfully). Deprecate-never-delete.

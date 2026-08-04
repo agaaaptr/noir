@@ -33,7 +33,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 
 - **2026-08-03** — C1 native installer + migration + self-update shipped (Tasks 1–11): managed-Node installer (`install.sh` + `install.ps1`), `noir install`/`migrate`, `noir update` + async cached version check, doctor install row, Homebrew formula (real url/sha256), Scoop manifest, installer attestation (SHA256SUMS + Sigstore). ADR-0005 records the managed-Node-not-single-binary decision; winget/Chocolatey deferred.
 - **2026-08-03** — Roadmap restructure: capability docs rewritten grounded against the shipped codebase; `releases.md` + `backlog.md` created; roadmap made the project reference.
-- **2026-08-03/04** — C1 managed-Node auto-provisioning (P1–P6): `provisionManagedNode()` in `@noir-ai/core` (`packages/core/src/node-provision.ts`) — download + verify (SHA256 checksum, fail-closed) + extract Node 22.23.2 LTS into `~/.noir/runtime/node/`; atomic writes (staging → rename); auto-cleanup old runtime versions. `MANAGED_NODE_VERSION` constant exported from core, shared with `install.sh`/`install.ps1` via `scripts/node-version.env`. `noir install`/`migrate` now calls `provisionManagedNode()` (CLI can bootstrap without a shell script). CI `node-provision-smoke` job validates real Node download. Release registry rebuilt with accurate channel labels + non-null `changelogRef` for every entry. C1 → Completed.
+- **2026-08-03/04** — C1 managed-Node auto-provisioning (P1–P6): `provisionManagedNode()` in `@noir-ai/core` (`packages/core/src/node-provision.ts`) — download + verify (SHA256 checksum, fail-closed) + extract Node 22.23.2 LTS into `~/.noir/runtime/v<version>/`; atomic writes (staging → rename); auto-cleanup old runtime versions. `MANAGED_NODE_VERSION` constant exported from core, shared with `install.sh`/`install.ps1` via `scripts/node-version.env`. `noir install`/`migrate` now calls `provisionManagedNode()` (CLI can bootstrap without a shell script). CI `node-provision-smoke` job validates real Node download. Release registry rebuilt with accurate channel labels + non-null `changelogRef` for every entry. C1 → Completed.
 
 ## Active capability
 
@@ -52,7 +52,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 - `docs/reference/config.md` + `mcp-tools.md` were stale skeletons — regenerated 2026-08-03.
 - `docs/reference/cli-auto.md` duplicate removed 2026-08-03 (single source: `cli.md`; stale ref in `capability-02` also cleared).
 - `CHANGELOG.md` unified to root (docs/CHANGELOG.md is now a pointer) — 2026-08-03.
-- Stale doc path labels in `AGENTS.md` + ADR-0001 (`docs/superpowers/`/`docs/specs/` → real `docs/internal/{specs,plans}`) — tracked, not yet fixed.
+- Stale doc path labels in `AGENTS.md` + ADR-0001 (`docs/internal/`/`docs/internal/specs/` → real `docs/internal/{specs,plans}`) — tracked, not yet fixed.
 - C1 native-installer work is committed locally on `develop` (not pushed); publish is a separate phase.
 
 ## Notes

@@ -1,6 +1,6 @@
 # Slice S — Intelligent Project Scaffolding (AI-layer) — design spec
 
-> v1.x capability slice. Companion: `docs/specs/2026-07-25-v1x-capabilities-design.md` §4.5. **Predecessor keystone K (committed)** provides `managedBlock` + `blockWriter` (`writeManagedRegion`/`commentStyleFor`) foundations — reuse, don't reinvent.
+> v1.x capability slice. Companion: `docs/internal/specs/2026-07-25-v1x-capabilities-design.md` §4.5. **Predecessor keystone K (committed)** provides `managedBlock` + `blockWriter` (`writeManagedRegion`/`commentStyleFor`) foundations — reuse, don't reinvent.
 > **Status: NOT started.** This spec is the implementation reference; the next session writes the plan + executes.
 
 ## Goal

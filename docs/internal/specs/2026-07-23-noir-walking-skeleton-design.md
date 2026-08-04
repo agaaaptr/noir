@@ -4,7 +4,7 @@
 - **Status:** Proposed (awaiting review)
 - **Owner:** agaaaptr
 - **Spec type:** Implementation design (brainstorm → spec → plan → implement; Noir dogfooding its own SDD)
-- **Parent spec:** `docs/specs/2026-07-23-noir-toolkit-design.md` (the blueprint + decision log D1–D10)
+- **Parent spec:** `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (the blueprint + decision log D1–D10)
 - **Branch:** `develop`
 - **Slices covered:** S0 (Foundation, subset) · S2 (Daemon + MCP skeleton) · S3 (Claude Code adapter + scaffolder, minimal)
 

@@ -25,7 +25,7 @@ How Noir is distributed (npm monorepo, native installer, package-manager taps, r
   - **Version-assert** — `noir install`/`update` refuses a silent downgrade (per-segment numeric semver comparison); an explicit positional version pin prints a warning.
   - **Doctor install row** (`noir doctor`) — advisory `ok`/`warn` only, never `fail`, never a live network call; reports the detected method, installed version, latest-known version, and a `native recommended` nudge on non-native paths.
 - **Managed-Node auto-provisioning** (`packages/core/src/node-provision.ts`, `packages/core/src/layout.ts`, `scripts/node-version.env`):
-  - `provisionManagedNode()` — downloads, verifies (SHA256 checksum, fail-closed), and extracts a pinned Node 22.23.2 LTS runtime under `~/.noir/runtime/node/`; atomic writes (staging-dir → rename); auto-cleanup of old runtime versions (keep current only).
+  - `provisionManagedNode()` — downloads, verifies (SHA256 checksum, fail-closed), and extracts a pinned Node 22.23.2 LTS runtime under `~/.noir/runtime/v<version>/`; atomic writes (staging-dir → rename); auto-cleanup of old runtime versions (keep current only).
   - `MANAGED_NODE_VERSION` exported from `@noir-ai/core`; shared with `install.sh`/`install.ps1` via `scripts/node-version.env`.
   - `noir install`/`migrate` now calls `provisionManagedNode()` — the CLI can bootstrap the managed runtime without a shell script.
   - `downloadAndVerify()` / `extractNode()` / `detectNodeTarget()` / `nodeArchiveUrl()` — the full provisioning pipeline as callable exports.

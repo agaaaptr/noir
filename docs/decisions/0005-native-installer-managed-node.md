@@ -30,7 +30,7 @@ A second, smaller question: which Windows package managers? `install.ps1` is the
 
 ### 1. Managed Node 22.x runtime under `~/.noir/`
 
-`scripts/install.sh` (POSIX) and `scripts/install.ps1` (Windows PowerShell) provision a pinned **Node 22.x LTS** runtime under `~/.noir/runtime/node/` (or `%USERPROFILE%\.noir\runtime\node\`), install `@noir-ai/cli@<spec>` into `~/.noir/cli/` via the managed npm with `--prefix` (isolated; never the system global), and write a `noir` shim at `~/.noir/bin/noir` (POSIX) or `noir.cmd` (Windows) that invokes the managed Node against the isolated CLI entry. The runtime, the prefix, and the shim are all in the user's home directory — **no system Node prerequisite, no `sudo`/admin**. Idempotent: re-running the installer upgrades in place and refreshes the `install.json` record.
+`scripts/install.sh` (POSIX) and `scripts/install.ps1` (Windows PowerShell) provision a pinned **Node 22.x LTS** runtime under `~/.noir/runtime/v<version>/` (or `%USERPROFILE%\.noir\runtime\node\`), install `@noir-ai/cli@<spec>` into `~/.noir/cli/` via the managed npm with `--prefix` (isolated; never the system global), and write a `noir` shim at `~/.noir/bin/noir` (POSIX) or `noir.cmd` (Windows) that invokes the managed Node against the isolated CLI entry. The runtime, the prefix, and the shim are all in the user's home directory — **no system Node prerequisite, no `sudo`/admin**. Idempotent: re-running the installer upgrades in place and refreshes the `install.json` record.
 
 ### 2. Windows PowerShell is a first-class install path
 
@@ -75,6 +75,6 @@ Every release publishes `install.sh`, `install.ps1`, and a `SHA256SUMS` file as 
 
 **Non-goals (explicitly out of scope for this decision):**
 
-- A CLI-only bootstrap that provisions the managed Node runtime without `install.sh`/`install.ps1` — the CLI's `installManagedNode` expects the runtime already provisioned. A no-shell-script bootstrap is a future task if the shell scripts prove insufficient.
+- A CLI-only bootstrap that provisions the managed Node runtime without `install.sh`/`install.ps1` — was originally deferred, but **shipped in the final C1 push** (`provisionManagedNode()` in `@noir-ai/core`, called by both `installManagedNode` and the shell scripts). The CLI can now bootstrap the runtime stand-alone; the shell scripts remain the recommended first-time entry point.
 - Bundling `onnxruntime-node` into a single artifact — research-verified unsupported upstream.
 - Auto-uninstalling the previous install method on migrate — explicitly never done without `--uninstall-prev`.

@@ -119,7 +119,7 @@ Overwrite · skip · interactive prompt · duplicate-copy (`.1`/`.2`) · merge �
   6. Cancel
   ```
 - **Non-TTY/CI default:** preserve existing + content-hash dedup + warning; `--force` to overwrite; `--no-input` already exists (S9 stable contract).
-- **Semantic duplicate detection (opt-in, never auto-resolved):** reuse S6's local embedder + sqlite-vec; surface as a **suggestion at cosine ≥ 0.90** inside the menu ("this looks 94% similar to `docs/specs/X.md` — link instead of duplicate?"). High threshold = few false positives; always user-confirmed.
+- **Semantic duplicate detection (opt-in, never auto-resolved):** reuse S6's local embedder + sqlite-vec; surface as a **suggestion at cosine ≥ 0.90** inside the menu ("this looks 94% similar to `docs/internal/specs/X.md` — link instead of duplicate?"). High threshold = few false positives; always user-confirmed.
 
 ### 2.5 The deeper finding (from §4)
 
@@ -249,6 +249,6 @@ Net: **everything recommended here is backward-compatible and additive**, except
 ## Appendix — evidence & sources
 
 - **Code evidence (W1):** `packages/create/src/scaffold.ts:89–96,106–108,138,148,216,228–230,270,273–275`; `manifest.ts:149–173,176–203,281–287,350–359`; `writers.ts:56–94,101–108,187–193`; `packages/core/src/block-writer.ts:47–57`; `packages/skills/src/compiler.ts:207–216,234–286`.
-- **Locked-rule citations:** `docs/specs/2026-07-23-noir-toolkit-design.md` (D1 BYO-agent, D5 no tool/exec loop); `docs/superpowers/specs/2026-07-24-s9-cli-tui-design.md` (full-screen TUI deferred to v2); `docs/roadmap.md` ("Programmatic headless driving of host CLIs from the TUI"); `docs/superpowers/specs/2026-07-24-s8-model-design.md:57–58` (streaming/tool-loops forbidden).
+- **Locked-rule citations:** `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (D1 BYO-agent, D5 no tool/exec loop); `docs/internal/specs/2026-07-24-s9-cli-tui-design.md` (full-screen TUI deferred to v2); `docs/roadmap/` ("Programmatic headless driving of host CLIs from the TUI"); `docs/internal/specs/2026-07-24-s8-model-design.md:57–58` (streaming/tool-loops forbidden).
 - **Key external references** (full annotated URL list in the workflow journal): **Ink** (npm/GitHub, v7.1.1 2026-07-16; React≥19.2); **Goose 2.0** ACP-client TUI; **Claude Code headless** `claude -p --output-format stream-json`; **Claude Agent SDK** subprocess pattern; **Copier** `.copier-answers.yml` (three-way merge baseline); **Angular** `ng update` (versioned migrations); **Yeoman** "identical" content-hash; GitHub **Copilot CLI** banner/color engineering write-ups; Bubble Tea / Ratatui / Textual (pattern references only).
 - **Caveat:** the adversarial-verify agent's structured result (V1) did not classify cleanly during journal recovery; the "idempotent by design" conclusion is corroborated by W1 (code, file:line) + two independent web-research agents. Re-verify V1 at implementation time.

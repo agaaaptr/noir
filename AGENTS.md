@@ -35,11 +35,11 @@ The new package is **automatically** included in workspace detection, the root b
 
 ## Dogfood SDD — how work is specified here
 
-This repo dogfoods Noir's own Spec-Driven Development flow: **brainstorm → spec → plan → subagent-driven implement + review → final whole-branch review**. Specs and plans live under `docs/superpowers/`:
+This repo dogfoods Noir's own Spec-Driven Development flow: **brainstorm → spec → plan → subagent-driven implement + review → final whole-branch review**. Specs and plans live under `docs/internal/`:
 
-- **Per-slice design specs** → `docs/superpowers/specs/YYYY-MM-DD-sN-<topic>-design.md`.
-- **Per-slice implementation plans** (+ acceptance) → `docs/superpowers/plans/YYYY-MM-DD-sN-<topic>.md`.
-- The single top-level **design blueprint** lives at `docs/specs/2026-07-23-noir-toolkit-design.md` (dated, status: implemented — the one occupant of `docs/specs/`).
+- **Per-slice design specs** → `docs/internal/specs/YYYY-MM-DD-sN-<topic>-design.md`.
+- **Per-slice implementation plans** (+ acceptance) → `docs/internal/plans/YYYY-MM-DD-sN-<topic>.md`.
+- The single top-level **design blueprint** lives at `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (dated, status: implemented — the one occupant of `docs/internal/specs/`).
 - **Architecture Decision Records** → `docs/decisions/NNNN-<slug>.md` (append-only — supersede, never rewrite).
 - `.superpowers/` is gitignored local session scratch; never commit it.
 

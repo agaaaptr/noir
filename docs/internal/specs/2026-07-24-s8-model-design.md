@@ -5,7 +5,7 @@
 - **Parent:** blueprint §8 D5 (bounded model) + grounding digest §10 S8 + the delivered S4 engine (deferred artifact generation).
 - **Slice:** S8 — roadmap v1.0. Depends on `@noir-ai/core` (config). Consumed by S4 (full-mode artifact drafting + Document phase), S7 (memory consolidation), S9 (home help).
 
-> **Status: RESOLVED 2026-07-25 — implemented & validated (340/340 tests). OQs resolved per docs/superpowers/plans/2026-07-24-v1.0-execution-plan.md §1.**
+> **Status: RESOLVED 2026-07-25 — implemented & validated (340/340 tests). OQs resolved per docs/internal/plans/2026-07-24-v1.0-execution-plan.md §1.**
 
 ---
 
@@ -317,5 +317,5 @@ S4 gates assert **result presence** (artifact was produced), **never AI success*
 
 - Grounding: `.superpowers/sdd/2026-07-24-s6-s9-grounding-digest.md` §8 D5, §10 S8, §5 config, §9 stance, §3 S4-deferred.
 - Parent blueprint: §8 D5 (bounded model), §9.1 (observable + escapable gates).
-- Sibling spec: `docs/superpowers/specs/2026-07-24-s5-skills-design.md` (structure + DS/OQ format).
+- Sibling spec: `docs/internal/specs/2026-07-24-s5-skills-design.md` (structure + DS/OQ format).
 - External: [Anthropic SDK](https://github.com/anthropics/anthropic-sdk-typescript), [OpenAI SDK](https://github.com/openai/openai-node), [Ollama OpenAI compat](https://ollama.com/blog/openai-compatibility), [JSON Schema](https://json-schema.org/).

@@ -25,7 +25,7 @@ Noir's documentation is a Diátaxis-structured, auto-generated knowledge system:
 - **Regenerate stale reference docs** — `config.md` / `mcp-tools.md` are out of date; rebuild + `pnpm docs:generate` required.
 - **Real drift detection** — command/flag drift vs `noir --help`; capability-status vs implementation; stale `STATUS` markers.
 - **Health-check surface** — extend `validateDocs()` toward orphan / duplicate / superseded detection.
-- **Reconcile ADR-0001** — its described layout (`docs/superpowers/`, `docs/specs/`) no longer matches the real tree (`docs/internal/`).
+- **Reconcile ADR-0001** — its described layout (`docs/internal/`, `docs/internal/specs/`) no longer matches the real tree (`docs/internal/`).
 - **Knowledge Index** — build the document-relation graph + active-capability overlay, or explicitly descope it.
 
 ## Acceptance criteria

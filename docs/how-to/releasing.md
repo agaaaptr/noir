@@ -124,7 +124,7 @@ Every stable release publishes the **native installers** as GitHub Release artif
 3. Runs [`actions/attest-build-provenance@v3`](https://github.com/actions/attest-build-provenance) over `install.sh`, `install.ps1`, and `SHA256SUMS`, persisting a Sigstore attestation to GitHub's attestations API (`attestations: write` permission).
 4. Uploads all three as Release assets and pastes the verification commands into the Release body.
 
-Consumer verification (also documented in [installation.md](installation.md#trust--verification-pinned-installers-checksums-attestation)):
+Consumer verification (also documented in [installation.md](installation.md#trust-verification-pinned-installers-checksums-attestation)):
 
 ```bash
 # 1. Verify the checksum against SHA256SUMS
@@ -224,7 +224,7 @@ When the beta line is ready:
    git push origin v1.5.0
    ```
 
-4. CI detects plain SemVer → publishes under `latest`. Now `npm i @noir-ai/cli` resolves to `1.5.0`; `npm i @noir-ai/cli@beta` still resolves to the last beta.
+4. CI detects plain SemVer → publishes under `latest`. Now `npm i @noir-ai/cli` resolves to `1.6.0`; `npm i @noir-ai/cli@beta` still resolves to the last beta.
 
 ### Additional beta for the same base version
 

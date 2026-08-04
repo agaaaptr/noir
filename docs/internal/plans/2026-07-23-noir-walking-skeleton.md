@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-(Copied verbatim from `docs/superpowers/specs/2026-07-23-noir-walking-skeleton-design.md`. Every task's requirements implicitly include these.)
+(Copied verbatim from `docs/internal/specs/2026-07-23-noir-walking-skeleton-design.md`. Every task's requirements implicitly include these.)
 
 - **MCP SDK = v2 beta:** deps `@modelcontextprotocol/server`, `@modelcontextprotocol/node`, `@modelcontextprotocol/client` (install latest `2.x` beta; stable expected 2026-07-28). Imports: `McpServer` from `@modelcontextprotocol/server`; `StdioServerTransport` from `@modelcontextprotocol/server/stdio`; `NodeStreamableHTTPServerTransport`, `localhostHostValidation`, `localhostOriginValidation` from `@modelcontextprotocol/node`; `Client`, `StreamableHTTPClientTransport` from `@modelcontextprotocol/client`; `StdioClientTransport` from `@modelcontextprotocol/client/stdio`. Schema lib: `import * as z from 'zod/v4'`.
 - **Module system = ESM:** every package `"type": "module"`; relative TS imports use `.js` extensions; moduleResolution `NodeNext`.
@@ -599,7 +599,7 @@ For each listed file, replace:
 - `ai-toolkit` → `noir`
 - `ai-dev-workflow` → `noir-workflow`
 
-(Preserve any historical references inside `docs/specs/**` and `docs/plans/**` that describe past work — those are dated records, not live identity. Only update live files: the plugin's `SKILL.md`/`references/`/`templates/`, root `README.md`, root `AGENTS.md`.)
+(Preserve any historical references inside `docs/internal/specs/**` and `docs/plans/**` that describe past work — those are dated records, not live identity. Only update live files: the plugin's `SKILL.md`/`references/`/`templates/`, root `README.md`, root `AGENTS.md`.)
 
 - [ ] **Step 4: Verify no stale identifiers in live files**
 
@@ -1847,7 +1847,7 @@ git commit -m "test(adapters,cli): http .mcp.json via init --transport streamabl
 
 **Files:**
 - Modify: `packages/cli/src/doctor.ts`, `README.md`
-- Create: `docs/superpowers/plans/2026-07-23-noir-walking-skeleton-acceptance.md`
+- Create: `docs/internal/plans/2026-07-23-noir-walking-skeleton-acceptance.md`
 
 **Interfaces:**
 - Produces: a `noir doctor` that prints toolchain + daemon health; a README section for install/dev; a manual acceptance checklist covering Gate 1 (b) and Gate 2 (b).
@@ -1899,7 +1899,7 @@ node packages/cli/dist/bin.js daemon start
 
 - [ ] **Step 3: Write the manual acceptance checklist**
 
-`docs/superpowers/plans/2026-07-23-noir-walking-skeleton-acceptance.md`:
+`docs/internal/plans/2026-07-23-noir-walking-skeleton-acceptance.md`:
 ```markdown
 # Noir Walking Skeleton — Manual Acceptance
 
@@ -1928,7 +1928,7 @@ Expected: all green.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/cli/src/doctor.ts README.md docs/superpowers/plans/2026-07-23-noir-walking-skeleton-acceptance.md
+git add packages/cli/src/doctor.ts README.md docs/internal/plans/2026-07-23-noir-walking-skeleton-acceptance.md
 git commit -m "feat(cli,docs): noir doctor stub, dev README, manual acceptance checklist"
 ```
 

@@ -2,7 +2,7 @@
 
 > **Living document.** This checklist validates that the SDD lifecycle engine runs end-to-end on a real task, gates record observable decisions, state survives daemon restart, and `--force` / quick mode work. Follow each step; check the box when satisfied.
 
-**Reference:** S4 spec (`docs/superpowers/specs/2026-07-24-s4-sdd-engine-design.md`) and implementation (`packages/workflow/`, `packages/daemon/src/workflow-seam.ts`, `packages/daemon/src/server.ts`).
+**Reference:** S4 spec (`docs/internal/specs/2026-07-24-s4-sdd-engine-design.md`) and implementation (`packages/workflow/`, `packages/daemon/src/workflow-seam.ts`, `packages/daemon/src/server.ts`).
 
 ---
 

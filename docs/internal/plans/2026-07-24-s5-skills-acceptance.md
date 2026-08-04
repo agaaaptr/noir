@@ -2,7 +2,7 @@
 
 > **Living document.** This checklist validates that the Noir builtin skill pack emits end-to-end: `noir init` / `noir sync` write all 28 `noir-*` skills to `.claude/skills/`, the compiler validates them, every `description` reads as a WHEN trigger, a WHAT-description is rejected, and no predecessor/Superpowers rhetoric survives in any shipped skill. Follow each step; check the box when satisfied.
 
-**Reference:** S5 spec (`docs/superpowers/specs/2026-07-24-s5-skills-design.md`), implementation plan (`docs/superpowers/plans/2026-07-24-s5-skills.md`), and source (`packages/skills/`, `packages/adapters/src/claude.ts`, `packages/cli/src/init.ts`, `packages/cli/src/sync.ts`).
+**Reference:** S5 spec (`docs/internal/specs/2026-07-24-s5-skills-design.md`), implementation plan (`docs/internal/plans/2026-07-24-s5-skills.md`), and source (`packages/skills/`, `packages/adapters/src/claude.ts`, `packages/cli/src/init.ts`, `packages/cli/src/sync.ts`).
 
 ---
 
