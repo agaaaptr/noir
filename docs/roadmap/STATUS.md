@@ -7,7 +7,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 | Capability | Progress | Current Phase | Last Update |
 |------------|----------|---------------|-------------|
 | C1 Package Distribution | 🟩 Completed | Ship | 2026-08-04 |
-| C2 CLI Runtime & UX | 🟦 Partial — full CLI + TUI MVP shipped | Ship + Research (richer TUI, daemon detach) | 2026-08-03 |
+| C2 CLI Runtime & UX | 🟩 Completed | Ship | 2026-08-05 |
 | C3 Built-in Skill System | 🟦 Partial — 33 skills + compiler shipped | Ship + Research (registry/versioning) | 2026-08-03 |
 | C4 AI Development Workflow | 🟩 Shipped core (SDD engine) | Ship | 2026-08-03 |
 | C5 Runtime Infrastructure & Daemon | 🟩 Shipped (daemon + store) | Ship | 2026-08-03 |
@@ -37,18 +37,19 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 - **2026-08-04** — **C1 published on npm** as **1.7.0** (`latest`) + **1.7.0-beta.1** (`beta`); `main` + `develop` synced. Then two post-release bugfixes on `develop` (pending next publish): **`noir_clickup_write` MCP tool rename** — the dotted name violated the MCP tool-name charset (`[a-z0-9_-]` only) and broke the whole MCP session with `-32000`; renamed repo-wide + added a charset regression guard (`fix(daemon)` `368b766`). **Piped `install.sh` `curl | bash` fix** — `${BASH_SOURCE[0]}` is empty when piped, so `node-version.env` wasn't found; now fetched from the repo raw URL (`fix(dist)` `23d4f19`). Both gates green (1428 tests). Published as **1.7.1** (`latest` + `1.7.1-beta.1`).
 - **2026-08-04** — **1.7.1 published** → **1.7.2** published (`latest` + `1.7.2-beta.1`): dynamic-require crash in `noir init --upgrade` conflict path (`fix(cli)` `2c6fc63`), `.mcp.json` absolute native-shim path — fix `spawn noir ENOENT` from GUI MCP clients (`fix` `2f28f91`), installer-UX (PATH-shadow detection `5964a38` + auto-add shell profile `b4e6bb9`). Gates green (1428 tests).
 - **2026-08-04/05** — **1.7.3 published** → **1.7.4 published** (`latest` + `1.7.4-beta.1`): shim exec-bit defense-in-depth (`atomicWriteFile` mode preservation + `ensureShimExecutable` self-heal, `fix(core,cli)` `c458770`). Closes the chicken-and-egg "noir update → permission denied" bug permanently. Gates green (1439 tests). All four post-1.7.0 hotfix releases complete.
+- **2026-08-05** — **C2 completed** (ADR-0006): the C2 TUI delta + all four acceptance-condition gaps shipped in one session via a 10-agent Workflow. **TUI delta:** `Ctrl+K` command palette (data-driven registry derived from the commander tree + hand-rolled fuzzy matcher behind a `FuzzyMatcher` swap seam), input history + recall, persistent recent commands (`~/.noir/<projectId>/tui-history.json`), in-TUI destructive confirmation, searchable output pane (`Ctrl+F`, `n`/`N`). **Gap closure:** `daemon start --detach` real backgrounding (detached child + `mode:'detached'` record + bounded `/health` probe), `context index --force` → full reindex, `--dry-run`/`--preview` on `init`/`create`/`sync`, in-process read-only fallback for read commands when the daemon is down (writes stay daemon-gated). Repo hygiene: dangling doc refs in `bin.ts` removed. **C2 → Completed.** Gates green (1521 tests).
 
 ## Active capability
 
-- **C2 — CLI Runtime & UX** (next up: TUI delta — richer widgets, command palette)
+- (none active; C1, C2, C4, C5, C5.5, C6, C7, C8 cores shipped)
 
 ## Active slice
 
-- (none active; C1 `c1-native-installer` is complete)
+- (none active; C1 `c1-native-installer` and C2 `c2-tui-delta` are complete)
 
 ## Next milestone
 
-- Return to the **C2 TUI delta** (richer widgets, command palette). All post-1.7.0 hotfixes are complete.
+- Return to the **C2 TUI delta** research track: the **v2 orchestrator TUI** (Archetype B — driving the host CLI as a subprocess, streaming output, token/cost bar) is tracked for v2 (ADR-0006). All post-1.7.0 hotfixes + the C2 gap closure are complete.
 
 ## Current technical debt
 

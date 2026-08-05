@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.8.0 (unreleased) — C2 TUI delta + capability completion
+
+Capability 2 (CLI Runtime & UX) completed in one session (ADR-0006): the **TUI command palette + richer widgets** and **all four acceptance-condition gaps** closed. Executed as a 10-agent multi-agent Workflow with an adversarial-verify pass; all changes reviewed, the full gate green at 1521 tests.
+
+### Added
+- **`Ctrl+K` command palette** in `noir tui` — a modal overlay (`packages/cli/src/tui/palette/Palette.tsx`) backed by a **data-driven command registry derived from the commander tree** (`buildPaletteCommands`). Fuzzy ranking via a hand-rolled subsequence + gap-penalty scorer behind a `FuzzyMatcher` swap seam (label > keywords > description; matched-char highlighting; recent-commands on empty query; grouped by category).
+- **Input history + recall** — `↑`/`↓` on an empty `/`-input recalls the session's commands (shell-like, in-memory, adjacent-dedup).
+- **Persistent recent commands** — the palette's recent list persists across sessions at `~/.noir/<projectId>/tui-history.json` (canonical ProjectId-keyed, `atomicWriteFile`, capped at 50, opt-out `NOIR_DISABLE_TUI_HISTORY`).
+- **In-TUI destructive confirmation** — commands flagged `destructive` in the registry (e.g. `context index --force`) show a `y/N` confirmation overlay before dispatching; the direct input bar is unchanged.
+- **Searchable output pane** — `Ctrl+F` enters search over captured dispatch output (incremental, smart-case, match highlighted); `n`/`N` next/prev (only when a query already matches, so the letter `n` stays typeable); `Esc` exits.
+- **`daemon start --detach` real backgrounding** — `spawnDetachedDaemon` spawns a detached child (`detached:true, stdio:'ignore', windowsHide:true` + `unref`), waits for its record + `/health`, writes an honest `mode:'detached'` daemon record; `daemon stop`/`status` work unchanged (SIGTERM + probe). A hidden `--_detached-child` flag tells the child to run foreground-style within itself.
+- **`context index --force` forces a full reindex** — the daemon `context_index` tool forwards `force` to the indexer's existing `reindex()`; default stays content-hash incremental.
+- **`init`/`create`/`sync` `--dry-run` / `--preview`** — report the planned writes (path + mode) to stderr without writing anything (reuses the scaffold engine's `dryRun`).
+- **In-process read-only fallback** — `context search`, `memory recall`/`sessions`, `task status` keep working when the daemon is down via `withInProcessRead` (readonly store + engines, single-writer preserved); writes keep the daemon-required exit-4 path.
+
+### Changed
+- `probeDaemon` (daemon-client) now bounds its `/health` fetch with `AbortSignal.timeout(1500)` so a stale/blackhole port never hangs the probe (reads fall back instead).
+- The TUI `App` state is a discriminated `Mode` union (`dashboard` | `palette` | `search` | `confirm`), replacing the growing boolean set — overlay input routing cannot collide with the dashboard's keybindings.
+- `bin.ts` dangling references to nonexistent `docs/command-policy.md` + `docs/deprecation.md` removed (the deprecation registry is self-documenting; CHANGELOG + `docs/reference/cli.md` are the record).
+
+### Documentation
+- `docs/decisions/0006-c2-tui-and-daemon-detach.md` — records the palette architecture, hand-rolled-matcher-behind-seam, projectId-keyed recent persistence, real daemon detach, and the deferred **v2 orchestrator TUI** (Archetype B).
+- `docs/roadmap/capability-02-cli-runtime.md` — status → **Completed**; gaps closed; acceptance criteria flipped `[DONE-CONDITION]` → `[MET]`.
+- `docs/roadmap/STATUS.md`, `releases.md`, `roadmap.manifest.yaml` — C2 → Completed; next milestone = v2 orchestrator TUI (research).
+- `docs/reference/cli.md` — new flags/commands documented.
+
+---
+
 ## 1.7.4 (2026-08-05) — shim exec-bit defense-in-depth (beta on `develop`, then stable)
 
 One critical fix that permanently prevents the recurring "noir update → permission denied: noir" bug. Cut as `1.7.4-beta.1` on `develop`, then promoted to stable `1.7.4` on `main`.

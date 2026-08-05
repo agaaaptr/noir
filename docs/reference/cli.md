@@ -60,4 +60,29 @@ Commands:
 | `--verbose` | Detailed diagnostics |
 | `--cwd <dir>` | Working directory |
 | `--tui` / `--no-tui` | Advisory routing for bare `noir` |
+
+## `noir tui` — interactive dashboard
+
+The TUI dashboard (Ink) is a command palette + status + output view. Keybindings:
+
+| Key | Action |
+|---|---|
+| `Ctrl+K` | Open the **command palette** (fuzzy-searchable, grouped, recent-first on empty query) |
+| `Ctrl+F` | **Search** the captured output of the last dispatched `/command` (`n`/`N` next/prev, `Esc` exit) |
+| `/command` | Type + `Enter` to dispatch any `noir` subcommand through the same router as the CLI |
+| `↑` / `↓` | Scroll the output pane; recall input history on an empty `/`-input |
+| `Enter` | Run the typed `/command` / select in the palette |
+| `Esc` | Back: clear input → dismiss output → quit |
+| `q` | Quit (when the input is empty) |
+| `?` | Toggle help |
+| `Ctrl+C` | Force exit |
+
+Destructive commands selected from the palette (e.g. `context index --force`) show a `y/N` confirmation overlay first. Recent commands persist per-project at `~/.noir/<projectId>/tui-history.json` (opt-out: `NOIR_DISABLE_TUI_HISTORY`).
+
+## New command behavior (C2)
+
+- `noir daemon start --detach` — starts the daemon as a **detached background process** (the command returns; `noir daemon stop` / `noir daemon status` manage it). The daemon record carries `mode:'detached'`.
+- `noir context index --force` — forces a **full reindex** (drops all chunks + vectors, re-indexes from scratch). Without `--force`, indexing stays incremental (SHA-256 content-hash, unchanged files skipped).
+- `noir init` / `noir create` / `noir sync` — `--dry-run` (alias `--preview`) reports the planned writes (path + mode) to stderr without writing anything.
+- Read commands (`context search`, `memory recall`/`sessions`, `task status`) fall back to an **in-process read-only engine** when the daemon is down instead of failing with exit 4. Writes (`task new`/`advance`, `memory save`/`forget`/`consolidate`, `context index`) still require the daemon.
 | `--no-tips` | Suppress hints on stderr |

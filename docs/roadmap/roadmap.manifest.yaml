@@ -4,7 +4,7 @@ current_phase: shipped
 
 active_capability: 2
 
-active_slice: null  # C1 c1-native-installer complete; C2 not yet started
+active_slice: null  # C1 c1-native-installer + C2 c2-tui-delta complete; next: v2 orchestrator TUI (research)
 
 roadmap:
   - id: C1
@@ -15,8 +15,9 @@ roadmap:
 
   - id: C2
     title: CLI Runtime & User Experience
-    status: partial
+    status: completed
     priority: high
+    note: "C2 completed 2026-08-05 (ADR-0006): Ctrl+K command palette + richer widgets (history, recent persist, destructive confirm, output search), daemon start --detach real backgrounding, context index --force full reindex, init/create/sync --dry-run/--preview, in-process read fallback. v2 orchestrator TUI (Archetype B) deferred to v2."
 
   - id: C3
     title: Built-in Skill System

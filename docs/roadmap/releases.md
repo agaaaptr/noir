@@ -10,7 +10,7 @@
 
 ## Current status
 
-> **As of 2026-08-05. `1.7.4` is `latest` on npm; `1.7.4-beta.1` is `beta`.** Source version is `1.7.4`. All 11 `@noir-ai/*` packages at `1.7.4`. Next milestone: return to the **C2 TUI delta**.
+> **As of 2026-08-05. `1.7.4` is `latest` on npm; `1.7.4-beta.1` is `beta`.** Source version is `1.7.4`. All 11 `@noir-ai/*` packages at `1.7.4`. **Next: `1.8.0` (minor — the C2 TUI delta + gap closure).**
 
 **The platform today (shipped & working):**
 - **11 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`, unified versioning, npm with SLSA provenance, dist-tags `latest` + `beta`.
@@ -24,7 +24,7 @@
 - **Bounded model layer** — single-shot `complete()`, 3 adapters, provider-explicit, agent loops impossible by construction.
 - **Local daemon** — single-writer store, stdio + Streamable HTTP transports, read-only FS fallback, 17+ MCP tools.
 - **5 host adapters** — `claude`/`agents-md`/`gemini`/`cursor`/`opencode` via `resolveAdapter(host)` + universal `AGENTS.md` emitter (ADR-0004).
-- **CLI** — commander command tree, `@clack` home menu, Ink `noir tui` MVP, `noir doctor` (incl. install row), `noir install`/`migrate`/`update`, stable exit codes, `data → stdout / diagnostics → stderr`.
+- **CLI** — commander command tree, `@clack` home menu, Ink `noir tui` with the **C2 delta** (Ctrl+K command palette, searchable output, recent-command persistence, in-TUI destructive confirm), `noir doctor` (incl. install row), `noir install`/`migrate`/`update`, `daemon start --detach` (real backgrounding), `context index --force`, `init`/`create`/`sync --dry-run`/`--preview`, in-process read fallback, stable exit codes, `data → stdout / diagnostics → stderr`.
 - **Release automation** — branch-based beta/stable dist-tag, auto-prerelease versioning, version registry, smart release tooling, installer artifacts + checksums + Sigstore attestation.
 
 > The per-slice shipped record below is the historical narrative. Do not trust in-file test counts — always cross-check `.noir/releases/` and `CHANGELOG.md` for the current number.
