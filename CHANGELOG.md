@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.7.4 (2026-08-05) — shim exec-bit defense-in-depth (beta on `develop`, then stable)
+
+One critical fix that permanently prevents the recurring "noir update → permission denied: noir" bug. Cut as `1.7.4-beta.1` on `develop`, then promoted to stable `1.7.4` on `main`.
+
+### Fixed
+- **`noir update` produced a non-executable shim → `permission denied: noir`.** This was a **chicken-and-egg** bug: the update installing version X was orchestrated by version X-1's running code, which lacked the `chmod +x` fix — so the freshly-written shim landed as `0o644` and every subsequent `noir` command failed. The fix (`6120bf1`) was correct but could not self-heal during the transition. Two layers of defense now permanently close this: (1) `atomicWriteFile()` (core) **preserves the existing file's POSIX mode** across overwrites — a rewrite of an already-executable shim keeps `0o755` regardless of which binary version performs the write. (2) `ensureShimExecutable()` (core) **re-asserts `0o755`** after every install/update — a freshly-installed binary (1.7.4+) heals its own shim even if the OLD updater forgot to chmod. This closes the chicken-egg permanently: future updates can never produce an unrunnable binary. (`fix(core,cli)` `c458770`)
+
+---
+
 ## 1.7.3 (2026-08-04) — post-1.7.2 bugfixes (beta on `develop`, then stable)
 
 Four post-1.7.2 fixes, found by systematic root-cause debugging + a pre-release audit workflow (23-agent find→adversarial-verify sweep). Cut as `1.7.3-beta.1` on `develop`, then promoted to stable `1.7.3` on `main`.
