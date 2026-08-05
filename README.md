@@ -22,11 +22,11 @@ The `noir` home menu (interactive; `noir status` when non-interactive):
 ## Status
 
 <!-- noir:doc:status -->
-**Latest stable:** `1.7.0` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.7.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
-**Source version:** `1.7.0` (clean SemVer in `packages/*/package.json`)
+**Latest stable:** `1.7.2` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.7.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Source version:** `1.7.2` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-04T04:54:16.151Z*
+*Last auto-generated: 2026-08-05T02:49:11.683Z*
 <!-- /noir:doc:status -->
 
 ## Quick start

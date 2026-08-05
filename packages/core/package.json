@@ -1,6 +1,6 @@
 {
   "name": "@noir-ai/core",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "description": "Noir core — shared types, the config schema (NoirConfigSchema), the .noir/ layout, and markers.",
   "license": "MIT",
   "author": "agaaaptr",

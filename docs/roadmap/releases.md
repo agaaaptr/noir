@@ -10,7 +10,7 @@
 
 ## Current status
 
-> **As of 2026-08-04. `1.7.0` is `latest` on npm; `1.7.0-beta.1` is `beta`.** Source version is `1.7.1` (cutting the 1.7.1 patch release: beta on `develop`, then stable on `main`). (Registry: `currentBaseVersion 1.7.0`, `latestStable 1.7.0`, `latestBeta 1.7.0-beta.1`.) The two bugfixes ship in 1.7.1.
+> **As of 2026-08-04. `1.7.2` is `latest` on npm; `1.7.2-beta.1` is `beta`.** Source version is `1.7.2`. (Registry: `currentBaseVersion 1.7.2`, `latestStable 1.7.2`, `latestBeta 1.7.2-beta.1`.) Four post-1.7.2 bugfixes are committed on `develop` (pending the 1.7.3 publish): the bundling `require()` class fix (3 latent `Dynamic require of X` crashes on the conflict path), the native-install `chmod` + spinner-UX fixes, the opencode command-threading fix, and the store `busy_timeout` — see CHANGELOG "Unreleased".
 
 **The platform today (shipped & working):**
 - **11 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`, unified versioning, npm with SLSA provenance, dist-tags `latest` + `beta`.
@@ -44,8 +44,10 @@ All 15 published releases are in the registry; the milestone history is:
 - **v1.4.0-beta.2** — release automation: auto-prerelease versioning, version registry, smart release tooling.
 - **v1.5.0 — FIRST STABLE PUBLISHED on npm (dist-tag `latest`)** (2026-07-28) — `npm i @noir-ai/cli` now resolves to `1.5.0`. First publication of the `latest` channel from `main`.
 - **v1.6.0 — released alongside `v1.6.0-beta.1` (beta channel).**
-- **v1.7.0 — current stable** (published 2026-08-04, dist-tag `latest`), alongside **v1.7.0-beta.1** (`beta`). C1 native installer + migration + self-update: managed-Node installer (`install.sh` + `install.ps1`), `noir install`/`migrate`, `noir update` + async cached version check, doctor install row, real Homebrew formula, Scoop manifest, installer attestation (`SHA256SUMS` + Sigstore). Decision record: ADR-0005 (managed-Node, not single-binary; Windows = PowerShell + Scoop; winget/Chocolatey deferred).
-- **v1.7.1 (2026-08-04)** — post-1.7.0 bugfixes: `noir_clickup_write` MCP tool rename (dotted name broke the MCP session; `fix(daemon)` `368b766`) + piped `install.sh` `curl | bash` fix (`fix(dist)` `23d4f19`). Beta `1.7.1-beta.1` on `develop`, then stable `1.7.1` on `main`.
+- **v1.7.0** (published 2026-08-04, dist-tag `latest`), alongside **v1.7.0-beta.1** (`beta`). C1 native installer + migration + self-update: managed-Node installer (`install.sh` + `install.ps1`), `noir install`/`migrate`, `noir update` + async cached version check, doctor install row, real Homebrew formula, Scoop manifest, installer attestation (`SHA256SUMS` + Sigstore). Decision record: ADR-0005 (managed-Node, not single-binary; Windows = PowerShell + Scoop; winget/Chocolatey deferred).
+- **v1.7.1 (2026-08-04)** — post-1.7.0 bugfixes: `noir_clickup_write` MCP tool rename (dotted name broke the MCP session; `fix(daemon)` `368b766`) + piped `install.sh` `curl | bash` fix (`fix(dist)` `23d4f19`).
+- **v1.7.2 — current stable** (published 2026-08-04, dist-tag `latest`), alongside **v1.7.2-beta.1** (`beta`). Post-1.7.1 bugfixes: dynamic-require crash in `noir init --upgrade` conflict path (`fix(cli)` `2c6fc63`), `.mcp.json` absolute native-shim path (fix `spawn noir ENOENT` from GUI MCP clients, `fix` `2f28f91`), and two installer-UX improvements (`fix(dist)` `5964a38` PATH-shadow detection + `b4e6bb9` auto-add shell profile).
+- **v1.7.3 (on `develop`, pending publish)** — four post-1.7.2 fixes found by systematic debugging + a 23-agent pre-release audit: the bundling `require()` class fix (`crypto`/`fs` latent crashes), native-install `chmod +x` shim + spinner UX, opencode `opts.command` threading (the one adapter missed by the ENOENT fix), and store `busy_timeout`. Windows native-install bugs (npm.exe, `unzip`, install.ps1 parity) are pre-existing and deferred (need a Windows VM; CI has no Windows smoke).
 
 ---
 

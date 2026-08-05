@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.7.3 (2026-08-04) — post-1.7.2 bugfixes (beta on `develop`, then stable)
+
+Four post-1.7.2 fixes, found by systematic root-cause debugging + a pre-release audit workflow (23-agent find→adversarial-verify sweep). Cut as `1.7.3-beta.1` on `develop`, then promoted to stable `1.7.3` on `main`.
+
+### Fixed — bundling (`Dynamic require of "X" is not supported`)
+A class of latent bugs where a `require()` inside a conditional code path survived tsup bundling as an ESM-incompatible `__require` shim. All three only fired on non-happy paths, which is why they survived multiple releases; all are fixed by converting to static top-level imports.
+- **`noir init --upgrade` crashed with "Dynamic require of @noir-ai/create is not supported"** — `conflict.ts` used a lazy `require('@noir-ai/create')` that only fired when a file conflict triggered the diff preview. Pre-existing since v1.7.0. (`fix(cli)` `2c6fc63`)
+- **`noir init --upgrade` crashed with "Dynamic require of crypto is not supported"** — `scaffold.ts` `sha256Hex12()` only ran AFTER a conflict was resolved (audit-record hash). (`fix(create)` `0376dbb`)
+- **The 'rename' conflict case crashed with "Dynamic require of fs is not supported"** — `store/markdown.ts` + `workflow/artifacts.ts` lazily `require('node:fs')` for `renameSync` only in the `'rename'` conflict branch. (`fix(store,workflow)` `5e8def7`)
+
+### Fixed — native install
+- **`noir update` left the shim non-executable → `permission denied: noir`.** `installManagedNode()` wrote the shim with `atomicWriteFile` (which sets `0o644`) but never `chmod +x`'d it — every update produced an unrunnable binary. Now `chmodSync(shim, 0o755)` (matching `install.sh`). (`fix(install)` `6120bf1`)
+- **`install.sh` gained progress spinners + auto shell-profile PATH.** `noir install`/`update`/`daemon {start,stop,status}` now show ora spinner feedback in TTY (no-op in CI/pipes); `install.sh` auto-adds `~/.noir/bin` to the right shell profile (zsh→`.zshrc`, bash→`.bashrc`, fish→`config.fish`, fallback→`.profile`) idempotently, and detects when a legacy install (nvm/npm) shadows the new shim. (`fix(install)` `6120bf1`, `5964a38`, `b4e6bb9`)
+- **`.mcp.json` now emits the absolute native shim path** when a native install is detected, fixing `spawn noir ENOENT` from GUI MCP clients (VS Code launched from the Dock doesn't read shell profiles). (`fix` `2f28f91`)
+
+### Fixed — adapters + store (from the pre-release audit)
+- **opencode adapter dropped `opts.command`.** The ENOENT fix threaded the absolute shim path through 4/5 adapters but missed opencode (it uses a different config shape and hardcoded `'noir'`). A native install with `noir init --host opencode` emitted a bare `'noir'` the OpenCode GUI couldn't spawn. Now threads `opts.command ?? 'noir'`. (`fix(adapters,store)` `db99639`)
+- **Store had no `busy_timeout`.** better-sqlite3's default is 0 (throw immediately on lock contention); WAL alone doesn't prevent `SQLITE_BUSY` if a second writer opens the same `.db` (a stdio MCP + a stray `noir` CLI, a stale daemon pid). Added `db.pragma('busy_timeout = 5000')`. (`fix(adapters,store)` `db99639`)
+- **Added a table-driven cross-adapter parity test** (claude/agents-md/gemini/cursor/opencode) so the command-threading contract is locked — no adapter can silently regress. (`+11 tests` → 1439 total)
+
+### Deferred (pre-existing, Windows-only — need a Windows VM to verify)
+These were surfaced by the audit but are **not** fixed in 1.7.3 (Windows is excluded from the CI smoke matrix; better-sqlite3@13 is source-only and the runner lacks VS Build Tools):
+- win32 managed-Node provisioning computes `npmBin = npm.exe` (Node ships `npm.cmd`, not `npm.exe`) and extracts with `unzip` (not present on stock Windows) → degrades to system-Node fallback.
+- `install.ps1` lacks the auto-PATH + shadow-detection parity that `install.sh` gained.
+- Scoop manifest `bin` entry points a Windows shim directly at a `.js` file with no `node` invocation.
+
+Tracked in `docs/roadmap/backlog.md` (C1 "known Windows limitations").
+
+---
+
 ## 1.7.2 (2026-08-04) — post-1.7.1 bugfixes
 
 Three fixes shipped in 1.7.2 (patch bump 1.7.1 → 1.7.2):
