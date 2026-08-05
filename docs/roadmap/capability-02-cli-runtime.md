@@ -28,7 +28,7 @@ The `noir` command-line surface: a Commander command tree with global flags, str
 
 - **TUI-as-sole-entry is intentionally NOT shipped** — the home menu remains the sole entry point. The v2 orchestrator TUI (driving the host CLI as a subprocess, streaming output, token/cost bar, mouse, fullscreen alternate-screen) is tracked for v2 (see ADR-0006).
 - **Windows native-install bugs** (C1 debt: win32 `npmBin` computes `npm.exe`; extraction shells out to `unzip`; `install.ps1` lacks auto-PATH/shadow parity; Scoop manifest `bin`) — need a Windows VM to verify.
-- **Three-way merge / semantic dedup / conflict menu** — separate sub-projects from the 2026-07-26 discovery.
+- **Enhanced standalone conflict menu** (beyond the current `@clack` resolver) — a separate sub-project from the 2026-07-26 discovery. (Three-way managed-region merge via SP-E/SP-H and write-path semantic dedup via `dedup-write.ts` are already shipped above.)
 
 ## Acceptance criteria
 

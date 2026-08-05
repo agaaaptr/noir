@@ -5,7 +5,7 @@
 - **Where Noir is today:** [`releases.md`](releases.md) (shipped status, release history, version targets) + [`STATUS.md`](STATUS.md) (per-capability progress).
 - **What is deferred:** [`backlog.md`](backlog.md) (consolidated engineering debt).
 - **Origin / detailed rationale:** `docs/internal/specs/2026-07-23-noir-toolkit-design.md`.
-- **Decisions of record:** `docs/decisions/` (ADR `0001`…`0004`).
+- **Decisions of record:** `docs/decisions/` (ADR `0001`…`0006`).
 
 Every capability on this roadmap must go through the project lifecycle before implementation — **research → analysis → architecture proposal → specification → planning → slice → implementation → validation → documentation → checkpoint → release**. Implementation is never done directly from the roadmap alone; the spec derived from it is the reference.
 
@@ -36,8 +36,8 @@ The roadmap is a set of **capabilities**, each an independent development area t
 
 | # | Capability | Status | Priority |
 |---|------------|--------|----------|
-| 1 | [Package Distribution & Release Management](capability-01-package-distribution.md) | Partial — core shipped | High |
-| 2 | [CLI Runtime & User Experience](capability-02-cli-runtime.md) | Partial — full CLI + TUI MVP shipped | High |
+| 1 | [Package Distribution & Release Management](capability-01-package-distribution.md) | Completed | High |
+| 2 | [CLI Runtime & User Experience](capability-02-cli-runtime.md) | Completed — CLI + TUI + command palette | High |
 | 3 | [Built-in Skill System](capability-03-builtin-skill-system.md) | Partial — 33 skills + compiler shipped | High |
 | 4 | [End-to-End AI Development Workflow](capability-04-ai-development-workflow.md) | Shipped core (SDD engine) | High |
 | 5 | [Runtime Infrastructure & Local Daemon](capability-05-runtime-infrastructure.md) | Shipped (daemon + store) | Medium |

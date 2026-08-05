@@ -12,7 +12,7 @@ Capability 2 (CLI Runtime & UX) completed in one session (ADR-0006): the **TUI c
 - **Searchable output pane** — `Ctrl+F` enters search over captured dispatch output (incremental, smart-case, match highlighted); `n`/`N` next/prev (only when a query already matches, so the letter `n` stays typeable); `Esc` exits.
 - **`daemon start --detach` real backgrounding** — `spawnDetachedDaemon` spawns a detached child (`detached:true, stdio:'ignore', windowsHide:true` + `unref`), waits for its record + `/health`, writes an honest `mode:'detached'` daemon record; `daemon stop`/`status` work unchanged (SIGTERM + probe). A hidden `--_detached-child` flag tells the child to run foreground-style within itself.
 - **`context index --force` forces a full reindex** — the daemon `context_index` tool forwards `force` to the indexer's existing `reindex()`; default stays content-hash incremental.
-- **`init`/`create`/`sync` `--dry-run` / `--preview`** — report the planned writes (path + mode) to stderr without writing anything (reuses the scaffold engine's `dryRun`).
+- **`init`/`create`/`sync` `--dry-run` / `--preview`** — report the planned writes (paths, grouped by write/skip/identical category) to stderr without writing anything (reuses the scaffold engine's `dryRun`).
 - **In-process read-only fallback** — `context search`, `memory recall`/`sessions`, `task status` keep working when the daemon is down via `withInProcessRead` (readonly store + engines, single-writer preserved); writes keep the daemon-required exit-4 path.
 
 ### Changed

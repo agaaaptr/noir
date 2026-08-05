@@ -3,7 +3,7 @@
 > **Living record.** Where Noir actually is today, how it got here, and where it is going version-by-version. The authoritative, machine-readable source is the **release registry** (`.noir/releases/releases.json` + `releases.md`), regenerated on every publish by `scripts/release-registry.mjs` and maintained with `pnpm release:history|rebuild|validate`.
 
 - **Origin / detailed rationale:** `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (the full design blueprint + decision log).
-- **Decisions of record:** `docs/decisions/` (ADR series — `0001`…`0004`).
+- **Decisions of record:** `docs/decisions/` (ADR series — `0001`…`0006`).
 - **Per-release narrative:** [`CHANGELOG.md`](../CHANGELOG.md) (root — single source of truth).
 
 ---

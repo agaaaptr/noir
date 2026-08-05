@@ -8,7 +8,7 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 
 ## Daemon / runtime
 
-- **Background/detached daemon spawn + socket activation** — `noir daemon start --detach` is documented-but-refused today (exit 2, "tracked: v1.x").
+- **Socket activation** for the daemon (systemd-style auto-start on first connect) — not yet implemented; real `--detach` backgrounding shipped in 1.8.0 (ADR-0006), but the daemon is not socket-activated.
 - **Auth token for the daemon transport** — today only localhost host+origin validation; no token.
 - **Per-project `daemon.json`** — today a single global `~/.noir/daemon.json` clobbers under concurrent projects.
 - **Fixed/configured daemon port** — `daemon.port` config is parsed (and tested) but never consumed; the daemon binds an ephemeral 127.0.0.1 port each start.
@@ -17,12 +17,9 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 
 ## CLI / TUI
 
-- **Richer Ink TUI widgets** — the `noir tui` MVP dashboard (StatusBar/OutputPane/CommandInput/Header/Footer) shipped; command palette, searchable command index, command history, interactive forms/wizards, in-TUI confirmation dialogs are still deferred.
-- **In-process read-only store fallback** for `context`/`memory`/`task` commands — daemon-required today; `status` is the only probe-only command.
-- **`noir context index --force` honored** — the flag is recognized but not wired (daemon always content-hash incremental).
-- **`--dry-run` / `--preview` on init/create/sync** — `ScaffoldOptions.dryRun` exists but is not surfaced on the CLI.
+- **v2 orchestrator TUI (Archetype B)** — driving the host CLI as a subprocess + rendering its `stream-json` (streaming output, token/cost bar, mouse, fullscreen alternate-screen, transcript mode). Tracked for v2 (ADR-0006). The 1.8.0 C2 delta shipped the command palette, searchable output, recent-command persistence, in-TUI destructive confirmation, and input-history recall (ADR-0006).
+- **Interactive forms/wizards** in the TUI — beyond the current palette + confirm + search overlays.
 - **`task` id/slug distinction** — collapsed to a single slug namespace for v1.
-- **Repo hygiene** — `packages/cli/src/bin.ts.bak` is a stale tracked backup; bin.ts comments reference `docs/command-policy.md` + `docs/deprecation.md` which do not exist.
 
 ## Context
 
@@ -87,6 +84,7 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 - **Resolved in the 2026-08-04 bugfix line (shipped in 1.7.2):** three post-1.7.1 bugs — **dynamic-require crash in `noir init --upgrade`** (`cli/conflict.ts` lazy `require('@noir-ai/create')` survived tsup bundling as an ESM-incompatible `__require` shim; only fired on the conflict path; static import fix, `fix(cli)` `2c6fc63`), **`.mcp.json` absolute native-shim path** (GUI MCP clients like VS Code launched from the Dock don't read shell profiles → `spawn noir ENOENT`; `resolveNoirCommand()` emits the absolute `~/.noir/bin/noir` when a native install is detected, `fix` `2f28f91`), and **installer UX** (`install.sh` PATH-shadow detection `5964a38` + auto-add shell profile `b4e6bb9`).
 - **Resolved in the 2026-08-04 bugfix line (shipped in 1.7.3):** four post-1.7.2 fixes from systematic debugging + a 23-agent pre-release audit workflow — the bundling `require()` class fix (`crypto`/`fs` latent crashes), native-install `chmod +x` shim + spinner UX, opencode `opts.command` threading, and store `busy_timeout = 5000`. Table-driven cross-adapter parity test (+11 tests → 1439).
 - **Resolved in the 2026-08-05 bugfix line (on `develop`, shipped in 1.7.4):** shim exec-bit defense-in-depth — `atomicWriteFile()` (core) preserves the existing file's POSIX mode across overwrites (rewrite of an already-executable shim keeps `0o755` regardless of which binary version performs the write); `ensureShimExecutable()` (core) re-asserts `0o755` after every install/update (a freshly-installed binary heals its own shim even if the OLD updater forgot to chmod). Closes the chicken-and-egg "noir update → permission denied" bug permanently. (`fix(core,cli)` `c458770`)
+- **Resolved in the C2 TUI-delta line (shipped in 1.8.0, 2026-08-05):** daemon `start --detach` real backgrounding (detached `--_detached-child` + `mode:'detached'` record + bounded `/health` probe); `Ctrl+K` command palette (commander-tree-derived registry + hand-rolled fuzzy matcher behind a swap seam) + searchable output (`Ctrl+F`, `n`/`N`) + persistent recent commands (`~/.noir/<projectId>/tui-history.json`, capped + `NOIR_DISABLE_TUI_HISTORY` opt-out) + in-TUI destructive confirmation + input-history recall; `context index --force` → full reindex (`context.reindex()`); `--dry-run`/`--preview` on `init`/`create`/`sync`; in-process read-only fallback for `context`/`memory`/`task` reads when the daemon is down (`withInProcessRead`, single-writer preserved); repo-hygiene cleanup (dangling `docs/command-policy.md`/`docs/deprecation.md` refs removed from `bin.ts`). Decision: ADR-0006. (Socket activation + interactive forms/wizards + the v2 orchestrator TUI remain open.)
 
 ---
 

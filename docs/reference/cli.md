@@ -83,6 +83,5 @@ Destructive commands selected from the palette (e.g. `context index --force`) sh
 
 - `noir daemon start --detach` — starts the daemon as a **detached background process** (the command returns; `noir daemon stop` / `noir daemon status` manage it). The daemon record carries `mode:'detached'`.
 - `noir context index --force` — forces a **full reindex** (drops all chunks + vectors, re-indexes from scratch). Without `--force`, indexing stays incremental (SHA-256 content-hash, unchanged files skipped).
-- `noir init` / `noir create` / `noir sync` — `--dry-run` (alias `--preview`) reports the planned writes (path + mode) to stderr without writing anything.
+- `noir init` / `noir create` / `noir sync` — `--dry-run` (alias `--preview`) reports the planned writes (paths, grouped by write/skip/identical category) to stderr without writing anything.
 - Read commands (`context search`, `memory recall`/`sessions`, `task status`) fall back to an **in-process read-only engine** when the daemon is down instead of failing with exit 4. Writes (`task new`/`advance`, `memory save`/`forget`/`consolidate`, `context index`) still require the daemon.
-| `--no-tips` | Suppress hints on stderr |
