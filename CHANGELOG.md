@@ -1,8 +1,8 @@
 # Changelog
 
-## 1.8.0 (unreleased) — C2 TUI delta + capability completion
+## 1.8.0 (2026-08-05) — C2 TUI delta + capability completion (beta on `develop`, then stable)
 
-Capability 2 (CLI Runtime & UX) completed in one session (ADR-0006): the **TUI command palette + richer widgets** and **all four acceptance-condition gaps** closed. Executed as a 10-agent multi-agent Workflow with an adversarial-verify pass; all changes reviewed, the full gate green at 1521 tests.
+Capability 2 (CLI Runtime & UX) completed in one session (ADR-0006): the **TUI command palette + richer widgets** and **all four acceptance-condition gaps** closed. Executed as a 10-agent implementation Workflow + an 11-agent final-verification Workflow (find → adversarial verify); all changes reviewed, the full gate green at **1525 tests**. Cut as `1.8.0-beta.1` on `develop`, then promoted to stable `1.8.0` on `main`.
 
 ### Added
 - **`Ctrl+K` command palette** in `noir tui` — a modal overlay (`packages/cli/src/tui/palette/Palette.tsx`) backed by a **data-driven command registry derived from the commander tree** (`buildPaletteCommands`). Fuzzy ranking via a hand-rolled subsequence + gap-penalty scorer behind a `FuzzyMatcher` swap seam (label > keywords > description; matched-char highlighting; recent-commands on empty query; grouped by category).

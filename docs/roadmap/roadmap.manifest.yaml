@@ -17,7 +17,7 @@ roadmap:
     title: CLI Runtime & User Experience
     status: completed
     priority: high
-    note: "C2 completed 2026-08-05 (ADR-0006): Ctrl+K command palette + richer widgets (history, recent persist, destructive confirm, output search), daemon start --detach real backgrounding, context index --force full reindex, init/create/sync --dry-run/--preview, in-process read fallback. v2 orchestrator TUI (Archetype B) deferred to v2."
+    note: "C2 shipped as 1.8.0 (published 2026-08-05, ADR-0006): Ctrl+K command palette + richer widgets (input-history recall, persistent recent commands, destructive confirm, output search), daemon start --detach real backgrounding, context index --force full reindex, init/create/sync --dry-run/--preview, in-process read fallback. v2 orchestrator TUI (Archetype B) deferred to v2."
 
   - id: C3
     title: Built-in Skill System
