@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join } from 'node:path';
 import { noirHome } from './layout.js';
 
@@ -39,6 +48,27 @@ export function nativeShimPath(): string {
 }
 
 /**
+ * Defense-in-depth vs the recurring "noir update → permission denied" bug.
+ * `noir update` is run by the CURRENTLY-INSTALLED binary; if that binary
+ * predates the chmod fix (or a future write path forgets to chmod), the shim
+ * at {@link nativeShimPath} lands as 0o644 (no exec bit) and every subsequent
+ * `noir …` fails with `permission denied`. This re-asserts 0o755 on the shim
+ * whenever the CLI starts a write/install/update path, so a freshly-installed
+ * binary (1.7.4+) heals its own shim even if the OLD updater that installed
+ * it forgot to. Called after the shim write in installManagedNode() and from
+ * the update path. Idempotent + best-effort; never throws.
+ */
+export function ensureShimExecutable(): void {
+  const shim = nativeShimPath();
+  try {
+    const mode = statSync(shim).mode & 0o777;
+    if (mode !== 0o755) chmodSync(shim, 0o755);
+  } catch {
+    // Absent or unreadable — nothing to heal (first install chmods explicitly).
+  }
+}
+
+/**
  * Resolve the `command` value a host's MCP config (`.mcp.json`) should use to
  * spawn the Noir server. GUI MCP clients (VS Code, Cursor) launch from the
  * Dock/Finder and do NOT read shell profiles, so `command: 'noir'` fails with
@@ -66,6 +96,16 @@ export function resolveNoirCommand(): string {
  *  Never in-place overwrite (macOS code-sign inode-taint → SIGKILL; Windows
  *  locks).
  *
+ *  Mode preservation (defense vs the "noir update → permission denied" bug):
+ *  `writeFileSync` on a fresh temp yields the umask default (0o644, NO exec
+ *  bit). If `path` already exists, the temp's mode replaces the target's on
+ *  rename — so an overwrite of an executable shim (0o755) would lose the exec
+ *  bit. This stat's the existing target BEFORE the write and re-applies its
+ *  mode after the rename, so a rewrite keeps the original perms (matching
+ *  `install -m` / rsync semantics). Callers writing a NEW exec file must still
+ *  chmod explicitly (the shim write at installManagedNode does); this only
+ *  preserves an existing exec file across a rewrite.
+ *
  *  NOTE: this does NOT call `fsync()` on the temp fd before the rename — the
  *  rename itself is atomic on POSIX, but a hard crash before the OS flushes
  *  the temp's dirty pages could leave a partially-written file visible at
@@ -76,9 +116,26 @@ export function resolveNoirCommand(): string {
  *  switch off `writeFileSync`. */
 export function atomicWriteFile(path: string, data: string): void {
   mkdirSync(dirname(path), { recursive: true });
+  // Stat the existing target (if any) so we can restore its mode after the
+  // atomic rename — a rewrite must not silently strip the exec bit. The temp
+  // file is written with umask (0o644); without this, `noir update` rewriting
+  // the shim would make it non-executable (the recurring "permission denied").
+  let prevMode: number | undefined;
+  try {
+    prevMode = statSync(path).mode & 0o777;
+  } catch {
+    // Absent on first write — nothing to preserve; caller chmods if exec.
+  }
   const tmp = `${path}.tmp-${process.pid}-${Date.now()}`;
   writeFileSync(tmp, data, 'utf8');
   renameSync(tmp, path);
+  if (prevMode !== undefined) {
+    try {
+      chmodSync(path, prevMode);
+    } catch {
+      // best-effort; a chmod failure on a rewritten file is non-fatal.
+    }
+  }
 }
 
 export function writeInstallRecord(rec: InstallRecord): void {

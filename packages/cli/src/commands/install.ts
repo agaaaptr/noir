@@ -5,6 +5,7 @@ import {
   type DetectResult,
   detectActiveMethod,
   detectInstallMethods,
+  ensureShimExecutable,
   loadProjectInfo,
   MANAGED_NODE_VERSION,
   NOIR_VERSION,
@@ -178,6 +179,7 @@ export async function installManagedNode(
   const shimBody = `#!/usr/bin/env bash\n"${nodeBin}" "${join(cliDir, 'lib', 'node_modules', '@noir-ai', 'cli', 'dist', 'bin.js')}" "$@"\n`;
   atomicWriteFile(shim, shimBody);
   chmodSync(shim, 0o755); // must be executable — atomicWriteFile sets 0o644 by default
+  ensureShimExecutable(); // defense-in-depth: re-assert 0o755 (idempotent, never throws)
   // (POSIX shim; Windows uses a .cmd wrapper -- install.sh/install.ps1, P3.)
 
   // Resolve installed version via the provisioned node.

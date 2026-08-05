@@ -1,5 +1,6 @@
 import {
   detectActiveMethod,
+  ensureShimExecutable,
   fetchLatestVersion,
   loadProjectInfo,
   readInstallRecord,
@@ -202,6 +203,12 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
       updateSpin.fail('Update failed');
       fail(EXIT.ERROR, res.error ?? 'update failed', opts);
     }
+    // Chicken-egg safety net: the update was ORCHESTRATED by the OLD binary
+    // (which may predate the chmod fix). Re-assert the freshly-written shim is
+    // executable so the user's NEXT `noir …` doesn't fail with permission
+    // denied. This is the ONLY line that closes the regression once 1.7.4+ is
+    // installed — it runs in the NEW binary's process.
+    ensureShimExecutable();
     updateSpin.succeed(`Updated to noir ${res.version}`);
     success(`Updated to ${res.version}.`);
     return;

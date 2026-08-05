@@ -25,6 +25,7 @@ const coreMock = vi.hoisted(() => ({
       ({ code: 0, stdout: '', stderr: '' }) as { code: number; stdout: string; stderr: string },
   ),
   atomicWriteFile: vi.fn(),
+  ensureShimExecutable: vi.fn(),
   noirHome: vi.fn(() => '/tmp/noir-test-home'),
   provisionManagedNode: vi.fn(
     async (): Promise<ProvisionedNode> => ({

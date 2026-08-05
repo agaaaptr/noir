@@ -16,6 +16,7 @@ export {
 export {
   atomicWriteFile,
   clearInstallRecord,
+  ensureShimExecutable,
   type InstallMethod,
   type InstallRecord,
   installJsonPath,
