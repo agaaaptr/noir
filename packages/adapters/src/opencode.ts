@@ -37,7 +37,10 @@ export const opencodeAdapter: HostAdapter = {
     const mcp: Record<string, unknown> = {
       noir:
         opts.transport === 'stdio'
-          ? { type: 'local', command: ['noir', 'mcp', 'serve', '--stdio'] }
+          ? // Thread opts.command like buildMcpServersJson does (mcp.ts:36) — the
+            // absolute native shim when resolveNoirCommand() detects a native
+            // install, so GUI MCP clients (no shell profile PATH) can spawn it.
+            { type: 'local', command: [opts.command ?? 'noir', 'mcp', 'serve', '--stdio'] }
           : { type: 'remote', url: opts.url ?? 'http://127.0.0.1:0/mcp' },
     };
     if (integration) {

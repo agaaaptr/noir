@@ -197,13 +197,32 @@ describe('opencode adapter', () => {
     const json = JSON.parse(opencodeAdapter.emitMcpConfig(ctx, { transport: 'stdio' }));
     expect(json.$schema).toBe('https://opencode.ai/config.json');
     // OpenCode stdio entries are `{ type: 'local', command: [...] }` — the
-    // command is an ARRAY (not the claude `{command, args}` split).
+    // command is an ARRAY (not the claude `{command, args}` split). The first
+    // element threads opts.command (defaults to 'noir'; absolute native shim
+    // when resolveNoirCommand() detects a native install).
     expect(json.mcp.noir).toEqual({
       type: 'local',
       command: ['noir', 'mcp', 'serve', '--stdio'],
     });
     // The claude `{mcpServers}` key is NOT present — different shape entirely.
     expect(json.mcpServers).toBeUndefined();
+  });
+
+  it('emitMcpConfig (stdio) honors opts.command (absolute native shim)', () => {
+    // Regression guard: opencode used to hardcode 'noir' and silently drop
+    // opts.command, so a native install emitted a bare 'noir' that GUI MCP
+    // clients (no shell profile PATH) couldn't spawn. All 5 adapters must
+    // thread opts.command — see the table-driven parity test below.
+    const json = JSON.parse(
+      opencodeAdapter.emitMcpConfig(ctx, {
+        transport: 'stdio',
+        command: '/Users/x/.noir/bin/noir',
+      }),
+    );
+    expect(json.mcp.noir).toEqual({
+      type: 'local',
+      command: ['/Users/x/.noir/bin/noir', 'mcp', 'serve', '--stdio'],
+    });
   });
 
   it('emitMcpConfig (http) produces {type:"remote", url} — opencode spells it "remote", NOT "http"', () => {
@@ -358,5 +377,49 @@ describe('path seams — every new adapter declares its MCP + AGENTS.md paths', 
     // holds: no behavioral surface added).
     expect(claudeAdapter.mcpConfigPath).toBeUndefined();
     expect(claudeAdapter.agentsMdPath).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MCP command threading — cross-adapter parity contract.
+// Every host adapter MUST honor opts.command (the absolute native shim that
+// resolveNoirCommand() emits for native installs). opencode used to hardcode
+// 'noir' and silently drop it — this table-driven test locks the contract so
+// the bug can't silently recur for ANY of the 5 hosts.
+// ---------------------------------------------------------------------------
+
+describe('MCP command threading — every adapter honors opts.command', () => {
+  // Extract the noir command from whatever shape each host emits. The 4
+  // {mcpServers}-shape adapters split command/args; opencode packs them in a
+  // single array. Both must surface opts.command as the resolved command.
+  function resolvedCommand(json: {
+    mcpServers?: { noir?: { command?: unknown } };
+    mcp?: { noir?: { command?: unknown[] } };
+  }): string | string[] | undefined {
+    return json.mcpServers?.noir?.command ?? json.mcp?.noir?.command?.[0];
+  }
+
+  it.each([
+    ['claude', claudeAdapter],
+    ['agents-md', agentsMdAdapter],
+    ['gemini', geminiAdapter],
+    ['cursor', cursorAdapter],
+    ['opencode', opencodeAdapter],
+  ])('%s threads an absolute opts.command into the noir entry', (_id, adapter) => {
+    const json = JSON.parse(
+      adapter.emitMcpConfig(ctx, { transport: 'stdio', command: '/abs/shim/noir' }),
+    );
+    expect(resolvedCommand(json)).toBe('/abs/shim/noir');
+  });
+
+  it.each([
+    ['claude', claudeAdapter],
+    ['agents-md', agentsMdAdapter],
+    ['gemini', geminiAdapter],
+    ['cursor', cursorAdapter],
+    ['opencode', opencodeAdapter],
+  ])('%s defaults to bare "noir" when opts.command is omitted', (_id, adapter) => {
+    const json = JSON.parse(adapter.emitMcpConfig(ctx, { transport: 'stdio' }));
+    expect(resolvedCommand(json)).toBe('noir');
   });
 });

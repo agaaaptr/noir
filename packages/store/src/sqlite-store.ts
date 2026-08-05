@@ -60,6 +60,12 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
 
   if (opts.readonly !== true) {
     db.pragma('journal_mode = WAL');
+    // Defense-in-depth vs SQLITE_BUSY: better-sqlite3's default busy_timeout is
+    // 0 (throw immediately on lock contention). WAL alone doesn't prevent BUSY
+    // if a second writer ever opens the same .db (e.g. a stdio MCP server + a
+    // stray `noir` CLI, or a daemon whose pid file is stale). 5s lets a racing
+    // writer complete instead of throwing "database is locked" at a tool call.
+    db.pragma('busy_timeout = 5000');
     migrate(db);
     // vec0 DDL deferred from v1: vec0 requires the sqlite-vec extension to be
     // loaded (done above). `source`/`id` are metadata columns — filterable in
