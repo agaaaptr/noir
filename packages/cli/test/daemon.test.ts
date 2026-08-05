@@ -1,8 +1,9 @@
 // S9 — `noir daemon {start,stop,status,restart}` behavior tests.
 //
 // Covers the foreground-honest UX without starting a real Noir daemon:
-//   - `start --detach` → exit 2 (USAGE) "not implemented (tracked: v1.x)"
-//     (including the --json error envelope on stdout)
+//   - `start --detach` contract pins: the parent never spawns on reuse, and
+//     `spawnDetachedDaemon` is never called on the foreground path (the full
+//     `--detach` / `--_detached-child` behavior lives in daemon-detach.test.ts)
 //   - `start` foreground/reused paths via a mocked `ensureDaemonRunning`
 //   - `status` exit-code contract: no record / stale pid / port unresponsive
 //     → exit 4; a live `/health` → exit 0 + pid/uptime/mode
@@ -21,18 +22,20 @@ import { paths } from '@noir-ai/core';
 import { clearDaemonRecord, writeDaemonRecord } from '@noir-ai/daemon';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock ONLY ensureDaemonRunning (so start's foreground/reused paths don't spin a
-// real server); every other export stays real — status/stop need the genuine
-// record helpers + pidAlive + fetch.
+// Mock ONLY ensureDaemonRunning + spawnDetachedDaemon (so start's foreground,
+// reused, and detach paths never spin a real server or spawn a real child);
+// every other export stays real — status/stop need the genuine record helpers +
+// pidAlive + fetch.
 vi.mock('@noir-ai/daemon', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@noir-ai/daemon')>();
   return {
     ...actual,
     ensureDaemonRunning: vi.fn(),
+    spawnDetachedDaemon: vi.fn(),
   };
 });
 
-import { ensureDaemonRunning } from '@noir-ai/daemon';
+import { ensureDaemonRunning, spawnDetachedDaemon } from '@noir-ai/daemon';
 import { daemonStart, daemonStatus, daemonStop } from '../src/commands/daemon.js';
 import { EXIT, inferExitCode } from '../src/output.js';
 
@@ -75,6 +78,7 @@ function deadPid(): number {
 
 beforeEach(() => {
   vi.mocked(ensureDaemonRunning).mockReset();
+  vi.mocked(spawnDetachedDaemon).mockReset();
   clearDaemonRecord();
 });
 
@@ -89,11 +93,11 @@ afterAll(() => {
 });
 
 describe('noir daemon start', () => {
-  // The success paths (foreground / reused / --json envelope) need an
+  // The success paths (foreground / reused / detach / --json envelope) need an
   // INITIALIZED project: daemonStart calls `loadProjectInfo(process.cwd())`
-  // before ensureDaemonRunning. Seed a minimal valid config in a temp root and
-  // chdir into it. The `not initialized` test below chdirs to its own empty dir
-  // to assert the failure path; the `--detach` tests fail before loadProjectInfo.
+  // before ensureDaemonRunning/spawnDetachedDaemon. Seed a minimal valid config
+  // in a temp root and chdir into it. The `not initialized` test below chdirs
+  // to its own empty dir to assert the failure path.
   let daemonStartRoot: string;
   let daemonStartOrigCwd: string;
   beforeEach(() => {
@@ -109,21 +113,39 @@ describe('noir daemon start', () => {
     rmSync(daemonStartRoot, { recursive: true, force: true });
   });
 
-  it('--detach → exit 2 with the stable "tracked: v1.x" message', async () => {
+  it('--detach calls spawnDetachedDaemon (never on the foreground path)', async () => {
+    vi.mocked(spawnDetachedDaemon).mockResolvedValue({ pid: 4321, port: 54321 });
     const r = await run(() => daemonStart({ detach: true }));
-    expect(r.err).toBeDefined();
-    expect(inferExitCode(r.err)).toBe(EXIT.USAGE);
-    expect(r.stderr).toContain('not implemented (tracked: v1.x)');
-    expect(ensureDaemonRunning).not.toHaveBeenCalled();
+    expect(r.err).toBeUndefined();
+    expect(spawnDetachedDaemon).toHaveBeenCalledTimes(1);
+    // The full parent-path envelope + reused-guard live in daemon-detach.test.ts.
+    expect(r.stderr).toMatch(/background/);
   });
 
-  it('--detach under --json emits the structured error envelope on stdout (exit 2)', async () => {
-    const r = await run(() => daemonStart({ detach: true, json: true }));
-    expect(inferExitCode(r.err)).toBe(EXIT.USAGE);
-    const envelope = JSON.parse(r.stdout);
-    expect(envelope.ok).toBe(false);
-    expect(envelope.error.code).toBe(EXIT.USAGE);
-    expect(envelope.error.message).toMatch(/not implemented \(tracked: v1\.x\)/);
+  it('--detach double-spawn guard: an already-healthy daemon short-circuits the spawn', async () => {
+    const server: Server = createServer((req, res) => {
+      if (req.url === '/health') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } else {
+        res.writeHead(404).end();
+      }
+    });
+    const port: number = await new Promise((resolve) => {
+      server.listen(0, '127.0.0.1', () => {
+        const addr = server.address();
+        resolve(typeof addr === 'object' && addr ? addr.port : 0);
+      });
+    });
+    try {
+      writeDaemonRecord({ pid: process.pid, port, startedAt: Date.now() });
+      const r = await run(() => daemonStart({ detach: true }));
+      expect(r.err).toBeUndefined();
+      expect(spawnDetachedDaemon).not.toHaveBeenCalled();
+      expect(ensureDaemonRunning).not.toHaveBeenCalled();
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 
   it('not initialized → exit 1 (loadProjectInfo throws before ensure)', async () => {

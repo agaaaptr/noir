@@ -10,7 +10,12 @@ import { resolveMemoryConfig } from '@noir-ai/memory';
 import { resolveModelConfig } from '@noir-ai/model';
 import { buildContextEngine } from './context-seam.js';
 import { buildIntegrationService } from './integration-seam.js';
-import { clearDaemonRecord, type DaemonRecord, writeDaemonRecord } from './lifecycle.js';
+import {
+  clearDaemonRecord,
+  DAEMON_MODE_ENV,
+  type DaemonRecord,
+  writeDaemonRecord,
+} from './lifecycle.js';
 import { buildMemoryEngine, resolveConsolidationCapability } from './memory-seam.js';
 import { createNoirServer } from './server.js';
 import { openStoreForDaemon } from './store-seam.js';
@@ -150,7 +155,14 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     });
   });
 
-  const rec: DaemonRecord = { pid, port, startedAt };
+  const rec: DaemonRecord = {
+    pid,
+    port,
+    startedAt,
+    // The detached child sets NOIR_DAEMON_MODE=detached so `daemon status`
+    // reports honest ownership (foreground vs backgrounded). Default foreground.
+    mode: process.env[DAEMON_MODE_ENV] === 'detached' ? 'detached' : 'foreground',
+  };
   writeDaemonRecord(rec);
 
   async function shutdown(): Promise<void> {

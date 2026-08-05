@@ -7,7 +7,12 @@ export interface DaemonRecord {
   pid: number;
   port: number;
   startedAt: number;
+  /** Ownership: `foreground` (this CLI process) or `detached` (backgrounded via --detach). */
+  mode?: 'foreground' | 'detached';
 }
+
+/** The env var `spawnDetachedDaemon` sets so the child writes a `detached` record. */
+export const DAEMON_MODE_ENV = 'NOIR_DAEMON_MODE';
 
 export function noirHome(): string {
   return join(homedir(), '.noir');

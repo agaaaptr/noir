@@ -42,6 +42,7 @@ export {
   type StoreStatus,
   type WorkflowStatus,
 } from './server.js';
+export { type SpawnTiming, spawnDetachedDaemon } from './spawn.js';
 export { buildStatus, type HostStatus, type StatusContext, type Transport } from './status.js';
 export { startStdioServer } from './stdio.js';
 export { type DaemonStore, openStoreForDaemon } from './store-seam.js';

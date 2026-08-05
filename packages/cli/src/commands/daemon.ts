@@ -1,20 +1,30 @@
 // S9 — `noir daemon {start,stop,status,restart}`.
 //
-// Honest foreground daemon UX (S9 / spec §8). `noir daemon start` runs the
-// daemon in-process FOREGROUND (it never silently forks): `ensureDaemonRunning`
-// (from @noir-ai/daemon) either starts a fresh in-process HTTP server — whose
-// listen handle + idle timer + SIGINT/SIGTERM handlers (installed inside
-// `startHttpServer`) keep this CLI process alive until idle-stop or a signal —
-// or reuses an already-healthy one and exits. Detached/socket-activated
-// spawning is deferred, so `--detach` is wired (documented in `--help`) but
-// refuses with exit 2 (USAGE) and a stable "tracked: v1.x" message rather than
-// surprise-forking.
+// Honest daemon UX (S9 / spec §8). `noir daemon start` runs the daemon either
+// FOREGROUND or DETACHED, depending on flags:
+//   - default (foreground): `ensureDaemonRunning` (from @noir-ai/daemon) starts
+//     a fresh in-process HTTP server — whose listen handle + idle timer +
+//     SIGINT/SIGTERM handlers (installed inside `startHttpServer`) keep this CLI
+//     process alive until idle-stop or a signal — or reuses an already-healthy
+//     one and exits.
+//   - `--detach` (parent path, D1): `spawnDetachedDaemon` forks a detached child
+//     `noir daemon start --_detached-child` (unref'd + silent stdio), waits for
+//     the child's daemon record + `/health` to confirm it is serving, reports
+//     `{mode:'detached', pid, port}`, and the PARENT exits — the child keeps the
+//     daemon alive in the background.
+//   - `--_detached-child` (child path, D2; hidden, set by the parent's spawn):
+//     we ARE the detached child — run `ensureDaemonRunning` in-process (the HTTP
+//     server keeps THIS process alive) and emit `{mode:'detached'}`. The child
+//     is the SINGLE writer of the daemon record (its own pid), so the parent
+//     discovers the port by polling that record.
+//   Both detached paths guard double-spawn: an already-healthy daemon is reported
+//   `{mode:'detached', reused:true}` and never spawned twice.
 //
 // Stream discipline (S9): `--json` emits the versioned `{ok,data}` envelope
 // to stdout (the only stdout write); every human diagnostic goes to stderr via
 // the centralized helpers. Exit codes follow the S9 contract: a missing/stale
-// daemon record on `status` → exit 4 (DAEMON_DOWN); `--detach` → exit 2; an
-// uninitialized project (`loadProjectInfo` throws) → exit 1 with the hint.
+// daemon record on `status` → exit 4 (DAEMON_DOWN); an uninitialized project
+// (`loadProjectInfo` throws) → exit 1 with the hint.
 
 import { loadProjectInfo } from '@noir-ai/core';
 import {
@@ -22,18 +32,23 @@ import {
   ensureDaemonRunning,
   pidAlive,
   readDaemonRecord,
+  spawnDetachedDaemon,
 } from '@noir-ai/daemon';
 import { type CliOptions, EXIT, fail, info, log, spinner } from '../output.js';
 
 /** Options accepted by `daemon` sub-commands (the global flags only). */
 export interface DaemonOptions extends CliOptions {}
 
-/** `daemon start` adds the (recognized-but-refused) `--detach` flag. */
+/** `daemon start` adds the real `--detach` flag (D1) plus the hidden
+ *  `--_detached-child` marker (D2) the detached child carries. */
 export interface DaemonStartOptions extends DaemonOptions {
+  /** `--detach`: parent path — fork a detached child and exit. */
   detach?: boolean;
+  /** `--_detached-child` (hidden, reserved): we ARE the detached child. */
+  detachChild?: boolean;
 }
 
-/** v1 daemon mode is foreground-only; `--detach` is tracked for v1.x. */
+/** Human label for the detached mode in `status` output. */
 const MODE = 'foreground' as const;
 
 /** Shape of the `/health` body the daemon's HTTP server serves. */
@@ -50,33 +65,114 @@ function formatUptime(sec: number): string {
   return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
 }
 
+/** Best-effort `/health` probe for the detach double-spawn guard (never throws). */
+async function isHealthy(port: number): Promise<boolean> {
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/health`);
+    return res.status === 200;
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
-// `noir daemon start` (foreground-honest; `--detach` → exit 2)
+// `noir daemon start` (foreground default; `--detach` + `--_detached-child`)
 // ---------------------------------------------------------------------------
 /**
- * Start the Noir daemon in the foreground (or report an already-running one).
+ * Start the Noir daemon — foreground by default, or detached via `--detach`.
  *
- * - `--detach` is recognized but NOT implemented in v1 → exit 2 (USAGE) with a
- *   stable "tracked: v1.x" message, so scripting against it fails honestly
- *   instead of surprise-forking.
- * - When `ensureDaemonRunning` STARTS a daemon, the in-process HTTP server
- *   keeps this process alive (foreground) until SIGINT/SIGTERM/idle-timeout;
- *   the function returns but the process does not exit. We deliberately do NOT
- *   call `ensured.stop()` — that would tear down the daemon we just started.
- * - When a healthy daemon is REUSED, this process reports it and exits.
+ * Three modes, chosen by the flags (all three guard double-spawn: an
+ * already-healthy daemon is reported `{mode:'detached', reused:true}` / the
+ * foreground `reused:true` envelope and never started twice):
  *
- * `--json` emits `{ok:true, data:{url,port,pid,mode,reused:false}}` to stdout
- * before the process blocks (so a `--json` caller still gets the one envelope).
+ * 1. `--_detached-child` (D2; hidden, only ever set by `spawnDetachedDaemon`'s
+ *    child argv): we ARE the detached daemon. Run `ensureDaemonRunning`
+ *    in-process — the started HTTP server + idle timer + signal handlers keep
+ *    THIS process alive as the background daemon — emit `{mode:'detached'}`
+ *    (or `{mode:'detached', reused:true}` when a healthy daemon is reused, in
+ *    which case the redundant child exits) and return. The child is the SINGLE
+ *    writer of the daemon record (its own pid), which is how the parent learns
+ *    the port. We deliberately do NOT call `ensured.stop()` — that would undo
+ *    the daemon we just started (or tear down a reused one owned elsewhere).
+ * 2. `--detach` (D1; parent path): `spawnDetachedDaemon` forks the detached
+ *    child, waits until the child's record + `/health` confirm it is serving,
+ *    emits `{mode:'detached', pid, port}`, and the PARENT returns (and thus
+ *    exits — it never blocks). Guard first: if a daemon is ALREADY healthy,
+ *    report `{mode:'detached', reused:true}` and return WITHOUT spawning.
+ * 3. Foreground (default): `ensureDaemonRunning` in-process. When it STARTS a
+ *    daemon, the HTTP server keeps this process alive until
+ *    SIGINT/SIGTERM/idle-timeout (the function returns but the process does not
+ *    exit); when it REUSES a healthy daemon, this process reports and exits.
+ *
+ * `--json` emits the one envelope to stdout before the process blocks/returns.
  */
 export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
-  if (opts.detach === true) {
-    // Wired (appears in `--help`) but refused: detached/socket-activated
-    // spawning is deliberate v0 debt (blueprint §9). Stable message + exit 2.
-    fail(EXIT.USAGE, 'not implemented (tracked: v1.x)', opts);
+  const project = loadProjectInfo(process.cwd());
+
+  // D2 — detached CHILD path. The parent forked us via `--_detached-child`;
+  // run the daemon in-process (the HTTP server keeps THIS process alive).
+  if (opts.detachChild === true) {
+    const child = await ensureDaemonRunning({
+      project,
+      idleTimeoutSec: project.config.daemon.idleTimeoutSec,
+    });
+    if (child.started) {
+      if (opts.json === true) {
+        process.stdout.write(`${JSON.stringify({ ok: true, data: { mode: 'detached' } })}\n`);
+        return;
+      }
+      // The HTTP server + idle timer + signal handlers inside startHttpServer
+      // keep this child process alive past `return` — it IS the daemon now.
+      info('noir daemon: detached foreground. Ctrl+C to stop.', opts);
+      log(`Noir daemon listening at ${child.url}`, opts);
+      return;
+    }
+    // An already-healthy daemon was reused — this redundant child reports and
+    // exits (the parent's double-spawn guard should have caught this, but the
+    // child re-checks so two racing spawns can never start two daemons).
+    if (opts.json === true) {
+      process.stdout.write(
+        `${JSON.stringify({ ok: true, data: { mode: 'detached', reused: true } })}\n`,
+      );
+      return;
+    }
+    info('Noir daemon already running; detached child exiting.', opts);
+    return;
   }
 
+  // D1 — `--detach` PARENT path. Fork a detached child and let it own the
+  // daemon; the parent reports the backgrounded daemon and exits.
+  if (opts.detach === true) {
+    // Double-spawn guard: only spawn a child if no daemon is already healthy
+    // (the child would merely reuse it and exit — a wasted detached process).
+    const existing = readDaemonRecord();
+    if (existing && pidAlive(existing.pid) && (await isHealthy(existing.port))) {
+      if (opts.json === true) {
+        process.stdout.write(
+          `${JSON.stringify({ ok: true, data: { mode: 'detached', reused: true } })}\n`,
+        );
+        return;
+      }
+      info(
+        `Noir daemon already running at http://127.0.0.1:${existing.port}/mcp (detach not needed).`,
+        opts,
+      );
+      return;
+    }
+    const spawned = await spawnDetachedDaemon({ project });
+    if (opts.json === true) {
+      process.stdout.write(
+        `${JSON.stringify({ ok: true, data: { mode: 'detached', pid: spawned.pid, port: spawned.port } })}\n`,
+      );
+      return;
+    }
+    info(`Noir daemon started in the background (pid ${spawned.pid}, port ${spawned.port}).`, opts);
+    // The parent returns (and exits); the detached child owns the daemon.
+    return;
+  }
+
+  // Foreground (default) — run the daemon in-process.
   const ds = spinner('Starting Noir daemon...', opts).start();
-  const project = loadProjectInfo(process.cwd());
   const ensured = await ensureDaemonRunning({
     project,
     idleTimeoutSec: project.config.daemon.idleTimeoutSec,
@@ -99,7 +195,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
       );
       return;
     }
-    info('noir daemon: foreground mode (backgrounding deferred to v1.x). Ctrl+C to stop.', opts);
+    info('noir daemon: foreground mode. Ctrl+C to stop.', opts);
     log(`Noir daemon listening at ${ensured.url}`, opts);
     // NOTE: the started HTTP server + idle timer + signal handlers installed
     // inside startHttpServer keep this process alive past `return`. We
@@ -236,7 +332,9 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
     port: rec.port,
     startedAt: rec.startedAt,
     uptimeSec,
-    mode: MODE,
+    // Honest ownership: the detached child writes `mode:'detached'`; anything
+    // else (legacy record, foreground start) reports 'foreground'.
+    mode: rec.mode ?? MODE,
   };
 
   if (opts.json === true) {
@@ -253,13 +351,15 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
 // `noir daemon restart`
 // ---------------------------------------------------------------------------
 /**
- * Stop any running daemon, then start a fresh foreground one.
+ * Stop any running daemon, then start a fresh one (foreground by default,
+ * detached when `--detach` is forwarded through).
  *
  * The stop sub-step is silenced (no separate envelope / message) so that under
  * `--json` a restart emits exactly ONE stdout envelope (the start result), and
  * so the human output's headline is the new daemon, not the torn-down old one.
- * `start` blocks foreground once it brings up a daemon, so `restart` blocks too
- * — the honest foreground behavior.
+ * Foreground `start` blocks once it brings up a daemon, so a foreground restart
+ * blocks too — the honest behavior; with `--detach` the parent exits after the
+ * detached child is confirmed serving.
  */
 export async function daemonRestart(opts: DaemonOptions): Promise<void> {
   // Force the stop to be quiet + non-JSON: its output would either duplicate
