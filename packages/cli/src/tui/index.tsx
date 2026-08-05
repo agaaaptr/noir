@@ -12,6 +12,7 @@
 // stream shim, so the host terminal only ever sees Ink's frames.
 
 import { render } from 'ink';
+import { buildPaletteCommandsForTui } from '../bin.js';
 import { gatherStatusPayload, type StatusOptions, type StatusPayload } from '../commands/status.js';
 import type { CliOptions } from '../output.js';
 import { App, type TuiDeps } from './App.js';
@@ -43,6 +44,8 @@ export async function runTui(opts: CliOptions, dispatch: TuiDeps['dispatch']): P
   const deps: TuiDeps = {
     dispatch,
     fetchStatus: defaultFetchStatus(opts),
+    // The palette source, derived from a fresh commander program at launch (B3).
+    commands: buildPaletteCommandsForTui(),
   };
   const instance = render(<App deps={deps} />);
   await instance.waitUntilExit();

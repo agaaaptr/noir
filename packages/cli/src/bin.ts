@@ -42,12 +42,24 @@ import {
   tip,
 } from './output.js';
 import { serve } from './serve.js';
+import { buildPaletteCommands } from './tui/commands/registry.js';
+import type { PaletteCommand } from './tui/palette/types.js';
 
 // Exit-code contract, error type, `fail`, and exit-code mapping live in
 // `./output.js` (S9 t2 central output infra). Re-exported here so existing
 // imports from `./bin.js` (bin.test.ts, future commands) keep working without
 // a second source of truth.
 export { EXIT, fail, inferExitCode, NoirCliError };
+
+/**
+ * The TUI palette source (B3). Walks a FRESH {@link createProgram} at `noir tui`
+ * launch and projects every leaf subcommand into a {@link PaletteCommand}.
+ * Defined here (not in the tui) so the palette derives from the REAL command
+ * tree without the tui graph importing the bin (which would be circular).
+ */
+export function buildPaletteCommandsForTui(): PaletteCommand[] {
+  return buildPaletteCommands(createProgram());
+}
 
 // ---------------------------------------------------------------------------
 // Program factory. Each call returns a fresh, independently-parseable Command
@@ -143,8 +155,7 @@ function parseHost(raw: string | undefined): HostId | undefined {
 // bare `noir` home menu is the documented human entry point; every subcommand
 // stays 100% scriptable. `--json` is the headless contract. The deprecation
 // registry below is the formal "warn for N → redirect for N → never silently
-// remove" channel; ZERO entries today (no command is deprecated). See
-// docs/command-policy.md + docs/deprecation.md.
+// remove" channel; ZERO entries today (no command is deprecated).
 // ---------------------------------------------------------------------------
 
 /** One entry in the {@link DEPRECATIONS} registry. */
@@ -161,9 +172,9 @@ export interface DeprecationEntry {
 
 /**
  * Deprecation registry. **Empty today** — no `noir` command is deprecated.
- * When adding an entry, also update `docs/deprecation.md` (and, if the old
- * form still routes, add a redirect). {@link emitDeprecationHintsFor} scans
- * this on every dispatch and emits one `tip()` per match; `--no-tips` /
+ * When adding an entry, update the CHANGELOG + `docs/reference/cli.md` (and,
+ * if the old form still routes, add a redirect). {@link emitDeprecationHintsFor}
+ * scans this on every dispatch and emits one `tip()` per match; `--no-tips` /
  * `--json` suppress the hint (see {@link tip}).
  */
 export const DEPRECATIONS: DeprecationEntry[] = [];
@@ -236,7 +247,7 @@ export function createProgram(): Command {
     )
     // Deprecation / redirect hints — `--no-tips` silences the `tip()` helper
     // for CI / log-friendly runs. No command is deprecated today; the flag is
-    // the headless contract for quieting future notices (see docs/deprecation.md).
+    // the headless contract for quieting future notices.
     .addOption(new Option('--no-tips', 'suppress redirect / deprecation hints on stderr'))
     .exitOverride((err) => {
       // Never process.exit; surface to the caller (run()/test) instead.
@@ -293,6 +304,8 @@ export function createProgram(): Command {
       'run scaffold migrations before re-emitting (re-run on an existing project)',
     )
     .option('--force', 're-scaffold even if already initialized (bypasses the already-init no-op)')
+    .option('--dry-run', 'report planned writes without writing anything')
+    .option('--preview', 'alias for --dry-run')
     .addOption(
       // S10: target host. Defaults to `'claude'` (the regression anchor). The
       // chosen host is forwarded to scaffold() + skills emission via
@@ -311,6 +324,8 @@ export function createProgram(): Command {
           upgrade?: boolean;
           force?: boolean;
           host?: string;
+          dryRun?: boolean;
+          preview?: boolean;
         },
         cmd: Command,
       ) => {
@@ -326,12 +341,16 @@ export function createProgram(): Command {
         const upgrade = opts.upgrade === true;
         const force = opts.force === true;
         const host = parseHost(opts.host);
+        // F1: --dry-run/--preview collapse to a single dryRun boolean (the
+        // command modules read both spellings, but the bin normalizes).
+        const dryRun = opts.dryRun === true || opts.preview === true;
         const result = await init(process.cwd(), {
           transport,
           url: opts.url,
           ...(upgrade ? { upgrade } : {}),
           ...(force ? { force } : {}),
           ...(host !== undefined ? { host } : {}),
+          ...(dryRun ? { dryRun } : {}),
         });
         // ScaffoldResult gap close: surface the structured ScaffoldResult (with
         // `conflicts[]`) on stdout under `--json`, wrapped in the versioned
@@ -354,6 +373,8 @@ export function createProgram(): Command {
     .option('--transport <transport>', 'stdio | streamable-http (default: stdio)', 'stdio')
     .option('--url <url>', 'streamable-http daemon URL (localhost only)')
     .option('--force', 're-scaffold even if already initialized (bypasses the already-init no-op)')
+    .option('--dry-run', 'report planned writes without writing anything')
+    .option('--preview', 'alias for --dry-run')
     .addOption(
       new Option(
         '--host <id>',
@@ -363,19 +384,29 @@ export function createProgram(): Command {
     .action(
       async (
         dir: string | undefined,
-        opts: { transport?: string; url?: string; force?: boolean; host?: string },
+        opts: {
+          transport?: string;
+          url?: string;
+          force?: boolean;
+          host?: string;
+          dryRun?: boolean;
+          preview?: boolean;
+        },
         cmd: Command,
       ) => {
         const transport: 'stdio' | 'streamable-http' =
           opts.transport === 'streamable-http' ? 'streamable-http' : 'stdio';
         const force = opts.force === true;
         const host = parseHost(opts.host);
+        // F1: --dry-run/--preview collapse to a single dryRun boolean.
+        const dryRun = opts.dryRun === true || opts.preview === true;
         const { create } = await import('./commands/create.js');
         const result = await create(dir, {
           transport,
           url: opts.url,
           ...(force ? { force } : {}),
           ...(host !== undefined ? { host } : {}),
+          ...(dryRun ? { dryRun } : {}),
         });
         // ScaffoldResult gap close: surface the structured ScaffoldResult (with
         // `conflicts[]`) on stdout under `--json`, wrapped in the `{ok, data}`
@@ -399,6 +430,8 @@ export function createProgram(): Command {
       '--merge',
       'three-way merge managed regions (default since 1.3.0; flag kept for compatibility)',
     )
+    .option('--dry-run', 'report planned writes without writing anything')
+    .option('--preview', 'alias for --dry-run')
     .addOption(
       // Opt OUT of managed-region merge (restore strip-replace). Commander
       // stores `--no-merge-regions` under `mergeRegions` (default true; flag →
@@ -419,7 +452,14 @@ export function createProgram(): Command {
     )
     .action(
       async (
-        opts: { host?: string; force?: boolean; merge?: boolean; mergeRegions?: boolean },
+        opts: {
+          host?: string;
+          force?: boolean;
+          merge?: boolean;
+          mergeRegions?: boolean;
+          dryRun?: boolean;
+          preview?: boolean;
+        },
         cmd: Command,
       ) => {
         // Lazy import preserves the original dispatcher's deferred module load.
@@ -429,18 +469,21 @@ export function createProgram(): Command {
         const merge = opts.merge === true;
         // `--no-merge-regions` → commander stores `mergeRegions: false`.
         const noMergeRegions = opts.mergeRegions === false;
+        // F1: --dry-run/--preview collapse to a single dryRun boolean.
+        const dryRun = opts.dryRun === true || opts.preview === true;
         // Single-positional regression anchor: when no `--host`/`--force`/`--merge`/
-        // `--no-merge-regions` is given, call `sync(cwd)` exactly (bin.test.ts pins
-        // this). Only spread the opts bag when a flag was explicit so the
-        // default-args snapshot stays green.
+        // `--no-merge-regions`/`--dry-run` is given, call `sync(cwd)` exactly
+        // (bin.test.ts pins this). Only spread the opts bag when a flag was
+        // explicit so the default-args snapshot stays green.
         const result =
-          host === undefined && !force && !merge && !noMergeRegions
+          host === undefined && !force && !merge && !noMergeRegions && !dryRun
             ? await sync(process.cwd())
             : await sync(process.cwd(), {
                 ...(host !== undefined ? { host } : {}),
                 ...(force ? { force } : {}),
                 ...(merge ? { merge } : {}),
                 ...(noMergeRegions ? { mergeManagedRegions: false } : {}),
+                ...(dryRun ? { dryRun } : {}),
               });
         // ScaffoldResult gap close: surface the structured ScaffoldResult (with
         // `conflicts[]`) on stdout under `--json`, wrapped in the `{ok, data}`
@@ -465,19 +508,29 @@ export function createProgram(): Command {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir mcp serve [--stdio]');
   });
 
-  // `daemon` group — foreground-honest start/stop/status/restart (S9).
-  // `start` accepts `--detach`, which is recognized (documented in --help) but
-  // refused inside the action with exit 2 "not implemented (tracked: v1.x)".
+  // `daemon` group — start/stop/status/restart (S9).
+  // `start` runs the daemon in the FOREGROUND by default; `--detach` forks a
+  // detached child (D1). `--_detached-child` is the hidden marker the detached
+  // child carries (D2): it tells the child it IS the daemon (run in-process),
+  // so it is never shown in `--help` and never meant for users.
   const daemonGrp = program.command('daemon').description('control the Noir daemon');
   daemonGrp
     .command('start')
-    .description('start the Noir daemon (foreground; backgrounding deferred)')
-    .option('--detach', 'run in the background (not yet implemented; exits 2)')
+    .description('start the Noir daemon (foreground, or background with --detach)')
+    .option('--detach', 'run the daemon in the background and exit')
+    .addOption(
+      new Option('--_detached-child', 'reserved: detached daemon child (internal)').hideHelp(),
+    )
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();
       const detach = g.detach === true;
-      await daemonStart({ ...toCliOptions(g), ...(detach ? { detach } : {}) });
+      const detachChild = g._detachedChild === true;
+      await daemonStart({
+        ...toCliOptions(g),
+        ...(detach ? { detach } : {}),
+        ...(detachChild ? { detachChild } : {}),
+      });
     });
   daemonGrp
     .command('stop')

@@ -14,5 +14,11 @@ export function Footer({ running }: FooterProps): ReactElement {
   if (running) {
     return <Text>{c.dim('running… (Ctrl+C to force exit)')}</Text>;
   }
-  return <Text>{c.dim('? help · q/Esc quit · ↑/↓ scroll · Enter run · Ctrl+C exit')}</Text>;
+  return (
+    <Text>
+      {c.dim(
+        '? help · q/Esc quit · ↑/↓ scroll · Enter run · Ctrl+K palette · Ctrl+F find · Ctrl+C exit',
+      )}
+    </Text>
+  );
 }
