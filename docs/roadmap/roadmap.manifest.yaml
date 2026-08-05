@@ -11,7 +11,7 @@ roadmap:
     title: Package Distribution & Release Management
     status: completed
     priority: high
-    note: "C1 shipped as 1.7.0 (published 2026-08-04). Hotfix releases: 1.7.1 (MCP tool rename + piped install.sh), 1.7.2 (dynamic-require crash + .mcp.json ENOENT fix + installer UX), 1.7.3 (published — bundling require class fix + chmod shim + opencode command threading + store busy_timeout), 1.7.4 pending (shim exec-bit defense-in-depth). Windows native-install bugs deferred."
+    note: "C1 shipped as 1.7.0 (published 2026-08-04). Hotfix releases: 1.7.1→1.7.2→1.7.3→1.7.4, all published. Windows native-install bugs deferred (npm.exe/unzip/install.ps1/Scoop — pre-existing, need Windows VM). Next: C2 TUI delta."
 
   - id: C2
     title: CLI Runtime & User Experience

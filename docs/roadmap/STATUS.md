@@ -36,7 +36,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 - **2026-08-03/04** — C1 managed-Node auto-provisioning (P1–P6): `provisionManagedNode()` in `@noir-ai/core` (`packages/core/src/node-provision.ts`) — download + verify (SHA256 checksum, fail-closed) + extract Node 22.23.2 LTS into `~/.noir/runtime/v<version>/`; atomic writes (staging → rename); auto-cleanup old runtime versions. `MANAGED_NODE_VERSION` constant exported from core, shared with `install.sh`/`install.ps1` via `scripts/node-version.env`. `noir install`/`migrate` now calls `provisionManagedNode()` (CLI can bootstrap without a shell script). CI `node-provision-smoke` job validates real Node download. Release registry rebuilt with accurate channel labels + non-null `changelogRef` for every entry. C1 → Completed.
 - **2026-08-04** — **C1 published on npm** as **1.7.0** (`latest`) + **1.7.0-beta.1** (`beta`); `main` + `develop` synced. Then two post-release bugfixes on `develop` (pending next publish): **`noir_clickup_write` MCP tool rename** — the dotted name violated the MCP tool-name charset (`[a-z0-9_-]` only) and broke the whole MCP session with `-32000`; renamed repo-wide + added a charset regression guard (`fix(daemon)` `368b766`). **Piped `install.sh` `curl | bash` fix** — `${BASH_SOURCE[0]}` is empty when piped, so `node-version.env` wasn't found; now fetched from the repo raw URL (`fix(dist)` `23d4f19`). Both gates green (1428 tests). Published as **1.7.1** (`latest` + `1.7.1-beta.1`).
 - **2026-08-04** — **1.7.1 published** → **1.7.2** published (`latest` + `1.7.2-beta.1`): dynamic-require crash in `noir init --upgrade` conflict path (`fix(cli)` `2c6fc63`), `.mcp.json` absolute native-shim path — fix `spawn noir ENOENT` from GUI MCP clients (`fix` `2f28f91`), installer-UX (PATH-shadow detection `5964a38` + auto-add shell profile `b4e6bb9`). Gates green (1428 tests).
-- **2026-08-04/05** — **1.7.3 published** (`latest` + `1.7.3-beta.1`): the bundling `require()` class fix + native-install `chmod +x` shim + spinner UX + opencode command threading + store `busy_timeout`. Then **1.7.4 bugfix on `develop` (pending publish)**: shim exec-bit defense-in-depth (`atomicWriteFile` mode preservation + `ensureShimExecutable` self-heal, `fix(core,cli)` `c458770`). Closes the chicken-and-egg "noir update → permission denied" bug permanently. Gates green (1439 tests).
+- **2026-08-04/05** — **1.7.3 published** → **1.7.4 published** (`latest` + `1.7.4-beta.1`): shim exec-bit defense-in-depth (`atomicWriteFile` mode preservation + `ensureShimExecutable` self-heal, `fix(core,cli)` `c458770`). Closes the chicken-and-egg "noir update → permission denied" bug permanently. Gates green (1439 tests). All four post-1.7.0 hotfix releases complete.
 
 ## Active capability
 
@@ -48,7 +48,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 
 ## Next milestone
 
-- Cut the **1.7.4** patch release (shim exec-bit defense-in-depth), then return to the **C2 TUI delta** (richer widgets, command palette).
+- Return to the **C2 TUI delta** (richer widgets, command palette). All post-1.7.0 hotfixes are complete.
 
 ## Current technical debt
 
