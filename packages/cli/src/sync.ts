@@ -31,6 +31,7 @@ import { type ScaffoldResult, scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 import { buildConflictOpts } from './conflict.js';
 import { checkWritePathDedup } from './dedup-write.js';
+import { reportPlannedWrites } from './init.js';
 import { resolveInteractive } from './output.js';
 
 export interface SyncOptions {
@@ -50,6 +51,13 @@ export interface SyncOptions {
    *  the bin as `--no-merge-regions`. When explicitly `false`, hand-edits
    *  inside `<!-- noir:* -->` markers are discarded on a template upgrade. */
   mergeManagedRegions?: boolean;
+  /** F1: `--dry-run`/`--preview` — report the planned writes to stderr
+   *  without touching disk. sync still requires a valid `.noir/project.id`
+   *  (the engine's "not initialized" gate fires regardless). */
+  dryRun?: boolean;
+  /** F1: alias for `--dry-run`. Kept on the options bag so direct callers can
+   *  pass either spelling; the bin collapses both flags before dispatch. */
+  preview?: boolean;
 }
 
 export async function sync(root: string, opts: SyncOptions = {}): Promise<ScaffoldResult> {
@@ -69,15 +77,28 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
     projectInfo = undefined;
   }
 
+  // F1: --dry-run/--preview collapse to a single dryRun boolean.
+  const dryRun = opts.dryRun === true || opts.preview === true;
+
   const res = await scaffold({
     root,
     mode: 'sync',
     host,
     interactive,
+    ...(dryRun ? { dryRun: true } : {}),
     ...conflictOpts,
     // Merge defaults TRUE inside scaffold; only forward an explicit opt-out.
     ...(opts.mergeManagedRegions === false ? { mergeManagedRegions: false } : {}),
   });
+
+  // F1: dry-run reports the planned writes and stops BEFORE skills emission +
+  // dedup (both would touch disk / load the embedder). The engine still throws
+  // its "not initialized" gate when `.noir/project.id` is missing, so a dry-run
+  // sync on an uninitialized project is a clean error (not a misleading no-op).
+  if (dryRun) {
+    reportPlannedWrites(res);
+    return res;
+  }
 
   // Surface the no-op so users see sync was a true no-op on disk (the
   // scaffold wrote nothing — every runtime file was content-hash identical).

@@ -126,9 +126,9 @@ export interface ContextEngineOptions {
  * Constructed once per serve lifecycle (mirror `buildWorkflowEngine`) from the
  * daemon's store handle + a resolved {@link EmbedderConfig}. Resolves the
  * embedder, then owns the indexer (the only context writer) and the retriever
- * (the only context reader). Public surface: {@link indexPaths}, {@link search},
- * {@link status} — the three operations the `context_{index,search,status}` MCP
- * tools (task t9) delegate to.
+ * (the only context reader). Public surface: {@link indexPaths}, {@link reindex},
+ * {@link search}, {@link status} — the operations the `context_index`,
+ * `context_search`, and `context_status` MCP tools (task t9) delegate to.
  */
 export class ContextEngine {
   /** The daemon's single-writer store handle (possibly read-only). */
@@ -186,6 +186,16 @@ export class ContextEngine {
    */
   indexPaths(paths: string[], opts?: IndexPathOptions): Promise<IndexResult> {
     return this.indexer.indexPaths(paths, opts);
+  }
+
+  /**
+   * Drop every indexed chunk + vector, then re-index the registered roots from
+   * scratch (spec F1 "warn + offer reindex, not silent" — the daemon's
+   * `context_index --force` delegates here). Delegates to the indexer; the
+   * engine stays the only context writer.
+   */
+  reindex(): Promise<IndexResult> {
+    return this.indexer.reindex();
   }
 
   /**

@@ -34,7 +34,7 @@ import { type ScaffoldResult, scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 import { buildConflictOpts } from '../conflict.js';
 import { checkWritePathDedup } from '../dedup-write.js';
-import { assertTransportUrl } from '../init.js';
+import { assertTransportUrl, reportPlannedWrites } from '../init.js';
 import { resolveInteractive } from '../output.js';
 
 export interface CreateOptions {
@@ -44,6 +44,12 @@ export interface CreateOptions {
   host?: HostId;
   /** SP-A: re-scaffold even if already initialized. */
   force?: boolean;
+  /** F1: `--dry-run`/`--preview` — report the planned writes to stderr
+   *  without touching disk (incl. NOT creating the target dir). */
+  dryRun?: boolean;
+  /** F1: alias for `--dry-run`. Kept on the options bag so direct callers can
+   *  pass either spelling; the bin collapses both flags before dispatch. */
+  preview?: boolean;
 }
 
 /**
@@ -71,6 +77,10 @@ export async function create(
   // and skills emission see the same hermetic flag.
   const interactive = resolveInteractive();
   const conflictOpts = buildConflictOpts({ force: opts.force, interactive });
+  // F1: --dry-run/--preview collapse to a single dryRun boolean. The engine
+  // skips the target-dir mkdir + every write; skills emission + dedup are
+  // skipped too (they would touch disk / load the embedder).
+  const dryRun = opts.dryRun === true || opts.preview === true;
 
   const res = await scaffold({
     root,
@@ -80,8 +90,16 @@ export async function create(
     interactive,
     ...(opts.url !== undefined ? { url: opts.url } : {}),
     ...(opts.force === true ? { force: true } : {}),
+    ...(dryRun ? { dryRun: true } : {}),
     ...conflictOpts,
   });
+  // F1: dry-run reports the planned writes and stops BEFORE skills emission +
+  // the "created" message — the target dir was NOT created, so nothing may
+  // touch disk. (The engine's create-mode mkdir is gated on !dryRun.)
+  if (dryRun) {
+    reportPlannedWrites(res);
+    return res;
+  }
   // SP-A: a no-op (already-initialized guard) must not re-emit skills.
   if (res.noop) return res;
 

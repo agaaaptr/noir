@@ -22,7 +22,14 @@
 // (`{ok:false,reason:'no-provider'|'model-unavailable'|'no-candidates'}`) is
 // honored as exit 1 with the reason; it is NEVER a silent paid call.
 
-import { callDaemonTool, type DaemonClientOptions, withDaemon } from '../daemon-client.js';
+import {
+  callDaemonTool,
+  type DaemonClientOptions,
+  type DaemonProbe,
+  probeDaemon,
+  withDaemon,
+  withInProcessRead,
+} from '../daemon-client.js';
 import {
   type CliOptions,
   definitionList,
@@ -176,8 +183,37 @@ export interface MemoryRecallOptions extends MemoryOptions {
   limit?: string;
 }
 
+/**
+ * Run `memory_recall` against the daemon when it is up, or fall back to the
+ * IN-PROCESS read-only memory engine when the daemon probe reports it down
+ * (S9 DS-5). Reads degrade to the read-only store (never exit 4); writes
+ * (`memory save` / `forget` / `consolidate`) keep the daemon-required path.
+ * The probe is conservative (mirrors contextSearch): only a CONFIRMED
+ * `{running:false}` engages the fallback; an unavailable probe defaults to the
+ * daemon path.
+ */
 export async function memoryRecall(opts: MemoryRecallOptions): Promise<void> {
   const limit = parseLimit(opts.limit, 'memory recall', opts);
+  let probe: DaemonProbe;
+  try {
+    probe = await probeDaemon(opts);
+  } catch {
+    probe = { running: true };
+  }
+  if (!probe.running) {
+    await withInProcessRead(opts, async (engines) => {
+      const result = await engines.memory.recall(opts.query, {
+        ...(limit === undefined ? {} : { limit }),
+      });
+      const data = { query: opts.query, hits: result, degraded: false };
+      if (opts.json === true) {
+        process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
+        return;
+      }
+      renderRecall(data.query, result, data.degraded, opts);
+    });
+    return;
+  }
   const res = await callDaemonTool<MemoryRecallResult | ToolFailure>(opts, 'memory_recall', {
     query: opts.query,
     ...(limit === undefined ? {} : { limit }),
@@ -296,6 +332,29 @@ function renderObservation(obs: Record<string, unknown>, opts: CliOptions): void
 // `noir memory sessions`
 // ---------------------------------------------------------------------------
 export async function memorySessions(opts: MemoryOptions): Promise<void> {
+  let probe: DaemonProbe;
+  try {
+    probe = await probeDaemon(opts);
+  } catch {
+    probe = { running: true };
+  }
+  if (!probe.running) {
+    await withInProcessRead(opts, async (engines) => {
+      const raw = engines.memory.sessions();
+      const sessions: SessionRow[] = raw.map((s) => ({
+        id: s.id,
+        count: s.count,
+        lastTs: s.lastTs,
+      }));
+      const data = { sessions };
+      if (opts.json === true) {
+        process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
+        return;
+      }
+      renderSessions(sessions, opts);
+    });
+    return;
+  }
   const res = await callDaemonTool<MemorySessionsResult | ToolFailure>(opts, 'memory_sessions');
   if (res.ok !== true) failTool('memory sessions', res, opts);
 
@@ -310,11 +369,15 @@ export async function memorySessions(opts: MemoryOptions): Promise<void> {
       })
     : [];
   const data = { sessions };
-
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
     return;
   }
+  renderSessions(sessions, opts);
+}
+
+/** Render the sessions list (human table to stderr; --json handled by caller). */
+function renderSessions(sessions: SessionRow[], opts: CliOptions): void {
   log(`memory sessions — ${sessions.length} session${sessions.length === 1 ? '' : 's'}`, opts);
   table(
     sessions.map((s) => ({ Session: s.id, Observations: s.count, 'Last seen': stamp(s.lastTs) })),

@@ -466,9 +466,13 @@ export function createNoirServer(ctx: ServerContext): McpServer {
             .array(z.string())
             .optional()
             .describe('Files/directories to index (repo-relative or absolute); defaults to ["."].'),
+          force: z
+            .boolean()
+            .optional()
+            .describe('Force a full reindex (drop all chunks+vectors, re-index from scratch).'),
         },
       },
-      async ({ paths }) => {
+      async ({ paths, force }) => {
         // Read-only (daemon-down) store: indexing is a write, so fence it off
         // up front with a clear envelope rather than letting the first write
         // throw partway through (spec F12 / AC-5).
@@ -480,6 +484,15 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           });
         }
         try {
+          // force:true → full reindex: drop every indexed chunk + vector, then
+          // re-index the registered roots from scratch (spec F1 "warn + offer
+          // reindex"). Any `paths` in the same call are a no-op for reindex —
+          // it re-reads the registered roots. The default remains the
+          // content-hash incremental walk.
+          if (force === true) {
+            const result = await context.reindex();
+            return textResult({ ok: true, ...result });
+          }
           const result = await context.indexPaths(paths && paths.length > 0 ? paths : ['.']);
           return textResult({ ok: true, ...result });
         } catch (err) {

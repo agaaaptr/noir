@@ -19,7 +19,14 @@
 // not-found condition, not an error (the broader `noir status` folds the same
 // envelope to `null` and stays exit 0).
 
-import { callDaemonTool, type DaemonClientOptions } from '../daemon-client.js';
+import { PHASES, type Phase } from '@noir-ai/workflow';
+import {
+  callDaemonTool,
+  type DaemonClientOptions,
+  type DaemonProbe,
+  probeDaemon,
+  withInProcessRead,
+} from '../daemon-client.js';
 import { type CliOptions, definitionList, EXIT, fail, info, log, tip } from '../output.js';
 import { badge } from '../theme.js';
 
@@ -127,7 +134,63 @@ export interface TaskStatusOptions extends TaskOptions {
   id?: string;
 }
 
+/** The gate phases in lifecycle order (mirrors the daemon's `nextGateAfter`). */
+const GATE_PHASES = ['spec', 'plan', 'verify'] as const satisfies readonly Phase[];
+
+/** The next gate-phase strictly ahead of `phase`, or `null` (past verify). */
+function nextGateAfter(phase: string): Phase | null {
+  const cur = PHASES.indexOf(phase as Phase);
+  for (const p of GATE_PHASES) {
+    if (PHASES.indexOf(p) > cur) return p;
+  }
+  return null;
+}
+
+/**
+ * Run `task status` against the daemon when it is up, or fall back to the
+ * IN-PROCESS read-only workflow engine when the daemon probe reports it down
+ * (S9 DS-5). A status read on a read-only store is a pure KV read, so instead
+ * of exit 4 it resolves against the in-process engine (still exit 3 NOT_FOUND
+ * for an unknown / absent task). Writes (`task new` / `advance`) keep the
+ * daemon-required exit-4 path.
+ */
 export async function taskStatus(opts: TaskStatusOptions): Promise<void> {
+  // Conservative probe (mirrors contextSearch/memoryRecall): only a CONFIRMED
+  // `{running:false}` engages the in-process fallback; an unavailable probe
+  // defaults to the daemon path.
+  let probe: DaemonProbe;
+  try {
+    probe = await probeDaemon(opts);
+  } catch {
+    probe = { running: true };
+  }
+  if (!probe.running) {
+    const s = await withInProcessRead(opts, async (engines) => {
+      const id = typeof opts.id === 'string' && opts.id.length > 0 ? opts.id : null;
+      const taskId = id ?? engines.workflow.activeTaskId();
+      if (!taskId) fail(EXIT.NOT_FOUND, 'task: no active task', opts);
+      const task = engines.workflow.status(taskId);
+      if (!task) fail(EXIT.NOT_FOUND, `task: unknown task '${taskId}'`, opts);
+      const stopped = task.state === 'blocked' || task.state === 'abandoned';
+      return {
+        ok: true as const,
+        taskId: task.taskId,
+        phase: task.phase,
+        state: task.state,
+        mode: task.mode,
+        nextGate: stopped ? null : nextGateAfter(task.phase),
+        history: task.history,
+        updatedAt: task.updatedAt,
+        degraded: true as const,
+      };
+    });
+    if (opts.json === true) {
+      process.stdout.write(`${JSON.stringify({ ok: true, data: s })}\n`);
+      return;
+    }
+    renderStatusRow(s, opts);
+    return;
+  }
   const s = await fetchStatus(opts, opts.id);
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: s })}\n`);

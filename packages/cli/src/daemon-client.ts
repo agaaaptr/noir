@@ -29,8 +29,12 @@
 // failure — it parses cleanly and is returned to the caller as data.
 
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
+import { ContextEngine, createEmbedFn, resolveEmbedderConfig } from '@noir-ai/context';
 import { loadProjectInfo, NOIR_VERSION, type ProjectInfo } from '@noir-ai/core';
 import { ensureDaemonRunning, pidAlive, readDaemonRecord } from '@noir-ai/daemon';
+import { createMemoryEngine, type MemoryEngine } from '@noir-ai/memory';
+import { openStore } from '@noir-ai/store';
+import { WorkflowEngine } from '@noir-ai/workflow';
 import { EXIT, fail } from './bin.js';
 
 /** Options shared by every daemon-client entry point. */
@@ -70,6 +74,15 @@ export interface DaemonToolCaller {
 
 /** Daemon-down remediation hint (S9). Stable across releases. */
 export const DAEMON_DOWN_HINT = 'daemon not reachable — try `noir daemon start`';
+
+/**
+ * Bounded /health probe window (ms). A probe must never hang: a stale daemon
+ * record can point at a port bound by an unrelated process that accepts TCP but
+ * never answers, and the probe is now the FIRST hop for every read command's
+ * fallback decision. A timeout is treated as "not running" (reads degrade to the
+ * read-only engine); the bound also keeps the daemon-up fast path snappy.
+ */
+export const PROBE_TIMEOUT_MS = 1500;
 
 function describeCause(cause: unknown): string {
   if (cause instanceof Error) return `${cause.name}: ${cause.message}`;
@@ -133,7 +146,13 @@ export async function probeDaemon(opts: DaemonClientOptions = {}): Promise<Daemo
     return { running: false };
   }
   try {
-    const res = await fetch(`http://127.0.0.1:${rec.port}/health`);
+    // Bounded probe: a stale daemon record pointing at a port held by an
+    // unrelated process that accepts TCP but never responds (a blackhole) must
+    // NOT hang the probe (or any read command that probes first). Treat a
+    // timeout as "not running" so reads fall back to the read-only engine.
+    const res = await fetch(`http://127.0.0.1:${rec.port}/health`, {
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
     if (!res.ok) {
       if (opts.verbose) process.stderr.write(`noir: daemon probe: /health → HTTP ${res.status}\n`);
       return { running: false };
@@ -360,4 +379,85 @@ export async function callDaemonTool<T = unknown>(
   args: Record<string, unknown> = {},
 ): Promise<T> {
   return withDaemon<T>(opts, (caller) => caller.callTool<T>(name, args));
+}
+
+// ---------------------------------------------------------------------------
+// In-process read-only fallback (S9 DS-5). READS only — the single-writer
+// invariant is preserved because the store is opened READ-ONLY and every engine
+// built over it (context retriever, memory recall/sessions, workflow status) is
+// a pure reader. Writes keep the daemon-required path (exit 4 when down).
+// ---------------------------------------------------------------------------
+
+/** Engines constructed in-process by {@link withInProcessRead} (reads only). */
+export interface InProcessEngines {
+  /** Hybrid-retrieval engine over the read-only store handle. */
+  context: ContextEngine;
+  /** Cross-session memory engine over the same handle (recall/sessions read). */
+  memory: MemoryEngine;
+  /** Workflow engine over the same handle (status read). */
+  workflow: WorkflowEngine;
+}
+
+/**
+ * Open the project's store READ-ONLY, build the context + memory + workflow
+ * engines in-process over that one handle, run `fn`, and close the store in
+ * `finally`. This is the daemon-down fallback for READ commands (`context
+ * search`, `memory recall`, `memory sessions`, `task status`): a read-only
+ * handle preserves the daemon's single-writer discipline (the store is never
+ * opened for writes here), and reads (FTS, kNN, counts, KV) keep working on it
+ * exactly as they do for a degraded daemon handle.
+ *
+ * Construction mirrors {@link openStoreForDaemon} + the daemon's stdio/http
+ * seams: the context engine resolves its embedder from the project's
+ * `context:` config via {@link resolveEmbedderConfig} (a pure projection —
+ * construction never touches the network or the native runtime; a `kind:'none'`
+ * or unavailable embedder degrades reads to BM25-only, F8); the memory engine
+ * shares the SAME embed; the workflow engine reads the store KV. All three
+ * reuse the injected handle — no second connection.
+ *
+ * `storeDegraded: true` is threaded into both engines so their persistent
+ * `degraded` flag is honest (a read-only handle) and any accidental write
+ * refuses with the daemon's "store is read-only (daemon down)" error rather
+ * than silently succeeding.
+ *
+ * The store is ALWAYS closed in `finally`, even when `fn` throws (a one-shot
+ * CLI command never strands a handle).
+ *
+ * @param opts Daemon-client options. `project` resolves the store path + the
+ *   embedder config; when absent it is resolved from `process.cwd()`
+ *   (uninitialized project → throws the "Run `noir init` first" exit-1 hint,
+ *   mirroring {@link resolveDaemon}).
+ */
+export async function withInProcessRead<T>(
+  opts: DaemonClientOptions,
+  fn: (engines: InProcessEngines) => Promise<T>,
+): Promise<T> {
+  const project = opts.project ?? loadProjectInfo(process.cwd());
+  const store = await openStore({ projectId: project.id, root: project.root, readonly: true });
+  try {
+    // READ-ONLY handle: `storeDegraded` is threaded so status/degraded flags are
+    // honest and any accidental write refuses cleanly (single writer preserved).
+    const embedderCfg = resolveEmbedderConfig(project.config.context);
+    const embed = createEmbedFn(embedderCfg).embed;
+    const context = new ContextEngine({
+      store,
+      root: project.root,
+      projectId: project.id,
+      embedderCfg,
+      storeDegraded: true,
+    });
+    const memory = createMemoryEngine({
+      store,
+      root: project.root,
+      projectId: project.id,
+      embed,
+      storeDegraded: true,
+    });
+    const workflow = new WorkflowEngine(store, project.root, project.id);
+    return await fn({ context, memory, workflow });
+  } finally {
+    await store.close().catch(() => {
+      /* a close error must not mask the command's outcome */
+    });
+  }
 }

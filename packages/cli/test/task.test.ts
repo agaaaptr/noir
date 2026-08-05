@@ -12,6 +12,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { payloads } = vi.hoisted(() => ({ payloads: { current: {} as Record<string, unknown> } }));
+// `probeDaemon`/`withInProcessRead` back the daemon-down read fallback (DS-5).
+// Mocking them explicitly keeps the existing daemon-path tests green (probe
+// defaulting to `{running:true}`) and lets a fallback test flip the probe.
+const { probeResult } = vi.hoisted(() => ({
+  probeResult: { current: { running: true } as { running: boolean } },
+}));
 
 vi.mock('../src/daemon-client.js', () => ({
   callDaemonTool: vi.fn(async (_opts: unknown, name: string, args?: Record<string, unknown>) => {
@@ -21,6 +27,24 @@ vi.mock('../src/daemon-client.js', () => ({
     }
     return payloads.current[name];
   }),
+  probeDaemon: vi.fn(async () => probeResult.current),
+  withInProcessRead: vi.fn(async (_opts: unknown, fn: (c: unknown) => Promise<unknown>) =>
+    fn({
+      workflow: {
+        activeTaskId: vi.fn(() => 't-inproc'),
+        status: vi.fn(() => ({
+          taskId: 't-inproc',
+          phase: 'plan',
+          state: 'in_progress',
+          mode: 'full',
+          history: [],
+          updatedAt: 0,
+        })),
+      },
+      context: {},
+      memory: {},
+    }),
+  ),
 }));
 
 import {
@@ -33,6 +57,7 @@ import {
 import { callDaemonTool } from '../src/daemon-client.js';
 
 function reset(): void {
+  probeResult.current = { running: true };
   payloads.current = {
     workflow_status: {
       ok: true,
@@ -156,6 +181,20 @@ describe('task status', () => {
   it('"unknown task" envelope → exit 3 (NOT_FOUND)', async () => {
     payloads.current['workflow_status:t-99'] = { ok: false, taskId: 't-99', error: 'unknown task' };
     await expect(taskStatus({ ...base, id: 't-99' })).rejects.toMatchObject({ exitCode: 3 });
+  });
+
+  it('daemon probe down → in-process read fallback (no daemon call)', async () => {
+    probeResult.current = { running: false };
+    const { capture, restore } = captureStreams();
+    try {
+      await taskStatus({ ...base, json: true });
+      expect(vi.mocked(callDaemonTool)).not.toHaveBeenCalled();
+      const env = JSON.parse(capture().out);
+      expect(env.ok).toBe(true);
+      expect(env.data.taskId).toBe('t-inproc');
+    } finally {
+      restore();
+    }
   });
 });
 

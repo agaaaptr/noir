@@ -31,7 +31,7 @@ import { type ScaffoldResult, scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 import { buildConflictOpts, type ScaffoldConflictOpts } from './conflict.js';
 import { checkWritePathDedup } from './dedup-write.js';
-import { resolveInteractive } from './output.js';
+import { log, resolveInteractive } from './output.js';
 
 export interface InitOptions {
   transport: 'stdio' | 'streamable-http';
@@ -48,6 +48,13 @@ export interface InitOptions {
   /** SP-A: re-scaffold even if already initialized (bypasses the
    *  already-initialized no-op guard in scaffold()). */
   force?: boolean;
+  /** F1: `--dry-run`/`--preview` — report the planned writes to stderr
+   *  (via {@link reportPlannedWrites}) without touching disk. The scaffold
+   *  engine already supports this; the CLI just surfaces it. */
+  dryRun?: boolean;
+  /** F1: alias for `--dry-run`. Kept on the options bag so direct callers can
+   *  pass either spelling; the bin collapses both flags before dispatch. */
+  preview?: boolean;
 }
 
 /**
@@ -64,6 +71,10 @@ export async function init(root: string, opts: InitOptions): Promise<ScaffoldRes
   // process.env). The CLI derives it once from the bridge + TTY/CI/NO_COLOR gate.
   const interactive = resolveInteractive();
   const conflictOpts = buildConflictOpts({ force: opts.force, interactive });
+  // F1: --dry-run/--preview collapse to a single dryRun boolean. The engine
+  // skips every write and returns the PLANNED lists; skills emission + dedup are
+  // skipped too (they would touch disk / load the embedder).
+  const dryRun = opts.dryRun === true || opts.preview === true;
 
   const res = await scaffold({
     root,
@@ -74,8 +85,18 @@ export async function init(root: string, opts: InitOptions): Promise<ScaffoldRes
     ...(opts.url !== undefined ? { url: opts.url } : {}),
     ...(opts.upgrade === true ? { upgrade: true } : {}),
     ...(opts.force === true ? { force: true } : {}),
+    ...(dryRun ? { dryRun: true } : {}),
     ...conflictOpts,
   });
+  // F1: dry-run reports the planned writes (result's written/skipped/identical)
+  // and stops BEFORE skills emission + the "initialized" message — nothing was
+  // written, so the host skill dir must stay untouched and we must not claim
+  // init. Under --json the bin emits the planned list as the `{ok, data}`
+  // envelope on stdout (the data channel) instead.
+  if (dryRun) {
+    reportPlannedWrites(res);
+    return res;
+  }
   // SP-A: if the already-initialized guard no-op'd scaffold, stop — don't re-emit
   // skills or print "initialized" (scaffold already printed the no-op message).
   if (res.noop) return res;
@@ -108,6 +129,36 @@ export async function init(root: string, opts: InitOptions): Promise<ScaffoldRes
     'Next: run `noir` to open the home menu (or `noir status` for a snapshot).\n',
   );
   return res;
+}
+
+/**
+ * F1 — report a dry-run (--dry-run/--preview) scaffold result. After
+ * `scaffold({dryRun:true})` the result's `written`/`skipped`/`identical` carry
+ * the PLANNED paths (nothing touched disk): `written` = files that WOULD be
+ * written, `skipped` = skipIfExists files already present (left alone),
+ * `identical` = files whose bytes would match the template (no rewrite).
+ * `conflicts` is always empty under dryRun (no writes → no conflicts).
+ *
+ * Emitted via the `log()` stderr helper — a HUMAN diagnostic, so under `--json`
+ * the bin emits the planned list as the structured `{ok, data}` envelope on
+ * stdout (the data channel) instead, matching the S9 stream discipline used by
+ * the other init/create/sync diagnostics. Shared by init/create/sync (the same
+ * dryRun surface on all three scaffold modes).
+ */
+export function reportPlannedWrites(res: ScaffoldResult): void {
+  log('Dry run — no files were written.');
+  if (res.written.length > 0) {
+    log('Planned writes:');
+    for (const p of res.written) log(`  ${p}`);
+  }
+  if (res.skipped.length > 0) {
+    log('Would leave as-is (already present):');
+    for (const p of res.skipped) log(`  ${p}`);
+  }
+  if (res.identical.length > 0) {
+    log('Would rewrite (byte-identical, no-op):');
+    for (const p of res.identical) log(`  ${p}`);
+  }
 }
 
 /**

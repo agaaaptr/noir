@@ -63,6 +63,9 @@ importers:
       '@noir-ai/daemon':
         specifier: workspace:*
         version: link:../daemon
+      '@noir-ai/memory':
+        specifier: workspace:*
+        version: link:../memory
       '@noir-ai/model':
         specifier: workspace:*
         version: link:../model
@@ -72,6 +75,9 @@ importers:
       '@noir-ai/store':
         specifier: workspace:*
         version: link:../store
+      '@noir-ai/workflow':
+        specifier: workspace:*
+        version: link:../workflow
       cli-table3:
         specifier: ^0.6.5
         version: 0.6.5

@@ -10,12 +10,38 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { payloads } = vi.hoisted(() => ({ payloads: { current: {} as Record<string, unknown> } }));
 
+// The daemon-down fallback adds two new exports to daemon-client that the
+// existing tests must mock explicitly (otherwise the real `probeDaemon` is
+// undefined in the mock factory and the `try/catch` in contextSearch silently
+// treats every probe as "daemon up" — masking the probe entirely). Default the
+// probe to `{running:true}` so the EXISTING tests keep exercising the daemon
+// path; a probe-down test overrides `probeResult.current`.
+const { probeResult } = vi.hoisted(() => ({
+  probeResult: { current: { running: true } as { running: boolean } },
+}));
+
 vi.mock('../src/daemon-client.js', () => ({
   callDaemonTool: vi.fn(
     async (_opts: unknown, name: string, _args?: Record<string, unknown>) => payloads.current[name],
   ),
   withDaemon: vi.fn(async (_opts: unknown, fn: (c: unknown) => Promise<unknown>) =>
     fn({ listTools: async () => Object.keys(payloads.current) }),
+  ),
+  probeDaemon: vi.fn(async () => probeResult.current),
+  withInProcessRead: vi.fn(async (_opts: unknown, fn: (c: unknown) => Promise<unknown>) =>
+    fn({
+      context: {
+        search: vi.fn(async () => ({
+          results: [],
+          consumedTokens: 0,
+          truncated: false,
+          degraded: false,
+          mode: 'bm25',
+        })),
+      },
+      memory: {},
+      workflow: {},
+    }),
   ),
 }));
 
@@ -28,6 +54,7 @@ import {
 import { callDaemonTool } from '../src/daemon-client.js';
 
 function reset(): void {
+  probeResult.current = { running: true };
   payloads.current = {
     context_search: {
       ok: true,
@@ -172,6 +199,22 @@ describe('context search --json', () => {
       restore();
     }
   });
+
+  it('daemon probe down → falls back to the in-process read engine (no daemon call)', async () => {
+    probeResult.current = { running: false };
+    const { capture, restore } = captureStreams();
+    try {
+      await contextSearch({ ...base, json: true, query: 'x', limit: '5' });
+      // The daemon path is NOT taken when the probe confirms the daemon is down.
+      expect(vi.mocked(callDaemonTool)).not.toHaveBeenCalled();
+      const env = JSON.parse(capture().out);
+      expect(env.ok).toBe(true);
+      expect(env.data.query).toBe('x');
+      expect(env.data.hits).toEqual([]);
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe('context search — human table on stderr', () => {
@@ -248,14 +291,11 @@ describe('context index', () => {
     await expect(contextIndex({ ...base })).rejects.toMatchObject({ exitCode: 1 });
   });
 
-  it('--force is recognized but does not break the flow', async () => {
-    const { capture, restore } = captureStreams();
-    try {
-      await contextIndex({ ...base, force: true });
-      expect(capture().err).toContain('--force is recognized but not yet honored');
-    } finally {
-      restore();
-    }
+  it('--force threads {force:true} to the daemon (full reindex)', async () => {
+    await contextIndex({ ...base, force: true });
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(expect.anything(), 'context_index', {
+      force: true,
+    });
   });
 });
 

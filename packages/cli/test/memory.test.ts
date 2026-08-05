@@ -23,6 +23,15 @@ const { payloads, clackMock, CANCEL } = vi.hoisted(() => ({
   },
 }));
 
+// `probeDaemon`/`withInProcessRead` are new daemon-client exports backing the
+// daemon-down read fallback (DS-5). They MUST be mocked explicitly — a missing
+// `probeDaemon` in the factory makes memoryRecall's `try/catch` treat every
+// probe as "daemon up", silently masking the probe. Default to `{running:true}`
+// (existing tests keep the daemon path); a fallback test flips `probeResult.current`.
+const { probeResult } = vi.hoisted(() => ({
+  probeResult: { current: { running: true } as { running: boolean } },
+}));
+
 vi.mock('../src/daemon-client.js', () => ({
   callDaemonTool: vi.fn(
     async (_opts: unknown, name: string, _args?: Record<string, unknown>) => payloads.current[name],
@@ -31,6 +40,19 @@ vi.mock('../src/daemon-client.js', () => ({
   // so `consolidate`'s capability discovery is controllable per-test.
   withDaemon: vi.fn(async (_opts: unknown, fn: (c: unknown) => Promise<unknown>) =>
     fn({ listTools: async () => Object.keys(payloads.current) }),
+  ),
+  probeDaemon: vi.fn(async () => probeResult.current),
+  withInProcessRead: vi.fn(async (_opts: unknown, fn: (c: unknown) => Promise<unknown>) =>
+    fn({
+      memory: {
+        // `memoryRecall`'s fallback treats the engine recall result AS the
+        // hits array (`data = { query, hits: result }`), so return an array.
+        recall: vi.fn(async () => []),
+        sessions: vi.fn(() => []),
+      },
+      context: {},
+      workflow: {},
+    }),
   ),
 }));
 
@@ -47,6 +69,7 @@ import {
 import { callDaemonTool } from '../src/daemon-client.js';
 
 function reset(): void {
+  probeResult.current = { running: true };
   payloads.current = {
     memory_recall: {
       ok: true,
@@ -218,6 +241,21 @@ describe('memory recall', () => {
     });
     expect(vi.mocked(callDaemonTool)).not.toHaveBeenCalled();
   });
+
+  it('daemon probe down → in-process read fallback (no daemon call)', async () => {
+    probeResult.current = { running: false };
+    const { capture, restore } = captureStreams();
+    try {
+      await memoryRecall({ ...base, json: true, query: 'x' });
+      expect(vi.mocked(callDaemonTool)).not.toHaveBeenCalled();
+      const env = JSON.parse(capture().out);
+      expect(env.ok).toBe(true);
+      expect(env.data.query).toBe('x');
+      expect(env.data.hits).toEqual([]);
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe('memory save', () => {
@@ -296,6 +334,20 @@ describe('memory sessions', () => {
       expect(c.out).toBe('');
       expect(c.err).toContain('s1');
       expect(c.err).toContain('Observations');
+    } finally {
+      restore();
+    }
+  });
+
+  it('daemon probe down → in-process read fallback (no daemon call)', async () => {
+    probeResult.current = { running: false };
+    const { capture, restore } = captureStreams();
+    try {
+      await memorySessions({ ...base, json: true });
+      expect(vi.mocked(callDaemonTool)).not.toHaveBeenCalled();
+      const env = JSON.parse(capture().out);
+      expect(env.ok).toBe(true);
+      expect(env.data.sessions).toEqual([]);
     } finally {
       restore();
     }

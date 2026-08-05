@@ -18,7 +18,13 @@
 // NO_COLOR / non-TTY / --json). `--limit` is coerced here; an invalid value is a
 // USAGE error (exit 2) before we touch the daemon.
 
-import { callDaemonTool, type DaemonClientOptions } from '../daemon-client.js';
+import {
+  callDaemonTool,
+  type DaemonClientOptions,
+  type DaemonProbe,
+  probeDaemon,
+  withInProcessRead,
+} from '../daemon-client.js';
 import { type CliOptions, definitionList, EXIT, fail, info, log, table } from '../output.js';
 import { badge } from '../theme.js';
 
@@ -152,8 +158,59 @@ export interface ContextSearchOptions extends ContextOptions {
   limit?: string;
 }
 
+/**
+ * Run `context_search` against the daemon when it is up, or fall back to the
+ * IN-PROCESS read-only engine when the daemon probe reports it down (S9 DS-5).
+ *
+ * A daemon-down probe is a READ degradation, not a write failure: the read-only
+ * store keeps working, so instead of exit 4 the search runs against a fresh
+ * in-process {@link withInProcessRead} ContextEngine over the same project
+ * store (BM25-only when the embedder is unavailable — F8). Writes (`context
+ * index`) keep the daemon-required exit-4 path. When the daemon IS up, the
+ * probe result is ignored and the normal daemon round-trip proceeds unchanged
+ * (the probe only ever short-circuits on a CONFIRMED down).
+ *
+ * The probe is best-effort and CONSERVATIVE: an unavailable probe (a host that
+ * stubs the daemon-client without a `probeDaemon` export, or a probe transport
+ * hiccup) is treated as "daemon may be up" so the command proceeds down the
+ * normal daemon path (which maps a genuinely-down daemon to exit 4). The
+ * fallback only engages on a CONFIRMED `{running:false}`.
+ */
 export async function contextSearch(opts: ContextSearchOptions): Promise<void> {
   const limit = parseLimit(opts.limit, 'context search', opts);
+  let probe: DaemonProbe;
+  try {
+    probe = await probeDaemon(opts);
+  } catch {
+    // Conservative: can't confirm the daemon is down → use the daemon path.
+    probe = { running: true };
+  }
+  if (!probe.running) {
+    await withInProcessRead(opts, async (engines) => {
+      const result = await engines.context.search(opts.query, {
+        ...(limit === undefined ? {} : { limit }),
+      });
+      const data: ContextSearchData = {
+        query: opts.query,
+        hits: result.results.map((h) => ({
+          path: h.path,
+          score: h.score,
+          snippet: h.snippet,
+          source: h.source,
+        })),
+        consumedTokens: result.consumedTokens,
+        truncated: result.truncated,
+        degraded: result.degraded,
+        mode: result.mode,
+      };
+      if (opts.json === true) {
+        process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
+        return;
+      }
+      renderSearch(data, opts);
+    });
+    return;
+  }
   const res = await callDaemonTool<ContextSearchResult | ToolFailure>(opts, 'context_search', {
     query: opts.query,
     ...(limit === undefined ? {} : { limit }),
@@ -201,23 +258,18 @@ function renderSearch(data: ContextSearchData, opts: CliOptions): void {
 export interface ContextIndexOptions extends ContextOptions {
   /** Raw repeated `--path` values from commander (`undefined` ⇒ index root). */
   paths?: string[];
-  /** Recognized for future content-hash-bypass; not yet honored by the daemon. */
+  /** Force a full reindex (drop all chunks+vectors, re-index from scratch). */
   force?: boolean;
 }
 
 export async function contextIndex(opts: ContextIndexOptions): Promise<void> {
-  // `--force` is part of the S9 §7 signature, but the daemon's context_index
-  // tool does not accept a force flag yet (content-hash incremental is always
-  // on). Rather than silently ignore it, surface the gap honestly so a user
-  // scripting `--force` learns it's a no-op rather than assuming a full reindex.
-  if (opts.force === true) {
-    info(
-      'context index: --force is recognized but not yet honored (content-hash is always incremental).',
-      opts,
-    );
-  }
+  // force:true → the daemon drops every indexed chunk + vector and re-indexes
+  // the registered roots from scratch (spec F1); otherwise the content-hash
+  // incremental walk. Omit the key entirely when not forced so the incremental
+  // contract (and any daemon defaulting) stays unambiguous on the wire.
   const args: Record<string, unknown> =
     opts.paths && opts.paths.length > 0 ? { paths: opts.paths } : {};
+  if (opts.force === true) args.force = true;
   const res = await callDaemonTool<ContextIndexResult | ToolFailure>(opts, 'context_index', args);
   if (res.ok !== true) failTool('context index', res, opts);
 
