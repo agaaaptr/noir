@@ -195,6 +195,9 @@ describe('keybindings — quit, help, scroll', () => {
     const frame = instance.lastFrame() ?? '';
     expect(frame).toMatch(/Keybindings/i);
     expect(frame).toMatch(/press \? \/ Esc \/ q to close/i);
+    // The help overlay documents the palette (Ctrl+K) and output search
+    // (Ctrl+F, n/N) keybindings added in B2 + C2/C4.
+    expect(frame).toMatch(/Ctrl\+K/i);
   });
 
   it('ArrowDown / ArrowUp move the scroll offset without dispatching', async () => {
