@@ -610,7 +610,7 @@ export function createProgram(): Command {
       (val: string, acc: string[]) => [...acc, val],
       [] as string[],
     )
-    .option('--force', 'ignore content-hash caching (recognized; not yet honored)')
+    .option('--force', 'force a full reindex (drop all chunks+vectors, re-index from scratch)')
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();

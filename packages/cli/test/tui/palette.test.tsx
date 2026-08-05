@@ -15,7 +15,7 @@ import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StatusPayload } from '../../src/commands/status.js';
 import { App, type TuiDeps } from '../../src/tui/App.js';
-import { __setNoirHome, recordRecent } from '../../src/tui/palette/history.js';
+import { __setNoirHome, loadRecent, recordRecent } from '../../src/tui/palette/history.js';
 import { handRolledMatcher } from '../../src/tui/palette/matcher.js';
 import type { PaletteCommand } from '../../src/tui/palette/types.js';
 
@@ -223,10 +223,18 @@ describe('palette interaction', () => {
 
 describe('recent commands (C3)', () => {
   it('recent commands from the on-disk history render above the full list on an empty query', async () => {
-    recordRecent(['status']);
-    // Let the App use its DEFAULT (on-disk) loader against the isolated home,
+    const pid = 'proj-palette';
+    recordRecent(pid, ['status']);
+    // Inject the REAL on-disk loader (projectId-keyed) against the isolated home,
     // so the persisted recents actually flow into the palette.
-    const m = mount(HEALTHY, { loadRecent: undefined });
+    const m = mount(HEALTHY, {
+      loadRecent: async () => {
+        const byId = new Map(COMMANDS.map((c) => [c.id, c]));
+        return loadRecent(pid)
+          .map((e) => byId.get(e.id))
+          .filter((c): c is PaletteCommand => c !== undefined);
+      },
+    });
     m.instance.stdin.write('');
     await flush(60);
     const frame = m.instance.lastFrame() ?? '';

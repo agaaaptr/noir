@@ -27,30 +27,17 @@ import { useInputBuffer } from './hooks/useInputBuffer.js';
 import { OutputPane } from './OutputPane.js';
 import { ConfirmOverlay } from './overlays/ConfirmOverlay.js';
 import { computeMatches } from './overlays/SearchMode.js';
-import { loadRecent } from './palette/history.js';
 import { type FuzzyMatcher, handRolledMatcher } from './palette/matcher.js';
 import { Palette } from './palette/Palette.js';
 import type { PaletteCommand } from './palette/types.js';
 import { StatusBar } from './StatusBar.js';
 
 /**
- * Default recent-commands loader (C3): read the on-disk history and hydrate the
- * bare `{argv, id}` entries against the live `commands` so the palette renders
- * real labels/descriptions. Entries whose argv no longer exists in the command
- * tree are dropped (a command removed from a newer build vanishes from recents).
+ * Default recent-commands loader: no on-disk access at the App layer (the App is
+ * project-agnostic). The live entry (index.tsx) injects `deps.loadRecent` wired
+ * to {@link loadRecent}(projectId); tests inject a stub. When neither supplies
+ * one, recents stay empty — the palette renders the full command list only.
  */
-function defaultLoadRecent(
-  commands: readonly PaletteCommand[],
-): () => Promise<readonly PaletteCommand[]> {
-  const byId = new Map(commands.map((cmd) => [cmd.id, cmd]));
-  return async () => {
-    const entries = loadRecent();
-    return entries.flatMap((entry) => {
-      const cmd = byId.get(entry.id);
-      return cmd ? [cmd] : [];
-    });
-  };
-}
 
 /** Injected dependencies (mirrors the `home(opts, deps)` seam). */
 export interface TuiDeps {
@@ -125,10 +112,11 @@ interface DispatchedOutput {
 
 export function App({ deps, initialPayload = null, refreshMs = 5000 }: AppProps): ReactElement {
   const { exit } = useApp();
-  // `recall` (Up/Down history walk) is part of the hook surface but is NOT
-  // wired here yet — arrows must keep scrolling the output pane (B1 is
-  // behavior-preserving); a later task moves the arrow bindings onto recall.
-  const { buffer, setBuffer, pushHistory, clear } = useInputBuffer();
+  // Input history + recall: Up/Down on an EMPTY `/`-input walks the session's
+  // typed commands (shell-like). When the input is non-empty (or it's bare
+  // text), Up/Down scroll the output pane instead — so recall never hijacks
+  // normal scrolling.
+  const { buffer, setBuffer, pushHistory, recall, clear } = useInputBuffer();
   // The active screen. B1 defaults to the dashboard; B2/C1 switch into palette /
   // confirm from their own entry keys.
   const [mode, setMode] = useState<Mode>({ kind: 'dashboard' });
@@ -152,11 +140,13 @@ export function App({ deps, initialPayload = null, refreshMs = 5000 }: AppProps)
   const [recent, setRecent] = useState<readonly PaletteCommand[]>([]);
 
   // ----- load the palette's recent commands once on mount ------------------
-  // `deps.loadRecent` (when provided) supplies fully-hydrated PaletteCommands;
-  // otherwise the on-disk history (a plain {argv, id} list) is hydrated against
-  // the live `commands` so the palette renders the real labels/descriptions.
+  // `deps.loadRecent` (when provided) supplies fully-hydrated PaletteCommands
+  // for THIS project (projectId-keyed on disk). When absent (tests that don't
+  // care about recents), recents stay empty and the palette renders the full
+  // command list only.
   useEffect(() => {
-    const loader = deps.loadRecent ?? defaultLoadRecent(deps.commands ?? []);
+    if (!deps.loadRecent) return;
+    const loader = deps.loadRecent;
     let cancelled = false;
     void loader()
       .then((entries) => {
@@ -168,7 +158,7 @@ export function App({ deps, initialPayload = null, refreshMs = 5000 }: AppProps)
     return () => {
       cancelled = true;
     };
-  }, [deps.loadRecent, deps.commands]);
+  }, [deps.loadRecent]);
 
   // ----- snapshot refresh: paused while a dispatch is in flight ----------
   useEffect(() => {
@@ -269,10 +259,26 @@ export function App({ deps, initialPayload = null, refreshMs = 5000 }: AppProps)
       return;
     }
     if (key.upArrow) {
+      // Recall history ONLY when the input holds a `/`-command that is empty
+      // past the slash — otherwise Up scrolls the output pane.
+      if (buffer === '/') {
+        const entry = recall('up');
+        if (entry !== null) {
+          setBuffer(() => entry);
+          return;
+        }
+      }
       setScrollOffset((o) => Math.max(0, o - 1));
       return;
     }
     if (key.downArrow) {
+      if (buffer === '/') {
+        const entry = recall('down');
+        if (entry !== null) {
+          setBuffer(() => entry);
+          return;
+        }
+      }
       setScrollOffset((o) => o + 1); // OutputPane clamps to content height
       return;
     }
@@ -478,11 +484,14 @@ export function App({ deps, initialPayload = null, refreshMs = 5000 }: AppProps)
     }
     // Record the runnable command into history. History is a ref — invisible to
     // the render, so this keeps submit behavior-identical while the hook's
-    // Up/Down recall surface (wired by a later task) has data to walk.
+    // Up/Down recall surface has data to walk.
     pushHistory(text);
     // Setting pending (→ effect) + running (→ frame + pause refresh) lets Ink
     // paint the "running…" frame BEFORE the dispatch's stream swap starts.
     dispatchCmd(argv);
+    // Persist to the project's recent-commands list (mirrors the palette +
+    // confirm paths) so typed /commands appear in recents on the next session.
+    void recordRuns(argv);
   }
 
   // ----- render -----------------------------------------------------------

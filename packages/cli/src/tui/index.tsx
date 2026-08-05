@@ -11,11 +11,13 @@
 // terminal before unmounting. Dispatched commands write through the captured
 // stream shim, so the host terminal only ever sees Ink's frames.
 
+import { loadProjectInfo } from '@noir-ai/core';
 import { render } from 'ink';
 import { buildPaletteCommandsForTui } from '../bin.js';
 import { gatherStatusPayload, type StatusOptions, type StatusPayload } from '../commands/status.js';
 import type { CliOptions } from '../output.js';
 import { App, type TuiDeps } from './App.js';
+import { loadRecent, recordRecent } from './palette/history.js';
 
 export type { TuiDeps } from './App.js';
 
@@ -41,11 +43,38 @@ function defaultFetchStatus(opts: CliOptions): () => Promise<StatusPayload | nul
  * uses — so command routing is owned by the bin, not reimplemented here.
  */
 export async function runTui(opts: CliOptions, dispatch: TuiDeps['dispatch']): Promise<void> {
+  // ProjectId-keyed recent-commands persistence (C3): resolve the canonical id
+  // once at launch so recents are isolated per project (respects the .noir/
+  // single-source-of-truth invariant). An uninitialized project (loadProjectInfo
+  // throws) degrades to empty recents — the palette still works with the full
+  // command list.
+  let projectId: string | null = null;
+  try {
+    projectId = loadProjectInfo(process.cwd()).id;
+  } catch {
+    projectId = null;
+  }
   const deps: TuiDeps = {
     dispatch,
     fetchStatus: defaultFetchStatus(opts),
     // The palette source, derived from a fresh commander program at launch (B3).
     commands: buildPaletteCommandsForTui(),
+    // C3 — persistent recent commands (projectId-keyed). recordRecent is async
+    // only to match the TuiDeps seam; it never rejects.
+    record: (argv) => {
+      if (projectId) recordRecent(projectId, argv);
+      return Promise.resolve();
+    },
+    loadRecent: async () => {
+      if (!projectId) return [];
+      // Hydrate the bare {argv,id} entries against the live palette commands so
+      // the palette renders real labels/descriptions; drop stale entries whose
+      // argv no longer exists in the current build.
+      const byId = new Map(deps.commands?.map((c) => [c.id, c]) ?? []);
+      return loadRecent(projectId)
+        .map((e) => byId.get(e.id))
+        .filter((c): c is NonNullable<typeof c> => c !== undefined);
+    },
   };
   const instance = render(<App deps={deps} />);
   await instance.waitUntilExit();
