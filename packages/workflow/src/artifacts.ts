@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { paths } from '@noir-ai/core';
 import type { GateResult } from './types.js';
@@ -85,8 +85,6 @@ function resolveAndWrite(
     case 'rename': {
       // Move the user's file aside (unique suffix), then proceed with the write.
       const aside = uniqueAsideSync(abs, '.local');
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { renameSync } = require('node:fs') as typeof import('node:fs');
       renameSync(abs, aside);
       return { write: true };
     }

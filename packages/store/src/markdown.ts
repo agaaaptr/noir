@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 
@@ -108,7 +108,6 @@ function resolveAndWrite(
       return false;
     case 'rename': {
       const aside = uniqueAsideSync(abs, '.local');
-      const { renameSync } = require('node:fs') as typeof import('node:fs');
       renameSync(abs, aside);
       return true;
     }
