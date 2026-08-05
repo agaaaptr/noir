@@ -10,7 +10,7 @@
 
 ## Current status
 
-> **As of 2026-08-05. `1.7.3` is `latest` on npm; `1.7.3-beta.1` is `beta`.** Source version is `1.7.3`. (Registry: `currentBaseVersion 1.7.3`, `latestStable 1.7.3`, `latestBeta 1.7.3-beta.1`.) The shim exec-bit defense-in-depth fix is committed on `develop` (pending the 1.7.4 publish) — see CHANGELOG "1.7.4".
+> **As of 2026-08-05. `1.7.4` is `latest` on npm; `1.7.4-beta.1` is `beta`.** Source version is `1.7.4`. All 11 `@noir-ai/*` packages at `1.7.4`. Next milestone: return to the **C2 TUI delta**.
 
 **The platform today (shipped & working):**
 - **11 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`, unified versioning, npm with SLSA provenance, dist-tags `latest` + `beta`.
@@ -48,7 +48,7 @@ All 15 published releases are in the registry; the milestone history is:
 - **v1.7.1 (2026-08-04)** — post-1.7.0 bugfixes: `noir_clickup_write` MCP tool rename (dotted name broke the MCP session; `fix(daemon)` `368b766`) + piped `install.sh` `curl | bash` fix (`fix(dist)` `23d4f19`).
 - **v1.7.2 — current stable** (published 2026-08-04, dist-tag `latest`), alongside **v1.7.2-beta.1** (`beta`). Post-1.7.1 bugfixes: dynamic-require crash in `noir init --upgrade` conflict path (`fix(cli)` `2c6fc63`), `.mcp.json` absolute native-shim path (fix `spawn noir ENOENT` from GUI MCP clients, `fix` `2f28f91`), and two installer-UX improvements (`fix(dist)` `5964a38` PATH-shadow detection + `b4e6bb9` auto-add shell profile).
 - **v1.7.3 — current stable** (published 2026-08-05, dist-tag `latest`), alongside **v1.7.3-beta.1** (`beta`). Four post-1.7.2 fixes: the bundling `require()` class fix (`crypto`/`fs` latent crashes), native-install `chmod +x` shim + spinner UX, opencode `opts.command` threading, and store `busy_timeout`. Table-driven cross-adapter parity test (+11 tests → 1439 total).
-- **v1.7.4 (on `develop`, pending publish)** — one critical fix: shim exec-bit defense-in-depth (atomicWriteFile mode preservation + ensureShimExecutable self-heal). Closes the chicken-and-egg "noir update → permission denied" bug permanently. Windows native-install bugs (npm.exe, `unzip`, install.ps1 parity) remain deferred (pre-existing, need a Windows VM; CI has no Windows smoke).
+- **v1.7.4 — current stable** (published 2026-08-05, dist-tag `latest`), alongside **v1.7.4-beta.1** (`beta`). One critical fix: shim exec-bit defense-in-depth (atomicWriteFile mode preservation + ensureShimExecutable self-heal). Closes the chicken-and-egg "noir update → permission denied" bug permanently.
 
 ---
 
