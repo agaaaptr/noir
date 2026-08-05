@@ -25,7 +25,7 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/aga
 
 Two channels ship in parallel:
 
-- **Default (`latest`)** — currently `1.7.0` (stable). The command above.
+- **Default (`latest`)** — currently `1.8.0` (stable). The command above.
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
 
   ```bash
