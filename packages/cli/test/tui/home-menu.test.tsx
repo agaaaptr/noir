@@ -11,7 +11,7 @@ import { App, type TuiDeps } from '../../src/tui/App.js';
 import { buildPaletteCommands } from '../../src/tui/commands/registry.js';
 
 const HEALTHY: StatusPayload = {
-  noir: '1.8.0',
+  noir: '1.9.0',
   project: { id: 'proj-test', name: 'noir-demo' },
   host: 'claude',
   daemon: { running: true, pid: 4242, uptimeSec: 125 },
