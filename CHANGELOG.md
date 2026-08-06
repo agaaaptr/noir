@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased — home consolidation + `noir palette` + bidirectional bridge
+
+### Added
+- **Grouped home menu** — bare `noir` now renders a two-level section picker + action list backed by a new shared curated-section module (`packages/cli/src/tui/commands/sections.ts`, React-free). Five sections (Status & context, Memory, Workflow, Setup & maintenance, Dashboard) expose every interactive surface. Per-option hints, keybindings (1-6), destructive-command confirmation, back/next/previous navigation, and the non-interactive arms preserved exactly.
+- **`noir palette` command** — the existing Ink fuzzy command palette mounted palette-first. `requireInteractive`-gated, lazy-imported, zero new routing. Accessible from the home menu ("All commands") and directly via `noir palette`.
+- **TUI home Mode (`h`)** — a curated quick-action screen inside the Ink dashboard consuming the same `sections.ts` module. Bidirectional bridge: home menu → dashboard (`['tui']`), dashboard → home menu (`h`).
+- **Shared palette-command registry** — `buildPaletteCommands(createProgram())` injected as `HomeDeps.commands` so the clack menu AND the TUI palette derive from the same single-source-of-truth — no drift possible (this structurally prevents the blank-Ctrl+K class of bug).
+- **Enhanced dashboard help cheatsheet** — `?` now lists the home quick-actions and `h` bridge in addition to the existing keybindings.
+
+### Changed
+- **Bare `noir` home menu rebuilt** from a flat 8-item `select` to a grouped `selectKey` + `select` navigation. `deps.commands` injected by `bin.ts` from `buildPaletteCommands(createProgram())` (memoized at module scope).
+- **`TuiDeps`/`AppProps` widened** — `AppProps.initialMode` lets `noir palette` render palette-first; `{ kind: 'home' }` added to the `Mode` union.
+- **`runTui` deduplicated** — shared `buildTuiDeps` helper supplies both `runTui` and `runPalette` (projectId-keyed recents + palette source identical for both).
+
+### Fixed
+- **Ctrl+K/Cmd+K in the home menu** no longer routes to the `@clack` vim-map "Exit" option (the root cause was the disjoint home-menu ↔ TUI split — the palette only lived in `noir tui`). Now every surface is reachable from bare `noir`.
+
 ## 1.8.0 (2026-08-05) — C2 TUI delta + capability completion (beta on `develop`, then stable)
 
 Capability 2 (CLI Runtime & UX) completed in one session (ADR-0006): the **TUI command palette + richer widgets** and **all four acceptance-condition gaps** closed. Executed as a 10-agent implementation Workflow + an 11-agent final-verification Workflow (find → adversarial verify); all changes reviewed, the full gate green at **1525 tests**. Cut as `1.8.0-beta.1` on `develop`, then promoted to stable `1.8.0` on `main`.

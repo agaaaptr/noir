@@ -906,23 +906,31 @@ export function createProgram(): Command {
       await runTui(opts, dispatch);
     });
 
-  // Bare `noir` (no subcommand): the home router (S9 t4). Interactive TTY →
-  // @clack menu; non-interactive → `status` (human) or `status --json`
-  // (machine). `dispatch` re-parses a fresh program so home/menu actions inherit
-  // own their own exit codes. status is probe-only: bare
-  // `noir` in CI never auto-starts a daemon and exits 0 even when down.
-  const homeDeps: HomeDeps = {
-    dispatch: async (argv: readonly string[]): Promise<void> => {
-      const sub = createProgram();
-      try {
-        await sub.parseAsync([...argv], { from: 'user' });
-      } catch (err) {
-        // Map the sub-command's failure to process.exitCode (never throw out
-        // of dispatch — home returns and the outer program exit reflects this).
-        handleError(err);
-      }
-    },
-  };
+  // `noir palette` — the fuzzy command palette opened directly (home-consolidation
+  // S3). Same lazy Ink mount as `noir tui` but renders the App palette-first
+  // (`{ kind: 'palette' }` initial mode), so the user can fuzzy-run any command
+  // without first entering the dashboard. Interactive-only (requireInteractive →
+  // exit 2 under non-TTY/--json/--no-input/CI/NO_COLOR), exactly like `noir tui`.
+  program
+    .command('palette')
+    .description('fuzzy command palette — run any noir command (Ink)')
+    .action(async (...args: unknown[]) => {
+      const g = actionGlobals(args);
+      const opts = toCliOptions(g);
+      requireInteractive(opts, '`noir palette`');
+      const tuiUrl = new URL('./tui/index.js', import.meta.url).href;
+      const { runPalette } = await import(/* @vite-ignore */ tuiUrl);
+      const dispatch = async (argv: readonly string[]): Promise<void> => {
+        const sub = createProgram();
+        try {
+          await sub.parseAsync([...argv], { from: 'user' });
+        } catch (err) {
+          handleError(err);
+        }
+      };
+      await runPalette(opts, dispatch);
+    });
+
   program.action(async (...args: unknown[]) => {
     const cmd = trailingCmd(args);
     // Bare `noir` (no subcommand) → the home router. But a leftover positional
@@ -946,6 +954,27 @@ export function createProgram(): Command {
 
 /** Singleton program used by the bin entry (`run`) and re-exported for convenience. */
 export const program: Command = createProgram();
+
+// Home-menu deps, built ONCE at module scope (home-consolidation S2). Defined
+// OUTSIDE createProgram so the palette commands are computed a single time and
+// never recurse (createProgram → homeDeps → createProgram → …). The bare-`noir`
+// action inside createProgram closes over this module-level const.
+const homeDeps: HomeDeps = {
+  dispatch: async (argv: readonly string[]): Promise<void> => {
+    const sub = createProgram();
+    try {
+      await sub.parseAsync([...argv], { from: 'user' });
+    } catch (err) {
+      // Map the sub-command's failure to process.exitCode (never throw out
+      // of dispatch — home returns and the outer program exit reflects this).
+      handleError(err);
+    }
+  },
+  // The grouped home menu resolves its sections against the LIVE palette
+  // registry (home-consolidation S1/S2) — the same source the TUI palette
+  // uses — so the menu cannot drift from the commander tree.
+  commands: buildPaletteCommands(createProgram()),
+};
 
 // ---------------------------------------------------------------------------
 // Error → exit-code mapping lives in `./output.js` (`handleError`); it never

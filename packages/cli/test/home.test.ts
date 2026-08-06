@@ -18,6 +18,8 @@ const { clackMock, CANCEL } = vi.hoisted(() => {
       outro: vi.fn(),
       cancel: vi.fn(),
       select: vi.fn(),
+      selectKey: vi.fn(),
+      confirm: vi.fn(),
       text: vi.fn(),
       isCancel: vi.fn((v: unknown) => v === CANCEL),
     },
@@ -78,12 +80,78 @@ afterEach(() => {
   setTty(savedStdoutTty ?? false, savedStdinTty ?? false);
 });
 
+// The live palette commands the menu resolves its sections against. Mirrors
+// what bin.ts injects as HomeDeps.commands (a subset is enough for tests).
+const TEST_COMMANDS = [
+  {
+    id: 'status',
+    label: 'Status',
+    argv: ['status'],
+    description: 'snapshot',
+    category: 'status',
+    keywords: ['status'],
+    destructive: false,
+  },
+  {
+    id: 'context index',
+    label: 'Context: Index',
+    argv: ['context', 'index'],
+    description: 'index',
+    category: 'context',
+    keywords: ['context', 'index'],
+    destructive: true,
+  },
+  {
+    id: 'memory recall',
+    label: 'Memory: Recall',
+    argv: ['memory', 'recall'],
+    description: 'recall',
+    category: 'memory',
+    keywords: ['memory', 'recall'],
+    destructive: false,
+  },
+  {
+    id: 'task next',
+    label: 'Task: Next',
+    argv: ['task', 'next'],
+    description: 'next',
+    category: 'task',
+    keywords: ['task', 'next'],
+    destructive: false,
+  },
+  {
+    id: 'tui',
+    label: 'Dashboard',
+    argv: ['tui'],
+    description: 'dashboard',
+    category: 'dashboard',
+    keywords: ['tui'],
+    destructive: false,
+  },
+  {
+    id: 'palette',
+    label: 'All commands',
+    argv: ['palette'],
+    description: 'palette',
+    category: 'dashboard',
+    keywords: ['palette'],
+    destructive: false,
+  },
+] as const;
+
 function makeDeps(): HomeDeps & {
   dispatch: ReturnType<typeof vi.fn>;
 } {
   return {
     dispatch: vi.fn(async () => {}),
+    commands: [...TEST_COMMANDS],
   };
+}
+
+/** Drive the grouped menu: pick a section (selectKey) then an action (select). */
+async function pickSectionAndAction(sectionId: string, actionId: string): Promise<void> {
+  clackMock.selectKey.mockResolvedValue(sectionId);
+  clackMock.select.mockResolvedValue(actionId);
 }
 
 describe('home — non-interactive routing (scriptable)', () => {
@@ -136,10 +204,11 @@ describe('home — TUI policy routing', () => {
 
   it('--tui in a TTY runs the menu (advisory hint, TTY honored)', async () => {
     setTty(true, true);
+    clackMock.selectKey.mockResolvedValue('status');
     clackMock.select.mockResolvedValue('status');
     const deps = makeDeps();
     await home({ tui: true }, deps);
-    expect(clackMock.select).toHaveBeenCalledTimes(1);
+    expect(clackMock.selectKey).toHaveBeenCalledTimes(1);
     expect(deps.dispatch).toHaveBeenCalledWith(['status']);
   });
 
@@ -153,52 +222,54 @@ describe('home — TUI policy routing', () => {
 
   it('auto (no flag) preserves S9 behavior — menu in a TTY, status without one', async () => {
     setTty(true, true);
-    clackMock.select.mockResolvedValue('exit');
+    clackMock.selectKey.mockResolvedValue('exit');
     const deps = makeDeps();
     await home({}, deps);
-    expect(clackMock.select).toHaveBeenCalledTimes(1);
+    expect(clackMock.selectKey).toHaveBeenCalledTimes(1);
   });
 });
 
-describe('home — interactive @clack menu', () => {
+describe('home — interactive grouped @clack menu', () => {
   beforeEach(() => {
     setTty(true, true); // interactive
   });
 
-  it('intro + select are shown, "status" dispatches ["status"]', async () => {
-    clackMock.select.mockResolvedValue('status');
+  it('intro + selectKey (section picker) are shown, "status" dispatches ["status"]', async () => {
+    await pickSectionAndAction('status', 'status');
     const deps = makeDeps();
     await home({}, deps);
     expect(clackMock.intro).toHaveBeenCalledTimes(1);
+    // Level 1 = selectKey (section), Level 2 = select (action).
+    expect(clackMock.selectKey).toHaveBeenCalledTimes(1);
     expect(clackMock.select).toHaveBeenCalledTimes(1);
     expect(deps.dispatch).toHaveBeenCalledWith(['status']);
     expect(clackMock.outro).toHaveBeenCalledWith('done');
   });
 
-  it.each([
-    ['index', ['context', 'index']],
-    ['next', ['task', 'next']],
-    ['daemon', ['daemon', 'start']],
-    ['sync', ['sync']],
-    ['handoff', ['handoff']],
-  ] as [string, string[]][])('choice %s dispatches %j', async (choice, argv) => {
-    clackMock.select.mockResolvedValue(choice);
+  it('section "status" → action "context index" dispatches ["context","index"] (destructive: confirm first)', async () => {
+    await pickSectionAndAction('status', 'context index');
+    clackMock.confirm.mockResolvedValue(true);
     const deps = makeDeps();
     await home({}, deps);
-    expect(deps.dispatch).toHaveBeenCalledWith(argv);
+    expect(deps.dispatch).toHaveBeenCalledWith(['context', 'index']);
+    expect(clackMock.confirm).toHaveBeenCalledTimes(1); // destructive gate
   });
 
-  it('"handoff" choice dispatches ["handoff"] (host-handoff quick action)', async () => {
-    clackMock.select.mockResolvedValue('handoff');
+  it('a declined destructive action does NOT dispatch (stays in the section, can back out)', async () => {
+    // Open "status", select the destructive "context index" → decline the
+    // confirm → the loop stays in the section; then the user picks "back" →
+    // returns to the section picker → Exit.
+    clackMock.selectKey.mockResolvedValueOnce('status').mockResolvedValueOnce('exit');
+    clackMock.select.mockResolvedValueOnce('context index').mockResolvedValueOnce('back');
+    clackMock.confirm.mockResolvedValue(false); // decline
     const deps = makeDeps();
     await home({}, deps);
-    expect(deps.dispatch).toHaveBeenCalledTimes(1);
-    expect(deps.dispatch).toHaveBeenCalledWith(['handoff']);
-    expect(clackMock.outro).toHaveBeenCalledWith('done');
+    expect(deps.dispatch).not.toHaveBeenCalled();
+    expect(clackMock.outro).toHaveBeenCalledWith('bye');
   });
 
-  it('"recall" prompts for a query then dispatches ["memory","recall",<q>]', async () => {
-    clackMock.select.mockResolvedValue('recall');
+  it('"memory recall" prompts for a query then dispatches ["memory","recall",<q>]', async () => {
+    await pickSectionAndAction('memory', 'memory recall');
     clackMock.text.mockResolvedValue('auth flow');
     const deps = makeDeps();
     await home({}, deps);
@@ -206,16 +277,42 @@ describe('home — interactive @clack menu', () => {
     expect(deps.dispatch).toHaveBeenCalledWith(['memory', 'recall', 'auth flow']);
   });
 
-  it('"exit" does NOT dispatch; outro("bye")', async () => {
-    clackMock.select.mockResolvedValue('exit');
+  it('section "dashboard" → "tui" dispatches ["tui"] (launches the full-screen dashboard)', async () => {
+    await pickSectionAndAction('dashboard', 'tui');
+    const deps = makeDeps();
+    await home({}, deps);
+    expect(deps.dispatch).toHaveBeenCalledWith(['tui']);
+  });
+
+  it('section "dashboard" → "palette" dispatches ["palette"] (fuzzy command palette)', async () => {
+    await pickSectionAndAction('dashboard', 'palette');
+    const deps = makeDeps();
+    await home({}, deps);
+    expect(deps.dispatch).toHaveBeenCalledWith(['palette']);
+  });
+
+  it('"Exit" at the section picker does NOT dispatch; outro("bye")', async () => {
+    clackMock.selectKey.mockResolvedValue('exit');
     const deps = makeDeps();
     await home({}, deps);
     expect(deps.dispatch).not.toHaveBeenCalled();
     expect(clackMock.outro).toHaveBeenCalledWith('bye');
   });
 
-  it('select cancel (Ctrl+C) → cancel() + exit 5 (CANCELLED), no dispatch', async () => {
+  it('Esc at the action list → back to the section picker (no dispatch)', async () => {
+    // User opens "memory", then cancels the action list (selectKey = memory,
+    // select = CANCEL) → loop returns to the picker; then Exit.
+    clackMock.selectKey.mockResolvedValueOnce('memory').mockResolvedValueOnce('exit');
     clackMock.select.mockResolvedValue(CANCEL);
+    const deps = makeDeps();
+    await home({}, deps);
+    expect(deps.dispatch).not.toHaveBeenCalled();
+    expect(clackMock.selectKey).toHaveBeenCalledTimes(2);
+    expect(clackMock.outro).toHaveBeenCalledWith('bye');
+  });
+
+  it('selectKey cancel (Ctrl+C at the picker) → cancel() + exit 5 (CANCELLED)', async () => {
+    clackMock.selectKey.mockResolvedValue(CANCEL);
     const deps = makeDeps();
     let caught: unknown;
     try {
@@ -230,12 +327,32 @@ describe('home — interactive @clack menu', () => {
   });
 
   it('recall text cancel → exit 5 (CANCELLED)', async () => {
-    clackMock.select.mockResolvedValue('recall');
+    await pickSectionAndAction('memory', 'memory recall');
     clackMock.text.mockResolvedValue(CANCEL);
     const deps = makeDeps();
     await expect(home({}, deps)).rejects.toMatchObject({ exitCode: EXIT.CANCELLED });
     expect(clackMock.cancel).toHaveBeenCalledTimes(1);
     expect(deps.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('navigation: "next" from a section jumps to the next section', async () => {
+    // Open "status", select "next" (→ next section = memory), then pick an action there.
+    clackMock.selectKey.mockResolvedValue('status');
+    clackMock.select.mockResolvedValueOnce('next').mockResolvedValueOnce('memory recall');
+    clackMock.text.mockResolvedValue('q');
+    const deps = makeDeps();
+    await home({}, deps);
+    expect(deps.dispatch).toHaveBeenCalledWith(['memory', 'recall', 'q']);
+  });
+
+  it('navigation: "back" returns to the section picker', async () => {
+    clackMock.selectKey.mockResolvedValueOnce('memory').mockResolvedValueOnce('exit');
+    clackMock.select.mockResolvedValue('back');
+    const deps = makeDeps();
+    await home({}, deps);
+    expect(deps.dispatch).not.toHaveBeenCalled();
+    expect(clackMock.selectKey).toHaveBeenCalledTimes(2);
+    expect(clackMock.outro).toHaveBeenCalledWith('bye');
   });
 });
 

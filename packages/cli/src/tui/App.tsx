@@ -20,9 +20,11 @@ import type { StatusPayload } from '../commands/status.js';
 import { c } from '../theme.js';
 import { CommandInput } from './CommandInput.js';
 import { captureProcessOutput } from './capture.js';
+import { type HomeAction, type HomeSection, resolveSections } from './commands/sections.js';
 import { Footer } from './Footer.js';
 import { formatStatusPayload } from './format.js';
 import { Header } from './Header.js';
+import { HomeMenu } from './HomeMenu.js';
 import { useInputBuffer } from './hooks/useInputBuffer.js';
 import { OutputPane } from './OutputPane.js';
 import { ConfirmOverlay } from './overlays/ConfirmOverlay.js';
@@ -81,6 +83,12 @@ export interface AppProps {
   initialPayload?: StatusPayload | null;
   /** Refresh interval in ms (default 5000). Set large in tests. */
   refreshMs?: number;
+  /**
+   * The mode the App starts in. Defaults to the dashboard. `noir palette`
+   * mounts the app palette-first via `{ kind: 'palette' }` (S3); tests can
+   * start in any mode.
+   */
+  initialMode?: Mode;
 }
 
 /**
@@ -103,14 +111,20 @@ export type Mode =
   | { kind: 'dashboard' }
   | { kind: 'palette' }
   | { kind: 'search'; query: string; matches: number[]; active: number }
-  | { kind: 'confirm'; argv: string[] };
+  | { kind: 'confirm'; argv: string[] }
+  | { kind: 'home' };
 
 interface DispatchedOutput {
   title: string;
   lines: string[];
 }
 
-export function App({ deps, initialPayload = null, refreshMs = 5000 }: AppProps): ReactElement {
+export function App({
+  deps,
+  initialPayload = null,
+  refreshMs = 5000,
+  initialMode = { kind: 'dashboard' },
+}: AppProps): ReactElement {
   const { exit } = useApp();
   // Input history + recall: Up/Down on an EMPTY `/`-input walks the session's
   // typed commands (shell-like). When the input is non-empty (or it's bare
@@ -119,7 +133,7 @@ export function App({ deps, initialPayload = null, refreshMs = 5000 }: AppProps)
   const { buffer, setBuffer, pushHistory, recall, clear } = useInputBuffer();
   // The active screen. B1 defaults to the dashboard; B2/C1 switch into palette /
   // confirm from their own entry keys.
-  const [mode, setMode] = useState<Mode>({ kind: 'dashboard' });
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [payload, setPayload] = useState<StatusPayload | null>(initialPayload);
   const [loading, setLoading] = useState(initialPayload === null);
   const [output, setOutput] = useState<DispatchedOutput | null>(null);
@@ -138,6 +152,11 @@ export function App({ deps, initialPayload = null, refreshMs = 5000 }: AppProps)
   // The persisted recent-commands list for the palette (C3), loaded once on
   // mount. Empty until loaded; the palette renders the full list until then.
   const [recent, setRecent] = useState<readonly PaletteCommand[]>([]);
+  // The curated home sections for the TUI home Mode (S4), resolved against the
+  // live registry once. `deps.commands` is the same palette source the menu +
+  // palette use; when absent (tests) the section module falls back to a fresh
+  // registry.
+  const [homeSections, setHomeSections] = useState<readonly HomeSection[]>([]);
 
   // ----- load the palette's recent commands once on mount ------------------
   // `deps.loadRecent` (when provided) supplies fully-hydrated PaletteCommands
@@ -159,6 +178,19 @@ export function App({ deps, initialPayload = null, refreshMs = 5000 }: AppProps)
       cancelled = true;
     };
   }, [deps.loadRecent]);
+
+  // ----- resolve the curated home sections once (S4) -----------------------
+  // Resolved against the live registry (deps.commands) so the TUI home cannot
+  // drift from the commander tree — same no-drift contract as the clack menu.
+  useEffect(() => {
+    let cancelled = false;
+    void resolveSections(deps.commands ?? []).then((sections) => {
+      if (!cancelled) setHomeSections(sections);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [deps.commands]);
 
   // ----- snapshot refresh: paused while a dispatch is in flight ----------
   useEffect(() => {
@@ -309,6 +341,12 @@ export function App({ deps, initialPayload = null, refreshMs = 5000 }: AppProps)
           setHelp(true);
           return;
         }
+        // h on an empty buffer opens the curated home menu (home-consolidation
+        // S4) — the bridge back to the menu's quick actions.
+        if (input === 'h') {
+          setMode({ kind: 'home' });
+          return;
+        }
       }
       setBuffer((b) => b + input);
       return;
@@ -351,6 +389,21 @@ export function App({ deps, initialPayload = null, refreshMs = 5000 }: AppProps)
     }
     dispatchCmd([...cmd.argv]);
     void recordRuns([...cmd.argv]);
+    setMode({ kind: 'dashboard' });
+  }
+
+  // Home-consolidation (S4): a TUI home quick-action selected. Destructive
+  // actions pause at the same confirm overlay the palette uses; everything else
+  // dispatches through the shared dispatchCmd seam + recency recording. Returns
+  // to the dashboard after dispatch.
+  function handleHomeSelect(action: HomeAction): void {
+    const argv = action.dispatch ?? [action.id];
+    if (action.destructive) {
+      setMode({ kind: 'confirm', argv: [...argv] });
+      return;
+    }
+    dispatchCmd([...argv]);
+    void recordRuns([...argv]);
     setMode({ kind: 'dashboard' });
   }
 
@@ -455,6 +508,8 @@ export function App({ deps, initialPayload = null, refreshMs = 5000 }: AppProps)
         return;
       case 'palette':
         return; // Palette renders its own useInput; no App-level keys here
+      case 'home':
+        return; // HomeMenu renders its own useInput (S4)
       case 'confirm':
         handleConfirmInput(input, key);
         return;
@@ -508,6 +563,20 @@ export function App({ deps, initialPayload = null, refreshMs = 5000 }: AppProps)
           matcher={deps.matcher ?? handRolledMatcher}
           recent={recent}
           onSelect={handlePaletteSelect}
+          onClose={() => setMode({ kind: 'dashboard' })}
+        />
+        <Footer running={false} />
+      </Box>
+    );
+  }
+
+  if (mode.kind === 'home') {
+    return (
+      <Box flexDirection="column">
+        <Header tagline="home" />
+        <HomeMenu
+          sections={homeSections}
+          onSelect={handleHomeSelect}
           onClose={() => setMode({ kind: 'dashboard' })}
         />
         <Footer running={false} />
@@ -583,6 +652,7 @@ function Help(): ReactElement {
       <Text>{c.dim('  Enter       run the typed /command')}</Text>
       <Text>{c.dim('  Esc         back: clear input → dismiss output → quit')}</Text>
       <Text>{c.dim('  q           quit (when the input is empty)')}</Text>
+      <Text>{c.dim('  h           open the curated home quick-actions (home menu)')}</Text>
       <Text>{c.dim('  ↑ / ↓       scroll the output pane')}</Text>
       <Text>{c.dim('  ?           toggle this help')}</Text>
       <Text>{c.dim('  Ctrl+K      open the command palette')}</Text>
@@ -590,6 +660,12 @@ function Help(): ReactElement {
       <Text>{c.dim('  n / N       next / previous match in search (Enter = next)')}</Text>
       <Text>{c.dim('  y / n       approve / decline a destructive command prompt')}</Text>
       <Text>{c.dim('  Ctrl+C      force exit')}</Text>
+      <Text> </Text>
+      <Text>{c.bold('Home menu (h)')}</Text>
+      <Text>{c.dim('  The curated quick actions mirror the bare-`noir` home menu:')}</Text>
+      <Text>
+        {c.dim('  Status &amp; context · Memory · Workflow · Setup &amp; maintenance · Dashboard')}
+      </Text>
       <Text> </Text>
       <Text>{c.bold('Commands')}</Text>
       <Text>{c.dim('  Dispatched through the same routing as `noir` at the prompt.')}</Text>

@@ -43,6 +43,32 @@ function defaultFetchStatus(opts: CliOptions): () => Promise<StatusPayload | nul
  * uses — so command routing is owned by the bin, not reimplemented here.
  */
 export async function runTui(opts: CliOptions, dispatch: TuiDeps['dispatch']): Promise<void> {
+  const deps = await buildTuiDeps(opts, dispatch);
+  const instance = render(<App deps={deps} />);
+  await instance.waitUntilExit();
+}
+
+/**
+ * `noir palette` — mount the App palette-first (S3). Reuses the SAME
+ * `runTui` deps (dispatch seam, commands, recents) so the fuzzy command
+ * palette is identical to the dashboard's Ctrl+K palette, just opened
+ * directly. `dispatch` is the same shape `runTui` receives from bin.ts.
+ */
+export async function runPalette(opts: CliOptions, dispatch: TuiDeps['dispatch']): Promise<void> {
+  // Reuse runTui's deps wiring wholesale, then render palette-first.
+  // Factor the shared deps build out of runTui into a helper to avoid
+  // duplicating the projectId/commands/recents logic.
+  const deps = await buildTuiDeps(opts, dispatch);
+  const instance = render(<App deps={deps} initialMode={{ kind: 'palette' }} />);
+  await instance.waitUntilExit();
+}
+
+/**
+ * Build the shared {@link TuiDeps} for both `runTui` and `runPalette`.
+ * Extracted so the two entry points cannot drift (projectId-keyed recents,
+ * the palette source, and the dispatch seam are identical).
+ */
+async function buildTuiDeps(opts: CliOptions, dispatch: TuiDeps['dispatch']): Promise<TuiDeps> {
   // ProjectId-keyed recent-commands persistence (C3): resolve the canonical id
   // once at launch so recents are isolated per project (respects the .noir/
   // single-source-of-truth invariant). An uninitialized project (loadProjectInfo
@@ -76,6 +102,5 @@ export async function runTui(opts: CliOptions, dispatch: TuiDeps['dispatch']): P
         .filter((c): c is NonNullable<typeof c> => c !== undefined);
     },
   };
-  const instance = render(<App deps={deps} />);
-  await instance.waitUntilExit();
+  return deps;
 }

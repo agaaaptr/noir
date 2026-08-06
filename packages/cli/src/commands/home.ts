@@ -1,15 +1,26 @@
-// S9 t4 — `noir` (bare) home menu.
+// S9 t4 + home-consolidation — `noir` (bare) home menu.
 //
 // The interactive entry point. Dispatch rules (spec F1 / AC1 / task t4):
 //   • interactive (TTY && !CI && !NO_COLOR && !--json && !--no-input) → the
-//     @clack/prompts select menu (intro + quick actions), dispatching the
-//     chosen action through the SAME commander program the bin uses, so the
-//     menu automatically inherits those implementations as they land.
+//     @clack/prompts grouped home menu (intro + sections + quick actions),
+//     dispatching the chosen action through the SAME commander program the bin
+//     uses, so the menu automatically inherits those implementations as they
+//     land.
 //   • non-interactive + --json → run `status --json` (machine snapshot).
 //   • non-interactive + no --json → run `status` (human snapshot). Safe now that
 //     `status` is probe-only: it NEVER auto-starts a daemon and exits 0
 //     even when the daemon is down, so bare `noir` in CI / a pipe is a useful
 //     no-op snapshot instead of a noisy failure or a help dump.
+//
+// Home-consolidation (S2): the interactive arm is a two-level grouped menu —
+// a section picker (selectKey, 1-6) then per-section action lists (select with
+// per-option hints). Navigation is smooth: Esc / backspace / ← return to the
+// section picker, → jumps to the next section, ← to the previous, so the user
+// can move across sections without re-entering level 1 each time. The section
+// content comes from the SHARED React-free {@link resolveSections} module
+// (tui/commands/sections.ts), which references palette-registry ids — so the
+// menu cannot drift from the commander tree. `deps.commands` is injected by
+// bin.ts (the same list the TUI palette uses).
 //
 // `@clack/prompts` is imported lazily inside the interactive branch so the
 // non-interactive paths (the common CI/script case) never pay for it and never
@@ -17,10 +28,10 @@
 // disabled — `isInteractive` already gated that — and a Ctrl+C at any prompt
 // maps to exit 5 (CANCELLED) via `fail`.
 //
-// Decoupling: `home` takes its `dispatch` as an injected callback (provided by
-// bin.ts) so this module has NO import edge back to bin.ts (which would be
-// circular: bin imports home). That also makes the menu unit-testable without
-// commander — tests pass a fake callback + mock @clack.
+// Decoupling: `home` takes its `dispatch` + `commands` as injected callbacks
+// (provided by bin.ts) so this module has NO import edge back to bin.ts (which
+// would be circular: bin imports home). That also makes the menu unit-testable
+// without commander — tests pass a fake callback + mock @clack.
 
 import { type HostId, hostLaunchDirective } from '@noir-ai/adapters';
 import {
@@ -32,6 +43,9 @@ import {
 import { NOIR_TAGLINE, renderBanner, shouldShowBanner } from '../banner.js';
 import { type CliOptions, EXIT, fail, isInteractive } from '../output.js';
 import { c } from '../theme.js';
+import { isDestructive } from '../tui/commands/registry.js';
+import { type HomeAction, type HomeSection, resolveSections } from '../tui/commands/sections.js';
+import type { PaletteCommand } from '../tui/palette/types.js';
 import { DEFAULT_UPDATE_CONFIG, runAsyncUpdateCheck } from './update.js';
 
 /** Callbacks home needs from the bin (injected → no circular import). */
@@ -43,6 +57,14 @@ export interface HomeDeps {
    * so it becomes the final exit code of the whole `noir` invocation.
    */
   dispatch: (argv: readonly string[]) => Promise<void>;
+  /**
+   * The live palette commands (derived from `createProgram()` by bin.ts) — the
+   * same source the TUI palette uses. The grouped home menu resolves its
+   * sections against this so it cannot drift. Optional for backward-compat
+   * (older tests omit it); when absent, sections fall back to the internal
+   * curated ids that resolve against a fresh registry.
+   */
+  readonly commands?: readonly PaletteCommand[];
 }
 
 /** Try to read the project for a friendlier intro banner; never throws. */
@@ -72,12 +94,7 @@ export function shouldShowMigrationBanner(rec: InstallRecord, currentVersion: st
 
 /** One-line summary of the CLI command surface (shown under the banner). */
 const COMMANDS_HINT =
-  'Commands: init · create · sync · status · context · memory · skills · task · daemon · doctor';
-
-// The host-direction line is the shared `hostLaunchDirective` in
-// `@noir-ai/adapters` (single source): the home banner AND the handoff artifact
-// both call it, so the wording never drifts. The local `hostDirection` wrapper
-// is gone; `hostLaunchDirective(host)` is called directly at the render sites.
+  'Commands: status · context · memory · task · skills · daemon · doctor · install · update · tui · palette';
 
 /**
  * Bare-`noir` router. See module header for the three dispatch arms. Never
@@ -103,6 +120,236 @@ export async function home(opts: CliOptions, deps: HomeDeps): Promise<void> {
   // — it never auto-starts a daemon and exits 0 even when down, so this is
   // a useful bare-`noir` snapshot in CI / pipes instead of a help dump.
   await deps.dispatch(['status']);
+}
+
+// ---------------------------------------------------------------------------
+// The grouped home menu (interactive arm).
+//
+// Two levels driven by a small state machine so navigation is smooth:
+//   LEVEL 1 — section picker (clack.selectKey): 1-6 sections + Exit.
+//   LEVEL 2 — per-section action list (clack.select with hints).
+//
+// Navigation keys are handled by @clack itself at each level (Esc cancels that
+// prompt). We return a sentinel from each level and branch on it, so "back"
+// from level 2 loops back to level 1, and "next"/"previous" from level 2 jump
+// to the adjacent section's action list. Cancel anywhere → exit 5 (CANCELLED).
+// ---------------------------------------------------------------------------
+
+/** @clack's `select`/`selectKey` result is a value | cancel-symbol. */
+type ClackChoice = string | symbol;
+
+/** The @clack/prompts module (lazy). */
+type Clack = typeof import('@clack/prompts');
+
+/**
+ * Level 1 — the section picker. Returns which section to open, or a control
+ * outcome. `selectKey` binds each section to a digit (1-6); Esc / Ctrl+C
+ * cancels the menu → exit 5 (CANCELLED), preserving the original contract.
+ */
+async function pickSection(
+  clack: Clack,
+  sections: readonly HomeSection[],
+  opts: CliOptions,
+): Promise<ClackChoice> {
+  const result = await clack.selectKey({
+    message: 'What would you like to do?',
+    options: [
+      ...sections.map((s) => ({
+        value: s.id,
+        label: s.label,
+        hint: s.hint,
+      })),
+      { value: 'exit', label: 'Exit', hint: 'leave the home menu' },
+    ],
+  });
+  if (clack.isCancel(result)) {
+    clack.cancel('Cancelled.');
+    fail(EXIT.CANCELLED, 'cancelled', opts);
+  }
+  return result;
+}
+
+/**
+ * Level 2 — the action list for `section`. Returns which action to run, or a
+ * control outcome. `select` renders each action with a one-line `hint`; the
+ * final "Back" option returns to the section picker. Cancel → back too.
+ */
+async function pickAction(
+  clack: Clack,
+  section: HomeSection,
+  sections: readonly HomeSection[],
+  opts: CliOptions,
+): Promise<ClackChoice> {
+  const idx = sections.findIndex((s) => s.id === section.id);
+  const hasPrev = idx > 0;
+  const hasNext = idx !== -1 && idx < sections.length - 1;
+  const result = await clack.select({
+    message: section.label,
+    initialValue: section.items[0]?.id,
+    options: [
+      ...section.items.map((a) => ({
+        value: a.id,
+        label: a.label,
+        hint: a.hint,
+      })),
+      // Navigation options so the user can move across sections without
+      // re-entering the section picker (the "lancar" navigation requirement).
+      ...(hasPrev
+        ? [{ value: 'prev' as const, label: '← Prev section', hint: sections[idx - 1]?.label }]
+        : []),
+      ...(hasNext
+        ? [{ value: 'next' as const, label: '→ Next section', hint: sections[idx + 1]?.label }]
+        : []),
+      { value: 'back', label: '↑ Back to sections', hint: 'return to the section picker' },
+    ],
+  });
+  if (clack.isCancel(result)) {
+    // Esc / Ctrl+C at the action list → back to the section picker (not exit).
+    clack.cancel('Back to the home menu.');
+    return 'back';
+  }
+  if (opts.verbose) {
+    process.stderr.write(`noir: home: section '${section.id}' selected\n`);
+  }
+  return result;
+}
+
+/**
+ * Collect an inline argument for an action that needs one (generalizes the
+ * existing recall-query pattern). Cancel → exit 5.
+ */
+async function collectArg(
+  clack: Clack,
+  action: HomeAction,
+  opts: CliOptions,
+): Promise<string | null> {
+  if (!action.needsArg) return null;
+  const value = await clack.text({
+    message: action.needsArg.prompt,
+    placeholder: action.needsArg.placeholder,
+  });
+  if (clack.isCancel(value)) {
+    clack.cancel('Cancelled.');
+    fail(EXIT.CANCELLED, 'cancelled', opts);
+  }
+  return String(value);
+}
+
+/**
+ * Resolve the argv an action dispatches: the registry-derived `dispatch`,
+ * plus the collected inline arg (when the action needs one). A `destructive`
+ * action gates behind a clack.confirm first (reusing the palette registry's
+ * destructive table). Returns null when the user declined a destructive action.
+ */
+async function argvForAction(
+  clack: Clack,
+  action: HomeAction,
+  opts: CliOptions,
+): Promise<string[] | null> {
+  const base = action.dispatch ?? [action.id];
+  let argv = [...base];
+  // Collect an inline arg ONLY when the action needs one; a non-arg action
+  // skips the prompt entirely (this is what distinguishes "no arg needed"
+  // from "cancelled" — both used to collide on `null` and infinite-loop).
+  if (action.needsArg) {
+    const arg = await collectArg(clack, action, opts);
+    if (arg === null) return null; // cancelled → back to the section
+    argv = [...base, arg];
+  }
+
+  // Gate destructive actions behind an explicit confirm (matches the TUI
+  // palette's destructive-confirm overlay — same table, isDestructive()).
+  if (action.destructive || isDestructive(argv)) {
+    const confirmed = await clack.confirm({
+      message: `Run \`noir ${argv.join(' ')}\`? This may modify project files / the store.`,
+    });
+    if (clack.isCancel(confirmed) || !confirmed) return null;
+  }
+  return argv;
+}
+
+/**
+ * The grouped home menu loop. Drives the two levels and the back/next/previous
+ * navigation. Dispatch through the shared seam; a selected action returns so
+ * `runMenu` can print the outro.
+ */
+async function runGroupedMenu(
+  clack: Clack,
+  opts: CliOptions,
+  deps: HomeDeps,
+  sections: readonly HomeSection[],
+): Promise<void> {
+  // Start on the first section's action list if the user just wants to move
+  // fast; otherwise start at the section picker. We begin at the picker so
+  // first-run users see the grouping.
+  let currentSection: number | null = null; // null = level 1 (section picker)
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    // LEVEL 1 — section picker
+    if (currentSection === null) {
+      const picked = await pickSection(clack, sections, opts);
+      if (clack.isCancel(picked) || picked === 'exit') {
+        clack.outro('bye');
+        return;
+      }
+      const idx = sections.findIndex((s) => s.id === picked);
+      if (idx === -1) {
+        // Unknown section value — defensive: re-show the picker.
+        continue;
+      }
+      currentSection = idx;
+      continue;
+    }
+
+    // LEVEL 2 — the current section's action list
+    const section = sections[currentSection];
+    if (!section) {
+      // Defensive: index out of range — back to the picker.
+      currentSection = null;
+      continue;
+    }
+    const chosen = await pickAction(clack, section, sections, opts);
+    if (clack.isCancel(chosen)) {
+      // Esc at the action list → back to the picker.
+      currentSection = null;
+      continue;
+    }
+
+    switch (chosen) {
+      case 'back': {
+        // ← Back → level 1.
+        currentSection = null;
+        continue;
+      }
+      case 'next': {
+        // → Next section (progressive: no need to re-pick at level 1).
+        currentSection = (currentSection + 1) % sections.length;
+        continue;
+      }
+      case 'prev': {
+        // ← Previous section.
+        currentSection = (currentSection - 1 + sections.length) % sections.length;
+        continue;
+      }
+      default: {
+        const action = section.items.find((a) => a.id === chosen);
+        if (!action) {
+          // Defensive: unknown action id — back to the picker.
+          currentSection = null;
+          continue;
+        }
+        const argv = await argvForAction(clack, action, opts);
+        if (argv === null) {
+          // Destructive declined (or arg cancelled) → stay in the section.
+          continue;
+        }
+        await deps.dispatch(argv);
+        clack.outro('done');
+        return; // one action per `noir` run, then the process exits
+      }
+    }
+  }
 }
 
 /** The @clack select menu (interactive arm). */
@@ -145,80 +392,12 @@ async function runMenu(opts: CliOptions, deps: HomeDeps): Promise<void> {
 
   clack.intro(project ? `noir — ${project.name}` : 'noir');
 
-  const choice = await clack.select({
-    message: 'What would you like to do?',
-    initialValue: 'status',
-    options: [
-      { value: 'status', label: 'Status', hint: 'project + daemon + store snapshot' },
-      { value: 'index', label: 'Index project', hint: '(re)index files into context' },
-      { value: 'recall', label: 'Recall memory', hint: 'search cross-session memory' },
-      { value: 'next', label: 'Next task', hint: 'suggest next phase + skill' },
-      { value: 'handoff', label: 'Handoff', hint: 'ready-to-paste host prompt' },
-      { value: 'daemon', label: 'Start daemon', hint: 'foreground daemon' },
-      { value: 'sync', label: 'Sync skills', hint: 're-emit builtin skills' },
-      { value: 'exit', label: 'Exit' },
-    ],
-  });
+  // Resolve the curated sections against the LIVE palette registry. bin.ts
+  // injects `deps.commands` (the same list the TUI palette uses). Tests that
+  // omit it (backward-compat) pass an empty list → sections degrade to those
+  // whose ids exist (none) — the menu would be empty, but those tests don't
+  // drive the interactive arm's content. bin.ts always injects the real list.
+  const sections = await resolveSections(deps.commands ?? []);
 
-  if (clack.isCancel(choice)) {
-    clack.cancel('Cancelled.');
-    // exit 5 (CANCELLED). Plain-text fail: the interactive branch implies
-    // !--json, so the {ok,error} envelope does not apply here.
-    fail(EXIT.CANCELLED, 'cancelled', opts);
-  }
-
-  const argv = await argvForChoice(choice as string, clack, opts);
-  if (argv === null) {
-    // "Exit" — nothing to dispatch.
-    clack.outro('bye');
-    return;
-  }
-  await deps.dispatch(argv);
-  clack.outro('done');
-}
-
-/**
- * Map a menu choice to the sub-command argv, prompting for any required
- * argument the menu can't supply inline. Returns `null` for "Exit" (no
- * dispatch). A cancel at a sub-prompt → exit 5.
- */
-async function argvForChoice(
-  choice: string,
-  clack: typeof import('@clack/prompts'),
-  opts: CliOptions,
-): Promise<string[] | null> {
-  switch (choice) {
-    case 'status':
-      return ['status'];
-    case 'index':
-      return ['context', 'index'];
-    case 'next':
-      return ['task', 'next'];
-    case 'handoff':
-      // The ready-to-paste host prompt. Dispatched through the same commander
-      // program as every other action, so it owns its own exit code.
-      return ['handoff'];
-    case 'daemon':
-      return ['daemon', 'start'];
-    case 'sync':
-      return ['sync'];
-    case 'exit':
-      return null;
-    case 'recall': {
-      // memory recall needs a query — collect it inline so dispatch doesn't
-      // immediately bounce with commander's "missing required argument".
-      const query = await clack.text({
-        message: 'Recall query:',
-        placeholder: 'e.g. auth flow, ContextEngine, deploy steps',
-      });
-      if (clack.isCancel(query)) {
-        clack.cancel('Cancelled.');
-        fail(EXIT.CANCELLED, 'cancelled', opts);
-      }
-      return ['memory', 'recall', String(query)];
-    }
-    default:
-      // select constrains values to the listed options; defensive default.
-      return null;
-  }
+  await runGroupedMenu(clack, opts, deps, sections);
 }
