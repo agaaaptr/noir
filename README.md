@@ -7,9 +7,9 @@
 [![Node](https://img.shields.io/node/v/@noir-ai/cli)](https://www.npmjs.com/package/@noir-ai/cli)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-The `noir` home menu (interactive; `noir status` when non-interactive):
+The `noir` grouped home menu — section picker + per-section action lists with hints (interactive; `noir status` when non-interactive):
 
-![Noir interactive home TUI menu showing project actions such as Status, Index project, Recall memory, and Next task](docs/assets/tui/noir-home-menu.png)
+![Noir grouped home menu showing section picker with Status &amp; context, Memory, Workflow, Setup &amp; maintenance, and Dashboard sections](docs/assets/tui/noir-home-menu.png)
 
 **Noir** is a host-agnostic orchestration layer that makes an agentic CLI behave like a disciplined spec-driven engineer. **Claude Code is the default host; Gemini, Cursor, OpenCode, and AGENTS.md are one `--host` flag away** (bring-your-own-agent). It wires three capabilities every long-running agent loses without help:
 
@@ -22,8 +22,8 @@ The `noir` home menu (interactive; `noir status` when non-interactive):
 ## Status
 
 <!-- noir:doc:status -->
-**Latest stable:** `1.8.0` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.8.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Latest stable:** `1.9.0` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.9.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.9.0` (clean SemVer in `packages/*/package.json`)
 
 *Last auto-generated: 2026-08-06T11:08:17.964Z*
@@ -108,8 +108,8 @@ MCP tools → [MCP Tools Reference](docs/reference/mcp-tools.md).
 
 ```bash
 pnpm install && pnpm build    # build all 11 packages
-pnpm typecheck && pnpm lint   # type + format checks
-pnpm test                      # vitest suite (Node ≥22)
+pnpm lint && pnpm typecheck    # lint + type checks
+pnpm test                       # vitest suite (Node ≥22)
 ```
 
 This repo is developed with Claude Code; [AGENTS.md](AGENTS.md) holds the conventions.
