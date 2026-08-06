@@ -4,11 +4,11 @@
 
 ## Overview
 
-Noir dogfoods Spec-Driven Development (SDD): the `@noir-ai/workflow` FSM engine runs the spec-first lifecycle with observable, escapable gates. The engine is real and ships in `@noir-ai/workflow` v1.6.0; a formal research phase, a release phase, and automated validation are the open deltas.
+Noir dogfoods Spec-Driven Development (SDD): the `@noir-ai/workflow` FSM engine runs the spec-first lifecycle with observable, escapable gates. The engine is real and ships in `@noir-ai/workflow` v1.9.0; a formal research phase, a release phase, and automated validation are the open deltas.
 
 ## Shipped today
 
-- **FSM lifecycle engine (v1.7.0):** intake → clarify → spec → plan → execute → verify → document, 9 states total, with observable, escapable gates at spec/plan/verify — `packages/workflow/src/engine.ts`, `packages/workflow/src/state-machine.ts`, `packages/workflow/src/gates.ts`.
+- **FSM lifecycle engine (v1.9.0):** intake → clarify → spec → plan → execute → verify → document, 9 states total, with observable, escapable gates at spec/plan/verify — `packages/workflow/src/engine.ts`, `packages/workflow/src/state-machine.ts`, `packages/workflow/src/gates.ts`.
 - **Gate audit as source of truth:** every gate decision is appended to the `audit:<taskId>` KV, re-derived onto `TaskState.history`, and exported to `.noir/audit/<taskId>.json` — `packages/workflow/src/engine.ts`.
 - **Full mode (default) + Quick mode:** Quick mode writes a stub spec, records gates as skipped, and still fires verify — `packages/workflow/src/engine.ts`.
 - **Soft, escapable PRD recommendation** for feature/epic in full mode (`prd.mandatoryFor` defaults to `[feature, epic]`) — `packages/workflow/src/gates.ts`.
@@ -32,7 +32,7 @@ Noir dogfoods Spec-Driven Development (SDD): the `@noir-ai/workflow` FSM engine 
 
 ## Acceptance criteria
 
-- FSM runs intake → clarify → spec → plan → execute → verify → document with observable, escapable gates at spec/plan/verify. — **MET** (v1.7.0; see `packages/workflow/src/engine.ts`).
+- FSM runs intake → clarify → spec → plan → execute → verify → document with observable, escapable gates at spec/plan/verify. — **MET** (v1.9.0; see `packages/workflow/src/engine.ts`).
 - Every gate decision persists to `audit:<taskId>` KV, `TaskState.history`, and `.noir/audit/<taskId>.json`. — **MET**.
 - A blocked task can be resumed across sessions; done/abandoned tasks are terminal. — **MET**.
 - Research is a first-class FSM state (with its own gate/artifacts), not only a skill. — done when a task's lifecycle can be `intake → research → clarify` and research produces persisted artifacts.
