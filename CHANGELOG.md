@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — home consolidation + `noir palette` + bidirectional bridge
+## 1.9.0 (2026-08-06) — home consolidation + `noir palette` + TUI bridge
 
 ### Added
 - **Grouped home menu** — bare `noir` now renders a two-level section picker + action list backed by a new shared curated-section module (`packages/cli/src/tui/commands/sections.ts`, React-free). Five sections (Status & context, Memory, Workflow, Setup & maintenance, Dashboard) expose every interactive surface. Per-option hints, keybindings (1-6), destructive-command confirmation, back/next/previous navigation, and the non-interactive arms preserved exactly.

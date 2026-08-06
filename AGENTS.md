@@ -4,19 +4,19 @@ Guidance for AI coding agents (Claude Code, Cursor, Codex, …) working **on thi
 
 ## What this repo is
 
-Noir is a host-agnostic, spec-driven-workflow + native-context + cross-session-memory **layer** for agentic CLIs — not an LLM runtime (bring your own agent). v1 host = Claude Code, behind an abstract `HostAdapter`. It is a pnpm monorepo of **11 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`. Noir ships **only native `noir-` builtin skills (+ opt-in integrations)** — there is no plugin, no marketplace, no slash-command-installed skill surface. See [docs/explanation/architecture.md](docs/explanation/architecture.md).
+Noir is a host-agnostic, spec-driven-workflow + native-context + cross-session-memory **layer** for agentic CLIs — not an LLM runtime (bring your own agent). 5 host adapters: `claude` (default), `agents-md`, `gemini`, `cursor`, `opencode` via `resolveAdapter(host)`; `claude` is the regression anchor. It is a pnpm monorepo of **11 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`. Noir ships **only native `noir-` builtin skills (+ opt-in integrations)** — there is no plugin, no marketplace, no slash-command-installed skill surface. See [docs/explanation/architecture.md](docs/explanation/architecture.md).
 
 ## Toolchain + conventions (immutable)
 
-- pnpm workspace, `packages/*`. TypeScript ESM: target ES2022, module/moduleResolution NodeNext, `strict` + `noUncheckedIndexedAccess`, declaration. tsup build. Biome lint. Vitest (15s timeout, aliases `@noir-ai/*` → `packages/*/src/index.ts`). CI: ubuntu + macos, node 22. MIT. `engines.node ">=22"`, `packageManager pnpm@10.12.4`.
+- pnpm workspace, `packages/*`. TypeScript ESM: target ES2022, module/moduleResolution NodeNext, `strict` + `noUncheckedIndexedAccess`, declaration. tsup build. Biome lint. Vitest (`testTimeout: 40000`, aliases `@noir-ai/*` → `packages/*/src/index.ts`). CI: ubuntu + macos, node 22. MIT. `engines.node ">=22"`, `packageManager pnpm@10.12.4`.
 - The default dev loop:
 
   ```bash
   pnpm install
-  pnpm build && pnpm typecheck && pnpm lint && pnpm test   # build + vitest (unit + integration)
+  pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm docs:validate
   ```
 
-  Do not claim a change is done until all four are green. The full test suite runs **offline/free** — never make it depend on a network call or a paid key.
+  Do not claim a change is done until all five are green. The full test suite runs **offline/free** — never make it depend on a network call or a paid key.
 
 - **Don't touch `packages/` source unless that's the task.** Doc-only work (READMEs, ADRs, roadmap) should not edit package source.
 
@@ -39,7 +39,7 @@ This repo dogfoods Noir's own Spec-Driven Development flow: **brainstorm → spe
 
 - **Per-slice design specs** → `docs/internal/specs/YYYY-MM-DD-sN-<topic>-design.md`.
 - **Per-slice implementation plans** (+ acceptance) → `docs/internal/plans/YYYY-MM-DD-sN-<topic>.md`.
-- The single top-level **design blueprint** lives at `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (dated, status: implemented — the one occupant of `docs/internal/specs/`).
+- The single top-level **design blueprint** lives at `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (dated, status: implemented — see `docs/internal/specs/` for the full set of capability design specs).
 - **Architecture Decision Records** → `docs/decisions/NNNN-<slug>.md` (append-only — supersede, never rewrite).
 - `.superpowers/` is gitignored local session scratch; never commit it.
 

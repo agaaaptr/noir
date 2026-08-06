@@ -120,7 +120,7 @@ The daemon is a **long-lived** Noir server that multiple clients can share — t
 **Caveats (v1):**
 
 - Killing the daemon while the host is connected **breaks the connection** — there is **no auto-fallback to stdio** in v1. Your data stays durable on disk, and reads have a degraded read-only fallback, but the live host link is severed until you restart the daemon.
-- The daemon is **foreground-only** in v1 (`--detach` honestly returns exit code 2). Backgrounded / auto-restart daemons are v1.x.
+- The daemon is **foreground by default**; pass `--detach` to fork a detached child that persists after the parent exits (`noir daemon start --detach` reports the child's PID and port). Auto-restart daemons are v1.x.
 - A single global `~/.noir/daemon.json` records the running daemon; running Noir concurrently in two projects on the same machine will clobber that record (per-project records are v1.x).
 
 Pick the daemon **only** if you need a persistent shared server across host sessions. Active terminal commands start a daemon when needed; otherwise, stdio is the simplest host transport. See [transports](explanation/sdd-workflow.md#transports) for the full comparison.
@@ -149,6 +149,16 @@ noir doctor         # config / store / embedder / native deps / provider / insta
 `noir doctor` includes an **install row** (advisory `ok`/`warn`, never `fail`, no network call) that reports the detected install method (`native`/`npm`/`pnpm`/…), the installed version, and the latest-known version from the update cache — a non-blocking `native recommended` nudge appears when you're on a non-native path.
 
 That's the whole loop. You don't drive the gates by hand — you talk to the host, and the host drives Noir.
+
+## Browsing commands (home + palette)
+
+You don't need to memorize every subcommand. Two surfaces make discovery effortless:
+
+- **Bare `noir`** (no arguments) opens a **grouped home menu** — a section picker (Status &amp; context / Memory / Workflow / Setup &amp; maintenance / Dashboard) then per-section action lists with hints and destructive-action confirmation. Use `↑/↓` and `1`–`6` to navigate; `Esc` steps back; `→`/`←` moves between sections.
+- **`noir palette`** opens a **fuzzy command palette** (Ink) — type to filter any command, `↑/↓` to choose, `Enter` to run. `Esc` closes.
+- **`noir tui`** opens the full-screen **Ink dashboard** (live status, `/command` input, `Ctrl+K` palette, `Ctrl+F` find-in-output, `h` for the curated quick-actions home screen, `?` cheatsheet).
+
+From the home menu, select **Dashboard (full-screen)** to launch the TUI, or **All commands** to open the fuzzy palette. The two surfaces are cross-linked — the bridge works both ways.
 
 ## Switching discipline: full vs quick
 

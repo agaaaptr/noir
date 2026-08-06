@@ -26,7 +26,7 @@ The `noir` home menu (interactive; `noir status` when non-interactive):
 **Current beta:** `1.8.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.8.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-05T11:25:12.999Z*
+*Last auto-generated: 2026-08-06T10:47:52.972Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
@@ -43,7 +43,7 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/aga
 Then:
 
 ```bash
-noir init                        # scaffold .noir/ + 34 skills + host wiring
+noir init                        # scaffold .noir/ + 33 skills + host wiring
 noir                             # open the home menu (screenshot above)
 ```
 
@@ -59,7 +59,7 @@ An 11-package pnpm monorepo, all `@noir-ai/*`:
 | `@noir-ai/core` | Shared types, config schema, `.noir/` layout |
 | `@noir-ai/store` | Embedded SQLite + FTS5 + sqlite-vec |
 | `@noir-ai/workflow` | SDD lifecycle FSM engine |
-| `@noir-ai/skills` | 34 native `noir-*` skills + compiler |
+| `@noir-ai/skills` | 33 native `noir-*` skills + compiler |
 | `@noir-ai/context` | Hybrid retrieval: BM25 + vector kNN + RRF |
 | `@noir-ai/memory` | Cross-session memory with governance |
 | `@noir-ai/model` | Optional single-shot completion layer |
@@ -78,14 +78,16 @@ noir sync                       re-emit skills + host config
 noir create [dir]               AI-layer scaffold
 noir status                     probe-only health (daemon-down safe)
 noir doctor                     config / store / embedder / deps / install
-noir daemon start|stop|status   persistent MCP server
-noir context {search,index}     hybrid retrieval
-noir memory {recall,save,forget} cross-session memory
-noir task {new,status,advance}  SDD workflow
-noir skills list                list 34 builtins + integrations
+noir daemon start|stop|status|restart  persistent MCP server
+noir context {search,index,status}     hybrid retrieval
+noir memory {recall,save,sessions,forget,consolidate}  cross-session memory
+noir task {new,next,status,advance}    SDD workflow
+noir skills {list,sync}                builtin skills
 noir install|migrate [spec]     native install / migrate from another method
 noir update [spec]              self-update via the active install method
 noir handoff                    pasteable host handoff artifact
+noir wrap                       session-end handoff alias
+noir palette                    fuzzy command palette — run any command (Ink)
 noir tui                        interactive Ink dashboard
 ```
 

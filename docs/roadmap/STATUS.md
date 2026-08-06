@@ -38,18 +38,19 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 - **2026-08-04** — **1.7.1 published** → **1.7.2** published (`latest` + `1.7.2-beta.1`): dynamic-require crash in `noir init --upgrade` conflict path (`fix(cli)` `2c6fc63`), `.mcp.json` absolute native-shim path — fix `spawn noir ENOENT` from GUI MCP clients (`fix` `2f28f91`), installer-UX (PATH-shadow detection `5964a38` + auto-add shell profile `b4e6bb9`). Gates green (1428 tests).
 - **2026-08-04/05** — **1.7.3 published** → **1.7.4 published** (`latest` + `1.7.4-beta.1`): shim exec-bit defense-in-depth (`atomicWriteFile` mode preservation + `ensureShimExecutable` self-heal, `fix(core,cli)` `c458770`). Closes the chicken-and-egg "noir update → permission denied" bug permanently. Gates green (1439 tests). All four post-1.7.0 hotfix releases complete.
 - **2026-08-05** — **C2 completed** (ADR-0006): the C2 TUI delta + all four acceptance-condition gaps shipped in one session via a 10-agent implementation Workflow + an 11-agent final-verification Workflow (find → adversarial verify, which caught a dead-code BLOCKER in recent-commands persistence and fixed it). **TUI delta:** `Ctrl+K` command palette (data-driven registry derived from the commander tree + hand-rolled fuzzy matcher behind a `FuzzyMatcher` swap seam), input history + recall, persistent recent commands (`~/.noir/<projectId>/tui-history.json`, `NOIR_DISABLE_TUI_HISTORY` opt-out), in-TUI destructive confirmation, searchable output pane (`Ctrl+F`, `n`/`N`). **Gap closure:** `daemon start --detach` real backgrounding (detached child + `mode:'detached'` record + bounded `/health` probe), `context index --force` → full reindex, `--dry-run`/`--preview` on `init`/`create`/`sync`, in-process read-only fallback for read commands when the daemon is down (writes stay daemon-gated). Repo hygiene: dangling doc refs in `bin.ts` removed. **C2 → Completed.** Gates green (1525 tests). Published as **1.8.0** (`latest` + `1.8.0-beta.1`).
+- **2026-08-06** — **Home consolidation** (C2 UX delta): grouped home menu (`noir` bare) rebuilt as a two-level section picker + action list backed by a shared React-free curated-section module (`sections.ts`, 5 sections, per-option hints, destructive-confirm, back/next/prev navigation). New `noir palette` command (Ink fuzzy palette palette-first). TUI home Mode (`h` key in dashboard, curated quick-action consuming the same `sections.ts`). Bidirectional menu↔TUI bridge. `HomeDeps.commands` injected from `buildPaletteCommands(createProgram())` at module scope — single-source palette registry for both the menu and dashboard (structurally prevents the blank-Ctrl+K class of discoverability bug). Enhanced `?` cheatsheet. Gates green (1539 tests, +14). Docs sync across 12 user-facing files. Preparing for **1.9.0**.
 
 ## Active capability
 
-- (none active; C1, C2, C4, C5, C5.5, C6, C7, C8 cores shipped)
+- C2 (CLI Runtime & UX)
 
 ## Active slice
 
-- (none active; C1 `c1-native-installer` and C2 `c2-tui-delta` are complete)
+- `c2-home-consolidation` (grouped home + palette + bridge)
 
 ## Next milestone
 
-- Return to the **C2 TUI delta** research track: the **v2 orchestrator TUI** (Archetype B — driving the host CLI as a subprocess, streaming output, token/cost bar) is tracked for v2 (ADR-0006). All post-1.7.0 hotfixes + the C2 gap closure are complete.
+- Return to the **C2 TUI delta** research track: the **v2 orchestrator TUI** (Archetype B — driving the host CLI as a subprocess, streaming output, token/cost bar) is tracked for v2 (ADR-0006). Home consolidation published as 1.9.0.
 
 ## Current technical debt
 

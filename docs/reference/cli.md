@@ -48,6 +48,8 @@ Commands:
   wrap [options]                    session-end alias for `noir handoff`
   tui                               interactive Ink dashboard (host · phase ·
                                     daemon + /command dispatch)
+  palette                           fuzzy command palette — run any noir
+                                    command (Ink)
 ```
 
 ## Global Flags

@@ -1,6 +1,6 @@
 {
   "name": "@noir-ai/adapters",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Noir adapters — the HostAdapter abstraction and the Claude Code adapter (the v1 host).",
   "license": "MIT",
   "author": "agaaaptr",
