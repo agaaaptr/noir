@@ -7,7 +7,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 | Capability | Progress | Current Phase | Last Update |
 |------------|----------|---------------|-------------|
 | C1 Package Distribution | 🟩 Completed | Ship | 2026-08-04 |
-| C2 CLI Runtime & UX | 🟩 Completed | Ship | 2026-08-08 |
+| C2 CLI Runtime & UX | 🟩 Completed | Ship | 2026-08-07 |
 | C3 Built-in Skill System | 🟦 Partial — 33 skills + compiler shipped | Ship + Research (registry/versioning) | 2026-08-03 |
 | C4 AI Development Workflow | 🟩 Shipped core (SDD engine) | Ship | 2026-08-03 |
 | C5 Runtime Infrastructure & Daemon | 🟩 Shipped (daemon + store) | Ship | 2026-08-03 |
