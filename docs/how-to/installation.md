@@ -14,11 +14,11 @@
 > ```
 >
 > <!-- noir:doc:status -->
-**Latest stable:** `1.9.2` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.9.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Latest stable:** `1.9.3` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.9.3-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.9.3` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-07T10:03:47.393Z*
+*Last auto-generated: 2026-08-07T10:39:58.488Z*
 <!-- /noir:doc:status -->
 >
 > Pin a version with `NOIR_VERSION=<VERSION>` (POSIX) or `$env:NOIR_VERSION='<VERSION>'` (PowerShell).
