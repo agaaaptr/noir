@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.9.1 (unreleased) — home-menu crash fix
+
+### Fixed
+- **Bare `noir` home menu crashed on Enter** (`Cannot read properties of undefined (reading 'label')`), and arrow keys / Esc did nothing at the section picker. Root cause: the Level-1 picker used `@clack/prompts` `selectKey`, which in 0.7.0 is a *select-by-typed-letter* prompt — no arrow/enter/esc handling, and Enter leaves `value` `undefined`, so the submit render dereferences `options.find(o => o.value === undefined)` → crash. Both menu levels now use `select` (arrow + Enter + Esc/Ctrl+C all work).
+
+### Changed
+- **`@clack/prompts` upgraded `^0.7.0 → ^1.7.0`** (with `@clack/core` 1.4.3). This is ESM-only (matches Noir's `"type":"module"`), requires Node `>=20.12` (Noir requires `>=22` — satisfied), and brings native **Esc→cancel** (`settings.aliases`), arrow navigation, and empty-options handling. The one API break (`validate` now receives `string | undefined`) was adapted in `memory.ts`.
+- **Home-menu Level 1 section picker** switched from `selectKey` to `select`; `selectKey` is removed from the home flow. The `HomeSection.key` field (legacy 1-9 selectKey binding) is now documented as unused-but-retained for TUI/test compat.
+
 ## 1.9.0 (2026-08-06) — home consolidation + `noir palette` + TUI bridge
 
 ### Added

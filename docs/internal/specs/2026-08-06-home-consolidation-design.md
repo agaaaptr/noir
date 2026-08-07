@@ -23,6 +23,7 @@ All commits stay **local on `develop`** until the publish phase.
 - **The codebase already has the hard half of the fix** (all three research lenses converge): `home.ts` owns the correct non-interactive spine; `deps.dispatch` re-parses a fresh commander program (shared with the TUI `/command`); and `buildPaletteCommands(createProgram())` derives every leaf subcommand into a **React-free** `PaletteCommand[]` that `bin.ts` already statically imports (tui/commands/registry.ts). The menu can be enriched as **wiring on top of that registry**, not a second hand-curated table that drifts.
 - **Lean-CLI precedent (npm/gh/cargo):** a full-screen Ink dashboard is an opt-in destination reached via a subcommand (`noir tui`); bare invocation stays a lightweight menu. Pulling Ink/React into every `noir` invocation would add startup cost + raw-mode risk (Warp/ConHost) disproportionate for a menu.
 - **@clack is pinned ^0.7.0** (verified): no `selectableGroups`, no section headers inside `select`. The 1.x upgrade (autocomplete-in-menu) is a separate, regression-tested effort. We stay on 0.7 and use `selectKey` (section level) + `select` (action level) + `text` (inline args) + `confirm` (destructive gate), composed behind a small state machine in `home.ts`.
+  > **Post-1.9.0 fix (2026-08-07):** this assumption was wrong — `selectKey` in @clack 0.7 has no arrow/enter/esc handling and crashes on Enter (`_track=false` → `value=undefined` → `Cannot read properties of undefined (reading 'label')`). The fix upgraded @clack to `^1.7.0` (core 1.4.3) and switched both menu levels to `select`. See CHANGELOG 1.9.1.
 
 ## Scope
 
@@ -30,7 +31,7 @@ All commits stay **local on `develop`** until the publish phase.
 
 `packages/cli/src/tui/commands/sections.ts`:
 
-- A `HomeSection[]` definition: each section has `id`, `label`, `hint`, `keys` (selectKey bindings), and an ordered `items: HomeAction[]`.
+- A `HomeSection[]` definition: each section has `id`, `label`, `hint`, `key` (display-order key, legacy from the original selectKey binding design), and an ordered `items: HomeAction[]`.
 - Each `HomeAction` references a palette-registry **`id`** (e.g. `'context search'`) — **not** hand-written argv. At menu build time, `resolveSections(paletteCommands)` filters to ids that exist in the live registry, so a future commander change never crashes the menu (it degrades to what exists).
 - `HomeAction` shape: `{ id, label, hint, needsArg?: { prompt, placeholder }, destructive?: boolean, dispatch?: string[] }`. `dispatch` is the argv to run (defaults to the palette entry's `argv`); `needsArg` collects a query/content inline (generalized from today's recall-query).
 - **Consumed by both** the clack menu (`home.ts`) and the new TUI home Mode — one command table, two renderers, no drift (this is what makes the blank-palette class of bug structurally impossible).
@@ -39,9 +40,9 @@ All commits stay **local on `develop`** until the publish phase.
 
 `packages/cli/src/commands/home.ts` (interactive arm only; non-interactive arms + exit-5 unchanged):
 
-- **Level 1 — section picker** (`clack.selectKey`, message "What would you like to do?"):
+- **Level 1 — section picker** (`clack.select`, arrow-navigable; was `selectKey` pre-1.9.1 — post-1.9.0 fix):
   - `1` Status & context · `2` Memory · `3` Workflow · `4` Setup & maintenance · `5` Dashboard (full-screen) · `6` Exit
-  - per-option `hint` lists the section's subcommands; a footer hint line via `clack.intro`: "↑↓ / 1-6 navigate · Enter run · Esc back · ? all commands · Ctrl+K in dashboard"
+  - per-option `hint` lists the section's subcommands; arrow navigation, Enter to select, Esc/Ctrl+C to cancel.
 - **Level 2 — action list** (per-section `clack.select`, `initialValue` = section top action, per-option `hint` = exact subcommand it runs):
   - each action dispatch through `deps.dispatch` with the argv from the shared section module (or a collected inline arg);
   - **navigation**: `Esc` / backspace / left-arrow → back to the section picker; the state machine supports **next/previous** between sections (right-arrow → next section's action list, left-arrow → previous) so the user can move smoothly without re-entering level 1 each time;
@@ -88,8 +89,20 @@ All commits stay **local on `develop`** until the publish phase.
 
 ## Risks
 
-- **Two hops per action** vs the flat 8 → mitigated by `selectKey` (one key into a section), `initialValue` = top action, and next/previous section navigation.
-- **@clack 0.7 constraints** (no grouped select) → sections must be two-level; do not bump to 1.x here.
+- **Two hops per action** vs the flat 8 → mitigated by `initialValue` = top action and next/previous section navigation. (Pre-1.9.1, the spec relied on `selectKey` for one-key access; post-1.9.0 fix uses `select` for both levels — arrow navigation, Esc→cancel, Enter→submit — so the two-hop overhead is the trade-off for correct behavior.)
+- **@clack 1.x upgrade** (post-1.9.0 fix) → upgraded to `^1.7.0` (core 1.4.3). ESM-only matches Noir's module system; `engine >=20.12` satisfied by Noir's `>=22`. The single API break (`validate` receives `string|undefined`) was adapted in `memory.ts`. Esc→cancel is native (via `settings.aliases`).
 - **Dispatching `['tui']` from the menu** hands the terminal to Ink mid-run → lazy TUI path + `requireInteractive` already guard raw-mode; verify on Warp/ConHost.
 - **New Ink surface (home Mode + `noir palette`)** → must stay on the single root `useInput` + `Mode` union (focus-trapping), or overlays can swallow keys.
 - **Unicode glyphs** (⚠/→) must keep ASCII fallback + stay paired with text (theme.ts `badge()` invariant).
+
+---
+
+## Postscript — v1.9.1 fix (2026-08-07)
+
+The spec’s @clack 0.7 + `selectKey` assumption was wrong. `selectKey` in @clack/prompts 0.7 (core 0.3.5) is a *select-by-typed-letter* prompt — no arrow/Enter/Esc handling — and `_track=false` leaves `value` `undefined` until a matching letter is typed. Enter at the Level-1 section picker triggered `state="submit"` → render submit dereferenced `options.find(o => o.value === undefined)` → **`Cannot read properties of undefined (reading 'label')`**.
+
+Fix (CHANGELOG 1.9.1):
+- **Upgraded @clack/prompts** `^0.7.0 → ^1.7.0` (core 1.4.3). ESM-only (Noir is ESM). `engine >=20.12` (Noir >=22). Esc → cancel native via `settings.aliases`. Empty-option handling native.
+- **Switched both menu levels to `select`** — Level-1 section picker and Level-2 action list now use the same arrow-navigable, Esc-cancelable, Enter-submittable prompt. `selectKey` removed from the home flow.
+- **Adapted validate signature** in `memory.ts` (`string → string|undefined` — the sole @clack 1.x API break).
+- **Full gate green:** lint, build (11 packages), typecheck, 1539/1539 tests, docs:validate.

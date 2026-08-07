@@ -309,7 +309,8 @@ async function resolveContent(opts: MemorySaveOptions): Promise<string> {
   const value = await clack.text({
     message: 'Memory to save:',
     placeholder: 'the insight / decision / pattern to remember',
-    validate: (v: string) => (v.trim().length === 0 ? 'content cannot be empty' : undefined),
+    validate: (v: string | undefined) =>
+      !v || v.trim().length === 0 ? 'content cannot be empty' : undefined,
   });
   if (clack.isCancel(value)) {
     clack.cancel('Cancelled.');

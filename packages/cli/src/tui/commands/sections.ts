@@ -53,13 +53,18 @@ export interface HomeAction {
 
 /** A named group of quick actions shown as one home-menu section. */
 export interface HomeSection {
-  /** Stable id (used as a section header + the selectKey value). */
+  /** Stable id (used as a section header + the select value). */
   readonly id: string;
   /** Section title, e.g. 'Status & context'. */
   readonly label: string;
   /** One-line dim hint for the section (its subcommands). */
   readonly hint: string;
-  /** The selectKey single-letter/num binding for this section (1-9). */
+  /**
+   * Display-order key. Legacy from the pre-1.9.1 `selectKey`-based section
+   * picker (which bound each section to a digit); no longer read by the home
+   * menu (both levels use `select`). Kept for backward-compat with the TUI
+   * home Mode and existing tests.
+   */
   readonly key: string;
   /** Ordered quick actions in this section. */
   readonly items: readonly HomeAction[];

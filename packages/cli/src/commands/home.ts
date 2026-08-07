@@ -13,14 +13,20 @@
 //     no-op snapshot instead of a noisy failure or a help dump.
 //
 // Home-consolidation (S2): the interactive arm is a two-level grouped menu —
-// a section picker (selectKey, 1-6) then per-section action lists (select with
-// per-option hints). Navigation is smooth: Esc / backspace / ← return to the
-// section picker, → jumps to the next section, ← to the previous, so the user
-// can move across sections without re-entering level 1 each time. The section
-// content comes from the SHARED React-free {@link resolveSections} module
-// (tui/commands/sections.ts), which references palette-registry ids — so the
-// menu cannot drift from the commander tree. `deps.commands` is injected by
-// bin.ts (the same list the TUI palette uses).
+// a section picker (select, arrow-navigable) then per-section action lists
+// (select with per-option hints). Navigation is smooth: Esc / backspace /
+// ← return to the section picker, → jumps to the next section, ← to the
+// previous, so the user can move across sections without re-entering level 1
+// each time. The section content comes from the SHARED React-free
+// {@link resolveSections} module (tui/commands/sections.ts), which references
+// palette-registry ids — so the menu cannot drift from the commander tree.
+// `deps.commands` is injected by bin.ts (the same list the TUI palette uses).
+//
+// Both levels use `clack.select` (NOT `selectKey`): `selectKey` is a
+// select-by-typed-letter prompt with no arrow/enter/esc handling, and its
+// `_track=false` value stays `undefined` until a letter is pressed — Enter
+// crashes with `Cannot read properties of undefined (reading 'label')` (the
+// 1.9.0 home-menu bug, fixed by `select` on @clack ≥1.7).
 //
 // `@clack/prompts` is imported lazily inside the interactive branch so the
 // non-interactive paths (the common CI/script case) never pay for it and never
@@ -126,7 +132,7 @@ export async function home(opts: CliOptions, deps: HomeDeps): Promise<void> {
 // The grouped home menu (interactive arm).
 //
 // Two levels driven by a small state machine so navigation is smooth:
-//   LEVEL 1 — section picker (clack.selectKey): 1-6 sections + Exit.
+//   LEVEL 1 — section picker (clack.select): 1-6 sections + Exit.
 //   LEVEL 2 — per-section action list (clack.select with hints).
 //
 // Navigation keys are handled by @clack itself at each level (Esc cancels that
@@ -135,7 +141,7 @@ export async function home(opts: CliOptions, deps: HomeDeps): Promise<void> {
 // to the adjacent section's action list. Cancel anywhere → exit 5 (CANCELLED).
 // ---------------------------------------------------------------------------
 
-/** @clack's `select`/`selectKey` result is a value | cancel-symbol. */
+/** @clack's `select` result is a value | cancel-symbol. */
 type ClackChoice = string | symbol;
 
 /** The @clack/prompts module (lazy). */
@@ -143,15 +149,19 @@ type Clack = typeof import('@clack/prompts');
 
 /**
  * Level 1 — the section picker. Returns which section to open, or a control
- * outcome. `selectKey` binds each section to a digit (1-6); Esc / Ctrl+C
- * cancels the menu → exit 5 (CANCELLED), preserving the original contract.
+ * outcome. Uses `select` (NOT `selectKey`) so arrow navigation, Enter-to-submit,
+ * and Esc/Ctrl+C cancel all work. `selectKey` is a select-by-typed-letter prompt
+ * with no arrow/enter/esc handling and a `_track=false` value that stays
+ * `undefined` until a matching letter is pressed — pressing Enter there crashes
+ * with `Cannot read properties of undefined (reading 'label')` (the 1.9.0 home
+ * menu bug, fixed by switching to `select` on @clack ≥1.7).
  */
 async function pickSection(
   clack: Clack,
   sections: readonly HomeSection[],
   opts: CliOptions,
 ): Promise<ClackChoice> {
-  const result = await clack.selectKey({
+  const result = await clack.select({
     message: 'What would you like to do?',
     options: [
       ...sections.map((s) => ({
@@ -227,6 +237,8 @@ async function collectArg(
   const value = await clack.text({
     message: action.needsArg.prompt,
     placeholder: action.needsArg.placeholder,
+    validate: (v: string | undefined) =>
+      !v || v.trim().length === 0 ? 'Please enter a value.' : undefined,
   });
   if (clack.isCancel(value)) {
     clack.cancel('Cancelled.');
@@ -262,6 +274,7 @@ async function argvForAction(
   if (action.destructive || isDestructive(argv)) {
     const confirmed = await clack.confirm({
       message: `Run \`noir ${argv.join(' ')}\`? This may modify project files / the store.`,
+      initialValue: false,
     });
     if (clack.isCancel(confirmed) || !confirmed) return null;
   }
