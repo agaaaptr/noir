@@ -19,7 +19,7 @@
 
 import { Box, Text, useInput } from 'ink';
 import { type ReactElement, useState } from 'react';
-import { c } from '../../theme.js';
+import { c, contentWidth } from '../../theme.js';
 import type { FuzzyMatcher } from './matcher.js';
 import type { PaletteCommand } from './types.js';
 
@@ -146,15 +146,19 @@ export function Palette({
   // OutputPane). On an empty query the list is `recent` first, then the full
   // list grouped by category via inline dim headers.
   const rows: ReactElement[] = [
-    <Text key="header">
-      {c.bold('▸ palette ')}
-      <Text>{c.dim(`search (${visible.length} shown)`)}</Text>
-    </Text>,
-    <Text key="query">
-      {c.dim('> ')}
-      {query}
-      <Text>{c.dim('▌')}</Text>
-    </Text>,
+    <Box key="header" paddingX={1}>
+      <Text>
+        {c.bold('▸ palette ')}
+        <Text>{c.dim(`search (${visible.length} shown)`)}</Text>
+      </Text>
+    </Box>,
+    <Box key="query" borderStyle="round" borderColor="gray" paddingX={1} width={contentWidth() + 4}>
+      <Text>
+        {c.dim('> ')}
+        {query}
+        <Text>{c.dim('▌')}</Text>
+      </Text>
+    </Box>,
   ];
 
   let lastCategory: string | null = null;
@@ -164,27 +168,42 @@ export function Palette({
     // full list; afterwards (and on a search) the list is grouped by category.
     if (query.length === 0) {
       if (isRecent && lastCategory !== 'recent') {
-        rows.push(<Text key="cat:recent">{c.dim('── recent ──')}</Text>);
+        rows.push(
+          <Box key="cat:recent" paddingX={1}>
+            <Text>{c.dim('── recent ──')}</Text>
+          </Box>,
+        );
         lastCategory = 'recent';
       } else if (!isRecent && cmd.category !== lastCategory) {
-        rows.push(<Text key={`cat:${cmd.category}`}>{c.dim(`── ${cmd.category} ──`)}</Text>);
+        rows.push(
+          <Box key={`cat:${cmd.category}`} paddingX={1}>
+            <Text>{c.dim(`── ${cmd.category} ──`)}</Text>
+          </Box>,
+        );
         lastCategory = cmd.category;
       }
     }
     const prefix = cmd.id === visible[active]?.cmd.id ? '▸ ' : '  ';
     rows.push(
-      <Text key={cmd.id}>
-        {isRecent && query.length === 0 ? <Text>{c.dim('↺ ')}</Text> : null}
-        {prefix}
-        {highlight(cmd.label, indices)}
-        <Text>{c.dim(`  ${cmd.description}`)}</Text>
-      </Text>,
+      <Box key={cmd.id} paddingX={1}>
+        <Text>
+          {isRecent && query.length === 0 ? <Text>{c.dim('↺ ')}</Text> : null}
+          {prefix}
+          {highlight(cmd.label, indices)}
+          <Text>{c.dim(`  ${cmd.description}`)}</Text>
+        </Text>
+      </Box>,
     );
   }
 
-  rows.push(<Text key="footer">{c.dim('↑/↓ navigate · Enter run · Esc close')}</Text>);
-
-  return <Box flexDirection="column">{rows.map((row) => row)}</Box>;
+  return (
+    <Box flexDirection="column">
+      <Box flexDirection="column" borderStyle="round" borderColor="gray" width={contentWidth() + 4}>
+        {rows}
+      </Box>
+      <Text>{c.dim('↑/↓ navigate · Enter run · Esc close')}</Text>
+    </Box>
+  );
 }
 
 /** `recent` entries that still exist in `commands`, in recent order. */

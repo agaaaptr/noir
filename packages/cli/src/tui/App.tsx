@@ -17,7 +17,7 @@
 import { Box, type Key, Text, useApp, useInput } from 'ink';
 import { type ReactElement, useEffect, useState } from 'react';
 import type { StatusPayload } from '../commands/status.js';
-import { c } from '../theme.js';
+import { c, contentWidth, divider } from '../theme.js';
 import { CommandInput } from './CommandInput.js';
 import { captureProcessOutput } from './capture.js';
 import { type HomeAction, type HomeSection, resolveSections } from './commands/sections.js';
@@ -600,18 +600,29 @@ export function App({
     return (
       <Box flexDirection="column">
         <Header tagline="search" />
-        <OutputPane
-          lines={searchLines}
-          scrollOffset={scrollOffset}
-          title={output?.title}
-          highlightQuery={mode.query}
-          activeLine={activeLine}
-        />
-        <Text>
-          {c.dim('search: ')}
-          {mode.query.length > 0 ? mode.query : c.dim('(type to filter output)')}
-          <Text>{c.dim(' ▌')}</Text>
-        </Text>
+        <Box
+          flexDirection="column"
+          borderStyle="round"
+          borderColor="gray"
+          width={contentWidth() + 4}
+        >
+          <Box paddingX={1}>
+            <OutputPane
+              lines={searchLines}
+              scrollOffset={scrollOffset}
+              title={output?.title}
+              highlightQuery={mode.query}
+              activeLine={activeLine}
+            />
+          </Box>
+        </Box>
+        <Box borderStyle="round" borderColor="gray" paddingX={1} width={contentWidth() + 4}>
+          <Text>
+            {c.dim('search: ')}
+            {mode.query.length > 0 ? mode.query : c.dim('(type to filter output)')}
+            <Text>{c.dim(' ▌')}</Text>
+          </Text>
+        </Box>
         <Text>
           {c.dim(
             matchCount === 0
@@ -631,8 +642,17 @@ export function App({
   return (
     <Box flexDirection="column">
       <Header tagline="dashboard" />
-      <StatusBar payload={payload} loading={loading} />
-      <OutputPane lines={paneLines} scrollOffset={scrollOffset} title={paneTitle} />
+      <Box flexDirection="column" borderStyle="round" borderColor="gray" width={contentWidth() + 4}>
+        <Box paddingX={1}>
+          <StatusBar payload={payload} loading={loading} />
+        </Box>
+        <Box paddingX={1}>
+          <Text>{divider()}</Text>
+        </Box>
+        <Box flexDirection="column" paddingX={1}>
+          <OutputPane lines={paneLines} scrollOffset={scrollOffset} title={paneTitle} />
+        </Box>
+      </Box>
       <CommandInput buffer={buffer} running={running} />
       {notice !== null ? <Text>{c.dim(notice)}</Text> : null}
       <Footer running={running} />
@@ -644,41 +664,89 @@ function Help(): ReactElement {
   return (
     <Box flexDirection="column">
       <Header tagline="help" />
-      <Text> </Text>
-      <Text>{c.bold('Keybindings')}</Text>
-      <Text>
-        {c.dim('  /&lt;command&gt;  run a Noir sub-command (e.g. /status, /sync, /task next)')}
-      </Text>
-      <Text>{c.dim('  Enter       run the typed /command')}</Text>
-      <Text>{c.dim('  Esc         back: clear input → dismiss output → quit')}</Text>
-      <Text>{c.dim('  q           quit (when the input is empty)')}</Text>
-      <Text>{c.dim('  h           open the curated home quick-actions (home menu)')}</Text>
-      <Text>{c.dim('  ↑ / ↓       scroll the output pane')}</Text>
-      <Text>{c.dim('  ?           toggle this help')}</Text>
-      <Text>{c.dim('  Ctrl+K      open the command palette')}</Text>
-      <Text>{c.dim('  Ctrl+F      find in the dispatched output pane')}</Text>
-      <Text>{c.dim('  n / N       next / previous match in search (Enter = next)')}</Text>
-      <Text>{c.dim('  y / n       approve / decline a destructive command prompt')}</Text>
-      <Text>{c.dim('  Ctrl+C      force exit')}</Text>
-      <Text> </Text>
-      <Text>{c.bold('Home menu (h)')}</Text>
-      <Text>{c.dim('  The curated quick actions mirror the bare-`noir` home menu:')}</Text>
-      <Text>
-        {c.dim('  Status &amp; context · Memory · Workflow · Setup &amp; maintenance · Dashboard')}
-      </Text>
-      <Text> </Text>
-      <Text>{c.bold('Commands')}</Text>
-      <Text>{c.dim('  Dispatched through the same routing as `noir` at the prompt.')}</Text>
-      <Text>
-        {c.dim(
-          '  /status /sync /doctor /context search &lt;q&gt; /task next /memory recall &lt;q&gt;',
-        )}
-      </Text>
-      <Text>
-        {c.dim('  Commands that need their own interactive prompts (e.g. a /sync with a')}
-      </Text>
-      <Text>{c.dim('  conflict) are best run directly — exit first with q.')}</Text>
-      <Text> </Text>
+      <Box flexDirection="column" borderStyle="round" borderColor="gray" width={contentWidth() + 4}>
+        <Box paddingX={1}>
+          <Text>{c.bold('Keybindings')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>
+            {c.dim('  /&lt;command&gt;  run a Noir sub-command (e.g. /status, /sync, /task next)')}
+          </Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  Enter       run the typed /command')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  Esc         back: clear input → dismiss output → quit')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  q           quit (when the input is empty)')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  h           open the curated home quick-actions (home menu)')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  ↑ / ↓       scroll the output pane')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  ?           toggle this help')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  Ctrl+K      open the command palette')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  Ctrl+F      find in the dispatched output pane')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  n / N       next / previous match in search (Enter = next)')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  y / n       approve / decline a destructive command prompt')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  Ctrl+C      force exit')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{divider()}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.bold('Home menu (h)')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  The curated quick actions mirror the bare-`noir` home menu:')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>
+            {c.dim(
+              '  Status &amp; context · Memory · Workflow · Setup &amp; maintenance · Dashboard',
+            )}
+          </Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{divider()}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.bold('Commands')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  Dispatched through the same routing as `noir` at the prompt.')}</Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>
+            {c.dim(
+              '  /status /sync /doctor /context search &lt;q&gt; /task next /memory recall &lt;q&gt;',
+            )}
+          </Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>
+            {c.dim('  Commands that need their own interactive prompts (e.g. a /sync with a')}
+          </Text>
+        </Box>
+        <Box paddingX={1}>
+          <Text>{c.dim('  conflict) are best run directly — exit first with q.')}</Text>
+        </Box>
+      </Box>
       <Text>{c.dim('press ? / Esc / q to close this help')}</Text>
     </Box>
   );

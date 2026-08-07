@@ -13,7 +13,7 @@
 
 import { Box, Text, useInput } from 'ink';
 import { type ReactElement, useState } from 'react';
-import { c } from '../theme.js';
+import { c, contentWidth } from '../theme.js';
 import type { HomeAction, HomeSection } from './commands/sections.js';
 
 interface HomeMenuProps {
@@ -102,11 +102,19 @@ export function HomeMenu({ sections, onSelect, onClose }: HomeMenuProps): ReactE
 
   return (
     <Box flexDirection="column">
-      <Text>
-        {c.bold('▸ home ')}
-        <Text>{c.dim(`quick actions (${rows.length})`)}</Text>
-      </Text>
-      {rowsEl}
+      <Box flexDirection="column" borderStyle="round" borderColor="gray" width={contentWidth() + 4}>
+        <Box paddingX={1}>
+          <Text>
+            {c.bold('▸ home ')}
+            <Text>{c.dim(`quick actions (${rows.length})`)}</Text>
+          </Text>
+        </Box>
+        {rowsEl.map((row) => (
+          <Box key={row.key ?? 'row'} paddingX={1}>
+            {row}
+          </Box>
+        ))}
+      </Box>
       <Text>{c.dim('↑/↓ navigate · Enter run · Esc close')}</Text>
     </Box>
   );

@@ -14,7 +14,7 @@
 
 import { Text } from 'ink';
 import type { ReactElement } from 'react';
-import { c, terminalWidth } from '../theme.js';
+import { c, contentWidth } from '../theme.js';
 
 interface OutputPaneProps {
   lines: readonly string[];
@@ -88,7 +88,10 @@ export function OutputPane({
   highlightQuery,
   activeLine,
 }: OutputPaneProps): ReactElement {
-  const width = terminalWidth();
+  // Content width already accounts for the parent panel's border + padding
+  // (see contentWidth()). Truncating to this (not the full terminal width)
+  // keeps long lines — like the `noir status` table — inside the rounded box.
+  const width = contentWidth();
 
   if (lines.length === 0) {
     return <Text>{c.dim('(no output — type a /command, or ? for help)')}</Text>;
@@ -102,7 +105,7 @@ export function OutputPane({
 
   return (
     <>
-      {title !== undefined ? <Text>{c.dim(`── ${title} ──`)}</Text> : null}
+      {title !== undefined ? <Text wrap="truncate-end">{c.dim(`── ${title} ──`)}</Text> : null}
       {rows.map((row) => {
         const truncated =
           row.text.length > width ? `${row.text.slice(0, Math.max(1, width - 1))}…` : row.text;
@@ -114,7 +117,15 @@ export function OutputPane({
         } else if (highlightQuery !== undefined && highlightQuery.length > 0) {
           body = highlightFirst(truncated, highlightQuery);
         }
-        return <Text key={row.key}>{body}</Text>;
+        // wrap="truncate-end" guarantees a long line never wraps inside the
+        // bordered panel — the manual truncate above is the first line of
+        // defense; this is the second (Ink will hard-truncate if the panel is
+        // narrower than contentWidth() reported, e.g. under a tiny COLUMNS).
+        return (
+          <Text key={row.key} wrap="truncate-end">
+            {body}
+          </Text>
+        );
       })}
     </>
   );

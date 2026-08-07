@@ -4,10 +4,13 @@
 // to approve. The App owns the input routing (its single `useInput` handles `y`
 // / `n` / Esc in confirm mode) and the dispatch seam, so this component has no
 // knowledge of what the command does or how to run it.
+//
+// Drawn inside a rounded, warn-colored border so a destructive gate is visually
+// unmistakable (TUI redesign: rounded outlines on every interactive surface).
 
-import { Text } from 'ink';
+import { Box, Text } from 'ink';
 import type { ReactElement } from 'react';
-import { c } from '../../theme.js';
+import { c, contentWidth } from '../../theme.js';
 
 /** The confirm overlay's props — supplied by the App. */
 export interface ConfirmOverlayProps {
@@ -21,9 +24,11 @@ export interface ConfirmOverlayProps {
  */
 export function ConfirmOverlay({ argv }: ConfirmOverlayProps): ReactElement {
   return (
-    <Text>
-      {c.warn(`! run /${argv.join(' ')}? (y/N)`)}
-      <Text>{c.dim('  [y approve · n/Esc back to palette]')}</Text>
-    </Text>
+    <Box borderStyle="round" borderColor="yellow" paddingX={1} width={contentWidth() + 4}>
+      <Text>
+        {c.warn(`! run /${argv.join(' ')}? (y/N)`)}
+        <Text>{c.dim('  [y approve · n/Esc back to palette]')}</Text>
+      </Text>
+    </Box>
   );
 }

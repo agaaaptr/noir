@@ -7,10 +7,14 @@
 // the convention; once the user types, render the buffer verbatim with an
 // accent prefix when the first char is `/` (a recognized dispatch) or a dim
 // prefix otherwise (a hint that this input would NOT dispatch on Enter).
+//
+// The input is drawn inside a rounded border so the interactive field is
+// visually distinct from the static output above it (TUI redesign: rounded
+// outlines on every interactive surface).
 
-import { Text } from 'ink';
+import { Box, Text } from 'ink';
 import type { ReactElement } from 'react';
-import { c } from '../theme.js';
+import { c, contentWidth } from '../theme.js';
 
 interface CommandInputProps {
   buffer: string;
@@ -19,16 +23,27 @@ interface CommandInputProps {
 
 export function CommandInput({ buffer, running }: CommandInputProps): ReactElement {
   if (running) {
-    return <Text>{c.dim('…')}</Text>;
+    return (
+      <Box borderStyle="round" borderColor="gray" paddingX={1} width={contentWidth() + 4}>
+        <Text>{c.dim('…')}</Text>
+      </Box>
+    );
   }
+  let body: ReactElement;
   if (buffer.length === 0) {
-    return <Text>{c.dim('type a /command (e.g. /status, /sync, /task next), or q to quit')}</Text>;
+    body = <Text>{c.dim('type a /command (e.g. /status, /sync, /task next), or q to quit')}</Text>;
+  } else {
+    const isCommand = buffer.startsWith('/');
+    body = (
+      <Text>
+        <Text>{isCommand ? c.accent('▸') : c.dim('▸')}</Text> {buffer}
+        <Text>{c.dim('▌')}</Text>
+      </Text>
+    );
   }
-  const isCommand = buffer.startsWith('/');
   return (
-    <Text>
-      <Text>{isCommand ? c.accent('▸') : c.dim('▸')}</Text> {buffer}
-      <Text>{c.dim('▌')}</Text>
-    </Text>
+    <Box borderStyle="round" borderColor="gray" paddingX={1} width={contentWidth() + 4}>
+      {body}
+    </Box>
   );
 }

@@ -157,3 +157,26 @@ export function terminalWidth(): number {
   if (typeof cols === 'number' && cols > 0) return Math.max(cols, 20);
   return 80;
 }
+
+/**
+ * Usable content width inside a bordered TUI panel. Ink's `borderStyle` adds a
+ * 1-char border on each side, and `paddingX={1}` adds 1 char inside that — so a
+ * full-width rounded panel has `terminalWidth - 4` columns of usable text.
+ * Components that truncate long lines (OutputPane) MUST use this, not
+ * {@link terminalWidth}, or content overflows the border.
+ *
+ * @param border chars consumed by the border (default 2 = left + right).
+ * @param padding chars consumed by inner padding (default 2 = left + right).
+ */
+export function contentWidth(border = 2, padding = 2): number {
+  return Math.max(20, terminalWidth() - border - padding);
+}
+
+/**
+ * A horizontal divider line of `─` sized for the current content width. Used
+ * inside bordered panels to separate regions (e.g. status bar ↔ output ↔ input)
+ * without nesting Ink borders. Always dim so it reads as structure, not content.
+ */
+export function divider(): string {
+  return c.dim('─'.repeat(Math.max(1, contentWidth())));
+}
