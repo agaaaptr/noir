@@ -1,10 +1,10 @@
 {
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "Discipline, context, and memory layer for any agentic CLI",
   "homepage": "https://github.com/agaaaptr/noir",
   "license": "MIT",
-  "url": "https://registry.npmjs.org/@noir-ai/cli/-/cli-1.9.0.tgz",
-  "hash": "1b27c983a19c997bd0aae6850e6aee45a25c8b05562c37ddf424854b49c1be5a",
+  "url": "https://registry.npmjs.org/@noir-ai/cli/-/cli-1.9.1.tgz",
+  "hash": "4248c79ecaef2a95c40e69887fd4ecd30248a86b6f264f0dd8ef009c0400f794",
   "dependencies": ["nodejs-lts"],
   "bin": [["dist/bin.js", "noir"]]
 }
