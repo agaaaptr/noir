@@ -25,14 +25,21 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/aga
 
 Two channels ship in parallel:
 
-- **Default (`latest`)** — currently `1.9.0` (stable). The command above.
+<!-- noir:doc:status -->
+**Latest stable:** `1.9.1` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.9.1-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Source version:** `1.9.1` (clean SemVer in `packages/*/package.json`)
+
+*Last auto-generated: 2026-08-07T06:50:48.456Z*
+<!-- /noir:doc:status -->
+
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
 
   ```bash
   curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | NOIR_CHANNEL=beta bash
   ```
 
-- **Pin a version** — `NOIR_VERSION=1.6.0` (or `1.6.0-beta.1`) overrides the channel.
+- **Pin a version** — `NOIR_VERSION=<VERSION>` (e.g. `1.6.0`) overrides the channel.
 
 The installer is idempotent (re-run = upgrade), prints a PATH hint if `noir` isn't on PATH, and verifies with `noir --version` at the end. To move an existing npm/Homebrew/Scoop install to the native path, run `noir migrate` (settings preserved). To update later, run `noir update`. The full reference — npm/pnpm/yarn/bun, one-shot `npx`, Homebrew, Scoop, troubleshooting, the **beta vs stable** channel model, and the trust/checksum/attestation story — lives in **[installation.md](how-to/installation.md)**.
 

@@ -146,6 +146,11 @@ function _readManagedBlock(content, tag) {
 
 // ── Content generators ────────────────────────────────────────────
 
+/** Single version string for inline injection (e.g. `1.9.1`). */
+function genVersionInline() {
+  return getBaseVersion();
+}
+
 function genVersionStatus() {
   const base = getBaseVersion();
   const distTags = npmViewNullable(['@noir-ai/cli', 'dist-tags']) || {};
@@ -624,21 +629,48 @@ function validateDocs() {
       }
     }
 
-    // Check for stale version references (only in user-facing docs, skip historical)
+    // Check for stale version references (only in user-facing docs, skip historical
+    // and auto-generated reference docs)
     if (
       file.relPath.includes('internal/') ||
       file.relPath.includes('decisions/') ||
       file.relPath.includes('CHANGELOG') ||
       file.relPath.includes('roadmap') ||
-      file.relPath.includes('architecture')
+      file.relPath.includes('docs/reference/')
     )
       continue;
 
-    // Check for references to 1.0.0-beta.1 that should be updated
-    if (content.includes('1.0.0-beta.1') && file.relPath !== 'CHANGELOG.md') {
-      issues.push(
-        `[STALE-VERSION] ${file.relPath}: references 1.0.0-beta.1 (original beta). Consider updating to current stable ${baseVersion}.`,
-      );
+    // Detect hardcoded X.Y.Z version numbers outside managed blocks.
+    // If a user-facing doc has a version string that matches the *current*
+    // base version (from package.json) but is NOT inside a managed block,
+    // it's a drift risk — it will be stale on the next release.
+    const inManagedBlock = (lineIdx) => {
+      // Look backwards from lineIdx to find the nearest <!-- noir:doc:* --> marker
+      // and check it's not closed.
+      for (let li = Math.max(0, lineIdx - 3); li <= lineIdx; li++) {
+        const line = content.split('\n')[li] || '';
+        if (line.includes('<!-- noir:doc:status -->') || line.includes('<!-- noir:doc:version -->'))
+          return true;
+      }
+      return false;
+    };
+    const lines = content.split('\n');
+    const semverPattern = /\b(\d+\.\d+\.\d+(?:-[\w.]+)?)\b/g;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      // Skip release HOWTO (example versions are expected)
+      if (file.relPath.includes('how-to/releasing')) continue;
+      const matches = [...line.matchAll(semverPattern)];
+      for (const m of matches) {
+        const ver = m[1];
+        // Only flag the *current* base version hardcoded outside managed blocks
+        if (ver === baseVersion && !inManagedBlock(i)) {
+          issues.push(
+            `[HARDCODED-VERSION] ${file.relPath}:${i + 1}: hardcoded "${ver}" outside a managed block. Replace with <!-- noir:doc:status --> or <!-- noir:doc:version --> so it auto-updates on release.`,
+          );
+          break; // one per line is enough
+        }
+      }
     }
   }
 
@@ -673,13 +705,25 @@ function cmdGenerate() {
   // Files with managed blocks to regenerate
   const managedFiles = [{ path: 'README.md', tag: 'noir:doc:status', gen: genVersionStatus }];
 
-  // Check docs for managed blocks
+  // Check docs + root files for managed blocks
   for (const f of findDocs()) {
     const content = readFile(join(ROOT, f.path));
     if (!content) continue;
-    if (content.includes('<!-- noir:doc:status -->')) {
+    if (content.includes('<!-- noir:doc:status -->'))
       managedFiles.push({ path: f.path, tag: 'noir:doc:status', gen: genVersionStatus });
-    }
+    if (content.includes('<!-- noir:doc:version -->'))
+      managedFiles.push({ path: f.path, tag: 'noir:doc:version', gen: genVersionInline });
+  }
+
+  // Also scan root-level docs (AGENTS.md, CLAUDE.md, etc.)
+  for (const rootFile of ['AGENTS.md']) {
+    const fullPath = join(ROOT, rootFile);
+    const content = readFile(fullPath);
+    if (!content) continue;
+    if (content.includes('<!-- noir:doc:status -->'))
+      managedFiles.push({ path: rootFile, tag: 'noir:doc:status', gen: genVersionStatus });
+    if (content.includes('<!-- noir:doc:version -->'))
+      managedFiles.push({ path: rootFile, tag: 'noir:doc:version', gen: genVersionInline });
   }
 
   let updated = 0;

@@ -13,7 +13,15 @@
 > powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.ps1 | iex"
 > ```
 >
-> Both follow npm's `latest` tag, which currently resolves to `1.9.0`; use the beta channel for the current `1.9.0-beta.1` release. Pin a version with `NOIR_VERSION=1.9.0` (POSIX) or `$env:NOIR_VERSION='1.9.0'` (PowerShell).
+> <!-- noir:doc:status -->
+**Latest stable:** `1.9.1` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.9.1-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Source version:** `1.9.1` (clean SemVer in `packages/*/package.json`)
+
+*Last auto-generated: 2026-08-07T06:50:48.962Z*
+<!-- /noir:doc:status -->
+>
+> Pin a version with `NOIR_VERSION=<VERSION>` (POSIX) or `$env:NOIR_VERSION='<VERSION>'` (PowerShell).
 
 ---
 
@@ -46,7 +54,7 @@ Two release **channels** ship in parallel from `.github/workflows/release.yml`:
 
 | Channel | npm dist-tag | How to ask for it | Version scheme |
 |---|---|---|---|
-| **Default (`latest`)** | `latest` (currently `1.9.0`) | `npm i @noir-ai/cli` | `X.Y.Z` stable release |
+| **Default (`latest`)** | `latest` | `npm i @noir-ai/cli` | `X.Y.Z` stable release |
 | **Beta** | `beta` (opt-in) | `npm i @noir-ai/cli@beta` | `X.Y.Z-beta.N` |
 
 The installer, `npm`, `npx`, and `pnpm`/`yarn`/`bun` flows below all support both channels. Homebrew is stable-only; Scoop is single-channel; for beta on those managers use npm directly.
@@ -60,7 +68,7 @@ A small script (`scripts/install.sh` on POSIX, `scripts/install.ps1` on Windows)
 ### macOS / Linux (`install.sh`)
 
 ```bash
-# Default (`latest`, currently 1.9.0)
+# Default (latest channel)
 curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | bash
 
 # Beta channel
@@ -87,7 +95,7 @@ curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.
 Windows is a first-class install path. The PowerShell installer mirrors `install.sh` and writes a `noir.cmd` shim:
 
 ```powershell
-# Default (`latest`, currently 1.9.0)
+# Default (latest channel)
 powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.ps1 | iex"
 
 # Beta channel
@@ -161,7 +169,7 @@ If you started from a non-native install, a **one-time migration banner** is sho
 `noir install`/`migrate` refuses to downgrade unless you pin the version explicitly. If the target spec resolves to an **older** version than what's recorded, the command fails with a clear message (under `--no-input`) or prompts an interactive confirm. To pin a specific older version on purpose:
 
 ```bash
-noir install 1.7.0           # explicit positional pin (with a warning that it's older than 1.9.0)
+noir install <VERSION>       # explicit positional pin
 ```
 
 ---
