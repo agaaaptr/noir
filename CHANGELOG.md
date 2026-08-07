@@ -1,6 +1,19 @@
 # Changelog
 
-## 1.9.2 (unreleased) — TUI visual redesign (rounded borders + clear input fields)
+## 1.9.3 (unreleased) — TUI polish (Panel component, block cursor, fixed-width palette, clear screen)
+
+### Added
+- **Shared `<Panel>` component** — one rounded-border container for all 5 TUI surfaces, eliminating duplicated props across 5+ files.
+- **Block cursor on empty input** (`▌`) — the command input field shows a static block cursor so users immediately see where to type.
+- **Terminal clear on TUI entry** — `noir tui` and `noir palette` emit ANSI clear-screen before mounting so leftover home-menu / banner text doesn't linger above the TUI frame.
+
+### Changed
+- **Fixed-width palette** — 64-column panel (not full terminal); command labels truncate to fit; query row no longer nests a border inside the outer panel.
+
+### Removed
+- **`.superpowers/` folder** — legacy, no longer in use.
+
+## 1.9.2 (2026-08-07) — TUI visual redesign (rounded borders + clear input fields)
 
 ### Added
 - **Rounded borders across every TUI surface** — the dashboard, home menu, command palette, search overlay, confirm prompt, and help screen now render each major region inside a `╭─╮│╰╯` rounded panel (dim gray border) so components are visually separated instead of an undifferentiated wall of text.
