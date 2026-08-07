@@ -1,6 +1,6 @@
 {
   "name": "@noir-ai/cli",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "Noir CLI — the `noir` command tree (commander + @clack/prompts), the shell entry point to the Noir AI toolkit.",
   "license": "MIT",
   "author": "agaaaptr",

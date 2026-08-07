@@ -1,6 +1,20 @@
 # Changelog
 
-## 1.9.1 (unreleased) — home-menu crash fix
+## 1.9.2 (unreleased) — TUI visual redesign (rounded borders + clear input fields)
+
+### Added
+- **Rounded borders across every TUI surface** — the dashboard, home menu, command palette, search overlay, confirm prompt, and help screen now render each major region inside a `╭─╮│╰╯` rounded panel (dim gray border) so components are visually separated instead of an undifferentiated wall of text.
+- **Bordered input fields** — the command input, palette query, and destructive-confirm prompt each render inside their own rounded field, so the interactive surface is unmistakable at a glance.
+- `contentWidth()` + `divider()` helpers in `theme.ts` — centralize the border (2) + padding (2) width budget so panels and their content agree on usable columns.
+
+### Changed
+- **Output pane truncation** — lines are truncated to `contentWidth()` (terminal − border − padding) and rendered with `wrap="truncate-end"`, so the `noir status` table and long output no longer overflow or wrap inside the bordered panel.
+- **Dashboard layout** — StatusBar, OutputPane, and CommandInput stack inside one rounded panel with dim divider lines separating the regions; the footer hints sit below the panel.
+
+### Notes
+- Presentational only — no keybinding, routing, or logic changes. All 66 TUI tests pass (their regex assertions are border-agnostic); full gate green (1539 tests).
+
+## 1.9.1 (2026-08-07) — home-menu crash fix
 
 ### Fixed
 - **Bare `noir` home menu crashed on Enter** (`Cannot read properties of undefined (reading 'label')`), and arrow keys / Esc did nothing at the section picker. Root cause: the Level-1 picker used `@clack/prompts` `selectKey`, which in 0.7.0 is a *select-by-typed-letter* prompt — no arrow/enter/esc handling, and Enter leaves `value` `undefined`, so the submit render dereferences `options.find(o => o.value === undefined)` → crash. Both menu levels now use `select` (arrow + Enter + Esc/Ctrl+C all work).
