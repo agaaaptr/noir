@@ -10,7 +10,8 @@
 
 import { Box, Text } from 'ink';
 import type { ReactElement } from 'react';
-import { c, contentWidth } from '../../theme.js';
+import { c } from '../../theme.js';
+import { Panel } from '../Panel.js';
 
 /** The confirm overlay's props — supplied by the App. */
 export interface ConfirmOverlayProps {
@@ -24,11 +25,13 @@ export interface ConfirmOverlayProps {
  */
 export function ConfirmOverlay({ argv }: ConfirmOverlayProps): ReactElement {
   return (
-    <Box borderStyle="round" borderColor="yellow" paddingX={1} width={contentWidth() + 4}>
-      <Text>
-        {c.warn(`! run /${argv.join(' ')}? (y/N)`)}
-        <Text>{c.dim('  [y approve · n/Esc back to palette]')}</Text>
-      </Text>
-    </Box>
+    <Panel>
+      <Box paddingX={1}>
+        <Text>
+          {c.warn(`! run /${argv.join(' ')}? (y/N)`)}
+          <Text>{c.dim('  [y approve · n/Esc back to palette]')}</Text>
+        </Text>
+      </Box>
+    </Panel>
   );
 }

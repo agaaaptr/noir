@@ -17,7 +17,7 @@
 import { Box, type Key, Text, useApp, useInput } from 'ink';
 import { type ReactElement, useEffect, useState } from 'react';
 import type { StatusPayload } from '../commands/status.js';
-import { c, contentWidth, divider } from '../theme.js';
+import { c, divider } from '../theme.js';
 import { CommandInput } from './CommandInput.js';
 import { captureProcessOutput } from './capture.js';
 import { type HomeAction, type HomeSection, resolveSections } from './commands/sections.js';
@@ -29,6 +29,7 @@ import { useInputBuffer } from './hooks/useInputBuffer.js';
 import { OutputPane } from './OutputPane.js';
 import { ConfirmOverlay } from './overlays/ConfirmOverlay.js';
 import { computeMatches } from './overlays/SearchMode.js';
+import { Panel } from './Panel.js';
 import { type FuzzyMatcher, handRolledMatcher } from './palette/matcher.js';
 import { Palette } from './palette/Palette.js';
 import type { PaletteCommand } from './palette/types.js';
@@ -600,12 +601,7 @@ export function App({
     return (
       <Box flexDirection="column">
         <Header tagline="search" />
-        <Box
-          flexDirection="column"
-          borderStyle="round"
-          borderColor="gray"
-          width={contentWidth() + 4}
-        >
+        <Panel>
           <Box paddingX={1}>
             <OutputPane
               lines={searchLines}
@@ -615,8 +611,8 @@ export function App({
               activeLine={activeLine}
             />
           </Box>
-        </Box>
-        <Box borderStyle="round" borderColor="gray" paddingX={1} width={contentWidth() + 4}>
+        </Panel>
+        <Box borderStyle="round" borderColor="gray" paddingX={1}>
           <Text>
             {c.dim('search: ')}
             {mode.query.length > 0 ? mode.query : c.dim('(type to filter output)')}
@@ -642,7 +638,7 @@ export function App({
   return (
     <Box flexDirection="column">
       <Header tagline="dashboard" />
-      <Box flexDirection="column" borderStyle="round" borderColor="gray" width={contentWidth() + 4}>
+      <Panel>
         <Box paddingX={1}>
           <StatusBar payload={payload} loading={loading} />
         </Box>
@@ -652,7 +648,7 @@ export function App({
         <Box flexDirection="column" paddingX={1}>
           <OutputPane lines={paneLines} scrollOffset={scrollOffset} title={paneTitle} />
         </Box>
-      </Box>
+      </Panel>
       <CommandInput buffer={buffer} running={running} />
       {notice !== null ? <Text>{c.dim(notice)}</Text> : null}
       <Footer running={running} />
@@ -664,7 +660,7 @@ function Help(): ReactElement {
   return (
     <Box flexDirection="column">
       <Header tagline="help" />
-      <Box flexDirection="column" borderStyle="round" borderColor="gray" width={contentWidth() + 4}>
+      <Panel>
         <Box paddingX={1}>
           <Text>{c.bold('Keybindings')}</Text>
         </Box>
@@ -746,7 +742,7 @@ function Help(): ReactElement {
         <Box paddingX={1}>
           <Text>{c.dim('  conflict) are best run directly — exit first with q.')}</Text>
         </Box>
-      </Box>
+      </Panel>
       <Text>{c.dim('press ? / Esc / q to close this help')}</Text>
     </Box>
   );

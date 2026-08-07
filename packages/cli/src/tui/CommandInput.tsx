@@ -31,7 +31,12 @@ export function CommandInput({ buffer, running }: CommandInputProps): ReactEleme
   }
   let body: ReactElement;
   if (buffer.length === 0) {
-    body = <Text>{c.dim('type a /command (e.g. /status, /sync, /task next), or q to quit')}</Text>;
+    body = (
+      <Text>
+        <Text>{c.dim('▌')}</Text>{' '}
+        <Text>{c.dim('type a /command (e.g. /status, /sync, /task next), or q to quit')}</Text>
+      </Text>
+    );
   } else {
     const isCommand = buffer.startsWith('/');
     body = (

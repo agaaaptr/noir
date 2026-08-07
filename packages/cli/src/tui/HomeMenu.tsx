@@ -13,8 +13,9 @@
 
 import { Box, Text, useInput } from 'ink';
 import { type ReactElement, useState } from 'react';
-import { c, contentWidth } from '../theme.js';
+import { c } from '../theme.js';
 import type { HomeAction, HomeSection } from './commands/sections.js';
+import { Panel } from './Panel.js';
 
 interface HomeMenuProps {
   /** The resolved sections (from resolveSections). */
@@ -102,7 +103,7 @@ export function HomeMenu({ sections, onSelect, onClose }: HomeMenuProps): ReactE
 
   return (
     <Box flexDirection="column">
-      <Box flexDirection="column" borderStyle="round" borderColor="gray" width={contentWidth() + 4}>
+      <Panel>
         <Box paddingX={1}>
           <Text>
             {c.bold('▸ home ')}
@@ -114,7 +115,7 @@ export function HomeMenu({ sections, onSelect, onClose }: HomeMenuProps): ReactE
             {row}
           </Box>
         ))}
-      </Box>
+      </Panel>
       <Text>{c.dim('↑/↓ navigate · Enter run · Esc close')}</Text>
     </Box>
   );

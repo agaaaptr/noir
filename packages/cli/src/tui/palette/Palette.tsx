@@ -19,9 +19,12 @@
 
 import { Box, Text, useInput } from 'ink';
 import { type ReactElement, useState } from 'react';
-import { c, contentWidth } from '../../theme.js';
+import { c } from '../../theme.js';
+import { Panel } from '../Panel.js';
 import type { FuzzyMatcher } from './matcher.js';
 import type { PaletteCommand } from './types.js';
+
+const PALETTE_WIDTH = 64;
 
 /** How many rows the overlay shows at most (a comfortable half-screen). */
 const VISIBLE_ROWS = 10;
@@ -72,6 +75,16 @@ function rankPalette(
     cmd: m.item,
     indices: m.matchedIndices,
   }));
+}
+
+/**
+ * Truncate a command label to fit the fixed-width palette. Each visible row
+ * carries prefix (2) + label + hint (~30); cap the label so the row never
+ * overflows the panel.
+ */
+function truncateLabel(label: string): string {
+  const max = Math.max(20, PALETTE_WIDTH - 8);
+  return label.length > max ? `${label.slice(0, max - 1)}…` : label;
 }
 
 /** Highlight matched chars of `label` using `matchedIndices` (brand accent). */
@@ -152,7 +165,7 @@ export function Palette({
         <Text>{c.dim(`search (${visible.length} shown)`)}</Text>
       </Text>
     </Box>,
-    <Box key="query" borderStyle="round" borderColor="gray" paddingX={1} width={contentWidth() + 4}>
+    <Box key="query" paddingX={1}>
       <Text>
         {c.dim('> ')}
         {query}
@@ -189,7 +202,7 @@ export function Palette({
         <Text>
           {isRecent && query.length === 0 ? <Text>{c.dim('↺ ')}</Text> : null}
           {prefix}
-          {highlight(cmd.label, indices)}
+          {highlight(truncateLabel(cmd.label), indices)}
           <Text>{c.dim(`  ${cmd.description}`)}</Text>
         </Text>
       </Box>,
@@ -198,9 +211,7 @@ export function Palette({
 
   return (
     <Box flexDirection="column">
-      <Box flexDirection="column" borderStyle="round" borderColor="gray" width={contentWidth() + 4}>
-        {rows}
-      </Box>
+      <Panel maxWidth={PALETTE_WIDTH}>{rows}</Panel>
       <Text>{c.dim('↑/↓ navigate · Enter run · Esc close')}</Text>
     </Box>
   );

@@ -43,6 +43,7 @@ function defaultFetchStatus(opts: CliOptions): () => Promise<StatusPayload | nul
  * uses — so command routing is owned by the bin, not reimplemented here.
  */
 export async function runTui(opts: CliOptions, dispatch: TuiDeps['dispatch']): Promise<void> {
+  process.stdout.write('\x1b[2J\x1b[H');
   const deps = await buildTuiDeps(opts, dispatch);
   const instance = render(<App deps={deps} />);
   await instance.waitUntilExit();
@@ -55,6 +56,7 @@ export async function runTui(opts: CliOptions, dispatch: TuiDeps['dispatch']): P
  * directly. `dispatch` is the same shape `runTui` receives from bin.ts.
  */
 export async function runPalette(opts: CliOptions, dispatch: TuiDeps['dispatch']): Promise<void> {
+  process.stdout.write('\x1b[2J\x1b[H');
   // Reuse runTui's deps wiring wholesale, then render palette-first.
   // Factor the shared deps build out of runTui into a helper to avoid
   // duplicating the projectId/commands/recents logic.
