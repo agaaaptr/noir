@@ -292,10 +292,14 @@ function genSkillsTable() {
       const content = readFile(skillMd);
       if (!content) continue;
 
-      // Extract description from YAML frontmatter
+      // Extract description + category from YAML frontmatter. `metadata.category`
+      // is the C3 single source of truth; a missing category falls back to the
+      // name-derived topic so the table never shows an empty cell.
       const descMatch = content.match(/description:\s*(.+)/);
       const desc = descMatch ? descMatch[1].trim() : '';
-      skills.push({ name: dir, desc, type: 'builtin' });
+      const catMatch = content.match(/^\s*category:\s*(.+)$/m);
+      const category = catMatch ? catMatch[1].trim() : dir.replace(/^noir-/, '') || 'general';
+      skills.push({ name: dir, desc, type: 'builtin', category });
     }
   }
 
@@ -308,7 +312,9 @@ function genSkillsTable() {
       if (!content) continue;
       const descMatch = content.match(/description:\s*(.+)/);
       const desc = descMatch ? descMatch[1].trim() : '';
-      skills.push({ name: dir, desc, type: 'integration' });
+      const catMatch = content.match(/^\s*category:\s*(.+)$/m);
+      const category = catMatch ? catMatch[1].trim() : 'integration';
+      skills.push({ name: dir, desc, type: 'integration', category });
     }
   }
 
@@ -318,10 +324,10 @@ function genSkillsTable() {
     `**${skills.length} skills** (${skills.filter((s) => s.type === 'builtin').length} builtins + ${skills.filter((s) => s.type === 'integration').length} integrations)`,
   );
   lines.push('');
-  lines.push('| Skill | Type | Description |');
-  lines.push('|---|---|---|');
+  lines.push('| Skill | Type | Category | Description |');
+  lines.push('|---|---|---|---|');
   for (const s of skills) {
-    lines.push(`| \`${s.name}\` | ${s.type} | ${s.desc} |`);
+    lines.push(`| \`${s.name}\` | ${s.type} | ${s.category} | ${s.desc} |`);
   }
   lines.push('');
 
