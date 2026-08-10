@@ -28,9 +28,10 @@ export const IntegrationAuthSchema = z.object({
 });
 
 /** SDD two-way binding. `intakeFrom` declares the external artifact kind the
- *  `noir-intake` skill pulls from; `writeBack` enumerates the fields
- *  `noir-wrap`/`noir-document` push back at session end. Strings (not enums)
- *  for `writeBack` so a per-integration vocabulary stays expressible without
+ *  `noir-brainstorming` skill pulls from (absorbed noir-intake in C3);
+ *  `writeBack` enumerates the fields `noir-wrap` pushes back at session end
+ *  (absorbed noir-document in C3). Strings (not enums) for `writeBack` so a
+ *  per-integration vocabulary stays expressible without
  *  churning the schema. */
 export const IntegrationSddSchema = z
   .object({

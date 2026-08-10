@@ -480,7 +480,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, '..', '..', '..');
+const ROOT = join(HERE, '..', '..');
 const ROUTER = join(ROOT, '.noir', 'router.md');
 
 function main() {
