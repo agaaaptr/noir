@@ -27,6 +27,10 @@ export interface SkillRegistryEntry {
   version: string;
   /** `full` when the body has no `> **Stub:**` marker; `stub` otherwise. */
   status: 'full' | 'stub';
+  /** Lifecycle stage of the skill. `active` = currently shipped and usable;
+   *  `deprecated` = superseded (a renamed/merged predecessor). C3 spec §8.
+   *  The curated pack has no deprecated members today. */
+  lifecycle: 'active' | 'deprecated';
   /** The WHAT+WHEN description (the trigger the host sees). */
   description: string;
   /** Number of `references/*.md` files. */
@@ -52,6 +56,9 @@ function toEntry(s: BuiltinSkill, kind: 'builtin' | 'integration'): SkillRegistr
     category,
     version,
     status,
+    // Every shipped skill is active; `deprecated` is reserved for a future
+    // superseded member (C3 spec §8).
+    lifecycle: 'active' as const,
     description: typeof s.frontmatter.description === 'string' ? s.frontmatter.description : '',
     referenceCount: s.references.length,
     lines,

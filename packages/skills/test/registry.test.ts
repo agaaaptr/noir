@@ -18,6 +18,7 @@ describe('buildRegistry() — runtime-derived skill registry', () => {
     expect(typeof clickup?.version).toBe('string');
     // ClickUp is a full playbook (no stub marker) with 1 reference.
     expect(clickup?.status).toBe('full');
+    expect(clickup?.lifecycle).toBe('active');
     expect(clickup?.referenceCount).toBe(1);
     expect(clickup?.lines).toBeGreaterThan(100);
     expect(clickup?.description.length).toBeGreaterThan(20);
@@ -30,6 +31,7 @@ describe('buildRegistry() — runtime-derived skill registry', () => {
       expect(e.category.length).toBeGreaterThan(0);
       expect(typeof e.version).toBe('string');
       expect(['full', 'stub']).toContain(e.status);
+      expect(['active', 'deprecated']).toContain(e.lifecycle);
     }
   });
 

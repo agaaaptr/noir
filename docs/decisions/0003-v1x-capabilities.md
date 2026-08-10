@@ -71,7 +71,7 @@ These pre-date v1.x but are load-bearing for every slice above and were used as 
 ## Consequences
 
 - **One managed-block writer, five consumers.** R, I, P, S, and the existing `CLAUDE.md` @import all go through the keystone writer. Adding a sixth managed region is an authoring concern, not an architecture decision.
-- **The skill pack grows by integration, not by editing.** `discoverAll()` emits builtins + integrations; adding an integration is `packages/skills/integrations/<name>/` + an `integration.json`, not a CLI change. Pack now 34 (33 builtins + 1 integration).
+- **The skill pack grows by integration, not by editing.** `discoverAll()` emits builtins + integrations; adding an integration is `packages/skills/integrations/<name>/` + an `integration.json`, not a CLI change. (At the time of writing: 34 = 33 builtins + 1 integration; curated to 27 = 26 builtins + 1 integration in C3, 2026-08-10.)
 - **`@noir-ai/create` is the scaffold authority.** Init, sync, create, and the scaffold-version drift check in `noir doctor` all consume one engine. Migrations are registered, inline-conflict-marked, and CI-safe; a broken migration does not silently mangle a user tree.
 - **ClickUp writes are observable by construction.** The HARD confirm gate, the endpoint allowlist, and the audit JSONL together make every external write inspectable and replayable. The credential is resolved at call time only, never logged, and canary-tested on success and error paths.
 - **OAuth is deferred, deliberately.** Until a keychain-backed secret store exists, ClickUp stays at "personal token in an env-var". The decision is reversible when keychain lands; the runtime tiers and the `gated-write-proxy` shape do not change.
