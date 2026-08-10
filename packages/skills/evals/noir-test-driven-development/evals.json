@@ -1,5 +1,5 @@
 {
-  "skill_name": "noir-tdd",
+  "skill_name": "noir-test-driven-development",
   "evals": [
     {
       "id": "red-before-green",

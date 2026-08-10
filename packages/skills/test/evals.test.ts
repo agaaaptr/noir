@@ -71,12 +71,12 @@ describe('parseEvalSuite() — evals.json shape validation', () => {
 });
 
 describe('shipped evals — offline suites in the pack', () => {
-  it('loads ≥2 suites (noir-tdd + noir-debug) from the shipped evals dir', () => {
+  it('loads ≥2 suites (test-driven-development + systematic-debugging) from the shipped evals dir', () => {
     const suites = loadEvalSuites();
     expect(suites.length).toBeGreaterThanOrEqual(2);
     const names = suites.map((s) => s.skill_name);
-    expect(names).toContain('noir-tdd');
-    expect(names).toContain('noir-debug');
+    expect(names).toContain('noir-test-driven-development');
+    expect(names).toContain('noir-systematic-debugging');
   });
 
   it('every shipped eval passes its own assertions (offline, no LLM)', () => {
