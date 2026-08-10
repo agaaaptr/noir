@@ -317,7 +317,11 @@ All 33 + 1 get `metadata: {category, version}`, `license: MIT`, `compatibility`.
 - ClickUp **verb dispatch** routing table: `fetch`/`update`/`create`/`comment`/`batch` → flow.
 - **"When done → next skill"** footer on every skill (chaining).
 - **Router `noir-sync`**: fires on explicit signals (feature start, spec request, session start), stays silent on trivial edits; lists high-value `noir-*` skills + when; ends with a follow-up offer.
-- **SessionStart hook emitted by `noir init` ONLY** (scaffold context): writes a project-scope `.claude/settings.local.json` SessionStart hook (merged with existing permissions) that injects a short router contract. Host-agnostic fallback: NOIR.md amplifier block (3-5 high-value skills) imported every session.
+- **SessionStart hook emitted via "both + split"** (research-validated 2026-08-10, supersedes the earlier "init ONLY" decision): a three-artifact split so the entry never goes stale and user edits are never overwritten —
+  1. **`.claude/settings.local.json` SessionStart entry** (tiny, stable pointer) — user-owned, written by **`noir init` only**, via a **new merge-aware write path** (preserves `permissions`/`env`/`enabledPlugins`, appends the entry only if absent, deduped by command substring). Not `regenerate` (would clobber user permissions), not `skipIfExists` (would go stale), not `managedBlock` (JSON cannot carry `<!-- noir:* -->` markers).
+  2. **`.noir/hooks/noir-session-start.mjs`** (Noir-owned runner) — `regenerate` (atomic), written by `init` + `sync`; emits `hookSpecificOutput.additionalContext` from `.noir/router.md`.
+  3. **`.noir/router.md`** (co-owned mutable router contract) — `managedBlock` (markers + 3-way merge), written by `init` + `sync`; user edits outside markers survive.
+  Host-agnostic fallback: NOIR.md amplifier block (3-5 high-value skills) imported every session. The hook content is NOT in the skill-listing 1% budget (it's system-reminder-only) — cheaper and deterministic vs skill descriptions.
 
 ### 10.5 New acceptance criteria (adds to §8)
 

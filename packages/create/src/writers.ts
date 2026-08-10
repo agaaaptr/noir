@@ -33,7 +33,7 @@ import { stripManagedBlock, writeManagedRegion } from '@noir-ai/core';
  * when a one-off write is needed outside the manifest.
  */
 
-export type WriteMode = 'regenerate' | 'managedBlock' | 'skipIfExists';
+export type WriteMode = 'regenerate' | 'managedBlock' | 'skipIfExists' | 'mergeJson';
 
 export interface WriteOutcome {
   /** The absolute path that was written. */
@@ -232,4 +232,95 @@ export function skipIfExists(absPath: string, content: string): WriteOutcome {
   }
   writeFileSync(absPath, content, 'utf8');
   return { path: absPath, mode: 'skipIfExists', written: true };
+}
+
+/**
+ * Merge-aware JSON write (C3 SessionStart hook). `settings.local.json` is JSON
+ * and CANNOT carry `<!-- noir:* -->` managed markers, so it is neither
+ * `managedBlock` (would need comments) nor `regenerate` (would clobber the
+ * user's `permissions`/`env`/`enabledPlugins`) nor `skipIfExists` (would go
+ * stale). This path:
+ *  1. Reads the existing file (missing → `{}`).
+ *  2. Preserves EVERY existing top-level key (`permissions`, `env`, `hooks`, …).
+ *  3. Merges the provided `patch` object — for `hooks` arrays, the existing
+ *     arrays are kept and entries whose command already contains the given
+ *     `dedupSubstring` are NOT re-added (context-mode's alreadyRegistered
+ *     pattern — the entry is written once, never clobbered).
+ *  4. Writes atomically via the same tmp+rename as `regenerate` when the merged
+ *     bytes differ (content-hash dedup: an unchanged `noir sync` writes nothing).
+ *
+ * `patch` is a deep-merge target: top-level keys merge by key; `hooks.*` arrays
+ * append-with-dedup. Other arrays replace only when provided. Returns the same
+ * `WriteOutcome` shape. */
+export function mergeJson(
+  absPath: string,
+  patch: Record<string, unknown>,
+  dedupSubstring?: string,
+): WriteOutcome {
+  let existing: Record<string, unknown> = {};
+  if (existsSync(absPath)) {
+    try {
+      existing = JSON.parse(readFileSync(absPath, 'utf8')) as Record<string, unknown>;
+    } catch {
+      // Corrupt/unparseable existing file — treat as empty, the merge will
+      // produce a valid file (the old bytes are preserved in git if versioned).
+      existing = {};
+    }
+  }
+
+  const merged = deepMergePreservingHooks(existing, patch, dedupSubstring);
+  const content = `${JSON.stringify(merged, null, 2)}\n`;
+
+  // Content-hash dedup — a no-op sync writes nothing.
+  if (existsSync(absPath)) {
+    try {
+      if (readFileSync(absPath, 'utf8') === content) {
+        return { path: absPath, mode: 'mergeJson', written: false };
+      }
+    } catch {
+      /* fall through and write */
+    }
+  }
+
+  regenerate(absPath, content); // reuse the atomic tmp+rename path
+  return { path: absPath, mode: 'mergeJson', written: true };
+}
+
+/** Deep-merge `patch` into `existing`. `hooks.*` arrays append-with-dedup
+ *  (an entry whose command contains `dedupSubstring` is kept as-is, not
+ *  re-added); other arrays replace only when present in the patch. */
+function deepMergePreservingHooks(
+  existing: Record<string, unknown>,
+  patch: Record<string, unknown>,
+  dedupSubstring?: string,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...existing };
+  for (const [key, value] of Object.entries(patch)) {
+    if (key === 'hooks' && typeof value === 'object' && value !== null) {
+      const existingHooks = (out.hooks as Record<string, unknown> | undefined) ?? {};
+      const mergedHooks: Record<string, unknown> = { ...existingHooks };
+      for (const [event, entries] of Object.entries(value as Record<string, unknown>)) {
+        const existingEntries = Array.isArray(mergedHooks[event])
+          ? (mergedHooks[event] as unknown[])
+          : [];
+        const patchEntries = Array.isArray(entries) ? entries : [];
+        // Append-only with dedup: only add patch entries whose command does NOT
+        // already contain the dedup marker (the Noir hook was registered before —
+        // write-once, never clobbered). A patch entry whose command itself is
+        // missing is still added (caller bug, but non-fatal).
+        const alreadyRegistered =
+          dedupSubstring !== undefined &&
+          existingEntries.some(
+            (x) => (x as { command?: string })?.command?.includes(dedupSubstring) ?? false,
+          );
+        const toAdd = alreadyRegistered ? [] : patchEntries;
+        mergedHooks[event] = [...existingEntries, ...toAdd];
+      }
+      out.hooks = mergedHooks;
+    } else {
+      // Non-hooks keys: patch wins, but only when the patch actually provides it.
+      out[key] = value;
+    }
+  }
+  return out;
 }

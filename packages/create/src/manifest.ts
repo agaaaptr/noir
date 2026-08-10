@@ -68,6 +68,12 @@ export interface ManifestEntry {
   template?: string;
   /** One-line human description for `noir doctor` + logs. */
   description?: string;
+  /** Required for `mergeJson` mode: the JSON patch object (or a template that
+   *  renders to one). Merged into the existing file, preserving user keys. */
+  patch?: Record<string, unknown>;
+  /** Required for `mergeJson` mode: dedup substring for `hooks.*` entries — an
+   *  existing entry whose command contains this is NOT re-added. */
+  dedupSubstring?: string;
 }
 
 export type BuildManifestContext = {
@@ -407,8 +413,90 @@ export function buildHostArtifacts(
     });
   }
 
+  // 4. C3 SessionStart hook bootstrap (claude only). Three artifacts, three
+  //    ownerships (research-validated "both + split" design):
+  //      a. `.claude/settings.local.json` SessionStart entry — user-owned,
+  //         written ONCE via mergeJson (init/create only, deduped by command
+  //         substring). NEVER re-written by sync; preserves permissions/env.
+  //      b. `.noir/hooks/noir-session-start.mjs` — Noir-owned runner,
+  //         regenerate (init + sync), emits additionalContext from router.md.
+  //      c. `.noir/router.md` — co-owned mutable router contract, managedBlock
+  //         (init + sync), user edits outside markers survive.
+  if (host === 'claude') {
+    const HOOK_DEDUP = 'noir-session-start';
+    const hookEntry = {
+      hooks: {
+        SessionStart: [
+          {
+            hooks: [
+              {
+                type: 'command',
+                command: `"${ctx.root}/.noir/hooks/noir-session-start.mjs"`,
+              },
+            ],
+          },
+        ],
+      },
+    };
+    entries.push({
+      path: '.claude/settings.local.json',
+      mode: 'mergeJson',
+      host,
+      content: JSON.stringify(hookEntry, null, 2),
+      dedupSubstring: HOOK_DEDUP,
+      description: 'C3 SessionStart hook entry (user-owned, written once)',
+    });
+    entries.push({
+      path: '.noir/hooks/noir-session-start.mjs',
+      mode: 'regenerate',
+      host,
+      content: SESSION_START_HOOK_SCRIPT,
+      description: 'C3 SessionStart hook runner (Noir-owned, re-emitted)',
+    });
+    entries.push({
+      path: '.noir/router.md',
+      mode: 'managedBlock',
+      host,
+      block: CONTEXT_BLOCK,
+      template: 'router.md.tmpl',
+      description: 'C3 skill router contract (co-owned managed block)',
+    });
+  }
+
   return entries;
 }
+
+/** The C3 SessionStart hook runner. Reads `.noir/router.md` (the co-owned
+ *  router contract) and emits it as `hookSpecificOutput.additionalContext` so
+ *  Claude Code wraps it in a system reminder at the start of every session —
+ *  deterministic, NOT in the skill-listing 1% budget. Kept small (<10k chars)
+ *  so Claude never file-izes it. */
+const SESSION_START_HOOK_SCRIPT = `#!/usr/bin/env node
+// Noir C3 SessionStart hook — injects the skill router contract at session start.
+// The mutable contract lives in .noir/router.md (a Noir managed block, so user
+// edits outside the markers survive noir sync). This script is a pure runner.
+import { readFileSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(HERE, '..', '..', '..');
+const ROUTER = join(ROOT, '.noir', 'router.md');
+
+function main() {
+  if (!existsSync(ROUTER)) {
+    // No router contract (project not initialized / router removed) — silent.
+    process.stdout.write(JSON.stringify({ hookSpecificOutput: {} }));
+    process.exit(0);
+  }
+  const contract = readFileSync(ROUTER, 'utf8').trim();
+  process.stdout.write(
+    JSON.stringify({ hookSpecificOutput: { additionalContext: contract } }),
+  );
+}
+
+main();
+`;
 
 /** Convert an absolute path under `root` to a repo-relative POSIX string (the
  *  manifest's path shape). Throws if `abs` is NOT under `root` so a future

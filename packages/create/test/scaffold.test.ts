@@ -527,3 +527,51 @@ describe('scaffold — host-parametric (--host <id>)', () => {
     expect(readFileSync(join(root, 'AGENTS.md'), 'utf8')).toBe(expected);
   });
 });
+
+describe('scaffold — C3 SessionStart hook bootstrap', () => {
+  it('claude init emits settings.local.json + hook script + router.md', async () => {
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
+    // settings.local.json: merge-aware, contains the SessionStart hook entry.
+    expect(existsSync(join(root, '.claude', 'settings.local.json'))).toBe(true);
+    const settings = JSON.parse(readFileSync(join(root, '.claude', 'settings.local.json'), 'utf8'));
+    expect(settings.hooks.SessionStart).toBeDefined();
+    const entry = settings.hooks.SessionStart[0]?.hooks?.[0];
+    expect(entry?.type).toBe('command');
+    expect(entry?.command).toContain('noir-session-start');
+    // Hook runner emitted (Noir-owned, regenerate).
+    expect(existsSync(join(root, '.noir', 'hooks', 'noir-session-start.mjs'))).toBe(true);
+    // Router contract emitted as a managed block (user edits outside markers survive).
+    expect(existsSync(join(root, '.noir', 'router.md'))).toBe(true);
+    expect(readFileSync(join(root, '.noir', 'router.md'), 'utf8')).toContain('# Noir skill router');
+  });
+
+  it('mergeJson preserves existing settings (permissions) when appending the hook', async () => {
+    // Pre-populate settings.local.json with a user permissions block, then init.
+    const settingsPath = join(root, '.claude', 'settings.local.json');
+    mkdirSync(join(root, '.claude'), { recursive: true });
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({ permissions: { allow: ['Bash(git *)'] } }, null, 2),
+      'utf8',
+    );
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
+    const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
+    // User's permissions survived the merge.
+    expect(settings.permissions).toEqual({ allow: ['Bash(git *)'] });
+    // Hook appended.
+    expect(settings.hooks.SessionStart[0]?.hooks?.[0]?.command).toContain('noir-session-start');
+  });
+
+  it('is deduped — re-init does not append a second hook entry', async () => {
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
+    // Force a second init (scaffold already-initialized guard bypass via --upgrade-like call).
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
+    const settings = JSON.parse(readFileSync(join(root, '.claude', 'settings.local.json'), 'utf8'));
+    expect(settings.hooks.SessionStart.length).toBe(1);
+  });
+
+  it('non-claude hosts do NOT emit the claude settings hook', async () => {
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'gemini' });
+    expect(existsSync(join(root, '.claude', 'settings.local.json'))).toBe(false);
+  });
+});

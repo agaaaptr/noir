@@ -29,6 +29,7 @@ import {
   buildRegion,
   managedBlock,
   managedBlocks,
+  mergeJson,
   predictManagedBlock,
   predictManagedBlocks,
   regenerate,
@@ -209,9 +210,13 @@ const WRITER_BY_MODE: Record<WriteMode, 'all' | 'runtime'> = {
   // 'runtime' subset = regenerate + managedBlock (the always-safe-to-rewrite
   // entries). sync + init --upgrade emit only this subset; skipIfExists is
   // reserved for first-run init/create so user edits survive.
+  // 'mergeJson' (C3 SessionStart hook) is 'all' — the settings entry is
+  // written once at init/create; sync re-emits only the script + router
+  // contract (regenerate + managedBlock), never the user-owned entry.
   regenerate: 'runtime',
   managedBlock: 'runtime',
   skipIfExists: 'all',
+  mergeJson: 'all',
 };
 
 /**
@@ -548,6 +553,15 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
           managedBlock(abs, block, regionText);
           written.push(entry.path);
         }
+      } else if (entry.mode === 'mergeJson') {
+        // C3 SessionStart hook: merge-aware JSON write (preserves the user's
+        // permissions/env/enabledPlugins, appends the hook entry once, deduped
+        // by command substring). `body` is the rendered JSON patch; the dedup
+        // marker comes from the entry.
+        const patch = JSON.parse(body) as Record<string, unknown>;
+        const out = mergeJson(abs, patch, entry.dedupSubstring);
+        if (out.written) written.push(entry.path);
+        else identical.push(entry.path);
       } else {
         const out = skipIfExists(abs, body);
         if (out.written) written.push(entry.path);

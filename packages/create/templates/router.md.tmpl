@@ -1,0 +1,22 @@
+# Noir skill router
+
+Before doing anything else this session, check whether a Noir skill applies to the user's request. Noir skills are on-demand playbooks — using one turns a fuzzy request into a disciplined, verifiable flow.
+
+## When to route
+
+- **Feature / new task** → use `noir-brainstorming` (explore intent) → `noir-spec` → `noir-planning` → `noir-executing-plans`.
+- **Bug / crash / failure** → use `noir-systematic-debugging` (root cause first, never a blind fix).
+- **Implement / write tests** → use `noir-test-driven-development` (failing test before code).
+- **Claim done / merge** → use `noir-verifying` (gather evidence, not "looks good").
+- **Commit / push / PR** → use `noir-shipping` (conventional commit, ask before push).
+- **Close session** → use `noir-wrap` (verify, docs, memory, handoff).
+- **Explore the codebase** → use `noir-exploring`.
+- **Search memory** → use `noir-recall`; **save a decision** → `noir-remember`.
+
+## When to stay silent
+
+- Single-file edits, typo fixes, renames, or trivial changes with no design decision — do NOT force a skill.
+
+## Follow-up norm
+
+After any skill completes, always offer the next step ("→ next skill, or is there something else?") — the user should never be left wondering what comes next.

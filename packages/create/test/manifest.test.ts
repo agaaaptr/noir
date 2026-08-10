@@ -45,6 +45,15 @@ describe('buildManifest', () => {
       { path: 'CLAUDE.md', mode: 'managedBlock', host: 'claude', hasBlock: true },
       { path: 'CLAUDE.md', mode: 'managedBlock', host: 'claude', hasBlock: true },
       { path: '.mcp.json', mode: 'regenerate', host: 'claude', hasBlock: false },
+      // --- C3 SessionStart hook bootstrap (claude only) ---
+      { path: '.claude/settings.local.json', mode: 'mergeJson', host: 'claude', hasBlock: false },
+      {
+        path: '.noir/hooks/noir-session-start.mjs',
+        mode: 'regenerate',
+        host: 'claude',
+        hasBlock: false,
+      },
+      { path: '.noir/router.md', mode: 'managedBlock', host: 'claude', hasBlock: true },
     ]);
   });
 
