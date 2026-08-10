@@ -95,7 +95,7 @@ Response → task object (`id`, `name`, `description`, `status`, `custom_fields[
 noir_clickup_write({ op: 'task:set-status', taskId, status })
 ```
 
-`status` is a system field — valid values come from the list's statuses. If unknown, the proxy probes or handles 400 — never invent a status value.
+`status` is a system field — valid values come from the list's statuses. If unknown, run **Flow 6** (get statuses) FIRST — never invent or guess a status value. The status string is **case-sensitive** (`"ready to test"` ≠ `"Ready To Test"`). There is NO batch status-update endpoint — updating N tasks = N separate calls (one per task).
 
 ### Flow 3 — Create a subtask
 
@@ -128,6 +128,52 @@ another description
 ```
 
 A CSV adapter converts to the same intermediate shape. The proxy ALWAYS renders a **dry-run preview table** → host surfaces it via the tool-approval gate → on **explicit confirm**, POSTs. No write is ever silent.
+
+### Flow 6 — Get the list's valid statuses (BEFORE any status update)
+
+You CANNOT invent a status value. Fetch the authoritative per-list status set FIRST:
+
+```
+GET /list/{list_id}
+Authorization: pk_<token>
+```
+
+Response `statuses[]` — each item:
+```json
+{ "status": "ready to test", "orderindex": 3, "color": "#a78bfa", "type": "custom" }
+```
+
+**Rules:**
+- `status` is **case-sensitive and must match exactly** — `"ready to test"` ≠ `"Ready To Test"`. The API does NOT case-fold or fuzzy-match.
+- You set the **exact name string**, never the `type`. `type` (`open`/`closed`/`custom`/`done`) is a read-only classification.
+- Prefer `GET /list/{list_id}` over `GET /space/{space_id}` — the space endpoint misses list-level "custom statuses" overrides. `GET /team` has no statuses at all.
+- `GET /task/{task_id}` returns only the task's CURRENT status, not the full valid set.
+
+### Flow 7 — Add an attachment (`POST /task/{id}/attachment`)
+
+Upload a file (screenshot, spec, evidence) to a task. **multipart/form-data**, NEVER JSON.
+
+```
+POST /task/{task_id}/attachment
+Authorization: pk_<token>
+Content-Type: multipart/form-data   (boundary auto-generated — do NOT hand-set)
+```
+
+**Form field MUST be named `attachment`** — a part named `file` → `ATTCH_039 "No attachment supplied"`. For multiple files use `attachment[0]`, `attachment[1]`, …
+
+**Node fetch pattern (works via the host's fetch / ctx_execute sandbox):**
+```js
+const form = new FormData();
+const blob = await (await fetch(remoteUrl)).blob();      // download cloud file first
+form.append('attachment', blob, 'bug-screenshot.png');
+await fetch(`https://api.clickup.com/api/v2/task/${taskId}/attachment`, {
+  method: 'POST',
+  headers: { Authorization: 'pk_<token>' },   // NO Content-Type — let fetch set the boundary
+  body: form,
+});
+```
+
+**Gotchas:** `comment_text` is NOT part of the v2 attachment schema — post the comment separately via Flow 4. Max 1 GB, any file type, LOCAL files only (download remote first). `GBUSED_005` = workspace storage quota exceeded. Custom task IDs need `?custom_task_ids=true&team_id=...`.
 
 ## API pitfalls — common mistakes that produce WRONG results
 
@@ -248,17 +294,32 @@ ClickUp limits to ~100 requests per minute per token. When you hit it:
 Authorization: pk_<token>
 ```
 
-**NO space after `pk_`.** `pk_ abcd...` is WRONG. `pk_abcd...` is correct. No `Bearer` prefix — ClickUp API v2 rejects it with a cryptic error.
+**NO space after `pk_`.** `pk_ abcd...` is WRONG. `pk_abcd...` is correct. No `Bearer` prefix — ClickUp API v2 rejects it with a cryptic error. `Bearer` is ONLY for OAuth tokens.
 
 ---
 
-### 10. Time values are Unix milliseconds
+### 10. Debugging a 401 "Token invalid" (esp. writes that work via direct fetch but fail via proxy)
+
+A 401 on a WRITE via the proxy while the SAME token works via direct fetch means the **header construction in the proxy/daemon path is broken**, NOT the token. Work through these in order:
+
+1. **Verify the token itself.** `curl -s -H "Authorization: $CLICKUP_API_TOKEN" https://api.clickup.com/api/v2/user` → `200` = token valid; `401` = header value is malformed. Isolate first.
+2. **Check the header BYTES.** `printf '%q' "$CLICKUP_API_TOKEN"` (or `xxd`) to reveal an embedded newline, quote, or CR (Windows CRLF). `echo ${#CLICKUP_API_TOKEN}` to confirm non-empty. A `.env` value with quotes, or an `export` with a trailing newline, breaks the header. Fix: `.trim()` at load.
+3. **Double-prefix.** If the proxy does `pk_${token}` but the stored token ALREADY starts with `pk_`, you get `pk_pk_...` → 401. The token string already includes `pk_` — do not add it again.
+4. **Stale daemon (MOST COMMON for Noir).** The daemon's `process.env` is a SNAPSHOT taken when it was spawned. If the token was set/rotated AFTER `noir daemon start`, the daemon never sees it → `Authorization: pk_<old-or-empty>` → 401. **Restart the daemon** (`noir daemon restart`) after setting/rotating the token, then retry. This is the #1 cause of "works direct, fails via proxy" in Noir.
+5. **Workspace scope.** Personal tokens are workspace-scoped. `GET /team` lists the workspaces the token may touch (`OAUTH_023`/`OAUTH_027` = workspace not authorized). A token from workspace A against workspace B's data → 401, not 403.
+6. **Read the ECODE** from the error body: `OAUTH_017` malformed/missing header · `OAUTH_018/019` token not found · `OAUTH_023/027` workspace not authorized · `OAUTH_026` revoked (regenerate at ClickUp → Settings → Apps → API Token).
+
+**Rule:** 401 = bad/absent/out-of-scope token; 403 = valid token, insufficient permission. Never "fix" a 401 by regenerating the token until you've checked steps 2–4 — the token is usually fine; the header construction or the daemon's stale env is the problem.
+
+---
+
+### 11. Time values are Unix milliseconds
 
 All date/due_date fields in request bodies use **Unix timestamps in milliseconds** (not seconds). `due_date: 1717286400000` not `1717286400`.
 
 ---
 
-### 11. Custom fields — access by ID, not name
+### 12. Custom fields — access by ID, not name
 
 Custom field values are returned as `{id: "uuid", name: "Priority", value: ...}`. Reference them by `id` (the UUID) in code, not by `name` — names can change, IDs don't.
 
@@ -266,7 +327,7 @@ To get a task's custom field definitions: `GET /list/{list_id}/field`.
 
 ---
 
-### 12. Getting attachments — NO dedicated endpoint, fetch per-task
+### 13. Getting attachments — NO dedicated endpoint, fetch per-task
 
 ClickUp API v2 has **no dedicated attachments endpoint** (`GET /task/{id}/attachment` was requested but is not on the roadmap). Attachments come back in the **single Get Task response only**.
 
@@ -301,7 +362,7 @@ The response includes an `attachments` array when the task has attachments. Each
 
 ---
 
-### 13. Verify after EVERY fetch — don't trust your assumptions
+### 14. Verify after EVERY fetch — don't trust your assumptions
 
 After any ClickUp API call, run this mental checklist before reporting to the user:
 
