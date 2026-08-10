@@ -122,7 +122,7 @@ function truncate(text: string, max: number): string {
 /**
  * `noir skills list`: discover the full shipped pack (builtins + integrations)
  * and render it. Consistent with `emitSkillsToDir` (which emits BOTH) — the
- * `noir-clickup` integration shows up here alongside the 33 builtins.
+ * `noir-clickup` integration shows up here alongside the 26 builtins.
  *
  * `--json` emits `{ok:true, data:{count, skills: SkillRow[]}}` to stdout. A
  * discovery failure (the pack dir is unreadable) maps to exit 1 (ERROR) —
