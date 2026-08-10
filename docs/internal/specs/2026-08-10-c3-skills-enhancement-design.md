@@ -258,7 +258,64 @@ All 33 + 1 get `metadata: {category, version}`, `license: MIT`, `compatibility`.
 - **`FORBIDDEN_RESIDUE`** — don't copy Superpowers rhetoric; the new template is original Noir. The quality lint's "no first/second person" must not reject legitimate Noir voice.
 - **Existing tests enforce the 22+11 split** — must be rewritten in lockstep with content changes (both land in the same commit set).
 
-## 10. References
+## 10. Amendment — skill-trigger/adoption + curation (2026-08-10, post-review)
+
+> Feedback from the user + dedicated research (10+ refs, cited in §10 refs): the host (Claude Code) does NOT proactively invoke Noir's skills — Superpowers triggers ~10%→66% via a SessionStart hook; Noir's skills are rarely triggered because selection is a probabilistic description-match against a 1%-of-context listing budget that silently drops the least-invoked descriptions first. This section records the design changes. Where it conflicts with §0–§9, this section wins.
+
+### 10.1 The adoption problem (root-caused)
+
+- **Selection mechanism:** Claude Code injects only each skill's `name` + `description` into the system prompt (L1). The model matches the request against that flat listing — probabilistic, not deterministic. No per-turn router.
+- **Two budgets:** per-entry `description` + `when_to_use` truncated at 1,536 chars; whole-listing at ~1% of context → overflow drops least-invoked descriptions (a ratchet: Noir, being newer/less-prompted, drops first). 34 Noir + ~13 Superpowers + bundled ≈ overflow.
+- **Precedence:** enterprise > personal (`~/.claude/skills/`) > project (`.claude/skills/`) > plugin > bundled. Plugin skills are namespaced (`superpowers:*`), so no name collision with `noir-*` — the real risk is listing-budget competition.
+- **Why Superpowers fires:** a plugin **SessionStart hook** injects the full `using-superpowers` content as `additionalContext` → in context before first response. Measured: skill execution ~10%/6% → ~66%. Mechanism is a documented plugin feature (legit), but the "1% chance → MUST invoke" rule is a false-positive engine (criticized) and FORBIDDEN_RESIDUE bans its rhetoric.
+- **The proven levers** (ranked): trigger-first mutually-exclusive descriptions in user vocabulary → keep visible set small → SessionStart-hook bootstrap of a *lean* router → budget/`skillOverrides` hygiene → selective CLAUDE.md/NOIR.md amplifier.
+
+### 10.2 Design changes (locked with user)
+
+| # | Change | Detail |
+|---|---|---|
+| A1 | **Router skill (`noir-sync` upgraded)** | Becomes the lean router (skill-radar style): fires on explicit signals (feature start, spec request, session start), STAYS SILENT on trivial edits; lists the high-value `noir-*` skills + when to use them in its body; ends with a follow-up offer (see A5). |
+| A2 | **SessionStart hook bootstrap** | `noir init`/`sync` emit a project-scope `.claude/settings.local.json` SessionStart hook that injects a SHORT router contract (the rule + skill triage + follow-up norm, ~1 skill's worth of tokens — NOT the 117-line Superpowers version). Host-agnostic in spirit; claude emits the hook, other hosts (gemini/cursor/copilot) get the NOIR.md router instead. |
+| A3 | **Description formula (v2)** | `[third-person what] + [when-to-use clause] + [real-user trigger phrases/nouns] + [boundary: "do NOT use for…"]`; trigger-complete first sentence (survives truncation); `when_to_use` frontmatter for 2–3 extra phrasings; mutually-exclusive across the pack; ≤1,536 combined chars. |
+| A4 | **NOIR.md amplifier (host-agnostic)** | `NOIR.md` auto-brief (imported every session by claude/gemini/etc.) gains a short "Noir skills" block naming 3–5 high-value skills + when to use them. NOT CLAUDE.md (host-agnostic per user — future-proof for gemini/copilot). |
+| A5 | **Follow-up/flow guidance in every skill** | Every skill (builtin + integration) MUST end with a "What next" section: the next gate's skill (from the SDD phase→skill map), an offer to continue the flow, AND room for improvisation ("or is there something else you'd like to do?"). The `noir-wrap`/`noir-handoff` phase→skill mapping (already in the engine) is the source — enhanced, not invented. |
+| A6 | **Host-tool maximization** | Skills written to leverage the HOST's tools: e.g. Claude Code's `AskUserQuestion` for choices, `Task`/subagents for parallel work, MCP tools, `Read/Edit/Grep/Glob/Bash`. Written as host-agnostic INTENT + host-tool mapping table (claude/gemini/cursor/copilot), so each host maps intent→its own tool. Never hard-code a tool name as the only path. |
+| A7 | **Skill curation (buang/merge/rename)** | Full audit of the 34-skill pack against research (high-value skills, naming conventions, overlap). Merge/rename/drop so EVERY skill is genuinely usable — no "dead" skills. Decision table to be produced from research (Task 14). Integration (clickup) improved with worked templates. |
+| A8 | **ClickUp integration UX** | `noir-clickup` gains worked examples + placeholder templates: a task-detail fetch → PRD/spec draft flow, a status-update example, a batch-create template (H2-per-task MD + CSV), how to attach a task id; each with a follow-up step. |
+
+### 10.3 Updated scope (adds to §1.1)
+
+- Deepen + CURATE all skills (buang/merge/rename) — not just deepen.
+- Router (`noir-sync` upgrade) + SessionStart hook emit (project `.claude/settings.local.json`) + NOIR.md amplifier block.
+- Description formula v2 (trigger-first + boundary + `when_to_use`) across the pack.
+- Follow-up "What next" section in EVERY skill.
+- Host-tool maximization (intent + host mapping) in skills.
+- ClickUp integration UX (worked templates).
+- Registry + quality gate + evals unchanged (§2–§4).
+
+### 10.4 New acceptance criteria (adds to §8)
+
+- **Done when** — a SessionStart hook is emitted by `noir init`/`sync` that injects a lean router contract; verified it lands in `.claude/settings.local.json`.
+- **Done when** — `noir-sync` routes to the relevant `noir-*` skill on explicit signals and stays silent on trivial edits; it ends with a follow-up offer.
+- **Done when** — every skill's description is trigger-first + boundary + mutually-exclusive (a "would you hesitate?" test passes across the pack); `when_to_use` present where it adds signal.
+- **Done when** — every skill ends with a "What next" (next gate's skill + improvisation offer).
+- **Done when** — every skill references host tools as intent + mapping (not a single hard-coded tool as the only path).
+- **Done when** — the 34-skill pack is curated: no redundant/overlapping skills remain; every skill is genuinely usable.
+- **Done when** — `noir-clickup` ships worked examples + templates for fetch→PRD/spec, status update, batch create, and task-id attachment.
+
+## 11. References (updated)
+
+- [Claude Code — skills](https://code.claude.com/docs/en/skills) (L1/L2/L3 disclosure, 1,536-char cap, 1% listing budget, `when_to_use`, `skillOverrides`, `skillListingBudgetFraction`, precedence, `disable-model-invocation`)
+- [Anthropic — Agent Skills best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices) (description = trigger, third person, trigger phrases)
+- [Anthropic — steering Claude Code](https://claude.com/blog/steering-claude-code-skills-hooks-rules-subagents-and-more) (CLAUDE.md = facts, skills = procedures, SessionStart hooks)
+- [dev.to — how Superpowers forces skill execution](https://dev.to/sonim1/how-superpowers-forces-skill-execution-3e6e) (SessionStart hook → additionalContext, 10%→66% lift)
+- [dev.to — 5 actual causes skills don't trigger](https://dev.to/dev_encyclopedia/claude-code-skill-not-triggering-here-are-the-5-actual-causes-laj) (malformed YAML, wrong path, budget)
+- [Steve Kinney — agent skills](https://stevekinney.com/writing/agent-skills) (probabilistic selection, mutually-exclusive descriptions, negative cases)
+- [dev.to/rulestack — listing budget](https://dev.to/rulestack/too-many-claude-code-skills-how-the-listing-budget-decides-which-descriptions-claude-sees-4a6m) (ratchet effect, budget hygiene)
+- [anthropics/claude-code #34648](https://github.com/anthropics/claude-code/issues/34648) (overload → bypass Skill tool, 0/10)
+- [superpowers source — using-superpowers SKILL.md](https://raw.githubusercontent.com/obra/superpowers/main/skills/using-superpowers/SKILL.md) (1% rule, red flags)
+- [skill-radar](https://github.com/Roni-quant/skill-radar) (lean router alternative; explicit triggers, no-skill list)
+- [deepwiki — superpowers session lifecycle](https://deepwiki.com/obra/superpowers/4.4-session-lifecycle-and-bootstrap) (hook mechanics)
 
 - [Anthropic — Agent Skills best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)
 - [Anthropic — Equipping agents with skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills)
