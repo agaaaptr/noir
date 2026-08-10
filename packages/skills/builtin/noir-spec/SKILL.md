@@ -7,6 +7,8 @@ metadata:
   version: 1.0.0
 license: MIT
 compatibility: claude · agents-md · gemini · cursor · opencode
+references:
+  - spec-template.md
 ---
 
 # noir-spec
@@ -44,6 +46,10 @@ Turn a brainstormed idea into a formal specification — the contract the implem
 - A spec can be short. A 10-line spec with sharp boundaries beats a 200-line essay with fuzzy acceptances.
 - Reference sibling specs when a feature builds on one — don't copy-paste.
 - If the user already has a clear mental model, don't force a spec; ask whether they'd like one.
+
+## Reference
+
+For a copyable spec skeleton (goal/scope/non-goals/acceptance/constraints), see [spec-template.md](references/spec-template.md).
 
 ## When done → next skill
 
