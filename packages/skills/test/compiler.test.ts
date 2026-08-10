@@ -39,6 +39,40 @@ function firstSkill(dir: string) {
   return first;
 }
 
+/**
+ * A VALID skill markdown (passes the C3 structural gate): metadata, license,
+ * all required sections, WHAT+WHEN description. Tests that exercise compile/
+ * emit/conflict paths use this so the gate doesn't reject the fixture. Negative
+ * validation tests keep their deliberately-invalid fixtures.
+ */
+function okSkill(description = 'Use when turning an idea into a spec — draft the spec.'): string {
+  return okSkillNamed('noir-x', description);
+}
+
+/** `okSkill` with a configurable name — for prune/conflict tests that need a
+ *  valid skill under a different `noir-*` name. */
+function okSkillNamed(name: string, description: string): string {
+  return `---
+name: ${name}
+description: ${description}
+metadata:
+  category: spec
+  version: 1.0.0
+license: MIT
+compatibility: claude
+---
+# ${name}
+Overview sentence.
+## When to use
+- when an idea needs formalizing
+## Procedure
+1. **Write it** — down.
+## Verification
+- [ ] spec written
+## Notes
+- routes to noir-plan`;
+}
+
 describe('compiler: frontmatter', () => {
   it('parses name + description', () => {
     const fm = parseFrontmatter('---\nname: noir-x\ndescription: Use when testing.\n---\n# body');
@@ -98,7 +132,7 @@ describe('compiler: validateSkill', () => {
   it('passes a well-formed skill', async () => {
     await writeSkill(
       'noir-x',
-      '---\nname: noir-x\ndescription: Use when testing.\n---\n# noir-x\nbody',
+      okSkill(),
     );
     const skill = firstSkill(fixture);
     expect(validateSkill(skill).ok).toBe(true);
@@ -127,9 +161,45 @@ describe('compiler: validateSkill', () => {
   });
 });
 
+describe('compiler: validateSkill C3 structural gate', () => {
+  it('rejects a skill missing metadata.category + metadata.version', async () => {
+    await writeSkill(
+      'noir-x',
+      '---\nname: noir-x\ndescription: Drafts specs. Use when turning an idea into a spec.\n---\n# noir-x\n## When to use\n- x\n## Procedure\n1. x\n## Notes\n- x',
+    );
+    const skill = firstSkill(fixture);
+    const errors = validateSkill(skill).errors.join('; ');
+    expect(errors).toMatch(/metadata\.category/);
+    expect(errors).toMatch(/metadata\.version/);
+  });
+  it('rejects a skill missing required sections', async () => {
+    await writeSkill(
+      'noir-x',
+      '---\nname: noir-x\ndescription: Drafts specs. Use when turning an idea into a spec.\nmetadata:\n  category: spec\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n## Procedure\n1. x',
+    );
+    const skill = firstSkill(fixture);
+    expect(validateSkill(skill).errors.join('; ')).toMatch(/## When to use/);
+  });
+  it('rejects a WHEN-only description (no WHAT clause)', async () => {
+    await writeSkill(
+      'noir-x',
+      '---\nname: noir-x\ndescription: Use when turning an idea into a spec.\nmetadata:\n  category: spec\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n## When to use\n- x\n## Procedure\n1. x\n## Notes\n- x',
+    );
+    const skill = firstSkill(fixture);
+    expect(validateSkill(skill).errors.join('; ')).toMatch(/WHAT\+WHEN/);
+  });
+  it('passes a skill with metadata + all sections + WHAT+WHEN (okSkill)', async () => {
+    await writeSkill('noir-x', okSkill());
+    const skill = firstSkill(fixture);
+    const res = validateSkill(skill);
+    expect(res.errors.join('; ')).toBe('');
+    expect(res.ok).toBe(true);
+  });
+});
+
 describe('compiler: compileSkill + emitSkillsToDir', () => {
   it('compileSkill is a verbatim copy for claude target', async () => {
-    const md = '---\nname: noir-x\ndescription: Use when testing.\n---\n# noir-x\nbody';
+    const md = okSkill('Use when turning an idea into a spec — draft the spec.');
     await writeSkill('noir-x', md, { 'detail.md': '# detail' });
     const skill = firstSkill(fixture);
     const out = compileSkill(skill, 'claude');
@@ -148,7 +218,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
   it.each(['claude', 'agents-md', 'gemini', 'opencode'] as const)(
     'S10: compileSkill(%j) emits the verbatim SKILL.md + references (canonical format)',
     async (target) => {
-      const md = '---\nname: noir-x\ndescription: Use when testing.\n---\n# noir-x\nbody';
+      const md = okSkill();
       await writeSkill('noir-x', md, { 'detail.md': '# detail' });
       const skill = firstSkill(fixture);
       const out = compileSkill(skill, target);
@@ -158,7 +228,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
   );
 
   it('S10: compileSkill defaults to "claude" (backward-compatible with every existing caller)', async () => {
-    const md = '---\nname: noir-x\ndescription: Use when testing.\n---\n# noir-x\nbody';
+    const md = okSkill();
     await writeSkill('noir-x', md, { 'detail.md': '# detail' });
     const skill = firstSkill(fixture);
     // No second arg — must behave exactly like compileSkill(skill, 'claude').
@@ -169,7 +239,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
 
   it('S10: compileSkill(cursor) transforms to <name>.mdc with description/globs/alwaysApply frontmatter', async () => {
     const md =
-      '---\nname: noir-x\ndescription: Use when testing cursor transform.\n---\n# noir-x\nA body.';
+      okSkill('Use when testing cursor transform — render cursor rules.');
     await writeSkill('noir-x', md);
     const skill = firstSkill(fixture);
     const out = compileSkill(skill, 'cursor');
@@ -185,7 +255,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     expect(closeIdx).toBeGreaterThan(0);
     const frontmatter = mdc.slice(4, closeIdx);
     // The skill's WHEN description drives Cursor's agent-decided rule selection.
-    expect(frontmatter).toContain('description: Use when testing cursor transform.');
+    expect(frontmatter).toContain('description: Use when testing cursor transform — render cursor rules.');
     // `globs: ['**/*']` — broad applicability; the description is the selector.
     // yaml.stringify quotes the wildcard entry, so we assert the literal pattern
     // (not the quote style — single vs double quotes is yaml's call).
@@ -198,12 +268,12 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     // frontmatter into the rendered rule body.
     const body = mdc.slice(closeIdx + '\n---\n'.length);
     expect(body).toContain('# noir-x');
-    expect(body).toContain('A body.');
+    expect(body).toContain('Overview sentence.');
     expect(body).not.toContain('name: noir-x');
   });
 
   it('S10: compileSkill(cursor) drops the references/ dir (Cursor rules have no references concept)', async () => {
-    await writeSkill('noir-x', '---\nname: noir-x\ndescription: Use when testing.\n---\n# noir-x', {
+    await writeSkill('noir-x', okSkill(), {
       'extra.md': '# extra context',
     });
     const skill = firstSkill(fixture);
@@ -218,7 +288,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     // Pre-S10, anything but 'claude' threw. After the widening, every HostId is
     // a legal CompileTarget — the validator runs, the format is selected, no
     // generic "unsupported" rejection.
-    await writeSkill('noir-x', '---\nname: noir-x\ndescription: Use when testing.\n---\n# noir-x');
+    await writeSkill('noir-x', okSkill());
     const skill = firstSkill(fixture);
     for (const target of ['claude', 'agents-md', 'gemini', 'cursor', 'opencode'] as const) {
       expect(() => compileSkill(skill, target)).not.toThrow();
@@ -232,7 +302,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
   it('emitSkillsToDir(cursor) writes .mdc FLAT under targetDir (no <name>/ subdir)', async () => {
     await writeSkill(
       'noir-x',
-      '---\nname: noir-x\ndescription: Use when testing flat cursor.\n---\n# noir-x\nbody',
+      okSkill('Use when testing flat cursor — render cursor rules.'),
     );
     const target = join(fixture, '_out');
     await emitSkillsToDir(target, { builtinDir: fixture, target: 'cursor' });
@@ -253,7 +323,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     // opencode) still lands at `<target>/<name>/SKILL.md` (+ references/).
     await writeSkill(
       'noir-x',
-      '---\nname: noir-x\ndescription: Use when testing nested.\n---\n# noir-x\nbody',
+      okSkill('Use when testing nested — render cursor rules.'),
     );
     const target = join(fixture, '_out');
     await emitSkillsToDir(target, { builtinDir: fixture, target: 'claude' });
@@ -276,7 +346,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     // Noir-managed and pruned; `my-custom-rule.mdc` lacks it and is preserved.
     await writeSkill(
       'noir-keep',
-      '---\nname: noir-keep\ndescription: Use when keeping.\n---\n# keep',
+      okSkillNamed('noir-keep', 'Use when keeping — keep the essentials.'),
     );
     const target = join(fixture, '_out');
     const { mkdir, writeFile } = await import('node:fs/promises');
@@ -317,15 +387,15 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     expect(await readFile(join(target, 'my-custom-rule.mdc'), 'utf8')).toBe('user-authored');
   });
   it('emitSkillsToDir writes every skill + reference, idempotently', async () => {
-    await writeSkill('noir-a', '---\nname: noir-a\ndescription: Use when a.\n---\n# a');
-    await writeSkill('noir-b', '---\nname: noir-b\ndescription: Use when b.\n---\n# b', {
+    await writeSkill('noir-a', okSkillNamed('noir-a', 'Use when a — do the work.'));
+    await writeSkill('noir-b', okSkillNamed('noir-b', 'Use when b — do the build.'), {
       'r.md': '# r',
     });
     const target = join(fixture, '_out');
     const s1 = await emitSkillsToDir(target, { builtinDir: fixture });
     expect(s1.emitted.sort()).toEqual(['noir-a', 'noir-b']);
     expect(s1.references).toBe(1);
-    expect(await readFile(join(target, 'noir-a', 'SKILL.md'), 'utf8')).toContain('# a');
+    expect(await readFile(join(target, 'noir-a', 'SKILL.md'), 'utf8')).toContain('# noir-a');
     expect(await readFile(join(target, 'noir-b', 'references', 'r.md'), 'utf8')).toContain('# r');
     // idempotent: second run yields the same files + counts
     const s2 = await emitSkillsToDir(target, { builtinDir: fixture });
@@ -345,7 +415,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     // and a user-authored skill (no `noir-` prefix) lives alongside.
     await writeSkill(
       'noir-keep',
-      '---\nname: noir-keep\ndescription: Use when keeping.\n---\n# keep',
+      okSkillNamed('noir-keep', 'Use when keeping — keep the essentials.'),
     );
     const target = join(fixture, '_out');
     const { mkdir, writeFile } = await import('node:fs/promises');
@@ -374,7 +444,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
   });
 
   it('empty `pruned` array when nothing stale (clean sync)', async () => {
-    await writeSkill('noir-a', '---\nname: noir-a\ndescription: Use when a.\n---\n# a');
+    await writeSkill('noir-a', okSkillNamed('noir-a', 'Use when a — do the work.'));
     const target = join(fixture, '_out');
     const summary = await emitSkillsToDir(target, { builtinDir: fixture });
     expect(summary.pruned).toEqual([]);
@@ -386,7 +456,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
   it('assertNotUserOwned preserves a hand-authored noir-* dir (no canonical frontmatter)', async () => {
     await writeSkill(
       'noir-shipped',
-      '---\nname: noir-shipped\ndescription: Use when shipped.\n---\n# shipped',
+      okSkillNamed('noir-shipped', 'Use when shipped — ship the release.'),
     );
     const target = join(fixture, '_out');
     const { mkdir, writeFile } = await import('node:fs/promises');
@@ -408,7 +478,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     // pruned (not preserved).
     await writeSkill(
       'noir-shipped',
-      '---\nname: noir-shipped\ndescription: Use when shipped.\n---\n# shipped',
+      okSkillNamed('noir-shipped', 'Use when shipped — ship the release.'),
     );
     const target = join(fixture, '_out');
     const { mkdir, writeFile } = await import('node:fs/promises');
@@ -426,14 +496,14 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
   // Non-interactive guard. A stub onConflict must NEVER be consulted
   // under `interactive: false` (CI / --json / --no-input never hangs a prompt).
   it('non-interactive guard — onConflict is NOT consulted when interactive=false', async () => {
-    await writeSkill('noir-x', '---\nname: noir-x\ndescription: Use when x.\n---\n# x');
+    await writeSkill('noir-x', okSkill('Use when x — draft the spec.'));
     const target = join(fixture, '_out');
     const { mkdir, writeFile } = await import('node:fs/promises');
     await mkdir(join(target, 'noir-x'), { recursive: true });
     // Pre-populate the EXACT file Noir will emit, with different bytes.
     await writeFile(
       join(target, 'noir-x', 'SKILL.md'),
-      '---\nname: noir-x\ndescription: Use when x.\n---\n# USER',
+      okSkill('Use when x — draft the spec.'),
       'utf8',
     );
     let called = false;
@@ -452,15 +522,17 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
   // leaves the user's bytes intact; the structured `conflicts[]` field records
   // the choice.
   it('onConflict=preserve keeps user edits + records into summary.conflicts', async () => {
-    await writeSkill('noir-x', '---\nname: noir-x\ndescription: Use when x.\n---\n# x');
+    await writeSkill('noir-x', okSkill('Use when x — draft the spec.'));
     const target = join(fixture, '_out');
     const { mkdir, writeFile } = await import('node:fs/promises');
     await mkdir(join(target, 'noir-x'), { recursive: true });
-    await writeFile(
-      join(target, 'noir-x', 'SKILL.md'),
-      '---\nname: noir-x\ndescription: Use when x.\n---\n# USER',
-      'utf8',
+    // User edited the emitted file — a DIFFERENT body than what Noir compiles,
+    // so the conflict seam fires and `preserve` keeps the user's bytes.
+    const userEdited = okSkill('Use when x — draft the spec.').replace(
+      '# noir-x\nOverview sentence.',
+      '# noir-x\n# USER\nUSER-EDITED BODY.',
     );
+    await writeFile(join(target, 'noir-x', 'SKILL.md'), userEdited, 'utf8');
     const summary = await emitSkillsToDir(target, {
       builtinDir: fixture,
       interactive: true,

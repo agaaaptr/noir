@@ -4,6 +4,20 @@ import { basename, dirname, join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { discoverAll, discoverBuiltin } from './discover.js';
 import { runtimeEmitsHostMcp } from './integrations-schema.js';
+import {
+  chainedReferences,
+  isWhatWhenDescription,
+  lintWarnings,
+  looksLikeWhenDescription,
+  MAX_BODY_LINES,
+  missingSections,
+  withinLineBudget,
+} from './quality.js';
+
+// Re-exported for backward-compat — callers (hygiene tests, CLI) import
+// `looksLikeWhenDescription` from './compiler.js'. The single source of truth
+// is quality.ts; this alias keeps the old import surface stable.
+export { looksLikeWhenDescription } from './quality.js';
 import type {
   BuiltinSkill,
   CompiledIntegration,
@@ -21,8 +35,6 @@ import type {
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 const NAME_RE = /^noir-[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const WHEN_START =
-  /^(use|using|used|whenever|when|before|after|while|starting|encountering|completing|creating|about to|upon|during|to|for|on)\b/i;
 const MAX_DESC = 1024;
 
 export function parseFrontmatter(md: string): SkillFrontmatter {
@@ -42,16 +54,10 @@ export function bodyOf(md: string): string {
   return md.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
 }
 
-/** A WHEN description leads with its trigger. Requiring a leading cue — rather
- *  than a loose "contains when/before/after anywhere" — avoids false positives
- *  ("A tool that decides when to run tests") and accepts valid leads ("Upon…"). */
-export function looksLikeWhenDescription(desc: string): boolean {
-  return WHEN_START.test(desc.trim());
-}
-
 export function validateSkill(skill: BuiltinSkill): ValidationResult {
   const errors: string[] = [];
-  const { name, description } = skill.frontmatter;
+  const warnings: string[] = [];
+  const { name, description, metadata } = skill.frontmatter;
   if (!name) errors.push('missing `name`');
   else if (!NAME_RE.test(name)) errors.push(`name "${name}" must match noir-<kebab>`);
   if (basename(skill.dir) !== name) {
@@ -61,12 +67,40 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
   else if (description.length > MAX_DESC) errors.push(`description exceeds ${MAX_DESC} chars`);
   else if (!looksLikeWhenDescription(description)) {
     errors.push('description must state WHEN to trigger (e.g. "Use when…"), not WHAT it does');
+  } else if (!isWhatWhenDescription(description)) {
+    // C3: the description must ALSO carry a WHAT clause — the trigger phrase
+    // alone (WHEN-only) fails. Errors, not warnings: it's part of the contract.
+    errors.push('description must be WHAT+WHEN — a WHAT clause after the trigger phrase');
   }
+  // C3 structural gate: metadata, required sections, line budget, one-level refs.
+  if (!metadata || !metadata.category?.trim()) errors.push('missing `metadata.category`');
+  if (!metadata?.version?.trim()) errors.push('missing `metadata.version`');
+  const body = bodyOf(skill.skillMd);
+  const missing = missingSections(body);
+  for (const sec of missing) errors.push(`missing required section: ${sec}`);
+  if (!withinLineBudget(body)) {
+    errors.push(`body exceeds ${MAX_BODY_LINES}-line budget (${body.split('\n').length} lines)`);
+  }
+  const chained = chainedReferences(skill);
+  for (const r of chained) errors.push(`reference "${r}" chains to another reference (must be one level deep)`);
   for (const r of skill.references) {
     if (!/^[a-z0-9-]+\.md$/i.test(r.name)) errors.push(`reference "${r.name}" must be <kebab>.md`);
     if (!r.content.trim()) errors.push(`reference "${r.name}" is empty`);
   }
-  return { ok: errors.length === 0, errors };
+  // Soft warnings (lint-level) — advisory, non-failing.
+  warnings.push(...lintWarnings(skill));
+  return { ok: errors.length === 0, errors, warnings: warnings.length > 0 ? warnings : undefined };
+}
+
+/**
+ * `lintSkill` — the C3 soft quality gate. Errors = `validateSkill` errors (a
+ * skill that fails validation is broken); warnings = `quality.ts` style rules
+ * (thin body, no examples, first-person narration, …). A skill can validate
+ * clean yet still carry lint warnings the author should resolve.
+ */
+export function lintSkill(skill: BuiltinSkill): { name: string; errors: string[]; warnings: string[] } {
+  const res = validateSkill(skill);
+  return { name: skill.name, errors: res.errors, warnings: res.warnings ?? [] };
 }
 
 /**

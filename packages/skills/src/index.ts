@@ -3,10 +3,20 @@ export {
   compileIntegration,
   compileSkill,
   emitSkillsToDir,
+  lintSkill,
   looksLikeWhenDescription,
   parseFrontmatter,
   validateSkill,
 } from './compiler.js';
+export {
+  chainedReferences,
+  isWhatWhenDescription,
+  lintWarnings,
+  MAX_BODY_LINES,
+  MIN_FULL_BODY_LINES,
+  missingSections,
+  withinLineBudget,
+} from './quality.js';
 export {
   BUILTIN_DIR,
   discoverAll,

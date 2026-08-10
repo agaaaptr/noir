@@ -58,6 +58,9 @@ export interface IntegrationSkill extends BuiltinSkill {
 export interface ValidationResult {
   ok: boolean;
   errors: string[];
+  /** C3 soft-quality warnings (lint-level): thin body, no example, first-person
+   *  narration, voodoo constants, time-sensitive pins. Present only when >0. */
+  warnings?: string[];
 }
 
 export interface EmittedFile {
