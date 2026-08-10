@@ -6,6 +6,8 @@ metadata:
   version: 1.0.0
 license: MIT
 compatibility: claude · agents-md · gemini · cursor · opencode
+references:
+  - tracing.md
 ---
 
 # noir-systematic-debugging
@@ -59,6 +61,10 @@ If three or more fixes have failed, each revealing a new problem in a different 
 
 - "No root cause found" is usually an incomplete investigation. If the bug is genuinely environmental or timing-dependent after a complete pass, document what you investigated, implement appropriate handling (retry, timeout, error message), and add monitoring — but say so plainly rather than implying the root cause is unknowable.
 - If the bug spans multiple services, use `noir-exploring` to fan out the evidence search first.
+
+## Reference
+
+For deeper detail, see [tracing.md](references/tracing.md).
 
 ## When done → next skill
 

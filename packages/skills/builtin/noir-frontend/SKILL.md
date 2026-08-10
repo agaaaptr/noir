@@ -6,6 +6,8 @@ metadata:
   version: 1.0.0
 license: MIT
 compatibility: claude · agents-md · gemini · cursor · opencode
+references:
+  - ui-patterns.md
 ---
 
 # noir-frontend
