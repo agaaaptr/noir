@@ -7,6 +7,8 @@ metadata:
   version: 1.0.0
 license: MIT
 compatibility: claude
+references:
+  - clickup-api.md
 ---
 
 # noir-clickup — ClickUp integration (read + gated write)
