@@ -18,7 +18,7 @@ Specifically removed:
 - `.claude-plugin/` — the marketplace manifest.
 - Pre-Noir spec/plan/findings artifacts that described the plugin identity.
 
-The native skill pack is the single skill mechanism: 31 builtins (19 full playbooks + 12 stubs) in canonical `SKILL.md` format, validated by the `@noir-ai/skills` compiler (WHEN-led `description`, `noir-` prefix, dir-equals-name) and guarded against predecessor residue (`FORBIDDEN_RESIDUE` in `packages/skills/src/residue.ts`).
+The native skill pack is the single skill mechanism: 26 builtins in canonical `SKILL.md` format, validated by the `@noir-ai/skills` compiler (WHAT+WHEN `description`, `noir-` prefix, dir-equals-name, structural quality gate with required sections + line budget + one-level refs, metadata-presence) and guarded against predecessor residue (`FORBIDDEN_RESIDUE` in `packages/skills/src/residue.ts`).
 
 ## Consequences
 

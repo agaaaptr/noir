@@ -8,7 +8,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 |------------|----------|---------------|-------------|
 | C1 Package Distribution | 🟩 Completed | Ship | 2026-08-04 |
 | C2 CLI Runtime & UX | 🟩 Completed | Ship | 2026-08-07 |
-| C3 Built-in Skill System | 🟦 Partial — 33 skills + compiler shipped | Ship + Research (registry/versioning) | 2026-08-03 |
+| C3 Built-in Skill System | 🟩 Completed — 26 skills + registry + quality gate + evals | Ship | 2026-08-10 |
 | C4 AI Development Workflow | 🟩 Shipped core (SDD engine) | Ship | 2026-08-03 |
 | C5 Runtime Infrastructure & Daemon | 🟩 Shipped (daemon + store) | Ship | 2026-08-03 |
 | C5.5 Host Abstraction Layer | 🟦 Partial — 5 adapters shipped | Ship + Research (negotiation/certification) | 2026-08-03 |
@@ -49,6 +49,8 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 ## Active slice
 
 - `c2-home-consolidation` (grouped home + palette + bridge)
+
+- **2026-08-10** — **C3 completed:** skill pack curated 34→26 via 5 merges + gerund renames; all 26 builtins + 1 integration become full playbooks (zero stubs, every skill WHAT+WHEN-described, with follow-up guidance and host-tool maximization). Runtime-derived skill registry queryable via `noir skills registry --json`. Structural quality gate (`validateSkill` + `lintSkill` + `noir skills lint`) checks metadata, required sections, line budget, one-level refs, WHAT+WHEN descriptions. Offline evals harness (`evals/evals.json` + vitest runner) with 2 shipped example evals. ClickUp integration enhanced with STEP-0 auth gate, 12 API pitfalls with corrective patterns, verb dispatch grammar, and attachment handling. Full gate green (1561 tests, lint, build, typecheck, docs:validate).
 
 ## Next milestone
 

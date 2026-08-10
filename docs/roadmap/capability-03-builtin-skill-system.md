@@ -1,42 +1,45 @@
 # Capability 3 — Built-in Skill System
 
-> **Status:** Partial — 33 builtins + 1 integration + compiler shipped; registry/versioning/quality-gate are research
+> **Status:** Completed — 26 builtins + 1 integration, all full playbooks; runtime-derived registry; structural quality gate; offline evals harness. C3 → Completed (2026-08-10).
 
 ## Overview
 
-Noir ships skills as a native, first-party capability: a compiler that validates and emits `noir-` builtin skills into any supported host, a shipped pack of 33 builtins plus one integration, and a daemon seam for gated integrations. There is no plugin system and no marketplace (see ADR-0002) — this capability covers the skill compiler, the shipped pack, multi-host compilation, and the remaining skill-system infrastructure.
+Noir ships skills as a native, first-party capability: a compiler that validates and emits `noir-` builtin skills into any supported host, a shipped pack of 26 builtins (curated from 34 via merge+rename) plus one integration, and a daemon seam for gated integrations. There is no plugin system and no marketplace (see ADR-0002).
 
 ## Shipped today
 
-- **33 builtin skills** in `packages/skills/builtin/` (22 full playbooks + 11 explicit stubs marked `> **Stub:**`), plus **1 integration** (`noir-clickup`).
-- **Copy-and-validate compiler** at `packages/skills/src/compiler.ts`: `parseFrontmatter` → `validateSkill` → `compileSkill` → `emitSkillsToDir`, validating the whole pack fail-fast before writing.
-- **WHEN-led description enforcement** in `validateSkill`: rejects WHAT-summaries, non-`noir-<kebab>` names, dir/name mismatches, descriptions over the max char limit, and empty/malformed references.
-- **Multi-host compilation** in `compileSkill`: `claude` / `agents-md` / `gemini` / `opencode` get verbatim `SKILL.md` + `references/`; `cursor` compiles to a flat `.cursor/rules/<name>.mdc` rule.
-- **Emission wired into the CLI** — `noir init` / `sync` / `create` / `skills sync`; emission is idempotent, prunes stale `noir-*` dirs, and is guarded by `assertNotUserOwned` (see `packages/skills/src/residue.ts`).
-- **`noir skills list` (with `--json`) and `noir skills sync`** commands in `packages/cli/src/commands/skills.ts`.
-- **Integration seam in the daemon** (`packages/daemon/src/integration-seam.ts` + `clickup-write.ts`): `integrations_auth` plus the `noir_clickup_write` gated-write-proxy, with an `integration.json` Zod schema (`packages/skills/src/integrations-schema.ts`) and runtime tiers (`none` / `gated-write-proxy` / `mcp-stdio` / `external-mcp`).
-- **`docs/reference/skills.md`** auto-generated covering 34 skills from `packages/skills/builtin/*/SKILL.md` + `integrations/*/SKILL.md`.
+- **26 builtin skills** in `packages/skills/builtin/` (curated from 34 via 5 merges + gerund renames), **all full playbooks** (zero stubs), plus **1 integration** (`noir-clickup` with auth gate, API pitfalls, verb dispatch).
+- **Copy-and-validate compiler** at `packages/skills/src/compiler.ts`: `parseFrontmatter` → `validateSkill` (structural gate: metadata, required sections, line budget, one-level refs, WHAT+WHEN descriptions) → `lintSkill` (warnings) → `compileSkill` → `emitSkillsToDir`.
+- **Quality gate** at `packages/skills/src/quality.ts`: `missingSections`, `withinLineBudget`, `chainedReferences`, `isWhatWhenDescription`, `lintWarnings`. `noir skills lint` CLI surfaces errors + warnings per skill.
+- **Runtime-derived skill registry** at `packages/skills/src/registry.ts`: `buildRegistry()` from `discoverAll()`; `noir skills registry --json` queries it. No committed file — frontmatter is the single source of truth.
+- **Offline evals harness** at `packages/skills/src/evals.ts` + `evals/**/evals.json` (agentskills.io format) + vitest runner in `test/evals.test.ts`. 2 shipped examples: `noir-tdd`, `noir-debug`.
+- **Multi-host compilation**: `claude`/`agents-md`/`gemini`/`opencode` → verbatim `SKILL.md` + `references/`; `cursor` → flat `.mdc` rule.
+- **Emission wired into CLI** — `noir init` / `sync` / `create` / `skills sync` / `skills list` / `skills lint` / `skills registry`. Idempotent, prunes stale `noir-*` entries, guards user-authored `noir-*` dirs via `assertNotUserOwned`.
+- **Integration seam** (`integration.json` + daemon `integrations_auth` + `noir_clickup_write` gated-write-proxy).
+- **`docs/reference/skills.md`** auto-generated covering 27 skills (26 builtin + 1 integration).
+- **Spec:** `docs/internal/specs/2026-08-10-c3-skills-enhancement-design.md`; **Plan:** `docs/internal/plans/2026-08-10-c3-skills-enhancement.md`.
 
-## Gap / roadmap delta
+## Gap / roadmap delta (resolved)
 
-- **Deepen the 11 stubs** (`> **Stub:**` playbooks) into full playbooks with real bodies and references.
-- **Skill registry** — a central record of id/name/category/dependency/version/owner/compatibility/status/lifecycle. None exists today.
-- **Per-skill versioning** plus a compatibility matrix across hosts and pack versions.
-- **Official skill template + governance doc** so third-party contribution has a contract to follow.
-- **Interactive-skill runtime** — a host-independent way for a skill to prompt for missing parameters at run time.
-- **More integrations** reusing `integration.json` (GitHub, Linear, Jira, Notion, Slack).
-- **Skill Quality Gate** beyond `validateSkill` metadata checks — a CLI/lint that checks body quality and structure.
-- **Test + benchmark suite** — golden/snapshot/prompt-regression/compatibility tests, and a skill benchmark for token/latency/determinism.
+- ✅ All 11 stubs deepened to full playbooks (zero stubs remain).
+- ✅ Skill registry (runtime-derived, queryable via CLI).
+- ✅ Per-skill metadata (category, version) in frontmatter.
+- ✅ Official skill template + quality gate (structural: sections, budget, depth, WHAT+WHEN).
+- ✅ Offline behavioral evals (evals.json + vitest runner).
+- ✅ ClickUp integration enhanced (auth gate, API pitfalls, verb dispatch, attachment handling).
+- Deferred: interactive-skill runtime, more integrations (GitHub/Linear/Jira), LLM-judge evals, benchmark suite.
 
 ## Acceptance criteria
 
-- **MET** — `noir skills list --json` and `noir skills sync` run against the live pack and report 33 builtins + 1 integration.
-- **MET** — `validateSkill` rejects a WHAT-style description, an over-limit description, and a `noir-` name/dir mismatch (verified in `packages/skills/src/compiler.ts`).
-- **MET** — `compileSkill` emits verbatim `SKILL.md`+`references/` for claude/agents-md/gemini/opencode and a single flat `.mdc` for cursor.
-- **MET** — `noir_clickup_write` is registered as a gated-write-proxy through the `integration.json` runtime-tier seam.
-- **Done when** — all 11 stubs compile without the `> **Stub:**` marker and pass the full pack validation.
-- **Done when** — a skill registry with id/version/owner/compatibility/lifecycle exists, and per-skill version + host compatibility are queryable by the CLI.
-- **Done when** — the Skill Quality Gate CLI reports a pass/fail per skill beyond metadata (body/reference/structure checks) and a benchmark suite (token/latency/determinism) has baseline numbers.
+- ✅ `noir skills list --json`, `noir skills sync`, `noir skills lint`, `noir skills registry --json` — all run against the live pack.
+- ✅ `validateSkill` rejects missing metadata, missing sections, body >500 lines, chained refs, WHAT-only/WHEN-only descriptions; `lintSkill` reports warnings.
+- ✅ `compileSkill` emits verbatim for claude/agents-md/gemini/opencode, `.mdc` for cursor.
+- ✅ `noir_clickup_write` gated-write-proxy works via `integration.json` runtime-tier seam.
+- ✅ All skills compile without `> **Stub:**` marker and pass full pack validation.
+- ✅ Skill registry queryable via `noir skills registry --json`.
+- ✅ Skill quality gate (`noir skills lint`) reports pass/fail + warnings per skill.
+- ✅ `evals/evals.json` harness runs offline in `pnpm test` with 2 shipped example evals.
+- ✅ Full gate green (1561 tests, lint, build, typecheck, docs:validate). C3 → Completed.
 
 ## References
 

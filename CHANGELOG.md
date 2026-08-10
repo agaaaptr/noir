@@ -1,6 +1,24 @@
 # Changelog
 
-## 1.9.3 (unreleased) — TUI polish (Panel component, block cursor, fixed-width palette, clear screen)
+## Unreleased — C3 skills enhancement
+
+### Added
+- **Skill pack curation (34→26):** 5 merges + gerund renames per Anthropic naming canon and collision-reduction research (~30-skill selection cliff).
+- **Runtime-derived skill registry** (`buildRegistry()`, `noir skills registry --json`). No committed file — frontmatter metadata is the source of truth.
+- **Structural quality gate** in `validateSkill`: metadata presence, required sections, line budget (<500), one-level refs, WHAT+WHEN descriptions.
+- **`noir skills lint`** CLI — per-skill errors + warnings.
+- **Offline evals harness:** `evals/evals.json` (agentskills.io format) + vitest runner, 2 shipped example evals (noir-tdd, noir-debug).
+- ClickUp integration: STEP-0 auth gate, 12 API pitfalls with corrective patterns (subtasks, pagination, custom task IDs, attachments, status values, rate limits, auth header), verb dispatch grammar (`fetch|update|create|comment|batch`), attachment handling.
+
+### Changed
+- **All 26 builtins are full playbooks** (zero stubs). Every skill: WHAT+WHEN trigger-first description with boundary, when_to_use section, numbered procedure, verification checklist, notes, and "when done → next skill" footer.
+- **Gerund renames:** brainstorm→brainstorming, plan→planning, execute→executing-plans, debug→systematic-debugging, tdd→test-driven-development, skill-author→writing-skills, explore→exploring.
+- **Merges:** intake+clarify+brainstorm→brainstorming, verify+review→verifying, commit+pr+branch→shipping, document→wrap, test→test-driven-development.
+- **Frontmatter expanded:** `metadata.{category,version}`, `license`, `compatibility`, `argument-hint` on args-taking skills.
+- **`FORBIDDEN_RESIDUE` enforced** — no Superpowers rhetoric in native skills.
+- **All descriptions WHAT+WHEN** (Anthropic canon; the WHEN-only school was fully migrated).
+
+## 1.9.3 (2026-08-07) — TUI polish (Panel component, block cursor, fixed-width palette, clear screen)
 
 ### Added
 - **Shared `<Panel>` component** — one rounded-border container for all 5 TUI surfaces, eliminating duplicated props across 5+ files.

@@ -48,10 +48,13 @@ This repo dogfoods Noir's own Spec-Driven Development flow: **brainstorm → spe
 There is **no plugin and no marketplace**. Skills are native `noir-` builtins, authored as Claude Code `SKILL.md` files and compiled by `@noir-ai/skills`.
 
 - **Adding a skill** = create `packages/skills/builtin/noir-<kebab>/SKILL.md` (+ optional `references/<kebab>.md`). It is auto-discovered, validated by the compiler, and emitted to the host's `.claude/skills/` on the next `noir init` / `noir sync`. The `noir-*` namespace is **managed** — overwritten on every sync.
-- **Frontmatter:** `{ name, description, references? }`. Validation rules (enforced in `packages/skills/src/compiler.ts`):
+- **Frontmatter:** `{ name, description, references?, metadata?, license?, compatibility? }`. Validation rules (enforced in `packages/skills/src/compiler.ts`):
   - `name` must match `/^noir-[a-z0-9]+(?:-[a-z0-9]+)*$/`, and the directory name must equal `name`.
-  - `description` is **WHEN-led** — it must lead with a trigger cue (`Use`/`Using`/`When`/`Before`/`After`/`Upon`/…). A WHAT-summary ("A tool that drafts specs…") is rejected: it becomes a shortcut the agent follows instead of loading the body. ≤ 1024 chars.
-  - References are named `<kebab>.md` and non-empty.
+  - `description` is **WHAT+WHEN** — it must lead with a trigger cue (`Use`/`Using`/`When`/`Before`/`After`/`Upon`/…) AND contain a WHAT clause. A WHAT-summary or WHEN-only description is rejected. ≤ 1024 chars.
+  - `metadata.{category,version}` is required (C3 structural gate).
+  - Body carries required sections: `## When to use`, `## Procedure` (or `## Steps`), and one of `## Verification`/`## Notes`/`## Fallbacks`.
+  - Body ≤ 500 lines; references one-level deep only (`<kebab>.md`, no chained references).
+  - Quality gate: `noir skills lint` reports errors + warnings; `noir skills registry --json` queries the runtime-derived registry.
 - **Compile target is Claude Code only** in v1 (canonical format copied verbatim). Multi-host transform is S10.
 - **Forbidden-residue guard** (`packages/skills/src/residue.ts`, `FORBIDDEN_RESIDUE`, checked by the hygiene tests): a native skill must not contain predecessor-plugin internals or Superpowers rhetoric — e.g. `workflow/<task`, `noir-workflow.mode`, `noir-workflow`, `plugins/noir-workflow`, `@uiigateway`, `<EXTREMELY-IMPORTANT`, `SUBAGENT-STOP`. If you are porting an old playbook, scrub these before committing. (Note: `ClickUp`/`clickup` were forbidden during the predecessor-port era but are **allowed again** — Slice X reintroduced ClickUp as a first-class Noir integration under `packages/skills/integrations/noir-clickup/`. The residue list is the source of truth; check it before assuming a token is banned.)
 

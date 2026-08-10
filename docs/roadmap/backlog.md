@@ -49,7 +49,7 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 ## Toolchain / quality
 
 - **`tsconfig.test.json`** — piloted on `@noir-ai/cli`; the remaining 10 packages are still `src`-only.
-- **`references/` skill code-path coverage** (only synthetic fixtures today; 0 shipped skills use it).
+- ✅ **`references/` skill code-path coverage** — resolved in C3 (2026-08-10): `noir-clickup` carries `references/clickup-api.md` as a real shipped reference.
 - **Engine-naming consistency** (`ContextEngine` / `MemoryEngineImpl`).
 - **`indexer.ts` + `daemon/server.ts` god-file refactors.**
 - **`biome.json` schema deprecation infos** (drift between biome's config schema and the pinned version).
