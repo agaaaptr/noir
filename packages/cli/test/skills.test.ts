@@ -8,7 +8,7 @@ import { mkdtempSync, readdirSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { skillsLint, skillsList, skillsSync } from '../src/commands/skills.js';
+import { skillsLint, skillsList, skillsRegistry, skillsSync } from '../src/commands/skills.js';
 import { init } from '../src/init.js';
 import { inferExitCode } from '../src/output.js';
 
@@ -195,6 +195,36 @@ describe('noir skills lint', () => {
   it('is project-independent (no init required)', async () => {
     // skills lint reads the shipped pack only — works outside any project.
     const r = await run(() => skillsLint({ json: true }));
+    expect(r.err).toBeUndefined();
+    expect(r.stderr).toBe('');
+  });
+});
+
+describe('noir skills registry', () => {
+  it('emits the runtime-derived registry with a --json envelope', async () => {
+    const r = await run(() => skillsRegistry({ json: true }));
+    expect(r.err).toBeUndefined();
+    const env = JSON.parse(r.stdout) as {
+      ok: boolean;
+      data: { count: number; skills: Array<{ name: string; kind: string; category: string; version: string; status: string; referenceCount: number; lines: number }> };
+    };
+    expect(env.ok).toBe(true);
+    expect(env.data.count).toBe(34); // 33 builtins + 1 integration
+    for (const s of env.data.skills) {
+      expect(s.name.startsWith('noir-')).toBe(true);
+      expect(['builtin', 'integration']).toContain(s.kind);
+      expect(typeof s.category).toBe('string');
+      expect(typeof s.version).toBe('string');
+      expect(['full', 'stub']).toContain(s.status);
+      expect(typeof s.referenceCount).toBe('number');
+      expect(typeof s.lines).toBe('number');
+    }
+    // ClickUp is the integration entry.
+    expect(env.data.skills.find((s) => s.name === 'noir-clickup')?.kind).toBe('integration');
+  });
+
+  it('is project-independent (no init required)', async () => {
+    const r = await run(() => skillsRegistry({ json: true }));
     expect(r.err).toBeUndefined();
     expect(r.stderr).toBe('');
   });

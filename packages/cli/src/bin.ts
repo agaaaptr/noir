@@ -26,7 +26,7 @@ import {
   memorySave,
   memorySessions,
 } from './commands/memory.js';
-import { skillsLint, skillsList, skillsSync } from './commands/skills.js';
+import { skillsLint, skillsList, skillsRegistry, skillsSync } from './commands/skills.js';
 import { type StatusOptions, status } from './commands/status.js';
 import { taskAdvance, taskNew, taskNext, taskStatus } from './commands/task.js';
 import { init } from './init.js';
@@ -736,8 +736,14 @@ export function createProgram(): Command {
     .action(async (...args: unknown[]) => {
       await skillsLint(toCliOptions(actionGlobals(args)));
     });
+  skillsGrp
+    .command('registry')
+    .description('emit the runtime-derived skill registry (C3)')
+    .action(async (...args: unknown[]) => {
+      await skillsRegistry(toCliOptions(actionGlobals(args)));
+    });
   skillsGrp.action(() => {
-    throw new NoirCliError(EXIT.USAGE, 'Usage: noir skills list|sync|lint');
+    throw new NoirCliError(EXIT.USAGE, 'Usage: noir skills list|sync|lint|registry');
   });
 
   const taskGrp = program.command('task').description('workflow task control');

@@ -17,6 +17,7 @@ import { claudeAdapter } from '@noir-ai/adapters';
 import { loadProjectInfo } from '@noir-ai/core';
 import {
   type BuiltinSkill,
+  buildRegistry,
   discoverAll,
   emitSkillsToDir,
   type IntegrationSkill,
@@ -88,12 +89,16 @@ export interface SkillRow {
    *  (e.g. `noir-clickup`) so `noir skills list` shows the full pack and which
    *  entries are integrations. Defaults to `'builtin'` for back-compat. */
   kind: 'builtin' | 'integration';
+  /** C3 — `full` (playbook) vs `stub` (marker). Derived from the body; the
+   *  registry enriches this from the same source so list + registry agree. */
+  status: 'full' | 'stub';
 }
 
 function toRow(s: BuiltinSkill, kind: 'builtin' | 'integration' = 'builtin'): SkillRow {
   const description =
     typeof s.frontmatter.description === 'string' ? s.frontmatter.description : '';
-  return { name: s.name, category: categoryOf(s.name), description, kind };
+  const status: 'full' | 'stub' = s.skillMd.includes('> **Stub:**') ? 'stub' : 'full';
+  return { name: s.name, category: categoryOf(s.name), description, kind, status };
 }
 
 /**
@@ -141,6 +146,11 @@ export async function skillsList(opts: SkillsOptions): Promise<void> {
     ...builtins.map((b) => toRow(b, 'builtin')),
     ...integrations.map((i) => toRow(i, 'integration')),
   ];
+  // Status is derived from the body (stub marker); category uses the CLI's
+  // CATEGORY map (name-derived) until skills carry `metadata.category` — after
+  // the C3 content rewrite every skill does, and `skills registry` reads it.
+  // `skills list` keeps the curated CATEGORY map as its single source so the
+  // human table is stable; the registry is the queryable form.
   const data = { count: rows.length, skills: rows };
 
   if (opts.json === true) {
@@ -159,9 +169,10 @@ export async function skillsList(opts: SkillsOptions): Promise<void> {
       Skill: r.name,
       Kind: r.kind,
       Category: r.category,
+      Status: r.status,
       Description: truncate(r.description, 80),
     })),
-    ['Skill', 'Kind', 'Category', 'Description'],
+    ['Skill', 'Kind', 'Category', 'Status', 'Description'],
     opts,
   );
 }
@@ -282,4 +293,49 @@ export async function skillsLint(opts: SkillsOptions): Promise<void> {
       for (const w of s.warnings) info(`  ${s.name}: ${w}`, opts);
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// `noir skills registry`
+// ---------------------------------------------------------------------------
+/**
+ * `noir skills registry`: emit the C3 runtime-derived skill registry (id, kind,
+ * category, version, status, refs, lines). In-process (no daemon) — reads the
+ * shipped pack via `buildRegistry()`. The registry is NOT a committed file;
+ * frontmatter is the single source of truth and this command derives it on
+ * demand (C3 decision D3).
+ *
+ * `--json` emits `{ok:true, data:{count, skills: SkillRegistryEntry[]}}` to
+ * stdout; the human view is a table to stderr.
+ */
+export async function skillsRegistry(opts: SkillsOptions): Promise<void> {
+  let reg: ReturnType<typeof buildRegistry>;
+  try {
+    reg = buildRegistry();
+  } catch (err) {
+    fail(
+      EXIT.ERROR,
+      `skills registry: could not build registry (${err instanceof Error ? err.message : String(err)})`,
+      opts,
+    );
+  }
+  const data = { count: reg.length, skills: reg };
+  if (opts.json === true) {
+    process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
+    return;
+  }
+  log(`noir skills registry — ${reg.length} skills.`, opts);
+  table(
+    reg.map((r) => ({
+      Skill: r.name,
+      Kind: r.kind,
+      Category: r.category,
+      Version: r.version,
+      Status: r.status,
+      Refs: String(r.referenceCount),
+      Lines: String(r.lines),
+    })),
+    ['Skill', 'Kind', 'Category', 'Version', 'Status', 'Refs', 'Lines'],
+    opts,
+  );
 }

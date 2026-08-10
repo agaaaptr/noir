@@ -17,6 +17,8 @@ export {
   missingSections,
   withinLineBudget,
 } from './quality.js';
+export { buildRegistry, registryByCategory, NOIR_NAMESPACE } from './registry.js';
+export type { SkillRegistryEntry } from './registry.js';
 export {
   BUILTIN_DIR,
   discoverAll,
