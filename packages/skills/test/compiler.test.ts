@@ -51,6 +51,22 @@ describe('compiler: frontmatter', () => {
   it('bodyOf strips the frontmatter block', () => {
     expect(bodyOf('---\nname: noir-x\ndescription: y\n---\n# body')).toContain('# body');
   });
+  it('tolerates metadata/license/compatibility in frontmatter', () => {
+    const fm = parseFrontmatter(`---
+name: noir-x
+description: Drafts specs. Use when turning an idea into a spec.
+metadata:
+  category: spec
+  version: 1.0.0
+license: MIT
+compatibility: claude
+---
+# noir-x`);
+    expect(fm.metadata?.category).toBe('spec');
+    expect(fm.metadata?.version).toBe('1.0.0');
+    expect(fm.license).toBe('MIT');
+    expect(fm.compatibility).toBe('claude');
+  });
 });
 
 describe('compiler: WHEN heuristic', () => {

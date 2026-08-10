@@ -2,6 +2,11 @@ export interface SkillFrontmatter {
   name: string;
   description: string;
   references?: string[];
+  /** C3 enhancement — canonical agentskills.io optional fields. `metadata` is a
+   *  string→string map convention; we type the two keys the registry reads. */
+  metadata?: { category?: string; version?: string };
+  license?: string;
+  compatibility?: string;
   [k: string]: unknown; // tolerate + ignore extra keys (user-invocable, allowed-tools, …)
 }
 
