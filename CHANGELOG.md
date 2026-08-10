@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — C3 skills enhancement
+## 1.9.4 (2026-08-10) — C3 skills enhancement
 
 ### Added
 - **Skill pack curation (34→26):** 5 merges + gerund renames per Anthropic naming canon and collision-reduction research (~30-skill selection cliff).
