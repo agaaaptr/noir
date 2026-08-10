@@ -22,11 +22,11 @@ The `noir` grouped home menu — section picker + per-section action lists with 
 ## Status
 
 <!-- noir:doc:status -->
-**Latest stable:** `1.9.3` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.9.3-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
-**Source version:** `1.9.3` (clean SemVer in `packages/*/package.json`)
+**Latest stable:** `1.9.4` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.9.4-beta.2` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Source version:** `1.9.4` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-10T09:12:52.906Z*
+*Last auto-generated: 2026-08-10T10:20:32.671Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
