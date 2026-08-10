@@ -18,6 +18,7 @@ import {
 // `looksLikeWhenDescription` from './compiler.js'. The single source of truth
 // is quality.ts; this alias keeps the old import surface stable.
 export { looksLikeWhenDescription } from './quality.js';
+
 import type {
   BuiltinSkill,
   CompiledIntegration,
@@ -73,7 +74,7 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
     errors.push('description must be WHAT+WHEN — a WHAT clause after the trigger phrase');
   }
   // C3 structural gate: metadata, required sections, line budget, one-level refs.
-  if (!metadata || !metadata.category?.trim()) errors.push('missing `metadata.category`');
+  if (!metadata?.category?.trim()) errors.push('missing `metadata.category`');
   if (!metadata?.version?.trim()) errors.push('missing `metadata.version`');
   const body = bodyOf(skill.skillMd);
   const missing = missingSections(body);
@@ -82,7 +83,8 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
     errors.push(`body exceeds ${MAX_BODY_LINES}-line budget (${body.split('\n').length} lines)`);
   }
   const chained = chainedReferences(skill);
-  for (const r of chained) errors.push(`reference "${r}" chains to another reference (must be one level deep)`);
+  for (const r of chained)
+    errors.push(`reference "${r}" chains to another reference (must be one level deep)`);
   for (const r of skill.references) {
     if (!/^[a-z0-9-]+\.md$/i.test(r.name)) errors.push(`reference "${r.name}" must be <kebab>.md`);
     if (!r.content.trim()) errors.push(`reference "${r.name}" is empty`);
@@ -98,7 +100,11 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
  * (thin body, no examples, first-person narration, …). A skill can validate
  * clean yet still carry lint warnings the author should resolve.
  */
-export function lintSkill(skill: BuiltinSkill): { name: string; errors: string[]; warnings: string[] } {
+export function lintSkill(skill: BuiltinSkill): {
+  name: string;
+  errors: string[];
+  warnings: string[];
+} {
   const res = validateSkill(skill);
   return { name: skill.name, errors: res.errors, warnings: res.warnings ?? [] };
 }

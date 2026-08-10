@@ -77,7 +77,8 @@ export function parseEvalSuite(raw: unknown): EvalSuite {
       expected_output?: unknown;
       assertions?: unknown;
     };
-    if (typeof id !== 'string' || id.length === 0) throw new Error(`eval[${i}] requires a string id`);
+    if (typeof id !== 'string' || id.length === 0)
+      throw new Error(`eval[${i}] requires a string id`);
     if (typeof prompt !== 'string' || prompt.length === 0) {
       throw new Error(`eval ${id} requires a string prompt`);
     }
@@ -112,7 +113,8 @@ export function runAssertions(
         if (!new RegExp(a.value, 'i').test(output)) failures.push(`expected to match /${a.value}/`);
         break;
       case 'length-gte':
-        if (output.length < a.value) failures.push(`expected length >= ${a.value} (got ${output.length})`);
+        if (output.length < a.value)
+          failures.push(`expected length >= ${a.value} (got ${output.length})`);
         break;
     }
   }

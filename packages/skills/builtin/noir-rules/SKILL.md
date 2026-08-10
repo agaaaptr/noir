@@ -1,34 +1,35 @@
 ---
 name: noir-rules
-description: Use when reviewing or editing the project's AI working-rules (.noir/rules/RULES.md), or when deciding whether a directive belongs in the always-on contract vs a skill, a memory, or an ADR.
+description: Use when reviewing or editing the project's AI working-rules (.noir/rules/RULES.md) — decide whether a directive belongs in the always-on contract vs a skill, a memory, or an ADR. Use when the user says "update the rules" or "add a rule".
+metadata:
+  category: meta
+  version: 1.0.0
+license: MIT
+compatibility: claude · agents-md · gemini · cursor · opencode
 ---
 
-# noir-rules — AI working-rules steward
+# noir-rules
 
-The project's canonical AI working-contract lives at `.noir/rules/RULES.md`; the host context file (`CLAUDE.md`) `@import`s it so it is in context every session. Noir re-emits only the `@import` pointer on `noir init`/`noir sync` — the body is user-owned.
+The project's AI working-rules at `.noir/rules/RULES.md` — the always-on contract. Every line costs context in every session, so a rule must earn its place.
 
 ## When to use
-- Editing or reviewing `.noir/rules/RULES.md`.
-- Deciding where a directive belongs:
-  - **rules** — always-on contract (loaded every session);
-  - **skill** — on-demand playbook (loaded when triggered);
-  - **memory** — a learned fact/decision (recall on demand);
-  - **ADR** — a locked architecture decision (`.noir/decisions/NNNN-*.md`).
 
-## Keeping rules lean — the pruning rubric
-Every line pays rent in every session's context budget. Keep a line only if it is one of:
-- **failure-backed** — it prevented a real issue in the last 30 days; or
-- **tool-enforceable** — a command / hook / gate checks it; or
-- **decision-encoding** — records a locked architecture/workflow choice; or
-- **triggerable** — names a specific condition for action.
+## Procedure
+1. **Follow the guidance** in the notes and verification.
 
-Otherwise delete it. "Document failures, not aspirations."
+- The user says "add a rule", "update rules", "should this be a rule?"
+- A convention is being repeated verbally every session — it's time to codify it.
+- A rule is growing stale — it's time to prune or archive.
 
-## Recommended structure (section order)
-Identity & scope → Anti-assumption contract → SDD workflow gates → Verification commands → Coding standards (link ADRs, don't inline) → Docs & roadmap pointers → Conventions gotchas.
+## Keeping rules lean
 
-## Budget
-Target ≤ 150 lines / ≤ 6 KB. Effective attention degrades in the low-thousands of tokens regardless of window size — every line must earn its place.
+1. **One rule, one line.** If it needs a paragraph, it belongs in a skill, a memory, or an ADR.
+2. **Use the most specific mechanism.** A directive you want ALWAYS active → rule. A directive you want on-demand → skill. A decision worth recalling → memory. An architecture decision with rationale → ADR.
+3. **Prune stale rules.** `noir doctor rules` checks the budget.
 
-## Multi-host (v1.x)
-`RULES.md` is AGENTS.md-compatible. For non-Claude hosts, `noir sync` emits a root `AGENTS.md` that imports it; Cursor additionally compiles to `.cursor/rules/*.mdc` with `description`/`globs`/`alwaysApply` frontmatter.
+## When done → next skill
+
+→ The relevant noir skill for the change the rule governs. Or continue.
+
+## Notes
+- This skill is a playbook — the host decides which tools to use. On Claude Code, prefer `AskUserQuestion` for choices; on other hosts, ask in text.

@@ -39,37 +39,32 @@ export interface SkillsOptions extends CliOptions {}
 // `--json` payload carries `category` too (same derivation) for consistency.
 // ---------------------------------------------------------------------------
 const CATEGORY: Record<string, string> = {
-  'noir-brainstorm': 'discovery',
-  'noir-intake': 'discovery',
-  'noir-clarify': 'discovery',
-  'noir-explore': 'discovery',
+  'noir-brainstorming': 'discovery',
+  'noir-sync': 'discovery',
+  'noir-checkpoint': 'discovery',
+  'noir-exploring': 'discovery',
   'noir-spec': 'spec',
-  'noir-plan': 'plan',
-  'noir-execute': 'execute',
-  'noir-tdd': 'execute',
-  'noir-debug': 'execute',
+  'noir-planning': 'plan',
+  'noir-prd': 'plan',
+  'noir-executing-plans': 'execute',
+  'noir-test-driven-development': 'execute',
+  'noir-systematic-debugging': 'execute',
   'noir-subagent': 'execute',
   'noir-parallel': 'execute',
-  'noir-verify': 'verify',
-  'noir-review': 'verify',
+  'noir-verifying': 'verify',
   'noir-security': 'verify',
-  'noir-test': 'verify',
-  'noir-document': 'document',
+  'noir-wrap': 'document',
   'noir-readme': 'document',
-  'noir-commit': 'git',
-  'noir-branch': 'git',
-  'noir-pr': 'git',
+  'noir-shipping': 'git',
   'noir-worktree': 'git',
   'noir-recall': 'memory',
   'noir-remember': 'memory',
-  'noir-checkpoint': 'memory',
   'noir-context': 'context',
   'noir-frontend': 'domain',
   'noir-backend': 'domain',
   'noir-doctor': 'meta',
-  'noir-skill-author': 'meta',
-  'noir-sync': 'meta',
-  'noir-wrap': 'meta',
+  'noir-writing-skills': 'meta',
+  'noir-rules': 'meta',
 };
 
 function categoryOf(name: string): string {
@@ -282,7 +277,10 @@ export async function skillsLint(opts: SkillsOptions): Promise<void> {
   if (errored.length === 0) {
     log(`noir skills lint — ${skills.length} skills, all validate clean.`, opts);
   } else {
-    warn(`noir skills lint — ${errored.length} skill${errored.length === 1 ? '' : 's'} FAIL validation:`, opts);
+    warn(
+      `noir skills lint — ${errored.length} skill${errored.length === 1 ? '' : 's'} FAIL validation:`,
+      opts,
+    );
   }
   for (const s of errored) {
     for (const e of s.errors) warn(`  ${s.name}: ${e}`, opts);

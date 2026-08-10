@@ -1,35 +1,46 @@
 ---
 name: noir-prd
-description: Use when drafting a Product Requirements Document (.noir/prd/<id>-<slug>.md) for a feature or epic, before writing the technical spec — captures the what/why/for-whom so the spec can focus on the how.
+description: Use when drafting a Product Requirements Document — capturing what a feature does, why it matters, and who it serves before the technical spec. Do NOT use for the technical "how" — that's noir-spec.
+metadata:
+  category: plan
+  version: 1.0.0
+license: MIT
+compatibility: claude · agents-md · gemini · cursor · opencode
 ---
 
-# noir-prd — Product Requirements Document authoring
+# noir-prd
 
-A PRD is a **pre-SDD product artifact** at `.noir/prd/<taskId>-<slug>.md`. It captures the *what / why / for-whom* so the technical spec can focus on the *how*. The spec later `@import`s it (`prdRef: <id>@<hash>`). **No FSM change** — the PRD is optional by mode, not a new phase.
+A PRD captures what and why before the spec captures how. It is the user-facing contract — who this feature is for, what problem it solves, and what success looks like. Shorter than a spec and never technical.
 
-## When to draft
-- `taskClass ∈ {feature, epic}` — a PRD is expected before the spec phase.
-- Explicitly requested (`noir-prd`, or "write a PRD for this").
-- NOT for bugfix / spike / quick-task / refactor (skip — Quick mode flows straight to spec).
+## When to use
+
+## Procedure
+1. **Follow the guidance** in the notes and verification.
+
+- A feature needs stakeholder-facing rationale before a technical spec.
+- The user says "write a PRD", "why are we building this", "who is this for."
+- After `noir-brainstorming` when the idea is clear but needs a formal "why."
+- **Do NOT use:** for the technical implementation plan — that's `noir-planning`.
 
 ## Sections (Noir template)
-1. **Problem** — what's broken / missing.
-2. **Evidence** — proof it's real (data, tickets, user reports). Never fill without a source.
-3. **Audience** — for whom.
-4. **Success Criteria** — machine-verifiable (quantified thresholds, not "fast/intuitive").
-5. **Appetite / Mode** — time-box; small batch or bet.
-6. **Proposed Direction** — product-altitude solution sketch (not technical design).
-7. **No-gos** — explicitly out of scope (highest-signal section).
-8. **Rabbit holes** — known pitfalls to avoid.
-9. **Open Questions** — unresolved; needs human input.
 
-## Task → PRD field mapping (e.g. from a tracker issue)
-`name`→Title; `description`→Problem/Proposed Direction; custom fields (Goal/Metric/Impact)→Evidence/Success Criteria; `status`+`priority`→Appetite/Mode; `assignees`→Audience; `due_date`→time-box; `tags`→clustering; `comments`→Open Questions/Rabbit holes; subtasks→Proposed Direction skeleton. Typically MISSING → No-gos, hard Success-Criteria metrics, explicit Rabbit holes → ask clarifying questions.
+1. **Title & summary.** One sentence — what and why.
+2. **Problem.** What problem does this solve? For whom?
+3. **Proposed solution.** High-level, non-technical. How does it solve the problem?
+4. **Success metrics.** How do we know it worked? (adoption, performance, feedback — one number if possible).
+5. **Non-goals.** What are we deliberately not building in this version?
+6. **Open questions.** What's still unknown?
 
-## Drafting process
-1. **Ground first** — search `.noir/` memory (+ the web if relevant); never fabricate Evidence.
-2. **Ask clarifying questions** for missing sections (No-gos, metrics, rabbit holes).
-3. **Write** to `.noir/prd/<id>-<slug>.md` via the workflow `writePrd` artifact helper.
-4. The spec phase then `@import`s it.
+## Drafting
 
-Offline (no model key): emit the section template above with placeholders — graceful degradation, never a hard failure.
+1. Gather from brainstorming output or the task brief.
+2. On Claude Code, use `AskUserQuestion` to fill gaps (who is the user, what metric). On other hosts, ask.
+3. Write to `.noir/prd/<id>-<slug>.md`.
+4. **Explicit opt-in.** Never auto-draft a PRD — ask first.
+
+## When done → next skill
+
+→ `noir-spec` to formalize the technical side. Or is there something else?
+
+## Notes
+- This skill is a playbook — the host decides which tools to use.

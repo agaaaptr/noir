@@ -40,7 +40,7 @@ describe('universal contract — producers consult the seam', () => {
     mkdirSync(join(builtinDir, 'noir-x'), { recursive: true });
     writeFileSync(
       join(builtinDir, 'noir-x', 'SKILL.md'),
-      '---\nname: noir-x\ndescription: Use when testing.\n---\n# fresh',
+      '---\nname: noir-x\ndescription: Use when testing the conflict contract — validate fixture behavior.\nmetadata:\n  category: test\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n## When to use\n- when testing\n## Procedure\n1. **Test** — the fixture.\n## Notes\n- fixture only\n# fresh',
       'utf8',
     );
 
@@ -49,7 +49,7 @@ describe('universal contract — producers consult the seam', () => {
     // Pre-populate the EXACT file Noir will emit, with different bytes.
     writeFileSync(
       join(target, 'noir-x', 'SKILL.md'),
-      '---\nname: noir-x\ndescription: Use when testing.\n---\n# USER-EDIT',
+      '---\nname: noir-x\ndescription: Use when testing the conflict contract — validate fixture behavior.\nmetadata:\n  category: test\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n# USER-EDIT\nThis is user-edited content.\n\n## When to use\n- when testing\n## Procedure\n1. **Test** — the fixture.\n## Notes\n- fixture only',
       'utf8',
     );
 
@@ -75,14 +75,14 @@ describe('universal contract — producers consult the seam', () => {
     mkdirSync(join(builtinDir, 'noir-x'), { recursive: true });
     writeFileSync(
       join(builtinDir, 'noir-x', 'SKILL.md'),
-      '---\nname: noir-x\ndescription: Use when testing.\n---\n# fresh',
+      '---\nname: noir-x\ndescription: Use when testing the conflict contract — validate fixture behavior.\nmetadata:\n  category: test\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n## When to use\n- when testing\n## Procedure\n1. **Test** — the fixture.\n## Notes\n- fixture only\n# fresh',
       'utf8',
     );
     const target = join(tmp, 'out');
     mkdirSync(join(target, 'noir-x'), { recursive: true });
     writeFileSync(
       join(target, 'noir-x', 'SKILL.md'),
-      '---\nname: noir-x\ndescription: Use when testing.\n---\n# USER-EDIT',
+      '---\nname: noir-x\ndescription: Use when testing the conflict contract — validate fixture behavior.\nmetadata:\n  category: test\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n## When to use\n- when testing\n## Procedure\n1. **Test** — the fixture.\n## Notes\n- fixture only\n# USER-EDIT',
       'utf8',
     );
 
@@ -106,7 +106,22 @@ describe('universal contract — producers consult the seam', () => {
     mkdirSync(join(builtinDir, 'noir-shipped'), { recursive: true });
     writeFileSync(
       join(builtinDir, 'noir-shipped', 'SKILL.md'),
-      '---\nname: noir-shipped\ndescription: Use when shipped.\n---\n# shipped',
+      `---
+name: noir-shipped
+description: Use when giting the conflict contract — validate fixture behavior.
+metadata:
+  category: test
+  version: 1.0.0
+license: MIT
+---
+# noir-shipped
+Overview sentence.
+## When to use
+- when testing
+## Procedure
+1. **Test** — the contract.
+## Notes
+- fixture only`,
       'utf8',
     );
     const target = join(tmp, 'out');

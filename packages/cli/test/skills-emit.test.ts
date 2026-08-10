@@ -19,26 +19,26 @@ describe('noir init / sync emit the skill pack (builtins + integrations)', () =>
     expect(claudeAdapter.skillsDir?.({ root })).toBe(join(root, '.claude', 'skills'));
   });
 
-  it('init writes all 34 skills (33 builtins + 1 integration) to .claude/skills/<name>/SKILL.md', async () => {
+  it('init writes all 27 skills (26 builtins + 1 integration) to .claude/skills/<name>/SKILL.md', async () => {
     await init(root, { transport: 'stdio' });
     const dir = join(root, '.claude', 'skills');
     const names = (await readdir(dir, { withFileTypes: true }))
       .filter((e) => e.isDirectory() && e.name.startsWith('noir-'))
       .map((e) => e.name)
       .sort();
-    expect(names.length).toBe(34);
+    expect(names.length).toBe(27);
     expect(names).toContain('noir-clickup');
-    const md = await readFile(join(dir, 'noir-brainstorm', 'SKILL.md'), 'utf8');
-    expect(md).toContain('name: noir-brainstorm');
+    const md = await readFile(join(dir, 'noir-brainstorming', 'SKILL.md'), 'utf8');
+    expect(md).toContain('name: noir-brainstorming');
   });
 
-  it('sync is idempotent (re-emits the same 34)', async () => {
+  it('sync is idempotent (re-emits the same 27)', async () => {
     await init(root, { transport: 'stdio' });
     await sync(root);
     const dir = join(root, '.claude', 'skills');
     const names = (await readdir(dir, { withFileTypes: true }))
       .filter((e) => e.isDirectory() && e.name.startsWith('noir-'))
       .map((e) => e.name);
-    expect(names.length).toBe(34);
+    expect(names.length).toBe(27);
   });
 });

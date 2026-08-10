@@ -1,23 +1,39 @@
 ---
 name: noir-wrap
-description: Use when closing a session cleanly — run tests, curate docs, confirm commits, save memory, emit a host handoff.
+description: Use when closing a work session cleanly — running final verification, updating docs and CHANGELOG, saving memory, and emitting a host handoff. Do NOT use mid-session for a checkpoint — use noir-checkpoint.
+metadata:
+  category: meta
+  version: 1.0.0
+license: MIT
+compatibility: claude · agents-md · gemini · cursor · opencode
 ---
 
 # noir-wrap
 
-Use when you are ending a session and want to leave the work in a clean, recoverable state — and hand off to the host CLI with a ready-to-paste prompt.
+Close a session in a clean, recoverable state. This skill absorbs `noir-document` (update docs/CHANGELOG/memory) — wrap is the superset that covers the full close.
 
-## Steps
+## When to use
 
-1. Run the project's test command (the host detects it; if unknown, `pnpm test` / `npm test`).
-2. Curate or delete ephemeral notes (scratch docs, dead branches, tmp files).
-3. Confirm commits are made — and pushed or intentionally local (Noir keeps commits local + conservative by default).
-4. Save durable memory before closing: observations, decisions, patterns the next session should recall. Prefer `noir memory save` (or the `noir.remember` MCP tool from the host) so cross-session recall works.
-5. Advance the workflow task if a gate is satisfied: `noir task advance --to <phase>` (the verify gate prints the handoff hint automatically).
-6. Emit the host handoff — run `noir handoff` (or the session-end alias `noir wrap`). This prints a ready-to-paste markdown prompt to STDOUT that names the active task, the next gate's skill, a bounded context/memory seed, and the exact host-launch directive. Pipe it straight into the host, or persist with `noir handoff --write` (the path is gitignored under `.noir/handoff/`).
+- Ending a work session.
+- The user says "wrap up", "I'm done", "close this out."
+- **Do NOT use:** mid-session — use `noir-checkpoint`.
 
-## Notes
+## Procedure
 
-- `noir handoff` reuses the same snapshot as `noir status` and the same phase→skill map as `noir task next`, so the handoff is always consistent with the live state.
-- The handoff directive is TEXT ONLY — Noir never launches the host. Paste the block into the host CLI to resume.
-- For a machine-readable handoff (e.g. a CI consumer), use `noir handoff --json`.
+1. **Run final verification.** Same gate as `noir-verifying`: test suite, lint, typecheck. Evidence, not assumption.
+2. **Update docs.** CHANGELOG, ADRs, decisions, reference docs — anything that should reflect the session's work. The rule: docs reflect shipped reality, never a stale plan.
+3. **Save memory.** Persist observations, decisions, patterns the next session should recall. `noir memory save` (or `noir.remember` MCP tool).
+4. **Confirm commits.** Commits are made and intentional (local or pushed). Noir defaults to local.
+5. **Advance the workflow task.** `noir task advance --to <phase>` if a gate is satisfied.
+6. **Emit the handoff.** `noir handoff` (text-only prompt; `--write` persists to `.noir/handoff/`; `--json` for CI). Names the active task, next gate's skill, and the host-launch directive.
+
+## Verification
+
+- [ ] Gate is green (tests, lint, typecheck).
+- [ ] Docs are synced (CHANGELOG, decisions, references).
+- [ ] Memory is saved (key observations + decisions).
+- [ ] Handoff emitted (the next session can resume).
+
+## When done → next skill
+
+The session is closed. Until next time.

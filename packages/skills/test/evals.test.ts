@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  evaluateSuite,
-  loadEvalSuites,
-  parseEvalSuite,
-  runAssertions,
-} from '../src/evals.js';
+import { evaluateSuite, loadEvalSuites, parseEvalSuite, runAssertions } from '../src/evals.js';
 
 describe('runAssertions() — offline assertion engine', () => {
   it('passes when all assertions hold', () => {
@@ -33,7 +28,14 @@ describe('runAssertions() — offline assertion engine', () => {
     expect(() =>
       parseEvalSuite({
         skill_name: 'noir-x',
-        evals: [{ id: 'e', prompt: 'p', expected_output: 'o', assertions: [{ type: 'bogus', value: 'x' }] }],
+        evals: [
+          {
+            id: 'e',
+            prompt: 'p',
+            expected_output: 'o',
+            assertions: [{ type: 'bogus', value: 'x' }],
+          },
+        ],
       }),
     ).toThrow(/unknown assertion type/);
   });
@@ -43,7 +45,14 @@ describe('parseEvalSuite() — evals.json shape validation', () => {
   it('parses a valid suite', () => {
     const s = parseEvalSuite({
       skill_name: 'noir-x',
-      evals: [{ id: 'e1', prompt: 'p', expected_output: 'o', assertions: [{ type: 'contains', value: 'o' }] }],
+      evals: [
+        {
+          id: 'e1',
+          prompt: 'p',
+          expected_output: 'o',
+          assertions: [{ type: 'contains', value: 'o' }],
+        },
+      ],
     });
     expect(s.skill_name).toBe('noir-x');
     expect(s.evals[0]?.id).toBe('e1');
@@ -55,9 +64,9 @@ describe('parseEvalSuite() — evals.json shape validation', () => {
   });
 
   it('rejects a malformed eval entry', () => {
-    expect(() =>
-      parseEvalSuite({ skill_name: 'x', evals: [{ id: 'e', prompt: 'p' }] }),
-    ).toThrow(/expected_output/);
+    expect(() => parseEvalSuite({ skill_name: 'x', evals: [{ id: 'e', prompt: 'p' }] })).toThrow(
+      /expected_output/,
+    );
   });
 });
 

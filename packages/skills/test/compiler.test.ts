@@ -130,10 +130,7 @@ describe('compiler: WHEN heuristic', () => {
 
 describe('compiler: validateSkill', () => {
   it('passes a well-formed skill', async () => {
-    await writeSkill(
-      'noir-x',
-      okSkill(),
-    );
+    await writeSkill('noir-x', okSkill());
     const skill = firstSkill(fixture);
     expect(validateSkill(skill).ok).toBe(true);
   });
@@ -238,8 +235,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
   });
 
   it('S10: compileSkill(cursor) transforms to <name>.mdc with description/globs/alwaysApply frontmatter', async () => {
-    const md =
-      okSkill('Use when testing cursor transform — render cursor rules.');
+    const md = okSkill('Use when testing cursor transform — render cursor rules.');
     await writeSkill('noir-x', md);
     const skill = firstSkill(fixture);
     const out = compileSkill(skill, 'cursor');
@@ -255,7 +251,9 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     expect(closeIdx).toBeGreaterThan(0);
     const frontmatter = mdc.slice(4, closeIdx);
     // The skill's WHEN description drives Cursor's agent-decided rule selection.
-    expect(frontmatter).toContain('description: Use when testing cursor transform — render cursor rules.');
+    expect(frontmatter).toContain(
+      'description: Use when testing cursor transform — render cursor rules.',
+    );
     // `globs: ['**/*']` — broad applicability; the description is the selector.
     // yaml.stringify quotes the wildcard entry, so we assert the literal pattern
     // (not the quote style — single vs double quotes is yaml's call).
@@ -300,10 +298,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
   // per-name subdirs; the prior nested `<name>/<name>.mdc` layout left skills
   // invisible to Cursor. The verbatim branch keeps the canonical nested shape.
   it('emitSkillsToDir(cursor) writes .mdc FLAT under targetDir (no <name>/ subdir)', async () => {
-    await writeSkill(
-      'noir-x',
-      okSkill('Use when testing flat cursor — render cursor rules.'),
-    );
+    await writeSkill('noir-x', okSkill('Use when testing flat cursor — render cursor rules.'));
     const target = join(fixture, '_out');
     await emitSkillsToDir(target, { builtinDir: fixture, target: 'cursor' });
 
@@ -321,10 +316,7 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
   it('emitSkillsToDir(claude) keeps the canonical NESTED layout (regression anchor)', async () => {
     // The flat fix is cursor-only; the verbatim branch (claude/agents-md/gemini/
     // opencode) still lands at `<target>/<name>/SKILL.md` (+ references/).
-    await writeSkill(
-      'noir-x',
-      okSkill('Use when testing nested — render cursor rules.'),
-    );
+    await writeSkill('noir-x', okSkill('Use when testing nested — render cursor rules.'));
     const target = join(fixture, '_out');
     await emitSkillsToDir(target, { builtinDir: fixture, target: 'claude' });
 

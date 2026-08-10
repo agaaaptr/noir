@@ -40,7 +40,9 @@ describe('noir init --host <id> — per-host artifact matrix', () => {
     expect(existsSync(join(root, '.mcp.json'))).toBe(true);
     expect(existsSync(join(root, '.claude', 'skills'))).toBe(true);
     // A skill file is the verbatim SKILL.md shape (claude CompileTarget).
-    expect(existsSync(join(root, '.claude', 'skills', 'noir-brainstorm', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(root, '.claude', 'skills', 'noir-brainstorming', 'SKILL.md'))).toBe(
+      true,
+    );
     // config.yml persisted host: claude (the default).
     expect(readFileSync(paths.config(root), 'utf8')).toMatch(/^host: claude/m);
   });
@@ -76,10 +78,10 @@ describe('noir init --host <id> — per-host artifact matrix', () => {
     expect(existsSync(join(root, '.cursor', 'mcp.json'))).toBe(true);
     // Cursor skills land FLAT under .cursor/rules/ (one .mdc per skill, no
     // per-name subdir — Cursor's rule loader does not recurse).
-    expect(existsSync(join(root, '.cursor', 'rules', 'noir-brainstorm.mdc'))).toBe(true);
+    expect(existsSync(join(root, '.cursor', 'rules', 'noir-brainstorming.mdc'))).toBe(true);
     // The prior nested layout is GONE.
     expect(
-      existsSync(join(root, '.cursor', 'rules', 'noir-brainstorm', 'noir-brainstorm.mdc')),
+      existsSync(join(root, '.cursor', 'rules', 'noir-brainstorming', 'noir-brainstorm.mdc')),
     ).toBe(false);
     // No CLAUDE.md / GEMINI.md leakage.
     expect(existsSync(join(root, 'CLAUDE.md'))).toBe(false);
@@ -134,9 +136,9 @@ describe('noir create --host <id> — greenfield per host', () => {
     expect(existsSync(join(target, 'AGENTS.md'))).toBe(true);
     expect(existsSync(join(target, '.cursor', 'mcp.json'))).toBe(true);
     // Skills land FLAT under .cursor/rules/<skill>.mdc (no nested dir).
-    expect(existsSync(join(target, '.cursor', 'rules', 'noir-brainstorm.mdc'))).toBe(true);
+    expect(existsSync(join(target, '.cursor', 'rules', 'noir-brainstorming.mdc'))).toBe(true);
     expect(
-      existsSync(join(target, '.cursor', 'rules', 'noir-brainstorm', 'noir-brainstorm.mdc')),
+      existsSync(join(target, '.cursor', 'rules', 'noir-brainstorming', 'noir-brainstorm.mdc')),
     ).toBe(false);
   });
 });

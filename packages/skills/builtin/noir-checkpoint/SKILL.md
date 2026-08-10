@@ -1,18 +1,36 @@
 ---
 name: noir-checkpoint
-description: Use mid-session — to save in-flight state before a context-risky moment or interruption, so work survives.
+description: Use when saving mid-session state before a context-risky moment or interruption — preserve the current task, progress, and open decisions. Use when the user says "save my place" or "checkpoint this". Do NOT use to close a session — use noir-wrap.
+metadata:
+  category: discovery
+  version: 1.0.0
+license: MIT
+compatibility: claude · agents-md · gemini · cursor · opencode
 ---
 
-Save in-flight state so work survives a context-risky moment (compaction, handoff, or interruption). Persists the task's phase, progress, and next step into `.noir/` and records the checkpoint observably via `noir.checkpoint`.
+# noir-checkpoint
+
+Save in-flight state so work survives an interruption, context-loss, or session restart. A checkpoint is a snapshot, not a close.
+
+## When to use
+
+- Mid-session, before a context-risky moment (long pause, context compaction, or interruption).
+- The user says "save my place", "checkpoint this."
+- **Do NOT use:** to close a session — use `noir-wrap`.
 
 ## Procedure
-1. **Find the task.** Locate the active task stub under `.noir/tasks/<id>.md` (the engine's persisted state). If none, ask the user which task to checkpoint — or note "no active task — nothing to checkpoint" and stop.
-2. **Capture state.** Update `.noir/tasks/<id>.md`: set the current phase, a status line (e.g. `checkpointed @ phase N`), an `updated:` timestamp, and fill *done so far* + *next steps* + any blockers. Append a one-line history entry so a fresh session can pick up cleanly.
-3. **Record the checkpoint.** Call `noir.checkpoint` so the SDD engine records the save observably; the task stub is the source of truth, the checkpoint is the durable signal that survives context loss.
-4. **Memory (best-effort).** Save the checkpoint to Noir memory (phase + key decisions + next step) if the host's memory tooling is available. Skip cleanly if not — `.noir/tasks/<id>.md` remains the durable record either way.
-5. **Uncommitted work.** Note any uncommitted changes (`git status --porcelain`) in the checkpoint and advise the user — commit or stash before truly leaving, or the on-disk state and the working tree will diverge.
-6. **Report.** State the task id, the phase, and the next step. Point to the SDD lifecycle to resume — do not invent a slash command.
 
-## Fallbacks
-- No active task → say so; nothing to checkpoint.
-- `noir.checkpoint` or Noir memory unavailable → skip silently; the task stub is the source of truth and the engine degrades read-only rather than failing.
+1. **Record open task state.** Which task is active, what phase it's in, what files are touched, what tests are in-flight. Use `noir task save` (or the SDD engine's checkpoint tooling).
+2. **Note open decisions.** Anything the user and agent agreed on that hasn't been committed.
+3. **Mark the workspace.** Dirty files, branch state, any uncommitted changes. The next session needs to know.
+4. **Save memory.** Key insights from this session segment.
+5. **Print the checkpoint summary.** Brief — next session reads this and resumes.
+
+## Notes
+
+- Checkpoints are temporary scaffolding, not permanent records. The engine's task state is the durable truth.
+- You can checkpoint multiple times in a session — each one replaces the last.
+
+## When done → next skill
+
+→ The session can pause safely. When you return, `noir-sync` will find the checkpoint. Or continue working.

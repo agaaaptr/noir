@@ -20,13 +20,12 @@ function getOrFail(name: string) {
 }
 
 const FULL_LIFECYCLE = [
-  'noir-intake',
-  'noir-clarify',
+  'noir-brainstorming',
   'noir-spec',
-  'noir-plan',
-  'noir-execute',
-  'noir-verify',
-  'noir-document',
+  'noir-planning',
+  'noir-executing-plans',
+  'noir-verifying',
+  'noir-wrap',
 ];
 
 function expectNoResidue(text: string) {
@@ -55,10 +54,8 @@ describe('builtin pack: SDD lifecycle', () => {
 });
 
 const FULL_POWER = [
-  'noir-brainstorm',
-  'noir-debug',
-  'noir-review',
-  'noir-tdd',
+  'noir-systematic-debugging',
+  'noir-test-driven-development',
   'noir-subagent',
   'noir-parallel',
   'noir-context',
@@ -73,7 +70,7 @@ describe('builtin pack: power skills', () => {
   });
 });
 
-const FULL_SESSION = ['noir-sync', 'noir-checkpoint', 'noir-explore'];
+const FULL_SESSION = ['noir-sync', 'noir-checkpoint', 'noir-exploring'];
 
 describe('builtin pack: session skills', () => {
   it('has all 3 full session skills, each with a substantial body', () => {
@@ -106,32 +103,16 @@ describe('builtin pack: handoff skills', () => {
   });
 });
 
-const STUBS = [
-  'noir-commit',
-  'noir-pr',
-  'noir-branch',
-  'noir-worktree',
-  'noir-frontend',
-  'noir-backend',
-  'noir-security',
-  'noir-test',
-  'noir-doctor',
-  'noir-skill-author',
-  'noir-readme',
-];
-
 describe('builtin pack: stubs + totals', () => {
-  it('has all 11 stubs, each marked as a stub', () => {
-    for (const name of STUBS) {
-      const s = getOrFail(name);
-      expect(s.skillMd, `${name} missing stub marker`).toContain('> **Stub:**');
-    }
+  it('has zero stubs (C3 curation — all skills are full playbooks)', () => {
+    const stubCount = skills.filter((s) => s.skillMd.includes('> **Stub:**')).length;
+    expect(stubCount).toBe(0);
   });
   it('pack total is 33 = 22 full + 11 stubs, all valid', () => {
-    expect(skills.length).toBe(33);
+    expect(skills.length).toBe(26);
     const stubCount = skills.filter((s) => s.skillMd.includes('> **Stub:**')).length;
-    expect(stubCount).toBe(11);
-    expect(skills.length - stubCount).toBe(22);
+    expect(stubCount).toBe(0);
+    expect(skills.length - stubCount).toBe(26);
     for (const s of skills) expect(validateSkill(s).ok, `${s.name} invalid`).toBe(true);
   });
 });

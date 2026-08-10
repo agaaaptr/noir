@@ -422,7 +422,7 @@ describe('TASK 1 — init/sync forward onConflict to skills emit', () => {
     try {
       const { init } = await import('../src/init.js');
       await init(tmp, { transport: 'stdio' });
-      const skillPath = join(tmp, '.claude', 'skills', 'noir-brainstorm', 'SKILL.md');
+      const skillPath = join(tmp, '.claude', 'skills', 'noir-brainstorming', 'SKILL.md');
       writeFileSync(
         skillPath,
         '---\nname: noir-brainstorm\ndescription: x.\n---\nUSER-EDIT',

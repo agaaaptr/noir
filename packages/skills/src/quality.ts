@@ -35,7 +35,8 @@ const PROCEDURE_SECTION = /^## (Procedure|Steps)$/im;
 const CLOSING_SECTION = /^## (Verification|Notes|Fallbacks|Troubleshooting|Why order matters)$/im;
 
 /** The lead cue regex — the FIRST part of the description must be a trigger. */
-const WHEN_CUE = /^(use|using|used|whenever|when|before|after|while|starting|encountering|completing|creating|about to|upon|during|to|for|on)\b/i;
+const WHEN_CUE =
+  /^(use|using|used|whenever|when|before|after|while|starting|encountering|completing|creating|about to|upon|during|to|for|on)\b/i;
 
 /** A chained reference link — a reference file that links to ANOTHER reference
  *  file (`references/a.md` → `references/b.md` or `../references/b.md`). The
@@ -65,9 +66,7 @@ export function withinLineBudget(body: string, max: number = MAX_BODY_LINES): bo
 /** Reference files that point at another reference file (chained — forbidden).
  *  Returns the offending reference names. */
 export function chainedReferences(skill: BuiltinSkill): string[] {
-  return skill.references
-    .filter((r) => CHAINED_REF_RE.test(r.content))
-    .map((r) => r.name);
+  return skill.references.filter((r) => CHAINED_REF_RE.test(r.content)).map((r) => r.name);
 }
 
 /**
@@ -89,7 +88,11 @@ export function isWhatWhenDescription(description: string): boolean {
   if (!WHEN_CUE.test(trimmed)) return false; // must lead with a cue
   // Split off the trigger phrase: after an em/en dash, or after the first period.
   // "Use when X — draft the spec." → whatPart = "draft the spec."
-  const whatPart = trimmed.split(/[—–]|(?<=\.) /).slice(1).join(' ').trim();
+  const whatPart = trimmed
+    .split(/[—–]|(?<=\.) /)
+    .slice(1)
+    .join(' ')
+    .trim();
   return whatPart.split(/\s+/).filter(Boolean).length >= 3;
 }
 
@@ -116,19 +119,23 @@ export function lintWarnings(skill: BuiltinSkill): string[] {
     warnings.push('thin-body: full playbook body is under 20 lines');
   }
   // Concrete examples: at least one fenced block or an "example:" mention.
-  const hasExample =
-    /```/.test(body) || /\bexample:?\b/i.test(body) || /\be\.g\.\b/i.test(body);
+  const hasExample = /```/.test(body) || /\bexample:?\b/i.test(body) || /\be\.g\.\b/i.test(body);
   if (!hasExample) {
     warnings.push('no-example: no concrete code fence or worked example in the body');
   }
   // First/second-person narration — "I/we/you" as the agent doing work.
-  if (/\b(I|we|you)\s+(will|should|can|need|must|do|write|create|implement|run|build)\b/i.test(body)) {
+  if (
+    /\b(I|we|you)\s+(will|should|can|need|must|do|write|create|implement|run|build)\b/i.test(body)
+  ) {
     warnings.push('first-person: narration addresses the reader instead of imperative steps');
   }
   // Voodoo constants: a bare number with a magnitude claim but no justification
   // ("wait 5 seconds" without why). Very loose — catches "wait N seconds" without
   // a "why".
-  if (/\b(?:wait|sleep|retry|backoff|limit|cap)\s+[a-z]*\s*(\d{1,4})\b/i.test(body) && !/because|to (avoid|prevent|give|let)/i.test(body)) {
+  if (
+    /\b(?:wait|sleep|retry|backoff|limit|cap)\s+[a-z]*\s*(\d{1,4})\b/i.test(body) &&
+    !/because|to (avoid|prevent|give|let)/i.test(body)
+  ) {
     warnings.push('voodoo-constant: numeric threshold without a stated reason');
   }
   // Time-sensitive version pins outside a Legacy section.

@@ -55,14 +55,14 @@ afterEach(() => {
 });
 
 describe('noir skills list', () => {
-  it('discovers every builtin (33) + integration (1) skill (34 total) and emits a --json envelope to stdout', async () => {
+  it('discovers every builtin (26) + integration (1) skill (27 total) and emits a --json envelope to stdout', async () => {
     const r = await run(() => skillsList({ json: true }));
     expect(r.err).toBeUndefined();
     const envelope = JSON.parse(r.stdout);
     expect(envelope.ok).toBe(true);
-    expect(envelope.data.count).toBe(34); // 33 builtins + noir-clickup
+    expect(envelope.data.count).toBe(27); // 26 builtins + noir-clickup
     expect(Array.isArray(envelope.data.skills)).toBe(true);
-    expect(envelope.data.skills.length).toBe(34);
+    expect(envelope.data.skills.length).toBe(27);
     const first = envelope.data.skills[0];
     expect(first).toEqual(
       expect.objectContaining({
@@ -85,7 +85,7 @@ describe('noir skills list', () => {
     expect(clickup).toBeDefined();
     expect(clickup?.kind).toBe('integration');
     // Builtins stay tagged builtin.
-    const brainstorm = skills.find((s) => s.name === 'noir-brainstorm');
+    const brainstorm = skills.find((s) => s.name === 'noir-brainstorming');
     expect(brainstorm?.kind).toBe('builtin');
   });
 
@@ -95,7 +95,7 @@ describe('noir skills list', () => {
     for (const s of skills) {
       expect(s.category.length).toBeGreaterThan(0);
     }
-    const brainstorm = skills.find((s) => s.name === 'noir-brainstorm');
+    const brainstorm = skills.find((s) => s.name === 'noir-brainstorming');
     expect(brainstorm?.category).toBe('discovery');
   });
 
@@ -113,9 +113,9 @@ describe('noir skills list', () => {
     expect(r.err).toBeUndefined();
     expect(r.stdout).toBe('');
     // Banner reports 34 skills (33 builtin + 1 integration).
-    expect(r.stderr).toMatch(/noir skills — 34 skills \(33 builtin, 1 integration\)/);
+    expect(r.stderr).toMatch(/noir skills — 27 skills \(26 builtin, 1 integration\)/);
     expect(r.stderr).toMatch(/Skill.*Kind.*Category.*Description/);
-    expect(r.stderr).toMatch(/noir-brainstorm/);
+    expect(r.stderr).toMatch(/noir-brainstorming/);
     expect(r.stderr).toMatch(/noir-clickup/);
   });
 });
@@ -131,12 +131,12 @@ describe('noir skills sync', () => {
       expect(r.err).toBeUndefined();
       const envelope = JSON.parse(r.stdout);
       expect(envelope.ok).toBe(true);
-      expect(envelope.data.emitted.length).toBe(34); // 33 builtins + 1 integration (noir-clickup)
+      expect(envelope.data.emitted.length).toBe(27); // 33 builtins + 1 integration (noir-clickup)
       expect(envelope.data.dir).toBe(join(root, '.claude', 'skills'));
       const names = readdirSync(join(root, '.claude', 'skills'), { withFileTypes: true })
         .filter((e) => e.isDirectory() && e.name.startsWith('noir-'))
         .map((e) => e.name);
-      expect(names.length).toBe(34); // 33 builtins + 1 integration (noir-clickup)
+      expect(names.length).toBe(27); // 33 builtins + 1 integration (noir-clickup)
     } finally {
       process.chdir(origCwd);
     }
@@ -150,7 +150,7 @@ describe('noir skills sync', () => {
       const r = await run(() => skillsSync({}));
       expect(r.err).toBeUndefined();
       expect(r.stdout).toBe('');
-      expect(r.stderr).toMatch(/Synced 34 Noir skills to .*\.claude\/skills\./);
+      expect(r.stderr).toMatch(/Synced 27 Noir skills to .*\.claude\/skills\./);
     } finally {
       process.chdir(origCwd);
     }
@@ -177,9 +177,13 @@ describe('noir skills lint', () => {
     expect(r.err).toBeUndefined();
     const env = JSON.parse(r.stdout) as {
       ok: boolean;
-      data: { count: number; errored: number; skills: Array<{ name: string; errors: string[]; warnings: string[] }> };
+      data: {
+        count: number;
+        errored: number;
+        skills: Array<{ name: string; errors: string[]; warnings: string[] }>;
+      };
     };
-    expect(env.data.count).toBe(34); // 33 builtins + 1 integration
+    expect(env.data.count).toBe(27); // 33 builtins + 1 integration
     expect(Array.isArray(env.data.skills)).toBe(true);
     // Every skill has a name + errors/warnings arrays.
     for (const s of env.data.skills) {
@@ -206,10 +210,21 @@ describe('noir skills registry', () => {
     expect(r.err).toBeUndefined();
     const env = JSON.parse(r.stdout) as {
       ok: boolean;
-      data: { count: number; skills: Array<{ name: string; kind: string; category: string; version: string; status: string; referenceCount: number; lines: number }> };
+      data: {
+        count: number;
+        skills: Array<{
+          name: string;
+          kind: string;
+          category: string;
+          version: string;
+          status: string;
+          referenceCount: number;
+          lines: number;
+        }>;
+      };
     };
     expect(env.ok).toBe(true);
-    expect(env.data.count).toBe(34); // 33 builtins + 1 integration
+    expect(env.data.count).toBe(27); // 33 builtins + 1 integration
     for (const s of env.data.skills) {
       expect(s.name.startsWith('noir-')).toBe(true);
       expect(['builtin', 'integration']).toContain(s.kind);

@@ -1,50 +1,39 @@
 ---
 name: noir-parallel
-description: Use when facing two or more independent tasks with no shared state or ordering — to work them concurrently.
+description: Use when facing two or more independent tasks — dispatch them concurrently without blocking each other. Use when the user says "do these at the same time" or "work on both". Do NOT use for tasks that share state or have ordering; use noir-executing-plans or noir-subagent instead.
+metadata:
+  category: execute
+  version: 1.0.0
+license: MIT
+compatibility: claude · agents-md · gemini · cursor · opencode
 ---
 
-Dispatch one focused subagent per independent problem and let them run concurrently. Each subagent gets precisely crafted scope and context — never the controller's session history — so it stays narrow and you preserve your own context for coordination. Sequential investigation of independent problems wastes wall-clock; parallel dispatch collapses that to the slowest agent.
+# noir-parallel
+
+When two or more tasks are independent (no shared state, no ordering), work them concurrently. Every tool dispatch in one response — no waiting for Task A to finish before starting Task B.
+
+## When to use
+
+- 2+ tasks that don't depend on each other.
+- The user says "do these at the same time", "concurrently", "parallelize."
+- A task naturally splits into non-overlapping sub-tasks.
+- **Do NOT use:** when tasks share state (B reads A's output). For a fan-out plan with review between tasks, use `noir-subagent`.
 
 ## Procedure
 
-### 1. Confirm the tasks are genuinely independent
-Before dispatching, verify:
-- each problem can be understood without context from the others;
-- fixing one cannot fix or break another;
-- the agents will not edit the same files or contend on the same resource (ports, locks, the working tree).
-
-If the failures are related, or you do not yet know what is broken, do not parallelize — investigate together first. Shared state and exploratory debugging disqualify this skill.
-
-### 2. Group by independent domain
-Cluster the work by what is actually broken or what is actually being built: one test file or subsystem per agent. "Fix all the tests" is too broad; "fix the 3 failing tests in `agent-tool-abort.test.ts`" is a domain.
-
-### 3. Craft each task
-Each dispatch carries:
-- **Scope** — the exact file(s) or subsystem; name them.
-- **Goal** — what "done" looks like (tests green, function added with signature X).
-- **Context** — the error messages, test names, or interface contract the agent needs. Do not make it re-derive what you already know.
-- **Constraints** — what it must not touch ("production code", "other test files"), and any anti-patterns to refuse ("do not just raise the timeout — find the real issue").
-- **Output** — what to return (a summary of root cause and the change made, plus the test evidence).
-
-### 4. Dispatch in parallel
-Issue every subagent dispatch in the same response — multiple dispatches in one response run concurrently, one per response runs sequentially. This is the move that buys the time saving.
-
-### 5. Review and integrate
-When the agents return:
-- read each summary;
-- check the diffs for conflicts — did two agents edit the same code?;
-- run the full suite (not just each agent's scoped tests) to verify the fixes compose;
-- spot-check the changes — a subagent can make a systematic error that its own scoped tests do not catch.
-
-If two agents touched overlapping code, reconcile manually and re-run before claiming green.
+1. **Validate independence.** List the tasks. Confirm none reads another's output or touches the same file in a conflicting way.
+2. **Issue all dispatches in the same response.** On Claude Code, issue multiple tool uses concurrently. On other hosts, dispatch the equivalent parallel work.
+3. **Collect results.** Each result lands independently. Aggregate, then continue.
 
 ## When not to use
-- The failures are related — fixing one might fix or break another.
-- Understanding requires seeing the whole system at once.
-- The work is exploratory — you do not yet know what is broken.
-- Agents would contend (editing the same files, binding the same port, taking the same lock).
+
+- Shared database or shared file writes — these must be sequential or protected by locking.
+- Tasks with a dependency chain — use `noir-executing-plans`.
+- Tasks that need per-task review — use `noir-subagent`.
+
+## When done → next skill
+
+→ `noir-verifying` to confirm all tasks are done and integrated.
 
 ## Notes
-- Parallel dispatch trades coordination cost for wall-clock. For two small tasks, the overhead of crafting two briefs may not be worth it — sequential is fine. The win compounds at three or more independent domains.
-- Each agent's report is its deliverable; the controller's job at the end is integration and the full-suite check, not re-doing the investigation.
-- Discipline is observable, not rhetorical: the SDD engine records the parallel dispatch and its integrated result via `noir.checkpoint` (the SDD execute gate).
+- This skill is a playbook — the host decides which tools to use.

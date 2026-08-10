@@ -130,7 +130,7 @@ it('rejects a WHAT-only description (no WHEN lead)', async () => {
 ```
 
 - [ ] **Step 2: Run tests** — Expected: FAIL (new rules not implemented).
-- [ ] **Step 3: Implement** — in `quality.ts` + wire into `validateSkill`. `checkRequiredSections` requires `## When to use` OR `## When to Use`, `## Procedure` OR `## Steps`, and one of `## Verification` / `## Notes` / `## Fallbacks` / `## Troubleshooting`. `hasWhatClause`: split description on `—`/`—`/`. `; return first part has ≥3 words and a noun-verb. Line budget: `body.split('\n').length <= 500`. One-level refs: for each reference content, no `[name](references/...)` or `[name](../references/...)` link pointing deeper.
+- [ ] **Step 3: Implement** — in `quality.ts` + wire into `validateSkill`. `checkRequiredSections` requires `## When to use` OR `## When to Use`, `## Procedure` OR `## Steps`, and one of `## Verification` / `## Notes` / `## Fallbacks` / `## Troubleshooting`. `hasWhatClause`: split description on `—`/`—`/`. `; return first part has ≥3 words and a noun-verb. Line budget: `body.split('\n').length <= 500`. One-level refs: for each reference content, no chained link pointing deeper (e.g. linking to another `references/` file).
 - [ ] **Step 4: Run tests** — Expected: PASS.
 - [ ] **Step 5: Keep the pack green mid-plan** — the shared-hygiene loop in `builtin-hygiene.test.ts` runs `validateSkill` on the CURRENT pack, which lacks metadata. Do NOT run `builtin-hygiene.test.ts` until content tasks (6–10) land metadata; run only `compiler.test.ts` + the new gate tests after this task. The pack is "structurally red until Task 6+", and Task 12's full gate is the true green checkpoint.
 - [ ] **Step 6: Commit** — `git commit -m "feat(skills): structural quality gate in validateSkill"`

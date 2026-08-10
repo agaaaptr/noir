@@ -66,9 +66,10 @@ function toEntry(s: BuiltinSkill, kind: 'builtin' | 'integration'): SkillRegistr
  */
 export function buildRegistry(): SkillRegistryEntry[] {
   const { builtins, integrations } = discoverAll();
-  return [...builtins.map((b) => toEntry(b, 'builtin')), ...integrations.map((i) => toEntry(i, 'integration'))].sort(
-    (a, b) => a.name.localeCompare(b.name),
-  );
+  return [
+    ...builtins.map((b) => toEntry(b, 'builtin')),
+    ...integrations.map((i) => toEntry(i, 'integration')),
+  ].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Convenience: registry filtered to a single category (CLI grouping). */
