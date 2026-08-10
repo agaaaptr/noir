@@ -184,7 +184,7 @@ describe('noir handoff — default markdown to STDOUT', () => {
       expect(c.out).toContain('**Phase:** plan — next gate: execute');
       expect(c.out).toContain('## Open host');
       expect(c.out).toContain('## Next step');
-      expect(c.out).toContain('`noir-execute`'); // next gate's skill
+      expect(c.out).toContain('`noir-executing-plans`'); // next gate's skill
       expect(c.out).toContain('## Extracted context (seed)');
       expect(c.out).toContain('src/auth.ts');
       expect(c.out).toContain('## Extracted memory (seed)');
@@ -243,7 +243,7 @@ describe('noir handoff --json — structured payload', () => {
       expect(env.data.project).toEqual({ id: 'proj-abc', name: 'noir-demo' });
       expect(env.data.host).toBe('claude');
       expect(env.data.task.taskId).toBe('auth-flow');
-      expect(env.data.task.nextSkill).toBe('noir-execute');
+      expect(env.data.task.nextSkill).toBe('noir-executing-plans');
       expect(Array.isArray(env.data.contextSeed)).toBe(true);
       expect(env.data.contextSeed[0].path).toBe('src/auth.ts');
       expect(env.data.memorySeed[0].id).toBe('obs-1');

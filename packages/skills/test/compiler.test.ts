@@ -70,7 +70,7 @@ Overview sentence.
 ## Verification
 - [ ] spec written
 ## Notes
-- routes to noir-plan`;
+- routes to noir-planning`;
 }
 
 describe('compiler: frontmatter', () => {

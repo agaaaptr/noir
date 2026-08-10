@@ -8,7 +8,7 @@
 //     envelope (incl. read-only store) to exit 1; an invalid mode/phase is
 //     exit 2 (USAGE); daemon-unreachable would be exit 4 from callDaemonTool
 //     (covered by daemon-client.test).
-//   • `next` suggests the grounded phase→skill (plan → noir-plan).
+//   • `next` suggests the grounded phase→skill (plan → noir-planning).
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { payloads } = vi.hoisted(() => ({ payloads: { current: {} as Record<string, unknown> } }));
@@ -207,7 +207,7 @@ describe('task next', () => {
       const env = JSON.parse(c.out);
       expect(env.data.phase).toBe('plan');
       expect(env.data.nextGate).toBe('plan');
-      expect(env.data.suggestion).toBe('noir-plan');
+      expect(env.data.suggestion).toBe('noir-planning');
     } finally {
       restore();
     }
@@ -219,7 +219,7 @@ describe('task next', () => {
       await taskNext({ ...base });
       const err = capture().err;
       expect(err).toContain('next gate: plan');
-      expect(err).toContain('noir-plan');
+      expect(err).toContain('noir-planning');
     } finally {
       restore();
     }

@@ -82,7 +82,7 @@ describe('HostAdapter.emitHandoff — optional hook (back-compat proof)', () => 
     const payload: HandoffPayload = {
       project: { id: 'p', name: 'demo' },
       host: 'claude',
-      task: { taskId: 't-1', phase: 'plan', nextGate: 'execute', nextSkill: 'noir-execute' },
+      task: { taskId: 't-1', phase: 'plan', nextGate: 'execute', nextSkill: 'noir-executing-plans' },
     };
     const tailored: HostAdapter = {
       id: 'claude',
