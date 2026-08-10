@@ -2,7 +2,7 @@
 
 > Auto-generated from `packages/skills/builtin/*/SKILL.md` and `integrations/*/SKILL.md`.
 
-**27 skills** (26 builtins + 1 integrations)
+**27 skills** (26 builtins + 1 integration)
 
 | Skill | Type | Category | Description |
 |---|---|---|---|

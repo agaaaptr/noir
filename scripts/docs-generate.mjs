@@ -321,7 +321,7 @@ function genSkillsTable() {
   skills.sort((a, b) => a.name.localeCompare(b.name));
 
   lines.push(
-    `**${skills.length} skills** (${skills.filter((s) => s.type === 'builtin').length} builtins + ${skills.filter((s) => s.type === 'integration').length} integrations)`,
+    `**${skills.length} skills** (${skills.filter((s) => s.type === 'builtin').length} builtins + ${skills.filter((s) => s.type === 'integration').length} integration${skills.filter((s) => s.type === 'integration').length === 1 ? '' : 's'})`,
   );
   lines.push('');
   lines.push('| Skill | Type | Category | Description |');

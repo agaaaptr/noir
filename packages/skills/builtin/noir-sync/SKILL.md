@@ -40,6 +40,6 @@ Load the project context AND route to the right skill. This is the entry point f
 - Don't auto-start work. Surface the state and let the user confirm direction.
 - If no skill matches, ask what the user wants to do — the route is a suggestion, not a mandate.
 
-## When done → next action
+## When done → next skill
 
 Route to the matched skill. Or is there something else you'd like to do first?
