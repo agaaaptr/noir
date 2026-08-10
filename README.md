@@ -82,7 +82,7 @@ noir daemon start|stop|status|restart  persistent MCP server
 noir context {search,index,status}     hybrid retrieval
 noir memory {recall,save,sessions,forget,consolidate}  cross-session memory
 noir task {new,next,status,advance}    SDD workflow
-noir skills {list,sync}                builtin skills
+noir skills {list,sync,lint,registry}   builtin skills + quality gate
 noir install|migrate [spec]     native install / migrate from another method
 noir update [spec]              self-update via the active install method
 noir handoff                    pasteable host handoff artifact
