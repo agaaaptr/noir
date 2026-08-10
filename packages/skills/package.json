@@ -42,6 +42,7 @@
     "dist",
     "builtin",
     "integrations",
+    "evals",
     "README.md"
   ],
   "scripts": {

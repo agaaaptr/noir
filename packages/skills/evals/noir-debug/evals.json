@@ -1,0 +1,25 @@
+{
+  "skill_name": "noir-debug",
+  "evals": [
+    {
+      "id": "root-cause-before-fix",
+      "prompt": "A test is failing intermittently. What do you do first?",
+      "expected_output": "Reproduce the failure reliably, read the error completely, gather evidence at component boundaries, and form a root cause hypothesis — before proposing any fix. Do not patch the symptom.",
+      "assertions": [
+        { "type": "contains", "value": "Reproduce" },
+        { "type": "contains", "value": "root cause" },
+        { "type": "contains", "value": "hypothesis" },
+        { "type": "not-contains", "value": "just fix it" }
+      ]
+    },
+    {
+      "id": "evidence-at-boundaries",
+      "prompt": "The bug could be in the API, the service, or the database. How do you narrow it down?",
+      "expected_output": "Instrument each layer boundary, log what enters and exits, verify config propagation, and check state at each layer — then investigate the specific layer the evidence implicates.",
+      "assertions": [
+        { "type": "contains", "value": "boundary" },
+        { "type": "contains", "value": "evidence" }
+      ]
+    }
+  ]
+}

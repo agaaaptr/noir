@@ -20,6 +20,14 @@ export {
 export { buildRegistry, registryByCategory, NOIR_NAMESPACE } from './registry.js';
 export type { SkillRegistryEntry } from './registry.js';
 export {
+  EVALS_DIR,
+  evaluateSuite,
+  loadEvalSuites,
+  parseEvalSuite,
+  runAssertions,
+} from './evals.js';
+export type { EvalAssertion, EvalSuite, SkillEval } from './evals.js';
+export {
   BUILTIN_DIR,
   discoverAll,
   discoverBuiltin,

@@ -1,0 +1,25 @@
+{
+  "skill_name": "noir-tdd",
+  "evals": [
+    {
+      "id": "red-before-green",
+      "prompt": "Implement a new feature. What is the first thing you do?",
+      "expected_output": "Write a failing test first before writing the implementation, then watch it fail (RED), implement the minimal code to pass (GREEN), then refactor.",
+      "assertions": [
+        { "type": "contains", "value": "failing test" },
+        { "type": "contains", "value": "RED" },
+        { "type": "contains", "value": "GREEN" },
+        { "type": "not-contains", "value": "write the implementation first" }
+      ]
+    },
+    {
+      "id": "verify-red-step",
+      "prompt": "After writing the failing test, what must you confirm before implementing?",
+      "expected_output": "Run the test and confirm it actually fails for the expected reason, not a passing test or an unrelated error.",
+      "assertions": [
+        { "type": "contains", "value": "fails" },
+        { "type": "regex", "value": "confirm|verify|make sure" }
+      ]
+    }
+  ]
+}
