@@ -425,7 +425,7 @@ describe('TASK 1 — init/sync forward onConflict to skills emit', () => {
       const skillPath = join(tmp, '.claude', 'skills', 'noir-brainstorming', 'SKILL.md');
       writeFileSync(
         skillPath,
-        '---\nname: noir-brainstorm\ndescription: x.\n---\nUSER-EDIT',
+        '---\nname: noir-brainstorming\ndescription: x.\n---\nUSER-EDIT',
         'utf8',
       );
 

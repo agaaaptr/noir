@@ -30,7 +30,7 @@ noir init                  # scaffolds .noir/ + host wiring + skills where suppo
 # 2. Open the project in Claude Code (the v1 host) → it auto-spawns the Noir MCP server.
 ```
 
-`noir init` defaults to Claude: it creates `.noir/` (project id, `config.yml`, `NOIR.md`, the SQLite store), root `.mcp.json`, a managed `CLAUDE.md` `@import` block, and the **34 native `noir-*` skills** (33 builtins + 1 integration) in `.claude/skills/`. Pass `--host` for agents-md, Gemini, Cursor, or OpenCode; only Claude and Cursor emit skills. There is no plugin and no marketplace — `noir init` / `noir sync` overwrite the managed `noir-*` namespace idempotently.
+`noir init` defaults to Claude: it creates `.noir/` (project id, `config.yml`, `NOIR.md`, the SQLite store), root `.mcp.json`, a managed `CLAUDE.md` `@import` block, and the **27 native `noir-*` skills** (26 builtins + 1 integration) in `.claude/skills/`. Pass `--host` for agents-md, Gemini, Cursor, or OpenCode; only Claude and Cursor emit skills. There is no plugin and no marketplace — `noir init` / `noir sync` overwrite the managed `noir-*` namespace idempotently.
 
 ## Commands
 

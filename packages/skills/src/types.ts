@@ -16,7 +16,7 @@ export interface BuiltinReference {
 }
 
 export interface BuiltinSkill {
-  name: string; // 'noir-brainstorm'
+  name: string; // 'noir-brainstorming'
   dir: string; // absolute builtin/<name> dir
   skillMd: string; // raw SKILL.md
   frontmatter: SkillFrontmatter;
@@ -135,7 +135,7 @@ export type SkillConflictResolution = 'replace' | 'preserve' | 'rename' | 'dupli
  * regenerate conflicts.
  */
 export interface SkillConflictContext {
-  /** Path relative to the skills target dir (e.g. `noir-brainstorm/SKILL.md`). */
+  /** Path relative to the skills target dir (e.g. `noir-brainstorming/SKILL.md`). */
   relPath: string;
   /** The skill file's current on-disk bytes. */
   existing: string;
