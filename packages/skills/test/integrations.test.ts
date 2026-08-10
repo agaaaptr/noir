@@ -231,7 +231,7 @@ describe('emitSkillsToDir() — integrations opt-in', () => {
       await mkdir(join(fixture, 'noir-a'), { recursive: true });
       await writeFile(
         join(fixture, 'noir-a', 'SKILL.md'),
-        '---\nname: noir-a\ndescription: Use when a.\n---\n# a',
+        '---\nname: noir-a\ndescription: Use when a — validate the path.\nmetadata:\n  category: spec\n  version: 1.0.0\nlicense: MIT\n---\n# noir-a\n## When to use\n- x\n## Procedure\n1. x\n## Notes\n- x',
       );
       const target = join(fixture, '_out');
       const summary = await emitSkillsToDir(target, { builtinDir: fixture });
@@ -282,7 +282,24 @@ async function writeFixtureIntegration(
   await writeFile(join(dir, 'integration.json'), JSON.stringify(json), 'utf8');
   await writeFile(
     join(dir, 'SKILL.md'),
-    `---\nname: ${decl.name}\ndescription: Use when testing the ${decl.name} fixture.\n---\n# ${decl.name}\n`,
+    `---
+name: ${decl.name}
+description: Use when testing ${decl.name} — validate the fixture path.
+metadata:
+  category: integration
+  version: 1.0.0
+license: MIT
+---
+# ${decl.name}
+Overview sentence.
+## When to use
+- when testing the fixture
+## Procedure
+1. **Run** — the fixture.
+## Verification
+- [ ] fixture validated
+## Notes
+- fixture only`,
     'utf8',
   );
   // Return the integrations/ dir (the arg discoverIntegrations expects).

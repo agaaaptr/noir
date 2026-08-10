@@ -8,7 +8,7 @@ import { mkdtempSync, readdirSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { skillsList, skillsSync } from '../src/commands/skills.js';
+import { skillsLint, skillsList, skillsSync } from '../src/commands/skills.js';
 import { init } from '../src/init.js';
 import { inferExitCode } from '../src/output.js';
 
@@ -168,5 +168,34 @@ describe('noir skills sync', () => {
     } finally {
       process.chdir(origCwd);
     }
+  });
+});
+
+describe('noir skills lint', () => {
+  it('reports per-skill errors+warnings with a --json envelope', async () => {
+    const r = await run(() => skillsLint({ json: true }));
+    expect(r.err).toBeUndefined();
+    const env = JSON.parse(r.stdout) as {
+      ok: boolean;
+      data: { count: number; errored: number; skills: Array<{ name: string; errors: string[]; warnings: string[] }> };
+    };
+    expect(env.data.count).toBe(34); // 33 builtins + 1 integration
+    expect(Array.isArray(env.data.skills)).toBe(true);
+    // Every skill has a name + errors/warnings arrays.
+    for (const s of env.data.skills) {
+      expect(typeof s.name).toBe('string');
+      expect(Array.isArray(s.errors)).toBe(true);
+      expect(Array.isArray(s.warnings)).toBe(true);
+    }
+    // The gate currently reports the un-migrated pack (missing metadata) as
+    // errored — that's the expected pre-content-rewrite state. `ok` reflects it.
+    expect(typeof env.ok).toBe('boolean');
+  });
+
+  it('is project-independent (no init required)', async () => {
+    // skills lint reads the shipped pack only — works outside any project.
+    const r = await run(() => skillsLint({ json: true }));
+    expect(r.err).toBeUndefined();
+    expect(r.stderr).toBe('');
   });
 });

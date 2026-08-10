@@ -26,7 +26,7 @@ import {
   memorySave,
   memorySessions,
 } from './commands/memory.js';
-import { skillsList, skillsSync } from './commands/skills.js';
+import { skillsLint, skillsList, skillsSync } from './commands/skills.js';
 import { type StatusOptions, status } from './commands/status.js';
 import { taskAdvance, taskNew, taskNext, taskStatus } from './commands/task.js';
 import { init } from './init.js';
@@ -730,8 +730,14 @@ export function createProgram(): Command {
     .action(async (...args: unknown[]) => {
       await skillsSync(toCliOptions(actionGlobals(args)));
     });
+  skillsGrp
+    .command('lint')
+    .description('structural quality gate over the shipped pack (C3)')
+    .action(async (...args: unknown[]) => {
+      await skillsLint(toCliOptions(actionGlobals(args)));
+    });
   skillsGrp.action(() => {
-    throw new NoirCliError(EXIT.USAGE, 'Usage: noir skills list|sync');
+    throw new NoirCliError(EXIT.USAGE, 'Usage: noir skills list|sync|lint');
   });
 
   const taskGrp = program.command('task').description('workflow task control');

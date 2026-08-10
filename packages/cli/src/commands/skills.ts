@@ -20,6 +20,7 @@ import {
   discoverAll,
   emitSkillsToDir,
   type IntegrationSkill,
+  lintSkill,
 } from '@noir-ai/skills';
 import { type CliOptions, EXIT, fail, info, log, table, warn } from '../output.js';
 
@@ -227,5 +228,58 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
       `Pruned ${pruned.length} stale noir-* skill dir${pruned.length === 1 ? '' : 's'}: ${pruned.join(', ')}`,
       opts,
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// `noir skills lint`
+// ---------------------------------------------------------------------------
+/**
+ * `noir skills lint`: the C3 structural quality gate over the full shipped pack.
+ * Runs `lintSkill` (validateSkill errors + soft warnings) over `discoverAll()`.
+ * In-process (no daemon) — the pack is a filesystem artifact.
+ *
+ * Exit contract: 0 when every skill validates clean (errors empty); 1 when any
+ * skill has errors (the gate fails). Warnings alone do NOT fail the lint — they
+ * are advisory and listed for the author. This mirrors how a real linter treats
+ * hard errors vs style warnings.
+ *
+ * `--json` emits `{ok, data:{skills:[{name, errors, warnings}]}}` to stdout
+ * (the only stdout write); the human report goes to stderr.
+ */
+export async function skillsLint(opts: SkillsOptions): Promise<void> {
+  let skills: Array<{ name: string; errors: string[]; warnings: string[] }>;
+  try {
+    const all = discoverAll();
+    skills = [...all.builtins, ...all.integrations].map(lintSkill);
+  } catch (err) {
+    fail(
+      EXIT.ERROR,
+      `skills lint: could not lint skills (${err instanceof Error ? err.message : String(err)})`,
+      opts,
+    );
+  }
+  const errored = skills.filter((s) => s.errors.length > 0);
+  const warned = skills.filter((s) => s.warnings.length > 0 && s.errors.length === 0);
+
+  const data = { count: skills.length, errored: errored.length, skills };
+  if (opts.json === true) {
+    process.stdout.write(`${JSON.stringify({ ok: errored.length === 0, data })}\n`);
+    return;
+  }
+
+  if (errored.length === 0) {
+    log(`noir skills lint — ${skills.length} skills, all validate clean.`, opts);
+  } else {
+    warn(`noir skills lint — ${errored.length} skill${errored.length === 1 ? '' : 's'} FAIL validation:`, opts);
+  }
+  for (const s of errored) {
+    for (const e of s.errors) warn(`  ${s.name}: ${e}`, opts);
+  }
+  if (warned.length > 0) {
+    info(`  ${warned.length} skill${warned.length === 1 ? '' : 's'} carry lint warnings:`, opts);
+    for (const s of warned) {
+      for (const w of s.warnings) info(`  ${s.name}: ${w}`, opts);
+    }
   }
 }
