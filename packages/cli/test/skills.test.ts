@@ -112,7 +112,7 @@ describe('noir skills list', () => {
     const r = await run(() => skillsList({}));
     expect(r.err).toBeUndefined();
     expect(r.stdout).toBe('');
-    // Banner reports 34 skills (33 builtin + 1 integration).
+    // Banner reports 27 skills (26 builtin + 1 integration).
     expect(r.stderr).toMatch(/noir skills — 27 skills \(26 builtin, 1 integration\)/);
     expect(r.stderr).toMatch(/Skill.*Kind.*Category.*Description/);
     expect(r.stderr).toMatch(/noir-brainstorming/);
@@ -131,12 +131,12 @@ describe('noir skills sync', () => {
       expect(r.err).toBeUndefined();
       const envelope = JSON.parse(r.stdout);
       expect(envelope.ok).toBe(true);
-      expect(envelope.data.emitted.length).toBe(27); // 33 builtins + 1 integration (noir-clickup)
+      expect(envelope.data.emitted.length).toBe(27); // 26 builtins + 1 integration (noir-clickup)
       expect(envelope.data.dir).toBe(join(root, '.claude', 'skills'));
       const names = readdirSync(join(root, '.claude', 'skills'), { withFileTypes: true })
         .filter((e) => e.isDirectory() && e.name.startsWith('noir-'))
         .map((e) => e.name);
-      expect(names.length).toBe(27); // 33 builtins + 1 integration (noir-clickup)
+      expect(names.length).toBe(27); // 26 builtins + 1 integration (noir-clickup)
     } finally {
       process.chdir(origCwd);
     }
@@ -183,7 +183,7 @@ describe('noir skills lint', () => {
         skills: Array<{ name: string; errors: string[]; warnings: string[] }>;
       };
     };
-    expect(env.data.count).toBe(27); // 33 builtins + 1 integration
+    expect(env.data.count).toBe(27); // 26 builtins + 1 integration
     expect(Array.isArray(env.data.skills)).toBe(true);
     // Every skill has a name + errors/warnings arrays.
     for (const s of env.data.skills) {
@@ -224,7 +224,7 @@ describe('noir skills registry', () => {
       };
     };
     expect(env.ok).toBe(true);
-    expect(env.data.count).toBe(27); // 33 builtins + 1 integration
+    expect(env.data.count).toBe(27); // 26 builtins + 1 integration
     for (const s of env.data.skills) {
       expect(s.name.startsWith('noir-')).toBe(true);
       expect(['builtin', 'integration']).toContain(s.kind);

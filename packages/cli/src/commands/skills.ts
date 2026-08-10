@@ -33,7 +33,7 @@ export interface SkillsOptions extends CliOptions {}
 //
 // Skills ship no `category` frontmatter field (S5 contract is `{name,
 // description, references?}`), so the column is a PRESENTATION-layer grouping
-// derived from the skill name. The map covers the 31 builtins; an unknown name
+// derived from the skill name. The map covers the 26 builtins; an unknown name
 // falls back to its `noir-`-stripped segment so a newly authored skill still
 // gets a sensible cell instead of an empty one. This is display-only — the
 // `--json` payload carries `category` too (same derivation) for consistency.

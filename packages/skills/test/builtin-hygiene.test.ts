@@ -62,7 +62,7 @@ const FULL_POWER = [
 ];
 
 describe('builtin pack: power skills', () => {
-  it('has all 7 power skills, each with a substantial body', () => {
+  it('has all 5 power skills, each with a substantial body', () => {
     for (const name of FULL_POWER) {
       const s = getOrFail(name);
       expect(bodyOf(s.skillMd).length, `${name} body too short`).toBeGreaterThan(300);
@@ -108,7 +108,7 @@ describe('builtin pack: stubs + totals', () => {
     const stubCount = skills.filter((s) => s.skillMd.includes('> **Stub:**')).length;
     expect(stubCount).toBe(0);
   });
-  it('pack total is 33 = 22 full + 11 stubs, all valid', () => {
+  it('pack total is 26, all valid (C3 curation — zero stubs)', () => {
     expect(skills.length).toBe(26);
     const stubCount = skills.filter((s) => s.skillMd.includes('> **Stub:**')).length;
     expect(stubCount).toBe(0);
