@@ -43,7 +43,7 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/aga
 Then:
 
 ```bash
-noir init                        # scaffold .noir/ + 33 skills + host wiring
+noir init                        # scaffold .noir/ + 27 skills + host wiring
 noir                             # open the home menu (screenshot above)
 ```
 
