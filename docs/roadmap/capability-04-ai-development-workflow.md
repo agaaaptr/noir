@@ -16,7 +16,7 @@ Noir dogfoods Spec-Driven Development (SDD): the `@noir-ai/workflow` FSM engine 
 - **Artifact writers** for intake/spec/prd/plan/task/decision/changelog/audit with a conflict-resolution seam — `packages/workflow/src/engine.ts`.
 - **MCP tools:** `workflow_status`, `workflow_start`, `workflow_advance`, `checkpoint {save|restore}` — `packages/daemon/src/workflow-seam.ts`.
 - **CLI:** `noir task new|status|advance|next`, `noir handoff`, `noir status` (workflow snapshot) — `packages/cli/src/commands/task.ts`.
-- **33 builtin skills** including the SDD lifecycle playbooks `noir-intake`/`clarify`/`prd`/`spec`/`plan`/`execute`/`verify`/`document`/`checkpoint`/`wrap` — e.g. `packages/skills/builtin/noir-spec/SKILL.md`, `packages/skills/builtin/noir-plan/SKILL.md`.
+- **26 builtin skills** + 1 integration including the SDD lifecycle playbooks `noir-brainstorming`/`spec`/`planning`/`executing-plans`/`verifying`/`wrap`/`checkpoint` — e.g. `packages/skills/builtin/noir-spec/SKILL.md`, `packages/skills/builtin/noir-planning/SKILL.md`.
 
 ## Gap / roadmap delta
 

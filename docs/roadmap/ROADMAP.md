@@ -22,7 +22,7 @@ Noir adopts the best ideas from modern AI tools **without copying their implemen
 
 > **Adopt ideas, not copies.**
 
-**What Noir is today** (grounded, 2026-08): a spec-driven-workflow + native-context + cross-session-memory **layer** for agentic CLIs — 11 packages, a local daemon, 5 host adapters, 33 builtin skills, hybrid retrieval, bounded model, and a release pipeline. It is **not** an LLM runtime (bring your own agent). See [`releases.md`](releases.md) for the shipped record.
+**What Noir is today** (grounded, 2026-08): a spec-driven-workflow + native-context + cross-session-memory **layer** for agentic CLIs — 11 packages, a local daemon, 5 host adapters, 26 builtin skills + 1 integration, hybrid retrieval, bounded model, and a release pipeline. It is **not** an LLM runtime (bring your own agent). See [`releases.md`](releases.md) for the shipped record.
 
 ---
 

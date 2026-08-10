@@ -38,7 +38,7 @@ The roadmap is a set of **capabilities**, each an independent development area t
 |---|------------|--------|----------|
 | 1 | [Package Distribution & Release Management](capability-01-package-distribution.md) | Completed | High |
 | 2 | [CLI Runtime & User Experience](capability-02-cli-runtime.md) | Completed — CLI + TUI + command palette | High |
-| 3 | [Built-in Skill System](capability-03-builtin-skill-system.md) | Partial — 33 skills + compiler shipped | High |
+| 3 | [Built-in Skill System](capability-03-builtin-skill-system.md) | Completed — 26 skills + registry + quality gate + evals | High |
 | 4 | [End-to-End AI Development Workflow](capability-04-ai-development-workflow.md) | Shipped core (SDD engine) | High |
 | 5 | [Runtime Infrastructure & Local Daemon](capability-05-runtime-infrastructure.md) | Shipped (daemon + store) | Medium |
 | 5.5 | [Host Abstraction Layer (HAL)](capability-05-5-host-abstraction-layer.md) | Shipped core (5 adapters) | High |
