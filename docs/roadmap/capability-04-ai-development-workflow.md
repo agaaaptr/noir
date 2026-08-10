@@ -21,12 +21,12 @@ Noir dogfoods Spec-Driven Development (SDD): the `@noir-ai/workflow` FSM engine 
 ## Gap / roadmap delta
 
 - **Research phase/step in the FSM:** docs mandate research as a formal stage; today research exists only as a skill/practice, not a state.
-- **Automated ambiguity/missing-requirement detection in clarify:** currently a manual `noir-clarify` step.
+- **Automated ambiguity/missing-requirement detection in clarify:** currently a manual `noir-brainstorming` step.
 - **Project discovery/detection in init/create:** framework / package-manager / CI / existing-AI-tool detection is not wired in.
 - **Capability → slice decomposition engine:** objective/scope/dependency/acceptance/testing/rollback artifacts are not auto-derived.
 - **Release phase/tool in the lifecycle:** releases today run outside via release scripts.
 - **Recovery workflow for CI/test/publish failure and merge/spec conflicts:** only blocked/abandoned/jump exist today.
-- **Automated validation commands wired to the verify gate:** `noir-verify` is a generic evidence skill, not gate-connected.
+- **Automated validation commands wired to the verify gate:** `noir-verifying` is a generic evidence skill, not gate-connected.
 - **Checkpoint auto-update of roadmap/changelog/progress/agent-memory:** `engine.checkpoint` only flushes KV + audit JSON.
 - **Surface cross-session resume to users:** no `noir task resume` command; `workflow_start` / `noir task new` don't accept `taskClass`, so the soft PRD gate is effectively dead.
 
@@ -49,4 +49,4 @@ Noir dogfoods Spec-Driven Development (SDD): the `@noir-ai/workflow` FSM engine 
 - `packages/cli/src/commands/task.ts`
 - `docs/explanation/sdd-workflow.md`
 - `packages/skills/builtin/noir-spec/SKILL.md`
-- `packages/skills/builtin/noir-plan/SKILL.md`
+- `packages/skills/builtin/noir-planning/SKILL.md`

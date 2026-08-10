@@ -137,12 +137,11 @@ Pick the daemon **only** if you need a persistent shared server across host sess
 You work **through** the host. After `noir init` and opening the project in Claude Code, just ask it to build something — for example, *"add a CSV export to the reports module."* The native skills pick up the request and run Noir's spec-driven lifecycle:
 
 ```
-noir-brainstorm  →  noir-intake  →  noir-clarify  →  noir-spec
-   →  noir-plan  →  noir-execute  →  noir-verify  →  noir-document
+noir-brainstorming  →  noir-spec  →  noir-planning  →  noir-executing-plans  →  noir-verifying  →  noir-wrap
 ```
 
-- `noir-execute` uses `context_search` to pull focused, ranked snippets instead of re-reading whole files, and `memory_recall` for anything you saved in a prior session.
-- `noir-document` ends with `memory_save`, so insights carry into the next session.
+- `noir-executing-plans` uses `context_search` to pull focused, ranked snippets instead of re-reading whole files, and `memory_recall` for anything you saved in a prior session.
+- `noir-wrap` ends with `memory_save`, so insights carry into the next session.
 - **Every gate decision is recorded** in `.noir/audit/`. State persists to the project-local store, so a new session can resume a task where the last one left off.
 
 You can watch the lifecycle from a terminal at any time:
@@ -178,7 +177,7 @@ noir task new --slug csv-export --mode quick
 - **full** — spec + plan are authored **and reviewed** (gates), then execute, then verify (tests/build). Use this for real features and risky changes. This is the default.
 - **quick** — spec + plan are **skipped** (a `<quick-mode stub spec>` is written, and the spec/plan gates are recorded as `skipped`), execute runs, and the **verify gate still fires**. Use this for small, trivial, or spike tasks. It is not a free-for-all — it only skips formal planning, not verification.
 
-The host picks up the configured mode via the `noir-intake` skill / the `workflow_start` MCP tool. See [SDD modes](explanation/sdd-workflow.md#modes) for the details.
+The host picks up the configured mode via the `noir-brainstorming` skill / the `workflow_start` MCP tool. See [SDD modes](explanation/sdd-workflow.md#modes) for the details.
 
 ## Where to go next
 

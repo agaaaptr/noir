@@ -12,7 +12,7 @@ Noir ships skills as a native, first-party capability: a compiler that validates
 - **Copy-and-validate compiler** at `packages/skills/src/compiler.ts`: `parseFrontmatter` → `validateSkill` (structural gate: metadata, required sections, line budget, one-level refs, WHAT+WHEN descriptions) → `lintSkill` (warnings) → `compileSkill` → `emitSkillsToDir`.
 - **Quality gate** at `packages/skills/src/quality.ts`: `missingSections`, `withinLineBudget`, `chainedReferences`, `isWhatWhenDescription`, `lintWarnings`. `noir skills lint` CLI surfaces errors + warnings per skill.
 - **Runtime-derived skill registry** at `packages/skills/src/registry.ts`: `buildRegistry()` from `discoverAll()`; `noir skills registry --json` queries it. No committed file — frontmatter is the single source of truth.
-- **Offline evals harness** at `packages/skills/src/evals.ts` + `evals/**/evals.json` (agentskills.io format) + vitest runner in `test/evals.test.ts`. 2 shipped examples: `noir-tdd`, `noir-debug`.
+- **Offline evals harness** at `packages/skills/src/evals.ts` + `evals/**/evals.json` (agentskills.io format) + vitest runner in `test/evals.test.ts`. 2 shipped examples: `noir-test-driven-development`, `noir-systematic-debugging`.
 - **Multi-host compilation**: `claude`/`agents-md`/`gemini`/`opencode` → verbatim `SKILL.md` + `references/`; `cursor` → flat `.mdc` rule.
 - **Emission wired into CLI** — `noir init` / `sync` / `create` / `skills sync` / `skills list` / `skills lint` / `skills registry`. Idempotent, prunes stale `noir-*` entries, guards user-authored `noir-*` dirs via `assertNotUserOwned`.
 - **Integration seam** (`integration.json` + daemon `integrations_auth` + `noir_clickup_write` gated-write-proxy).
