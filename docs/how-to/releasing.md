@@ -11,7 +11,7 @@
 **Current beta:** `1.9.3-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.9.3` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-10T08:01:00.528Z*
+*Last auto-generated: 2026-08-10T08:46:41.543Z*
 <!-- /noir:doc:status -->
 
 ---

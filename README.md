@@ -26,7 +26,7 @@ The `noir` grouped home menu — section picker + per-section action lists with 
 **Current beta:** `1.9.3-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.9.3` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-10T08:00:58.488Z*
+*Last auto-generated: 2026-08-10T08:46:40.165Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
@@ -59,7 +59,7 @@ An 11-package pnpm monorepo, all `@noir-ai/*`:
 | `@noir-ai/core` | Shared types, config schema, `.noir/` layout |
 | `@noir-ai/store` | Embedded SQLite + FTS5 + sqlite-vec |
 | `@noir-ai/workflow` | SDD lifecycle FSM engine |
-| `@noir-ai/skills` | 33 native `noir-*` skills + compiler |
+| `@noir-ai/skills` | 26 native `noir-*` skills + integration + compiler with quality gate |
 | `@noir-ai/context` | Hybrid retrieval: BM25 + vector kNN + RRF |
 | `@noir-ai/memory` | Cross-session memory with governance |
 | `@noir-ai/model` | Optional single-shot completion layer |
