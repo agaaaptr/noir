@@ -64,13 +64,15 @@ interface WorkflowNotFound {
 // the next gate's skill in the handoff artifact — single source.
 // ---------------------------------------------------------------------------
 export const PHASE_SKILL: Readonly<Record<string, string>> = {
-  intake: 'noir-intake',
-  clarify: 'noir-clarify',
+  // C3 curation (2026-08-10): intake+clarify merged into brainstorming;
+  // execute → executing-plans; verify → verifying; document → wrap.
+  intake: 'noir-brainstorming',
+  clarify: 'noir-brainstorming',
   spec: 'noir-spec',
-  plan: 'noir-plan',
-  execute: 'noir-execute',
-  verify: 'noir-verify',
-  document: 'noir-document',
+  plan: 'noir-planning',
+  execute: 'noir-executing-plans',
+  verify: 'noir-verifying',
+  document: 'noir-wrap',
 };
 
 /** Map a phase string to its shipped skill id (`null` if unknown / absent).
