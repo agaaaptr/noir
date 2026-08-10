@@ -293,7 +293,33 @@ All 33 + 1 get `metadata: {category, version}`, `license: MIT`, `compatibility`.
 - ClickUp integration UX (worked templates).
 - Registry + quality gate + evals unchanged (§2–§4).
 
-### 10.4 New acceptance criteria (adds to §8)
+### 10.4 Curation decision (locked with user, 2026-08-10)
+
+**34 → 24 skills.** Full curation approved: 5 merges + gerund renames + 21 kept + new features. Rationale grounded in the curation research (collision degrades routing more than context cost; ~30 skills is the selection cliff; gerund is the Anthropic naming recommendation).
+
+**Merges (5 → 24 skills):**
+| Merge | Becomes | Rationale |
+|---|---|---|
+| `noir-intake` + `noir-clarify` + `noir-brainstorm` | **`noir-brainstorming`** | same "gather requirements" phase; superpowers compresses to 1 |
+| `noir-verify` + `noir-review` | **`noir-verifying`** | both evidence-before-done |
+| `noir-commit` + `noir-pr` + `noir-branch` | **`noir-shipping`** | all git-release; addyosmani = 1 "git-workflow-and-versioning" |
+| `noir-document` | → **`noir-wrap`** | wrap is a superset |
+| `noir-test` | → **`noir-test-driven-development`** | collides with tdd |
+
+**Gerund renames (canon):** `noir-brainstorm`→`noir-brainstorming`, `noir-plan`→`noir-planning`, `noir-execute`→`noir-executing-plans`, `noir-debug`→`noir-systematic-debugging`, `noir-tdd`→`noir-test-driven-development`, `noir-skill-author`→`noir-writing-skills`, `noir-explore`→`noir-exploring`. `noir-spec` stays (canonical one-word).
+
+**Kept (21):** `noir-sync` (→ router), `noir-checkpoint`, `noir-recall`, `noir-remember`, `noir-context`, `noir-exploring`, `noir-doctor`, `noir-rules`, `noir-prd`, `noir-worktree`, `noir-subagent`, `noir-parallel`, `noir-security`, `noir-frontend`, `noir-backend`, `noir-readme`, `noir-wrap`, `noir-clickup`, `noir-planning`, `noir-executing-plans`, `noir-verifying`.
+
+**New features (from the args/auth research):**
+- `argument-hint` + `arguments` frontmatter on args-taking skills (`noir-clickup`, `noir-brainstorming`, `noir-spec`, `noir-test-driven-development`) — skills are already slash commands (`/name args` + `$ARGUMENTS` substitution, confirmed in code.claude.com/docs/en/skills); NO `.claude/commands/` needed.
+- `$ARGUMENTS` in skill bodies — read the user query.
+- ClickUp **auth gate (STEP 0)**: call `integrations_auth` FIRST; `no-token` → STOP + setup guidance (1. `~/.claude/settings.json` env block, 2. `~/.zshenv` NOT `.zshrc`, 3. manual-paste; + **restart the daemon** — env is a spawn-time snapshot). Research confirmed `.zshrc` is the WRONG instruction (non-interactive shells skip it).
+- ClickUp **verb dispatch** routing table: `fetch`/`update`/`create`/`comment`/`batch` → flow.
+- **"When done → next skill"** footer on every skill (chaining).
+- **Router `noir-sync`**: fires on explicit signals (feature start, spec request, session start), stays silent on trivial edits; lists high-value `noir-*` skills + when; ends with a follow-up offer.
+- **SessionStart hook emitted by `noir init` ONLY** (scaffold context): writes a project-scope `.claude/settings.local.json` SessionStart hook (merged with existing permissions) that injects a short router contract. Host-agnostic fallback: NOIR.md amplifier block (3-5 high-value skills) imported every session.
+
+### 10.5 New acceptance criteria (adds to §8)
 
 - **Done when** — a SessionStart hook is emitted by `noir init`/`sync` that injects a lean router contract; verified it lands in `.claude/settings.local.json`.
 - **Done when** — `noir-sync` routes to the relevant `noir-*` skill on explicit signals and stays silent on trivial edits; it ends with a follow-up offer.
