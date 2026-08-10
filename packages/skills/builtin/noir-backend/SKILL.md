@@ -28,6 +28,10 @@ Backend architecture and implementation — APIs, databases, services, and serve
 4. **Database migrations.** Schema changes go through migration files — never alter a table by hand. Rollback must be possible.
 5. **Security.** Auth on every endpoint that touches data; rate-limit write endpoints; validate input at the boundary.
 
+## Reference
+
+For contract-first, layered error handling, migrations, and resilience patterns, see [backend-patterns.md](references/backend-patterns.md).
+
 ## When done → next skill
 
 → `noir-test-driven-development` for the test suite, then `noir-verifying`.

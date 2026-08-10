@@ -28,6 +28,10 @@ Gather evidence before asserting success. Absorbs `noir-verify` and `noir-review
 4. **Check side effects.** New lint warnings? Type errors? Doc links? Run the full gate.
 5. **ONLY THEN claim done.** State "verified: <evidence>" — never "verified: looks good."
 
+## Reference
+
+For the full claim-done + PR-review checklist, see [verification-checklist.md](references/verification-checklist.md).
+
 ## When done → next skill
 
 → `noir-shipping` to commit and integrate, or `noir-wrap` to close. Or something else?

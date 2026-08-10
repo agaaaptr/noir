@@ -64,6 +64,10 @@ Writing the test first forces you to state the desired behavior before you're in
 - One assertion per behavior, one test per behavior. A test that asserts five things is five tests fighting for attention.
 - If TDD feels slow, you're probably fixing a bug that someone else shipped because they skipped it.
 
+## Reference
+
+For a worked RED → GREEN → REFACTOR walkthrough, see [tdd-worked-example.md](references/tdd-worked-example.md).
+
 ## When done → next skill
 
 → `noir-verifying` to gather evidence the work is complete. Or is there another behavior to implement?

@@ -28,6 +28,10 @@ Frontend design and implementation guide — visual design, component architectu
 4. **Accessibility.** Semantic HTML, keyboard navigation, color contrast, screen-reader labels. An inaccessible UI is an unfinished UI.
 5. **On Claude Code**, use `AskUserQuestion` for design choices (color palette, layout preference). On other hosts, ask plainly.
 
+## Reference
+
+For design tokens, component structure, responsive, and accessibility patterns, see [ui-patterns.md](references/ui-patterns.md).
+
 ## When done → next skill
 
 → `noir-verifying` to confirm the UI meets the spec. Or `noir-test-driven-development` to add tests.

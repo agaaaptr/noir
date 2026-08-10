@@ -34,6 +34,10 @@ Dispatch each independent task to a fresh subagent with a brief, then review the
 ### Final
 6. **Integrate.** All tasks done, all tests green, all briefs archived. Hand off to `noir-verifying`.
 
+## Reference
+
+For brief-writing, independence validation, and review mechanics, see [dispatch-guide.md](references/dispatch-guide.md).
+
 ## When done → next skill
 
 → `noir-verifying` for the full integration gate, then `noir-shipping`.

@@ -29,6 +29,10 @@ Review changes for vulnerabilities — not a pen-test, but the baseline every fe
 5. **Check dependencies.** Any new packages? Known vulnerabilities? Pinned versions that are stale?
 6. **Report findings.** Severity (critical/high/medium/low) + location + fix. One finding per entry.
 
+## Reference
+
+For the full injection/auth/exposure/dependency checklist, see [security-checklist.md](references/security-checklist.md).
+
 ## When done → next skill
 
 → `noir-shipping` if clean, or `noir-systematic-debugging` if a vulnerability needs fixing.
