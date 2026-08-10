@@ -25,8 +25,8 @@ class Noir < Formula
   desc "Discipline, context, and memory layer for any agentic CLI"
   homepage "https://github.com/agaaaptr/noir"
   url "https://registry.npmjs.org/@noir-ai/cli/-/cli-1.9.3.tgz"
-  sha256 "57d3898a484d1775870c9028596e69de6f70756fa4e382deddceb7e173f838df"
-  version "1.9.3"
+  sha256 "38937373fd0d925d6b9d416051cfbd3463a3ec85aca86009bfe2a4bf18677c50"
+  version "1.9.4"
   license "MIT"
 
   # Noir requires Node >= 22 (the CLI's package.json `engines.node`).
