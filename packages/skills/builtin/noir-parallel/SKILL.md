@@ -22,8 +22,9 @@ When two or more tasks are independent (no shared state, no ordering), work them
 ## Procedure
 
 1. **Validate independence.** List the tasks. Confirm none reads another's output or touches the same file in a conflicting way.
-2. **Issue all dispatches in the same response.** On Claude Code, issue multiple tool uses concurrently. On other hosts, dispatch the equivalent parallel work.
-3. **Collect results.** Each result lands independently. Aggregate, then continue.
+2. **Dispatch all tasks in ONE response.** On Claude Code, issue multiple `Task` tool calls or `Agent` dispatches in the same message turn — the host runs them concurrently. On other hosts, use whatever parallel dispatch mechanism is available (subagents, parallel tool calls, async workers). The key: don't wait for Task A's full completion before starting Task B — issue them together.
+3. **Collect results.** Each result lands independently. Aggregate, then continue. If any task failed or needs adjustment, route it to `noir-systematic-debugging` before integrating.
+4. **Integrate.** All results clean → combine and proceed.
 
 ## When not to use
 
