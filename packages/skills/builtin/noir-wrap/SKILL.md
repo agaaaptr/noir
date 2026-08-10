@@ -2,7 +2,7 @@
 name: noir-wrap
 description: Use when closing a work session cleanly — running final verification, updating docs and CHANGELOG, saving memory, and emitting a host handoff. Do NOT use mid-session for a checkpoint — use noir-checkpoint.
 metadata:
-  category: meta
+  category: document
   version: 1.0.0
 license: MIT
 compatibility: claude · agents-md · gemini · cursor · opencode

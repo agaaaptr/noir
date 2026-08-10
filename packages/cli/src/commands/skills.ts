@@ -93,7 +93,12 @@ function toRow(s: BuiltinSkill, kind: 'builtin' | 'integration' = 'builtin'): Sk
   const description =
     typeof s.frontmatter.description === 'string' ? s.frontmatter.description : '';
   const status: 'full' | 'stub' = s.skillMd.includes('> **Stub:**') ? 'stub' : 'full';
-  return { name: s.name, category: categoryOf(s.name), description, kind, status };
+  // Category: frontmatter `metadata.category` is the C3 single source of truth
+  // ("data, not code"); the curated CATEGORY map is only the fallback for a
+  // legacy skill that lacks metadata. Keeps `skills list`, the registry, and
+  // the docs table agreeing on one category per skill.
+  const category = s.frontmatter.metadata?.category?.trim() || categoryOf(s.name);
+  return { name: s.name, category, description, kind, status };
 }
 
 /**
