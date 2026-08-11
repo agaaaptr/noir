@@ -9,6 +9,7 @@ import type {
   GateResultInput,
   Mode,
   Phase,
+  ResearchEntry,
   TaskClass,
   TaskState,
   WorkflowGateConfig,
@@ -24,6 +25,8 @@ import type {
  */
 const ACTIVE_KEY = 'workflow:active';
 const GATE_PHASES = ['spec', 'plan', 'verify'] as const satisfies ReadonlyArray<Phase>;
+/** c4-research-grounding: cap on a single research entry's text (token budget). */
+const RESEARCH_TEXT_CAP = 220;
 
 /**
  * Default gate config — used when the engine is constructed without an explicit
@@ -37,6 +40,9 @@ const DEFAULT_GATE_CONFIG: WorkflowGateConfig = {
   // verify config behaves exactly as v1.9.4 (records approved/forced/skipped,
   // no evidence, no blocking). Opt-in via gateConfig.verify or NoirConfig.
   verify: { required: false, retryBudget: 2 },
+  // c4-research-grounding: research is a SOFT grounding recommendation for
+  // feature/epic (mirrors the PRD gate) — never a hard block.
+  research: { recommendFor: ['feature', 'epic'], requireSource: true },
 };
 
 /** Options for {@link WorkflowEngine.advance}. */
@@ -221,6 +227,24 @@ export class WorkflowEngine {
       throw new Error('--force requires a reason');
     }
 
+    // c4-research-grounding: the clarify→spec exit criterion. Open questions
+    // raised during clarify block the transition to `specified` (the spec gate)
+    // unless the advance carries --force/--skip (the escapable-observable
+    // invariant). Jumps bypass this (a jump is an explicit out-of-order move).
+    const jumpEarly = opts?.to !== undefined;
+    const nextPhaseGuess = jumpEarly ? (opts?.to as Phase) : this.nextPhaseOf(task);
+    if (
+      !jumpEarly &&
+      nextPhaseGuess === 'spec' &&
+      (task.openQuestions?.length ?? 0) > 0 &&
+      !opts?.force &&
+      !opts?.skip
+    ) {
+      throw new Error(
+        `clarify→spec blocked: ${task.openQuestions!.length} open question(s) unresolved (resolve them, or --force/--skip)`,
+      );
+    }
+
     const jump = opts?.to !== undefined;
     const targetPhase: Phase = jump ? (opts?.to as Phase) : this.nextPhaseOf(task);
 
@@ -295,16 +319,20 @@ export class WorkflowEngine {
         // dropped. Quick-mode + unlisted taskClasses skip the check entirely;
         // --force records `forced` with the user's reason (the explicit override).
         const prdHint = this.prdRecommendation(task, gatePhase, opts);
+        const researchHint = this.researchRecommendation(task, gatePhase, opts);
+        const softHint = prdHint !== null && researchHint !== null
+          ? `${prdHint}; ${researchHint}`
+          : prdHint ?? researchHint;
         const input: GateResultInput = {
           phase: gatePhase,
           decision,
           // exactOptionalPropertyTypes is false; spread reason only when present.
-          // Force-path wins over the soft hint (a user who forces is explicitly
-          // accepting the recommendation; their reason is the override signal).
+          // Force-path wins over the soft hints (a user who forces is explicitly
+          // accepting the recommendations; their reason is the override signal).
           ...(opts?.force
             ? { reason: opts.force.reason }
-            : prdHint !== null
-              ? { reason: prdHint }
+            : softHint !== null
+              ? { reason: softHint }
               : {}),
         };
         // Record ONCE to the authoritative audit KV; derive history from it.
@@ -355,6 +383,30 @@ export class WorkflowEngine {
     if (opts?.force) return null; // explicit override — user's reason wins
     if (readPrd(this.root, task.taskId, task.slug) !== null) return null;
     return `PRD recommended for ${taskClass} — provide one (noir-prd) or --force <reason> to skip`;
+  }
+
+  /**
+   * c4-research-grounding: a SOFT research-grounding recommendation at the spec
+   * gate (mirrors {@link prdRecommendation}). Fires when the task's class is in
+   * `research.recommendFor` AND `research:<taskId>` has no source-backed findings
+   * (only absent or assumption-only entries without sources). Never a hard block
+   * — the advance always proceeds; `--force` is the explicit override.
+   */
+  private researchRecommendation(task: TaskState, gatePhase: Phase, opts?: AdvanceOpts): string | null {
+    if (gatePhase !== 'spec') return null;
+    if (task.mode === 'quick') return null;
+    const taskClass = task.taskClass;
+    if (taskClass === undefined) return null;
+    if (!this.gateConfig.research.recommendFor.includes(taskClass)) return null;
+    if (opts?.force) return null;
+    const findings = this.readResearch(task.taskId);
+    // "Source-backed" = any entry with a source, or a grounding-fact. If none,
+    // the task is entering spec without grounding → recommend.
+    const hasGrounding = findings.some(
+      (f) => f.type === 'grounding-fact' || (f.source !== undefined && f.source.trim().length > 0),
+    );
+    if (hasGrounding) return null;
+    return `research grounding recommended for ${taskClass} — record findings (noir task research record) or --force <reason> to skip`;
   }
 
   /** Read the persisted TaskState, or null if the task is unknown. */
@@ -430,6 +482,50 @@ export class WorkflowEngine {
   async abandon(taskId: string): Promise<TaskState> {
     const task = this.requireTask(taskId);
     task.state = 'abandoned';
+    task.updatedAt = Date.now();
+    this.persist(task);
+    return task;
+  }
+
+  /**
+   * c4-research-grounding: append a research-finding record to `research:<taskId>`
+   * (append-only, mirrors the gate audit). `source` is required for non-
+   * `grounding-fact` entries when `gateConfig.research.requireSource` is on
+   * (defeats the "faux context" failure mode); `text` is length-capped.
+   */
+  recordResearch(taskId: string, entry: Omit<ResearchEntry, 'at'>): ResearchEntry {
+    this.requireTask(taskId); // validate the task exists
+    const text = entry.text?.trim() ?? '';
+    if (text.length === 0) throw new Error('research entry text must be non-empty');
+    if (text.length > RESEARCH_TEXT_CAP) {
+      throw new Error(`research entry text exceeds ${RESEARCH_TEXT_CAP} chars`);
+    }
+    const requireSource = this.gateConfig.research.requireSource;
+    if (requireSource && entry.type !== 'grounding-fact') {
+      if (!entry.source || entry.source.trim().length === 0) {
+        throw new Error(`research entry of type '${entry.type}' requires a source`);
+      }
+    }
+    const key = `research:${taskId}`;
+    const prior = this.store.getState<ResearchEntry[]>(key) ?? [];
+    const recorded: ResearchEntry = { ...entry, text, at: Date.now() };
+    this.store.setState<ResearchEntry[]>(key, [...prior, recorded]);
+    return recorded;
+  }
+
+  /** Read the research findings for a task (empty array when none recorded). */
+  readResearch(taskId: string): ResearchEntry[] {
+    return this.store.getState<ResearchEntry[]>(`research:${taskId}`) ?? [];
+  }
+
+  /**
+   * c4-research-grounding: set the task's open questions (raised during
+   * clarify). When non-empty, the clarify→spec transition is gated unless the
+   * advance carries `force`/`skip` (the observable+escapable invariant).
+   */
+  setOpenQuestions(taskId: string, questions: string[]): TaskState {
+    const task = this.requireTask(taskId);
+    task.openQuestions = questions.filter((q) => typeof q === 'string' && q.trim().length > 0);
     task.updatedAt = Date.now();
     this.persist(task);
     return task;

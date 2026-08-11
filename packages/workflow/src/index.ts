@@ -2,6 +2,7 @@ export {
   readPrd,
   writeAuditExport,
   writeChangelogStub,
+  writeClarifications,
   writeDecisionStub,
   writeIntake,
   writePlan,
@@ -30,9 +31,11 @@ export type {
   GateResultInput,
   Mode,
   Phase,
+  ResearchEntry,
+  ResearchEntryType,
   TaskClass,
   TaskState,
   WorkflowGateConfig,
   WorkflowState,
 } from './types.js';
-export { TASK_CLASSES } from './types.js';
+export { RESEARCH_ENTRY_TYPES, TASK_CLASSES } from './types.js';

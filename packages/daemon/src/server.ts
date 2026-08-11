@@ -564,6 +564,53 @@ export function createNoirServer(ctx: ServerContext): McpServer {
         }
       },
     );
+
+    // `workflow_research_record` (c4-research-grounding): record a research
+    // finding — appends to `research:<taskId>` (mirrors the gate audit). A write;
+    // degraded stores refuse it up front.
+    server.registerTool(
+      'workflow_research_record',
+      {
+        description:
+          'Record a research finding for a Noir SDD task (append-only to research:<taskId>). Non-grounding-fact types require a source (defeats faux context).',
+        inputSchema: {
+          taskId: z
+            .string()
+            .optional()
+            .describe('Task id; defaults to the active task (workflow:active).'),
+          type: z
+            .enum(['assumption', 'discovery', 'decision', 'grounding-fact'])
+            .describe('Research entry type.'),
+          text: z.string().min(1).max(220).describe('Finding text (capped).'),
+          source: z
+            .string()
+            .optional()
+            .describe('Evidence/citation — file:line, URL, or command. Required unless type is grounding-fact.'),
+        },
+      },
+      async ({ taskId, type, text, source }) => {
+        if (degraded) {
+          return textResult({
+            ok: false,
+            degraded: true,
+            error: 'store is read-only (daemon down) — workflow_research_record is unavailable',
+          });
+        }
+        try {
+          const id = taskId ?? engine.activeTaskId();
+          if (!id) return textResult({ ok: false, error: 'no active task' });
+          const entry = engine.recordResearch(id, {
+            type,
+            text,
+            ...(source === undefined ? {} : { source }),
+            taskClass: engine.status(id)?.taskClass,
+          });
+          return textResult({ ok: true, taskId: id, entry });
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
+      },
+    );
   }
 
   // The context engine is optional: stdio/HTTP inject it alongside the store +

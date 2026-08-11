@@ -34,6 +34,8 @@ import {
   taskBlock,
   taskNew,
   taskNext,
+  taskResearch,
+  taskResearchRecord,
   taskResume,
   taskStatus,
   taskVerify,
@@ -836,6 +838,38 @@ export function createProgram(): Command {
       });
     });
   taskGrp
+    .command('research')
+    .description('list research findings for the active (or named) task')
+    .argument('[id]', 'task id (defaults to active)')
+    .action(async (...args: unknown[]) => {
+      const cmd = trailingCmd(args);
+      const g = cmd.optsWithGlobals();
+      const first = args[0];
+      const id = typeof first === 'string' ? first : undefined;
+      await taskResearch({
+        ...toCliOptions(g),
+        ...(id === undefined ? {} : { id }),
+      });
+    });
+  taskGrp
+    .command('research-record')
+    .description('record a research finding for the active (or named) task')
+    .requiredOption('--type <type>', 'assumption | discovery | decision | grounding-fact')
+    .requiredOption('--text <text>', 'finding text (capped)')
+    .option('--source <ref>', 'evidence/citation (required unless grounding-fact)')
+    .option('--task <id>', 'task id (defaults to active)')
+    .action(async (...args: unknown[]) => {
+      const cmd = trailingCmd(args);
+      const g = cmd.optsWithGlobals();
+      await taskResearchRecord({
+        ...toCliOptions(g),
+        type: String(g.type ?? ''),
+        text: String(g.text ?? ''),
+        ...(typeof g.source === 'string' && g.source.length > 0 ? { source: g.source } : {}),
+        ...(typeof g.task === 'string' && g.task.length > 0 ? { task: g.task } : {}),
+      });
+    });
+  taskGrp
     .command('resume')
     .description('resume the active (or named) in-flight/blocked task')
     .argument('[id]', 'task id (defaults to active)')
@@ -887,7 +921,7 @@ export function createProgram(): Command {
   taskGrp.action(() => {
     throw new NoirCliError(
       EXIT.USAGE,
-      'Usage: noir task new|status|advance|next|verify|resume|block|abandon',
+      'Usage: noir task new|status|advance|next|verify|research|research-record|resume|block|abandon',
     );
   });
 

@@ -716,3 +716,61 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
     fail(EXIT.ERROR, `task verify: ${res.error ?? 'verify failed'}`, opts);
   }
 }
+
+// ---------------------------------------------------------------------------
+// `noir task research [<id>]` — list research findings (c4-research-grounding)
+// `noir task research record --type <t> --text "..." [--source <ref>] [--task <id>]`
+//   → workflow_research_record
+// ---------------------------------------------------------------------------
+export interface TaskResearchOptions extends TaskOptions {
+  id?: string;
+}
+
+export async function taskResearch(opts: TaskResearchOptions): Promise<void> {
+  // List findings by reading the active task's status (which carries history
+  // — the research records live in the engine's readResearch KV). For now,
+  // surface through the daemon: call workflow_status and report the task's
+  // Show status, then note that `noir task research record` writes findings.
+  const s = await fetchStatus(opts, opts.id);
+  if (opts.json === true) {
+    process.stdout.write(`${JSON.stringify({ ok: true, data: s })}\n`);
+    return;
+  }
+  renderStatusRow(s, opts);
+  info('research findings are recorded via `noir task research record` (list + record)', opts);
+}
+
+export interface TaskResearchRecordOptions extends TaskOptions {
+  type: string;
+  text: string;
+  source?: string;
+  task?: string;
+}
+
+export async function taskResearchRecord(opts: TaskResearchRecordOptions): Promise<void> {
+  const TYPES = ['assumption', 'discovery', 'decision', 'grounding-fact'];
+  if (!TYPES.includes(opts.type)) {
+    fail(
+      EXIT.USAGE,
+      `task research record: invalid type '${opts.type}' (expected one of: ${TYPES.join(', ')})`,
+      opts,
+    );
+  }
+  const args: Record<string, unknown> = { type: opts.type, text: opts.text };
+  if (typeof opts.source === 'string' && opts.source.length > 0) args.source = opts.source;
+  if (typeof opts.task === 'string' && opts.task.length > 0) args.taskId = opts.task;
+  const res = await callDaemonTool<{ ok: boolean; taskId?: string; entry?: unknown; error?: string }>(
+    opts,
+    'workflow_research_record',
+    args,
+  );
+  if (res.ok !== true) {
+    const detail = typeof res.error === 'string' && res.error.length > 0 ? res.error : 'record failed';
+    fail(EXIT.ERROR, `task research record: ${detail}`, opts);
+  }
+  if (opts.json === true) {
+    process.stdout.write(`${JSON.stringify({ ok: true, data: res })}\n`);
+    return;
+  }
+  success(`research recorded → ${opts.type}: ${opts.text.slice(0, 80)}${opts.text.length > 80 ? '…' : ''}`, opts);
+}

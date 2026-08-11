@@ -120,7 +120,40 @@ export interface TaskState {
   jumpEntry?: Phase; // recorded if a jump-to-phase happened
   /** Reason captured by `setBlocked` (admin escape; set directly, not via FSM). */
   blockReason?: string;
+  /**
+   * c4-research-grounding: open questions raised during clarify. When non-empty,
+   * the clarify→spec transition is gated (force/skip escape it). Set by the
+   * engine from `advance({ resolveOpenQuestions })` or the clarify artifact.
+   */
+  openQuestions?: string[];
   updatedAt: number;
+}
+
+/**
+ * c4-research-grounding: a typed, append-only research-finding record persisted
+ * at `research:<taskId>` (mirrors the gate audit at `audit:<taskId>`). SMALL +
+ * evidence-backed: a `source` is REQUIRED unless the type is `grounding-fact`
+ * (defeats the "faux context" failure mode); `text` is length-capped.
+ */
+export const RESEARCH_ENTRY_TYPES = [
+  'assumption',
+  'discovery',
+  'decision',
+  'grounding-fact',
+] as const;
+export type ResearchEntryType = (typeof RESEARCH_ENTRY_TYPES)[number];
+
+export interface ResearchEntry {
+  type: ResearchEntryType;
+  /** Capped (default 220 chars) — the ~2.2k-token-packet lesson. */
+  text: string;
+  /**
+   * Evidence/citation — file:line, URL, or command. REQUIRED unless
+   * `type === 'grounding-fact'`.
+   */
+  source?: string;
+  taskClass?: TaskClass;
+  at: number;
 }
 
 /**
@@ -156,5 +189,16 @@ export interface WorkflowGateConfig {
     required: boolean | Partial<Record<TaskClass, boolean>>;
     retryBudget: number;
     checks?: { name: string; command: string; tier?: 'hard' | 'soft' }[];
+  };
+  /**
+   * c4-research-grounding: research soft-gate config. `recommendFor` lists the
+   * task classes for which an empty `research:<taskId>` (or only source-less
+   * assumptions) at the spec gate surfaces an observable, escapable grounding
+   * recommendation (mirrors the PRD gate — the advance always proceeds).
+   * `requireSource` enforces that non-grounding-fact entries carry a `source`.
+   */
+  research: {
+    recommendFor: readonly TaskClass[];
+    requireSource: boolean;
   };
 }

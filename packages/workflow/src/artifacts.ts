@@ -235,6 +235,31 @@ ${body}`;
 }
 
 /**
+ * Write the clarify-phase artifact — resolved questions + assumptions.
+ * c4-research-grounding S4. Path: `.noir/clarifications/<id>-<slug>.md`.
+ */
+export function writeClarifications(
+  root: string,
+  taskId: string,
+  slug: string,
+  body: string,
+  conflict?: WorkflowConflictOpts,
+): void {
+  const dir = join(root, '.noir', 'clarifications');
+  const file = join(dir, `${taskId}-${slug}.md`);
+  mkdirSync(dir, { recursive: true });
+  const content = `---
+taskId: ${taskId}
+slug: ${slug}
+---
+
+${body}`;
+  if (!resolveAndWrite(file, `.noir/clarifications/${taskId}-${slug}.md`, content, conflict).write)
+    return;
+  writeFileSync(file, content, 'utf-8');
+}
+
+/**
  * Write decision stub to .noir/decisions/<n>.md
  */
 export function writeDecisionStub(

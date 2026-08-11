@@ -226,10 +226,37 @@ export const NoirConfigSchema = z.object({
                 .optional(),
             })
             .default({ required: false, retryBudget: 2 }),
+          // c4-research-grounding — soft grounding gate.
+          research: z
+            .object({
+              recommendFor: z
+                .array(
+                  z.enum([
+                    'feature',
+                    'epic',
+                    'enhancement',
+                    'bugfix',
+                    'spike',
+                    'quick-task',
+                    'refactor',
+                  ]),
+                )
+                .default(['feature', 'epic']),
+              requireSource: z.boolean().default(true),
+            })
+            .default({ recommendFor: ['feature', 'epic'], requireSource: true }),
         })
-        .default({ verify: { required: false, retryBudget: 2 } }),
+        .default({
+          verify: { required: false, retryBudget: 2 },
+          research: { recommendFor: ['feature', 'epic'], requireSource: true },
+        }),
     })
-    .default({ gate: { verify: { required: false, retryBudget: 2 } } }),
+    .default({
+      gate: {
+        verify: { required: false, retryBudget: 2 },
+        research: { recommendFor: ['feature', 'epic'], requireSource: true },
+      },
+    }),
   // Slice X integration layer (@noir-ai/skills `integrations/<name>/`). Additive
   // block keyed by integration name — every field optional + default-`{}` so a
   // config with NO `integrations:` block still parses and behaves as "no

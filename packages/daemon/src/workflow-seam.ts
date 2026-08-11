@@ -63,7 +63,16 @@ export function resolveGateConfig(config?: NoirConfig): WorkflowGateConfig | und
       mandatoryFor.includes('feature') &&
       mandatoryFor.includes('epic'));
   const verifyAtDefault = !hasVerify || verifyCfg.required === false;
-  if (prdAtDefault && verifyAtDefault) return undefined;
+  // Research slice (c4-research-grounding).
+  const researchCfg = config?.workflow?.gate?.research;
+  const hasResearch = researchCfg !== undefined;
+  const researchAtDefault =
+    !hasResearch ||
+    (researchCfg.recommendFor.length === 2 &&
+      researchCfg.recommendFor.includes('feature') &&
+      researchCfg.recommendFor.includes('epic') &&
+      researchCfg.requireSource === true);
+  if (prdAtDefault && verifyAtDefault && researchAtDefault) return undefined;
   return {
     prd: mandatoryFor.length === 0 ? { mandatoryFor: ['feature', 'epic'] } : { mandatoryFor },
     verify: hasVerify
@@ -73,5 +82,11 @@ export function resolveGateConfig(config?: NoirConfig): WorkflowGateConfig | und
           ...(verifyCfg.checks === undefined ? {} : { checks: verifyCfg.checks }),
         }
       : { required: false, retryBudget: 2 },
+    research: hasResearch
+      ? {
+          recommendFor: researchCfg.recommendFor as readonly TaskClass[],
+          requireSource: researchCfg.requireSource ?? true,
+        }
+      : { recommendFor: ['feature', 'epic'], requireSource: true },
   };
 }
