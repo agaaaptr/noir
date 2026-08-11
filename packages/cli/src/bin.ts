@@ -18,6 +18,7 @@ import { contextIndex, contextSearch, contextStatus } from './commands/context.j
 import { daemonRestart, daemonStart, daemonStatus, daemonStop } from './commands/daemon.js';
 import { doctor } from './commands/doctor.js';
 import { type HandoffOptions, handoff } from './commands/handoff.js';
+import { type ReleaseOptions, release } from './commands/release.js';
 import { type HomeDeps, home } from './commands/home.js';
 import {
   memoryConsolidate,
@@ -1012,6 +1013,30 @@ export function createProgram(): Command {
     .option('--write', 'persist to .noir/handoff/<id>.md (gitignored)')
     .action(async (...args: unknown[]) => {
       await handoff(buildHandoffOptions(trailingCmd(args).optsWithGlobals()));
+    });
+
+  // `noir release <version> [--channel beta|stable] [--dry-run]` — guided
+  // orchestrator over the patch-release flow (c4-release-phase S2). Hands off
+  // at the human-approval gates; NEVER auto-approves the GitHub publish job.
+  program
+    .command('release')
+    .description('guided release orchestrator over the patch-release flow')
+    .argument('[version]', 'target version, e.g. 1.10.0')
+    .option('--channel <channel>', 'beta (default) | stable')
+    .option('--dry-run', 'print the checklist without executing any steps')
+    .action(async (...args: unknown[]) => {
+      const cmd = trailingCmd(args);
+      const g = cmd.optsWithGlobals();
+      await release({
+        ...toCliOptions(g),
+        ...(typeof args[0] === 'string' && (args[0] as string).length > 0
+          ? { version: args[0] as string }
+          : {}),
+        ...(typeof g.channel === 'string' && (g.channel as string).length > 0
+          ? { channel: g.channel as string }
+          : {}),
+        ...(g.dryRun === true ? { dryRun: true } : {}),
+      });
     });
 
   // `noir tui` — the interactive Ink dashboard. LAZY-loaded: the Ink app
