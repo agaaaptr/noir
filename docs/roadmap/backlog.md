@@ -6,6 +6,17 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 
 ---
 
+## Workflow / lifecycle (C4)
+
+> **Design-complete 2026-08-11** — the C4 spec suite (`docs/internal/specs/2026-08-11-c4-*.md`) closes every capability-04 delta. Implementation is pending (spec-first); each item below is a designed slice with its own acceptance criteria + testing + rollback, **not** debt. Recommended order: `c4-surface-wiring` first (activates shipped-but-unreachable engine features, zero FSM change).
+
+- **c4-surface-wiring** — surface `resumeTask` (`noir task resume`), plumb `taskClass` through `workflow_start` + `noir task new --class` (soft PRD gate live), wire quick-mode `runQuick`, expose `setBlocked`/`abandon`, implement the `prd.mandatoryFor` config bridge. — [`2026-08-11-c4-surface-wiring-design.md`](../internal/specs/2026-08-11-c4-surface-wiring-design.md)
+- **c4-verify-gate-recovery** — verify gate becomes evidence-backed (pre-transition hard gate + post-run evidence), block-and-offer-recovery with bounded retry, HARD/SOFT tiering by taskClass, merge/spec-conflict recovery via the artifact conflict seam, document-phase artifact wiring (`writeDecisionStub`/`writeChangelogStub` + memory hook). — [`2026-08-11-c4-verify-gate-recovery-design.md`](../internal/specs/2026-08-11-c4-verify-gate-recovery-design.md)
+- **c4-research-grounding** — soft research sub-step (read-only mode, taskClass-gated, evidence-backed `research:<taskId>` records — NOT a hard FSM state), `noir-research` skill, clarify artifact + open-questions exit criterion. — [`2026-08-11-c4-research-grounding-design.md`](../internal/specs/2026-08-11-c4-research-grounding-design.md)
+- **c4-project-discovery** — two-half PM detection, CI detection + opt-in templates, existing-AI-tooling probe (never clobber), onboarding confirm step ("no surprises"), `create-noir` bin, detection feeds the workflow. — [`2026-08-11-c4-project-discovery-design.md`](../internal/specs/2026-08-11-c4-project-discovery-design.md)
+- **c4-decomposition** — capability→slice Spec-of-Specs pass (`noir task decompose`), enriched slice schema, `rollback_plan` per slice (verify-gated), walking-skeleton-first routing + Spike slices. — [`2026-08-11-c4-decomposition-design.md`](../internal/specs/2026-08-11-c4-decomposition-design.md)
+- **c4-release-phase** — optional `release` FSM phase (the one deliberate FSM extension) + `noir release` guided orchestrator over the existing patch-release flow with human handoffs, build-once/idempotent/rollback, publish-failure recovery. — [`2026-08-11-c4-release-phase-design.md`](../internal/specs/2026-08-11-c4-release-phase-design.md)
+
 ## Daemon / runtime
 
 - **Socket activation** for the daemon (systemd-style auto-start on first connect) — not yet implemented; real `--detach` backgrounding shipped in 1.8.0 (ADR-0006), but the daemon is not socket-activated.

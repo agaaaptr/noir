@@ -29,6 +29,7 @@ roadmap:
     title: End-to-End AI Development Workflow
     status: shipped
     priority: high
+    note: "C4 design completed 2026-08-11 (spec suite in docs/internal/specs/2026-08-11-c4-*.md): 4-agent codebase audit (engine is real; wiring gaps — resumeTask/taskClass/quick-mode/setBlocked/abandon/config-bridge unreachable from the surface) + 7-agent web research. 6 specs close every delta: surface wiring (#9, most material), verify-gate automation + recovery (#6/#7), research soft-grounding + clarify (#1/#2), project discovery (#3), capability→slice decomposition + rollback_plan (#4), release phase/tool (#5). Implementation pending (spec-first); c4-surface-wiring is the first implementation slice."
 
   - id: C5
     title: Runtime Infrastructure & Local Daemon

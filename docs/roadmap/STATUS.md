@@ -9,7 +9,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 | C1 Package Distribution | 🟩 Completed | Ship | 2026-08-04 |
 | C2 CLI Runtime & UX | 🟩 Completed | Ship | 2026-08-07 |
 | C3 Built-in Skill System | 🟩 Completed — 26 skills + registry + quality gate + evals | Ship | 2026-08-10 |
-| C4 AI Development Workflow | 🟩 Shipped core (SDD engine) | Ship | 2026-08-03 |
+| C4 AI Development Workflow | 🟩 Shipped core (SDD engine) + full-lifecycle design spec'd | Spec (impl pending) | 2026-08-11 |
 | C5 Runtime Infrastructure & Daemon | 🟩 Shipped (daemon + store) | Ship | 2026-08-03 |
 | C5.5 Host Abstraction Layer | 🟦 Partial — 5 adapters shipped | Ship + Research (negotiation/certification) | 2026-08-03 |
 | C6 Documentation & Knowledge System | 🟦 Partial — Diátaxis + auto-gen shipped | Ship + Research (drift detection) | 2026-08-03 |
@@ -41,20 +41,21 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 - **2026-08-06** — **Home consolidation** (C2 UX delta): grouped home menu (`noir` bare) rebuilt as a two-level section picker + action list backed by a shared React-free curated-section module (`sections.ts`, 5 sections, per-option hints, destructive-confirm, back/next/prev navigation). New `noir palette` command (Ink fuzzy palette palette-first). TUI home Mode (`h` key in dashboard, curated quick-action consuming the same `sections.ts`). Bidirectional menu↔TUI bridge. `HomeDeps.commands` injected from `buildPaletteCommands(createProgram())` at module scope — single-source palette registry for both the menu and dashboard (structurally prevents the blank-Ctrl+K class of discoverability bug). Enhanced `?` cheatsheet. Gates green (1539 tests, +14). Docs sync across 12 user-facing files. Published as **1.9.0**.
 - **2026-08-07** — **Home menu crash fix (1.9.1).** Bare `noir` home menu crashed on Enter (`Cannot read properties of undefined (reading 'label')`), arrow dead, Esc dead at the section picker. Root cause: Level 1 used `@clack/prompts` `selectKey` (select-by-typed-letter, no arrow/enter/esc, `_track=false` → `value=undefined` → Enter crash). Fix: upgraded `@clack/prompts` `^0.7.0 → ^1.7.0` (core 1.4.3; Esc→cancel native, empty-options handling, ESM-only), switched both menu levels to `select`. One API break (`validate` `string→string|undefined` in `memory.ts`). Gates green (1539 tests, 0 regression). Published as **1.9.1**.
 - **2026-08-07/08** — **TUI visual redesign (1.9.2).** Every TUI surface (dashboard, home menu, palette, search, confirm, help) redrawn with `╭─╮│╰╯` rounded borders + dim dividers; command input / palette query / confirm prompt each get a bordered field; output pane truncates to `contentWidth()` (terminal − border − padding) with `wrap="truncate-end"` so the `noir status` table no longer overflows. New `contentWidth()` + `divider()` helpers centralize the width budget. Presentational only (no logic/keybinding change). Gates green (1539 tests, 0 regression). Published as **1.9.2**.
+- **2026-08-11** — **C4 design completion (spec suite).** Full lifecycle analysis + research: a 4-agent codebase audit verified the capability doc against shipped code (the engine is real; the dominant pattern is *wiring gaps* — `resumeTask`, `taskClass`/soft PRD gate, quick-mode `runQuick`, `setBlocked`/`abandon`, and the `prd.mandatoryFor` config bridge all exist in the engine but are unreachable from the CLI/MCP), and a 7-agent web research sweep (≥3 sources each) covered research-phase design, spec-driven development, FSM orchestration, project detection, validation gates + recovery, resume UX, and capability→slice decomposition. Produced **6 design specs** (`docs/internal/specs/2026-08-11-c4-*.md`) closing every C4 delta: surface wiring (#9, most material), verify-gate automation + recovery (#6/#7), research soft-grounding + clarify (#1/#2), project discovery (#3), capability→slice decomposition + `rollback_plan` (#4), and release phase/tool (#5). Doc accuracy drifts fixed in `capability-04` + `explanation/sdd-workflow.md`. **C4 → Shipped core + full-lifecycle design spec'd** (implementation pending, spec-first).
 
 ## Active capability
 
-- C2 (CLI Runtime & UX)
+- C4 (End-to-End AI Development Workflow) — design complete (2026-08-11); implementation of the spec suite is next
 
 ## Active slice
 
-- `c2-home-consolidation` (grouped home + palette + bridge)
+- `c4-surface-wiring` (first implementation slice: resume + taskClass/PRD gate + quick mode + blocked/abandon + config bridge — `docs/internal/specs/2026-08-11-c4-surface-wiring-design.md`)
 
 - **2026-08-10** — **C3 completed:** skill pack curated 34→26 via 5 merges + gerund renames; all 26 builtins + 1 integration become full playbooks (zero stubs, every skill WHAT+WHEN-described, with follow-up guidance and host-tool maximization). Runtime-derived skill registry queryable via `noir skills registry --json`. Structural quality gate (`validateSkill` + `lintSkill` + `noir skills lint`) checks metadata, required sections, line budget, one-level refs, WHAT+WHEN descriptions. Offline evals harness (`evals/evals.json` + vitest runner) with 2 shipped example evals. ClickUp integration enhanced with STEP-0 auth gate, 12 API pitfalls with corrective patterns, verb dispatch grammar, and attachment handling. Full gate green (1561 tests, lint, build, typecheck, docs:validate).
 
 ## Next milestone
 
-- Return to the **C2 TUI delta** research track: the **v2 orchestrator TUI** (Archetype B — driving the host CLI as a subprocess, streaming output, token/cost bar) is tracked for v2 (ADR-0006). Home consolidation published as 1.9.0.
+- **Implement the C4 spec suite** (spec-first): `c4-surface-wiring` first (activates shipped-but-unreachable engine features — zero FSM change), then verify-gate automation + recovery, research soft-grounding, project discovery, decomposition, and release phase — each as its own slice with a full gate. The **v2 orchestrator TUI** (Archetype B — driving the host CLI as a subprocess, streaming output, token/cost bar) remains tracked for v2 (ADR-0006).
 
 ## Current technical debt
 
