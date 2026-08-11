@@ -10,7 +10,7 @@
 
 ## Current status
 
-> **As of 2026-08-11. `1.9.4` is `latest` on npm; `1.9.4-beta.2` is `beta`.** Source version is **`1.9.4`**. **C3 Completed** — 26 curated builtins + registry + quality gate + evals. **C4 design completed** — 6-spec suite in `docs/internal/specs/2026-08-11-c4-*.md` closes every C4 delta (surface wiring, verify-gate automation + recovery, research soft-grounding, project discovery, decomposition, release phase); implementation pending, spec-first. Next milestone: **implement the C4 spec suite** (`c4-surface-wiring` first); the **v2 orchestrator TUI** (Archetype B) remains tracked for v2 (ADR-0006).
+> **As of 2026-08-11. `1.9.4` is `latest` on npm; `1.9.4-beta.2` is `beta`.** Source version is **`1.9.4`**. **C3 Completed** — 26 curated builtins + registry + quality gate + evals. **C4 Completed** — all 6 deltas implemented across 6 slices (surface wiring, verify-gate automation + recovery, research soft-grounding, project discovery, decomposition, release phase); full gate green. Next milestone: the **v2 orchestrator TUI** (Archetype B — research).
 
 **The platform today (shipped & working):**
 - **11 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`, unified versioning, npm with SLSA provenance, dist-tags `latest` + `beta`.
@@ -18,7 +18,7 @@
 - **CLI self-update + migration** — `noir install`/`migrate` (move an existing install to native, settings preserved, `--uninstall-prev` explicit, never auto-uninstalls); `noir update` (reinstall via the active method); async cached startup version check (24h default) with `NOIR_DISABLE_UPDATE_CHECK` / `NOIR_DISABLE_UPDATES` kill-switches; semver downgrade guard; `noir doctor` install row (advisory, no network).
 - **Homebrew formula + Scoop manifest** — real `url`/`sha256`/`version` from the 1.8.0 tarball; stable-only (single-channel taps). winget/Chocolatey deferred (ADR-0005).
 - **26 builtin `noir-` skills** + **1 integration** (`noir-clickup`) — a copy+validate compiler with a structural quality gate and WHAT+WHEN descriptions, emitted idempotently via `noir init`/`sync` (no plugin, no marketplace — see ADR-0002).
-- **SDD workflow engine** — FSM (Intake→Clarify→Spec→Plan→Execute→Verify→Document) with observable, escapable gates, Full/Quick modes, cross-session resume, `.noir/` artifacts, `workflow_*` MCP tools.
+- **SDD workflow engine** — FSM (Intake→Clarify→Spec→Plan→Execute→Verify→Document) with observable, escapable gates (spec/plan/verify), Full/Quick modes, cross-session resume (`noir task resume`), evidence-backed verify gate (HARD/SOFT tiering), soft PRD gate (taskClass-keyed, `noir task new --class`), research grounding sub-step, `noir task verify` (run config checks + submit evidence), `noir task block|abandon`, `noir task decompose` (capability→slice), `.noir/` artifacts, `workflow_*` MCP tools (status/start/advance/resume/block/abandon/research-record), and `noir release` guided orchestrator.
 - **Hybrid context retrieval** — BM25 ∪ kNN → RRF, local 384-dim embeddings by default (zero API key), remote/Ollama embedders opt-in.
 - **Cross-session memory** — save/recall/search/sessions/forget/consolidate, hybrid retrieval reuse, provider-gated consolidation that refuses cleanly without a provider.
 - **Bounded model layer** — single-shot `complete()`, 3 adapters, provider-explicit, agent loops impossible by construction.
