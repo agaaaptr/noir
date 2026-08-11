@@ -479,7 +479,12 @@ describe('WorkflowEngine', () => {
     it('records the PRD recommendation on the spec gate when a feature task has no PRD', async () => {
       const store = await openStore({ projectId, root });
       try {
-        const engine = new WorkflowEngine(store, root, projectId);
+        // Disable research hint for PRD-isolation test.
+        const engine = new WorkflowEngine(store, root, projectId, {
+          prd: { mandatoryFor: ['feature', 'epic'] },
+          verify: { required: false, retryBudget: 2 },
+          research: { recommendFor: [], requireSource: true },
+        });
         await engine.startTask('task-1', 'add-login', 'full', 'feature');
         await engine.advance('task-1'); // → clarifying
 
@@ -503,7 +508,12 @@ describe('WorkflowEngine', () => {
     it('records the spec gate CLEAN (no reason) when a PRD artifact exists', async () => {
       const store = await openStore({ projectId, root });
       try {
-        const engine = new WorkflowEngine(store, root, projectId);
+        // Disable research hint for PRD-isolation test.
+        const engine = new WorkflowEngine(store, root, projectId, {
+          prd: { mandatoryFor: ['feature', 'epic'] },
+          verify: { required: false, retryBudget: 2 },
+          research: { recommendFor: [], requireSource: true },
+        });
         await engine.startTask('task-1', 'add-login', 'full', 'feature');
         writePrd(root, 'task-1', 'add-login', '# Problem\nUsers cannot log in.');
         await engine.advance('task-1'); // → clarifying
@@ -593,6 +603,8 @@ describe('WorkflowEngine', () => {
         // User widens the recommendation to enhancement.
         const engine = new WorkflowEngine(store, root, projectId, {
           prd: { mandatoryFor: ['enhancement'] },
+          verify: { required: false, retryBudget: 2 },
+          research: { recommendFor: [], requireSource: true },
         });
         await engine.startTask('task-1', 'x', 'full', 'enhancement');
         await engine.advance('task-1'); // → clarifying

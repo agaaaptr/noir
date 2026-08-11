@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
@@ -223,7 +223,9 @@ export function detectStack(root: string): StackInfo {
       pmSource = 'lockfile';
     }
   }
-  if (!packageManager) {
+  // Invoke-time fallback: only when the dir has recognizable languages
+  // (user-agent alone doesn't define a project — an empty dir gets no PM).
+  if (!packageManager && languages.size > 0) {
     const ua = process.env.npm_config_user_agent;
     if (ua) {
       if (ua.startsWith('pnpm')) packageManager = 'pnpm';
@@ -237,7 +239,15 @@ export function detectStack(root: string): StackInfo {
   {
     const ua = process.env.npm_config_user_agent;
     if (ua && packageManager) {
-      const invokePm = ua.startsWith('pnpm') ? 'pnpm' : ua.startsWith('yarn') ? 'yarn' : ua.startsWith('npm') ? 'npm' : ua.startsWith('bun') ? 'bun' : null;
+      const invokePm = ua.startsWith('pnpm')
+        ? 'pnpm'
+        : ua.startsWith('yarn')
+          ? 'yarn'
+          : ua.startsWith('npm')
+            ? 'npm'
+            : ua.startsWith('bun')
+              ? 'bun'
+              : null;
       if (invokePm && invokePm !== packageManager) pmConflict = true;
     }
   }
@@ -269,7 +279,8 @@ export function detectStack(root: string): StackInfo {
     if (existsSync(cursorRulesDir)) {
       const entries = readdirSync(cursorRulesDir);
       for (const e of entries) {
-        if (e.endsWith('.md')) existingAiFiles.push({ path: `.cursor/rules/${e}`, kind: 'cursor-rules' });
+        if (e.endsWith('.md'))
+          existingAiFiles.push({ path: `.cursor/rules/${e}`, kind: 'cursor-rules' });
       }
     }
   } catch {

@@ -4,7 +4,7 @@
 
 ## Overview
 
-Noir dogfoods Spec-Driven Development (SDD): the `@noir-ai/workflow` FSM engine runs the spec-first lifecycle with observable, escapable gates. The engine is real and ships in `@noir-ai/workflow` v1.9.0; a formal research phase, a release phase, and automated validation are the open deltas.
+Noir dogfoods Spec-Driven Development (SDD): the `@noir-ai/workflow` FSM engine runs the spec-first lifecycle with observable, escapable gates. The engine shipped in v1.9.0; all lifecycle deltas (surface wiring, verify-gate automation + recovery, research grounding, project discovery, decomposition, and a guided release orchestrator) were implemented in 6 slices on 2026-08-11.
 
 ## Shipped today
 
@@ -38,7 +38,7 @@ Noir dogfoods Spec-Driven Development (SDD): the `@noir-ai/workflow` FSM engine 
 
 - FSM runs intake → clarify → spec → plan → execute → verify → document with observable, escapable gates at spec/plan/verify. — **MET** (v1.9.0; see `packages/workflow/src/engine.ts`).
 - Every gate decision persists to `audit:<taskId>` KV, `TaskState.history`, and `.noir/audit/<taskId>.json`. — **MET** (minor: the JSON export fires on explicit `checkpoint()`, not per-gate).
-- A blocked task can be resumed across sessions; done/abandoned tasks are terminal. — **MET** at the engine; user-reachable via `noir task resume` after the surface-wiring spec. — 🟦 [`2026-08-11-c4-surface-wiring-design.md`](../internal/specs/2026-08-11-c4-surface-wiring-design.md)
+- A blocked task can be resumed across sessions; done/abandoned tasks are terminal. — **MET** (2026-08-11, c4-surface-wiring): `noir task resume` + `workflow_resume` surfacing the engine's `resumeTask`. — [`2026-08-11-c4-surface-wiring-design.md`](../internal/specs/2026-08-11-c4-surface-wiring-design.md)
 - Research is a first-class sub-step with its own gate/artifacts, not only a skill. — **reinterpreted per research** (no leading tool uses a hard research state; the s4 spec never designed one): research becomes a first-class **soft grounding sub-step** (read-only mode, `research:<taskId>` audit records, `noir-research` skill, spec-gate grounding check). — 🟦 [`2026-08-11-c4-research-grounding-design.md`](../internal/specs/2026-08-11-c4-research-grounding-design.md)
 - Init/create detects the project's framework, package manager, CI, and existing AI tooling and seeds the workflow accordingly. — partial today (`detectStack()` wired for ignore-files); full detection + onboarding confirm + workflow seeding spec'd. — 🟦 [`2026-08-11-c4-project-discovery-design.md`](../internal/specs/2026-08-11-c4-project-discovery-design.md)
 - A `noir task resume` (or equivalent) exists and `taskClass` is accepted so the soft PRD gate is reachable by users. — **MET** (2026-08-11, c4-surface-wiring): `noir task resume` + `workflow_resume`; `noir task new --class` + `workflow_start taskClass`; quick mode, block, abandon, and the config bridge all wired. — [`2026-08-11-c4-surface-wiring-design.md`](../internal/specs/2026-08-11-c4-surface-wiring-design.md)

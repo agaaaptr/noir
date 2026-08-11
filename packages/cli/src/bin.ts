@@ -18,7 +18,6 @@ import { contextIndex, contextSearch, contextStatus } from './commands/context.j
 import { daemonRestart, daemonStart, daemonStatus, daemonStop } from './commands/daemon.js';
 import { doctor } from './commands/doctor.js';
 import { type HandoffOptions, handoff } from './commands/handoff.js';
-import { type ReleaseOptions, release } from './commands/release.js';
 import { type HomeDeps, home } from './commands/home.js';
 import {
   memoryConsolidate,
@@ -27,6 +26,7 @@ import {
   memorySave,
   memorySessions,
 } from './commands/memory.js';
+import { release } from './commands/release.js';
 import { skillsLint, skillsList, skillsRegistry, skillsSync } from './commands/skills.js';
 import { type StatusOptions, status } from './commands/status.js';
 import {
@@ -823,7 +823,9 @@ export function createProgram(): Command {
     });
   taskGrp
     .command('decompose')
-    .description('decompose a capability into buildable slices (template-only offline; see the spec)')
+    .description(
+      'decompose a capability into buildable slices (template-only offline; see the spec)',
+    )
     .argument('<capability>', 'capability id, e.g. C4')
     .option('--out <path>', 'output path for the SlicePlan JSON')
     .action(async (...args: unknown[]) => {

@@ -12,10 +12,10 @@ export {
 } from './artifacts.js';
 export type { AdvanceOpts } from './engine.js';
 export { VerifyGateError, WorkflowEngine } from './engine.js';
-export { validateSlicePlan, type Slice, type SlicePlan, type SliceType } from './slices.js';
 export { gateFor, readGateHistory, recordGate } from './gates.js';
 export type { QuickOpts } from './modes.js';
 export { QUICK_SPEC_STUB, resumeTask, runQuick } from './modes.js';
+export { type Slice, type SlicePlan, type SliceType, validateSlicePlan } from './slices.js';
 export {
   applyTransition,
   canTransition,

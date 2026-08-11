@@ -16,9 +16,20 @@ export interface ReleaseOptions extends CliOptions {
   dryRun?: boolean;
 }
 
-type Step = 'preflight' | 'bump' | 'gate' | 'commit' | 'ci-develop' | 'beta-tag' |
-  'human-approve-beta' | 'merge-main' | 'ci-main' | 'stable-tag' |
-  'human-approve-stable' | 'dist-bump' | 'sync';
+type Step =
+  | 'preflight'
+  | 'bump'
+  | 'gate'
+  | 'commit'
+  | 'ci-develop'
+  | 'beta-tag'
+  | 'human-approve-beta'
+  | 'merge-main'
+  | 'ci-main'
+  | 'stable-tag'
+  | 'human-approve-stable'
+  | 'dist-bump'
+  | 'sync';
 
 /** Report what step does and who runs it. */
 function describe(step: Step, who: 'noir' | 'human'): string {
@@ -34,16 +45,27 @@ function describe(step: Step, who: 'noir' | 'human'): string {
     'ci-main': 'wait for CI on main → green',
     'stable-tag': 'pnpm release:tag → stable tag + push',
     'human-approve-stable': 'approve the release workflow publish job in GitHub Actions (again)',
-    'dist-bump': 'update Homebrew (packaging/homebrew/noir.rb) + Scoop (packaging/scoop/noir.json) from npm',
+    'dist-bump':
+      'update Homebrew (packaging/homebrew/noir.rb) + Scoop (packaging/scoop/noir.json) from npm',
     sync: 'merge main → develop + verify both branches at same SHA',
   };
   return `${m[step]} [${who}]`;
 }
 
 const ALL: Step[] = [
-  'preflight', 'bump', 'gate', 'commit', 'ci-develop', 'beta-tag',
-  'human-approve-beta', 'merge-main', 'ci-main', 'stable-tag',
-  'human-approve-stable', 'dist-bump', 'sync',
+  'preflight',
+  'bump',
+  'gate',
+  'commit',
+  'ci-develop',
+  'beta-tag',
+  'human-approve-beta',
+  'merge-main',
+  'ci-main',
+  'stable-tag',
+  'human-approve-stable',
+  'dist-bump',
+  'sync',
 ];
 
 export async function release(opts: ReleaseOptions): Promise<void> {
@@ -78,7 +100,10 @@ export async function release(opts: ReleaseOptions): Promise<void> {
 
     // 2. Bump
     info(`[2/13] bump: ${describe('bump', 'noir')}`, opts);
-    spawnSync('node', ['scripts/bump-version.mjs', version], { encoding: 'utf8', stdio: 'inherit' });
+    spawnSync('node', ['scripts/bump-version.mjs', version], {
+      encoding: 'utf8',
+      stdio: 'inherit',
+    });
     success(`bump: ✓ version ${version}`, opts);
 
     // 3. Gate
@@ -89,9 +114,10 @@ export async function release(opts: ReleaseOptions): Promise<void> {
     });
     success('gate: ✓ full gate green', opts);
 
-    // 4. Commit
+    // 4. Commit (spawnSync — no shell, no injection).
     info(`[4/13] commit/push: ${describe('commit', 'noir')}`, opts);
-    execSync(`git add -A && git commit -m "chore(release): v${version} + docs sync"`, {
+    spawnSync('git', ['add', '-A'], { encoding: 'utf8', stdio: 'inherit' });
+    spawnSync('git', ['commit', '-m', `chore(release): v${version} + docs sync`], {
       encoding: 'utf8',
       stdio: 'inherit',
     });

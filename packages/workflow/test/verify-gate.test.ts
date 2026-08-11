@@ -11,7 +11,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openStore } from '@noir-ai/store';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { WorkflowEngine, VerifyGateError, type GateEvidence, type WorkflowGateConfig } from '../src/index.js';
+import {
+  type GateEvidence,
+  VerifyGateError,
+  WorkflowEngine,
+  type WorkflowGateConfig,
+} from '../src/index.js';
 
 let root: string;
 

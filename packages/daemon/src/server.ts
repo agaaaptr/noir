@@ -585,7 +585,9 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           source: z
             .string()
             .optional()
-            .describe('Evidence/citation — file:line, URL, or command. Required unless type is grounding-fact.'),
+            .describe(
+              'Evidence/citation — file:line, URL, or command. Required unless type is grounding-fact.',
+            ),
         },
       },
       async ({ taskId, type, text, source }) => {

@@ -759,20 +759,25 @@ export async function taskResearchRecord(opts: TaskResearchRecordOptions): Promi
   const args: Record<string, unknown> = { type: opts.type, text: opts.text };
   if (typeof opts.source === 'string' && opts.source.length > 0) args.source = opts.source;
   if (typeof opts.task === 'string' && opts.task.length > 0) args.taskId = opts.task;
-  const res = await callDaemonTool<{ ok: boolean; taskId?: string; entry?: unknown; error?: string }>(
-    opts,
-    'workflow_research_record',
-    args,
-  );
+  const res = await callDaemonTool<{
+    ok: boolean;
+    taskId?: string;
+    entry?: unknown;
+    error?: string;
+  }>(opts, 'workflow_research_record', args);
   if (res.ok !== true) {
-    const detail = typeof res.error === 'string' && res.error.length > 0 ? res.error : 'record failed';
+    const detail =
+      typeof res.error === 'string' && res.error.length > 0 ? res.error : 'record failed';
     fail(EXIT.ERROR, `task research record: ${detail}`, opts);
   }
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: res })}\n`);
     return;
   }
-  success(`research recorded → ${opts.type}: ${opts.text.slice(0, 80)}${opts.text.length > 80 ? '…' : ''}`, opts);
+  success(
+    `research recorded → ${opts.type}: ${opts.text.slice(0, 80)}${opts.text.length > 80 ? '…' : ''}`,
+    opts,
+  );
 }
 // ---------------------------------------------------------------------------
 // `noir task decompose <capability-id>`  → draft a SlicePlan (c4-decomposition)
@@ -802,7 +807,7 @@ export async function taskDecompose(opts: TaskDecomposeOptions): Promise<void> {
         scopeOut: 'Polish, edge cases, full coverage.',
         dependsOn: [] as { id: string; mode: 'sequential' | 'parallel' }[],
         files: { create: [], modify: [], preserve: [] },
-        acceptance: ['verify acceptance criteria for capability ${cap}'],
+        acceptance: [`verify acceptance criteria for capability ${cap}`],
         doD: ['pnpm test', 'pnpm typecheck'],
         rollbackPlan: { procedure: 'revert the slice commit', verifyCommand: 'pnpm test' },
       },

@@ -2,7 +2,6 @@
 // The capability→slice roadmap pass lives ABOVE the spec FSM (each slice then
 // re-enters the existing clarify→spec→plan lifecycle). Fixed schema + optional
 // LLM content + deterministic validation (schema, dependency-cycle detection).
-import type { TaskClass } from './types.js';
 
 export type SliceType = 'feature' | 'tech' | 'spike';
 
@@ -75,7 +74,8 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
       if (!sibling) continue;
       const sCreates = new Set(s.files.create);
       for (const f of sibling.files.create) {
-        if (sCreates.has(f)) errors.push(`slice ${s.id}: parallel file conflict on '${f}' with sibling ${pd.id}`);
+        if (sCreates.has(f))
+          errors.push(`slice ${s.id}: parallel file conflict on '${f}' with sibling ${pd.id}`);
       }
     }
   }

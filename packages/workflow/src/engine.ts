@@ -165,7 +165,15 @@ export class WorkflowEngine {
      */
     gateConfig?: WorkflowGateConfig,
   ) {
-    this.gateConfig = gateConfig ?? DEFAULT_GATE_CONFIG;
+    // Deep-merge with defaults: a partial gateConfig (e.g., only prd) must
+    // not strip verify/research defaults — the engine accesses all three.
+    this.gateConfig = gateConfig
+      ? {
+          prd: gateConfig.prd ?? DEFAULT_GATE_CONFIG.prd,
+          verify: gateConfig.verify ?? DEFAULT_GATE_CONFIG.verify,
+          research: gateConfig.research ?? DEFAULT_GATE_CONFIG.research,
+        }
+      : DEFAULT_GATE_CONFIG;
   }
 
   /**
@@ -240,8 +248,9 @@ export class WorkflowEngine {
       !opts?.force &&
       !opts?.skip
     ) {
+      const count = task.openQuestions?.length ?? 0;
       throw new Error(
-        `clarify→spec blocked: ${task.openQuestions!.length} open question(s) unresolved (resolve them, or --force/--skip)`,
+        `clarify→spec blocked: ${count} open question(s) unresolved (resolve them, or --force/--skip)`,
       );
     }
 
@@ -320,9 +329,10 @@ export class WorkflowEngine {
         // --force records `forced` with the user's reason (the explicit override).
         const prdHint = this.prdRecommendation(task, gatePhase, opts);
         const researchHint = this.researchRecommendation(task, gatePhase, opts);
-        const softHint = prdHint !== null && researchHint !== null
-          ? `${prdHint}; ${researchHint}`
-          : prdHint ?? researchHint;
+        const softHint =
+          prdHint !== null && researchHint !== null
+            ? `${prdHint}; ${researchHint}`
+            : (prdHint ?? researchHint);
         const input: GateResultInput = {
           phase: gatePhase,
           decision,
@@ -392,7 +402,11 @@ export class WorkflowEngine {
    * (only absent or assumption-only entries without sources). Never a hard block
    * — the advance always proceeds; `--force` is the explicit override.
    */
-  private researchRecommendation(task: TaskState, gatePhase: Phase, opts?: AdvanceOpts): string | null {
+  private researchRecommendation(
+    task: TaskState,
+    gatePhase: Phase,
+    opts?: AdvanceOpts,
+  ): string | null {
     if (gatePhase !== 'spec') return null;
     if (task.mode === 'quick') return null;
     const taskClass = task.taskClass;
