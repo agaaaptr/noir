@@ -1,6 +1,6 @@
 # Capability 4 — End-to-End AI Development Workflow
 
-> **Status:** Shipped core (SDD engine) — **all deltas fully specified** (2026-08-11 spec suite); implementation pending. No open design gaps remain.
+> **Status:** 🟩 **Completed** — shipped core (SDD engine) + all 6 deltas implemented (2026-08-11). No open gaps.
 
 ## Overview
 
