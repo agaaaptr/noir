@@ -26,11 +26,11 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/aga
 Two channels ship in parallel:
 
 <!-- noir:doc:status -->
-**Latest stable:** `1.9.4` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.9.4-beta.2` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
-**Source version:** `1.9.4` (clean SemVer in `packages/*/package.json`)
+**Latest stable:** `1.10.0` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.10.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Source version:** `1.10.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-11T06:13:36.568Z*
+*Last auto-generated: 2026-08-11T06:55:24.252Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
