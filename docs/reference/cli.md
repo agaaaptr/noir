@@ -46,6 +46,8 @@ Commands:
                                     active install method
   handoff [options]                 emit a ready-to-paste host handoff prompt
   wrap [options]                    session-end alias for `noir handoff`
+  release [options] [version]       guided release orchestrator over the
+                                    patch-release flow
   tui                               interactive Ink dashboard (host · phase ·
                                     daemon + /command dispatch)
   palette                           fuzzy command palette — run any noir

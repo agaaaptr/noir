@@ -13,5 +13,6 @@
 | `memory` | `unknown` | no | {"consolidation":{"enabled":false}} |  |
 | `rules` | `unknown` | no | {"enabled":true,"lengthBudgetKb":6} |  |
 | `prd` | `unknown` | no | {"mandatoryFor":["feature","epic"]} |  |
+| `workflow` | `unknown` | no | {"gate":{"verify":{"required":false,"retryBudget":2},"research":{"recommendFor":["feature","epic"],"requireSource":true}}} |  |
 | `integrations` | `unknown` | no | {} |  |
 | `update` | `unknown` | no | {"checkEnabled":true,"checkIntervalHours":24,"channel":"latest","minVersion":"1.6.0","display":"notice"} |  |
