@@ -207,7 +207,7 @@ If you already have a Node 22+ toolchain you prefer, skip the installer and inst
 
 At a glance (each command also appears in a block below):
 
-| Tool | Default (`latest`, currently `1.9.0`) | Beta |
+| Tool | Default (`latest`, currently `1.10.0`) | Beta |
 |---|---|---|
 | **npm** | `npm install -g @noir-ai/cli` | `npm install -g @noir-ai/cli@beta` |
 | **pnpm** | `pnpm add -g @noir-ai/cli` | `pnpm add -g @noir-ai/cli@beta` |
@@ -217,7 +217,7 @@ At a glance (each command also appears in a block below):
 ### npm
 
 ```bash
-# default/latest (currently 1.9.0)
+# default/latest (currently 1.10.0)
 npm install -g @noir-ai/cli
 # beta
 npm install -g @noir-ai/cli@beta
@@ -226,7 +226,7 @@ npm install -g @noir-ai/cli@beta
 ### pnpm
 
 ```bash
-# default/latest (currently 1.9.0)
+# default/latest (currently 1.10.0)
 pnpm add -g @noir-ai/cli
 # beta
 pnpm add -g @noir-ai/cli@beta
@@ -235,7 +235,7 @@ pnpm add -g @noir-ai/cli@beta
 ### yarn (classic)
 
 ```bash
-# default/latest (currently 1.9.0)
+# default/latest (currently 1.10.0)
 yarn global add @noir-ai/cli
 # beta
 yarn global add @noir-ai/cli@beta
@@ -244,7 +244,7 @@ yarn global add @noir-ai/cli@beta
 ### bun
 
 ```bash
-# default/latest (currently 1.9.0)
+# default/latest (currently 1.10.0)
 bun add -g @noir-ai/cli
 # beta
 bun add -g @noir-ai/cli@beta
@@ -262,7 +262,7 @@ Run Noir once without adding anything to your PATH. Each tool fetches the packag
 
 **npx** (npm)
 ```bash
-# default/latest (currently 1.9.0)
+# default/latest (currently 1.10.0)
 npx @noir-ai/cli init
 # beta
 npx @noir-ai/cli@beta init
@@ -270,7 +270,7 @@ npx @noir-ai/cli@beta init
 
 **pnpm dlx** (pnpm)
 ```bash
-# default/latest (currently 1.9.0)
+# default/latest (currently 1.10.0)
 pnpm dlx @noir-ai/cli init
 # beta
 pnpm dlx @noir-ai/cli@beta init
@@ -278,7 +278,7 @@ pnpm dlx @noir-ai/cli@beta init
 
 **yarn dlx** (yarn / Berry)
 ```bash
-# default/latest (currently 1.9.0)
+# default/latest (currently 1.10.0)
 yarn dlx @noir-ai/cli init
 # beta
 yarn dlx @noir-ai/cli@beta init
@@ -286,7 +286,7 @@ yarn dlx @noir-ai/cli@beta init
 
 **bunx** (bun)
 ```bash
-# default/latest (currently 1.9.0)
+# default/latest (currently 1.10.0)
 bunx @noir-ai/cli init
 # beta
 bunx @noir-ai/cli@beta init
