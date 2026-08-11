@@ -149,8 +149,12 @@ You can watch the lifecycle from a terminal at any time:
 ```bash
 noir status         # probe-only health; works even with the daemon down
 noir task status    # where the active task is in the lifecycle
+noir task resume    # cross-session resume: briefing + next action
+noir task verify    # run configured checks and submit evidence to the verify gate
 noir doctor         # config / store / embedder / native deps / provider / install status
 ```
+
+Other task commands: `noir task new --class feature`, `advance --force`, `block`, `abandon`, `research-record`, `decompose`, `next`. The daemon exposes `workflow_*` MCP tools (`workflow_status`, `workflow_start`, `workflow_advance`, `workflow_resume`, `workflow_block`, `workflow_abandon`, `workflow_research_record`, `checkpoint`).
 
 `noir doctor` includes an **install row** (advisory `ok`/`warn`, never `fail`, no network call) that reports the detected install method (`native`/`npm`/`pnpm`/…), the installed version, and the latest-known version from the update cache — a non-blocking `native recommended` nudge appears when you're on a non-native path.
 
