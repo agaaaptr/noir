@@ -4,6 +4,7 @@ import { readPrd, writeAuditExport } from './artifacts.js';
 import { gateFor, readGateHistory, recordGate } from './gates.js';
 import { applyTransition, nextPhase, stateForPhase } from './state-machine.js';
 import type {
+  GateEvidence,
   GateResult,
   GateResultInput,
   Mode,
@@ -32,6 +33,10 @@ const GATE_PHASES = ['spec', 'plan', 'verify'] as const satisfies ReadonlyArray<
  */
 const DEFAULT_GATE_CONFIG: WorkflowGateConfig = {
   prd: { mandatoryFor: ['feature', 'epic'] },
+  // c4-verify-gate-recovery: verify gate is OFF by default — a task with no
+  // verify config behaves exactly as v1.9.4 (records approved/forced/skipped,
+  // no evidence, no blocking). Opt-in via gateConfig.verify or NoirConfig.
+  verify: { required: false, retryBudget: 2 },
 };
 
 /** Options for {@link WorkflowEngine.advance}. */
@@ -62,6 +67,14 @@ export interface AdvanceOpts {
    * Mutually exclusive with {@link force}.
    */
   skip?: true;
+  /**
+   * c4-verify-gate-recovery: validation evidence for the verify gate. When the
+   * verify gate is required for the task's class, advance into `done` evaluates
+   * this evidence: all HARD checks exit 0 ⇒ `approved`; any HARD check non-zero
+   * ⇒ `failed` (no transition); absent/stale evidence ⇒ pending (no transition,
+   * no audit entry). `force`/`skip` override as usual.
+   */
+  evidence?: GateEvidence;
 }
 
 /**
@@ -76,6 +89,35 @@ function gatePhaseForState(state: WorkflowState): Phase | null {
     if (gateFor(p) === state) return p;
   }
   return null;
+}
+
+/**
+ * c4-verify-gate-recovery: thrown when the verify gate cannot admit `done`.
+ * `kind: 'evidence-required'` = no fresh evidence was supplied (pending); the
+ * advance did not transition and recorded NO gate. `kind: 'evidence-failed'` =
+ * a HARD check failed; the advance recorded a `failed` decision WITH evidence
+ * but did not transition. Both carry the `pendingGate` so the daemon/CLI handler
+ * can surface a structured recovery offer (retry / force / skip / block).
+ */
+export class VerifyGateError extends Error {
+  readonly kind: 'evidence-required' | 'evidence-failed';
+  readonly pendingGate: { gate: 'verify'; reason: string };
+  readonly evidence?: GateEvidence;
+  constructor(
+    kind: 'evidence-required' | 'evidence-failed',
+    updatedAt: number,
+    evidence?: GateEvidence,
+  ) {
+    super(`verify gate ${kind}`);
+    this.name = 'VerifyGateError';
+    this.kind = kind;
+    this.evidence = evidence;
+    this.pendingGate = {
+      gate: 'verify',
+      reason:
+        kind === 'evidence-required' ? 'evidence-required' : `evidence-failed at ${updatedAt}`,
+    };
+  }
 }
 
 /**
@@ -199,30 +241,76 @@ export class WorkflowEngine {
     // gate — looked up from the target STATE (see gatePhaseForState).
     const gatePhase = gatePhaseForState(targetState);
     if (gatePhase !== null) {
-      const decision = opts?.force ? 'forced' : opts?.skip ? 'skipped' : 'approved';
-      // Soft PRD recommendation: when entering `specified` (the spec gate),
-      // the task is mandatoryFor-eligible, no PRD artifact exists, and the user
-      // did NOT supply --force, fold a recommendation note into the recorded
-      // gate's `reason`. The advance STILL PROCEEDS — this is the "quiet
-      // observable nudge" doctrine (§9.1): never a hard block, never silently
-      // dropped. Quick-mode + unlisted taskClasses skip the check entirely;
-      // --force records `forced` with the user's reason (the explicit override).
-      const prdHint = this.prdRecommendation(task, gatePhase, opts);
-      const input: GateResultInput = {
-        phase: gatePhase,
-        decision,
-        // exactOptionalPropertyTypes is false; spread reason only when present.
-        // Force-path wins over the soft hint (a user who forces is explicitly
-        // accepting the recommendation; their reason is the override signal).
-        ...(opts?.force
-          ? { reason: opts.force.reason }
-          : prdHint !== null
-            ? { reason: prdHint }
-            : {}),
-      };
-      // Record ONCE to the authoritative audit KV; derive history from it.
-      recordGate(this.store, taskId, input);
-      task.history = readGateHistory(this.store, taskId);
+      const forced = opts?.force !== undefined;
+      const skipped = opts?.skip === true;
+      // c4-verify-gate-recovery: the verify gate is evidence-backed when the
+      // task's class is configured `verify.required`. `force`/`skip` override
+      // the evaluation (the explicit escapes), exactly like the other gates.
+      // Default OFF — a task with no verify config takes the legacy path
+      // (decision approved/forced/skipped, no evidence, no blocking).
+      if (gatePhase === 'verify' && this.verifyRequiredFor(task) && !forced && !skipped) {
+        const evidence = opts?.evidence;
+        // Stale evidence (ran before the last TaskState update) = no evidence.
+        const fresh =
+          evidence !== undefined && evidence.ranAt >= task.updatedAt ? evidence : undefined;
+        if (fresh === undefined) {
+          // No fresh evidence: do NOT transition, do NOT record — "pending" is
+          // the absence of a decision. Throw so the daemon/CLI handler surfaces
+          // a clear pendingGate envelope + recovery options.
+          throw new VerifyGateError('evidence-required', task.updatedAt);
+        }
+        const hardFail = fresh.checks.some(
+          (c) => c.exitCode !== 0 && (c.tier ?? 'hard') === 'hard',
+        );
+        if (hardFail) {
+          // Evidence ran and a HARD check failed: record a `failed` decision
+          // WITH evidence (a visible failure — observable-checkpoint invariant),
+          // but do NOT transition to `done`. Throw so the caller surfaces recovery.
+          recordGate(this.store, taskId, {
+            phase: 'verify',
+            decision: 'failed',
+            evidence: fresh,
+            reason: fresh.summary,
+          });
+          task.history = readGateHistory(this.store, taskId);
+          throw new VerifyGateError('evidence-failed', task.updatedAt, fresh);
+        }
+        // Evidence present, all HARD checks green ⇒ record `approved` with
+        // evidence (SOFT failures are flagged in the summary but don't block).
+        const input: GateResultInput = {
+          phase: gatePhase,
+          decision: 'approved',
+          evidence: fresh,
+          ...(fresh.summary ? { reason: fresh.summary } : {}),
+        };
+        recordGate(this.store, taskId, input);
+        task.history = readGateHistory(this.store, taskId);
+      } else {
+        const decision = opts?.force ? 'forced' : opts?.skip ? 'skipped' : 'approved';
+        // Soft PRD recommendation: when entering `specified` (the spec gate),
+        // the task is mandatoryFor-eligible, no PRD artifact exists, and the user
+        // did NOT supply --force, fold a recommendation note into the recorded
+        // gate's `reason`. The advance STILL PROCEEDS — this is the "quiet
+        // observable nudge" doctrine (§9.1): never a hard block, never silently
+        // dropped. Quick-mode + unlisted taskClasses skip the check entirely;
+        // --force records `forced` with the user's reason (the explicit override).
+        const prdHint = this.prdRecommendation(task, gatePhase, opts);
+        const input: GateResultInput = {
+          phase: gatePhase,
+          decision,
+          // exactOptionalPropertyTypes is false; spread reason only when present.
+          // Force-path wins over the soft hint (a user who forces is explicitly
+          // accepting the recommendation; their reason is the override signal).
+          ...(opts?.force
+            ? { reason: opts.force.reason }
+            : prdHint !== null
+              ? { reason: prdHint }
+              : {}),
+        };
+        // Record ONCE to the authoritative audit KV; derive history from it.
+        recordGate(this.store, taskId, input);
+        task.history = readGateHistory(this.store, taskId);
+      }
     }
 
     task.state = targetState;
@@ -246,6 +334,18 @@ export class WorkflowEngine {
    * Returns the observable note (audited on the spec gate's `reason`) so a
    * downstream consumer (CLI status, workflow_status MCP tool) can surface it.
    */
+  /**
+   * c4-verify-gate-recovery: resolve whether the verify gate is evidence-backed
+   * for this task. `required` may be a boolean (all tasks) or a per-class map.
+   * A task with no `taskClass` follows the boolean default (false ⇒ off).
+   */
+  private verifyRequiredFor(task: TaskState): boolean {
+    const required = this.gateConfig.verify.required;
+    if (typeof required === 'boolean') return required;
+    if (task.taskClass === undefined) return false;
+    return required[task.taskClass] === true;
+  }
+
   private prdRecommendation(task: TaskState, gatePhase: Phase, opts?: AdvanceOpts): string | null {
     if (gatePhase !== 'spec') return null;
     if (task.mode === 'quick') return null;

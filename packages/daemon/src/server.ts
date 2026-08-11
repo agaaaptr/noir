@@ -14,7 +14,7 @@ import type {
   WorkflowEngine,
   WorkflowState,
 } from '@noir-ai/workflow';
-import { PHASES, resumeTask, runQuick, TASK_CLASSES } from '@noir-ai/workflow';
+import { PHASES, resumeTask, runQuick, TASK_CLASSES, VerifyGateError } from '@noir-ai/workflow';
 import { z } from 'zod';
 import {
   buildRequests,
@@ -372,7 +372,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       'workflow_advance',
       {
         description:
-          'Advance a Noir SDD task to its next phase, or jump with `to`. At a gate-landing state (entering specified/planned/done) a gate is recorded — approved by default, forced (with reason) via `force`, or skipped via `skip`. Omit taskId to target the active task. `force` and `skip` are mutually exclusive.',
+          'Advance a Noir SDD task to its next phase, or jump with `to`. At a gate-landing state (entering specified/planned/done) a gate is recorded — approved by default, forced (with reason) via `force`, or skipped via `skip`. Omit taskId to target the active task. `force` and `skip` are mutually exclusive. For an evidence-backed verify gate, supply `evidence` (ranAt + checks[]).',
         inputSchema: {
           taskId: z
             .string()
@@ -394,9 +394,27 @@ export function createNoirServer(ctx: ServerContext): McpServer {
             .describe(
               "Quick-mode: record the landing gate as 'skipped' instead of 'approved'. Mutually exclusive with force.",
             ),
+          evidence: z
+            .object({
+              ranAt: z.number(),
+              summary: z.string(),
+              checks: z.array(
+                z.object({
+                  name: z.string(),
+                  exitCode: z.number(),
+                  outputDigest: z.string(),
+                  command: z.string(),
+                  tier: z.enum(['hard', 'soft']).optional(),
+                }),
+              ),
+            })
+            .optional()
+            .describe(
+              'c4-verify-gate-recovery: validation evidence for the verify gate (ranAt + checks[]). Required when the verify gate is configured for the task class.',
+            ),
         },
       },
-      async ({ taskId, force, to, skip }) => {
+      async ({ taskId, force, to, skip, evidence }) => {
         if (degraded) {
           return textResult({
             ok: false,
@@ -411,11 +429,23 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           if (force) opts.force = { reason: force.reason };
           if (to) opts.to = to;
           if (skip) opts.skip = true;
+          if (evidence) opts.evidence = evidence;
           await engine.advance(id, opts);
           const payload = buildWorkflowStatus(engine, id, degraded);
           if (!payload) return textResult({ ok: false, taskId: id, error: 'unknown task' });
           return textResult(payload);
         } catch (err) {
+          // Verify-gate pending/failed: surface a structured envelope so the CLI
+          // can render recovery options (retry / force / skip / block). The
+          // `failed` decision was already recorded in the audit before throw.
+          if (err instanceof VerifyGateError) {
+            return textResult({
+              ok: false,
+              pendingGate: err.pendingGate,
+              ...(err.evidence === undefined ? {} : { evidence: err.evidence }),
+              recovery: ['retry', 'force', 'skip', 'block'],
+            });
+          }
           return textResult({ ok: false, degraded: true, error: errorMessage(err) });
         }
       },

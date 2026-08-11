@@ -19,7 +19,19 @@
 // not-found condition, not an error (the broader `noir status` folds the same
 // envelope to `null` and stays exit 0).
 
-import { PHASES, type Phase, TASK_CLASSES, type TaskClass } from '@noir-ai/workflow';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { loadProjectInfo } from '@noir-ai/core';
+import {
+  PHASES,
+  type Phase,
+  TASK_CLASSES,
+  type TaskClass,
+  writeChangelogStub,
+  writeDecisionStub,
+} from '@noir-ai/workflow';
 import {
   callDaemonTool,
   type DaemonClientOptions,
@@ -35,7 +47,9 @@ import {
   info,
   isInteractive,
   log,
+  success,
   tip,
+  warn,
 } from '../output.js';
 import { badge } from '../theme.js';
 
@@ -110,6 +124,38 @@ export const PHASE_SKILL: Readonly<Record<string, string>> = {
 export function skillFor(phase: string | null | undefined): string | null {
   if (typeof phase !== 'string') return null;
   return PHASE_SKILL[phase] ?? null;
+}
+
+/**
+ * c4-verify-gate-recovery S8 — write the document-phase artifacts when a task
+ * lands at `done`: a changelog entry + a pending decision-record stub. Uses the
+ * artifact conflict seam with `preserve` policy (never clobber a user's edit).
+ * The decision-record number is the next after the highest existing ADR.
+ */
+function writeDoneArtifacts(opts: CliOptions, taskId: string): void {
+  try {
+    const project = loadProjectInfo(process.cwd());
+    const conflict = { conflictPolicy: 'preserve' as const, interactive: false };
+    writeChangelogStub(project.root, `- ${taskId}: completed (verify gate passed)`, conflict);
+    // Decision-record numbering: scan .noir/decisions/ (the artifact writer's
+    // path) for NNNN.md, take max+1.
+    const decisionsDir = join(project.root, '.noir', 'decisions');
+    let nextN = 1;
+    try {
+      const files = readdirSync(decisionsDir);
+      const nums = files
+        .map((f) => Number.parseInt(f.replace(/\D.*$/, ''), 10))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      if (nums.length > 0) nextN = Math.max(...nums) + 1;
+    } catch {
+      // No decisions dir yet — start at 1.
+    }
+    writeDecisionStub(project.root, nextN, taskId, conflict);
+  } catch {
+    // Artifact writes are best-effort — a failure must never mask the advance
+    // result. Surface a tip so the user knows the artifacts didn't land.
+    tip('document-phase artifacts could not be written (use --no-artifacts to skip)', opts);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -336,6 +382,8 @@ export async function taskNew(opts: TaskNewOptions): Promise<void> {
 export interface TaskAdvanceOptions extends TaskOptions {
   to?: string;
   force?: string;
+  /** Skip the document-phase artifact writes (changelog + decision stubs). */
+  noArtifacts?: boolean;
 }
 
 export async function taskAdvance(opts: TaskAdvanceOptions): Promise<void> {
@@ -361,6 +409,14 @@ export async function taskAdvance(opts: TaskAdvanceOptions): Promise<void> {
     const detail =
       typeof res.error === 'string' && res.error.length > 0 ? res.error : 'advance failed';
     fail(EXIT.ERROR, `task advance: ${detail}`, opts);
+  }
+  // c4-verify-gate-recovery S8 — document-phase artifact wiring: when the task
+  // lands at `done`, write a changelog entry + a pending decision-record stub
+  // via the artifact conflict seam (preserve on conflict). `--no-artifacts`
+  // skips; the memory consolidation hook is provider-gated and fires via the
+  // daemon's existing memory engine when configured (not re-implemented here).
+  if (res.state === 'done' && opts.noArtifacts !== true) {
+    writeDoneArtifacts(opts, res.taskId);
   }
   // Surface (never auto-emit) the handoff command at the verify gate, the
   // natural handoff point (work moves from Noir's planning into the host's
@@ -513,4 +569,150 @@ export async function taskAbandon(opts: TaskAbandonOptions): Promise<void> {
     return;
   }
   renderStatusRow(res, opts);
+}
+
+// ---------------------------------------------------------------------------
+// `noir task verify [--check <name> ...]`  → runs checks + submits evidence
+//   to workflow_advance (c4-verify-gate-recovery S3).
+// ---------------------------------------------------------------------------
+export interface TaskVerifyOptions extends TaskOptions {
+  /** Restrict to a named subset of checks; defaults to all configured checks. */
+  check?: string[];
+}
+
+/** A check definition resolved from the project config. */
+interface VerifyCheck {
+  name: string;
+  command: string;
+  tier: 'hard' | 'soft';
+}
+
+/** `workflow_advance` result with optional verify-gate pending/recovery. */
+interface WorkflowAdvanceResult {
+  ok: boolean;
+  taskId?: string;
+  phase?: string;
+  state?: string;
+  mode?: string;
+  nextGate?: string | null;
+  history?: unknown;
+  updatedAt?: number;
+  degraded?: boolean;
+  error?: string;
+  /** c4-verify-gate-recovery: present when the verify gate did not admit `done`. */
+  pendingGate?: { gate: string; reason: string };
+  recovery?: string[];
+}
+
+/** Run one shell command and capture {exitCode, outputDigest}. */
+function runCheck(cmd: string): { exitCode: number; digest: string } {
+  // The CLI (user-invoked) owns shell access — the engine never shells out.
+  // Synchronous spawn keeps `noir task verify` a single atomic step; failures
+  // surface as non-zero exit codes (the evidence), never a thrown crash.
+  try {
+    const buf = spawnSync('sh', ['-c', cmd], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      encoding: 'utf8',
+    });
+    let out = '';
+    if (buf.stdout) out += buf.stdout.toString();
+    if (buf.stderr) out += buf.stderr.toString();
+    const status = buf.status;
+    return {
+      exitCode: typeof status === 'number' ? status : 1,
+      digest: createHash('sha256').update(out).digest('hex'),
+    };
+  } catch {
+    return { exitCode: 1, digest: createHash('sha256').update('').digest('hex') };
+  }
+}
+
+export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
+  // Resolve the check set from the project config (workflow.gate.verify.checks).
+  // No checks resolvable → exit 2 (USAGE) rather than inventing commands.
+  const project = loadProjectInfo(process.cwd());
+  const cfgChecks = project.config.workflow?.gate?.verify?.checks ?? [];
+  const all: VerifyCheck[] = cfgChecks.map((c) => ({
+    name: c.name,
+    command: c.command,
+    tier: (c.tier ?? 'hard') as 'hard' | 'soft',
+  }));
+  let checks = all;
+  if (opts.check && opts.check.length > 0) {
+    const want = new Set(opts.check);
+    checks = all.filter((c) => want.has(c.name));
+    if (checks.length === 0) {
+      fail(
+        EXIT.USAGE,
+        `task verify: no configured checks match --check ${[...want].join(',')}`,
+        opts,
+      );
+    }
+  }
+  if (checks.length === 0) {
+    fail(
+      EXIT.USAGE,
+      'task verify: no verify checks configured (set workflow.gate.verify.checks in noir.config)',
+      opts,
+    );
+  }
+
+  // Run each check, capture evidence.
+  const ranAt = Date.now();
+  const evidence = {
+    ranAt,
+    checks: checks.map((c) => {
+      const r = runCheck(c.command);
+      return {
+        name: c.name,
+        exitCode: r.exitCode,
+        outputDigest: r.digest,
+        command: c.command,
+        tier: c.tier,
+      };
+    }),
+    summary: '',
+  };
+  const passed = evidence.checks.filter((c) => c.exitCode === 0).length;
+  const failed = evidence.checks.length - passed;
+  evidence.summary = `${passed} passed, ${failed} failed`;
+
+  // Submit evidence to workflow_advance (targets the active task → verify gate).
+  const res = await callDaemonTool<WorkflowAdvanceResult>(opts, 'workflow_advance', { evidence });
+  if (res.ok === true) {
+    if (opts.json === true) {
+      process.stdout.write(`${JSON.stringify({ ok: true, data: res, evidence })}\n`);
+      return;
+    }
+    success(`verify — ${evidence.summary} → gate approved`, opts);
+    renderStatusRow(res as WorkflowStatusResult, opts);
+    return;
+  }
+  // Pending / failed: render recovery options.
+  if (opts.json === true) {
+    process.stdout.write(`${JSON.stringify({ evidence, ...res })}\n`);
+    return;
+  }
+  if (res.pendingGate) {
+    warn(`verify gate: ${res.pendingGate.reason} (${evidence.summary})`, opts);
+    const recovery = res.recovery ?? ['retry', 'force', 'skip', 'block'];
+    info(
+      `recovery: ${recovery
+        .map((r) =>
+          r === 'retry'
+            ? '`noir task verify`'
+            : r === 'force'
+              ? '`noir task advance --force <reason>`'
+              : r === 'skip'
+                ? '`noir task advance --skip`'
+                : r === 'block'
+                  ? '`noir task block <reason>`'
+                  : `\`${r}\``,
+        )
+        .join(' | ')}`,
+      opts,
+    );
+  } else {
+    fail(EXIT.ERROR, `task verify: ${res.error ?? 'verify failed'}`, opts);
+  }
 }

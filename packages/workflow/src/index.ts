@@ -10,7 +10,7 @@ export {
   writeTask,
 } from './artifacts.js';
 export type { AdvanceOpts } from './engine.js';
-export { WorkflowEngine } from './engine.js';
+export { VerifyGateError, WorkflowEngine } from './engine.js';
 export { gateFor, readGateHistory, recordGate } from './gates.js';
 export type { QuickOpts } from './modes.js';
 export { QUICK_SPEC_STUB, resumeTask, runQuick } from './modes.js';
@@ -23,6 +23,9 @@ export {
   stateForPhase,
 } from './state-machine.js';
 export type {
+  CheckEvidence,
+  GateDecision,
+  GateEvidence,
   GateResult,
   GateResultInput,
   Mode,

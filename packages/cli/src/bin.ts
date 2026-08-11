@@ -36,6 +36,7 @@ import {
   taskNext,
   taskResume,
   taskStatus,
+  taskVerify,
 } from './commands/task.js';
 import { init } from './init.js';
 import {
@@ -797,6 +798,7 @@ export function createProgram(): Command {
     .description('advance the active task to the next phase')
     .option('--to <phase>', 'target phase')
     .option('--force <reason>', 'force the gate with a reason')
+    .option('--no-artifacts', 'skip the document-phase artifact writes at done')
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();
@@ -806,6 +808,7 @@ export function createProgram(): Command {
         ...toCliOptions(g),
         ...(to === undefined ? {} : { to }),
         ...(force === undefined ? {} : { force }),
+        ...(g.artifacts === false ? { noArtifacts: true } : {}),
       });
     });
   taskGrp
@@ -813,6 +816,24 @@ export function createProgram(): Command {
     .description('suggest the next phase + applicable skill')
     .action(async (...args: unknown[]) => {
       await taskNext(toCliOptions(trailingCmd(args).optsWithGlobals()));
+    });
+  taskGrp
+    .command('verify')
+    .description('run configured verify checks and submit evidence to the verify gate')
+    .option(
+      '--check <name>',
+      'restrict to a named check (repeatable)',
+      (val: string, acc: string[]) => [...acc, val],
+      [],
+    )
+    .action(async (...args: unknown[]) => {
+      const cmd = trailingCmd(args);
+      const g = cmd.optsWithGlobals();
+      const check = Array.isArray(g.check) ? (g.check as string[]) : undefined;
+      await taskVerify({
+        ...toCliOptions(g),
+        ...(check === undefined || check.length === 0 ? {} : { check }),
+      });
     });
   taskGrp
     .command('resume')
@@ -866,7 +887,7 @@ export function createProgram(): Command {
   taskGrp.action(() => {
     throw new NoirCliError(
       EXIT.USAGE,
-      'Usage: noir task new|status|advance|next|resume|block|abandon',
+      'Usage: noir task new|status|advance|next|verify|resume|block|abandon',
     );
   });
 

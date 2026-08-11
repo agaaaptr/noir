@@ -1,0 +1,211 @@
+// c4-verify-gate-recovery — the evidence-backed verify gate. Pins:
+//   • default OFF: no verify config ⇒ legacy approved/forced/skipped, no evidence, no blocking;
+//   • required + no evidence ⇒ VerifyGateError(evidence-required), no transition, no audit entry;
+//   • required + passing evidence ⇒ approved WITH evidence, transitions to done;
+//   • required + failed HARD check ⇒ VerifyGateError(evidence-failed), a `failed` decision recorded WITH evidence, no transition;
+//   • required + failed SOFT check ⇒ approved (soft-fail flagged), transitions;
+//   • stale evidence (ranAt < updatedAt) ⇒ treated as no evidence;
+//   • force/skip override the evaluation (the explicit escapes).
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { openStore } from '@noir-ai/store';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { WorkflowEngine, VerifyGateError, type GateEvidence, type WorkflowGateConfig } from '../src/index.js';
+
+let root: string;
+
+beforeEach(() => {
+  root = mkdtempSync(join(tmpdir(), 'noir-verify-'));
+});
+
+afterEach(() => {
+  rmSync(root, { recursive: true, force: true });
+});
+
+const verifyOn: WorkflowGateConfig = {
+  prd: { mandatoryFor: ['feature', 'epic'] },
+  verify: { required: { feature: true }, retryBudget: 2 },
+};
+
+/** Walk a task from intake to verifying (one step short of the verify gate). */
+async function toVerifying(engine: WorkflowEngine, id: string): Promise<void> {
+  await engine.startTask(id, 'task-x', 'full', 'feature');
+  await engine.advance(id); // draft → clarifying
+  await engine.advance(id); // → specified (spec gate)
+  await engine.advance(id); // → planned (plan gate)
+  await engine.advance(id); // → executing
+  await engine.advance(id); // → verifying
+}
+
+const passEvidence = (): GateEvidence => ({
+  ranAt: Date.now(),
+  summary: '2 passed, 0 failed',
+  checks: [
+    { name: 'test', exitCode: 0, outputDigest: 'a'.repeat(64), command: 'pnpm test' },
+    { name: 'lint', exitCode: 0, outputDigest: 'b'.repeat(64), command: 'pnpm lint' },
+  ],
+});
+
+const failHardEvidence = (): GateEvidence => ({
+  ranAt: Date.now(),
+  summary: '1 passed, 1 failed',
+  checks: [
+    { name: 'test', exitCode: 1, outputDigest: 'a'.repeat(64), command: 'pnpm test', tier: 'hard' },
+    { name: 'lint', exitCode: 0, outputDigest: 'b'.repeat(64), command: 'pnpm lint', tier: 'hard' },
+  ],
+});
+
+const failSoftEvidence = (): GateEvidence => ({
+  ranAt: Date.now(),
+  summary: '1 passed, 1 soft-failed',
+  checks: [
+    { name: 'docs', exitCode: 1, outputDigest: 'a'.repeat(64), command: 'pnpm docs', tier: 'soft' },
+    { name: 'lint', exitCode: 0, outputDigest: 'b'.repeat(64), command: 'pnpm lint', tier: 'hard' },
+  ],
+});
+
+describe('verify gate — default OFF (backward compatible)', () => {
+  it('no verify config ⇒ legacy approved, no evidence, no blocking', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p'); // default gateConfig
+      await toVerifying(engine, 't1');
+      // No evidence supplied — legacy path transitions and records approved.
+      const res = await engine.advance('t1');
+      expect(res.state).toBe('done');
+      const verifyGate = res.history.find((g) => g.phase === 'verify');
+      expect(verifyGate?.decision).toBe('approved');
+      expect(verifyGate?.evidence).toBeUndefined();
+    } finally {
+      await store.close();
+    }
+  });
+});
+
+describe('verify gate — evidence-required', () => {
+  it('required + no evidence ⇒ throws evidence-required, no transition, no audit entry', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p', verifyOn);
+      await toVerifying(engine, 't2');
+      const before = engine.status('t2');
+      await expect(engine.advance('t2')).rejects.toBeInstanceOf(VerifyGateError);
+      // State unchanged.
+      const after = engine.status('t2');
+      expect(after?.state).toBe('verifying');
+      expect(after?.state).toBe(before?.state);
+      // No verify gate was recorded (pending = absence of decision).
+      const verifyGate = after?.history.find((g) => g.phase === 'verify');
+      expect(verifyGate).toBeUndefined();
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('stale evidence (ranAt < updatedAt) ⇒ treated as no evidence', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p', verifyOn);
+      await toVerifying(engine, 't3');
+      const stale: GateEvidence = { ...passEvidence(), ranAt: 0 };
+      await expect(engine.advance('t3', { evidence: stale })).rejects.toBeInstanceOf(
+        VerifyGateError,
+      );
+      expect(engine.status('t3')?.state).toBe('verifying');
+    } finally {
+      await store.close();
+    }
+  });
+});
+
+describe('verify gate — passing evidence', () => {
+  it('required + all HARD green ⇒ approved WITH evidence, transitions to done', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p', verifyOn);
+      await toVerifying(engine, 't4');
+      const res = await engine.advance('t4', { evidence: passEvidence() });
+      expect(res.state).toBe('done');
+      const verifyGate = res.history.find((g) => g.phase === 'verify');
+      expect(verifyGate?.decision).toBe('approved');
+      expect(verifyGate?.evidence?.summary).toBe('2 passed, 0 failed');
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('required + failed SOFT check ⇒ approved (soft-fail flagged), transitions', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p', verifyOn);
+      await toVerifying(engine, 't5');
+      const res = await engine.advance('t5', { evidence: failSoftEvidence() });
+      expect(res.state).toBe('done');
+      const verifyGate = res.history.find((g) => g.phase === 'verify');
+      expect(verifyGate?.decision).toBe('approved');
+      expect(verifyGate?.evidence?.summary).toContain('soft-failed');
+    } finally {
+      await store.close();
+    }
+  });
+});
+
+describe('verify gate — evidence-failed', () => {
+  it('required + failed HARD ⇒ throws evidence-failed, `failed` recorded WITH evidence, no transition', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p', verifyOn);
+      await toVerifying(engine, 't6');
+      try {
+        await engine.advance('t6', { evidence: failHardEvidence() });
+        expect.fail('should have thrown');
+      } catch (err) {
+        expect(err).toBeInstanceOf(VerifyGateError);
+        const e = err as VerifyGateError;
+        expect(e.kind).toBe('evidence-failed');
+        expect(e.evidence?.summary).toContain('failed');
+      }
+      // No transition.
+      expect(engine.status('t6')?.state).toBe('verifying');
+      // BUT the `failed` decision WAS recorded (observable failure).
+      const after = engine.status('t6');
+      const verifyGate = after?.history.find((g) => g.phase === 'verify');
+      expect(verifyGate?.decision).toBe('failed');
+      expect(verifyGate?.evidence).toBeDefined();
+    } finally {
+      await store.close();
+    }
+  });
+});
+
+describe('verify gate — force/skip override', () => {
+  it('required + force ⇒ forced (override), transitions even without evidence', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p', verifyOn);
+      await toVerifying(engine, 't7');
+      const res = await engine.advance('t7', { force: { reason: 'known-good override' } });
+      expect(res.state).toBe('done');
+      const verifyGate = res.history.find((g) => g.phase === 'verify');
+      expect(verifyGate?.decision).toBe('forced');
+      expect(verifyGate?.reason).toBe('known-good override');
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('required + skip ⇒ skipped (override), transitions', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p', verifyOn);
+      await toVerifying(engine, 't8');
+      const res = await engine.advance('t8', { skip: true });
+      expect(res.state).toBe('done');
+      const verifyGate = res.history.find((g) => g.phase === 'verify');
+      expect(verifyGate?.decision).toBe('skipped');
+    } finally {
+      await store.close();
+    }
+  });
+});

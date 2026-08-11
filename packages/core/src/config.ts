@@ -184,6 +184,52 @@ export const NoirConfigSchema = z.object({
         .default(['feature', 'epic']),
     })
     .default({ mandatoryFor: ['feature', 'epic'] }),
+  // c4-verify-gate-recovery — `workflow.gate.verify` block. Additive + default
+  // OFF: a config with no `workflow:` block leaves the verify gate as the
+  // legacy record-only gate (byte-identical to v1.9.4). When `required` resolves
+  // truthy for a task's class, advance into `done` requires fresh passing
+  // evidence; HARD checks block on non-zero, SOFT checks record + nudge. The
+  // engine reads this via the daemon/CLI `resolveGateConfig` bridge (no
+  // core→workflow cycle — the TaskClass enum is duplicated here as a literal).
+  workflow: z
+    .object({
+      gate: z
+        .object({
+          verify: z
+            .object({
+              required: z
+                .union([
+                  z.boolean(),
+                  z.record(
+                    z.enum([
+                      'feature',
+                      'epic',
+                      'enhancement',
+                      'bugfix',
+                      'spike',
+                      'quick-task',
+                      'refactor',
+                    ]),
+                    z.boolean(),
+                  ),
+                ])
+                .default(false),
+              retryBudget: z.number().int().positive().default(2),
+              checks: z
+                .array(
+                  z.object({
+                    name: z.string(),
+                    command: z.string(),
+                    tier: z.enum(['hard', 'soft']).optional(),
+                  }),
+                )
+                .optional(),
+            })
+            .default({ required: false, retryBudget: 2 }),
+        })
+        .default({ verify: { required: false, retryBudget: 2 } }),
+    })
+    .default({ gate: { verify: { required: false, retryBudget: 2 } } }),
   // Slice X integration layer (@noir-ai/skills `integrations/<name>/`). Additive
   // block keyed by integration name — every field optional + default-`{}` so a
   // config with NO `integrations:` block still parses and behaves as "no

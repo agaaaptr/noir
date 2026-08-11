@@ -461,7 +461,11 @@ describe('task resume (c4-surface-wiring S2)', () => {
     } finally {
       restore();
     }
-    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(expect.anything(), 'workflow_resume', {});
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(
+      expect.anything(),
+      'workflow_resume',
+      {},
+    );
   });
 
   it('forwards a positional task id', async () => {
