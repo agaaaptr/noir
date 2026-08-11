@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.10.0 (2026-08-11) — C4 end-to-end AI development workflow
+
+### Added
+- **Surface wiring (c4-surface-wiring):** `noir task resume` + `workflow_resume` MCP tool (cross-session resume briefing — in-flight/blocked resumable, done/abandoned terminal); `taskClass` plumbed through `workflow_start` + `noir task new --class` (soft PRD gate live end-to-end for feature/epic); quick-mode `runQuick` wired into `workflow_start mode:'quick'` (stub spec + skipped gates + fast-forward to executing); `setBlocked`/`abandon` surfaced via `workflow_block`/`workflow_abandon` + `noir task block|abandon` (abandon has destructive confirm); `prd.mandatoryFor` config bridge (`resolveGateConfig`). `noir status` shows resume hint. **Zero FSM change.**
+- **Verify-gate recovery (c4-verify-gate-recovery):** Evidence-backed verify gate — `GateEvidence` (ranAt + checks[{name,exitCode,outputDigest,command,tier}]) + `failed` decision + `VerifyGateError`; default OFF (byte-identical to v1.9.4 when unconfigured); `noir task verify` resolves checks from `workflow.gate.verify.checks` config, runs them (CLI owns shell access; engine never shells out), hashes output, submits evidence to `workflow_advance`; HARD checks block advance on non-zero + offer recovery (retry/force/skip/block), SOFT checks record + nudge. Block-and-offer-recovery with bounded retry. Document-phase artifact wiring: `noir task advance` → `done` writes a changelog entry + a pending decision-record stub via the artifact conflict seam (`--no-artifacts` escapes).
+- **Research grounding (c4-research-grounding):** Soft research grounding sub-step — `ResearchEntry` type + `recordResearch`/`readResearch` engine methods (append-only `research:<taskId>` KV, source-required rule, 220-char text cap); soft grounding recommendation at the spec gate (mirrors PRD gate); clarify gating (`openQuestions` blocks clarify→spec, `--force`/`--skip`/jump escape); `setOpenQuestions` engine method; `writeClarifications` artifact writer; `workflow_research_record` MCP tool + `noir task research-record` CLI; `workflow.gate.research` config bridged via `resolveGateConfig`. Research is a **soft sub-step**, not a 10th hard FSM state (per research: no leading tool uses a hard research state).
+- **Project discovery (c4-project-discovery):** `StackInfo` gains `pmSource`, `pmConflict`, `ci`, `existingAiFiles`; two-half PM detection (packageManager field > lockfile > user-agent, conflict surfaced); CI detection (github/gitlab/circleci/jenkins); existing-AI-tooling probe (AGENTS.md/CLAUDE.md/.cursorrules/.cursor/rules/GEMINI.md/.github/copilot-instructions.md — detection only, never clobber).
+- **Capability → slice decomposition (c4-decomposition):** `SlicePlan`/`Slice` schema with deterministic validation (duplicate ID, missing field, dependency cycles, parallel file conflicts) in `slices.ts`; `noir task decompose <capability>` CLI (offline template, mirrors `draftPrd` P3); `rollback_plan` per slice (Noir's differentiation).
+- **Release orchestrator (c4-release-phase):** `noir release <version> [--channel beta|stable] [--dry-run]` guided orchestrator over the patch-release flow (preflight→bump→gate→commit→CI→beta-tag→hands off at human-approval gates). Build-once/idempotent (tags immutable). Never auto-approves the publish job. The optional FSM release phase (`done→released`) is spec'd but deferred.
+- **Clarify artifact + gating:** `writeClarifications` artifact writer (`.noir/clarifications/<id>-<slug>.md`); clarify→spec exit criterion: `openQuestions` non-empty blocks advance (`--force`/`--skip` escape).
+- **Config bridge:** `prd.mandatoryFor` config override reaches the engine via `resolveGateConfig` (daemon http/stdio + CLI in-process read fallback); `workflow.gate.verify` and `workflow.gate.research` config blocks added to `NoirConfigSchema`.
+- **6 design specs** in `docs/internal/specs/2026-08-11-c4-*.md` — each with acceptance criteria, testing strategy, and rollback plan.
+
+### Changed
+- **Engine constructor:** deep-merges partial `WorkflowGateConfig` with defaults (a partial config with only `prd` won't crash on `verify`/`research` access).
+- **`detectStack`:** PM detection uses a defined cascade (packageManager field → lockfile → user-agent, with conflict surface); CI and AI-tooling probes added.
+
+### Fixed
+- **Wiring gaps:** `resumeTask`, `taskClass`, `runQuick`, `setBlocked`/`abandon`, `prd.mandatoryFor` config bridge, and `writeDecisionStub`/`writeChangelogStub` — all already implemented in the engine but unreachable from the CLI/MCP surface — are now fully wired.
+
 ## 1.9.4 (2026-08-10) — C3 skills enhancement
 
 ### Added

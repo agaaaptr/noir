@@ -10,7 +10,7 @@
 
 ## Current status
 
-> **As of 2026-08-11. `1.9.4` is `latest` on npm; `1.9.4-beta.2` is `beta`.** Source version is **`1.9.4`**. **C3 Completed** — 26 curated builtins + registry + quality gate + evals. **C4 Completed** — all 6 deltas implemented across 6 slices (surface wiring, verify-gate automation + recovery, research soft-grounding, project discovery, decomposition, release phase); full gate green. Next milestone: the **v2 orchestrator TUI** (Archetype B — research).
+> **As of 2026-08-11. `1.10.0` is being published; `1.9.4` is `latest` on npm.** Source version is **`1.10.0`**. **C4 Completed** — all 6 deltas implemented across 6 slices (surface wiring, verify-gate automation + recovery, research soft-grounding, project discovery, decomposition, release phase); full gate green (1614 tests). Next milestone: the **v2 orchestrator TUI** (Archetype B — research).
 
 **The platform today (shipped & working):**
 - **11 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`, unified versioning, npm with SLSA provenance, dist-tags `latest` + `beta`.
