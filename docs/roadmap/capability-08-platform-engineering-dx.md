@@ -18,7 +18,7 @@ The internal platform-engineering layer of Noir itself: a pnpm monorepo with uni
 - **Release registry + unified version tooling** — `bump-version.mjs`, `compute-version.mjs`, `release-registry.mjs`, `release-tag.mjs`. Source: [`scripts/`](../../scripts/).
 - **Docs automation** — `scripts/docs-generate.mjs` with `generate|validate|registry|index` subcommands. Source: [`scripts/docs-generate.mjs`](../../scripts/docs-generate.mjs).
 - **Package scaffolding generator** — `scripts/new-package.mjs` (scaffolds a publish-ready package and wires the vitest source alias). Source: [`scripts/new-package.mjs`](../../scripts/new-package.mjs).
-- **Installer** — `scripts/install.sh` (node/npm delegating installer) + Homebrew formula stub at [`packaging/homebrew/noir.rb`](../../packaging/homebrew/noir.rb) (not live until first stable release). Sources: [`scripts/install.sh`](../../scripts/install.sh), [`docs/how-to/installation.md`](../../docs/how-to/installation.md).
+- **Installer** — `scripts/install.sh` + `install.ps1` (managed-Node native installer) + Homebrew formula at [`packaging/homebrew/noir.rb`](../../packaging/homebrew/noir.rb) (live; ships real `url`/`sha256`/`version` per release) + Scoop manifest at [`packaging/scoop/noir.json`](../../packaging/scoop/noir.json). Sources: [`scripts/install.sh`](../../scripts/install.sh), [`docs/how-to/installation.md`](../../docs/how-to/installation.md).
 - **Onboarding docs** — [`AGENTS.md`](../../AGENTS.md), [`docs/how-to/releasing.md`](../../docs/how-to/releasing.md), [`docs/how-to/packaging.md`](../../docs/how-to/packaging.md), [`docs/how-to/installation.md`](../../docs/how-to/installation.md), [`docs/getting-started.md`](../../docs/getting-started.md).
 
 ## Gap / roadmap delta
