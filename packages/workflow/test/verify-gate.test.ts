@@ -265,9 +265,9 @@ describe('recordResearch / readResearch', () => {
     try {
       const engine = new WorkflowEngine(store, root, 'p');
       await engine.startTask('r4', 'task-u', 'full');
-      expect(() => engine.recordResearch('r4', { type: 'discovery', text: 'x'.repeat(221) })).toThrow(
-        'exceeds',
-      );
+      expect(() =>
+        engine.recordResearch('r4', { type: 'discovery', text: 'x'.repeat(221) }),
+      ).toThrow('exceeds');
     } finally {
       await store.close();
     }

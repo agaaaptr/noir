@@ -1,6 +1,6 @@
 // c4-decomposition — validateSlicePlan deterministic validation.
 import { describe, expect, it } from 'vitest';
-import { validateSlicePlan, type SlicePlan } from '../src/index.js';
+import { type SlicePlan, validateSlicePlan } from '../src/index.js';
 
 const validSlice: SlicePlan = {
   capabilityId: 'C4',
@@ -81,7 +81,9 @@ describe('validateSlicePlan', () => {
   it('rejects dependency on unknown slice', () => {
     const plan = {
       ...validSlice,
-      slices: [{ ...validSlice.slices[0], dependsOn: [{ id: 's-unknown', mode: 'sequential' as const }] }],
+      slices: [
+        { ...validSlice.slices[0], dependsOn: [{ id: 's-unknown', mode: 'sequential' as const }] },
+      ],
     };
     const r = validateSlicePlan(plan);
     expect(r.ok).toBe(false);

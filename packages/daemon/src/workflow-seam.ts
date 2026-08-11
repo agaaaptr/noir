@@ -84,8 +84,9 @@ export function resolveGateConfig(config?: NoirConfig): WorkflowGateConfig | und
       : { required: false, retryBudget: 2 },
     research: hasResearch
       ? {
-          recommendFor: (researchCfg.recommendFor as string[])
-            .filter((c) => valid.has(c)) as readonly TaskClass[],
+          recommendFor: (researchCfg.recommendFor as string[]).filter((c) =>
+            valid.has(c),
+          ) as readonly TaskClass[],
           requireSource: researchCfg.requireSource ?? true,
         }
       : { recommendFor: ['feature', 'epic'], requireSource: true },
