@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
@@ -29,6 +29,25 @@ export interface StackInfo {
   frameworks: string[];
   /** `pnpm` | `npm` | `yarn` when a lockfile is present, else null. */
   packageManager: string | null;
+  /**
+   * c4-project-discovery S1: source of the resolved PM. `packageManager-field`
+   * (package.json#packageManager), `lockfile`, `user-agent` (invoke-time
+   * npm_config_user_agent), or `unknown`.
+   */
+  pmSource: 'packageManager-field' | 'devEngines' | 'lockfile' | 'user-agent' | 'unknown';
+  /**
+   * c4-project-discovery S3: detected CI. `github`/`gitlab`/`circleci`/
+   * `jenkins`/`none`.
+   */
+  ci: string | null;
+  /**
+   * c4-project-discovery S2: existing AI instruction files found under root.
+   * Never clobbered — the scaffold confirms the write strategy (skip/add-section/
+   * standalone).
+   */
+  existingAiFiles: { path: string; kind: string }[];
+  /** True when the invoke-time PM conflicts with the detected project-state PM. */
+  pmConflict: boolean;
 }
 
 /** Frameworks looked up against `package.json#dependencies`+`devDependencies`.
@@ -187,11 +206,85 @@ export function detectStack(root: string): StackInfo {
     packageManager = packageManager ?? 'cargo';
   }
 
+  // c4-project-discovery S1: invoke-time PM via npm_config_user_agent (fallback
+  // after lockfile + packageManager field). `pmConflict` flags when invoke-time
+  // differs from project-state (the "no surprise" principle).
+  let pmSource: StackInfo['pmSource'] = 'unknown';
+  let pmConflict = false;
+  if (packageManager) {
+    if (pjPath && existsSync(pjPath)) {
+      const pj = readJson<PackageJson>(pjPath);
+      if (pj?.packageManager?.split('@')[0] === packageManager) {
+        pmSource = 'packageManager-field';
+      } else {
+        pmSource = 'lockfile';
+      }
+    } else {
+      pmSource = 'lockfile';
+    }
+  }
+  if (!packageManager) {
+    const ua = process.env.npm_config_user_agent;
+    if (ua) {
+      if (ua.startsWith('pnpm')) packageManager = 'pnpm';
+      else if (ua.startsWith('yarn')) packageManager = 'yarn';
+      else if (ua.startsWith('npm')) packageManager = 'npm';
+      else if (ua.startsWith('bun')) packageManager = 'bun';
+      pmSource = 'user-agent';
+    }
+  }
+  // Conflict detection: invoke-time PM differs from project-state PM.
+  {
+    const ua = process.env.npm_config_user_agent;
+    if (ua && packageManager) {
+      const invokePm = ua.startsWith('pnpm') ? 'pnpm' : ua.startsWith('yarn') ? 'yarn' : ua.startsWith('npm') ? 'npm' : ua.startsWith('bun') ? 'bun' : null;
+      if (invokePm && invokePm !== packageManager) pmConflict = true;
+    }
+  }
+
+  // c4-project-discovery S3: CI detection.
+  let ci: string | null = null;
+  if (existsSync(join(root, '.github', 'workflows'))) ci = 'github';
+  else if (existsSync(join(root, '.gitlab-ci.yml'))) ci = 'gitlab';
+  else if (existsSync(join(root, '.circleci', 'config.yml'))) ci = 'circleci';
+  else if (existsSync(join(root, 'Jenkinsfile'))) ci = 'jenkins';
+
+  // c4-project-discovery S2: existing AI instruction files (never clobbered).
+  // c4-project-discovery S2: existing AI instruction files (never clobbered).
+  const aiFiles: [string, string][] = [
+    ['AGENTS.md', 'agents-md'],
+    ['CLAUDE.md', 'claude'],
+    ['.cursorrules', 'cursor'],
+    ['GEMINI.md', 'gemini'],
+    ['.github/copilot-instructions.md', 'copilot'],
+  ];
+  const existingAiFiles: StackInfo['existingAiFiles'] = [];
+  for (const [p, kind] of aiFiles) {
+    const full = join(root, p);
+    if (existsSync(full)) existingAiFiles.push({ path: p, kind });
+  }
+  // .cursor/rules/**/*.md — probe the dir (shallow).
+  const cursorRulesDir = join(root, '.cursor', 'rules');
+  try {
+    if (existsSync(cursorRulesDir)) {
+      const entries = readdirSync(cursorRulesDir);
+      for (const e of entries) {
+        if (e.endsWith('.md')) existingAiFiles.push({ path: `.cursor/rules/${e}`, kind: 'cursor-rules' });
+      }
+    }
+  } catch {
+    // ignore
+  }
+
   return {
     languages: [...languages].sort(),
     monorepo,
     frameworks: [...frameworks].sort(),
     packageManager,
+    pmSource,
+    pmConflict,
+    ci,
+    existingAiFiles,
   };
 }
 
