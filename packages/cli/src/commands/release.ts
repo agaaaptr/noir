@@ -12,7 +12,6 @@ import { type CliOptions, EXIT, fail, info, log, success, tip, warn } from '../o
 export interface ReleaseOptions extends CliOptions {
   version?: string;
   channel?: string;
-  resume?: boolean;
   dryRun?: boolean;
 }
 

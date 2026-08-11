@@ -34,7 +34,7 @@ export interface StackInfo {
    * (package.json#packageManager), `lockfile`, `user-agent` (invoke-time
    * npm_config_user_agent), or `unknown`.
    */
-  pmSource: 'packageManager-field' | 'devEngines' | 'lockfile' | 'user-agent' | 'unknown';
+  pmSource: 'packageManager-field' | 'lockfile' | 'user-agent' | 'unknown';
   /**
    * c4-project-discovery S3: detected CI. `github`/`gitlab`/`circleci`/
    * `jenkins`/`none`.
