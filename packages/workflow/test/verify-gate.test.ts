@@ -214,3 +214,161 @@ describe('verify gate — force/skip override', () => {
     }
   });
 });
+
+// c4-research-grounding — recordResearch / readResearch / setOpenQuestions
+
+describe('recordResearch / readResearch', () => {
+  it('appends a research entry and readResearch returns it', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p');
+      await engine.startTask('r1', 'task-r', 'full', 'feature');
+      const entry = engine.recordResearch('r1', {
+        type: 'discovery',
+        text: 'API gateway requires X-Api-Key header',
+        source: 'docs/api.md:42',
+      });
+      expect(entry.type).toBe('discovery');
+      expect(typeof entry.at).toBe('number');
+      expect(engine.readResearch('r1')).toHaveLength(1);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('readResearch returns empty array for a task with no findings', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p');
+      await engine.startTask('r2', 'task-s', 'full');
+      expect(engine.readResearch('r2')).toEqual([]);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('rejects empty text', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p');
+      await engine.startTask('r3', 'task-t', 'full');
+      expect(() => engine.recordResearch('r3', { type: 'discovery', text: '   ' })).toThrow(
+        'non-empty',
+      );
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('rejects text exceeding the cap', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p');
+      await engine.startTask('r4', 'task-u', 'full');
+      expect(() => engine.recordResearch('r4', { type: 'discovery', text: 'x'.repeat(221) })).toThrow(
+        'exceeds',
+      );
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('rejects non-grounding-fact without a source (requireSource on)', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p');
+      await engine.startTask('r5', 'task-v', 'full');
+      expect(() =>
+        engine.recordResearch('r5', { type: 'discovery', text: 'some finding' }),
+      ).toThrow('requires a source');
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('allows grounding-fact without a source', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p');
+      await engine.startTask('r6', 'task-w', 'full');
+      const entry = engine.recordResearch('r6', {
+        type: 'grounding-fact',
+        text: 'project uses TypeScript 5.x',
+      });
+      expect(entry.type).toBe('grounding-fact');
+    } finally {
+      await store.close();
+    }
+  });
+});
+
+describe('setOpenQuestions + clarify gating', () => {
+  it('setOpenQuestions filters empty/whitespace', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p');
+      await engine.startTask('q1', 'task-q', 'full');
+      engine.setOpenQuestions('q1', ['', '  ', 'valid']);
+      expect(engine.status('q1')?.openQuestions).toEqual(['valid']);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('clarify→spec blocked when openQuestions non-empty', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p');
+      await engine.startTask('q2', 'task-r2', 'full');
+      await engine.advance('q2');
+      engine.setOpenQuestions('q2', ['unresolved']);
+      await expect(engine.advance('q2')).rejects.toThrow('open question(s) unresolved');
+      expect(engine.status('q2')?.state).toBe('clarifying');
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('--force overrides the open-questions gate', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p');
+      await engine.startTask('q3', 'task-r3', 'full');
+      await engine.advance('q3');
+      engine.setOpenQuestions('q3', ['unresolved']);
+      const res = await engine.advance('q3', { force: { reason: 'resolved offline' } });
+      expect(res.state).toBe('specified');
+      expect(res.history.find((g) => g.phase === 'spec')?.decision).toBe('forced');
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('--skip overrides the open-questions gate', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p');
+      await engine.startTask('q4', 'task-r4', 'full');
+      await engine.advance('q4');
+      engine.setOpenQuestions('q4', ['unresolved']);
+      const res = await engine.advance('q4', { skip: true });
+      expect(res.state).toBe('specified');
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('jump bypasses open-questions gate', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p');
+      await engine.startTask('q5', 'task-r5', 'full');
+      await engine.advance('q5');
+      engine.setOpenQuestions('q5', ['unresolved']);
+      const res = await engine.advance('q5', { to: 'execute' });
+      expect(res.state).toBe('executing');
+    } finally {
+      await store.close();
+    }
+  });
+});

@@ -27,7 +27,7 @@ roadmap:
 
   - id: C4
     title: End-to-End AI Development Workflow
-    status: shipped
+    status: completed
     priority: high
     note: "C4 completed 2026-08-11 across 8 commits: 6-spec design suite + 6 implementation slices (surface-wiring — resume/taskClass/PRD/quick/blocked/abandon/config-bridge, verify-gate-recovery — evidence-backed verify gate + HARD/SOFT tiering + document wiring, research-grounding — soft research sub-step + clarify gating, project-discovery — two-half PM + CI + AI-tooling probe, decomposition — SlicePlan schema + noir task decompose, release-phase — noir release guided orchestrator). All gate green (lint/build/typecheck/test 1593/docs:validate)."
 

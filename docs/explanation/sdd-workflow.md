@@ -72,10 +72,15 @@ Noir's MCP server runs in one of two modes. Independent of the SDD mode above.
 
 The `WorkflowEngine` class (`@noir-ai/workflow`) exposes:
 - `startTask(taskId, slug, mode, taskClass?)` — create task at draft/intake
-- `advance(taskId, opts?)` — advance phase or jump with `opts.to`
+- `advance(taskId, opts?)` — advance phase or jump with `opts.to`, evaluate gates (spec/plan/verify), record evidence, soft-check PRD + research grounding
 - `status(taskId)` — read persisted TaskState
 - `activeTaskId()` — current active task
 - `checkpoint(taskId)` — flush state + write audit export
+- `setBlocked(taskId, reason?)` — mark task blocked (resumable; FSM edges to every in-flight phase)
+- `abandon(taskId)` — terminal state
+- `recordResearch(taskId, entry)` — append a research finding (source-required, text-capped)
+- `readResearch(taskId)` — read research findings
+- `setOpenQuestions(taskId, questions)` — set open questions (clarify gating)
 
 ## Artifact layout
 
@@ -91,4 +96,4 @@ The `WorkflowEngine` class (`@noir-ai/workflow`) exposes:
 
 ## MCP tools
 
-The daemon exposes `workflow_status`, `workflow_start`, `workflow_advance`, and `checkpoint` as MCP tools — gated on the engine context.
+The daemon exposes `workflow_status`, `workflow_start` (with `taskClass`), `workflow_advance` (with `evidence`), `workflow_resume`, `workflow_block`, `workflow_abandon`, `workflow_research_record`, and `checkpoint` as MCP tools — gated on the engine context.

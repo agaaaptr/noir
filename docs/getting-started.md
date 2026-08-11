@@ -119,7 +119,7 @@ The daemon is a **long-lived** Noir server that multiple clients can share — t
 
    ```bash
    noir daemon start
-   # foreground mode (backgrounding deferred); Ctrl+C to stop
+   # foreground mode; Ctrl+C to stop. Use --detach for background
    ```
 
 4. Open the project in Claude Code. It connects to `http://127.0.0.1:8787/mcp` via `.mcp.json`.
