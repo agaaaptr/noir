@@ -774,3 +774,49 @@ export async function taskResearchRecord(opts: TaskResearchRecordOptions): Promi
   }
   success(`research recorded → ${opts.type}: ${opts.text.slice(0, 80)}${opts.text.length > 80 ? '…' : ''}`, opts);
 }
+// ---------------------------------------------------------------------------
+// `noir task decompose <capability-id>`  → draft a SlicePlan (c4-decomposition)
+// ---------------------------------------------------------------------------
+export interface TaskDecomposeOptions extends TaskOptions {
+  capability: string;
+  out?: string;
+}
+
+export async function taskDecompose(opts: TaskDecomposeOptions): Promise<void> {
+  const cap = opts.capability.trim();
+  if (cap.length === 0) fail(EXIT.USAGE, 'task decompose: <capability-id> is required', opts);
+
+  // Template SlicePlan (offline — mirrors draftPrd P3: single-shot, no provider
+  // needed for a template, null/empty on no-provider). A provider-backed drafting
+  // pass would fill richer fields; the offline template gives a valid skeleton.
+  const plan = {
+    capabilityId: cap,
+    intent: `Capability ${cap} — details TBD (run with a provider for an LLM-drafted plan)`,
+    slices: [
+      {
+        id: 's1-walking-skeleton',
+        title: 'Walking skeleton — thinnest end-to-end',
+        type: 'feature' as const,
+        rationale: `The first slice for capability ${cap}.`,
+        scopeIn: 'End-to-end path linking the main architecture.',
+        scopeOut: 'Polish, edge cases, full coverage.',
+        dependsOn: [] as { id: string; mode: 'sequential' | 'parallel' }[],
+        files: { create: [], modify: [], preserve: [] },
+        acceptance: ['verify acceptance criteria for capability ${cap}'],
+        doD: ['pnpm test', 'pnpm typecheck'],
+        rollbackPlan: { procedure: 'revert the slice commit', verifyCommand: 'pnpm test' },
+      },
+    ],
+    status: { 's1-walking-skeleton': 'planned' as const },
+  };
+
+  if (opts.json === true) {
+    process.stdout.write(`${JSON.stringify({ ok: true, data: plan })}\n`);
+    return;
+  }
+  log(`decompose — ${cap}`, opts);
+  for (const s of plan.slices) {
+    info(`${s.id}: ${s.title} (${s.type}) — rationale: ${s.rationale}`, opts);
+  }
+  tip('each slice enters the existing clarify→spec→plan→execute→verify→document FSM cycle', opts);
+}

@@ -32,6 +32,7 @@ import {
   taskAbandon,
   taskAdvance,
   taskBlock,
+  taskDecompose,
   taskNew,
   taskNext,
   taskResearch,
@@ -818,6 +819,21 @@ export function createProgram(): Command {
     .description('suggest the next phase + applicable skill')
     .action(async (...args: unknown[]) => {
       await taskNext(toCliOptions(trailingCmd(args).optsWithGlobals()));
+    });
+  taskGrp
+    .command('decompose')
+    .description('decompose a capability into buildable slices (template-only offline; see the spec)')
+    .argument('<capability>', 'capability id, e.g. C4')
+    .option('--out <path>', 'output path for the SlicePlan JSON')
+    .action(async (...args: unknown[]) => {
+      const cmd = trailingCmd(args);
+      const g = cmd.optsWithGlobals();
+      const capability = typeof args[0] === 'string' ? (args[0] as string) : '';
+      await taskDecompose({
+        ...toCliOptions(g),
+        capability,
+        ...(typeof g.out === 'string' && g.out.length > 0 ? { out: g.out } : {}),
+      });
     });
   taskGrp
     .command('verify')
