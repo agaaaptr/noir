@@ -31,7 +31,12 @@
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { ContextEngine, createEmbedFn, resolveEmbedderConfig } from '@noir-ai/context';
 import { loadProjectInfo, NOIR_VERSION, type ProjectInfo } from '@noir-ai/core';
-import { ensureDaemonRunning, pidAlive, readDaemonRecord } from '@noir-ai/daemon';
+import {
+  ensureDaemonRunning,
+  pidAlive,
+  readDaemonRecord,
+  resolveGateConfig,
+} from '@noir-ai/daemon';
 import { createMemoryEngine, type MemoryEngine } from '@noir-ai/memory';
 import { openStore } from '@noir-ai/store';
 import { WorkflowEngine } from '@noir-ai/workflow';
@@ -453,7 +458,12 @@ export async function withInProcessRead<T>(
       embed,
       storeDegraded: true,
     });
-    const workflow = new WorkflowEngine(store, project.root, project.id);
+    const workflow = new WorkflowEngine(
+      store,
+      project.root,
+      project.id,
+      resolveGateConfig(project.config),
+    );
     return await fn({ context, memory, workflow });
   } finally {
     await store.close().catch(() => {

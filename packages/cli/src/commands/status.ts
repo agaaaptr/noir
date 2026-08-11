@@ -41,7 +41,7 @@ import {
   probeDaemon,
   withRunningDaemon,
 } from '../daemon-client.js';
-import { type CliOptions, definitionList, log } from '../output.js';
+import { type CliOptions, definitionList, log, tip } from '../output.js';
 import { badge } from '../theme.js';
 import { DEFAULT_UPDATE_CONFIG, runAsyncUpdateCheck } from './update.js';
 
@@ -309,6 +309,12 @@ function renderHuman(p: StatusPayload, opts: CliOptions): void {
     ],
     opts,
   );
+  // Resume hint (c4-surface-wiring S2): when a resumable (non-terminal) task is
+  // present, surface the resume command git-status-style. `--no-tips`/`--json`
+  // silence it (renderHuman is only called when !json; tip() honors --no-tips).
+  if (p.workflow && p.workflow.state !== 'done' && p.workflow.state !== 'abandoned') {
+    tip('resume: `noir task resume`', opts);
+  }
 }
 
 /**

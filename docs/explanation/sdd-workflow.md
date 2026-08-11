@@ -21,7 +21,7 @@ intake → clarify → spec → plan → execute → verify → document
 ## Modes
 
 - **full (default)** — Every gate fires. Spec, plan, and verify are authored AND reviewed. For real features or risky changes.
-- **quick** — Spec and plan are skipped (stubs written). Verify still fires. For small/trivial/spike tasks. ⚠️ **Surface caveat:** the engine's `runQuick` fast-forward is not yet wired into `workflow_start` / `noir task new --mode quick` — `--mode quick` starts the task but the stub-spec + skipped-gate fast-forward requires the surface-wiring spec. Engine-level behavior (via `runQuick`) is as described.
+- **quick** — Spec and plan are skipped (stubs written). Verify still fires. For small/trivial/spike tasks. Override per task: `noir task new --slug <s> --mode quick` (writes a stub spec, records the spec+plan gates as `skipped`, fast-forwards to `executing`).
 
 ## Gates (3 decision points)
 
@@ -55,7 +55,7 @@ For `feature` and `epic` task classes in full mode: if no `.noir/prd/<id>-<slug>
 - Write a PRD via the `noir-prd` skill
 - Bypass with `--force <reason>` (records `decision: 'forced'`)
 
-⚠️ **Surface caveat:** `taskClass` is not plumbed through `workflow_start` / `noir task new`, and the NoirConfig `prd.mandatoryFor` → engine config bridge is not implemented, so the recommendation cannot fire from the CLI/MCP today (see the surface-wiring spec). The engine logic (`prdRecommendation`, `DEFAULT_GATE_CONFIG`) is as described.
+Set a task's class at creation: `noir task new --slug <s> --class feature`. The `prd.mandatoryFor` config (default `['feature','epic']`) reaches the engine via the daemon/CLI config bridge, so a user override takes effect.
 
 ## Transports
 

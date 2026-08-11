@@ -10,8 +10,11 @@
 | `store_status` | Report the Noir embedded store |
 | `workflow_status` | Report the active Noir SDD task |
 | `checkpoint` | Checkpoint a Noir SDD task: `save` flushes the in-flight state to the store KV; `restore` reads it back. Omit taskId to target the active task. |
-| `workflow_start` | Start a Noir SDD task at draft/intake and make it the active task (workflow:active). Re-starting an existing taskId overwrites it (the KV is the source of truth, not a journal). Defaults to full mode. |
+| `workflow_start` | Start a Noir SDD task at draft/intake and make it the active task (workflow:active). Re-starting an existing taskId overwrites it (the KV is the source of truth, not a journal). Defaults to full mode. taskClass (feature/epic/…) drives the soft PRD gate at the spec gate; quick mode writes a stub spec + fast-forwards to executing. |
 | `workflow_advance` | Advance a Noir SDD task to its next phase, or jump with `to`. At a gate-landing state (entering specified/planned/done) a gate is recorded — approved by default, forced (with reason) via `force`, or skipped via `skip`. Omit taskId to target the active task. `force` and `skip` are mutually exclusive. |
+| `workflow_resume` | Resume a Noir SDD task across a session break. Omit taskId to target the active task. Blocked/in-flight tasks are resumable; done/abandoned are terminal. Returns the task status + a resumable flag. |
+| `workflow_block` | Mark a Noir SDD task blocked with a reason. Omit taskId to target the active task. A blocked task is resumable (retains FSM edges to every in-flight phase). |
+| `workflow_abandon` | Abandon a Noir SDD task (terminal). Omit taskId to target the active task. Abandonment is irreversible for the task lifecycle. |
 | `context_search` | Hybrid search over the Noir context index: BM25 ∪ cosine-kNN fused by Reciprocal Rank Fusion (k=60), packed into a token budget with window-extracted snippets (never truncated). Returns ranked hits with path, snippet, and score. |
 | `context_index` | Incrementally index files/directories into the Noir context store (SHA-256 content-hash; unchanged files are skipped). Indexes docs + 384-dim vectors into the existing tables (no schema migration). Omit paths to index the project root. |
 | `context_status` | Report the Noir context index |

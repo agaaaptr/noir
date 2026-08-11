@@ -58,6 +58,11 @@ vi.mock('@noir-ai/daemon', () => ({
   }),
   readDaemonRecord: () => null,
   pidAlive: () => false,
+  // resolveGateConfig is imported by the in-process read fallback to plumb the
+  // user's prd.mandatoryFor override (c4-surface-wiring S5). Return undefined so
+  // the engine applies its own default (no surprise override) — mirrors the
+  // absent-config path.
+  resolveGateConfig: () => undefined,
 }));
 
 import { contextSearch } from '../src/commands/context.js';

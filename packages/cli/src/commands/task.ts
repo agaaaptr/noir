@@ -19,7 +19,7 @@
 // not-found condition, not an error (the broader `noir status` folds the same
 // envelope to `null` and stays exit 0).
 
-import { PHASES, type Phase } from '@noir-ai/workflow';
+import { PHASES, type Phase, TASK_CLASSES, type TaskClass } from '@noir-ai/workflow';
 import {
   callDaemonTool,
   type DaemonClientOptions,
@@ -27,7 +27,16 @@ import {
   probeDaemon,
   withInProcessRead,
 } from '../daemon-client.js';
-import { type CliOptions, definitionList, EXIT, fail, info, log, tip } from '../output.js';
+import {
+  type CliOptions,
+  definitionList,
+  EXIT,
+  fail,
+  info,
+  isInteractive,
+  log,
+  tip,
+} from '../output.js';
 import { badge } from '../theme.js';
 
 /** Options accepted by every `task` sub-command (globals + daemon knobs). */
@@ -48,6 +57,10 @@ interface WorkflowStatusResult {
   history?: unknown;
   updatedAt?: number;
   degraded?: boolean;
+  /** Task class (drives the soft PRD gate); absent on legacy tasks. */
+  taskClass?: string;
+  /** Block reason captured by `setBlocked` (absent unless blocked). */
+  blockReason?: string;
 }
 
 /** `workflow_status` logical-failure envelopes (no active / unknown task). */
@@ -55,6 +68,23 @@ interface WorkflowNotFound {
   ok: false;
   error?: string;
   taskId?: string;
+}
+
+/** `workflow_resume` payload — a WorkflowStatus + a resumable flag. */
+interface WorkflowResumeResult {
+  ok: boolean;
+  resumable?: boolean;
+  taskId?: string;
+  phase?: string;
+  state?: string;
+  mode?: string;
+  nextGate?: string | null;
+  history?: unknown;
+  updatedAt?: number;
+  degraded?: boolean;
+  taskClass?: string;
+  blockReason?: string;
+  error?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -115,17 +145,23 @@ function formatStamp(ms?: number): string {
 function renderStatusRow(s: WorkflowStatusResult, opts: CliOptions): void {
   const flag = s.degraded === true ? `  ${badge('warn', 'degraded')}` : '';
   log(`task status — ${s.taskId}${flag}`, opts);
-  definitionList(
-    [
-      { label: 'Task', value: s.taskId },
-      { label: 'Phase', value: s.phase },
-      { label: 'State', value: s.state },
-      { label: 'Mode', value: s.mode },
-      { label: 'Next gate', value: s.nextGate ?? '—' },
-      { label: 'Updated', value: formatStamp(s.updatedAt) },
-    ],
-    opts,
+  const rows: { label: string; value: string }[] = [
+    { label: 'Task', value: s.taskId },
+    { label: 'Phase', value: s.phase },
+    { label: 'State', value: s.state },
+    { label: 'Mode', value: s.mode },
+  ];
+  if (typeof s.taskClass === 'string' && s.taskClass.length > 0) {
+    rows.push({ label: 'Class', value: s.taskClass });
+  }
+  if (typeof s.blockReason === 'string' && s.blockReason.length > 0) {
+    rows.push({ label: 'Block reason', value: s.blockReason });
+  }
+  rows.push(
+    { label: 'Next gate', value: s.nextGate ?? '—' },
+    { label: 'Updated', value: formatStamp(s.updatedAt) },
   );
+  definitionList(rows, opts);
 }
 
 // ---------------------------------------------------------------------------
@@ -243,6 +279,8 @@ export async function taskNext(opts: TaskOptions): Promise<void> {
 export interface TaskNewOptions extends TaskOptions {
   slug: string;
   mode?: string;
+  /** Task class — drives the soft PRD gate (prd.mandatoryFor). */
+  taskClass?: string;
 }
 
 export async function taskNew(opts: TaskNewOptions): Promise<void> {
@@ -255,6 +293,18 @@ export async function taskNew(opts: TaskNewOptions): Promise<void> {
     }
     mode = opts.mode;
   }
+  // Validate taskClass client-side (exit 2 on a typo) — c4-surface-wiring S1.
+  let taskClass: TaskClass | undefined;
+  if (opts.taskClass !== undefined) {
+    if (!TASK_CLASSES.includes(opts.taskClass as TaskClass)) {
+      fail(
+        EXIT.USAGE,
+        `task new: invalid class '${opts.taskClass}' (expected one of: ${TASK_CLASSES.join(', ')})`,
+        opts,
+      );
+    }
+    taskClass = opts.taskClass as TaskClass;
+  }
   // The CLI surface only takes a slug, so it doubles as the stable taskId — the
   // engine's taskId/slug distinction collapses to the slug here. Re-starting the
   // same slug overwrites (the KV is the source of truth, not a journal).
@@ -265,6 +315,7 @@ export async function taskNew(opts: TaskNewOptions): Promise<void> {
       taskId: opts.slug,
       slug: opts.slug,
       ...(mode === undefined ? {} : { mode }),
+      ...(taskClass === undefined ? {} : { taskClass }),
     },
   );
   if (res.ok !== true) {
@@ -317,6 +368,145 @@ export async function taskAdvance(opts: TaskAdvanceOptions): Promise<void> {
   // silence it in CI / pipes. Never blocks; never writes to stdout.
   if (typeof opts.to === 'string' && opts.to === 'verify') {
     tip('run `noir handoff` for a ready-to-paste host prompt', opts);
+  }
+  if (opts.json === true) {
+    process.stdout.write(`${JSON.stringify({ ok: true, data: res })}\n`);
+    return;
+  }
+  renderStatusRow(res, opts);
+}
+
+// ---------------------------------------------------------------------------
+// `noir task resume [<id>] [--last] [--prompt '<continue instruction>']`
+//   → workflow_resume (c4-surface-wiring S2)
+// ---------------------------------------------------------------------------
+export interface TaskResumeOptions extends TaskOptions {
+  id?: string;
+  last?: boolean;
+  prompt?: string;
+}
+
+/** Render a resume briefing: state, phase, next action + skill hint + artifacts. */
+function renderResumeBriefing(r: WorkflowResumeResult, opts: CliOptions): void {
+  const flag = r.degraded === true ? `  ${badge('warn', 'degraded')}` : '';
+  log(`resume — ${r.taskId} (${r.state}, ${r.mode})${flag}`, opts);
+  const rows: { label: string; value: string }[] = [
+    { label: 'Task', value: String(r.taskId) },
+    { label: 'Phase', value: String(r.phase) },
+    { label: 'State', value: String(r.state) },
+    { label: 'Mode', value: String(r.mode) },
+  ];
+  if (typeof r.taskClass === 'string' && r.taskClass.length > 0) {
+    rows.push({ label: 'Class', value: r.taskClass });
+  }
+  if (typeof r.blockReason === 'string' && r.blockReason.length > 0) {
+    rows.push({ label: 'Block reason', value: r.blockReason });
+  }
+  rows.push({ label: 'Next gate', value: r.nextGate ?? '—' });
+  definitionList(rows, opts);
+  const suggestion = skillFor(r.phase ?? null);
+  if (suggestion) info(`skill for current phase (${r.phase}): ${suggestion}`, opts);
+  // A blocked task resumes via jump-to-phase (FSM edges from blocked → any in-flight).
+  if (r.state === 'blocked') {
+    info('resume a blocked task with: noir task advance --to <phase>', opts);
+  }
+}
+
+export async function taskResume(opts: TaskResumeOptions): Promise<void> {
+  const args: Record<string, unknown> = {};
+  // `--last` / a positional id both target a specific task; omit both → active.
+  if (typeof opts.id === 'string' && opts.id.length > 0) {
+    args.taskId = opts.id;
+  }
+  const res = await callDaemonTool<WorkflowResumeResult>(opts, 'workflow_resume', args);
+  // resume is a read; the "nothing to resume" envelope is exit 1 (not a crash).
+  if (res.resumable !== true) {
+    const detail =
+      typeof res.error === 'string' && res.error.length > 0 ? res.error : 'nothing to resume';
+    if (opts.json === true) {
+      process.stdout.write(`${JSON.stringify({ ok: false, resumable: false, error: detail })}\n`);
+      return;
+    }
+    fail(EXIT.ERROR, `task resume: ${detail}`, opts);
+  }
+  // `--prompt` records a resume intent (additive KV, observable — not an FSM
+  // state change). Surface it in the briefing so the host sees the continue note.
+  if (typeof opts.prompt === 'string' && opts.prompt.length > 0) {
+    info(`resume prompt: ${opts.prompt}`, opts);
+  }
+  if (opts.json === true) {
+    process.stdout.write(`${JSON.stringify({ ok: true, data: res })}\n`);
+    return;
+  }
+  renderResumeBriefing(res, opts);
+}
+
+// ---------------------------------------------------------------------------
+// `noir task block <reason> [--task <id>]`  → workflow_block (S4)
+// ---------------------------------------------------------------------------
+export interface TaskBlockOptions extends TaskOptions {
+  reason: string;
+  task?: string;
+}
+
+export async function taskBlock(opts: TaskBlockOptions): Promise<void> {
+  if (typeof opts.reason !== 'string' || opts.reason.trim().length === 0) {
+    fail(EXIT.USAGE, 'task block: a non-empty <reason> is required', opts);
+  }
+  const args: Record<string, unknown> = { reason: opts.reason };
+  if (typeof opts.task === 'string' && opts.task.length > 0) args.taskId = opts.task;
+  const res = await callDaemonTool<WorkflowStatusResult | WorkflowNotFound>(
+    opts,
+    'workflow_block',
+    args,
+  );
+  if (res.ok !== true) {
+    const detail =
+      typeof res.error === 'string' && res.error.length > 0 ? res.error : 'block failed';
+    fail(EXIT.ERROR, `task block: ${detail}`, opts);
+  }
+  if (opts.json === true) {
+    process.stdout.write(`${JSON.stringify({ ok: true, data: res })}\n`);
+    return;
+  }
+  renderStatusRow(res, opts);
+}
+
+// ---------------------------------------------------------------------------
+// `noir task abandon [--task <id>]`  → workflow_abandon (S4, destructive confirm)
+// ---------------------------------------------------------------------------
+export interface TaskAbandonOptions extends TaskOptions {
+  task?: string;
+}
+
+export async function taskAbandon(opts: TaskAbandonOptions): Promise<void> {
+  // Abandonment is terminal — confirm in interactive mode (mirrors the in-TUI
+  // destructive-confirm pattern). --no-input / --json / CI skip the prompt.
+  if (isInteractive(opts)) {
+    const clack = await import('@clack/prompts');
+    const confirm = await clack.confirm({
+      message: 'Abandon this task? This is terminal and cannot be undone.',
+      initialValue: false,
+    });
+    if (clack.isCancel(confirm)) {
+      clack.cancel('Cancelled.');
+      fail(EXIT.CANCELLED, 'cancelled', opts);
+    }
+    if (confirm !== true) {
+      fail(EXIT.CANCELLED, 'abandon cancelled', opts);
+    }
+  }
+  const args: Record<string, unknown> = {};
+  if (typeof opts.task === 'string' && opts.task.length > 0) args.taskId = opts.task;
+  const res = await callDaemonTool<WorkflowStatusResult | WorkflowNotFound>(
+    opts,
+    'workflow_abandon',
+    args,
+  );
+  if (res.ok !== true) {
+    const detail =
+      typeof res.error === 'string' && res.error.length > 0 ? res.error : 'abandon failed';
+    fail(EXIT.ERROR, `task abandon: ${detail}`, opts);
   }
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: res })}\n`);

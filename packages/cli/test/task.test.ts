@@ -49,9 +49,12 @@ vi.mock('../src/daemon-client.js', () => ({
 
 import {
   type TaskOptions,
+  taskAbandon,
   taskAdvance,
+  taskBlock,
   taskNew,
   taskNext,
+  taskResume,
   taskStatus,
 } from '../src/commands/task.js';
 import { callDaemonTool } from '../src/daemon-client.js';
@@ -91,6 +94,41 @@ function reset(): void {
       nextGate: 'spec',
       history: [],
       updatedAt: 1700000000001,
+      degraded: false,
+    },
+    workflow_resume: {
+      ok: true,
+      resumable: true,
+      taskId: 'auth',
+      phase: 'clarify',
+      state: 'clarifying',
+      mode: 'full',
+      nextGate: 'spec',
+      history: [],
+      updatedAt: 1700000000001,
+      degraded: false,
+    },
+    workflow_block: {
+      ok: true,
+      taskId: 'auth',
+      phase: 'clarify',
+      state: 'blocked',
+      mode: 'full',
+      nextGate: null,
+      blockReason: 'CI is red',
+      history: [],
+      updatedAt: 1700000000002,
+      degraded: false,
+    },
+    workflow_abandon: {
+      ok: true,
+      taskId: 'auth',
+      phase: 'clarify',
+      state: 'abandoned',
+      mode: 'full',
+      nextGate: null,
+      history: [],
+      updatedAt: 1700000000003,
       degraded: false,
     },
   };
@@ -381,5 +419,110 @@ describe('task advance — wired to workflow_advance', () => {
     } finally {
       restore();
     }
+  });
+});
+
+describe('task new --class (c4-surface-wiring S1)', () => {
+  it('forwards a valid taskClass as {taskClass}', async () => {
+    await taskNew({ ...base, slug: 'feat', taskClass: 'feature' });
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(expect.anything(), 'workflow_start', {
+      taskId: 'feat',
+      slug: 'feat',
+      taskClass: 'feature',
+    });
+  });
+
+  it('invalid taskClass → exit 2 (USAGE), no daemon call', async () => {
+    await expect(taskNew({ ...base, slug: 'x', taskClass: 'bogus' })).rejects.toMatchObject({
+      exitCode: 2,
+    });
+    expect(vi.mocked(callDaemonTool)).not.toHaveBeenCalled();
+  });
+
+  it('omits taskClass when not given (legacy shape)', async () => {
+    await taskNew({ ...base, slug: 'y' });
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(expect.anything(), 'workflow_start', {
+      taskId: 'y',
+      slug: 'y',
+    });
+  });
+});
+
+describe('task resume (c4-surface-wiring S2)', () => {
+  it('--json emits the resume briefing on STDOUT + calls workflow_resume', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskResume({ ...base, json: true });
+      const c = capture();
+      const env = JSON.parse(c.out);
+      expect(env.ok).toBe(true);
+      expect(env.data.resumable).toBe(true);
+      expect(env.data.taskId).toBe('auth');
+    } finally {
+      restore();
+    }
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(expect.anything(), 'workflow_resume', {});
+  });
+
+  it('forwards a positional task id', async () => {
+    await taskResume({ ...base, id: 't-42' });
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(expect.anything(), 'workflow_resume', {
+      taskId: 't-42',
+    });
+  });
+
+  it('"nothing to resume" envelope → exit 1', async () => {
+    payloads.current.workflow_resume = { ok: true, resumable: false, error: 'no resumable task' };
+    await expect(taskResume({ ...base })).rejects.toMatchObject({ exitCode: 1 });
+  });
+
+  it('human renders the resume briefing on STDERR', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskResume({ ...base });
+      const c = capture();
+      expect(c.err).toContain('resume');
+      expect(c.err).toContain('auth');
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe('task block / abandon (c4-surface-wiring S4)', () => {
+  it('block forwards the reason and renders the blocked row', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskBlock({ ...base, reason: 'CI is red' });
+      const c = capture();
+      expect(c.err).toContain('blocked');
+      expect(c.err).toContain('CI is red');
+    } finally {
+      restore();
+    }
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(expect.anything(), 'workflow_block', {
+      reason: 'CI is red',
+    });
+  });
+
+  it('block with empty reason → exit 2 (USAGE), no daemon call', async () => {
+    await expect(taskBlock({ ...base, reason: '   ' })).rejects.toMatchObject({ exitCode: 2 });
+    expect(vi.mocked(callDaemonTool)).not.toHaveBeenCalled();
+  });
+
+  it('abandon forwards to workflow_abandon and renders the abandoned row (--no-input skips confirm)', async () => {
+    const { capture, restore } = captureStreams();
+    try {
+      await taskAbandon({ ...base, noInput: true });
+      const c = capture();
+      expect(c.err).toContain('abandoned');
+    } finally {
+      restore();
+    }
+    expect(vi.mocked(callDaemonTool)).toHaveBeenCalledWith(
+      expect.anything(),
+      'workflow_abandon',
+      {},
+    );
   });
 });

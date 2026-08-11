@@ -7,7 +7,7 @@ import { buildIntegrationService } from './integration-seam.js';
 import { buildMemoryEngine, resolveConsolidationCapability } from './memory-seam.js';
 import { createNoirServer, type ServerContext } from './server.js';
 import { openStoreForDaemon } from './store-seam.js';
-import { buildWorkflowEngine } from './workflow-seam.js';
+import { buildWorkflowEngine, resolveGateConfig } from './workflow-seam.js';
 
 export async function startStdioServer(ctx: ServerContext): Promise<void> {
   // The daemon is the single writer: open the store once for this stdio serve
@@ -18,9 +18,16 @@ export async function startStdioServer(ctx: ServerContext): Promise<void> {
   const daemonStore = await openStoreForDaemon(ctx.project.id, ctx.project.root).catch(
     () => undefined,
   );
-  // One engine per serve lifecycle, built from the same store handle.
+  // One engine per serve lifecycle, built from the same store handle. The
+  // gate-config bridge (c4-surface-wiring S5) resolves the user's
+  // `prd.mandatoryFor` override so it reaches the engine.
   const engine = daemonStore
-    ? buildWorkflowEngine(daemonStore.store, ctx.project.root, ctx.project.id)
+    ? buildWorkflowEngine(
+        daemonStore.store,
+        ctx.project.root,
+        ctx.project.id,
+        resolveGateConfig(ctx.project.config),
+      )
     : undefined;
   // The daemon owns ONE embedder. Resolve the config once (`resolveEmbedderConfig`
   // is the core→context bridge — no cycle) and materialize the `EmbedFn` once

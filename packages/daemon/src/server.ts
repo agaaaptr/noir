@@ -9,10 +9,12 @@ import type {
   GateResult,
   Mode,
   Phase,
+  TaskClass,
+  TaskState,
   WorkflowEngine,
   WorkflowState,
 } from '@noir-ai/workflow';
-import { PHASES } from '@noir-ai/workflow';
+import { PHASES, resumeTask, runQuick, TASK_CLASSES } from '@noir-ai/workflow';
 import { z } from 'zod';
 import {
   buildRequests,
@@ -149,6 +151,10 @@ export interface WorkflowStatus {
   updatedAt: number;
   /** Mirrors `store_status`: true when the store is a read-only fallback. */
   degraded: boolean;
+  /** Task class (drives the soft PRD gate); absent on legacy tasks. */
+  taskClass?: TaskClass;
+  /** Block reason captured by `setBlocked` (absent unless the task is blocked). */
+  blockReason?: string;
 }
 
 /**
@@ -190,6 +196,8 @@ export function buildWorkflowStatus(
     history: task.history,
     updatedAt: task.updatedAt,
     degraded,
+    ...(task.taskClass === undefined ? {} : { taskClass: task.taskClass }),
+    ...(task.blockReason === undefined ? {} : { blockReason: task.blockReason }),
   };
 }
 
@@ -319,14 +327,20 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       'workflow_start',
       {
         description:
-          'Start a Noir SDD task at draft/intake and make it the active task (workflow:active). Re-starting an existing taskId overwrites it (the KV is the source of truth, not a journal). Defaults to full mode.',
+          'Start a Noir SDD task at draft/intake and make it the active task (workflow:active). Re-starting an existing taskId overwrites it (the KV is the source of truth, not a journal). Defaults to full mode. taskClass (feature/epic/…) drives the soft PRD gate at the spec gate; quick mode writes a stub spec + fast-forwards to executing.',
         inputSchema: {
           taskId: z.string().min(1).describe('Stable task handle (re-starting overwrites).'),
           slug: z.string().min(1).describe('Human-readable slug, e.g. "add-login".'),
           mode: z.enum(['full', 'quick']).optional().describe("Mode: 'full' (default) or 'quick'."),
+          taskClass: z
+            .enum(TASK_CLASSES)
+            .optional()
+            .describe(
+              'Task class (feature/epic/enhancement/bugfix/spike/quick-task/refactor). Drives the soft PRD gate (prd.mandatoryFor).',
+            ),
         },
       },
-      async ({ taskId, slug, mode }) => {
+      async ({ taskId, slug, mode, taskClass }) => {
         if (degraded) {
           return textResult({
             ok: false,
@@ -336,7 +350,15 @@ export function createNoirServer(ctx: ServerContext): McpServer {
         }
         try {
           const resolvedMode: Mode = mode ?? 'full';
-          await engine.startTask(taskId, slug, resolvedMode);
+          // taskClass plumbs into startTask so the soft PRD gate (prdRecommendation)
+          // can fire for mandatoryFor classes (c4-surface-wiring S1).
+          await engine.startTask(taskId, slug, resolvedMode, taskClass as TaskClass | undefined);
+          // Quick mode wiring (c4-surface-wiring S3): runQuick writes the stub spec
+          // + records the spec/plan gates as skipped + fast-forwards to executing.
+          // Previously --mode quick started the task without the fast-forward (inert).
+          if (resolvedMode === 'quick') {
+            await runQuick(engine, taskId);
+          }
           const payload = buildWorkflowStatus(engine, taskId, degraded);
           if (!payload) return textResult({ ok: false, taskId, error: 'unknown task' });
           return textResult(payload);
@@ -390,6 +412,120 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           if (to) opts.to = to;
           if (skip) opts.skip = true;
           await engine.advance(id, opts);
+          const payload = buildWorkflowStatus(engine, id, degraded);
+          if (!payload) return textResult({ ok: false, taskId: id, error: 'unknown task' });
+          return textResult(payload);
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
+      },
+    );
+
+    // `workflow_resume` surfaces the engine's `resumeTask` (c4-surface-wiring S2):
+    // reads the active (or named) task; blocked/in-flight tasks are resumable,
+    // done/abandoned are terminal. A read — allowed under a degraded (read-only)
+    // store, mirroring `workflow_status`. Returns the status payload + a
+    // `resumable` boolean so the CLI can render a resume briefing.
+    server.registerTool(
+      'workflow_resume',
+      {
+        description:
+          'Resume a Noir SDD task across a session break. Omit taskId to target the active task. Blocked/in-flight tasks are resumable; done/abandoned are terminal. Returns the task status + a resumable flag.',
+        inputSchema: {
+          taskId: z
+            .string()
+            .optional()
+            .describe('Task id; defaults to the active task (workflow:active).'),
+        },
+      },
+      async ({ taskId }) => {
+        try {
+          let task: TaskState | null = null;
+          if (taskId) {
+            task = engine.status(taskId);
+          } else if (ctx.store) {
+            // resumeTask reads workflow:active → the persisted TaskState and
+            // returns null for terminal tasks. Uses only the public Store API.
+            task = await resumeTask(ctx.store);
+          }
+          if (!task) {
+            return textResult({ ok: true, resumable: false, error: 'no resumable task' });
+          }
+          const payload = buildWorkflowStatus(engine, task.taskId, degraded);
+          if (!payload) {
+            return textResult({ ok: true, resumable: false, error: 'no resumable task' });
+          }
+          return textResult({ resumable: true, ...payload });
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
+      },
+    );
+
+    // `workflow_block` surfaces `engine.setBlocked` (c4-surface-wiring S4): mark
+    // the active (or named) task blocked with a non-empty reason. A write — a
+    // degraded (read-only) store refuses it up front (no crash).
+    server.registerTool(
+      'workflow_block',
+      {
+        description:
+          'Mark a Noir SDD task blocked with a reason. Omit taskId to target the active task. A blocked task is resumable (retains FSM edges to every in-flight phase).',
+        inputSchema: {
+          taskId: z
+            .string()
+            .optional()
+            .describe('Task id; defaults to the active task (workflow:active).'),
+          reason: z.string().min(1).describe('Non-empty block reason (why the task is stuck).'),
+        },
+      },
+      async ({ taskId, reason }) => {
+        if (degraded) {
+          return textResult({
+            ok: false,
+            degraded: true,
+            error: 'store is read-only (daemon down) — workflow_block is unavailable',
+          });
+        }
+        try {
+          const id = taskId ?? engine.activeTaskId();
+          if (!id) return textResult({ ok: false, error: 'no active task' });
+          await engine.setBlocked(id, reason);
+          const payload = buildWorkflowStatus(engine, id, degraded);
+          if (!payload) return textResult({ ok: false, taskId: id, error: 'unknown task' });
+          return textResult(payload);
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
+      },
+    );
+
+    // `workflow_abandon` surfaces `engine.abandon` (c4-surface-wiring S4): mark
+    // the active (or named) task abandoned (terminal). A write — degraded stores
+    // refuse it up front.
+    server.registerTool(
+      'workflow_abandon',
+      {
+        description:
+          'Abandon a Noir SDD task (terminal). Omit taskId to target the active task. Abandonment is irreversible for the task lifecycle.',
+        inputSchema: {
+          taskId: z
+            .string()
+            .optional()
+            .describe('Task id; defaults to the active task (workflow:active).'),
+        },
+      },
+      async ({ taskId }) => {
+        if (degraded) {
+          return textResult({
+            ok: false,
+            degraded: true,
+            error: 'store is read-only (daemon down) — workflow_abandon is unavailable',
+          });
+        }
+        try {
+          const id = taskId ?? engine.activeTaskId();
+          if (!id) return textResult({ ok: false, error: 'no active task' });
+          await engine.abandon(id);
           const payload = buildWorkflowStatus(engine, id, degraded);
           if (!payload) return textResult({ ok: false, taskId: id, error: 'unknown task' });
           return textResult(payload);

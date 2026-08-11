@@ -28,7 +28,15 @@ import {
 } from './commands/memory.js';
 import { skillsLint, skillsList, skillsRegistry, skillsSync } from './commands/skills.js';
 import { type StatusOptions, status } from './commands/status.js';
-import { taskAdvance, taskNew, taskNext, taskStatus } from './commands/task.js';
+import {
+  taskAbandon,
+  taskAdvance,
+  taskBlock,
+  taskNew,
+  taskNext,
+  taskResume,
+  taskStatus,
+} from './commands/task.js';
 import { init } from './init.js';
 import {
   type CliOptions,
@@ -752,15 +760,21 @@ export function createProgram(): Command {
     .description('start a new workflow task')
     .requiredOption('--slug <slug>', 'task slug')
     .option('--mode <mode>', 'full | quick')
+    .option(
+      '--class <taskClass>',
+      'task class (feature/epic/enhancement/bugfix/spike/quick-task/refactor) — drives the PRD gate',
+    )
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();
       const slug = typeof g.slug === 'string' ? (g.slug as string) : '';
       const mode = typeof g.mode === 'string' ? (g.mode as string) : undefined;
+      const taskClass = typeof g.class === 'string' ? (g.class as string) : undefined;
       await taskNew({
         ...toCliOptions(g),
         slug,
         ...(mode === undefined ? {} : { mode }),
+        ...(taskClass === undefined ? {} : { taskClass }),
       });
     });
   taskGrp
@@ -800,8 +814,60 @@ export function createProgram(): Command {
     .action(async (...args: unknown[]) => {
       await taskNext(toCliOptions(trailingCmd(args).optsWithGlobals()));
     });
+  taskGrp
+    .command('resume')
+    .description('resume the active (or named) in-flight/blocked task')
+    .argument('[id]', 'task id (defaults to active)')
+    .option('--last', 'target the active task explicitly (scripting)')
+    .option('--prompt <text>', 'a continue instruction to surface in the briefing')
+    .action(async (...args: unknown[]) => {
+      const cmd = trailingCmd(args);
+      const g = cmd.optsWithGlobals();
+      const first = args[0];
+      const id = typeof first === 'string' ? first : undefined;
+      const last = g.last === true;
+      const prompt = typeof g.prompt === 'string' ? (g.prompt as string) : undefined;
+      await taskResume({
+        ...toCliOptions(g),
+        ...(id === undefined ? {} : { id }),
+        ...(last ? { last } : {}),
+        ...(prompt === undefined ? {} : { prompt }),
+      });
+    });
+  taskGrp
+    .command('block')
+    .description('mark the active (or named) task blocked with a reason')
+    .argument('<reason>', 'why the task is stuck (non-empty)')
+    .option('--task <id>', 'task id (defaults to active)')
+    .action(async (...args: unknown[]) => {
+      const cmd = trailingCmd(args);
+      const g = cmd.optsWithGlobals();
+      const reason = typeof args[0] === 'string' ? (args[0] as string) : '';
+      const task = typeof g.task === 'string' ? (g.task as string) : undefined;
+      await taskBlock({
+        ...toCliOptions(g),
+        reason,
+        ...(task === undefined ? {} : { task }),
+      });
+    });
+  taskGrp
+    .command('abandon')
+    .description('abandon the active (or named) task (terminal, confirmed)')
+    .option('--task <id>', 'task id (defaults to active)')
+    .action(async (...args: unknown[]) => {
+      const cmd = trailingCmd(args);
+      const g = cmd.optsWithGlobals();
+      const task = typeof g.task === 'string' ? (g.task as string) : undefined;
+      await taskAbandon({
+        ...toCliOptions(g),
+        ...(task === undefined ? {} : { task }),
+      });
+    });
   taskGrp.action(() => {
-    throw new NoirCliError(EXIT.USAGE, 'Usage: noir task new|status|advance|next');
+    throw new NoirCliError(
+      EXIT.USAGE,
+      'Usage: noir task new|status|advance|next|resume|block|abandon',
+    );
   });
 
   // C1 -- `noir install` / `noir migrate`: move to the native install path,

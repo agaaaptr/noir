@@ -19,7 +19,7 @@ import {
 import { buildMemoryEngine, resolveConsolidationCapability } from './memory-seam.js';
 import { createNoirServer } from './server.js';
 import { openStoreForDaemon } from './store-seam.js';
-import { buildWorkflowEngine } from './workflow-seam.js';
+import { buildWorkflowEngine, resolveGateConfig } from './workflow-seam.js';
 
 export interface StartHttpOptions {
   project: ProjectInfo;
@@ -52,9 +52,16 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     () => undefined,
   );
   // One engine per lifecycle, built from the shared store handle — reused
-  // across every request, exactly like the store.
+  // across every request, exactly like the store. The gate-config bridge
+  // (c4-surface-wiring S5) resolves the user's `prd.mandatoryFor` override so
+  // it reaches the engine (no surprise default when the user customized it).
   const engine = daemonStore
-    ? buildWorkflowEngine(daemonStore.store, opts.project.root, opts.project.id)
+    ? buildWorkflowEngine(
+        daemonStore.store,
+        opts.project.root,
+        opts.project.id,
+        resolveGateConfig(opts.project.config),
+      )
     : undefined;
   // One context engine per lifecycle, built from the same shared store handle +
   // the resolved embedder config — reused across every request, exactly like the
