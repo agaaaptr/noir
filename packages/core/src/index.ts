@@ -1,4 +1,16 @@
 export {
+  ARTIFACT_TYPES,
+  type ArtifactFrontmatterInput,
+  type ArtifactKind,
+  artifactDir,
+  artifactFileName,
+  artifactFrontmatter,
+  findArtifact,
+  nextArtifactSequence,
+  resolveArtifactPath,
+  titleFromSlug,
+} from './artifacts.js';
+export {
   commentStyleFor,
   readManagedBlock,
   stripManagedBlock,

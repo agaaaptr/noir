@@ -1,5 +1,6 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { artifactFileName } from './artifacts.js';
 
 export const NOIR_DIR = '.noir';
 
@@ -52,22 +53,29 @@ export const paths = {
   projectId: (root: string) => join(root, NOIR_DIR, 'project.id'),
   storeDir: (root: string) => join(root, NOIR_DIR, 'store'),
   storeDb: (root: string, projectId: string) => join(root, NOIR_DIR, 'store', `${projectId}.db`),
-  // Artifact directories and files
+  // Artifact directories and files — filenames follow the C3 generated-artifact
+  // standard (`<CODE>-<NNNN>-<taskId>-<slug>.md`); see docs/reference/artifact-format.md
   specsDir: (root: string) => join(root, NOIR_DIR, 'specs'),
-  specFile: (root: string, taskId: string, slug: string) =>
-    join(root, NOIR_DIR, 'specs', `${taskId}-${slug}.md`),
+  specFile: (root: string, nnnn: number, taskId: string, slug: string) =>
+    join(root, NOIR_DIR, 'specs', artifactFileName('spec', nnnn, { taskId, slug })),
   prdDir: (root: string) => join(root, NOIR_DIR, 'prd'),
-  prdFile: (root: string, taskId: string, slug: string) =>
-    join(root, NOIR_DIR, 'prd', `${taskId}-${slug}.md`),
+  prdFile: (root: string, nnnn: number, taskId: string, slug: string) =>
+    join(root, NOIR_DIR, 'prd', artifactFileName('prd', nnnn, { taskId, slug })),
   plansDir: (root: string) => join(root, NOIR_DIR, 'plans'),
-  planFile: (root: string, taskId: string, slug: string) =>
-    join(root, NOIR_DIR, 'plans', `${taskId}-${slug}.md`),
+  planFile: (root: string, nnnn: number, taskId: string, slug: string) =>
+    join(root, NOIR_DIR, 'plans', artifactFileName('plan', nnnn, { taskId, slug })),
   tasksDir: (root: string) => join(root, NOIR_DIR, 'tasks'),
-  taskFile: (root: string, taskId: string, taskName: string) =>
-    join(root, NOIR_DIR, 'tasks', `${taskId}-${taskName}.md`),
+  taskFile: (root: string, nnnn: number, taskId: string, taskName: string) =>
+    join(root, NOIR_DIR, 'tasks', artifactFileName('task', nnnn, { taskId, slug: taskName })),
+  analysisDir: (root: string) => join(root, NOIR_DIR, 'analysis'),
+  bugsDir: (root: string) => join(root, NOIR_DIR, 'bugs'),
+  subagentsDir: (root: string) => join(root, NOIR_DIR, 'subagents'),
+  clarificationsDir: (root: string) => join(root, NOIR_DIR, 'clarifications'),
+  intakeDir: (root: string) => join(root, NOIR_DIR, 'intake'),
+  handoffDir: (root: string) => join(root, NOIR_DIR, 'handoff'),
   decisionsDir: (root: string) => join(root, NOIR_DIR, 'decisions'),
-  decisionFile: (root: string, n: number) =>
-    join(root, NOIR_DIR, 'decisions', `${String(n).padStart(4, '0')}.md`),
+  decisionFile: (root: string, nnnn: number, slug: string) =>
+    join(root, NOIR_DIR, 'decisions', artifactFileName('adr', nnnn, { slug })),
   auditDir: (root: string) => join(root, NOIR_DIR, 'audit'),
   auditFile: (root: string, taskId: string) => join(root, NOIR_DIR, 'audit', `${taskId}.json`),
 } as const;
