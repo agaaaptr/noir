@@ -1,6 +1,6 @@
 {
   "name": "@noir-ai/memory",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "description": "Noir memory — cross-session observations over the store, with hybrid recall and provider-gated consolidation.",
   "license": "MIT",
   "author": "agaaaptr",

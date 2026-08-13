@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.10.1 (2026-08-13) — C3 generated-artifact standard
+
+### Added
+- **Generated-artifact standard** — a single naming/frontmatter/outline contract for every `.noir/` file a C3 skill generates. New `ARTIFACT_TYPES` registry (`packages/core/src/artifacts.ts`) is the single source of truth; filenames follow `<CODE>-<NNNN>-<taskId>-<slug>.md` with a 12-kind type-code registry (`TS`/`SP`/`PL`/`PRD`/`AN`/`ADR`/`BG`/`BR`/`RP`/`CL`/`IN`/`HO`) and a per-type monotonic `NNNN` (scan-based `max+1`, reuse-on-rewrite). Reference: `docs/reference/artifact-format.md`; decision: ADR-0007.
+- **Canonical frontmatter** — `kind`/`id`/`slug`/`title`/`status`/`date`/`generated_by`/`generated_at` (+ optional `version`/`author`/`tags`/`related`/`supersedes`/`source`/`checksum`). The decision stub now writes `ADR-<NNNN>-<slug>.md` with `status: proposed` + the Nygard Context/Decision/Consequences shape (replacing the `<!-- Status: pending -->` comment).
+- **Per-type outlines** — full for SPEC/PLAN/TASK/ANALYSIS/ADR; PRD reconciled to the richer 9-section `draftPrd` canon (`noir-prd` now lists the same 9); light outlines for bug/brief/report/handoff/intake/clarification.
+- **Quality-gate enforcement** — `artifactPathDrift()` (hard error via `validateSkill`) cross-checks every `.noir/<dir>/<name>` a skill prescribes against the registry; `layout.ts` gains `analysis`/`bugs`/`subagents` dirs.
+
+### Changed
+- `writeIntake`/`writeSpec`/`writePrd`/`writePlan`/`writeTask`/`writeClarifications` resolve paths via `resolveArtifactPath` (reuse-or-allocate) and emit the canonical frontmatter.
+- `noir handoff --write` persists to `.noir/handoff/HO-<NNNN>-<id>.md`.
+- `noir task advance → done` numbers decision records via `nextArtifactSequence(root, 'adr')`.
+
+### Fixed
+- **Naming drift** across 4 skills (`noir-planning` `<date>`, `noir-subagent` `.noir/sdd/`, `noir-spec`/`noir-prd` `<id>`) — now caught mechanically by the gate.
+- **Stale docs** — `sdd-workflow.md` described a nested `.noir/tasks/<id>-<slug>/` layout that never existed; corrected to the flat per-type layout.
+
 ## 1.10.0 (2026-08-11) — C4 end-to-end AI development workflow
 
 ### Added

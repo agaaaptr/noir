@@ -23,7 +23,7 @@ roadmap:
     title: Built-in Skill System
     status: completed
     priority: high
-    note: "C3 completed 2026-08-10: 26 curated builtins + 1 integration all full playbooks (zero stubs), runtime-derived registry, structural quality gate with lintSkill CLI, offline evals harness (evals.json + vitest runner, 2 shipped examples), ClickUp integration with auth gate + 14 API pitfalls + verb dispatch + attachment handling, SessionStart hook bootstrap at noir init, NOIR.md skill amplifier."
+    note: "C3 completed 2026-08-10: 26 curated builtins + 1 integration all full playbooks (zero stubs), runtime-derived registry, structural quality gate with lintSkill CLI, offline evals harness (evals.json + vitest runner, 2 shipped examples), ClickUp integration with auth gate + 14 API pitfalls + verb dispatch + attachment handling, SessionStart hook bootstrap at noir init, NOIR.md skill amplifier. 2026-08-13: generated-artifact standard — <CODE>-<NNNN>-<taskId>-<slug>.md naming + canonical frontmatter + per-type outlines + artifactPathDrift gate (ADR-0007)."
 
   - id: C4
     title: End-to-End AI Development Workflow

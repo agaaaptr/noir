@@ -3,14 +3,14 @@
 > **Living record.** Where Noir actually is today, how it got here, and where it is going version-by-version. The authoritative, machine-readable source is the **release registry** (`.noir/releases/releases.json` + `releases.md`), regenerated on every publish by `scripts/release-registry.mjs` and maintained with `pnpm release:history|rebuild|validate`.
 
 - **Origin / detailed rationale:** `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (the full design blueprint + decision log).
-- **Decisions of record:** `docs/decisions/` (ADR series — `0001`…`0006`).
+- **Decisions of record:** `docs/decisions/` (ADR series — `0001`…`0007`).
 - **Per-release narrative:** [`CHANGELOG.md`](../CHANGELOG.md) (root — single source of truth).
 
 ---
 
 ## Current status
 
-> **As of 2026-08-11. `1.10.0` is being published; `1.9.4` is `latest` on npm.** Source version is **`1.10.0`**. **C4 Completed** — all 6 deltas implemented across 6 slices (surface wiring, verify-gate automation + recovery, research soft-grounding, project discovery, decomposition, release phase); full gate green (1614 tests). Next milestone: the **v2 orchestrator TUI** (Archetype B — research).
+> **As of 2026-08-13. `1.10.1` is staged for release; `1.10.0` is `latest` on npm.** Source version is **`1.10.1`**. **C3 generated-artifact standard** shipped — `<CODE>-<NNNN>-<taskId>-<slug>.md` naming, canonical frontmatter, per-type outlines, and gate drift enforcement (ADR-0007); full gate green (1622 tests). Next milestone: the **v2 orchestrator TUI** (Archetype B — research).
 
 **The platform today (shipped & working):**
 - **11 packages** `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`, unified versioning, npm with SLSA provenance, dist-tags `latest` + `beta`.
@@ -56,6 +56,7 @@ All 15 published releases are in the registry; the milestone history is:
 - **v1.9.3 (2026-08-08)** — **TUI polish.** New shared `<Panel>` component eliminates duplicated border props across 5 surfaces. Block cursor (`▌`) on empty command input. Fixed-width palette (64-col) with label truncation; query row no longer nests a border. ANSI clear-screen on `noir tui`/`noir palette` entry. `.superpowers/` removed. Gates green (1539 tests).
 - **v1.9.4 (2026-08-10)** — **C3 skills enhancement.** Skill pack curated 34→26, runtime-derived registry, structural quality gate, offline evals harness. Gates green (1561 tests). C3 → Completed.
 - **v1.10.0 (2026-08-11) — current stable** (published 2026-08-11, dist-tag `latest`), alongside **v1.10.0-beta.1** (`beta`). **C4 Completed** — all 6 deltas implemented across 6 slices: surface wiring (resume + taskClass/PRD gate + quick mode + blocked/abandon + config bridge), verify-gate recovery (evidence-backed verify gate + HARD/SOFT tiering + document wiring), research grounding (soft research sub-step + clarify gating), project discovery (two-half PM + CI + AI-tooling probe), decomposition (SlicePlan schema + `noir task decompose`), and release phase (`noir release` guided orchestrator). Gates green (1614 tests). C4 → Completed.
+- **v1.10.1 (2026-08-13)** — **C3 generated-artifact standard.** One naming/frontmatter/outline contract for every `.noir/` file a C3 skill generates: `<CODE>-<NNNN>-<taskId>-<slug>.md` with a 12-kind registry (`packages/core/src/artifacts.ts`), canonical frontmatter (`kind`/`id`/`slug`/`title`/`status`/`date`/`generated_by`/`generated_at`), per-type outlines (SPEC/PLAN/TASK/ANALYSIS/ADR full; PRD reconciled to the 9-section canon), and gate enforcement (`artifactPathDrift` hard-fails skill bodies naming a non-canonical `.noir/` path). Fixed 4 skills' naming drift + the phantom `.noir/sdd/`. ADR-0007. Gates green (1622 tests).
 
 ---
 

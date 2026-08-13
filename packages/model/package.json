@@ -1,6 +1,6 @@
 {
   "name": "@noir-ai/model",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "description": "Noir model — optional bounded single-shot LLM layer (anthropic / openai / openai-compatible); agent loops are impossible by design.",
   "license": "MIT",
   "author": "agaaaptr",

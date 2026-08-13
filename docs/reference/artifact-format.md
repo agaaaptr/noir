@@ -48,7 +48,7 @@ slug: c3-artifact-format
 title: C3 artifact format
 status: draft         # lifecycle kinds: draft | review | approved | done ; adr: proposed | accepted | rejected | superseded
 date: 2026-08-13      # ISO-8601
-generated_by: "@noir-ai 1.10.0"
+generated_by: "@noir-ai <version>"
 generated_at: 2026-08-13T09:00:00Z   # RFC3339
 ---
 ```
