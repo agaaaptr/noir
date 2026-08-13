@@ -5,6 +5,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { discoverAll, discoverBuiltin } from './discover.js';
 import { runtimeEmitsHostMcp } from './integrations-schema.js';
 import {
+  artifactPathDrift,
   chainedReferences,
   isWhatWhenDescription,
   lintWarnings,
@@ -89,6 +90,9 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
     if (!/^[a-z0-9-]+\.md$/i.test(r.name)) errors.push(`reference "${r.name}" must be <kebab>.md`);
     if (!r.content.trim()) errors.push(`reference "${r.name}" is empty`);
   }
+  // C3 generated-artifact standard: no `.noir/` output-path drift in the body
+  // or references (unknown dir, or a filename missing its type-code prefix).
+  for (const d of artifactPathDrift(skill)) errors.push(d);
   // Soft warnings (lint-level) — advisory, non-failing.
   warnings.push(...lintWarnings(skill));
   return { ok: errors.length === 0, errors, warnings: warnings.length > 0 ? warnings : undefined };

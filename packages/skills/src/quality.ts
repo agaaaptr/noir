@@ -12,6 +12,7 @@
 // description. `checkRequiredSections` is the load-bearing check — it's what
 // forces every SKILL.md to carry a real playbook shape, not a shell.
 
+import { ARTIFACT_TYPES } from '@noir-ai/core';
 import type { BuiltinSkill } from './types.js';
 
 /** The max body length the canon recommends (Anthropic: "under 500 lines").
@@ -145,4 +146,55 @@ export function lintWarnings(skill: BuiltinSkill): string[] {
     warnings.push('time-sensitive: version/date pin outside a Legacy section');
   }
   return warnings;
+}
+
+/** `.noir/` subdirectories a skill may legitimately reference that are NOT
+ *  per-type artifact dirs (store db, audit export, rules, daemon state). */
+const NON_ARTIFACT_DIRS = new Set(['store', 'audit', 'rules', 'state']);
+
+/** Canonical artifact directory → its type code(s) (from the C3 registry).
+ *  One directory can host multiple kinds (`subagents/` → BR + RP). */
+const DIR_TO_CODES: ReadonlyMap<string, ReadonlySet<string>> = (() => {
+  const m = new Map<string, Set<string>>();
+  for (const t of Object.values(ARTIFACT_TYPES)) {
+    const codes = m.get(t.dir);
+    if (codes) codes.add(t.code);
+    else m.set(t.dir, new Set([t.code]));
+  }
+  return m;
+})();
+
+/**
+ * `.noir/…` output-path drift: a skill body or reference that names a `.noir/`
+ * directory absent from the artifact registry (e.g. `.noir/sdd/`), or a file
+ * under a canonical artifact directory whose name carries none of that
+ * directory's type codes (e.g. `.noir/plans/<date>-<slug>.md` instead of
+ * `PL-<NNNN>-…`). Hard errors — the host would mint non-standard artifacts.
+ * See `docs/reference/artifact-format.md`.
+ */
+export function artifactPathDrift(skill: BuiltinSkill): string[] {
+  const texts = [skill.skillMd, ...skill.references.map((r) => r.content)];
+  const drifts = new Set<string>();
+  // `.noir/<dir>/<name>` — name runs to whitespace/backtick/quote/paren so
+  // `<date>-<slug>.md` placeholders are captured whole.
+  const re = /\.noir\/([a-zA-Z0-9-]+)\/([^\s`'"()]+)/g;
+  for (const text of texts) {
+    for (const m of text.matchAll(re)) {
+      const dir = m[1];
+      const name = m[2];
+      if (!dir || !name) continue;
+      const codes = DIR_TO_CODES.get(dir);
+      if (codes === undefined) {
+        if (!NON_ARTIFACT_DIRS.has(dir)) {
+          drifts.add(`.noir/${dir}/ is not a canonical artifact directory (C3 artifact standard)`);
+        }
+        continue;
+      }
+      const expected = [...codes].join('/');
+      if (![...codes].some((c) => name.startsWith(`${c}-`))) {
+        drifts.add(`.noir/${dir}/${name} must be ${expected}-<NNNN>-… (C3 artifact standard)`);
+      }
+    }
+  }
+  return [...drifts];
 }

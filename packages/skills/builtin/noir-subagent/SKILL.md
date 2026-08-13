@@ -23,12 +23,12 @@ Dispatch each independent task to a fresh subagent with a brief, then review the
 ## Procedure
 
 ### Pre-flight
-1. **Write a brief per task.** Each subagent gets: the task goal, the files it touches, the expected output, and a deadline. The brief lives at `.noir/sdd/task-N-brief.md`.
+1. **Write a brief per task.** Each subagent gets: the task goal, the files it touches, the expected output, and a deadline. The brief lives at `.noir/subagents/BR-<NNNN>-<slug>.md`.
 2. **Validate independence.** If task B needs task A's output, they're not independent — order them or merge them.
 
 ### Per task
 3. **Dispatch the subagent.** Fresh subagent, clean context, reads the brief and the spec. On Claude Code, use the `Task` tool with a specific subagent type (e.g. `Explore` for search, `Plan` for design) — or use `Agent` with `subagent_type` for custom configurations. On other hosts, dispatch whatever agent/subagent runner is available. **Issue multiple dispatches in ONE response to run them concurrently.**
-4. **Receive the report.** The subagent returns a `.noir/sdd/task-N-report.md` — what was done, test results, any issues.
+4. **Receive the report.** The subagent returns a `.noir/subagents/RP-<NNNN>-<slug>.md` — what was done, test results, any issues.
 5. **Review.** Verify: tests pass, spec satisfied, commits are clean. If not, return to the subagent with the specific issues — don't rewrite their code yourself (that defeats the isolation). If a task needs rework, re-dispatch with the issues as context.
 
 ### Final

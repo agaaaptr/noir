@@ -24,18 +24,21 @@ A PRD captures what and why before the spec captures how. It is the user-facing 
 
 ## Sections (Noir template)
 
-1. **Title & summary.** One sentence — what and why.
-2. **Problem.** What problem does this solve? For whom?
-3. **Proposed solution.** High-level, non-technical. How does it solve the problem?
-4. **Success metrics.** How do we know it worked? (adoption, performance, feedback — one number if possible).
-5. **Non-goals.** What are we deliberately not building in this version?
-6. **Open questions.** What's still unknown?
+1. **Problem.** What problem does this solve? For whom?
+2. **Evidence.** Proof it's real — data, tickets, user reports. Never fabricate; cite a source.
+3. **Audience.** For whom.
+4. **Success Criteria.** Machine-verifiable thresholds — not adjectives.
+5. **Appetite / Mode.** Time-box; small batch or bet.
+6. **Proposed Direction.** Product-altitude solution sketch — not the technical design.
+7. **No-gos.** Explicitly out of scope.
+8. **Rabbit holes.** Known pitfalls to avoid.
+9. **Open Questions.** Unresolved items that need human input.
 
 ## Drafting
 
 1. Gather from brainstorming output or the task brief.
 2. On Claude Code, use `AskUserQuestion` to fill gaps (who is the user, what metric). On other hosts, ask.
-3. Write to `.noir/prd/<id>-<slug>.md`.
+3. Write to `.noir/prd/PRD-<NNNN>-<taskId>-<slug>.md`.
 4. **Explicit opt-in.** Never auto-draft a PRD — ask first.
 
 ## When done → next skill

@@ -30,7 +30,7 @@ Turn a brainstormed idea into a formal specification — the contract the implem
 2. **Capture the scope.** What's in, what's explicitly out (non-goals), and who this is for (users / personas). On Claude Code, use `AskUserQuestion` for structured choices; on other hosts, ask in plain text.
 3. **Define acceptance criteria.** Concrete, verifiable "done when" statements. No vague acceptances.
 4. **Note constraints.** Technical, timeline, dependency, or architectural constraints that bind the implementation.
-5. **Write to `.noir/specs/<id>-<slug>.md`.** Use the spec template at `references/spec-template.md` if shipped. The file is the durable contract; the engine records the spec checkpoint.
+5. **Write to `.noir/specs/SP-<NNNN>-<taskId>-<slug>.md`.** Use the spec template at `references/spec-template.md` if shipped. The file is the durable contract; the engine records the spec checkpoint.
 6. **Hand off.** Point to `noir-planning` to break this spec into an implementation plan.
 
 ## Verification
