@@ -2,9 +2,9 @@ version: 2
 
 current_phase: shipped
 
-active_capability: 2
+active_capability: 4
 
-active_slice: null  # C1 c1-native-installer + C2 c2-tui-delta complete; next: v2 orchestrator TUI (research)
+active_slice: null  # C4 fully shipped 2026-08-11; next: v2 orchestrator TUI (research, ADR-0006)
 
 roadmap:
   - id: C1
