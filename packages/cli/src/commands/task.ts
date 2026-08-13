@@ -21,9 +21,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { loadProjectInfo } from '@noir-ai/core';
+import { loadProjectInfo, nextArtifactSequence } from '@noir-ai/core';
 import {
   PHASES,
   type Phase,
@@ -137,20 +135,11 @@ function writeDoneArtifacts(opts: CliOptions, taskId: string): void {
     const project = loadProjectInfo(process.cwd());
     const conflict = { conflictPolicy: 'preserve' as const, interactive: false };
     writeChangelogStub(project.root, `- ${taskId}: completed (verify gate passed)`, conflict);
-    // Decision-record numbering: scan .noir/decisions/ (the artifact writer's
-    // path) for NNNN.md, take max+1.
-    const decisionsDir = join(project.root, '.noir', 'decisions');
-    let nextN = 1;
-    try {
-      const files = readdirSync(decisionsDir);
-      const nums = files
-        .map((f) => Number.parseInt(f.replace(/\D.*$/, ''), 10))
-        .filter((n) => Number.isFinite(n) && n > 0);
-      if (nums.length > 0) nextN = Math.max(...nums) + 1;
-    } catch {
-      // No decisions dir yet — start at 1.
-    }
-    writeDecisionStub(project.root, nextN, taskId, conflict);
+    // Decision-record numbering: the canonical per-type sequence over
+    // `.noir/decisions/` (`ADR-<NNNN>-<slug>.md`), max+1. The CLI collapses
+    // taskId == slug (`task new --slug`), so the task id doubles as the ADR slug.
+    const nextN = nextArtifactSequence(project.root, 'adr');
+    writeDecisionStub(project.root, nextN, taskId, undefined, conflict);
   } catch {
     // Artifact writes are best-effort — a failure must never mask the advance
     // result. Surface a tip so the user knows the artifacts didn't land.

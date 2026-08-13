@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
-import { createProjectId, type ProjectInfo } from '@noir-ai/core';
+import { createProjectId, type ProjectInfo, resolveArtifactPath } from '@noir-ai/core';
 import { openStore } from '@noir-ai/store';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createNoirServer } from '../src/server.js';
@@ -127,7 +127,7 @@ describe('workflow_start — quick mode wiring (S3)', () => {
       expect(started.state).toBe('executing');
       expect(started.phase).toBe('execute');
       // The stub spec lands on disk (writeSpec wraps the body in frontmatter).
-      const specPath = join(root, '.noir', 'specs', 'q1-spike-thing.md');
+      const specPath = resolveArtifactPath(root, 'spec', { taskId: 'q1', slug: 'spike-thing' });
       expect(existsSync(specPath)).toBe(true);
       expect(readFileSync(specPath, 'utf8')).toContain('<quick-mode stub spec>');
       // The spec + plan gates are recorded as skipped (observable, not dropped).

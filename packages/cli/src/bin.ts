@@ -994,7 +994,7 @@ export function createProgram(): Command {
   // SAME handler; the artifact reuses `gatherStatusPayload` (status.ts) +
   // `PHASE_SKILL` (task.ts) for the snapshot, does a bounded context/memory
   // extraction, and renders a pasteable host-handoff markdown block to STDOUT.
-  // `--write` persists to `.noir/handoff/<id>.md` (gitignored); `--json` emits
+  // `--write` persists to `.noir/handoff/HO-<NNNN>-<id>.md` (gitignored); `--json` emits
   // the structured payload. Doctrine: the host-launch directive is TEXT ONLY —
   // Noir never spawns the host.
   function buildHandoffOptions(g: Record<string, unknown>): HandoffOptions {
@@ -1003,7 +1003,7 @@ export function createProgram(): Command {
   program
     .command('handoff')
     .description('emit a ready-to-paste host handoff prompt')
-    .option('--write', 'persist to .noir/handoff/<id>.md (gitignored)')
+    .option('--write', 'persist to .noir/handoff/HO-<NNNN>-<id>.md (gitignored)')
     .action(async (...args: unknown[]) => {
       await handoff(buildHandoffOptions(trailingCmd(args).optsWithGlobals()));
     });
@@ -1012,7 +1012,7 @@ export function createProgram(): Command {
   program
     .command('wrap')
     .description('session-end alias for `noir handoff`')
-    .option('--write', 'persist to .noir/handoff/<id>.md (gitignored)')
+    .option('--write', 'persist to .noir/handoff/HO-<NNNN>-<id>.md (gitignored)')
     .action(async (...args: unknown[]) => {
       await handoff(buildHandoffOptions(trailingCmd(args).optsWithGlobals()));
     });

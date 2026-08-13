@@ -24,7 +24,7 @@
 // stdout write under the default path); `--json` emits the structured payload
 // via the versioned `{ok,data}` envelope instead; ALL diagnostics (the
 // "wrote <path>" confirmation, the daemon-down note) → STDERR via `info()`.
-// `--write` persists to `.noir/handoff/<id>.md` (gitignored — see
+// `--write` persists to `.noir/handoff/HO-<NNNN>-<id>.md` (gitignored — see
 // `@noir-ai/core` `syncIgnores`); the path is reported on stderr, never stdout.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -37,7 +37,7 @@ import {
   hostLaunchDirective,
   resolveAdapter,
 } from '@noir-ai/adapters';
-import { loadProjectInfo, NOIR_DIR } from '@noir-ai/core';
+import { loadProjectInfo, NOIR_DIR, resolveArtifactPath } from '@noir-ai/core';
 import {
   type DaemonClientOptions,
   type DaemonProbe,
@@ -50,7 +50,7 @@ import { PHASE_SKILL, skillFor } from './task.js';
 
 /** Options accepted by `noir handoff` (globals + daemon-client knobs). */
 export interface HandoffOptions extends CliOptions, DaemonClientOptions {
-  /** `--write`: persist the artifact to `.noir/handoff/<id>.md` (gitignored). */
+  /** `--write`: persist the artifact to `.noir/handoff/HO-<NNNN>-<id>.md` (gitignored). */
   write?: boolean;
 }
 
@@ -266,12 +266,13 @@ function resolveDirective(root: string, p: HandoffPayloadFull): string {
   return defaultHandoffBlock(ctx, hostPayload);
 }
 
-/** Derive the on-disk filename for `--write`: `.noir/handoff/<id>.md`. The id is
- *  the active task id when available, else the project id (stable + unique per
- *  project). The path is gitignored via `syncIgnores`. */
+/** Derive the on-disk filename for `--write`: `.noir/handoff/HO-<NNNN>-<id>.md`.
+ *  The id is the active task id when available, else the project id (stable +
+ *  unique per project). Reuses the existing artifact on rewrite. The path is
+ *  gitignored via `syncIgnores`. */
 function handoffFilePath(root: string, taskId: string | undefined, projectId: string): string {
   const id = typeof taskId === 'string' && taskId.length > 0 ? taskId : projectId;
-  return join(root, NOIR_DIR, 'handoff', `${id}.md`);
+  return resolveArtifactPath(root, 'handoff', { taskId: id });
 }
 
 // ---------------------------------------------------------------------------
@@ -350,7 +351,7 @@ async function probeOnly(opts: HandoffOptions): Promise<DaemonProbe> {
  * context/memory seed and render a pasteable host-handoff artifact.
  *
  * - Default: markdown → STDOUT (the single stdout write).
- * - `--write`: persist to `.noir/handoff/<id>.md` (gitignored); confirm on stderr.
+ * - `--write`: persist to `.noir/handoff/HO-<NNNN>-<id>.md` (gitignored); confirm on stderr.
  * - `--json`: emit the structured `{ok:true, data: HandoffPayloadFull}` envelope.
  *
  * Never hard-fails on a down daemon or a missing embedder — degrades to a note

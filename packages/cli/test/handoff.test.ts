@@ -271,7 +271,7 @@ describe('noir handoff --write — persists under .noir/handoff/ (gitignored)', 
     rmSync(root, { recursive: true, force: true });
   });
 
-  it('writes the artifact to .noir/handoff/<taskId>.md and confirms on stderr', async () => {
+  it('writes the artifact to .noir/handoff/HO-<NNNN>-<taskId>.md and confirms on stderr', async () => {
     const { capture, restore } = captureStreams();
     try {
       await handoff({ ...base, write: true });
@@ -279,7 +279,7 @@ describe('noir handoff --write — persists under .noir/handoff/ (gitignored)', 
       // STDOUT is empty (the artifact went to the file); stderr carries the path.
       expect(c.out).toBe('');
       expect(c.err).toContain('handoff written to');
-      const expected = join(root, '.noir', 'handoff', 'auth-flow.md');
+      const expected = join(root, '.noir', 'handoff', 'HO-0001-auth-flow.md');
       expect(c.err).toContain(expected);
       expect(existsSync(expected)).toBe(true);
       const md = readFileSync(expected, 'utf8');
