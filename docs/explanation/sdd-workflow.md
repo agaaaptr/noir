@@ -10,11 +10,11 @@ intake → clarify → spec → plan → execute → verify → document
 
 | Phase | Artifact | Purpose |
 |---|---|---|
-| **Intake** | `.noir/tasks/<id>-<slug>/intake.md` | What & why — user story, scope, constraints |
-| **Clarify** | (refines intake) | Resolve ambiguities before committing to a spec |
-| **Spec** | `.noir/tasks/<id>-<slug>/spec.md` | Technical specification — architecture, data model, API contract |
-| **Plan** | `.noir/tasks/<id>-<slug>/plan.md` | Implementation plan — steps, dependencies, risk assessment |
-| **Execute** | `.noir/tasks/<id>-<slug>/task.md` | Build it — code, tests, documentation |
+| **Intake** | `.noir/intake/IN-<NNNN>-<taskId>.md` | What & why — user story, scope, constraints |
+| **Clarify** | `.noir/clarifications/CL-<NNNN>-<taskId>-<slug>.md` | Resolve ambiguities before committing to a spec |
+| **Spec** | `.noir/specs/SP-<NNNN>-<taskId>-<slug>.md` | Technical specification — architecture, data model, API contract |
+| **Plan** | `.noir/plans/PL-<NNNN>-<taskId>-<slug>.md` | Implementation plan — steps, dependencies, risk assessment |
+| **Execute** | `.noir/tasks/TS-<NNNN>-<taskId>-<slug>.md` | Build it — code, tests, documentation |
 | **Verify** | (gated) | Run tests, validate against spec acceptance criteria |
 | **Document** | (gated) | Finalize changelog, decisions, cleanup |
 
@@ -51,7 +51,7 @@ Each decision is timestamped and auditable. `--force <reason>` bypasses soft che
 
 ## PRD recommendation (soft gate)
 
-For `feature` and `epic` task classes in full mode: if no `.noir/prd/<id>-<slug>.md` exists when entering the spec phase, the engine surfaces an observable recommendation. You can:
+For `feature` and `epic` task classes in full mode: if no `.noir/prd/PRD-<NNNN>-<id>-<slug>.md` exists when entering the spec phase, the engine surfaces an observable recommendation. You can:
 - Write a PRD via the `noir-prd` skill
 - Bypass with `--force <reason>` (records `decision: 'forced'`)
 
@@ -84,14 +84,19 @@ The `WorkflowEngine` class (`@noir-ai/workflow`) exposes:
 
 ## Artifact layout
 
+Naming follows the C3 generated-artifact standard ([`docs/reference/artifact-format.md`](../reference/artifact-format.md)): `<CODE>-<NNNN>-<taskId>-<slug>.md`.
+
 ```
-.noir/tasks/<id>-<slug>/
-├── intake.md
-├── spec.md
-├── plan.md
-└── task.md
-.noir/prd/<id>-<slug>.md          (optional)
-.noir/audit/<taskId>.json          (gate audit trail)
+.noir/
+├── intake/IN-<NNNN>-<taskId>.md
+├── clarifications/CL-<NNNN>-<taskId>-<slug>.md
+├── specs/SP-<NNNN>-<taskId>-<slug>.md
+├── plans/PL-<NNNN>-<taskId>-<slug>.md
+├── tasks/TS-<NNNN>-<taskId>-<slug>.md
+├── prd/PRD-<NNNN>-<taskId>-<slug>.md          (optional)
+├── decisions/ADR-<NNNN>-<slug>.md
+├── audit/<taskId>.json                         (gate audit trail)
+└── CHANGELOG.md
 ```
 
 ## MCP tools
