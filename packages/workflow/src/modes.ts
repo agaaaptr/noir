@@ -23,7 +23,7 @@ export interface QuickOpts {
 /**
  * Quick mode — the fast path for small / spike tasks.
  *
- * Writes a stub spec to `.noir/specs/<taskId>-<slug>.md` (via
+ * Writes a stub spec to `.noir/specs/SP-<NNNN>-<taskId>-<slug>.md` (via
  * {@link writeSpec}) and fast-forwards the task from `draft` to `executing`,
  * recording the spec and plan gates as `decision: 'skipped'`. The verify gate
  * is intentionally LEFT alone — it still fires as `approved` when the task

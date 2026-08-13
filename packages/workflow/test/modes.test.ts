@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createProjectId, paths } from '@noir-ai/core';
+import { createProjectId, resolveArtifactPath } from '@noir-ai/core';
 import { openStore } from '@noir-ai/store';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { WorkflowEngine } from '../src/engine.js';
@@ -32,13 +32,14 @@ describe('runQuick (quick mode)', () => {
       expect(landed.state).toBe('executing');
       expect(landed.phase).toBe('execute');
 
-      // stub spec written to .noir/specs/task-1-add-login.md
-      const specFile = paths.specFile(root, 'task-1', 'add-login');
+      // stub spec written to .noir/specs/SP-<NNNN>-task-1-add-login.md
+      const specFile = resolveArtifactPath(root, 'spec', { taskId: 'task-1', slug: 'add-login' });
       expect(existsSync(specFile)).toBe(true);
       const content = readFileSync(specFile, 'utf-8');
       expect(content).toContain(QUICK_SPEC_STUB);
-      // frontmatter carries the taskId + slug (ArtifactWriter.writeSpec shape)
-      expect(content).toContain('taskId: task-1');
+      // frontmatter carries the C3 contract (ArtifactWriter.writeSpec shape)
+      expect(content).toContain('kind: spec');
+      expect(content).toContain('id: task-1');
       expect(content).toContain('slug: add-login');
 
       // skipped gates recorded (spec + plan) — observable, not silently dropped.
@@ -83,7 +84,10 @@ describe('runQuick (quick mode)', () => {
       await engine.startTask('task-1', 'x', 'quick');
       await runQuick(engine, 'task-1', { specBody: 'my custom stub' });
 
-      const content = readFileSync(paths.specFile(root, 'task-1', 'x'), 'utf-8');
+      const content = readFileSync(
+        resolveArtifactPath(root, 'spec', { taskId: 'task-1', slug: 'x' }),
+        'utf-8',
+      );
       expect(content).toContain('my custom stub');
     } finally {
       await store.close();

@@ -366,7 +366,7 @@ export class WorkflowEngine {
    *   • the gate landing now is the spec gate (entering `specified`), AND
    *   • the task is in full mode (quick mode skips — quickPath writes a stub), AND
    *   • the task has a `taskClass` listed in `gateConfig.prd.mandatoryFor`, AND
-   *   • no PRD artifact exists at `.noir/prd/<id>-<slug>.md` (readPrd), AND
+   *   • no PRD artifact exists at `.noir/prd/PRD-<NNNN>-<id>-<slug>.md` (readPrd), AND
    *   • the user did NOT supply --force (force is the explicit-override path).
    *
    * Returns the observable note (audited on the spec gate's `reason`) so a

@@ -1,6 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { paths } from '@noir-ai/core';
+import {
+  artifactFrontmatter,
+  findArtifact,
+  paths,
+  resolveArtifactPath,
+  titleFromSlug,
+} from '@noir-ai/core';
 import type { GateResult } from './types.js';
 
 /**
@@ -13,7 +19,7 @@ import type { GateResult } from './types.js';
 export type WorkflowConflictResolution = 'replace' | 'preserve' | 'rename' | 'duplicate' | 'cancel';
 
 export interface WorkflowConflictContext {
-  /** Repo-relative path (e.g. `.noir/specs/<taskId>-<slug>.md`). */
+  /** Repo-relative path (e.g. `.noir/specs/SP-0001-<taskId>-<slug>.md`). */
   relPath: string;
   existing: string;
   proposed: string;
@@ -103,8 +109,13 @@ function uniqueAsideSync(abs: string, suffix: string): string {
   return candidate;
 }
 
+/** Repo-relative path from an absolute artifact path + its type dir name. */
+function relPathFor(file: string, dir: string): string {
+  return `.noir/${dir}/${file.slice(file.lastIndexOf('/') + 1)}`;
+}
+
 /**
- * Write intake artifact to .noir/intake/<taskId>.md
+ * Write intake artifact to `.noir/intake/IN-<NNNN>-<taskId>.md`.
  */
 export function writeIntake(
   root: string,
@@ -112,17 +123,16 @@ export function writeIntake(
   content: string,
   conflict?: WorkflowConflictOpts,
 ): void {
-  const dir = join(root, '.noir', 'intake');
-  const file = join(dir, `${taskId}.md`);
-
-  mkdirSync(dir, { recursive: true });
-  if (!resolveAndWrite(file, `.noir/intake/${taskId}.md`, content, conflict).write) return;
-  writeFileSync(file, content, 'utf-8');
+  const file = resolveArtifactPath(root, 'intake', { taskId });
+  mkdirSync(join(root, '.noir', 'intake'), { recursive: true });
+  const full = `${artifactFrontmatter({ kind: 'intake', id: taskId })}\n\n${content}`;
+  if (!resolveAndWrite(file, relPathFor(file, 'intake'), full, conflict).write) return;
+  writeFileSync(file, full, 'utf-8');
 }
 
 /**
- * Write spec artifact to .noir/specs/<taskId>-<slug>.md
- * Creates markdown with frontmatter and body
+ * Write spec artifact to `.noir/specs/SP-<NNNN>-<taskId>-<slug>.md`.
+ * Creates markdown with the C3 frontmatter and the body.
  */
 export function writeSpec(
   root: string,
@@ -131,24 +141,15 @@ export function writeSpec(
   body: string,
   conflict?: WorkflowConflictOpts,
 ): void {
-  const dir = paths.specsDir(root);
-  const file = paths.specFile(root, taskId, slug);
-
-  mkdirSync(dir, { recursive: true });
-
-  const content = `---
-taskId: ${taskId}
-slug: ${slug}
----
-
-${body}`;
-
-  if (!resolveAndWrite(file, `.noir/specs/${taskId}-${slug}.md`, content, conflict).write) return;
-  writeFileSync(file, content, 'utf-8');
+  const file = resolveArtifactPath(root, 'spec', { taskId, slug });
+  mkdirSync(paths.specsDir(root), { recursive: true });
+  const full = `${artifactFrontmatter({ kind: 'spec', id: taskId, slug })}\n\n${body}`;
+  if (!resolveAndWrite(file, relPathFor(file, 'specs'), full, conflict).write) return;
+  writeFileSync(file, full, 'utf-8');
 }
 
 /**
- * Write PRD artifact to .noir/prd/<taskId>-<slug>.md
+ * Write PRD artifact to `.noir/prd/PRD-<NNNN>-<taskId>-<slug>.md`.
  * Pre-SDD product document; the spec @imports it (prdRef). No FSM change.
  */
 export function writePrd(
@@ -158,31 +159,22 @@ export function writePrd(
   body: string,
   conflict?: WorkflowConflictOpts,
 ): void {
-  const dir = paths.prdDir(root);
-  const file = paths.prdFile(root, taskId, slug);
-
-  mkdirSync(dir, { recursive: true });
-
-  const content = `---
-taskId: ${taskId}
-slug: ${slug}
----
-
-${body}`;
-
-  if (!resolveAndWrite(file, `.noir/prd/${taskId}-${slug}.md`, content, conflict).write) return;
-  writeFileSync(file, content, 'utf-8');
+  const file = resolveArtifactPath(root, 'prd', { taskId, slug });
+  mkdirSync(paths.prdDir(root), { recursive: true });
+  const full = `${artifactFrontmatter({ kind: 'prd', id: taskId, slug })}\n\n${body}`;
+  if (!resolveAndWrite(file, relPathFor(file, 'prd'), full, conflict).write) return;
+  writeFileSync(file, full, 'utf-8');
 }
 
 /** Read a PRD artifact, or null if absent. */
 export function readPrd(root: string, taskId: string, slug: string): string | null {
-  const file = paths.prdFile(root, taskId, slug);
-  if (!existsSync(file)) return null;
+  const file = findArtifact(root, 'prd', { taskId, slug });
+  if (!file) return null;
   return readFileSync(file, 'utf-8');
 }
 
 /**
- * Write plan artifact to .noir/plans/<taskId>-<slug>.md
+ * Write plan artifact to `.noir/plans/PL-<NNNN>-<taskId>-<slug>.md`.
  */
 export function writePlan(
   root: string,
@@ -191,24 +183,15 @@ export function writePlan(
   body: string,
   conflict?: WorkflowConflictOpts,
 ): void {
-  const dir = paths.plansDir(root);
-  const file = paths.planFile(root, taskId, slug);
-
-  mkdirSync(dir, { recursive: true });
-
-  const content = `---
-taskId: ${taskId}
-slug: ${slug}
----
-
-${body}`;
-
-  if (!resolveAndWrite(file, `.noir/plans/${taskId}-${slug}.md`, content, conflict).write) return;
-  writeFileSync(file, content, 'utf-8');
+  const file = resolveArtifactPath(root, 'plan', { taskId, slug });
+  mkdirSync(paths.plansDir(root), { recursive: true });
+  const full = `${artifactFrontmatter({ kind: 'plan', id: taskId, slug })}\n\n${body}`;
+  if (!resolveAndWrite(file, relPathFor(file, 'plans'), full, conflict).write) return;
+  writeFileSync(file, full, 'utf-8');
 }
 
 /**
- * Write task artifact to .noir/tasks/<taskId>-<taskName>.md
+ * Write task artifact to `.noir/tasks/TS-<NNNN>-<taskId>-<taskName>.md`.
  */
 export function writeTask(
   root: string,
@@ -217,26 +200,16 @@ export function writeTask(
   body: string,
   conflict?: WorkflowConflictOpts,
 ): void {
-  const dir = paths.tasksDir(root);
-  const file = paths.taskFile(root, taskId, taskName);
-
-  mkdirSync(dir, { recursive: true });
-
-  const content = `---
-taskId: ${taskId}
-task: ${taskName}
----
-
-${body}`;
-
-  if (!resolveAndWrite(file, `.noir/tasks/${taskId}-${taskName}.md`, content, conflict).write)
-    return;
-  writeFileSync(file, content, 'utf-8');
+  const file = resolveArtifactPath(root, 'task', { taskId, slug: taskName });
+  mkdirSync(paths.tasksDir(root), { recursive: true });
+  const full = `${artifactFrontmatter({ kind: 'task', id: taskId, slug: taskName })}\n\n${body}`;
+  if (!resolveAndWrite(file, relPathFor(file, 'tasks'), full, conflict).write) return;
+  writeFileSync(file, full, 'utf-8');
 }
 
 /**
  * Write the clarify-phase artifact — resolved questions + assumptions.
- * c4-research-grounding S4. Path: `.noir/clarifications/<id>-<slug>.md`.
+ * `.noir/clarifications/CL-<NNNN>-<taskId>-<slug>.md`.
  */
 export function writeClarifications(
   root: string,
@@ -245,43 +218,51 @@ export function writeClarifications(
   body: string,
   conflict?: WorkflowConflictOpts,
 ): void {
-  const dir = join(root, '.noir', 'clarifications');
-  const file = join(dir, `${taskId}-${slug}.md`);
-  mkdirSync(dir, { recursive: true });
-  const content = `---
-taskId: ${taskId}
-slug: ${slug}
----
-
-${body}`;
-  if (!resolveAndWrite(file, `.noir/clarifications/${taskId}-${slug}.md`, content, conflict).write)
-    return;
-  writeFileSync(file, content, 'utf-8');
+  const file = resolveArtifactPath(root, 'clarification', { taskId, slug });
+  mkdirSync(join(root, '.noir', 'clarifications'), { recursive: true });
+  const full = `${artifactFrontmatter({ kind: 'clarification', id: taskId, slug })}\n\n${body}`;
+  if (!resolveAndWrite(file, relPathFor(file, 'clarifications'), full, conflict).write) return;
+  writeFileSync(file, full, 'utf-8');
 }
 
 /**
- * Write decision stub to .noir/decisions/<n>.md
+ * Write decision stub to `.noir/decisions/ADR-<NNNN>-<slug>.md` with the Nygard
+ * heading shape (Context → Decision → Consequences) and `status: proposed`.
  */
 export function writeDecisionStub(
   root: string,
   n: number,
-  title: string,
+  slug: string,
+  title?: string,
   conflict?: WorkflowConflictOpts,
 ): void {
   const dir = paths.decisionsDir(root);
-  const file = paths.decisionFile(root, n);
+  const file = paths.decisionFile(root, n, slug);
+  const num = String(n).padStart(4, '0');
+  const humanTitle = title ?? titleFromSlug(slug);
+  const heading = `ADR-${num}: ${humanTitle}`;
 
   mkdirSync(dir, { recursive: true });
 
-  const content = `# ${title}
+  const full = `${artifactFrontmatter({ kind: 'adr', id: `ADR-${num}`, slug, title: humanTitle, status: 'proposed' })}
 
-*Decision record ${n}*
+# ${heading}
 
-<!-- Status: pending -->
+## Context
+
+<fill in: value-neutral forces at play>
+
+## Decision
+
+<fill in: "We will …" full sentences, active voice>
+
+## Consequences
+
+<fill in: positive, negative, neutral>
 `;
 
-  if (!resolveAndWrite(file, `.noir/decisions/${n}.md`, content, conflict).write) return;
-  writeFileSync(file, content, 'utf-8');
+  if (!resolveAndWrite(file, relPathFor(file, 'decisions'), full, conflict).write) return;
+  writeFileSync(file, full, 'utf-8');
 }
 
 /**

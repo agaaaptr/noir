@@ -1,6 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { resolveArtifactPath } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readPrd, writePrd } from '../src/artifacts.js';
 
@@ -13,12 +14,13 @@ describe('PRD artifacts', () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  it('writePrd writes .noir/prd/<id>-<slug>.md with frontmatter + body', () => {
+  it('writePrd writes .noir/prd/PRD-<NNNN>-<id>-<slug>.md with frontmatter + body', () => {
     writePrd(root, 't1', 'add-login', '# Problem\nUsers cannot log in.');
-    const file = join(root, '.noir', 'prd', 't1-add-login.md');
+    const file = resolveArtifactPath(root, 'prd', { taskId: 't1', slug: 'add-login' });
     expect(existsSync(file)).toBe(true);
     const content = readFileSync(file, 'utf8');
-    expect(content).toContain('taskId: t1');
+    expect(content).toContain('kind: prd');
+    expect(content).toContain('id: t1');
     expect(content).toContain('slug: add-login');
     expect(content).toContain('# Problem');
   });

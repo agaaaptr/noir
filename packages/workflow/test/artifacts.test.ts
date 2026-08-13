@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { paths } from '@noir-ai/core';
+import { paths, resolveArtifactPath } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   writeAuditExport,
@@ -29,30 +29,34 @@ describe('ArtifactWriter', () => {
   });
 
   describe('writeIntake', () => {
-    it('creates .noir/intake/<taskId>.md with the given content', () => {
+    it('creates .noir/intake/IN-<NNNN>-<taskId>.md with frontmatter and content', () => {
       const content = '# Intake Notes\n\nSome context gathered during intake.';
       writeIntake(testRoot, taskId, content);
 
-      const intakePath = join(testRoot, '.noir', 'intake', `${taskId}.md`);
+      const intakePath = resolveArtifactPath(testRoot, 'intake', { taskId });
       expect(existsSync(intakePath)).toBe(true);
 
       const fileContent = readFileSync(intakePath, 'utf-8');
-      expect(fileContent).toBe(content);
+      expect(fileContent).toContain('kind: intake');
+      expect(fileContent).toContain(`id: ${taskId}`);
+      expect(fileContent).toContain(content);
     });
   });
 
   describe('writeSpec', () => {
-    it('creates .noir/specs/<taskId>-<slug>.md with frontmatter and body', () => {
+    it('creates .noir/specs/SP-<NNNN>-<taskId>-<slug>.md with frontmatter and body', () => {
       const body = '# Example Spec\n\nThis is the spec content.';
       writeSpec(testRoot, taskId, slug, body);
 
-      const specPath = paths.specFile(testRoot, taskId, slug);
+      const specPath = resolveArtifactPath(testRoot, 'spec', { taskId, slug });
       expect(existsSync(specPath)).toBe(true);
 
       const content = readFileSync(specPath, 'utf-8');
       expect(content).toContain('---');
-      expect(content).toContain(`taskId: ${taskId}`);
+      expect(content).toContain('kind: spec');
+      expect(content).toContain(`id: ${taskId}`);
       expect(content).toContain(`slug: ${slug}`);
+      expect(content).toContain('status: draft');
       expect(content).toContain(body);
     });
 
@@ -63,7 +67,7 @@ describe('ArtifactWriter', () => {
       const body2 = '# Second Version\n\nContent 2';
       writeSpec(testRoot, taskId, slug, body2);
 
-      const specPath = paths.specFile(testRoot, taskId, slug);
+      const specPath = resolveArtifactPath(testRoot, 'spec', { taskId, slug });
       const content = readFileSync(specPath, 'utf-8');
 
       // Count frontmatter delimiters - should only have 2 (begin and end)
@@ -77,53 +81,62 @@ describe('ArtifactWriter', () => {
   });
 
   describe('writePlan', () => {
-    it('creates .noir/plans/<taskId>-<slug>.md with frontmatter and body', () => {
+    it('creates .noir/plans/PL-<NNNN>-<taskId>-<slug>.md with frontmatter and body', () => {
       const body = '# Plan\n\nStep 1, then step 2.';
       writePlan(testRoot, taskId, slug, body);
 
-      const planPath = paths.planFile(testRoot, taskId, slug);
+      const planPath = resolveArtifactPath(testRoot, 'plan', { taskId, slug });
       expect(existsSync(planPath)).toBe(true);
 
       const content = readFileSync(planPath, 'utf-8');
       expect(content).toContain('---');
-      expect(content).toContain(`taskId: ${taskId}`);
+      expect(content).toContain('kind: plan');
+      expect(content).toContain(`id: ${taskId}`);
       expect(content).toContain(`slug: ${slug}`);
       expect(content).toContain(body);
     });
   });
 
   describe('writeTask', () => {
-    it('creates .noir/tasks/<taskId>-<taskName>.md with frontmatter and body', () => {
+    it('creates .noir/tasks/TS-<NNNN>-<taskId>-<taskName>.md with frontmatter and body', () => {
       const taskName = 'setup-db';
       const body = '# Task\n\nDo the thing.';
       writeTask(testRoot, taskId, taskName, body);
 
-      const taskPath = paths.taskFile(testRoot, taskId, taskName);
+      const taskPath = resolveArtifactPath(testRoot, 'task', { taskId, slug: taskName });
       expect(existsSync(taskPath)).toBe(true);
 
       const content = readFileSync(taskPath, 'utf-8');
       expect(content).toContain('---');
-      expect(content).toContain(`taskId: ${taskId}`);
-      expect(content).toContain(`task: ${taskName}`);
+      expect(content).toContain('kind: task');
+      expect(content).toContain(`id: ${taskId}`);
+      expect(content).toContain(`slug: ${taskName}`);
       expect(content).toContain(body);
     });
   });
 
   describe('writeDecisionStub', () => {
-    it('creates .noir/decisions/<n>.md with zero-padded name, title and pending status', () => {
+    it('creates .noir/decisions/ADR-<NNNN>-<slug>.md with the Nygard shape', () => {
       const n = 7;
+      const dSlug = 'use-hand-rolled-fsm';
       const title = 'Use hand-rolled FSM';
-      writeDecisionStub(testRoot, n, title);
+      writeDecisionStub(testRoot, n, dSlug, title);
 
-      const decisionPath = paths.decisionFile(testRoot, n);
+      const decisionPath = paths.decisionFile(testRoot, n, dSlug);
       expect(existsSync(decisionPath)).toBe(true);
-      // zero-padded to 4 digits
-      expect(decisionPath.endsWith(join('decisions', '0007.md'))).toBe(true);
+      // zero-padded to 4 digits + type code
+      expect(decisionPath.endsWith(join('decisions', 'ADR-0007-use-hand-rolled-fsm.md'))).toBe(
+        true,
+      );
 
       const content = readFileSync(decisionPath, 'utf-8');
-      expect(content).toContain(`# ${title}`);
-      expect(content).toContain(`Decision record ${n}`);
-      expect(content).toContain('Status: pending');
+      expect(content).toContain('kind: adr');
+      expect(content).toContain(`id: ADR-0007`);
+      expect(content).toContain('status: proposed');
+      expect(content).toContain('# ADR-0007: Use hand-rolled FSM');
+      expect(content).toContain('## Context');
+      expect(content).toContain('## Decision');
+      expect(content).toContain('## Consequences');
     });
   });
 
@@ -243,24 +256,27 @@ describe('artifact writers route through the conflict seam', () => {
   });
 
   it('writeIntake default (no opts) overwrites differing content (v1.2 behavior)', () => {
+    const p = resolveArtifactPath(root, 'intake', { taskId });
     mkdirSync(join(root, '.noir', 'intake'), { recursive: true });
-    writeFileSync(join(root, '.noir', 'intake', `${taskId}.md`), 'USER', 'utf8');
+    writeFileSync(p, 'USER', 'utf8');
     writeIntake(root, taskId, 'FRESH');
-    expect(readFileSync(join(root, '.noir', 'intake', `${taskId}.md`), 'utf8')).toBe('FRESH');
+    expect(readFileSync(p, 'utf8')).toContain('FRESH');
   });
 
   it('writeIntake consults onConflict on a differing file (preserve keeps user bytes)', () => {
+    const p = resolveArtifactPath(root, 'intake', { taskId });
     mkdirSync(join(root, '.noir', 'intake'), { recursive: true });
-    writeFileSync(join(root, '.noir', 'intake', `${taskId}.md`), 'USER', 'utf8');
+    writeFileSync(p, 'USER', 'utf8');
     const onConflict = vi.fn((): 'preserve' => 'preserve');
     writeIntake(root, taskId, 'FRESH', { onConflict, interactive: true });
     expect(onConflict).toHaveBeenCalledTimes(1);
-    expect(readFileSync(join(root, '.noir', 'intake', `${taskId}.md`), 'utf8')).toBe('USER');
+    expect(readFileSync(p, 'utf8')).toBe('USER');
   });
 
   it('writeIntake does NOT consult under non-interactive (CI/--json never prompts)', () => {
+    const p = resolveArtifactPath(root, 'intake', { taskId });
     mkdirSync(join(root, '.noir', 'intake'), { recursive: true });
-    writeFileSync(join(root, '.noir', 'intake', `${taskId}.md`), 'USER', 'utf8');
+    writeFileSync(p, 'USER', 'utf8');
     const onConflict = vi.fn((): 'preserve' => 'preserve');
     writeIntake(root, taskId, 'FRESH', { onConflict, interactive: false });
     expect(onConflict).not.toHaveBeenCalled();
@@ -268,7 +284,7 @@ describe('artifact writers route through the conflict seam', () => {
 
   it('writeSpec consults onConflict; rename moves the user aside then writes fresh', () => {
     // Pre-seed so the specFile exists with user bytes.
-    const specPath = paths.specFile(root, taskId, slug);
+    const specPath = resolveArtifactPath(root, 'spec', { taskId, slug });
     mkdirSync(join(root, '.noir', 'specs'), { recursive: true });
     writeFileSync(specPath, 'USER', 'utf8');
     const onConflict = vi.fn((): 'rename' => 'rename');
@@ -284,6 +300,7 @@ describe('artifact writers route through the conflict seam', () => {
     const onConflict = vi.fn((): 'preserve' => 'preserve');
     writeIntake(root, taskId, 'FRESH', { onConflict, interactive: true });
     expect(onConflict).not.toHaveBeenCalled();
-    expect(readFileSync(join(root, '.noir', 'intake', `${taskId}.md`), 'utf8')).toContain('FRESH');
+    const p = resolveArtifactPath(root, 'intake', { taskId });
+    expect(readFileSync(p, 'utf8')).toContain('FRESH');
   });
 });

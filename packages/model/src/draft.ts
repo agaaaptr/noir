@@ -1,6 +1,6 @@
 // draft.ts — bounded PRD drafting helper (debt-batch A, slice P).
 //
-// The PRD is the pre-SDD product artifact (`.noir/prd/<taskId>-<slug>.md`) the
+// The PRD is the pre-SDD product artifact (`.noir/prd/PRD-<NNNN>-<taskId>-<slug>.md`) the
 // spec later `@import`s. This helper drafts it from the intake + clarification
 // Q&A + retrieved memory via ONE bounded `complete()` call (blueprint D5 —
 // single-shot, no tools/stream, provider-EXPLICIT). It mirrors the structure
@@ -33,7 +33,7 @@ import type { CompleteRequest, ModelConfig } from './types.js';
  * `clarify` is resolved clarification Q&A; `intake` is the raw intake notes.
  */
 export interface DraftPrdInput {
-  /** Raw intake notes (typically `.noir/intake/<taskId>.md`). Required. */
+  /** Raw intake notes (typically `.noir/intake/IN-<NNNN>-<taskId>.md`). Required. */
   intake: string;
   /** Resolved clarification Q&A, one entry per line (optional). */
   clarify?: string[];
@@ -60,7 +60,7 @@ export interface DraftPrdOptions {
  * Callers substitute this when {@link draftPrd} returns `null` (no provider/key
  * configured). Every section is present with a `<fill in>` placeholder so a
  * human (or a later model-assisted pass once a provider is configured) can
- * complete it in place at `.noir/prd/<taskId>-<slug>.md`.
+ * complete it in place at `.noir/prd/PRD-<NNNN>-<taskId>-<slug>.md`.
  */
 export const PRD_FALLBACK_TEMPLATE = `# PRD
 
