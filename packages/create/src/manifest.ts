@@ -444,14 +444,14 @@ export function buildHostArtifacts(
       host,
       content: JSON.stringify(hookEntry, null, 2),
       dedupSubstring: HOOK_DEDUP,
-      description: 'C3 SessionStart hook entry (user-owned, written once)',
+      description: 'SessionStart hook entry (user-owned, written once)',
     });
     entries.push({
       path: '.noir/hooks/noir-session-start.mjs',
       mode: 'regenerate',
       host,
       content: SESSION_START_HOOK_SCRIPT,
-      description: 'C3 SessionStart hook runner (Noir-owned, re-emitted)',
+      description: 'SessionStart hook runner (Noir-owned, re-emitted)',
     });
     entries.push({
       path: '.noir/router.md',
@@ -459,7 +459,7 @@ export function buildHostArtifacts(
       host,
       block: CONTEXT_BLOCK,
       template: 'router.md.tmpl',
-      description: 'C3 skill router contract (co-owned managed block)',
+      description: 'skill router contract (co-owned managed block)',
     });
   }
 

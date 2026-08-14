@@ -262,7 +262,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       'workflow_status',
       {
         description:
-          "Report the active Noir SDD task's phase, state, the next gate ahead, mode, and observable gate history. Omit taskId to read the active task.",
+          "Report the active Noir spec-driven task's phase, state, the next gate ahead, mode, and observable gate history. Omit taskId to read the active task.",
         inputSchema: {
           taskId: z
             .string()
@@ -283,7 +283,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       'checkpoint',
       {
         description:
-          'Checkpoint a Noir SDD task: `save` flushes the in-flight state to the store KV; `restore` reads it back. Omit taskId to target the active task.',
+          'Checkpoint a Noir spec-driven task: `save` flushes the in-flight state to the store KV; `restore` reads it back. Omit taskId to target the active task.',
         inputSchema: {
           action: z
             .enum(['save', 'restore'])
@@ -327,7 +327,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       'workflow_start',
       {
         description:
-          'Start a Noir SDD task at draft/intake and make it the active task (workflow:active). Re-starting an existing taskId overwrites it (the KV is the source of truth, not a journal). Defaults to full mode. taskClass (feature/epic/…) drives the soft PRD gate at the spec gate; quick mode writes a stub spec + fast-forwards to executing.',
+          'Start a Noir spec-driven task at draft/intake and make it the active task (workflow:active). Re-starting an existing taskId overwrites it (the KV is the source of truth, not a journal). Defaults to full mode. taskClass (feature/epic/…) drives the soft PRD gate at the spec gate; quick mode writes a stub spec + fast-forwards to executing.',
         inputSchema: {
           taskId: z.string().min(1).describe('Stable task handle (re-starting overwrites).'),
           slug: z.string().min(1).describe('Human-readable slug, e.g. "add-login".'),
@@ -372,7 +372,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       'workflow_advance',
       {
         description:
-          'Advance a Noir SDD task to its next phase, or jump with `to`. At a gate-landing state (entering specified/planned/done) a gate is recorded — approved by default, forced (with reason) via `force`, or skipped via `skip`. Omit taskId to target the active task. `force` and `skip` are mutually exclusive. For an evidence-backed verify gate, supply `evidence` (ranAt + checks[]).',
+          'Advance a Noir spec-driven task to its next phase, or jump with `to`. At a gate-landing state (entering specified/planned/done) a gate is recorded — approved by default, forced (with reason) via `force`, or skipped via `skip`. Omit taskId to target the active task. `force` and `skip` are mutually exclusive. For an evidence-backed verify gate, supply `evidence` (ranAt + checks[]).',
         inputSchema: {
           taskId: z
             .string()
@@ -460,7 +460,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       'workflow_resume',
       {
         description:
-          'Resume a Noir SDD task across a session break. Omit taskId to target the active task. Blocked/in-flight tasks are resumable; done/abandoned are terminal. Returns the task status + a resumable flag.',
+          'Resume a Noir spec-driven task across a session break. Omit taskId to target the active task. Blocked/in-flight tasks are resumable; done/abandoned are terminal. Returns the task status + a resumable flag.',
         inputSchema: {
           taskId: z
             .string()
@@ -499,7 +499,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       'workflow_block',
       {
         description:
-          'Mark a Noir SDD task blocked with a reason. Omit taskId to target the active task. A blocked task is resumable (retains FSM edges to every in-flight phase).',
+          'Mark a Noir spec-driven task blocked with a reason. Omit taskId to target the active task. A blocked task is resumable (retains FSM edges to every in-flight phase).',
         inputSchema: {
           taskId: z
             .string()
@@ -536,7 +536,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       'workflow_abandon',
       {
         description:
-          'Abandon a Noir SDD task (terminal). Omit taskId to target the active task. Abandonment is irreversible for the task lifecycle.',
+          'Abandon a Noir spec-driven task (terminal). Omit taskId to target the active task. Abandonment is irreversible for the task lifecycle.',
         inputSchema: {
           taskId: z
             .string()
@@ -572,7 +572,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       'workflow_research_record',
       {
         description:
-          'Record a research finding for a Noir SDD task (append-only to research:<taskId>). Non-grounding-fact types require a source (defeats faux context).',
+          'Record a research finding for a Noir spec-driven task (append-only to research:<taskId>). Non-grounding-fact types require a source (defeats faux context).',
         inputSchema: {
           taskId: z
             .string()

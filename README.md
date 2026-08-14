@@ -22,11 +22,11 @@ The `noir` grouped home menu — section picker + per-section action lists with 
 ## Status
 
 <!-- noir:doc:status -->
-**Latest stable:** `1.11.1` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.11.1-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Latest stable:** `1.11.2` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.11.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.11.2` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-14T09:19:39.000Z*
+*Last auto-generated: 2026-08-14T09:50:52.944Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
@@ -58,7 +58,7 @@ An 11-package pnpm monorepo, all `@noir-ai/*`:
 |---|---|
 | `@noir-ai/core` | Shared types, config schema, `.noir/` layout |
 | `@noir-ai/store` | Embedded SQLite + FTS5 + sqlite-vec |
-| `@noir-ai/workflow` | SDD lifecycle FSM engine |
+| `@noir-ai/workflow` | Spec-Driven Development (SDD) lifecycle FSM engine |
 | `@noir-ai/skills` | 26 native `noir-*` skills + integration + compiler with quality gate |
 | `@noir-ai/context` | Hybrid retrieval: BM25 + vector kNN + RRF |
 | `@noir-ai/memory` | Cross-session memory with governance |
@@ -82,7 +82,7 @@ noir doctor                     config / store / embedder / deps / install
 noir daemon start|stop|status|restart  persistent MCP server
 noir context {search,index,status}     hybrid retrieval
 noir memory {recall,save,sessions,forget,consolidate}  cross-session memory
-noir task {new,next,status,advance}    SDD workflow
+noir task {new,next,status,advance}    spec-driven workflow
 noir skills {list,sync,lint,registry}   builtin skills + quality gate
 noir install|migrate [spec]     native install / migrate from another method
 noir update [spec]              self-update via the active install method
@@ -103,7 +103,7 @@ MCP tools → [MCP Tools Reference](docs/reference/mcp-tools.md).
 | **Tutorial** | [Getting Started](docs/getting-started.md) |
 | **How-to** | [Installation](docs/how-to/installation.md) · [Releasing](docs/how-to/releasing.md) · [Adding a Package](docs/how-to/packaging.md) |
 | **Reference** | [CLI Commands](docs/reference/cli.md) · [Configuration](docs/reference/config.md) · [MCP Tools](docs/reference/mcp-tools.md) · [Skills](docs/reference/skills.md) · [Packages](docs/reference/packages.md) |
-| **Explanation** | [Architecture](docs/explanation/architecture.md) · [Privacy](docs/explanation/privacy.md) · [SDD Workflow](docs/explanation/sdd-workflow.md) |
+| **Explanation** | [Architecture](docs/explanation/architecture.md) · [Privacy](docs/explanation/privacy.md) · [Spec-Driven Workflow](docs/explanation/sdd-workflow.md) |
 | **Records** | [Roadmap](docs/roadmap/) · [Changelog](CHANGELOG.md) · [Decisions (ADRs)](docs/decisions/) |
 
 ## Development

@@ -26,11 +26,11 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/aga
 Two channels ship in parallel:
 
 <!-- noir:doc:status -->
-**Latest stable:** `1.11.1` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.11.1-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Latest stable:** `1.11.2` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.11.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.11.2` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-14T09:19:39.453Z*
+*Last auto-generated: 2026-08-14T09:50:53.376Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -76,7 +76,7 @@ noir init
 
 ## Connect your host over MCP
 
-The Noir MCP server runs in one of **two transport modes**. This is about *how the server process runs* — it's a separate concern from the SDD discipline level (full/quick) covered later. `noir init` defaults to the one almost everyone should use.
+The Noir MCP server runs in one of **two transport modes**. This is about *how the server process runs* — it's a separate concern from the spec-driven discipline level (full/quick) covered later. `noir init` defaults to the one almost everyone should use.
 
 ### Default: stdio (recommended)
 
@@ -183,7 +183,7 @@ noir task new --slug csv-export --mode quick
 - **full** — spec + plan are authored **and reviewed** (gates), then execute, then verify (tests/build). Use this for real features and risky changes. This is the default.
 - **quick** — spec + plan are **skipped** (a `<quick-mode stub spec>` is written, and the spec/plan gates are recorded as `skipped`), execute runs, and the **verify gate still fires**. Use this for small, trivial, or spike tasks. It is not a free-for-all — it only skips formal planning, not verification.
 
-The host picks up the configured mode via the `noir-brainstorming` skill / the `workflow_start` MCP tool. See [SDD modes](explanation/sdd-workflow.md#modes) for the details.
+The host picks up the configured mode via the `noir-brainstorming` skill / the `workflow_start` MCP tool. See [Spec-Driven modes](explanation/sdd-workflow.md#modes) for the details.
 
 ## Where to go next
 

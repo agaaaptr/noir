@@ -7,11 +7,11 @@
 > **Note:** All version numbers in this runbook (e.g. `1.4.0`, `1.5.0`) are **examples** — substitute your actual version. Current published versions (run `pnpm docs:generate` to refresh):
 >
 > <!-- noir:doc:status -->
-**Latest stable:** `1.11.1` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.11.1-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Latest stable:** `1.11.2` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.11.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.11.2` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-14T09:19:40.411Z*
+*Last auto-generated: 2026-08-14T09:50:54.275Z*
 <!-- /noir:doc:status -->
 
 ---
@@ -234,7 +234,7 @@ When the beta line is ready:
    git push origin v1.5.0
    ```
 
-4. CI detects plain SemVer → publishes under `latest`. Now `npm i @noir-ai/cli` resolves to `1.9.0`; `npm i @noir-ai/cli@beta` still resolves to the last beta.
+4. CI detects plain SemVer → publishes under `latest`. Now `npm i @noir-ai/cli` resolves to `1.5.0`; `npm i @noir-ai/cli@beta` still resolves to the last beta.
 
 ### Additional beta for the same base version
 
