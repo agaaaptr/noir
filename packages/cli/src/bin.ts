@@ -1069,6 +1069,12 @@ export function createProgram(): Command {
       // (see the second tsup config) so its react/ink dependency tree never
       // enters the main CLI graph; React stays out of `noir status` etc.
       const tuiUrl = new URL('./tui/index.js', import.meta.url).href;
+      // React/Ink are external (resolved from node_modules at runtime), so the
+      // react-reconciler DEV build is selected unless NODE_ENV is 'production'.
+      // The dev build calls performance.measure() on every render, filling
+      // Node's 1M-entry performance buffer and OOMing the TUI after a few
+      // minutes (QwenLM PR #4462). Force production BEFORE the TUI loads.
+      process.env.NODE_ENV ||= 'production';
       const { runTui } = await import(/* @vite-ignore */ tuiUrl);
       // Same dispatch seam as homeDeps.dispatch above — a fresh program per
       // dispatched argv, errors mapped to process.exitCode (never thrown out).
@@ -1096,6 +1102,7 @@ export function createProgram(): Command {
       const opts = toCliOptions(g);
       requireInteractive(opts, '`noir palette`');
       const tuiUrl = new URL('./tui/index.js', import.meta.url).href;
+      process.env.NODE_ENV ||= 'production'; // see the `noir tui` action above
       const { runPalette } = await import(/* @vite-ignore */ tuiUrl);
       const dispatch = async (argv: readonly string[]): Promise<void> => {
         const sub = createProgram();
@@ -1120,11 +1127,12 @@ export function createProgram(): Command {
     .addOption(new Option('--host <id>', 'host to drive (default claude)').choices(SUPPORTED_HOSTS))
     .option('--command <binary>', 'custom host binary (e.g. claude-work)')
     .action(async (...args: unknown[]) => {
-      const g = trailingCmd(args).optsWithGlobals();
-      const prompt = args
-        .filter((a): a is string => typeof a === 'string')
-        .join(' ')
-        .trim();
+      const cmd = trailingCmd(args);
+      const g = cmd.optsWithGlobals();
+      // A variadic `[prompt...]` argument arrives as a SINGLE array value in the
+      // action's positional args, so read the parsed positional args off the
+      // trailing Command (`cmd.args`) rather than filtering the raw `args`.
+      const prompt = cmd.args.join(' ').trim();
       const opts: RunOptions = {
         ...toCliOptions(g),
         ...(typeof g.host === 'string' ? { host: g.host } : {}),

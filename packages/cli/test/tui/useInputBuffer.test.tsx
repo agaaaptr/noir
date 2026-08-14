@@ -176,3 +176,23 @@ describe('useInputBuffer — history + recall cursor', () => {
     unmount();
   });
 });
+
+describe('useInputBuffer — stable identities (regression: OOM)', () => {
+  it('returned functions keep their identity across renders (seed is used in a useEffect dep)', async () => {
+    const { capture, unmount } = mount();
+    const seed = capture.seed;
+    const push = capture.pushHistory;
+    const recall = capture.recall;
+    const clear = capture.clear;
+    // Force a re-render; the hook must return the SAME function objects, else a
+    // `useEffect` that depends on `seed` re-runs every render → infinite
+    // setState loop → memory leak → OOM (the 1.11.0 idle-crash bug).
+    capture.setBuffer(() => '/re-render');
+    await flush();
+    expect(capture.seed).toBe(seed);
+    expect(capture.pushHistory).toBe(push);
+    expect(capture.recall).toBe(recall);
+    expect(capture.clear).toBe(clear);
+    unmount();
+  });
+});

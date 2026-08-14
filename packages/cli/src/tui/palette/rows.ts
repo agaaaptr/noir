@@ -129,6 +129,9 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
     }
     const homeIds = new Set<string>();
     for (const { group, action } of flattenHome(homeSections)) {
+      // Skip a curated action already shown in the recents section, so a command
+      // run recently never appears twice (recents + its section) on one screen.
+      if (recentIds.has(action.id)) continue;
       const argv = action.dispatch ?? [action.id];
       homeIds.add(action.id);
       rows.push({

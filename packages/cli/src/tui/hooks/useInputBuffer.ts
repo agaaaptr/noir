@@ -2,18 +2,27 @@
 // command-history + recall-cursor state can live with the keybindings that use
 // it instead of dangling inside the App's single `useInput` closure. Owns:
 //   - `buffer` — the current text being composed at the prompt.
-//   - `history` — in-memory command history (newest first), with adjacent
-//     duplicates dropped on push (re-running the same command once is one entry).
+//   - `history` — in-memory command history (newest first), with move-to-front
+//     dedup (matches the persisted recents store).
 //   - `recall` — Up/Down history walk via an index cursor (`-1` = not
-//     recalling). Up from the edit line returns the newest entry, then walks
-//     older, clamped at the oldest; Down walks back toward the edit line and
-//     returns `null` once past the newest boundary.
+//     recalling).
+//   - `seed` — replace the session history with the persisted recents.
 //
 // Deliberately tiny + framework-shaped like the rest of the TUI state: `buffer`
 // is a React state string so keystrokes rerender the CommandInput, while
 // `history` + the cursor are refs (they are recalled on demand, never painted).
+//
+// IMPORTANT: every returned function is wrapped in `useCallback` so its identity
+// is STABLE across renders. The App passes `seed` into a `useEffect` dependency
+// array (`[deps.loadRecent, seed]`); a plain function re-created each render
+// would make that effect re-run every render — an infinite setState loop that
+// leaks memory and OOMs the TUI after ~a minute of idle. All these functions
+// only touch refs (+ the stable `setBuffer`), so `useCallback(…, [])` is safe.
 
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+
+/** Cap on the in-memory session history (mirrors the persisted recents cap). */
+const MAX_HISTORY = 50;
 
 /** The input-buffer + command-history surface the App's keybindings consume. */
 export interface InputBuffer {
@@ -54,16 +63,19 @@ export function useInputBuffer(): InputBuffer {
   // Index into `historyRef.current`; -1 = not recalling (editing fresh text).
   const cursorRef = useRef(-1);
 
-  function pushHistory(text: string): void {
+  const pushHistory = useCallback((text: string): void => {
     if (text.length === 0) return;
     // Move-to-front dedup (matches `recordRecent` in palette/history.ts): an
     // exact re-run moves the entry to the head instead of duplicating, so the
     // shell-recall overlay and the persisted recents apply one dedup rule.
     const history = historyRef.current.filter((e) => e !== text);
-    historyRef.current = [text, ...history];
-  }
+    // Cap at MAX_HISTORY so a long session running many distinct commands does
+    // not grow the in-memory overlay without bound (the persisted store is
+    // already capped at 50).
+    historyRef.current = [text, ...history].slice(0, MAX_HISTORY);
+  }, []);
 
-  function recall(dir: 'up' | 'down'): string | null {
+  const recall = useCallback((dir: 'up' | 'down'): string | null => {
     const history = historyRef.current;
     if (history.length === 0) return null;
     let cursor = cursorRef.current;
@@ -77,17 +89,17 @@ export function useInputBuffer(): InputBuffer {
     }
     cursorRef.current = cursor;
     return cursor === -1 ? null : (history[cursor] ?? null);
-  }
+  }, []);
 
-  function clear(): void {
+  const clear = useCallback((): void => {
     setBuffer(() => '');
     cursorRef.current = -1;
-  }
+  }, []);
 
-  function seed(entries: readonly string[]): void {
+  const seed = useCallback((entries: readonly string[]): void => {
     historyRef.current = [...entries];
     cursorRef.current = -1;
-  }
+  }, []);
 
   return { buffer, setBuffer, pushHistory, recall, clear, seed };
 }

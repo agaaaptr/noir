@@ -16,7 +16,7 @@
 // commands always pause at the confirm overlay.
 
 import { Box, type Key, Text, useApp, useInput } from 'ink';
-import { type ReactElement, useEffect, useState } from 'react';
+import { type ReactElement, useEffect, useMemo, useState } from 'react';
 import type { StatusPayload } from '../commands/status.js';
 import { c, divider } from '../theme.js';
 import { CommandInput } from './CommandInput.js';
@@ -169,38 +169,45 @@ export function App({
 
   // ----- snapshot refresh: paused while a dispatch is in flight ----------
   useEffect(() => {
-    if (running) return;
+    // Pause polling while a dispatch runs OR the palette/confirm overlay is
+    // open (the dashboard snapshot is off-screen then, so polling only wastes
+    // a fetch + a re-render).
+    if (running || mode.kind !== 'dashboard') return;
     let cancelled = false;
+    let inFlight = false;
+    let lastPayload: StatusPayload | null = null;
+    const fetched = (p: StatusPayload | null): void => {
+      inFlight = false;
+      if (cancelled) return;
+      // Bail out when the snapshot is unchanged so an idle dashboard stops
+      // re-rendering the whole tree on every poll tick.
+      if (JSON.stringify(p) === JSON.stringify(lastPayload)) return;
+      lastPayload = p;
+      setPayload(p);
+      setLoading(false);
+    };
     setLoading(true);
+    inFlight = true;
     void deps
       .fetchStatus()
-      .then((p) => {
-        if (!cancelled) {
-          setPayload(p);
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setPayload(null);
-          setLoading(false);
-        }
-      });
+      .then(fetched)
+      .catch(() => fetched(null));
     const id = setInterval(() => {
+      // Skip the tick while a fetch is still pending — a slow/restarting daemon
+      // (gatherStatusPayload does a probe + MCP round-trips) must not stack
+      // concurrent fetches.
+      if (inFlight) return;
+      inFlight = true;
       void deps
         .fetchStatus()
-        .then((p) => {
-          if (!cancelled) setPayload(p);
-        })
-        .catch(() => {
-          /* keep the last good payload on a transient probe failure */
-        });
+        .then(fetched)
+        .catch(() => fetched(null));
     }, refreshMs);
     return () => {
       cancelled = true;
       clearInterval(id);
     };
-  }, [running, refreshMs, deps]);
+  }, [running, mode.kind, refreshMs, deps]);
 
   // ----- dispatch runner: fires after the "running" frame has flushed ------
   useEffect(() => {
@@ -353,6 +360,8 @@ export function App({
   function handlePaletteInput(input: string, key: Key): void {
     if (mode.kind !== 'palette') return;
     if (key.escape) {
+      setPaletteQuery('');
+      setPaletteActive(0);
       setMode({ kind: 'dashboard' });
       return;
     }
@@ -457,18 +466,22 @@ export function App({
     void recordRuns(argv);
   }
 
-  // The rows for the active palette corpus (recomputed each render; cheap over
-  // ~40 commands). Computed once so render + Enter-dispatch agree on the row.
-  const paletteCorpus = mode.kind === 'palette' ? mode.corpus : 'commands';
-  const paletteRows = buildPaletteRows({
-    corpus: paletteCorpus,
-    query: paletteQuery,
-    commands: deps.commands ?? [],
-    matcher: deps.matcher ?? handRolledMatcher,
-    recent,
-    homeSections,
-    outputLines: searchLines,
-  });
+  // The rows for the active palette corpus, memoized so the dashboard hot path
+  // (every keystroke + snapshot poll) does NOT rebuild ~60 row objects. Only
+  // recompute when a palette input actually changes.
+  const paletteRows = useMemo(
+    () =>
+      buildPaletteRows({
+        corpus: mode.kind === 'palette' ? mode.corpus : 'commands',
+        query: paletteQuery,
+        commands: deps.commands ?? [],
+        matcher: deps.matcher ?? handRolledMatcher,
+        recent,
+        homeSections,
+        outputLines: searchLines,
+      }),
+    [mode, paletteQuery, deps.commands, deps.matcher, recent, homeSections, searchLines],
+  );
 
   // ----- render -----------------------------------------------------------
   if (mode.kind === 'palette') {

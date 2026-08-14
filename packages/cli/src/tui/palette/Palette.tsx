@@ -38,8 +38,18 @@ function highlight(label: string, matchedIndices: readonly number[]): ReactEleme
 
 /** Truncate a label so the fixed-width palette never overflows. */
 function truncate(label: string): string {
-  const max = Math.max(20, PALETTE_WIDTH - 8);
+  const max = 26;
   return label.length > max ? `${label.slice(0, max - 1)}…` : label;
+}
+
+/**
+ * Truncate a secondary line (description/hint) so each palette row stays ONE
+ * line. A long command description otherwise wraps across several rows, turning
+ * the list into a wall of text where titles and descriptions blur together.
+ */
+function truncateDescription(desc: string): string {
+  const max = 32;
+  return desc.length > max ? `${desc.slice(0, max - 1)}…` : desc;
 }
 
 /** Placeholder hint for the query row, per corpus. */
@@ -93,7 +103,9 @@ export function Palette({ corpus, query, active, rows }: PaletteProps): ReactEle
           {isActive
             ? c.accent(truncate(row.primary))
             : highlight(truncate(row.primary), row.indices)}
-          <Text>{c.dim(`  ${row.secondary}`)}</Text>
+          {row.secondary.length > 0 ? (
+            <Text>{c.dim(` · ${truncateDescription(row.secondary)}`)}</Text>
+          ) : null}
         </Text>
       </Box>,
     );
