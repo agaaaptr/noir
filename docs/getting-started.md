@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.11.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.11.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-14T08:24:14.105Z*
+*Last auto-generated: 2026-08-14T08:45:36.335Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -72,7 +72,7 @@ noir init
 
 > **No plugin, no marketplace.** Noir ships only its native `noir-` builtins. There is nothing to install into the host — `noir init`/`noir sync` overwrite the `noir-*` namespace idempotently.
 >
-> **Edited a managed file?** When `noir init --upgrade` or `noir sync` finds a generated file (or skill) that differs from the template, it shows a conflict prompt — **Replace**, **Rename**, **Create duplicate**, **Keep mine**, or **Cancel** (plus **Merge** when a 3-way merge hit an overlap). After your first choice you're asked whether to **apply it to all remaining conflicts** this run, so re-emitting many divergent skills prompts once rather than per-file.
+> **Edited a managed file?** When `noir init --upgrade` or `noir sync` finds a generated file (or skill) that differs from the template, it shows a conflict prompt — **Replace**, **Rename**, **Create duplicate**, **Keep mine**, or **Cancel** (plus **Merge (with conflict markers)** when a 3-way merge hit an overlap). After your first choice you're asked whether to **apply it to all remaining conflicts** this run, so re-emitting many divergent skills prompts once rather than per-file.
 
 ## Connect your host over MCP
 
@@ -126,9 +126,9 @@ The daemon is a **long-lived** Noir server that multiple clients can share — t
 
 4. Open the project in Claude Code. It connects to `http://127.0.0.1:8787/mcp` via `.mcp.json`.
 
-**Caveats (v1):**
+**Caveats:**
 
-- Killing the daemon while the host is connected **breaks the connection** — there is **no auto-fallback to stdio** in v1. Your data stays durable on disk, and reads have a degraded read-only fallback, but the live host link is severed until you restart the daemon.
+- Killing the daemon while the host is connected **breaks the connection** — there is **no auto-fallback to stdio**. Your data stays durable on disk, and reads have a degraded read-only fallback, but the live host link is severed until you restart the daemon.
 - The daemon is **foreground by default**; pass `--detach` to fork a detached child that persists after the parent exits (`noir daemon start --detach` reports the child's PID and port). Auto-restart daemons are not yet available.
 - A single global `~/.noir/daemon.json` records the running daemon; running Noir concurrently in two projects on the same machine will clobber that record (per-project records are not yet available).
 

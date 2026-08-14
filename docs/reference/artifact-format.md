@@ -44,7 +44,7 @@ Every `.md` artifact carries YAML frontmatter as the first bytes (no BOM, single
 ---
 kind: plan            # enum = one of the 12 kinds above
 id: t4k3b1e9          # the store key (taskId) — or ADR-0007 for decisions
-slug: c3-artifact-format
+slug: artifact-format
 title: Artifact format
 status: draft         # lifecycle kinds: draft | review | approved | done ; adr: proposed | accepted | rejected | superseded
 date: 2026-08-13      # ISO-8601

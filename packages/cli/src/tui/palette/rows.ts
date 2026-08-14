@@ -18,8 +18,7 @@ export const CORPORA: readonly Corpus[] = ['commands', 'output', 'help'];
 
 const MATCH_LIMIT = 20;
 
-/** How many rows the palette renders at once (shared with the App so the
- *  active-row cursor is clamped to the SAME bound Enter dispatches against). */
+/** How many rows the palette renders at once (the sliding window size). */
 export const VISIBLE_ROWS = 10;
 
 /** A rendered palette row. `argv` is null for non-dispatchable rows. */
@@ -29,7 +28,6 @@ export interface PaletteRow {
   secondary: string;
   argv: readonly string[] | null;
   destructive: boolean;
-  indices: readonly number[];
   group: string | null;
 }
 
@@ -73,7 +71,6 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
       secondary: e.desc,
       argv: null,
       destructive: false,
-      indices: [],
       group: 'keybindings',
     }));
   }
@@ -90,7 +87,6 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
           secondary: `nothing matches "${query}"`,
           argv: null,
           destructive: false,
-          indices: [],
           group: null,
         },
       ];
@@ -104,7 +100,6 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
             secondary: 'run a /command first',
             argv: null,
             destructive: false,
-            indices: [],
             group: null,
           },
         ];
@@ -116,7 +111,6 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
         secondary: String(i + 1),
         argv: null,
         destructive: false,
-        indices: [],
         group: null,
       }));
     }
@@ -126,7 +120,6 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
       secondary: String(i + 1),
       argv: null,
       destructive: false,
-      indices: [],
       group: 'matches',
     }));
   }
@@ -143,7 +136,6 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
         secondary: cmd.description,
         argv: cmd.argv,
         destructive: cmd.destructive,
-        indices: [],
         group: 'recent',
       });
     }
@@ -160,7 +152,6 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
         secondary: action.hint,
         argv,
         destructive: action.destructive ?? false,
-        indices: [],
         group,
       });
     }
@@ -174,7 +165,6 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
         secondary: cmd.description,
         argv: cmd.argv,
         destructive: cmd.destructive,
-        indices: [],
         group: cmd.category,
       });
     }
@@ -188,7 +178,6 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
     secondary: m.item.description,
     argv: m.item.argv,
     destructive: m.item.destructive,
-    indices: m.matchedIndices,
     group: null,
   }));
 }

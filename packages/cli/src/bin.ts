@@ -827,8 +827,8 @@ export function createProgram(): Command {
     .description(
       'decompose a capability into buildable slices (template-only offline; see the spec)',
     )
-    .argument('<capability>', 'capability id, e.g. C4')
-    .option('--out <path>', 'output path for the SlicePlan JSON')
+    .argument('<capability>', 'capability id')
+    .option('--out <path>', 'output path for the slice-plan JSON')
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();

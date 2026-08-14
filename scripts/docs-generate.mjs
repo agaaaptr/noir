@@ -88,10 +88,6 @@ function npmViewNullable(args) {
   }
 }
 
-function _git(args) {
-  return exec('git', args, { nullable: true });
-}
-
 function getBaseVersion() {
   try {
     const pkg = JSON.parse(readFileSync(join(PACKAGES_DIR, 'cli', 'package.json'), 'utf8'));
@@ -129,19 +125,6 @@ function replaceManagedBlock(path, tag, newContent, dryRun = false) {
     writeFileSync(path, newDoc, 'utf8');
   }
   return true;
-}
-
-/**
- * Extract text between managed block markers.
- * Returns null if block not found.
- */
-function _readManagedBlock(content, tag) {
-  const startMarker = `<!-- ${tag} -->`;
-  const endMarker = `<!-- /${tag} -->`;
-  const startIdx = content.indexOf(startMarker);
-  const endIdx = content.indexOf(endMarker);
-  if (startIdx === -1 || endIdx === -1) return null;
-  return content.slice(startIdx + startMarker.length, endIdx).trim();
 }
 
 // ── Content generators ────────────────────────────────────────────
@@ -449,28 +432,6 @@ function genPackages() {
     );
   }
   lines.push('');
-
-  return lines.join('\n');
-}
-
-function _genReleaseHistory() {
-  const lines = [];
-  const versions = npmViewNullable(['@noir-ai/cli', 'versions']) || [];
-  const timeData = npmViewNullable(['@noir-ai/cli', 'time']) || {};
-
-  if (versions.length === 0) {
-    lines.push('_No releases yet._');
-    return lines.join('\n');
-  }
-
-  // Show last 10 releases
-  const recent = versions.sort().reverse().slice(0, 10);
-  lines.push('| Version | Date |');
-  lines.push('|---|---|');
-  for (const v of recent) {
-    const date = timeData[v] ? new Date(timeData[v]).toISOString().slice(0, 10) : '—';
-    lines.push(`| ${v} | ${date} |`);
-  }
 
   return lines.join('\n');
 }
