@@ -151,12 +151,15 @@ async function clackConflictResolver(ctx: ConflictContext): Promise<ConflictReso
   });
   if (clack.isCancel(choice)) return 'cancel';
   const resolution = choice as ConflictResolution;
-  // Apply-to-all. Only meaningful for `regenerate` (one decision
-  // shared across the run); managedBlock/managedBlocks stay per-file (the
-  // engine keys memory by path::block there, not by class — so even if the
-  // user picks "all", the engine won't reuse it across files).
-  const mode = ctx.mode ?? 'regenerate';
-  if (mode === 'regenerate') {
+  // Apply-to-all. The `regenerate` scaffold path AND the `skill` emit path both
+  // key their per-run memory by a single class, so one "Yes" reuses the choice
+  // across the whole run. The `managedBlock`/`managedBlocks` paths are per-file
+  // (the engine keys memory by path::block, not by class), so they must NOT
+  // offer "apply to all" — reusing a per-file decision there would silently
+  // clobber unrelated blocks.
+  const mode = (ctx.mode ?? 'regenerate') as string;
+  const supportsApplyToAll = mode !== 'managedBlock' && mode !== 'managedBlocks';
+  if (supportsApplyToAll) {
     const remember = await clack.select({
       message: `Apply "${labelFor(resolution)}" to all remaining conflicts this run?`,
       initialValue: 'no',

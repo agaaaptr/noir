@@ -207,7 +207,7 @@ export function App({
       cancelled = true;
       clearInterval(id);
     };
-  }, [running, mode.kind, refreshMs, deps]);
+  }, [running, mode.kind, refreshMs, deps.fetchStatus]);
 
   // ----- dispatch runner: fires after the "running" frame has flushed ------
   useEffect(() => {
@@ -231,7 +231,7 @@ export function App({
     return () => {
       active = false;
     };
-  }, [pending, deps]);
+  }, [pending, deps.dispatch]);
 
   // ----- shared dispatch helper --------------------------------------------
   function dispatchCmd(argv: readonly string[]): void {
