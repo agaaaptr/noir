@@ -36,8 +36,8 @@ Noir is a **host-agnostic orchestration layer** — not an LLM runtime. The host
 | `@noir-ai/model` | Optional bounded model layer — one single-shot `complete()` (Anthropic / OpenAI / OpenAI-compatible). No `tools`/`stream`; agent loops impossible by construction; first-class `null` degradation without a key. |
 | `@noir-ai/daemon` | The runtime authority: owns the store write handle, resolves the embedder once, and exposes the single Noir MCP server (stdio + Streamable HTTP on 127.0.0.1). |
 | `@noir-ai/adapters` | `HostAdapter` interface + a `resolveAdapter(host)` registry over `HostId`. Ships 5 adapters — `claude` (default: `.mcp.json`, managed `CLAUDE.md` @import block, `.claude/skills/`), `agents-md` (universal `AGENTS.md`), `gemini` (`GEMINI.md` + `.gemini/mcp.json`), `cursor` (`AGENTS.md`, `.cursor/rules/*.mdc`, `.cursor/mcp.json`), `opencode` (`AGENTS.md`, `opencode.json`). A shared `emitAgentsMd(ctx)` helper writes the byte-identical universal `AGENTS.md` for agents-md, Cursor, and OpenCode. |
-| `@noir-ai/cli` | The `noir` command tree (commander + @clack/prompts); store-touching commands are MCP clients to the daemon. |
-| `@noir-ai/create` | The scaffold engine (Slice S): three-mode writer (`regenerate`/`managedBlock`/`skipIfExists`), declarative manifest, `{{var}}` templates, `.noir/scaffold-version`, inline-conflict migrations, read-only stack-detect. Consumed by `noir init`/`sync` and the AI-layer-only `noir create [dir]`. |
+| `@noir-ai/cli` | The `noir` command tree: the Ink dashboard + fuzzy command palette, `noir run` (headless host agent), the `@clack` home menu, and store-touching commands as MCP clients to the daemon. |
+| `@noir-ai/create` | The scaffold engine: an idempotent declarative writer with `{{var}}` templates, `.noir/scaffold-version`, inline-conflict migrations, and read-only stack-detect. Consumed by `noir init`/`sync` and the AI-layer-only `noir create [dir]`. |
 
 ## How a host connects
 
@@ -67,25 +67,14 @@ The daemon is the **single writer** to the store; if it is down, reads (FTS/kNN/
 4. **MCP = dynamic intelligence; static artifacts = declarative context/skills.**
 5. **Graceful degradation everywhere** — no key → pure orchestration; daemon down → read-only store; host lacks a feature → emulate.
 
-## Host-agnostic by design — S10 shipped
+## Host-agnostic by design
 
-The host-specific surface is concentrated in one place: the **adapter layer**. A `resolveAdapter(host)` registry (`Record<HostId, HostAdapter>`) maps each host id (`claude` | `agents-md` | `gemini` | `cursor` | `opencode`) to its `HostAdapter`. The CLI's 8 direct `claudeAdapter` imports collapsed to one `resolveAdapter(host)` call; the `host:` config widened from `z.literal('claude')` to the same enum (`claude` is the default — existing projects stay byte-equivalent); and `CompileTarget` widened so the skills compiler transforms per host (e.g. cursor skills compile to flat `.cursor/rules/<name>.mdc`).
+The host-specific surface is concentrated in one place: the **adapter layer**. A `resolveAdapter(host)` registry maps each host id (`claude` | `agents-md` | `gemini` | `cursor` | `opencode`) to its `HostAdapter`, so one core serves every host without per-host logic forks.
 
-**AGENTS.md is the universal baseline where a host uses it.** A shared `emitAgentsMd(ctx)` helper produces byte-identical `AGENTS.md` content for agents-md, Cursor, and OpenCode; it `@`-imports `.noir/NOIR.md` + `.noir/rules/RULES.md` (the 32-platform standard). Claude and Gemini use only their native `CLAUDE.md` or `GEMINI.md` context file to avoid duplicate imports. `claude` is the regression anchor: a bare `noir init` is unchanged.
+**AGENTS.md is the universal baseline where a host uses it.** A shared `emitAgentsMd(ctx)` helper produces byte-identical `AGENTS.md` content for agents-md, Cursor, and OpenCode; it `@`-imports `.noir/NOIR.md` + `.noir/rules/RULES.md`. Claude and Gemini use only their native `CLAUDE.md` or `GEMINI.md` context file to avoid duplicate imports. `claude` is the default host; a bare `noir init` is unchanged.
 
-S10 ships 4 new adapters (`agents-md`, `gemini`, `cursor`, `opencode`); `qwen` and `agy` are deferred and are not accepted `--host` values. Adding a host is now an authoring concern, not an architecture decision: extend `HostId`, author an adapter, register it, and the schema + compiler + `--host` flag widen automatically. The locked decisions live in [ADR-0004](../decisions/0004-multi-host-adapters.md); design record [`internal/specs/2026-07-25-s10-multihost-design.md`](../internal/specs/2026-07-25-s10-multihost-design.md).
+Adding a host is an authoring concern, not an architecture decision: extend `HostId`, author an adapter, register it, and the schema + compiler + `--host` flag widen automatically.
 
-## v1.x capabilities (added on the beta channel)
+## Capability history
 
-Built on one keystone refactor (`managedBlock` + shared `blockWriter` + `HostAdapter` emitters), seven capability slices first shipped together in `v1.2.0-beta.1` — K/R/I/P/S/X plus **S10 multi-host** and the **S11** SDK/`doctor` remainder:
-
-- **K** Keystone — pure refactor: a `managedBlock(name, commentStyle)` factory + shared block-region writer + the `HostAdapter.emitRules` seam that the later slices write through.
-- **R** Rules — `.noir/rules/RULES.md` Noir-curated seed wired into `CLAUDE.md` via a managed `RULES_BLOCK`; `noir-rules` skill.
-- **I** Ignore — `IgnoreManager` + `syncIgnores` into init/sync (managed-block idempotent across `.gitignore`/`.dockerignore`/`.npmignore`/`.prettierignore`).
-- **P** PRD — `prd` artifact kind + `writePrd`/`readPrd` + `noir-prd` skill (opt-in; no FSM change).
-- **S** Scaffold — the `@noir-ai/create` engine (see table above); `noir create [dir]` is AI-layer-only; `noir init --upgrade` runs migrations; `noir doctor` checks scaffold-version drift.
-- **X** Integration — first-class integration layer (skill-only / gated-write-proxy / full-runtime tiers). First integration: **ClickUp** (`noir-clickup` skill + `integration.json` + daemon `integrations_auth` / `noir_clickup_write` MCP tools).
-- **S10** Multi-host — the adapter registry above; `--host` on `noir init`/`create`/`sync`; `noir doctor` reports the active host. (`v1.2.0-beta.1`.)
-- **S11** Distribution + SDK remainder — `docs/reference/packages.md` (the per-package framework/library API surface) and a `noir doctor` `publish` check (advisory package-metadata validation). (Distribution itself shipped at `1.0.0-beta.1`.)
-
-Full design record: [`specs/2026-07-25-v1x-capabilities-design.md`](../internal/specs/2026-07-25-v1x-capabilities-design.md); per-slice specs under [`internal/specs/`](../internal/specs/); the locked decisions in [ADR-0003](../decisions/0003-v1x-capabilities.md) (K/R/I/P/S/X) and [ADR-0004](../decisions/0004-multi-host-adapters.md) (S10).
+Noir's capabilities shipped incrementally across releases. The per-capability record — what shipped when, and what remains deferred — lives in the [roadmap](../roadmap/) and the [architecture decisions](../decisions/).

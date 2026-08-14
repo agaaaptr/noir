@@ -34,7 +34,7 @@ noir init                  # scaffolds .noir/ + host wiring + skills where suppo
 
 ## Commands
 
-`noir` (home menu / `status --json`), `status [--json]`, `init`, `create [dir]`, `sync`, `run [prompt]`, `release [version]`, `mcp serve [--stdio]`, `daemon {start|stop|status|restart}`, `context {search|index|status}`, `memory {recall|save|sessions|forget|consolidate}`, `skills {list|sync|lint|registry}`, `task {new|status|advance|next|decompose|verify|research|research-record|resume|block|abandon}`, `handoff [--write]`, `wrap [--write]`, `install|migrate`, `update`, `tui`, `palette`, `doctor`.
+`noir` (home menu / `status --json`), `status [--json]`, `init`, `create [dir]`, `sync`, `run [prompt...]`, `release [version]`, `mcp serve [--stdio]`, `daemon {start|stop|status|restart}`, `context {search|index|status}`, `memory {recall|save|sessions|forget|consolidate}`, `skills {list|sync|lint|registry}`, `task {new|status|advance|next|decompose|verify|research|research-record|resume|block|abandon}`, `handoff [--write]`, `wrap [--write]`, `install|migrate`, `update`, `tui`, `palette`, `doctor`.
 
 Global flags: `--json`, `--no-input`, `--quiet`, `--verbose`, `--cwd`. Data → stdout, diagnostics → stderr. Exit codes: `0` ok · `1` error · `2` usage · `3` not-found · `4` daemon-down · `5` cancelled.
 

@@ -1,6 +1,6 @@
 # Generated-artifact format & naming standard
 
-The single source of truth for every **file a C3 skill generates under `.noir/`** — how it is named, where it lives, what frontmatter it carries, and what shape each type takes. The C3 quality gate (`noir skills lint`) cross-checks skill bodies against the registry in [`ARTIFACT_TYPES`](../../packages/core/src/artifacts.ts), and the workflow writers + CLI handoff writer build filenames from it. Decision record: [`docs/decisions/0007-…`](../decisions/0007-generated-artifact-standard.md).
+The single source of truth for every **file a skill generates under `.noir/`** — how it is named, where it lives, what frontmatter it carries, and what shape each type takes. The quality gate (`noir skills lint`) cross-checks skill bodies against the registry in [`ARTIFACT_TYPES`](../../packages/core/src/artifacts.ts), and the workflow writers + CLI handoff writer build filenames from it.
 
 Scope: **`.noir/` generated artifacts only**. Human-authored repo docs (`docs/internal`, `docs/decisions`) deliberately keep their own convention — two standards, explicitly permitted.
 
@@ -45,7 +45,7 @@ Every `.md` artifact carries YAML frontmatter as the first bytes (no BOM, single
 kind: plan            # enum = one of the 12 kinds above
 id: t4k3b1e9          # the store key (taskId) — or ADR-0007 for decisions
 slug: c3-artifact-format
-title: C3 artifact format
+title: Artifact format
 status: draft         # lifecycle kinds: draft | review | approved | done ; adr: proposed | accepted | rejected | superseded
 date: 2026-08-13      # ISO-8601
 generated_by: "@noir-ai <version>"

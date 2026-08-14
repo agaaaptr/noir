@@ -1,7 +1,7 @@
 {
   "name": "@noir-ai/cli",
   "version": "1.11.0",
-  "description": "Noir CLI — the `noir` command tree (commander + @clack/prompts), the shell entry point to the Noir AI toolkit.",
+  "description": "Noir CLI — the `noir` command tree (commander + Ink dashboard + @clack home menu), the shell entry point to the Noir AI toolkit.",
   "license": "MIT",
   "author": "agaaaptr",
   "homepage": "https://github.com/agaaaptr/noir#readme",

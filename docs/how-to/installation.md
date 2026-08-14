@@ -18,7 +18,7 @@
 **Current beta:** `1.11.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.11.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-14T06:25:47.634Z*
+*Last auto-generated: 2026-08-14T08:24:14.520Z*
 <!-- /noir:doc:status -->
 >
 > Pin a version with `NOIR_VERSION=<VERSION>` (POSIX) or `$env:NOIR_VERSION='<VERSION>'` (PowerShell).
@@ -333,7 +333,7 @@ noir --version       # prints the installed version
 noir doctor          # config / store / embedder / native-deps / provider / install status
 ```
 
-`noir doctor` is the right next step on a fresh install. It checks the config schema, the SQLite store, the local embedder, the native dependencies, the (optional) model provider config, and — since C1 — an **install row** that reports the detected install method (`method=native` / `npm` / `pnpm` / …), the installed version, the latest-known version from the update cache, and a non-blocking advisory when the install isn't on the recommended native path. The install row is **advisory only** (`ok`/`warn`, never `fail`) and makes **no live network call** — it reads `~/.noir/install.json` and the update cache. None of these checks makes a network call. If anything is off, it says so plainly.
+`noir doctor` is the right next step on a fresh install. It checks the config schema, the SQLite store, the local embedder, the native dependencies, the (optional) model provider config, and an **install row** that reports the detected install method (`method=native` / `npm` / `pnpm` / …), the installed version, the latest-known version from the update cache, and a non-blocking advisory when the install isn't on the recommended native path. The install row is **advisory only** (`ok`/`warn`, never `fail`) and makes **no live network call** — it reads `~/.noir/install.json` and the update cache. None of these checks makes a network call. If anything is off, it says so plainly.
 
 Then, from the project you want Noir to manage:
 

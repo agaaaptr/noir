@@ -175,14 +175,9 @@ export function App({
     if (running || mode.kind !== 'dashboard') return;
     let cancelled = false;
     let inFlight = false;
-    let lastPayload: StatusPayload | null = null;
     const fetched = (p: StatusPayload | null): void => {
       inFlight = false;
       if (cancelled) return;
-      // Bail out when the snapshot is unchanged so an idle dashboard stops
-      // re-rendering the whole tree on every poll tick.
-      if (JSON.stringify(p) === JSON.stringify(lastPayload)) return;
-      lastPayload = p;
       setPayload(p);
       setLoading(false);
     };
@@ -201,7 +196,11 @@ export function App({
       void deps
         .fetchStatus()
         .then(fetched)
-        .catch(() => fetched(null));
+        .catch(() => {
+          // Keep the last-good payload on a transient probe/daemon failure — a
+          // poll-time hiccup must not wipe the dashboard to "down".
+          inFlight = false;
+        });
     }, refreshMs);
     return () => {
       cancelled = true;
@@ -357,6 +356,14 @@ export function App({
   }
 
   // ----- palette-mode keybinding handler (single router) -------------------
+  // Clamp the active cursor to the FULL row list. The renderer slides a
+  // VISIBLE_ROWS window over the list, so the cursor (and Enter) can reach
+  // every row, not just the first ten.
+  function moveActive(delta: number): void {
+    const max = Math.max(0, paletteRows.length - 1);
+    setPaletteActive((a) => Math.min(max, Math.max(0, a + delta)));
+  }
+
   function handlePaletteInput(input: string, key: Key): void {
     if (mode.kind !== 'palette') return;
     if (key.escape) {
@@ -372,8 +379,8 @@ export function App({
       return;
     }
     if (mode.corpus === 'help') {
-      if (key.upArrow) setPaletteActive((a) => Math.max(0, a - 1));
-      else if (key.downArrow) setPaletteActive((a) => a + 1);
+      if (key.upArrow) moveActive(-1);
+      else if (key.downArrow) moveActive(1);
       return; // help corpus takes no typing
     }
     if (key.return) {
@@ -381,16 +388,16 @@ export function App({
         const row = paletteRows[paletteActive];
         if (row?.argv) handleRun(row.argv, row.destructive);
       } else {
-        setPaletteActive((a) => a + 1); // output corpus: next match
+        moveActive(1); // output corpus: next match
       }
       return;
     }
     if (key.upArrow) {
-      setPaletteActive((a) => Math.max(0, a - 1));
+      moveActive(-1);
       return;
     }
     if (key.downArrow) {
-      setPaletteActive((a) => a + 1);
+      moveActive(1);
       return;
     }
     if (key.backspace || key.delete) {

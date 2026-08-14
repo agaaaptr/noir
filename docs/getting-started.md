@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.11.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.11.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-14T06:25:47.116Z*
+*Last auto-generated: 2026-08-14T08:24:14.105Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -62,7 +62,7 @@ noir init
 | `.noir/project.id` | A UUID — the project's canonical `ProjectId` (Noir keys everything on this, never on a filesystem path). |
 | `.noir/config.yml` | Project config. Starts as `host: claude` + `mode: full`. See [configuration](reference/config.md). |
 | `.noir/NOIR.md` | The canonical context file. The host merely `@import`s it. |
-| `.noir/rules/RULES.md` | The Noir-curated rules seed (Slice R); wired into the host context file via a managed `RULES_BLOCK`. |
+| `.noir/rules/RULES.md` | The Noir-curated rules seed; wired into the host context file via a managed `RULES_BLOCK`. |
 | `.noir/scaffold-version` | The scaffold-engine version stamp; `noir doctor` reports drift, `noir init --upgrade` runs migrations. |
 | `.mcp.json` | The MCP server entry Claude Code reads. |
 | `CLAUDE.md` | A managed `@import ".noir/NOIR.md"` block is inserted (existing content is preserved). |
@@ -71,6 +71,8 @@ noir init
 `.noir/store/` (the SQLite DB), `.noir/specs/`, `.noir/plans/`, `.noir/tasks/`, `.noir/decisions/`, and `.noir/audit/` are created on demand as you work.
 
 > **No plugin, no marketplace.** Noir ships only its native `noir-` builtins. There is nothing to install into the host — `noir init`/`noir sync` overwrite the `noir-*` namespace idempotently.
+>
+> **Edited a managed file?** When `noir init --upgrade` or `noir sync` finds a generated file (or skill) that differs from the template, it shows a conflict prompt — **Replace**, **Rename**, **Create duplicate**, **Keep mine**, or **Cancel** (plus **Merge** when a 3-way merge hit an overlap). After your first choice you're asked whether to **apply it to all remaining conflicts** this run, so re-emitting many divergent skills prompts once rather than per-file.
 
 ## Connect your host over MCP
 
@@ -127,8 +129,8 @@ The daemon is a **long-lived** Noir server that multiple clients can share — t
 **Caveats (v1):**
 
 - Killing the daemon while the host is connected **breaks the connection** — there is **no auto-fallback to stdio** in v1. Your data stays durable on disk, and reads have a degraded read-only fallback, but the live host link is severed until you restart the daemon.
-- The daemon is **foreground by default**; pass `--detach` to fork a detached child that persists after the parent exits (`noir daemon start --detach` reports the child's PID and port). Auto-restart daemons are v1.x.
-- A single global `~/.noir/daemon.json` records the running daemon; running Noir concurrently in two projects on the same machine will clobber that record (per-project records are v1.x).
+- The daemon is **foreground by default**; pass `--detach` to fork a detached child that persists after the parent exits (`noir daemon start --detach` reports the child's PID and port). Auto-restart daemons are not yet available.
+- A single global `~/.noir/daemon.json` records the running daemon; running Noir concurrently in two projects on the same machine will clobber that record (per-project records are not yet available).
 
 Pick the daemon **only** if you need a persistent shared server across host sessions. Active terminal commands start a daemon when needed; otherwise, stdio is the simplest host transport. See [transports](explanation/sdd-workflow.md#transports) for the full comparison.
 
@@ -165,7 +167,7 @@ That's the whole loop. You don't drive the gates by hand — you talk to the hos
 You don't need to memorize every subcommand:
 
 - **Bare `noir`** (no arguments) opens a **grouped home menu** — a section picker (Status &amp; context / Memory / Workflow / Setup &amp; maintenance / Dashboard) then per-section action lists with hints and destructive-action confirmation. Use `↑/↓` and `1`–`6` to navigate; `Esc` steps back; `→`/`←` moves between sections.
-- **`noir tui`** opens the **Ink dashboard** — live status, `/command` input, and one command surface (the palette): `Ctrl+K` all commands, `h` quick actions, `?` keybindings, `Ctrl+F` find-in-output, `Tab` to switch the palette corpus.
+- **`noir tui`** opens the **Ink dashboard** — live status, `/command` input, and one command surface (the palette): `Ctrl+K` all commands, `h` quick actions, `?` keybindings, `Ctrl+F` find-in-output, `Tab` to switch the palette view.
 - **`noir palette`** opens the fuzzy command palette directly (type to filter, `↑/↓` to choose, `Enter` to run).
 
 From the home menu, select **Dashboard** to launch the TUI, or **All commands** to open the fuzzy palette. The curated quick actions live inside the palette (`h`) rather than a separate home screen.
@@ -187,5 +189,5 @@ The host picks up the configured mode via the `noir-brainstorming` skill / the `
 
 - [installation.md](how-to/installation.md) — the full install reference (every path, troubleshooting, the channel model).
 - [CLI Reference](reference/cli.md) — every command (auto-generated from `noir --help`). The `.noir/config.yml` schema is in [config.md](reference/config.md).
-- [architecture/README.md](explanation/architecture.md) — how the 11 packages fit together (incl. the v1.x capability slices).
+- [architecture/README.md](explanation/architecture.md) — how the 11 packages fit together.
 - [roadmap/](roadmap/) — project direction, capability index, releases & version targets.

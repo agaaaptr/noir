@@ -4,15 +4,15 @@
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `host` | `unknown` | no | "claude" |  |
-| `name` | `unknown` | no | — |  |
-| `mode` | `unknown` | no | "full" |  |
-| `daemon` | `unknown` | no | {"idleTimeoutSec":900} |  |
-| `context` | `unknown` | no | {"embedder":{"kind":"local","dim":384},"roots":[],"budgetTokens":4096} |  |
-| `model` | `unknown` | no | {} |  |
-| `memory` | `unknown` | no | {"consolidation":{"enabled":false}} |  |
-| `rules` | `unknown` | no | {"enabled":true,"lengthBudgetKb":6} |  |
-| `prd` | `unknown` | no | {"mandatoryFor":["feature","epic"]} |  |
-| `workflow` | `unknown` | no | {"gate":{"verify":{"required":false,"retryBudget":2},"research":{"recommendFor":["feature","epic"],"requireSource":true}}} |  |
-| `integrations` | `unknown` | no | {} |  |
-| `update` | `unknown` | no | {"checkEnabled":true,"checkIntervalHours":24,"channel":"latest","minVersion":"1.6.0","display":"notice"} |  |
+| `host` | `enum` | no | "claude" |  |
+| `name` | `string` | no | — |  |
+| `mode` | `enum` | no | "full" |  |
+| `daemon` | `object` | no | {"idleTimeoutSec":900} |  |
+| `context` | `object` | no | {"embedder":{"kind":"local","dim":384},"roots":[],"budgetTokens":4096} |  |
+| `model` | `object` | no | {} |  |
+| `memory` | `object` | no | {"consolidation":{"enabled":false}} |  |
+| `rules` | `object` | no | {"enabled":true,"lengthBudgetKb":6} |  |
+| `prd` | `object` | no | {"mandatoryFor":["feature","epic"]} |  |
+| `workflow` | `object` | no | {"gate":{"verify":{"required":false,"retryBudget":2},"research":{"recommendFor":["feature","epic"],"requireSource":true}}} |  |
+| `integrations` | `record` | no | {} |  |
+| `update` | `object` | no | {"checkEnabled":true,"checkIntervalHours":24,"channel":"latest","minVersion":"1.6.0","display":"notice"} |  |

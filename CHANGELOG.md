@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.11.1 (2026-08-14) — TUI fix + polish
+
+### Fixed
+- **OOM crash** — two root causes: (1) `process.env.NODE_ENV` is now forced to `production` before the lazy TUI load, so react-reconciler's DEV build (which calls `performance.measure()` on every render, filling Node's 1M-entry performance buffer) is no longer selected; (2) `useInputBuffer`'s returned functions are now `useCallback`-stable, so the `seed`-in-a-`useEffect`-dep anti-pattern no longer causes an infinite re-render loop. Both previously OOM'd `noir tui` after a minute of typing or idle.
+- **`noir run` variadic prompt** — a multi-word prompt was parsed as empty ("a prompt is required") because commander delivers `[prompt...]` as a nested array; the `run` action now reads the joined positional args off the trailing `Command`.
+- **Conflict "apply to all" for skills** — the resolver now offers the "apply this choice to all remaining conflicts" prompt for the `skill` emit path (previously only `regenerate`), so a `noir sync` re-emitting N divergent skills prompts once instead of per-file.
+
+### Changed
+- **Palette redesign** — two-column layout (bold label + dim `/argv` hint), reverse-video active row, the full command description shown as a `↳` detail line on the active row (word-wrapped, never ellipsis-truncated), and blank spacers between sections for scannability.
+- **Snapshot polling** — added an in-flight guard (no concurrent `gatherStatusPayload` stacking on a slow daemon) and kept the last-good payload on a transient probe failure (no more flapping to "down").
+
+---
+
 ## 1.11.0 (2026-08-14) — v2 orchestrator TUI: single-surface consolidation + headless host-driving
 
 ### Added

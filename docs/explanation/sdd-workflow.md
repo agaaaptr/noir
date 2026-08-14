@@ -84,7 +84,7 @@ The `WorkflowEngine` class (`@noir-ai/workflow`) exposes:
 
 ## Artifact layout
 
-Naming follows the C3 generated-artifact standard ([`docs/reference/artifact-format.md`](../reference/artifact-format.md)): `<CODE>-<NNNN>-<taskId>-<slug>.md`.
+Naming follows the generated-artifact standard ([`docs/reference/artifact-format.md`](../reference/artifact-format.md)): `<CODE>-<NNNN>-<taskId>-<slug>.md`.
 
 ```
 .noir/

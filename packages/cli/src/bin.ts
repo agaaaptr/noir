@@ -594,7 +594,7 @@ export function createProgram(): Command {
       await status(toStatusOptions(actionGlobals(args)));
     });
 
-  const contextGrp = program.command('context').description('context engine (S6)');
+  const contextGrp = program.command('context').description('context engine');
   contextGrp
     .command('search')
     .description('hybrid search over the indexed context')
@@ -731,7 +731,7 @@ export function createProgram(): Command {
   });
 
   // `skills` group — list/sync the builtin pack in-process (S9, S5).
-  const skillsGrp = program.command('skills').description('builtin skills (S5)');
+  const skillsGrp = program.command('skills').description('builtin skills');
   skillsGrp
     .command('list')
     .description('list installed Noir skills')
@@ -746,13 +746,13 @@ export function createProgram(): Command {
     });
   skillsGrp
     .command('lint')
-    .description('structural quality gate over the shipped pack (C3)')
+    .description('structural quality gate over the shipped pack')
     .action(async (...args: unknown[]) => {
       await skillsLint(toCliOptions(actionGlobals(args)));
     });
   skillsGrp
     .command('registry')
-    .description('emit the runtime-derived skill registry (C3)')
+    .description('emit the runtime-derived skill registry')
     .action(async (...args: unknown[]) => {
       await skillsRegistry(toCliOptions(actionGlobals(args)));
     });
@@ -1122,7 +1122,7 @@ export function createProgram(): Command {
   // can point at their own binary (D2a). Scriptable under `--json`.
   program
     .command('run')
-    .description('drive the host CLI headless and render its stream-json (v2)')
+    .description('ask the host agent a question and print the answer')
     .argument('[prompt...]', 'prompt to send to the host')
     .addOption(new Option('--host <id>', 'host to drive (default claude)').choices(SUPPORTED_HOSTS))
     .option('--command <binary>', 'custom host binary (e.g. claude-work)')

@@ -47,6 +47,8 @@ export const c = {
   dim: (s: string): string => (useColor() ? FORCE.dim(s) : s),
   /** Bold — emphasis (table headers compose this with `info`). */
   bold: (s: string): string => (useColor() ? FORCE.bold(s) : s),
+  /** Reverse video (SGR 7) — inverted background for the active list row. */
+  inverse: (s: string): string => (useColor() ? FORCE.inverse(s) : s),
 };
 
 // @clack-style status symbols (the vocabulary Noir inherits via @clack/prompts

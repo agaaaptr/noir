@@ -226,10 +226,11 @@ function genConfigSchema() {
         const shape = typeof rawShape === 'function' ? rawShape() : (rawShape || {});
         const result = {};
         for (const [key, field] of Object.entries(shape)) {
-          // Zod v4 puts the schema on the field's own 'shape' too; the field may be
-          // wrapped (optional/nullable/default) — resolve to the inner schema.
-          const inner = field?.unwrap?.() || field;
-          const typeName = inner?._def?.typeName || field?._def?.typeName || 'unknown';
+          // Zod v4: a wrapped field (optional/nullable/default) keeps its real
+          // schema on _def.innerType; the type is a short string on _def.type
+          // (e.g. "enum", "object", "string", "boolean") — NOT the v3 typeName.
+          const inner = field?._def?.innerType || field?.unwrap?.() || field;
+          const typeName = inner?._def?.type || field?._def?.type || 'unknown';
           const dv = field?._def?.defaultValue;
           let defaultValue;
           if (typeof dv === 'function') defaultValue = JSON.stringify(dv());

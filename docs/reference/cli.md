@@ -35,9 +35,9 @@ Commands:
   doctor [options]                  environment + project health
   status                            project + daemon + workflow + store
                                     snapshot
-  context                           context engine (S6)
+  context                           context engine
   memory                            memory engine
-  skills                            builtin skills (S5)
+  skills                            builtin skills
   task                              workflow task control
   install|migrate [options] [spec]  install Noir via the native managed-Node
                                     path (or migrate from another install
@@ -52,8 +52,8 @@ Commands:
                                     daemon + /command dispatch)
   palette                           fuzzy command palette — run any noir
                                     command (Ink)
-  run [options] [prompt...]         drive the host CLI headless and render its
-                                    stream-json (v2)
+  run [options] [prompt...]         ask the host agent a question and print the
+                                    answer
 ```
 
 ## Global Flags

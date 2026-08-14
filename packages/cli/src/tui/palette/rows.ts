@@ -18,6 +18,10 @@ export const CORPORA: readonly Corpus[] = ['commands', 'output', 'help'];
 
 const MATCH_LIMIT = 20;
 
+/** How many rows the palette renders at once (shared with the App so the
+ *  active-row cursor is clamped to the SAME bound Enter dispatches against). */
+export const VISIBLE_ROWS = 10;
+
 /** A rendered palette row. `argv` is null for non-dispatchable rows. */
 export interface PaletteRow {
   key: string;
@@ -76,6 +80,21 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
 
   if (corpus === 'output') {
     const matches = computeMatches(outputLines, query);
+    if (query.length > 0 && matches.length === 0) {
+      // A typed filter with zero hits is an explicit empty state — never list
+      // the full output under a misleading "matches" header.
+      return [
+        {
+          key: 'empty',
+          primary: '(no matches)',
+          secondary: `nothing matches "${query}"`,
+          argv: null,
+          destructive: false,
+          indices: [],
+          group: null,
+        },
+      ];
+    }
     if (matches.length === 0) {
       if (outputLines.length === 0) {
         return [
@@ -90,6 +109,7 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
           },
         ];
       }
+      // Empty query: browse the full output.
       return outputLines.map((line, i) => ({
         key: `out:${i}`,
         primary: line,
@@ -97,7 +117,7 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
         argv: null,
         destructive: false,
         indices: [],
-        group: query.length === 0 ? null : 'matches',
+        group: null,
       }));
     }
     return matches.map((i) => ({
