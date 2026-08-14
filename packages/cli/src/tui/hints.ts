@@ -14,7 +14,7 @@ export const FOOTER_HINT =
 export const RUNNING_HINT = 'running… (Ctrl+C to force exit)';
 
 /** The palette/home list footer hint (navigate · run · close). */
-export const LIST_NAV_HINT = '↑/↓ navigate · Enter run · Esc close · Tab corpus';
+export const LIST_NAV_HINT = '↑/↓ navigate · Enter run · Esc close · Tab view';
 
 /** A single keybinding row for the `help` corpus. */
 export interface HelpEntry {
@@ -37,7 +37,7 @@ export const HELP_ENTRIES: readonly HelpEntry[] = [
   { keys: 'h', desc: 'palette — commands (quick actions + all commands)' },
   { keys: 'Ctrl+K', desc: 'palette — all commands (fuzzy search)' },
   { keys: 'Ctrl+F', desc: 'palette — find in the dispatched output' },
-  { keys: 'Tab', desc: 'switch the palette corpus' },
+  { keys: 'Tab', desc: 'switch between commands, output, and help' },
   { keys: 'y / n', desc: 'approve / decline a destructive command prompt' },
   { keys: 'Ctrl+C', desc: 'force exit' },
 ];

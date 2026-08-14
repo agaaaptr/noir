@@ -824,11 +824,9 @@ export function createProgram(): Command {
     });
   taskGrp
     .command('decompose')
-    .description(
-      'decompose a capability into buildable slices (template-only offline; see the spec)',
-    )
+    .description('decompose a capability into an implementation plan')
     .argument('<capability>', 'capability id')
-    .option('--out <path>', 'output path for the slice-plan JSON')
+    .option('--out <path>', 'output path for the plan JSON')
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();

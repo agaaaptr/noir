@@ -812,5 +812,5 @@ export async function taskDecompose(opts: TaskDecomposeOptions): Promise<void> {
   for (const s of plan.slices) {
     info(`${s.id}: ${s.title} (${s.type}) — rationale: ${s.rationale}`, opts);
   }
-  tip('each slice enters the existing clarify→spec→plan→execute→verify→document FSM cycle', opts);
+  tip('each piece enters the existing clarify→spec→plan→execute→verify→document workflow', opts);
 }

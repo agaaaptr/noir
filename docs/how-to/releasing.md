@@ -7,11 +7,11 @@
 > **Note:** All version numbers in this runbook (e.g. `1.4.0`, `1.5.0`) are **examples** — substitute your actual version. Current published versions (run `pnpm docs:generate` to refresh):
 >
 > <!-- noir:doc:status -->
-**Latest stable:** `1.11.0` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.11.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
-**Source version:** `1.11.1` (clean SemVer in `packages/*/package.json`)
+**Latest stable:** `1.11.1` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.11.1-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Source version:** `1.11.2` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-14T08:48:54.859Z*
+*Last auto-generated: 2026-08-14T09:19:40.411Z*
 <!-- /noir:doc:status -->
 
 ---

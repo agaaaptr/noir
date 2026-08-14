@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.11.1 (2026-08-14) — TUI fix + polish
+## 1.11.2 (2026-08-14) — TUI fix + polish
 
 ### Fixed
 - **OOM crash** — two root causes: (1) `process.env.NODE_ENV` is now forced to `production` before the lazy TUI load, so react-reconciler's DEV build (which calls `performance.measure()` on every render, filling Node's 1M-entry performance buffer) is no longer selected; (2) `useInputBuffer`'s returned functions are now `useCallback`-stable, so the `seed`-in-a-`useEffect`-dep anti-pattern no longer causes an infinite re-render loop. Both previously OOM'd `noir tui` after a minute of typing or idle.
