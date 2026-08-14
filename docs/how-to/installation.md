@@ -18,7 +18,7 @@
 **Current beta:** `1.11.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.11.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-14T06:04:58.700Z*
+*Last auto-generated: 2026-08-14T06:23:21.948Z*
 <!-- /noir:doc:status -->
 >
 > Pin a version with `NOIR_VERSION=<VERSION>` (POSIX) or `$env:NOIR_VERSION='<VERSION>'` (PowerShell).
@@ -75,8 +75,8 @@ curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.
 curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | NOIR_CHANNEL=beta bash
 
 # Pin an exact version (overrides the channel)
-curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | NOIR_VERSION=1.6.0 bash
-curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | NOIR_VERSION=1.6.0-beta.1 bash
+curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | NOIR_VERSION=<VERSION> bash
+curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | NOIR_VERSION=<VERSION>-beta.N bash
 ```
 
 **What it does, step by step:**
@@ -102,7 +102,7 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/aga
 $env:NOIR_CHANNEL='beta'; powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.ps1 | iex"
 
 # Pin a version
-$env:NOIR_VERSION='1.6.0'; powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.ps1 | iex"
+$env:NOIR_VERSION='<VERSION>'; powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.ps1 | iex"
 ```
 
 It provisions the runtime under `%USERPROFILE%\.noir\runtime\node\node.exe`, installs into `.noir\cli\`, writes the `.noir\bin\noir.cmd` shim (the only PATH contract), and writes `.noir\install.json`. If the managed runtime isn't provisioned yet, it falls back to a system `node`/`npm` ≥ 22 if present. There is **no need for Git Bash, MSYS2, or WSL** — run the PowerShell one-liner from a normal PowerShell prompt.
@@ -181,7 +181,7 @@ Once installed, update to the latest published version through the **active inst
 ```bash
 noir update                 # native → re-provisions; npm/pnpm/yarn/bun/Homebrew/Scoop → reinstall via that manager
 noir update --check         # one-shot: print the latest version vs. what you have, then exit
-noir update 1.9.0           # pin a specific version (positional)
+noir update <VERSION>       # pin a specific version (positional)
 ```
 
 The check is **network-bound and timeout-bounded** (2s abort on the async path). When the registry is unreachable, `noir update` prints "Could not reach the registry." and exits — it never silently treats a network failure as "up to date".
@@ -298,7 +298,7 @@ This is the right choice when you want to try Noir in a throwaway project withou
 
 ## Homebrew (macOS)
 
-A real Homebrew formula ships at [`packaging/homebrew/noir.rb`](../../packaging/homebrew/noir.rb), using the Node-for-Formula-Authors pattern: it depends on Homebrew's `node@22`, installs `@noir-ai/cli` into the formula's `libexec`, and symlinks `noir` into the Homebrew `bin`. The `url`/`sha256`/`version` are the real values from the published 1.8.0 npm tarball (immutable).
+A real Homebrew formula ships at [`packaging/homebrew/noir.rb`](../../packaging/homebrew/noir.rb), using the Node-for-Formula-Authors pattern: it depends on Homebrew's `node@22`, installs `@noir-ai/cli` into the formula's `libexec`, and symlinks `noir` into the Homebrew `bin`. The `url`/`sha256`/`version` are the real values from the published npm tarball (immutable).
 
 ```bash
 brew tap agaaaptr/noir

@@ -8,7 +8,7 @@ The `noir` command-line surface: a Commander command tree with global flags, str
 
 ## Shipped today
 
-- Commander command tree (`packages/cli/src/bin.ts`): `init`, `create [dir]`, `sync`, `mcp serve`, `daemon start|stop|status|restart`, `doctor`, `status`, `context search|index|status`, `memory recall|save|sessions|forget|consolidate`, `skills list|sync`, `task new|status|advance|next`, `install`/`migrate` (C1), `update` (C1), `handoff`/`wrap`, `release`, `run` (v2), `tui`, `palette`.
+- Commander command tree (`packages/cli/src/bin.ts`): `init`, `create [dir]`, `sync`, `mcp serve`, `daemon start|stop|status|restart`, `doctor`, `status`, `context search|index|status`, `memory recall|save|sessions|forget|consolidate`, `skills list|sync|lint|registry`, `task new|status|advance|next|decompose|verify|research|research-record|resume|block|abandon`, `install`/`migrate` (C1), `update` (C1), `handoff`/`wrap`, `release`, `run` (v2), `tui`, `palette`.
 - Global flags on every subcommand: `--json`, `--no-input`, `--quiet`, `--verbose`, `--cwd`, `--tui`/`--no-tui` (advisory), `--no-tips`, `-v`/`--version`.
 - S9 exit-code + stream discipline: data → stdout, diagnostics → stderr; color auto-stripped under `--json`/`--quiet`/CI/`NO_COLOR`/non-TTY.
 - Bare `noir` home menu (`@clack/prompts` select, `packages/cli/src/commands/home.ts`) when TTY; routes to `status`/`status --json` when non-interactive (probe-only — never auto-starts the daemon).

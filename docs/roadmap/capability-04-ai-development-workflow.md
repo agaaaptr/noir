@@ -15,7 +15,7 @@ Noir dogfoods Spec-Driven Development (SDD): the `@noir-ai/workflow` FSM engine 
 - **Cross-session resume (`resumeTask`):** blocked tasks are resumable across sessions; done/abandoned are terminal. Surfaced via `noir task resume` (briefing + `--last` + `<id>` + `--prompt`) and the `workflow_resume` MCP tool. — `packages/workflow/src/modes.ts`, `packages/cli/src/commands/task.ts`.
 - **Artifact writers** for intake/spec/prd/plan/task/decision/changelog/audit with a conflict-resolution seam (`replace`/`preserve`/`rename`/`duplicate`/`cancel` + non-interactive fallback). `writeDecisionStub`/`writeChangelogStub` are wired to the document phase (`noir task advance` → `done` writes both via the conflict seam; `--no-artifacts` escapes). — `packages/workflow/src/artifacts.ts`.
 - **MCP tools:** `workflow_status`, `workflow_start`, `workflow_advance`, `workflow_resume`, `workflow_block`, `workflow_abandon`, `checkpoint {save|restore}` — `packages/daemon/src/server.ts` (not `workflow-seam.ts`, which builds the engine + the `resolveGateConfig` config bridge).
-- **CLI:** `noir task new|status|advance|next|resume|block|abandon`, `noir handoff`, `noir status` (workflow snapshot + resume hint) — `packages/cli/src/commands/task.ts`.
+- **CLI:** `noir task new|status|advance|next|decompose|verify|research|research-record|resume|block|abandon`, `noir handoff`, `noir status` (workflow snapshot + resume hint) — `packages/cli/src/commands/task.ts`.
 - **26 builtin skills** + 1 integration including the SDD lifecycle playbooks `noir-brainstorming`/`spec`/`planning`/`executing-plans`/`verifying`/`wrap`/`checkpoint` — e.g. `packages/skills/builtin/noir-spec/SKILL.md`, `packages/skills/builtin/noir-planning/SKILL.md`.
 
 ## Gap / roadmap delta

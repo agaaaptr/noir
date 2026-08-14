@@ -5,7 +5,7 @@
 - **Where Noir is today:** [`releases.md`](releases.md) (shipped status, release history, version targets) + [`STATUS.md`](STATUS.md) (per-capability progress).
 - **What is deferred:** [`backlog.md`](backlog.md) (consolidated engineering debt).
 - **Origin / detailed rationale:** `docs/internal/specs/2026-07-23-noir-toolkit-design.md`.
-- **Decisions of record:** `docs/decisions/` (ADR `0001`…`0007`).
+- **Decisions of record:** `docs/decisions/` (ADR `0001`…`0008`).
 
 Every capability on this roadmap must go through the project lifecycle before implementation — **research → analysis → architecture proposal → specification → planning → slice → implementation → validation → documentation → checkpoint → release**. Implementation is never done directly from the roadmap alone; the spec derived from it is the reference.
 

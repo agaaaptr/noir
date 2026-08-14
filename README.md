@@ -26,7 +26,7 @@ The `noir` grouped home menu — section picker + per-section action lists with 
 **Current beta:** `1.11.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.11.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-14T06:04:57.787Z*
+*Last auto-generated: 2026-08-14T06:23:21.032Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
@@ -76,6 +76,7 @@ Full inventory → [Package Reference](docs/reference/packages.md).
 noir init [--host <id>]         scaffold .noir/ + skills + host wiring
 noir sync                       re-emit skills + host config
 noir create [dir]               AI-layer scaffold
+noir run [prompt]               drive the host CLI headless (v2 orchestrator)
 noir status                     probe-only health (daemon-down safe)
 noir doctor                     config / store / embedder / deps / install
 noir daemon start|stop|status|restart  persistent MCP server
@@ -85,6 +86,7 @@ noir task {new,next,status,advance}    SDD workflow
 noir skills {list,sync,lint,registry}   builtin skills + quality gate
 noir install|migrate [spec]     native install / migrate from another method
 noir update [spec]              self-update via the active install method
+noir release [version]          guided release orchestrator
 noir handoff                    pasteable host handoff artifact
 noir wrap                       session-end handoff alias
 noir palette                    fuzzy command palette — run any command (Ink)

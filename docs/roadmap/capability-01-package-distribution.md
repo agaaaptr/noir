@@ -8,8 +8,8 @@ How Noir is distributed (npm monorepo, native installer, package-manager taps, r
 
 ## Shipped today
 
-- Full 11-package `@noir-ai/*` monorepo published to npm at a unified version (1.6.0) with SLSA provenance (`publishConfig.provenance: true` + `npm publish --provenance` in CI) — `packages/cli/package.json`, `.github/workflows/release.yml`.
-- Two live dist-tags: `latest` = 1.6.0 (stable) and `beta` = 1.6.0-beta.1. Installable via npm/pnpm/yarn/bun and one-shot via npx/pnpm dlx/yarn dlx/bunx — `docs/how-to/installation.md`.
+- Full 11-package `@noir-ai/*` monorepo published to npm at a unified version (lockstep across all 11 packages) with SLSA provenance (`publishConfig.provenance: true` + `npm publish --provenance` in CI) — `packages/cli/package.json`, `.github/workflows/release.yml`.
+- Two live dist-tags: `latest` (stable) and `beta` (prerelease). Installable via npm/pnpm/yarn/bun and one-shot via npx/pnpm dlx/yarn dlx/bunx — `docs/how-to/installation.md`.
 - Version-string-based release channel detection in CI: tag `vX.Y.Z` → `latest`, `vX.Y.Z-beta.N` → `beta` — `.github/workflows/release.yml`.
 - Auto-generated release registry `.noir/releases/releases.json` + `releases.md`, with rebuild/validate/history tooling and a JSON schema (`schemas/release-registry.schema.json`, `scripts/release-registry.mjs`).
 - Auto-computed beta numbering (`scripts/compute-version.mjs`, `scripts/release-tag.mjs`) and unified version bumping (`scripts/bump-version.mjs`).
@@ -30,7 +30,7 @@ How Noir is distributed (npm monorepo, native installer, package-manager taps, r
   - `noir install`/`migrate` now calls `provisionManagedNode()` — the CLI can bootstrap the managed runtime without a shell script.
   - `downloadAndVerify()` / `extractNode()` / `detectNodeTarget()` / `nodeArchiveUrl()` — the full provisioning pipeline as callable exports.
   - CI smoke test (`.github/workflows/ci.yml` `node-provision-smoke` job) validates a real Node download on each push.
-- **Homebrew formula** — real `url`/`sha256`/`version` from the published 1.8.0 npm tarball (`packaging/homebrew/noir.rb`, Node-for-Formula-Authors pattern; stable-only; tap README at `packaging/homebrew/README.md`).
+- **Homebrew formula** — real `url`/`sha256`/`version` from the published npm tarball (`packaging/homebrew/noir.rb`, Node-for-Formula-Authors pattern; stable-only; tap README at `packaging/homebrew/README.md`).
 - **Scoop manifest** — `packaging/scoop/noir.json` (Windows; depends on `nodejs-lts`; shims `dist/bin.js` as `noir`; stable-only single-channel).
 
 ## Gap / roadmap delta

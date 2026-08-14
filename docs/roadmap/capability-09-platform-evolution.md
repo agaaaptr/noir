@@ -8,7 +8,7 @@ Noir's long-term strategic direction as an AI development platform. Several "vis
 
 ## Shipped today
 
-- **11 `@noir-ai/*` packages at 1.11.0, 26 builtin `noir-` skills (+ 1 integration), release registry** tracking versions from 1.5.0 through 1.10.1 (latest published) ([`AGENTS.md`](../../AGENTS.md), [`docs/roadmap/releases.md`](releases.md)).
+- **11 `@noir-ai/*` packages at 1.11.0, 26 builtin `noir-` skills (+ 1 integration), release registry** tracking versions from 1.5.0 through 1.11.0 (latest published) ([`AGENTS.md`](../../AGENTS.md), [`docs/roadmap/releases.md`](releases.md)).
 - **Bounded model layer** — single-shot `complete()`, provider-explicit, null-degradation, no tools/stream by construction (D5) ([`packages/model/src/complete.ts`](../../packages/model/src/complete.ts)).
 - **Hybrid retrieval** — BM25 ∪ kNN → RRF, local 384-dim embeddings by default, remote/Ollama embedders opt-in ([`packages/context/src/contextEngine.ts`](../../packages/context/src/contextEngine.ts)).
 - **Cross-session memory** — save/recall/search/sessions/forget/consolidate, provider-gated consolidation that refuses cleanly without a provider ([`packages/memory/src/engine.ts`](../../packages/memory/src/engine.ts)).

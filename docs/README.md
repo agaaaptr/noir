@@ -1,7 +1,7 @@
 # Documentation
 
 > Auto-generated documentation index.
-> Last updated: 2026-08-03T07:40:56.448Z
+> Last updated: 2026-08-14T06:23:22.945Z
 
 ## Getting Started
 
@@ -19,6 +19,7 @@
 
 ## Reference
 
+- [**Generated-artifact format & naming standard**](reference/artifact-format.md) — 
 - [**CLI Command Reference**](reference/cli.md) — 
 - [**Configuration Reference**](reference/config.md) — 
 - [**MCP Tools Reference**](reference/mcp-tools.md) — 
@@ -41,6 +42,10 @@
 - [**ADR-0002: Native skills only — plugin + marketplace removed**](decisions/0002-native-skills-only-plugin-removed.md) — 
 - [**ADR-0003: v1.x capabilities — keystone refactor + five extensions**](decisions/0003-v1x-capabilities.md) — 
 - [**ADR-0004: Multi-host adapters — the `resolveAdapter(host)` registry + AGENTS.md universal**](decisions/0004-multi-host-adapters.md) — 
+- [**ADR-0005: Native installer is managed-Node, not a single binary**](decisions/0005-native-installer-managed-node.md) — 
+- [**ADR-0006: C2 TUI command palette + daemon `--detach` (and the deferred v2 orchestrator TUI)**](decisions/0006-c2-tui-and-daemon-detach.md) — 
+- [**ADR-0007: C3 generated-artifact standard — type codes, frontmatter, per-type outlines**](decisions/0007-generated-artifact-standard.md) — 
+- [**ADR-0008: v2 orchestrator TUI — single-surface consolidation + `noir run` headless host-driving**](decisions/0008-v2-orchestrator-tui.md) — 
 - [**Architecture Decision Records**](decisions/README.md) — 
 
 ## Roadmap
@@ -66,6 +71,7 @@
 ## Internal (SDD History)
 
 - [**Noir — Discovery: Idempotent Scaffold, Conflict Resolution & AI-Native TUI**](internal/discovery/2026-07-26-scaffold-tui-discovery.md) — [ARCHIVED] 
+- [**Noir — Discovery: v2 Orchestrator TUI — surface consolidation, streaming, and host-driving (Archetype B)**](internal/discovery/2026-08-14-v2-orchestrator-tui-discovery.md) — [ARCHIVED] 
 - [**Noir — next-session handoff & playbook**](internal/handoff/2026-07-27-runtime-polish-handoff.md) — [ARCHIVED] 
 - [**Noir Walking Skeleton — Manual Acceptance**](internal/plans/2026-07-23-noir-walking-skeleton-acceptance.md) — [ARCHIVED] 
 - [**Noir Walking Skeleton Implementation Plan**](internal/plans/2026-07-23-noir-walking-skeleton.md) — [ARCHIVED] 
@@ -84,6 +90,12 @@
 - [**Noir v1.x — Overnight Execution Plan (S + X + debt → release 1.1.0-beta.1)**](internal/plans/2026-07-25-v1x-execution.md) — [ARCHIVED] 
 - [**Overnight Session — Runtime Polish, TUI, Idempotency, Handoff (2026-07-26)**](internal/plans/2026-07-26-overnight-runtime-polish.md) — [ARCHIVED] 
 - [**S10 + S11 remainder — execution plan (session 2)**](internal/plans/2026-07-26-s10-s11-execution.md) — [ARCHIVED] 
+- [**C1 Managed-Node Provisioning + Registry Accuracy — Implementation Plan**](internal/plans/2026-08-03-c1-managed-node-provisioning.md) — [ARCHIVED] 
+- [**C1 Native Installer + Migration + Self-Update — Implementation Plan**](internal/plans/2026-08-03-c1-native-installer.md) — [ARCHIVED] 
+- [**TUI Polish Implementation Plan**](internal/plans/2026-08-08-tui-polish.md) — [ARCHIVED] 
+- [**C3 Skills Enhancement — Implementation Plan**](internal/plans/2026-08-10-c3-skills-enhancement.md) — [ARCHIVED] 
+- [**C3 Generated Artifact Standard — implementation plan**](internal/plans/2026-08-13-c3-generated-artifact-standard.md) — [ARCHIVED] 
+- [**Plan — v2 Orchestrator TUI implementation**](internal/plans/2026-08-14-v2-orchestrator-tui.md) — [ARCHIVED] 
 - [**Noir — AI Toolkit Design Blueprint**](internal/specs/2026-07-23-noir-toolkit-design.md) — [ARCHIVED] 
 - [**Noir — Walking Skeleton Design (S0 → S2 → S3)**](internal/specs/2026-07-23-noir-walking-skeleton-design.md) — [ARCHIVED] 
 - [**Noir — S1 Stores Design (`@noir-ai/store`)**](internal/specs/2026-07-23-s1-stores-design.md) — [ARCHIVED] 
@@ -100,4 +112,17 @@
 - [**Noir v1.x Capabilities — Design Analysis**](internal/specs/2026-07-25-v1x-capabilities-design.md) — [ARCHIVED] 
 - [**Spec — File Conflict Resolution (SP-C)**](internal/specs/2026-07-26-conflict-resolution-design.md) — [ARCHIVED] 
 - [**Spec — Scaffold Idempotency & Root-Safety (SP-A)**](internal/specs/2026-07-26-scaffold-idempotency-design.md) — [ARCHIVED] 
+- [**C1 Managed-Node Provisioning + Registry Accuracy (spec)**](internal/specs/2026-08-03-c1-managed-node-provisioning-design.md) — [ARCHIVED] 
+- [**C1 Native Installer + Migration + Self-Update (spec)**](internal/specs/2026-08-03-c1-native-installer-design.md) — [ARCHIVED] 
+- [**Home Consolidation + `noir palette` + bidirectional bridge (spec)**](internal/specs/2026-08-06-home-consolidation-design.md) — [ARCHIVED] 
+- [**TUI Polish — Panel component, block cursor, clear screen, fixed-width palette (spec)**](internal/specs/2026-08-08-tui-polish-design.md) — [ARCHIVED] 
+- [**C3 — Built-in Skill System Enhancement (design spec)**](internal/specs/2026-08-10-c3-skills-enhancement-design.md) — [ARCHIVED] 
+- [**C4 Capability → Slice Decomposition + rollback_plan — a Spec-of-Specs roadmap pass (spec)**](internal/specs/2026-08-11-c4-decomposition-design.md) — [ARCHIVED] 
+- [**C4 Project Discovery Completion — CI detection, AI-tooling probe, onboarding confirm, create-noir (spec)**](internal/specs/2026-08-11-c4-project-discovery-design.md) — [ARCHIVED] 
+- [**C4 Release Phase + Tool — an optional lifecycle close-out and a guided `noir release` (spec)**](internal/specs/2026-08-11-c4-release-phase-design.md) — [ARCHIVED] 
+- [**C4 Research Soft-Grounding + Clarify Ambiguity — a grounding sub-step, not a 10th state (spec)**](internal/specs/2026-08-11-c4-research-grounding-design.md) — [ARCHIVED] 
+- [**C4 Surface Wiring — resume, taskClass/PRD gate, quick mode, blocked/abandon, config bridge (spec)**](internal/specs/2026-08-11-c4-surface-wiring-design.md) — [ARCHIVED] 
+- [**C4 Verify-Gate Automation + Recovery — evidence, blocking, and failure recovery (spec)**](internal/specs/2026-08-11-c4-verify-gate-recovery-design.md) — [ARCHIVED] 
+- [**C3 Generated Artifact Standard — file naming + frontmatter + per-type format (spec)**](internal/specs/2026-08-13-c3-generated-artifact-standard-design.md) — [ARCHIVED] 
+- [**Spec — v2 Orchestrator TUI: single-surface consolidation, streaming, and host-driving (Archetype B)**](internal/specs/2026-08-14-v2-orchestrator-tui-design.md) — [ARCHIVED] 
 

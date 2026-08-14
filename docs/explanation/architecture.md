@@ -73,7 +73,7 @@ The host-specific surface is concentrated in one place: the **adapter layer**. A
 
 **AGENTS.md is the universal baseline where a host uses it.** A shared `emitAgentsMd(ctx)` helper produces byte-identical `AGENTS.md` content for agents-md, Cursor, and OpenCode; it `@`-imports `.noir/NOIR.md` + `.noir/rules/RULES.md` (the 32-platform standard). Claude and Gemini use only their native `CLAUDE.md` or `GEMINI.md` context file to avoid duplicate imports. `claude` is the regression anchor: a bare `noir init` is unchanged.
 
-S10 ships 4 new adapters (`agents-md`, `gemini`, `cursor`, `opencode`); `qwen` and `agy` are deferred and are not accepted `--host` values. Adding a host is now an authoring concern, not an architecture decision: extend `HostId`, author an adapter, register it, and the schema + compiler + `--host` flag widen automatically. The locked decisions live in [ADR-0004](../decisions/0004-multi-host-adapters.md); design record [`superpowers/specs/2026-07-25-s10-multihost-design.md`](../internal/specs/2026-07-25-s10-multihost-design.md).
+S10 ships 4 new adapters (`agents-md`, `gemini`, `cursor`, `opencode`); `qwen` and `agy` are deferred and are not accepted `--host` values. Adding a host is now an authoring concern, not an architecture decision: extend `HostId`, author an adapter, register it, and the schema + compiler + `--host` flag widen automatically. The locked decisions live in [ADR-0004](../decisions/0004-multi-host-adapters.md); design record [`internal/specs/2026-07-25-s10-multihost-design.md`](../internal/specs/2026-07-25-s10-multihost-design.md).
 
 ## v1.x capabilities (added on the beta channel)
 

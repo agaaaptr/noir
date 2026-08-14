@@ -7,7 +7,7 @@ New to Noir? Read the [README](../README.md) first for the 30-second "what and w
 ## What you need
 
 - **No system Node prerequisite** if you use the native installer (recommended) — it provisions a managed Node 22.x runtime under `~/.noir/`. If you install via npm/pnpm/yarn/bun directly, **Node.js ≥ 22** is required (Node 22 is what CI uses). For the from-source dev install below you also need **pnpm 10** (`corepack enable && corepack prepare pnpm@10 --activate`).
-- **An agentic CLI host.** Noir targets **Claude Code by default**; Gemini, Cursor, OpenCode, and AGENTS.md are supported via `noir init --host <id>` (see [usage.md](reference/cli.md#multi-host)). This walkthrough uses Claude Code. Noir is the workflow/context/memory *layer* — it is not an agent runtime. **Bring your own agent.**
+- **An agentic CLI host.** Noir targets **Claude Code by default**; Gemini, Cursor, OpenCode, and AGENTS.md are supported via `noir init --host <id>` (see [CLI Reference](reference/cli.md)). This walkthrough uses Claude Code. Noir is the workflow/context/memory *layer* — it is not an agent runtime. **Bring your own agent.**
 - macOS, Linux, or Windows on x64 or arm64 (native deps ship prebuilt).
 
 ## Install
@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.11.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.11.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-14T06:04:58.207Z*
+*Last auto-generated: 2026-08-14T06:23:21.473Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -39,7 +39,7 @@ Two channels ship in parallel:
   curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | NOIR_CHANNEL=beta bash
   ```
 
-- **Pin a version** — `NOIR_VERSION=<VERSION>` (e.g. `1.6.0`) overrides the channel.
+- **Pin a version** — `NOIR_VERSION=<VERSION>` overrides the channel.
 
 The installer is idempotent (re-run = upgrade), prints a PATH hint if `noir` isn't on PATH, and verifies with `noir --version` at the end. To move an existing npm/Homebrew/Scoop install to the native path, run `noir migrate` (settings preserved). To update later, run `noir update`. The full reference — npm/pnpm/yarn/bun, one-shot `npx`, Homebrew, Scoop, troubleshooting, the **beta vs stable** channel model, and the trust/checksum/attestation story — lives in **[installation.md](how-to/installation.md)**.
 
@@ -60,7 +60,7 @@ noir init
 | Path | What it is |
 |---|---|
 | `.noir/project.id` | A UUID — the project's canonical `ProjectId` (Noir keys everything on this, never on a filesystem path). |
-| `.noir/config.yml` | Project config. Starts as `host: claude` + `mode: full`. See [configuration](reference/cli.md). |
+| `.noir/config.yml` | Project config. Starts as `host: claude` + `mode: full`. See [configuration](reference/config.md). |
 | `.noir/NOIR.md` | The canonical context file. The host merely `@import`s it. |
 | `.noir/rules/RULES.md` | The Noir-curated rules seed (Slice R); wired into the host context file via a managed `RULES_BLOCK`. |
 | `.noir/scaffold-version` | The scaffold-engine version stamp; `noir doctor` reports drift, `noir init --upgrade` runs migrations. |
@@ -186,6 +186,6 @@ The host picks up the configured mode via the `noir-brainstorming` skill / the `
 ## Where to go next
 
 - [installation.md](how-to/installation.md) — the full install reference (every path, troubleshooting, the channel model).
-- [usage.md](reference/cli.md) — the full reference: every command, the config schema, the `.noir/` + `~/.noir/` layout, and the privacy rules.
+- [CLI Reference](reference/cli.md) — every command (auto-generated from `noir --help`). The `.noir/config.yml` schema is in [config.md](reference/config.md).
 - [architecture/README.md](explanation/architecture.md) — how the 11 packages fit together (incl. the v1.x capability slices).
 - [roadmap/](roadmap/) — project direction, capability index, releases & version targets.

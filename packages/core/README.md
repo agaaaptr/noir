@@ -16,7 +16,7 @@ npm install @noir-ai/core
 > npm install -g @noir-ai/cli
 > ```
 
-This package is mainly consumed by the other `@noir-ai/*` packages. For programmatic usage, see the [root README](https://github.com/agaaaptr/noir#readme) and [`docs/usage.md`](https://github.com/agaaaptr/noir/blob/main/docs/usage.md).
+This package is mainly consumed by the other `@noir-ai/*` packages. For programmatic usage, see the [root README](https://github.com/agaaaptr/noir#readme) and [`docs/reference/cli.md`](https://github.com/agaaaptr/noir/blob/main/docs/reference/cli.md).
 
 ## License
 

@@ -787,6 +787,10 @@ function cmdGenerate() {
     console.log('  ⚠ docs/reference/mcp-tools.md skipped (run pnpm build first)');
   }
 
+  // Regenerate the docs/README.md index too (previously a separate `docs:index`
+  // command that drifted — fold it in so `docs:generate` keeps it fresh).
+  cmdIndex();
+
   console.log(`\nDone. ${updated} document(s) updated.`);
 }
 
