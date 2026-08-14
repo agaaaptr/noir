@@ -61,7 +61,9 @@ export async function runPalette(opts: CliOptions, dispatch: TuiDeps['dispatch']
   // Factor the shared deps build out of runTui into a helper to avoid
   // duplicating the projectId/commands/recents logic.
   const deps = await buildTuiDeps(opts, dispatch);
-  const instance = render(<App deps={deps} initialMode={{ kind: 'palette' }} />);
+  const instance = render(
+    <App deps={deps} initialMode={{ kind: 'palette', corpus: 'commands' }} />,
+  );
   await instance.waitUntilExit();
 }
 

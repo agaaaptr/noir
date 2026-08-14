@@ -1,9 +1,11 @@
-// Footer with the shortcut hints. Kept as a pure function of the help/running
-// state so the App can swap it without re-wiring keybindings.
+// Footer with the shortcut hints. Kept as a pure function of the running state
+// so the App can swap it without re-wiring keybindings. The hint copy lives in
+// `hints.ts` (single source of truth) — the bindings themselves live in App.tsx.
 
 import { Text } from 'ink';
 import type { ReactElement } from 'react';
 import { c } from '../theme.js';
+import { FOOTER_HINT, RUNNING_HINT } from './hints.js';
 
 interface FooterProps {
   /** When true, a dispatched command is in flight — show the running hint. */
@@ -11,14 +13,5 @@ interface FooterProps {
 }
 
 export function Footer({ running }: FooterProps): ReactElement {
-  if (running) {
-    return <Text>{c.dim('running… (Ctrl+C to force exit)')}</Text>;
-  }
-  return (
-    <Text>
-      {c.dim(
-        '? help · q/Esc quit · ↑/↓ scroll · Enter run · Ctrl+K palette · Ctrl+F find · Ctrl+C exit',
-      )}
-    </Text>
-  );
+  return <Text>{c.dim(running ? RUNNING_HINT : FOOTER_HINT)}</Text>;
 }

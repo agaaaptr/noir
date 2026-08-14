@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.11.0 (2026-08-14) — v2 orchestrator TUI: single-surface consolidation + headless host-driving
+
+### Added
+- **Single command surface (v2 TUI consolidation)** — the `home` quick-action menu (`h`), the static `?` help, and the `Ctrl+F` output search are collapsed into ONE corpus-aware command palette (`Ctrl+K`). The palette now has three corpora switched with `Tab`: `commands` (all leaf commands + curated quick-actions + recents), `output` (find-in-output), and `help` (keybindings). `h`/`?`/`Ctrl+F` open the same surface at the relevant corpus. The `Mode` union collapses to `dashboard | palette{corpus} | confirm`; keyboard routing is unified in the App's single `useInput` (the palette is now presentational). Shared hint copy lives in `tui/hints.ts` (one source for the footer + palette + help corpus).
+- **`noir run <prompt>`** — the v2 orchestrator (Archetype B): drive the host CLI headless and render its `stream-json` (`claude -p --output-format stream-json --verbose` by default). `--host <id>` selects the host; `--command <binary>` overrides the per-host binary so users with multiple profiles (`claude` vs `claude-work`) can point at their own. Reports token/cost from the `result` event (labeled "API-equivalent estimate, not billed") and persists a raw stream-json transcript to `.noir/transcripts/`. Scriptable under `--json`. See ADR-0008.
+- **Token/cost reducer** — `UsageReducer` (`packages/cli/src/orchestrator.ts`) accumulates usage with the `max per message.id` dedup rule (Claude emits one cumulative JSONL line per content block; summing over-counts ~2.5-3x). Pure + unit-tested.
+- **Update-available notice** — the bare-`noir` home menu now advertises a newer cached version with install-type-specific advice (`brew upgrade noir`, `scoop update noir`, `npm install -g @noir-ai/cli@latest`, or `noir update` for native). Semver downgrade-guarded; reads the cached latest (the async startup check refreshes it).
+
+### Changed
+- **Unified recents** — shell recall (`↑`/`↓` on `/`) and the palette recents now share ONE persisted source (`tui-history.json`); `useInputBuffer` gained `seed()` and move-to-front dedup, so a command run via the palette appears in shell recall and vice-versa.
+- **Destructive confirm covers all paths** — a destructive typed `/command` (e.g. `/sync`) now routes through the same `y/N` confirm gate as palette selections (previously the typed path bypassed it).
+- Removed dead `HomeSection.key` (legacy `selectKey` digit) and the stale `['context','forget']` destructive prefix.
+
+### Fixed
+- `noir doctor` install row already surfaced "update available"; the home menu now does too (see Added).
+
 ## 1.10.1 (2026-08-13) — C3 generated-artifact standard
 
 ### Added

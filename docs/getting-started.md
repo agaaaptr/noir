@@ -28,9 +28,9 @@ Two channels ship in parallel:
 <!-- noir:doc:status -->
 **Latest stable:** `1.10.1` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
 **Current beta:** `1.10.1-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
-**Source version:** `1.10.1` (clean SemVer in `packages/*/package.json`)
+**Source version:** `1.11.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-13T09:23:45.236Z*
+*Last auto-generated: 2026-08-14T04:30:33.271Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -162,13 +162,13 @@ That's the whole loop. You don't drive the gates by hand — you talk to the hos
 
 ## Browsing commands (home + palette)
 
-You don't need to memorize every subcommand. Two surfaces make discovery effortless:
+You don't need to memorize every subcommand:
 
 - **Bare `noir`** (no arguments) opens a **grouped home menu** — a section picker (Status &amp; context / Memory / Workflow / Setup &amp; maintenance / Dashboard) then per-section action lists with hints and destructive-action confirmation. Use `↑/↓` and `1`–`6` to navigate; `Esc` steps back; `→`/`←` moves between sections.
-- **`noir palette`** opens a **fuzzy command palette** (Ink) — type to filter any command, `↑/↓` to choose, `Enter` to run. `Esc` closes.
-- **`noir tui`** opens the full-screen **Ink dashboard** (live status, `/command` input, `Ctrl+K` palette, `Ctrl+F` find-in-output, `h` for the curated quick-actions home screen, `?` cheatsheet).
+- **`noir tui`** opens the **Ink dashboard** — live status, `/command` input, and one command surface (the palette): `Ctrl+K` all commands, `h` quick actions, `?` keybindings, `Ctrl+F` find-in-output, `Tab` to switch the palette corpus.
+- **`noir palette`** opens the fuzzy command palette directly (type to filter, `↑/↓` to choose, `Enter` to run).
 
-From the home menu, select **Dashboard (full-screen)** to launch the TUI, or **All commands** to open the fuzzy palette. The two surfaces are cross-linked — the bridge works both ways.
+From the home menu, select **Dashboard** to launch the TUI, or **All commands** to open the fuzzy palette. The curated quick actions live inside the palette (`h`) rather than a separate home screen.
 
 ## Switching discipline: full vs quick
 

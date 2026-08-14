@@ -4,7 +4,7 @@ current_phase: shipped
 
 active_capability: 4
 
-active_slice: null  # C4 fully shipped 2026-08-11; next: v2 orchestrator TUI (research, ADR-0006)
+active_slice: null  # v2 orchestrator TUI shipped 2026-08-14 (1.11.0, ADR-0008)
 
 roadmap:
   - id: C1
@@ -17,7 +17,7 @@ roadmap:
     title: CLI Runtime & User Experience
     status: completed
     priority: high
-    note: "C2 shipped as 1.8.0 (published 2026-08-05, ADR-0006): Ctrl+K command palette + richer widgets (input-history recall, persistent recent commands, destructive confirm, output search), daemon start --detach real backgrounding, context index --force full reindex, init/create/sync --dry-run/--preview, in-process read fallback. v2 orchestrator TUI (Archetype B) deferred to v2."
+    note: "C2 shipped as 1.8.0 (published 2026-08-05, ADR-0006): Ctrl+K command palette + richer widgets (input-history recall, persistent recent commands, destructive confirm, output search), daemon start --detach real backgrounding, context index --force full reindex, init/create/sync --dry-run/--preview, in-process read fallback. v2 orchestrator TUI (Archetype B) shipped as 1.11.0 (2026-08-14, ADR-0008): single-surface palette consolidation + noir run headless host-driving."
 
   - id: C3
     title: Built-in Skill System

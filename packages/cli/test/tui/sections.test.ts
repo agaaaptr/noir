@@ -15,12 +15,11 @@ import {
 } from '../../src/tui/commands/sections.js';
 
 describe('HOME_SECTIONS — curated quick-action coverage', () => {
-  it('defines 5 sections with stable ids + keys + items', () => {
+  it('defines 5 sections with stable ids + labels + items', () => {
     expect(HOME_SECTIONS.length).toBe(5);
     const ids = HOME_SECTIONS.map((s) => s.id);
     expect(ids).toEqual(['status', 'memory', 'workflow', 'setup', 'dashboard']);
     for (const s of HOME_SECTIONS) {
-      expect(s.key).toBeTruthy();
       expect(s.label).toBeTruthy();
       expect(s.items.length).toBeGreaterThan(0);
     }

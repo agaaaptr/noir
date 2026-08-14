@@ -21,7 +21,7 @@ export interface InputBuffer {
   readonly buffer: string;
   /** Apply an updater to the current buffer (React `useState` setter shape). */
   setBuffer: (updater: (prev: string) => string) => void;
-  /** Record a submitted command into history (newest first, adjacent dedup). */
+  /** Record a submitted command into history (newest first, move-to-front dedup). */
   pushHistory: (text: string) => void;
   /**
    * Walk the command history from the recall cursor. `up` returns the next
@@ -32,6 +32,12 @@ export interface InputBuffer {
   recall: (dir: 'up' | 'down') => string | null;
   /** Empty the buffer and reset the recall cursor to "not recalling". */
   clear: () => void;
+  /**
+   * Replace the session history with the persisted recents (the source of
+   * truth). Called once after `loadRecent` resolves so shell recall and the
+   * palette recents read the same list instead of diverging.
+   */
+  seed: (entries: readonly string[]) => void;
 }
 
 /**
@@ -50,10 +56,10 @@ export function useInputBuffer(): InputBuffer {
 
   function pushHistory(text: string): void {
     if (text.length === 0) return;
-    const history = historyRef.current;
-    // Adjacent dedup: re-running the same command twice in a row is ONE entry,
-    // not two — the newest is already at the head so only that slot is checked.
-    if (history.length > 0 && history[0] === text) return;
+    // Move-to-front dedup (matches `recordRecent` in palette/history.ts): an
+    // exact re-run moves the entry to the head instead of duplicating, so the
+    // shell-recall overlay and the persisted recents apply one dedup rule.
+    const history = historyRef.current.filter((e) => e !== text);
     historyRef.current = [text, ...history];
   }
 
@@ -78,5 +84,10 @@ export function useInputBuffer(): InputBuffer {
     cursorRef.current = -1;
   }
 
-  return { buffer, setBuffer, pushHistory, recall, clear };
+  function seed(entries: readonly string[]): void {
+    historyRef.current = [...entries];
+    cursorRef.current = -1;
+  }
+
+  return { buffer, setBuffer, pushHistory, recall, clear, seed };
 }

@@ -29,13 +29,20 @@ const { clackMock, CANCEL } = vi.hoisted(() => {
 vi.mock('@clack/prompts', () => clackMock);
 
 // loadProjectInfo is mocked so tryProject() is deterministic (no test-cwd
-// coupling to whether the real repo is initialized).
-vi.mock('@noir-ai/core', () => ({
-  loadProjectInfo: vi.fn(() => {
-    throw new Error('not initialized');
-  }),
-  readInstallRecord: vi.fn(() => null),
-}));
+// coupling to whether the real repo is initialized). readUpdateCache is mocked
+// to an empty cache so the update-available notice is deterministically absent
+// (no cached latest → no notice). Everything else spreads the real core.
+vi.mock('@noir-ai/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@noir-ai/core')>();
+  return {
+    ...actual,
+    loadProjectInfo: vi.fn(() => {
+      throw new Error('not initialized');
+    }),
+    readInstallRecord: vi.fn(() => null),
+    readUpdateCache: vi.fn(() => ({ lastCheckAt: null, latestVersion: null, channel: null })),
+  };
+});
 
 import { type HomeDeps, home, shouldShowMigrationBanner } from '../src/commands/home.js';
 import { EXIT } from '../src/output.js';

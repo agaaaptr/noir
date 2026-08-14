@@ -1,18 +1,19 @@
 // Dashboard root component. Owns the interactive state (input buffer, scroll
-// offset, dispatched output, snapshot, help overlay, the active screen) and the
-// single keybinding dispatcher. The snapshot is fetched via
-// {@link TuiDeps.fetchStatus} on a short interval (paused while a
-// `/<command>` is dispatching, so a StatusBar refresh can never race the stream
-// capture). Dispatch goes through the EXISTING {@link TuiDeps.dispatch} seam —
-// the same `home(opts, deps).dispatch` shape — so command routing is NOT
-// reimplemented here.
+// offset, dispatched output, snapshot, palette query/active, the active screen)
+// and the SINGLE keybinding dispatcher (v2 — the palette, home, help, and search
+// surfaces all collapsed into one corpus-aware palette, so keyboard routing
+// lives here alone). The snapshot is fetched via {@link TuiDeps.fetchStatus} on
+// a short interval (paused while a `/<command>` is dispatching, so a StatusBar
+// refresh can never race the stream capture). Dispatch goes through the EXISTING
+// {@link TuiDeps.dispatch} seam — the same `home(opts, deps).dispatch` shape —
+// so command routing is NOT reimplemented here.
 //
-// Screens (the {@link Mode} union): `dashboard` (default), `palette` (B2 — the
-// fuzzy command palette opened by Ctrl+K), `confirm` (C1 — the `y/N` gate
-// before a destructive palette dispatch), and `search` (C2 — output-pane find
-// opened by Ctrl+F, n/N/Enter advance the active match). Palette selections
-// route through {@link handlePaletteSelect}, so destructive commands always
-// pause at the confirm overlay before dispatch.
+// Screens (the {@link Mode} union): `dashboard` (default), `palette` (the single
+// command surface — corpus `commands` | `output` | `help`, opened by Ctrl+K /
+// Ctrl+F / h / ? and cycled with Tab), and `confirm` (the `y/N` gate before a
+// destructive dispatch — now covering EVERY dispatch path, typed /command
+// included). Every selection funnels through {@link handleRun}, so destructive
+// commands always pause at the confirm overlay.
 
 import { Box, type Key, Text, useApp, useInput } from 'ink';
 import { type ReactElement, useEffect, useState } from 'react';
@@ -20,27 +21,20 @@ import type { StatusPayload } from '../commands/status.js';
 import { c, divider } from '../theme.js';
 import { CommandInput } from './CommandInput.js';
 import { captureProcessOutput } from './capture.js';
-import { type HomeAction, type HomeSection, resolveSections } from './commands/sections.js';
+import { isDestructive } from './commands/registry.js';
+import { type HomeSection, resolveSections } from './commands/sections.js';
 import { Footer } from './Footer.js';
 import { formatStatusPayload } from './format.js';
 import { Header } from './Header.js';
-import { HomeMenu } from './HomeMenu.js';
 import { useInputBuffer } from './hooks/useInputBuffer.js';
 import { OutputPane } from './OutputPane.js';
 import { ConfirmOverlay } from './overlays/ConfirmOverlay.js';
-import { computeMatches } from './overlays/SearchMode.js';
 import { Panel } from './Panel.js';
 import { type FuzzyMatcher, handRolledMatcher } from './palette/matcher.js';
 import { Palette } from './palette/Palette.js';
+import { buildPaletteRows, CORPORA, type Corpus } from './palette/rows.js';
 import type { PaletteCommand } from './palette/types.js';
 import { StatusBar } from './StatusBar.js';
-
-/**
- * Default recent-commands loader: no on-disk access at the App layer (the App is
- * project-agnostic). The live entry (index.tsx) injects `deps.loadRecent` wired
- * to {@link loadRecent}(projectId); tests inject a stub. When neither supplies
- * one, recents stay empty — the palette renders the full command list only.
- */
 
 /** Injected dependencies (mirrors the `home(opts, deps)` seam). */
 export interface TuiDeps {
@@ -86,8 +80,7 @@ export interface AppProps {
   refreshMs?: number;
   /**
    * The mode the App starts in. Defaults to the dashboard. `noir palette`
-   * mounts the app palette-first via `{ kind: 'palette' }` (S3); tests can
-   * start in any mode.
+   * mounts the app palette-first via `{ kind: 'palette', corpus: 'commands' }`.
    */
   initialMode?: Mode;
 }
@@ -96,24 +89,14 @@ export interface AppProps {
  * The dashboard's discriminated screen union. Exactly one screen is active at a
  * time; the App keys its render + keybinding handler off `mode.kind`.
  * - `dashboard` — the default screen: live snapshot, command input, output pane.
- * - `palette` — the command palette overlay (added by B2).
- * - `search` — a full-dashboard search with a live query + result indices (C2).
- * - `confirm` — an in-TUI confirmation prompt for a destructive dispatch (C1).
- *
- * The `search` payload IS the {@link SearchState} — the query + the output-line
- * indices that match + the active-match cursor. It carries no per-mode state of
- * its own beyond that; the search input reads `mode.query`, and `mode.active`
- * is never `-1` once a query has at least one match (see
- * {@link handleSearchInput}). `palette` carries no payload (the registry is
- * fixed for the session); `confirm` carries the argv it is asking the user to
- * approve.
+ * - `palette` — the single command surface, with a `corpus` selecting what the
+ *   query filters (commands / output / help).
+ * - `confirm` — an in-TUI confirmation prompt for a destructive dispatch.
  */
 export type Mode =
   | { kind: 'dashboard' }
-  | { kind: 'palette' }
-  | { kind: 'search'; query: string; matches: number[]; active: number }
-  | { kind: 'confirm'; argv: string[] }
-  | { kind: 'home' };
+  | { kind: 'palette'; corpus: Corpus }
+  | { kind: 'confirm'; argv: string[] };
 
 interface DispatchedOutput {
   title: string;
@@ -127,50 +110,43 @@ export function App({
   initialMode = { kind: 'dashboard' },
 }: AppProps): ReactElement {
   const { exit } = useApp();
-  // Input history + recall: Up/Down on an EMPTY `/`-input walks the session's
-  // typed commands (shell-like). When the input is non-empty (or it's bare
-  // text), Up/Down scroll the output pane instead — so recall never hijacks
-  // normal scrolling.
-  const { buffer, setBuffer, pushHistory, recall, clear } = useInputBuffer();
-  // The active screen. B1 defaults to the dashboard; B2/C1 switch into palette /
-  // confirm from their own entry keys.
+  const { buffer, setBuffer, pushHistory, recall, clear, seed } = useInputBuffer();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [payload, setPayload] = useState<StatusPayload | null>(initialPayload);
   const [loading, setLoading] = useState(initialPayload === null);
   const [output, setOutput] = useState<DispatchedOutput | null>(null);
-  // C2 — the output lines the search screen searches. Captured from the CURRENT
-  // dispatched output when search opens, so a new dispatch landing mid-search
+  // The output lines the `output` corpus searches. Captured from the CURRENT
+  // dispatched output when the corpus opens, so a new dispatch landing mid-search
   // cannot change the corpus mid-filter.
   const [searchLines, setSearchLines] = useState<readonly string[]>([]);
   const [scrollOffset, setScrollOffset] = useState(0);
-  const [help, setHelp] = useState(false);
   const [running, setRunning] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   // The argv of a dispatch the user just submitted. An effect watches this so
-  // the dispatch runs AFTER React flushes the "running…" frame — guaranteeing
-  // the stream swap happens when Ink is idle (no mid-dispatch rerender).
+  // the dispatch runs AFTER React flushes the "running…" frame.
   const [pending, setPending] = useState<string[] | null>(null);
-  // The persisted recent-commands list for the palette (C3), loaded once on
-  // mount. Empty until loaded; the palette renders the full list until then.
+  // The persisted recent-commands list for the palette, loaded once on mount.
   const [recent, setRecent] = useState<readonly PaletteCommand[]>([]);
-  // The curated home sections for the TUI home Mode (S4), resolved against the
-  // live registry once. `deps.commands` is the same palette source the menu +
-  // palette use; when absent (tests) the section module falls back to a fresh
-  // registry.
+  // The curated home sections, resolved against the live registry once.
   const [homeSections, setHomeSections] = useState<readonly HomeSection[]>([]);
+  // v2 — the single palette's query + active row (owned here so the App's one
+  // `useInput` routes palette keys and can resolve the active row on Enter).
+  const [paletteQuery, setPaletteQuery] = useState('');
+  const [paletteActive, setPaletteActive] = useState(0);
 
   // ----- load the palette's recent commands once on mount ------------------
-  // `deps.loadRecent` (when provided) supplies fully-hydrated PaletteCommands
-  // for THIS project (projectId-keyed on disk). When absent (tests that don't
-  // care about recents), recents stay empty and the palette renders the full
-  // command list only.
   useEffect(() => {
     if (!deps.loadRecent) return;
     const loader = deps.loadRecent;
     let cancelled = false;
     void loader()
       .then((entries) => {
-        if (!cancelled) setRecent(entries);
+        if (!cancelled) {
+          setRecent(entries);
+          // Seed the shell-recall overlay from the SAME persisted recents the
+          // palette shows, so ↑/↓ recall and the palette recents never diverge.
+          seed(entries.map((c) => `/${c.argv.join(' ')}`));
+        }
       })
       .catch(() => {
         // Recents are a nice-to-have — a read failure leaves the full list.
@@ -178,11 +154,9 @@ export function App({
     return () => {
       cancelled = true;
     };
-  }, [deps.loadRecent]);
+  }, [deps.loadRecent, seed]);
 
-  // ----- resolve the curated home sections once (S4) -----------------------
-  // Resolved against the live registry (deps.commands) so the TUI home cannot
-  // drift from the commander tree — same no-drift contract as the clack menu.
+  // ----- resolve the curated home sections once ---------------------------
   useEffect(() => {
     let cancelled = false;
     void resolveSections(deps.commands ?? []).then((sections) => {
@@ -195,7 +169,7 @@ export function App({
 
   // ----- snapshot refresh: paused while a dispatch is in flight ----------
   useEffect(() => {
-    if (running) return; // pause refreshes during dispatch
+    if (running) return;
     let cancelled = false;
     setLoading(true);
     void deps
@@ -252,36 +226,64 @@ export function App({
     };
   }, [pending, deps]);
 
-  // ----- shared dispatch helper (typed /command + palette selections) ------
-  // Sets pending (→ effect) + running (→ frame + pause refresh) so Ink paints
-  // the "running…" frame BEFORE the dispatch's stream swap starts. Same shape
-  // the typed `/command` submit uses.
+  // ----- shared dispatch helper --------------------------------------------
   function dispatchCmd(argv: readonly string[]): void {
     setOutput(null);
     setRunning(true);
     setPending([...argv]);
   }
 
-  // ----- dashboard-mode keybinding handler -------------------------------
-  // Every existing dashboard keybinding, moved verbatim out of the old single
-  // `useInput` closure into a handler that fires when `mode.kind === 'dashboard'`.
-  // Behavior-preserving: q / ? / Esc progressive-back / backspace / arrows /
-  // Enter submit / ctrl-swallow / single + multi-char text are all unchanged.
-  function handleDashboardInput(input: string, key: Key): void {
-    if (running) return; // swallow keystrokes while a command is dispatching
-    setNotice(null); // any keystroke clears the transient notice
-
-    if (help) {
-      if (input === '?' || key.escape || input === 'q') setHelp(false);
+  // ----- unified run seam: every selection (palette / home / confirm) ------
+  function handleRun(argv: readonly string[], destructive: boolean): void {
+    if (destructive) {
+      setMode({ kind: 'confirm', argv: [...argv] });
       return;
     }
+    dispatchCmd([...argv]);
+    void recordRuns([...argv]);
+    pushHistory(`/${argv.join(' ')}`);
+    setMode({ kind: 'dashboard' });
+  }
+
+  function recordRuns(argv: readonly string[]): void {
+    const recorder = deps.record;
+    if (recorder) void recorder(argv);
+  }
+
+  // ----- palette open / cycle helpers --------------------------------------
+  function openPalette(corpus: Corpus): void {
+    setPaletteQuery('');
+    setPaletteActive(0);
+    setMode({ kind: 'palette', corpus });
+    setNotice(null);
+  }
+
+  function openOutputSearch(): void {
+    if (output === null) return;
+    setSearchLines(output.lines);
+    openPalette('output');
+  }
+
+  function nextCorpus(current: Corpus): Corpus {
+    const idx = CORPORA.indexOf(current);
+    const candidates = [...CORPORA.slice(idx + 1), ...CORPORA.slice(0, idx + 1)];
+    for (const corpus of candidates) {
+      if (corpus === 'output' && output === null) continue; // no output to search
+      return corpus;
+    }
+    return 'commands';
+  }
+
+  // ----- dashboard-mode keybinding handler -------------------------------
+  function handleDashboardInput(input: string, key: Key): void {
+    if (running) return;
+    setNotice(null);
 
     if (key.return) {
       submit();
       return;
     }
     if (key.escape) {
-      // Progressive back: clear buffer → dismiss dispatched output → quit.
       if (buffer.length > 0) clear();
       else if (output !== null) setOutput(null);
       else exit();
@@ -292,8 +294,6 @@ export function App({
       return;
     }
     if (key.upArrow) {
-      // Recall history ONLY when the input holds a `/`-command that is empty
-      // past the slash — otherwise Up scrolls the output pane.
       if (buffer === '/') {
         const entry = recall('up');
         if (entry !== null) {
@@ -312,26 +312,20 @@ export function App({
           return;
         }
       }
-      setScrollOffset((o) => o + 1); // OutputPane clamps to content height
+      setScrollOffset((o) => o + 1);
       return;
     }
     if (key.ctrl) {
-      // Ctrl+K opens the palette (before the generic ctrl-swallow).
       if (input === 'k') {
-        openPalette();
+        openPalette('commands');
         return;
       }
-      // Ctrl+F opens output search (C2) — only when there is dispatched output
-      // to search. The '/' dispatch prefix makes '/' unusable as a search key,
-      // so Ctrl+F is the entry (documented in SearchMode.ts).
       if (input === 'f' && output !== null) {
-        openSearch();
+        openOutputSearch();
         return;
       }
-      return; // ignore other Ctrl-combos (Ctrl+C is handled by Ink)
+      return;
     }
-    // Single-char input (the normal per-keystroke case): check the buffer-empty
-    // global keys (q quits, ? toggles help) BEFORE treating it as text.
     if (input.length === 1) {
       if (buffer.length === 0) {
         if (input === 'q') {
@@ -339,183 +333,98 @@ export function App({
           return;
         }
         if (input === '?') {
-          setHelp(true);
+          openPalette('help');
           return;
         }
-        // h on an empty buffer opens the curated home menu (home-consolidation
-        // S4) — the bridge back to the menu's quick actions.
         if (input === 'h') {
-          setMode({ kind: 'home' });
+          openPalette('commands');
           return;
         }
       }
       setBuffer((b) => b + input);
       return;
     }
-    // Multi-char input (a pasted string, or a batched test write): append it
-    // verbatim as text. The q/? globals do NOT fire for batched input — a paste
-    // that happens to start with 'q' must not quit the dashboard.
     if (input.length > 1) {
       setBuffer((b) => b + input);
     }
   }
 
-  // ----- dashboard-mode keybinding additions (B2 / C2) ---------------------
-  // Ctrl+K opens the palette from the dashboard (handled above, before the
-  // generic ctrl-swallow). Ctrl+F opens output search (handled above, gated on
-  // dispatched output being present).
-  function openPalette(): void {
-    setMode({ kind: 'palette' });
-    setNotice(null);
-  }
-
-  // C2 — open output search over the CURRENT dispatched output. `lines` is
-  // captured eagerly so the search is stable against a dispatch landing mid-
-  // search; the fresh empty search state recomputes matches on the first key.
-  function openSearch(): void {
-    if (output === null) return;
-    setSearchLines(output.lines);
-    setMode({ kind: 'search', query: '', matches: [], active: -1 });
-    setNotice(null);
-  }
-
-  // ----- palette / confirm selection handlers ------------------------------
-  // The single decision point for a palette-selected command. Destructive
-  // commands pause at the confirm overlay; everything else dispatches through
-  // the same deps.dispatch seam + recency recording the typed /command uses.
-  function handlePaletteSelect(cmd: PaletteCommand): void {
-    if (cmd.destructive) {
-      setMode({ kind: 'confirm', argv: [...cmd.argv] });
-      return;
-    }
-    dispatchCmd([...cmd.argv]);
-    void recordRuns([...cmd.argv]);
-    setMode({ kind: 'dashboard' });
-  }
-
-  // Home-consolidation (S4): a TUI home quick-action selected. Destructive
-  // actions pause at the same confirm overlay the palette uses; everything else
-  // dispatches through the shared dispatchCmd seam + recency recording. Returns
-  // to the dashboard after dispatch.
-  function handleHomeSelect(action: HomeAction): void {
-    const argv = action.dispatch ?? [action.id];
-    if (action.destructive) {
-      setMode({ kind: 'confirm', argv: [...argv] });
-      return;
-    }
-    dispatchCmd([...argv]);
-    void recordRuns([...argv]);
-    setMode({ kind: 'dashboard' });
-  }
-
-  function handleConfirmApprove(): void {
-    if (mode.kind !== 'confirm') return;
-    dispatchCmd([...mode.argv]);
-    void recordRuns([...mode.argv]);
-    setMode({ kind: 'dashboard' });
-  }
-
-  function handleConfirmDecline(): void {
-    // Back to the palette (the destructive command was not dispatched).
-    setMode({ kind: 'palette' });
-  }
-
-  // Record a palette-dispatched command into the persisted recents (C3).
-  function recordRuns(argv: readonly string[]): void {
-    const recorder = deps.record;
-    if (recorder) void recorder(argv);
-  }
-
-  // ----- confirm-mode keybinding handler ----------------------------------
-  // y approves (dispatch + record + back to dashboard); n / Esc decline (back
-  // to the palette, nothing dispatched).
-  function handleConfirmInput(input: string, key: Key): void {
-    if (key.escape || input === 'n' || input === 'N') {
-      handleConfirmDecline();
-      return;
-    }
-    if (input === 'y' || input === 'Y') {
-      handleConfirmApprove();
-      return;
-    }
-  }
-
-  // ----- search-mode keybinding handler (C2) -------------------------------
-  // The search screen routes its OWN keys here (the App's single useInput):
-  // typing appends to the query and recomputes the matches against the
-  // captured output lines; n / Enter advance the active match (wrapping); N
-  // steps back (wrapping); backspace edits the query; Esc returns to the
-  // dashboard. All navigation recomputes the active index from the match list,
-  // so the active line can never point at a non-matching line.
-  function handleSearchInput(input: string, key: Key): void {
-    if (mode.kind !== 'search') return;
+  // ----- palette-mode keybinding handler (single router) -------------------
+  function handlePaletteInput(input: string, key: Key): void {
+    if (mode.kind !== 'palette') return;
     if (key.escape) {
       setMode({ kind: 'dashboard' });
       return;
     }
-    if (key.backspace || key.delete) {
-      const nextQuery = mode.query.slice(0, -1);
-      setMode(searchFor(nextQuery));
+    if (key.tab) {
+      setMode({ kind: 'palette', corpus: nextCorpus(mode.corpus) });
+      setPaletteQuery('');
+      setPaletteActive(0);
       return;
     }
-    if (key.ctrl) return; // swallow other Ctrl-combos (Ctrl+C is handled by Ink)
+    if (mode.corpus === 'help') {
+      if (key.upArrow) setPaletteActive((a) => Math.max(0, a - 1));
+      else if (key.downArrow) setPaletteActive((a) => a + 1);
+      return; // help corpus takes no typing
+    }
     if (key.return) {
-      advanceActive(1);
+      if (mode.corpus === 'commands') {
+        const row = paletteRows[paletteActive];
+        if (row?.argv) handleRun(row.argv, row.destructive);
+      } else {
+        setPaletteActive((a) => a + 1); // output corpus: next match
+      }
       return;
     }
-    // `n`/`N` navigate ONLY when the query already has matches. When there are
-    // none, they fall through to normal typing — otherwise the letter 'n' (the
-    // most common in the English alphabet) could never be entered into a search
-    // query. Once a query matches, 'n' becomes navigation again.
-    if (input === 'n' && mode.matches.length > 0) {
-      advanceActive(1);
+    if (key.upArrow) {
+      setPaletteActive((a) => Math.max(0, a - 1));
       return;
     }
-    if (input === 'N' && mode.matches.length > 0) {
-      advanceActive(-1);
+    if (key.downArrow) {
+      setPaletteActive((a) => a + 1);
       return;
     }
+    if (key.backspace || key.delete) {
+      setPaletteQuery((q) => q.slice(0, -1));
+      setPaletteActive(0);
+      return;
+    }
+    if (key.ctrl) return;
     if (input.length > 0) {
-      setMode(searchFor(mode.query + input));
+      setPaletteQuery((q) => q + input);
+      setPaletteActive(0);
     }
   }
 
-  // Rebuild a search mode from a (possibly edited) query against the captured
-  // corpus. Matches recompute from scratch; an empty query has none.
-  function searchFor(query: string): Extract<Mode, { kind: 'search' }> {
-    const matches = computeMatches(searchLines, query);
-    return { kind: 'search', query, matches, active: matches.length > 0 ? 0 : -1 };
+  // ----- confirm-mode keybinding handler ----------------------------------
+  function handleConfirmInput(input: string, key: Key): void {
+    if (key.escape || input === 'n' || input === 'N') {
+      // Back to the palette with a clean query so the full list is visible.
+      setPaletteQuery('');
+      setPaletteActive(0);
+      setMode({ kind: 'palette', corpus: 'commands' });
+      return;
+    }
+    if (input === 'y' || input === 'Y') {
+      if (mode.kind !== 'confirm') return;
+      dispatchCmd([...mode.argv]);
+      void recordRuns([...mode.argv]);
+      pushHistory(`/${mode.argv.join(' ')}`);
+      setMode({ kind: 'dashboard' });
+    }
   }
 
-  // Move the active match by `delta` (+1 next, -1 prev), wrapping around the
-  // match list. No-op when there is no match to land on.
-  function advanceActive(delta: number): void {
-    if (mode.kind !== 'search') return;
-    const n = mode.matches.length;
-    if (n === 0) return;
-    const next = (mode.active + delta + n) % n;
-    setMode({ ...mode, active: next });
-  }
-
-  // ----- keybinding dispatcher -------------------------------------------
-  // One `useInput` for the whole App, gated per-mode. The palette owns its own
-  // input (its useInput consumes palette keystrokes); the confirm and search
-  // branches are handled here. `isActive` is NOT turned off per-mode — each
-  // branch returns early for keys it does not own.
+  // ----- keybinding dispatcher (single `useInput` for the whole App) ------
   useInput((input, key) => {
     switch (mode.kind) {
       case 'dashboard':
         handleDashboardInput(input, key);
         return;
       case 'palette':
-        return; // Palette renders its own useInput; no App-level keys here
-      case 'home':
-        return; // HomeMenu renders its own useInput (S4)
+        handlePaletteInput(input, key);
+        return;
       case 'confirm':
         handleConfirmInput(input, key);
-        return;
-      case 'search':
-        handleSearchInput(input, key);
         return;
     }
   });
@@ -523,9 +432,8 @@ export function App({
   function submit(): void {
     const text = buffer;
     if (text.length === 0) return;
-    clear(); // empty the buffer + park the recall cursor (behavioral twin of the old setBuffer(''))
+    clear();
     if (!text.startsWith('/')) {
-      // Bare text is a hint, not a dispatch.
       setNotice('type a /command to run it (bare text is just a hint)');
       return;
     }
@@ -538,47 +446,40 @@ export function App({
       setNotice('empty /command');
       return;
     }
-    // Record the runnable command into history. History is a ref — invisible to
-    // the render, so this keeps submit behavior-identical while the hook's
-    // Up/Down recall surface has data to walk.
+    if (isDestructive(argv)) {
+      // Destructive typed /commands go through the SAME confirm gate the
+      // palette uses (v2 — closes the old typed-path bypass).
+      setMode({ kind: 'confirm', argv });
+      return;
+    }
     pushHistory(text);
-    // Setting pending (→ effect) + running (→ frame + pause refresh) lets Ink
-    // paint the "running…" frame BEFORE the dispatch's stream swap starts.
     dispatchCmd(argv);
-    // Persist to the project's recent-commands list (mirrors the palette +
-    // confirm paths) so typed /commands appear in recents on the next session.
     void recordRuns(argv);
   }
 
-  // ----- render -----------------------------------------------------------
-  if (help) {
-    return <Help />;
-  }
+  // The rows for the active palette corpus (recomputed each render; cheap over
+  // ~40 commands). Computed once so render + Enter-dispatch agree on the row.
+  const paletteCorpus = mode.kind === 'palette' ? mode.corpus : 'commands';
+  const paletteRows = buildPaletteRows({
+    corpus: paletteCorpus,
+    query: paletteQuery,
+    commands: deps.commands ?? [],
+    matcher: deps.matcher ?? handRolledMatcher,
+    recent,
+    homeSections,
+    outputLines: searchLines,
+  });
 
+  // ----- render -----------------------------------------------------------
   if (mode.kind === 'palette') {
     return (
       <Box flexDirection="column">
-        <Header tagline="palette" />
+        <Header tagline={`palette · ${mode.corpus}`} />
         <Palette
-          commands={deps.commands ?? []}
-          matcher={deps.matcher ?? handRolledMatcher}
-          recent={recent}
-          onSelect={handlePaletteSelect}
-          onClose={() => setMode({ kind: 'dashboard' })}
-        />
-        <Footer running={false} />
-      </Box>
-    );
-  }
-
-  if (mode.kind === 'home') {
-    return (
-      <Box flexDirection="column">
-        <Header tagline="home" />
-        <HomeMenu
-          sections={homeSections}
-          onSelect={handleHomeSelect}
-          onClose={() => setMode({ kind: 'dashboard' })}
+          corpus={mode.corpus}
+          query={paletteQuery}
+          active={paletteActive}
+          rows={paletteRows}
         />
         <Footer running={false} />
       </Box>
@@ -590,42 +491,6 @@ export function App({
       <Box flexDirection="column">
         <Header tagline="confirm" />
         <ConfirmOverlay argv={mode.argv} />
-        <Footer running={false} />
-      </Box>
-    );
-  }
-
-  if (mode.kind === 'search') {
-    const activeLine = mode.active >= 0 ? mode.matches[mode.active] : undefined;
-    const matchCount = mode.matches.length;
-    return (
-      <Box flexDirection="column">
-        <Header tagline="search" />
-        <Panel>
-          <Box paddingX={1}>
-            <OutputPane
-              lines={searchLines}
-              scrollOffset={scrollOffset}
-              title={output?.title}
-              highlightQuery={mode.query}
-              activeLine={activeLine}
-            />
-          </Box>
-        </Panel>
-        <Box borderStyle="round" borderColor="gray" paddingX={1}>
-          <Text>
-            {c.dim('search: ')}
-            {mode.query.length > 0 ? mode.query : c.dim('(type to filter output)')}
-            <Text>{c.dim(' ▌')}</Text>
-          </Text>
-        </Box>
-        <Text>
-          {c.dim(
-            matchCount === 0
-              ? 'no matches · Esc exit'
-              : `${mode.active + 1}/${matchCount} matches · n/Enter next · N prev · Esc exit`,
-          )}
-        </Text>
         <Footer running={false} />
       </Box>
     );
@@ -652,98 +517,6 @@ export function App({
       <CommandInput buffer={buffer} running={running} />
       {notice !== null ? <Text>{c.dim(notice)}</Text> : null}
       <Footer running={running} />
-    </Box>
-  );
-}
-
-function Help(): ReactElement {
-  return (
-    <Box flexDirection="column">
-      <Header tagline="help" />
-      <Panel>
-        <Box paddingX={1}>
-          <Text>{c.bold('Keybindings')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>
-            {c.dim('  /&lt;command&gt;  run a Noir sub-command (e.g. /status, /sync, /task next)')}
-          </Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  Enter       run the typed /command')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  Esc         back: clear input → dismiss output → quit')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  q           quit (when the input is empty)')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  h           open the curated home quick-actions (home menu)')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  ↑ / ↓       scroll the output pane')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  ?           toggle this help')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  Ctrl+K      open the command palette')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  Ctrl+F      find in the dispatched output pane')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  n / N       next / previous match in search (Enter = next)')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  y / n       approve / decline a destructive command prompt')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  Ctrl+C      force exit')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{divider()}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.bold('Home menu (h)')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  The curated quick actions mirror the bare-`noir` home menu:')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>
-            {c.dim(
-              '  Status &amp; context · Memory · Workflow · Setup &amp; maintenance · Dashboard',
-            )}
-          </Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{divider()}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.bold('Commands')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  Dispatched through the same routing as `noir` at the prompt.')}</Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>
-            {c.dim(
-              '  /status /sync /doctor /context search &lt;q&gt; /task next /memory recall &lt;q&gt;',
-            )}
-          </Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>
-            {c.dim('  Commands that need their own interactive prompts (e.g. a /sync with a')}
-          </Text>
-        </Box>
-        <Box paddingX={1}>
-          <Text>{c.dim('  conflict) are best run directly — exit first with q.')}</Text>
-        </Box>
-      </Panel>
-      <Text>{c.dim('press ? / Esc / q to close this help')}</Text>
     </Box>
   );
 }

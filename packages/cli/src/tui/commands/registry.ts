@@ -25,7 +25,6 @@ import type { PaletteCommand } from '../palette/types.js';
  */
 const DESTRUCTIVE_PREFIXES: readonly (readonly string[])[] = [
   ['context', 'index'],
-  ['context', 'forget'],
   ['memory', 'save'],
   ['memory', 'forget'],
   ['memory', 'consolidate'],
@@ -40,6 +39,7 @@ const DESTRUCTIVE_PREFIXES: readonly (readonly string[])[] = [
   ['sync'],
   ['install'],
   ['update'],
+  ['run'],
 ];
 
 /**

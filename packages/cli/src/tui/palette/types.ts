@@ -29,7 +29,7 @@ export interface PaletteCommand {
   readonly description: string;
   /** Top-level group the command belongs to (`argv[0]`), for palette grouping. */
   readonly category: string;
-  /** Search keywords — currently the argv tokens, used by the palette's matcher. */
+  /** Search keywords — extra tokens the palette matcher scores beyond the label. */
   readonly keywords: readonly string[];
   /**
    * True for commands that mutate the store / workflow / host artifacts (context

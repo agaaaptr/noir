@@ -1,10 +1,10 @@
 // Home-consolidation (S1) — the shared, React-free curated-section module.
 //
 // The bare `noir` home menu (packages/cli/src/commands/home.ts) and the Ink TUI
-// home Mode (App.tsx, { kind: 'home' }) both render a curated set of quick
-// actions. This module is the SINGLE source of that curation so the two
-// renderers cannot drift — the same one-table-two-renderers idea that keeps the
-// TUI palette aligned with the commander tree.
+// palette's `commands` corpus (App.tsx → palette/rows.ts) both render a curated
+// set of quick actions. This module is the SINGLE source of that curation so
+// the two renderers cannot drift — the same one-table-two-renderers idea that
+// keeps the TUI palette aligned with the commander tree.
 //
 // No-drift contract: every {@link HomeAction} references a palette-registry
 // `id` (e.g. 'context search'), NOT a hand-written argv. {@link resolveSections}
@@ -59,13 +59,6 @@ export interface HomeSection {
   readonly label: string;
   /** One-line dim hint for the section (its subcommands). */
   readonly hint: string;
-  /**
-   * Display-order key. Legacy from the pre-1.9.1 `selectKey`-based section
-   * picker (which bound each section to a digit); no longer read by the home
-   * menu (both levels use `select`). Kept for backward-compat with the TUI
-   * home Mode and existing tests.
-   */
-  readonly key: string;
   /** Ordered quick actions in this section. */
   readonly items: readonly HomeAction[];
 }
@@ -80,7 +73,6 @@ export const HOME_SECTIONS: readonly HomeSection[] = [
     id: 'status',
     label: 'Status & context',
     hint: 'snapshot · index · search · doctor',
-    key: '1',
     items: [
       {
         id: 'status',
@@ -115,7 +107,6 @@ export const HOME_SECTIONS: readonly HomeSection[] = [
     id: 'memory',
     label: 'Memory',
     hint: 'recall · save · sessions · forget · consolidate',
-    key: '2',
     items: [
       {
         id: 'memory recall',
@@ -153,7 +144,6 @@ export const HOME_SECTIONS: readonly HomeSection[] = [
     id: 'workflow',
     label: 'Workflow',
     hint: 'next · status · advance · handoff · wrap',
-    key: '3',
     items: [
       {
         id: 'task next',
@@ -188,7 +178,6 @@ export const HOME_SECTIONS: readonly HomeSection[] = [
     id: 'setup',
     label: 'Setup & maintenance',
     hint: 'init · create · sync · skills · install · update',
-    key: '4',
     items: [
       {
         id: 'init',
@@ -237,7 +226,6 @@ export const HOME_SECTIONS: readonly HomeSection[] = [
     id: 'dashboard',
     label: 'Dashboard (full-screen)',
     hint: 'noir tui · noir palette · home',
-    key: '5',
     items: [
       {
         id: 'tui',

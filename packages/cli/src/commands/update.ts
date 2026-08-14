@@ -247,6 +247,58 @@ function updateCmdFor(method: string, spec: string): string[] | null {
   }
 }
 
+/**
+ * The human-readable update command for an install method. Mirrors
+ * {@link updateCmdFor} (the machine command) with the manager the user should
+ * actually run — `noir update` is the universal entry (it re-dispatches to the
+ * right manager), but the package-manager spellings are shown for transparency.
+ */
+export function updateAdvice(method: string): string {
+  switch (method) {
+    case 'npm':
+      return 'run `npm install -g @noir-ai/cli@latest`';
+    case 'pnpm':
+      return 'run `pnpm add -g @noir-ai/cli@latest`';
+    case 'yarn':
+      return 'run `yarn global add @noir-ai/cli@latest`';
+    case 'bun':
+      return 'run `bun add -g @noir-ai/cli@latest`';
+    case 'homebrew':
+      return 'run `brew upgrade noir`';
+    case 'scoop':
+      return 'run `scoop update noir`';
+    case 'native':
+      return 'run `noir update`';
+    default:
+      return 'run `noir update`';
+  }
+}
+
+/** A "new version available" notice for the home menu (version + advice). */
+export interface UpdateNotice {
+  readonly latestVersion: string;
+  readonly currentVersion: string;
+  readonly method: string;
+  readonly advice: string;
+}
+
+/**
+ * Build the home-menu "update available" notice from the cached latest version.
+ * Returns `null` when there is no cached latest, no current version, or the
+ * latest is NOT strictly newer (the semver downgrade guard — a stale/older
+ * cache entry is never advertised as an upgrade).
+ */
+export function buildUpdateNotice(opts: {
+  method: string;
+  currentVersion: string | null;
+  latestKnown: string | null;
+}): UpdateNotice | null {
+  const { method, currentVersion, latestKnown } = opts;
+  if (currentVersion == null || latestKnown == null) return null;
+  if (!semverGt(latestKnown, currentVersion)) return null;
+  return { latestVersion: latestKnown, currentVersion, method, advice: updateAdvice(method) };
+}
+
 /** Non-blocking, time-boxed startup check. Writes the cache on success; silent on any failure. */
 export async function runAsyncUpdateCheck(opts: {
   env: NodeJS.ProcessEnv;

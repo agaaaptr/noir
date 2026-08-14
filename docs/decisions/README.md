@@ -15,5 +15,6 @@ ADRs record *why* a choice was made — not *what* the code does (the skills the
 - [ADR-0003 — v1.x capabilities — keystone refactor + five extensions](0003-v1x-capabilities.md)
 - [ADR-0004 — Multi-host adapters — the `resolveAdapter(host)` registry + AGENTS.md universal](0004-multi-host-adapters.md)
 - [ADR-0005 — Native installer is managed-Node, not a single binary](0005-native-installer-managed-node.md)
-- [ADR-0006 — C2 TUI command palette + daemon `--detach` (and the deferred v2 orchestrator TUI)](0006-c2-tui-and-daemon-detach.md)
+- [ADR-0006 — C2 TUI command palette + daemon `--detach` (v2 orchestrator TUI scope superseded by ADR-0008)](0006-c2-tui-and-daemon-detach.md)
 - [ADR-0007 — C3 generated-artifact standard — type codes, frontmatter, per-type outlines](0007-generated-artifact-standard.md)
+- [ADR-0008 — v2 orchestrator TUI — single-surface consolidation + `noir run` headless host-driving](0008-v2-orchestrator-tui.md)

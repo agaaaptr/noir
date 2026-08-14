@@ -41,10 +41,13 @@
 
 import { type HostId, hostLaunchDirective } from '@noir-ai/adapters';
 import {
+  detectActiveMethod,
   type InstallRecord,
+  latestVersionFromCache,
   loadProjectInfo,
   NOIR_VERSION,
   readInstallRecord,
+  readUpdateCache,
 } from '@noir-ai/core';
 import { NOIR_TAGLINE, renderBanner, shouldShowBanner } from '../banner.js';
 import { type CliOptions, EXIT, fail, isInteractive } from '../output.js';
@@ -52,7 +55,7 @@ import { c } from '../theme.js';
 import { isDestructive } from '../tui/commands/registry.js';
 import { type HomeAction, type HomeSection, resolveSections } from '../tui/commands/sections.js';
 import type { PaletteCommand } from '../tui/palette/types.js';
-import { DEFAULT_UPDATE_CONFIG, runAsyncUpdateCheck } from './update.js';
+import { buildUpdateNotice, DEFAULT_UPDATE_CONFIG, runAsyncUpdateCheck } from './update.js';
 
 /** Callbacks home needs from the bin (injected → no circular import). */
 export interface HomeDeps {
@@ -400,6 +403,20 @@ async function runMenu(opts: CliOptions, deps: HomeDeps): Promise<void> {
   if (rec && shouldShowMigrationBanner(rec, NOIR_VERSION)) {
     process.stderr.write(
       `\n  ${c.warn(`noir installed via ${rec.method}`)} — consider \`noir install\` for the native path (auto-update, no npm prefix/PATH issues). Dismiss with: \`noir install --dismiss\` (persisted per version).\n\n`,
+    );
+  }
+
+  // Update-available notice (version + install-type-specific advice). Reads the
+  // CACHED latest version (the async check above refreshes it for next time) and
+  // advertises it only when strictly newer (semver downgrade guard).
+  const updateNotice = buildUpdateNotice({
+    method: detectActiveMethod(),
+    currentVersion: NOIR_VERSION,
+    latestKnown: latestVersionFromCache(readUpdateCache(), 'latest'),
+  });
+  if (updateNotice) {
+    process.stderr.write(
+      `\n  ${c.warn(`noir ${updateNotice.latestVersion} is available`)} (you have ${updateNotice.currentVersion}) — ${updateNotice.advice}.\n\n`,
     );
   }
 

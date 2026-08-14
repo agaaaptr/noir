@@ -52,6 +52,8 @@ Commands:
                                     daemon + /command dispatch)
   palette                           fuzzy command palette — run any noir
                                     command (Ink)
+  run [options] [prompt...]         drive the host CLI headless and render its
+                                    stream-json (v2)
 ```
 
 ## Global Flags

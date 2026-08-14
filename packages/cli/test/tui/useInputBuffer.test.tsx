@@ -26,6 +26,7 @@ interface Capture {
   pushHistory: (text: string) => void;
   recall: (dir: 'up' | 'down') => string | null;
   clear: () => void;
+  seed: (entries: readonly string[]) => void;
   buffer: string;
 }
 
@@ -43,6 +44,7 @@ function mount(): { capture: Capture; unmount: () => void } {
     capture.pushHistory = ib.pushHistory;
     capture.recall = ib.recall;
     capture.clear = ib.clear;
+    capture.seed = ib.seed;
     capture.buffer = ib.buffer;
     return <Text> </Text>;
   }
@@ -149,6 +151,28 @@ describe('useInputBuffer — history + recall cursor', () => {
     expect(capture.buffer).toBe('');
     // Cursor reset to -1: the next up starts over from the newest entry.
     expect(capture.recall('up')).toBe('/sync');
+    unmount();
+  });
+
+  it('seed replaces the session history with the persisted recents (source of truth)', () => {
+    const { capture, unmount } = mount();
+    capture.pushHistory('/stale');
+    capture.seed(['/context search foo', '/sync']);
+    // Seeded list is walked newest-first; the stale in-memory entry is gone.
+    expect(capture.recall('up')).toBe('/context search foo');
+    expect(capture.recall('up')).toBe('/sync');
+    expect(capture.recall('up')).toBe('/sync'); // clamped at the oldest
+    unmount();
+  });
+
+  it('pushHistory moves a re-run to the front instead of duplicating', () => {
+    const { capture, unmount } = mount();
+    capture.pushHistory('/a');
+    capture.pushHistory('/b');
+    capture.pushHistory('/a'); // re-run → move-to-front, not duplicate
+    expect(capture.recall('up')).toBe('/a');
+    expect(capture.recall('up')).toBe('/b');
+    expect(capture.recall('up')).toBe('/b'); // clamped; only one /a entry
     unmount();
   });
 });

@@ -27,6 +27,7 @@ import {
   memorySessions,
 } from './commands/memory.js';
 import { release } from './commands/release.js';
+import { type RunOptions, run as runHostCommand } from './commands/run.js';
 import { skillsLint, skillsList, skillsRegistry, skillsSync } from './commands/skills.js';
 import { type StatusOptions, status } from './commands/status.js';
 import {
@@ -1105,6 +1106,31 @@ export function createProgram(): Command {
         }
       };
       await runPalette(opts, dispatch);
+    });
+
+  // `noir run <prompt>` — drive the host CLI headless and render its
+  // stream-json (v2 orchestrator, Archetype B). Streams the host's output and
+  // reports token/cost from the `result` event. `--command <binary>` overrides
+  // the per-host default so users with multiple profiles (claude vs claude-work)
+  // can point at their own binary (D2a). Scriptable under `--json`.
+  program
+    .command('run')
+    .description('drive the host CLI headless and render its stream-json (v2)')
+    .argument('[prompt...]', 'prompt to send to the host')
+    .addOption(new Option('--host <id>', 'host to drive (default claude)').choices(SUPPORTED_HOSTS))
+    .option('--command <binary>', 'custom host binary (e.g. claude-work)')
+    .action(async (...args: unknown[]) => {
+      const g = trailingCmd(args).optsWithGlobals();
+      const prompt = args
+        .filter((a): a is string => typeof a === 'string')
+        .join(' ')
+        .trim();
+      const opts: RunOptions = {
+        ...toCliOptions(g),
+        ...(typeof g.host === 'string' ? { host: g.host } : {}),
+        ...(typeof g.command === 'string' ? { command: g.command } : {}),
+      };
+      await runHostCommand(prompt, opts);
     });
 
   program.action(async (...args: unknown[]) => {

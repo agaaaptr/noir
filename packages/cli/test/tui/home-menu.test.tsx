@@ -1,6 +1,7 @@
-// Home-consolidation (S4) — the TUI home Mode + the `h` bridge back to the
-// curated quick actions. Renders the App, opens the home mode, and asserts the
-// curated sections render + a quick action dispatches through the shared seam.
+// v2 — the curated quick actions now render INSIDE the single palette (the
+// former `h` home Mode merged into the palette's `commands` corpus). Renders the
+// App, opens the palette via `h`, and asserts the curated sections render + a
+// quick action dispatches through the shared seam + destructive ones confirm.
 
 import { render } from 'ink-testing-library';
 import type { ReactElement } from 'react';
@@ -35,18 +36,19 @@ function mount() {
 
 const flush = (ms = 80): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
-describe('TUI home Mode (S4)', () => {
-  it('h on the dashboard opens the curated home quick actions', async () => {
+describe('curated quick actions in the palette (v2)', () => {
+  it('h on the dashboard opens the palette with the curated quick actions', async () => {
     const { instance } = mount();
     instance.stdin.write('h');
     await flush();
     const frame = instance.lastFrame() ?? '';
-    expect(frame).toMatch(/home/i);
+    expect(frame).toMatch(/palette/i);
     expect(frame).toMatch(/Status & context/i); // a curated section header
+    expect(frame).toMatch(/Status/); // the first quick action
     instance.unmount();
   });
 
-  it('Esc in the home mode returns to the dashboard', async () => {
+  it('Esc in the palette returns to the dashboard', async () => {
     const { instance } = mount();
     instance.stdin.write('h');
     await flush();
@@ -72,8 +74,7 @@ describe('TUI home Mode (S4)', () => {
     const { instance, dispatch } = mount();
     instance.stdin.write('h');
     await flush();
-    // Navigate down to a destructive action (e.g. 'Index project' in the
-    // Status & context section, row 2). Use arrow down once.
+    // Navigate down to a destructive action ('Index project', row 2).
     instance.stdin.write('\x1b[B');
     await flush();
     instance.stdin.write('\r');
@@ -85,7 +86,7 @@ describe('TUI home Mode (S4)', () => {
   });
 });
 
-describe('TUI home Mode — palette-first initial mode (noir palette, S3)', () => {
+describe('palette-first initial mode (noir palette)', () => {
   it('renders the palette when initialMode is palette', async () => {
     const dispatch = vi.fn(async (): Promise<void> => {});
     const fetchStatus = vi.fn(async (): Promise<StatusPayload | null> => HEALTHY);
@@ -96,7 +97,7 @@ describe('TUI home Mode — palette-first initial mode (noir palette, S3)', () =
           deps={deps}
           initialPayload={HEALTHY}
           refreshMs={60000}
-          initialMode={{ kind: 'palette' }}
+          initialMode={{ kind: 'palette', corpus: 'commands' }}
         />
       ) as unknown as ReactElement,
     );

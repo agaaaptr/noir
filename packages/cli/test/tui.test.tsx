@@ -120,12 +120,23 @@ describe('StatusBar — live snapshot summary', () => {
 describe('CommandInput — /command dispatch via the bin seam', () => {
   it('types a /command and Enter dispatches through deps.dispatch', async () => {
     const m = mount(HEALTHY);
-    m.instance.stdin.write('/sync');
+    m.instance.stdin.write('/status');
     await flush(20); // let React flush the buffer update before Enter
     m.instance.stdin.write('\r');
     await flush(80);
     expect(m.dispatch).toHaveBeenCalledTimes(1);
-    expect(m.dispatch).toHaveBeenCalledWith(['sync']);
+    expect(m.dispatch).toHaveBeenCalledWith(['status']);
+    m.instance.unmount();
+  });
+
+  it('a destructive /command routes through the confirm overlay (v2)', async () => {
+    const m = mount(HEALTHY);
+    m.instance.stdin.write('/sync');
+    await flush(20);
+    m.instance.stdin.write('\r');
+    await flush(80);
+    expect(m.dispatch).not.toHaveBeenCalled();
+    expect(m.instance.lastFrame() ?? '').toMatch(/y\/N/i);
     m.instance.unmount();
   });
 
@@ -149,7 +160,7 @@ describe('CommandInput — /command dispatch via the bin seam', () => {
         <App deps={{ dispatch, fetchStatus }} initialPayload={HEALTHY} refreshMs={60000} />
       ) as unknown as ReactElement,
     );
-    instance.stdin.write('/sync');
+    instance.stdin.write('/status');
     await flush(20);
     instance.stdin.write('\r');
     await flush(120);
@@ -188,16 +199,15 @@ describe('keybindings — quit, help, scroll', () => {
     expect(m.dispatch).not.toHaveBeenCalled();
   });
 
-  it('? toggles the help overlay', async () => {
+  it('? opens the palette help corpus (keybindings)', async () => {
     const { instance } = mount(HEALTHY);
     instance.stdin.write('?');
     await flush(40);
     const frame = instance.lastFrame() ?? '';
-    expect(frame).toMatch(/Keybindings/i);
-    expect(frame).toMatch(/press \? \/ Esc \/ q to close/i);
-    // The help overlay documents the palette (Ctrl+K) and output search
-    // (Ctrl+F, n/N) keybindings added in B2 + C2/C4.
+    expect(frame).toMatch(/keybindings/i);
+    // The help corpus documents the palette (Ctrl+K) and output search (Ctrl+F).
     expect(frame).toMatch(/Ctrl\+K/i);
+    expect(frame).toMatch(/Ctrl\+F/i);
   });
 
   it('ArrowDown / ArrowUp move the scroll offset without dispatching', async () => {

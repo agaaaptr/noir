@@ -53,17 +53,19 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 
 ## Active capability
 
-- C4 (End-to-End AI Development Workflow) — **shipped core + all deltas implemented** (2026-08-11, 6 commits). The v2 orchestrator TUI (Archetype B) remains tracked for v2 (ADR-0006).
+- (none in-flight). The **v2 orchestrator TUI** (Archetype B) shipped in **1.11.0** (2026-08-14): single-surface TUI consolidation + `noir run` headless host-driving (ADR-0008). The remaining v2.0 ecosystem (memory cloud sync, team/multi-user, skill registry/distribution, theming, plugin SDK) stays long-term (see `releases.md`).
 
 ## Active slice
 
-- (none — C4 fully shipped 2026-08-11). Next: return to the v2 orchestrator TUI research track (Archetype B).
+- (none — v2 orchestrator TUI fully shipped 2026-08-14 as 1.11.0).
+
+- **2026-08-14** — **v2 orchestrator TUI shipped.** TUI command discovery collapsed to ONE corpus-aware palette (`commands`/`output`/`help`, Tab-switched; `h`/`?`/`Ctrl+F` open it at a corpus); unified recents (shell recall + palette share `tui-history.json`); destructive confirm now covers typed `/command` too; `noir run <prompt>` drives the host headless (`--host`/`--command` for profile selection) with a token/cost reducer (max-per-message.id dedup) + transcript persistence; the home menu advertises a newer version with install-type-specific advice. ADR-0008. Full gate green.
 
 - **2026-08-10** — **C3 completed:** skill pack curated 34→26 via 5 merges + gerund renames; all 26 builtins + 1 integration become full playbooks (zero stubs, every skill WHAT+WHEN-described, with follow-up guidance and host-tool maximization). Runtime-derived skill registry queryable via `noir skills registry --json`. Structural quality gate (`validateSkill` + `lintSkill` + `noir skills lint`) checks metadata, required sections, line budget, one-level refs, WHAT+WHEN descriptions. Offline evals harness (`evals/evals.json` + vitest runner) with 2 shipped example evals. ClickUp integration enhanced with STEP-0 auth gate, 12 API pitfalls with corrective patterns, verb dispatch grammar, and attachment handling. Full gate green (1561 tests, lint, build, typecheck, docs:validate).
 
 ## Next milestone
 
-- Return to the **v2 orchestrator TUI (Archetype B)** research track (driving the host CLI as a subprocess, streaming output, token/cost bar) — tracked for v2 (ADR-0006). C4 fully shipped 2026-08-11.
+- (TBD) — the v2 orchestrator TUI shipped as 1.11.0. Remaining v2.0 work is long-term ecosystem (memory cloud sync, team/multi-user, first-class skill registry, theming/plugin SDK) — see `releases.md` version targets.
 
 ## Current technical debt
 
