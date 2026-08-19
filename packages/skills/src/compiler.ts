@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto';
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import { sha256Hex12, uniqueAsideSync } from '@noir-ai/core';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { discoverAll, discoverBuiltin } from './discover.js';
 import { runtimeEmitsHostMcp } from './integrations-schema.js';
@@ -523,11 +523,6 @@ async function isUserOwnedCursorLegacyDir(dirAbs: string): Promise<boolean> {
   }
 }
 
-/** sha256 hex, first 12 chars (matches @noir-ai/create's sha256Hex12). */
-function sha256Hex12(s: string): string {
-  return createHash('sha256').update(s, 'utf8').digest('hex').slice(0, 12);
-}
-
 /** LCS similarity in [0,1]. Local copy (skills has no create dependency)
  *  so the structured report's `similarity` matches the engine's algorithm. */
 function similarity(a: string, b: string): number {
@@ -556,19 +551,12 @@ function similarity(a: string, b: string): number {
  *  so the user's bytes never get silently clobbered. */
 async function renameAside(abs: string, suffix: string): Promise<void> {
   const { rename } = await import('node:fs/promises');
-  const dest = await uniqueAsideAbs(abs, suffix);
+  const dest = await uniqueAside(abs, suffix);
   await rename(abs, dest);
 }
 
 async function uniqueAside(abs: string, suffix: string): Promise<string> {
-  return uniqueAsideAbs(abs, suffix);
-}
-
-async function uniqueAsideAbs(abs: string, suffix: string): Promise<string> {
-  const { existsSync } = await import('node:fs');
-  let candidate = `${abs}${suffix}`;
-  for (let n = 1; existsSync(candidate); n++) candidate = `${abs}${suffix}.${n}`;
-  return candidate;
+  return uniqueAsideSync(abs, suffix);
 }
 
 // Convenience for callers/tests that already hold raw markdown (unused by emit path;

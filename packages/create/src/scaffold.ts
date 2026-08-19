@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import {
@@ -7,6 +6,7 @@ import {
   paths,
   readManagedBlock,
   resolveNoirCommand,
+  sha256Hex12,
 } from '@noir-ai/core';
 import { readAncestors, writeAncestors } from './ancestors.js';
 import {
@@ -599,16 +599,6 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     toVersion: CURRENT_SCAFFOLD_VERSION,
     host,
   };
-}
-
-/** sha256 hex digest, truncated to 12 chars (git-short-style). Cheap,
- *  deterministic, collision-resistant enough for a single conflict report.
- *  `createHash` is imported statically at the top of this module — it used to
- *  be a lazy `require('node:crypto')` that tsup rewrote into an ESM-incompatible
- *  `__require('crypto')` shim, crashing on the conflict path (same root cause as
- *  the conflict.ts `require('@noir-ai/create')` fix). */
-function sha256Hex12(s: string): string {
-  return createHash('sha256').update(s, 'utf8').digest('hex').slice(0, 12);
 }
 
 /** LCS-based similarity ratio in [0,1]. 1.0 = byte-identical lines, 0.0 =

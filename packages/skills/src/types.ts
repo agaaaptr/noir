@@ -1,3 +1,5 @@
+import type { ConflictResolution } from '@noir-ai/core';
+
 export interface SkillFrontmatter {
   name: string;
   description: string;
@@ -121,12 +123,11 @@ export interface EmitSummary {
 }
 
 /**
- * Resolution choice for a skill-file conflict. Mirrors
- * @noir-ai/create's `ConflictResolution` literally so the CLI's
- * `buildConflictOpts().onConflict` is structurally compatible, WITHOUT the
- * skills package gaining a create dependency.
+ * Resolution choice for a skill-file conflict. Re-exports the shared
+ * `ConflictResolution` union from @noir-ai/core (no create dependency) so the
+ * CLI's `buildConflictOpts().onConflict` is structurally compatible.
  */
-export type SkillConflictResolution = 'replace' | 'preserve' | 'rename' | 'duplicate' | 'cancel';
+export type SkillConflictResolution = ConflictResolution;
 
 /**
  * Context passed to {@link SkillConflictResolver}. Mirrors
