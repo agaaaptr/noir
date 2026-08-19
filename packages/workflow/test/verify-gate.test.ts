@@ -184,6 +184,61 @@ describe('verify gate — evidence-failed', () => {
   });
 });
 
+describe('verify gate — retry budget exhaustion', () => {
+  it('retryBudget (2) trips on the third consecutive hard-fail: budget-exhausted, no extra `failed` entry, no transition', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p', verifyOn);
+      await toVerifying(engine, 't9');
+      // Fresh evidence PER attempt (ranAt must be >= task.updatedAt — each
+      // advance bumps it, so a single captured ranAt goes stale).
+      const attempt = (): GateEvidence => ({
+        ranAt: Date.now(),
+        summary: '0 passed, 1 failed',
+        checks: [
+          {
+            name: 'test',
+            exitCode: 1,
+            outputDigest: 'a'.repeat(64),
+            command: 'pnpm test',
+            tier: 'hard',
+          },
+        ],
+      });
+      // Attempts 1 + 2: `failed` recorded each time, budget not yet exhausted.
+      for (let i = 0; i < 2; i++) {
+        try {
+          await engine.advance('t9', { evidence: attempt() });
+          expect.fail(`attempt ${i + 1} should have thrown`);
+        } catch (err) {
+          expect(err).toBeInstanceOf(VerifyGateError);
+          expect((err as VerifyGateError).kind).toBe('evidence-failed');
+        }
+      }
+      // Attempt 3: prior failures (2) >= retryBudget (2) ⇒ budget-exhausted.
+      try {
+        await engine.advance('t9', { evidence: attempt() });
+        expect.fail('third attempt should have thrown budget-exhausted');
+      } catch (err) {
+        expect(err).toBeInstanceOf(VerifyGateError);
+        const e = err as VerifyGateError;
+        expect(e.kind).toBe('budget-exhausted');
+        expect(e.evidence?.summary).toContain('failed');
+      }
+      // Exactly 2 `failed` entries — the budget-exhausted attempt records none.
+      const after = engine.status('t9');
+      const failedEntries = after?.history.filter(
+        (g) => g.phase === 'verify' && g.decision === 'failed',
+      );
+      expect(failedEntries?.length).toBe(2);
+      // State unchanged — the task never advanced past verifying.
+      expect(engine.status('t9')?.state).toBe('verifying');
+    } finally {
+      await store.close();
+    }
+  });
+});
+
 describe('verify gate — force/skip override', () => {
   it('required + force ⇒ forced (override), transitions even without evidence', async () => {
     const store = await openStore({ projectId: 'p', root });

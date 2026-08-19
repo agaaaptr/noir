@@ -1,6 +1,7 @@
 import type { Store } from '@noir-ai/store';
 import { writeSpec } from './artifacts.js';
 import type { WorkflowEngine } from './engine.js';
+import { readGateHistory } from './gates.js';
 import type { TaskState, WorkflowState } from './types.js';
 
 /**
@@ -41,6 +42,12 @@ export async function runQuick(
 ): Promise<TaskState> {
   const task = engine.status(taskId);
   if (!task) throw new Error(`Unknown task: ${taskId}`);
+  // Guard: quick mode must only run on a task started in 'quick' mode. Calling
+  // it on a full-mode task would silently downgrade the spec/plan discipline
+  // (recording them as 'skipped') with no observable indication.
+  if (task.mode !== 'quick') {
+    throw new Error(`runQuick requires a quick-mode task (got ${task.mode})`);
+  }
 
   // Flush the stub spec first so the artifact exists before any gate fires.
   writeSpec(engine.root, taskId, task.slug, opts?.specBody ?? QUICK_SPEC_STUB);
@@ -76,5 +83,9 @@ export async function resumeTask(store: Store): Promise<TaskState | null> {
   if (!task) return null;
   if (TERMINAL_STATES.has(task.state)) return null;
 
+  // Re-derive history from the authoritative audit KV (mirrors engine.status)
+  // so the resumed task carries the full gate history, not the possibly-stale
+  // persisted `task.history`.
+  task.history = readGateHistory(store, activeId);
   return task;
 }

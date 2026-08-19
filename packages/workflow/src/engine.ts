@@ -3,17 +3,19 @@ import type { Store } from '@noir-ai/store';
 import { readPrd, writeAuditExport } from './artifacts.js';
 import { gateFor, readGateHistory, recordGate } from './gates.js';
 import { applyTransition, nextPhase, stateForPhase } from './state-machine.js';
-import type {
-  GateEvidence,
-  GateResult,
-  GateResultInput,
-  Mode,
-  Phase,
-  ResearchEntry,
-  TaskClass,
-  TaskState,
-  WorkflowGateConfig,
-  WorkflowState,
+import {
+  type GateEvidence,
+  type GateResult,
+  type GateResultInput,
+  type Mode,
+  PHASES,
+  type Phase,
+  RESEARCH_ENTRY_TYPES,
+  type ResearchEntry,
+  type TaskClass,
+  type TaskState,
+  type WorkflowGateConfig,
+  type WorkflowState,
 } from './types.js';
 
 /**
@@ -106,11 +108,11 @@ function gatePhaseForState(state: WorkflowState): Phase | null {
  * can surface a structured recovery offer (retry / force / skip / block).
  */
 export class VerifyGateError extends Error {
-  readonly kind: 'evidence-required' | 'evidence-failed';
+  readonly kind: 'evidence-required' | 'evidence-failed' | 'budget-exhausted';
   readonly pendingGate: { gate: 'verify'; reason: string };
   readonly evidence?: GateEvidence;
   constructor(
-    kind: 'evidence-required' | 'evidence-failed',
+    kind: 'evidence-required' | 'evidence-failed' | 'budget-exhausted',
     updatedAt: number,
     evidence?: GateEvidence,
   ) {
@@ -121,7 +123,11 @@ export class VerifyGateError extends Error {
     this.pendingGate = {
       gate: 'verify',
       reason:
-        kind === 'evidence-required' ? 'evidence-required' : `evidence-failed at ${updatedAt}`,
+        kind === 'evidence-required'
+          ? 'evidence-required'
+          : kind === 'budget-exhausted'
+            ? `verify retry budget exhausted at ${updatedAt}`
+            : `evidence-failed at ${updatedAt}`,
     };
   }
 }
@@ -203,6 +209,15 @@ export class WorkflowEngine {
       ...(taskClass !== undefined ? { taskClass } : {}),
       updatedAt: Date.now(),
     };
+    // Re-start overwrites the TaskState; the DERIVED KV (audit + research) must
+    // be reset too, else status() re-derives the prior run's full gate history
+    // and stale research findings onto the "fresh" draft task. Only clear when a
+    // prior task existed (a first start must leave the KV ABSENT, not `[]` — the
+    // `null`-vs-empty contract readGateHistory/readResearch rely on).
+    if (this.store.getState<TaskState>(`workflow:${taskId}`) !== null) {
+      this.store.setState<GateResult[]>(`audit:${taskId}`, []);
+      this.store.setState<ResearchEntry[]>(`research:${taskId}`, []);
+    }
     this.persist(task);
     this.store.setState<string>(ACTIVE_KEY, taskId);
     return task;
@@ -223,6 +238,11 @@ export class WorkflowEngine {
    */
   async advance(taskId: string, opts?: AdvanceOpts): Promise<TaskState> {
     const task = this.requireTask(taskId);
+
+    // Terminal states are terminal: `done` / `abandoned` have no outgoing FSM
+    // edge, so a jump (`opts.to`) must not resurrect them either — otherwise a
+    // completed task could be jumped back into any phase and re-record gates.
+    this.assertNotTerminal(task);
 
     // Policy: --force and skip are mutually exclusive gate decisions (a gate
     // can't be both forced AND skipped). Validated BEFORE any gate write so a
@@ -264,6 +284,15 @@ export class WorkflowEngine {
       return task;
     }
 
+    // Guard: a BACKWARD jump (target phase at-or-before the current phase) must
+    // NOT re-record the target phase's gate as approved — the task already
+    // passed through that gate and its authoritative audit carries the original
+    // decision. The jump still LANDS (a jump is an explicit out-of-order admin
+    // move), but no duplicate gate entry is appended. The `jumpEntry` marker
+    // below still records where the jump landed. Forward jumps (including the
+    // normal FSM path, where `jump` is false) record gates exactly as before.
+    const backwardJump = jump && PHASES.indexOf(targetPhase) <= PHASES.indexOf(task.phase);
+
     const targetState = stateForPhase(targetPhase);
     if (!jump) {
       // applyTransition surfaces the FSM's gate hint on illegal moves.
@@ -271,9 +300,10 @@ export class WorkflowEngine {
     }
 
     // Observable checkpoint: entering specified/planned/done always records a
-    // gate — looked up from the target STATE (see gatePhaseForState).
+    // gate — looked up from the target STATE (see gatePhaseForState). Suppressed
+    // on backward jumps (the original gate decision is already in the audit).
     const gatePhase = gatePhaseForState(targetState);
-    if (gatePhase !== null) {
+    if (gatePhase !== null && !backwardJump) {
       const forced = opts?.force !== undefined;
       const skipped = opts?.skip === true;
       // c4-verify-gate-recovery: the verify gate is evidence-backed when the
@@ -296,6 +326,18 @@ export class WorkflowEngine {
           (c) => c.exitCode !== 0 && (c.tier ?? 'hard') === 'hard',
         );
         if (hardFail) {
+          // Enforce the verify retry budget: count prior failed verify decisions
+          // for this task and refuse to record ANOTHER (unbounded retry) once
+          // the budget is exhausted. The budget comes from gate config; the
+          // default (2) keeps a couple of retries before the gate hard-stops.
+          const priorFailures = readGateHistory(this.store, taskId).filter(
+            (g) => g.phase === 'verify' && g.decision === 'failed',
+          ).length;
+          const budget = this.gateConfig.verify.retryBudget;
+          if (priorFailures >= budget) {
+            task.history = readGateHistory(this.store, taskId);
+            throw new VerifyGateError('budget-exhausted', task.updatedAt, fresh);
+          }
           // Evidence ran and a HARD check failed: record a `failed` decision
           // WITH evidence (a visible failure — observable-checkpoint invariant),
           // but do NOT transition to `done`. Throw so the caller surfaces recovery.
@@ -479,6 +521,10 @@ export class WorkflowEngine {
    */
   async setBlocked(taskId: string, reason?: string): Promise<TaskState> {
     const task = this.requireTask(taskId);
+    // Terminal tasks stay terminal: flipping a done/abandoned task to `blocked`
+    // would bypass the advance() terminal guard and let a later jump resurrect
+    // the completed task and re-record its gates. Same policy as advance().
+    this.assertNotTerminal(task);
     if (reason !== undefined) {
       const trimmed = reason.trim();
       if (trimmed.length === 0) {
@@ -495,6 +541,10 @@ export class WorkflowEngine {
   /** Set state directly to `abandoned` (terminal; no FSM edge). */
   async abandon(taskId: string): Promise<TaskState> {
     const task = this.requireTask(taskId);
+    // Re-abandoning is a no-op guard for consistency: `abandon` on a done task
+    // must not relabel it (done stays done — it was verified). advance() and
+    // setBlocked share the same terminal policy.
+    this.assertNotTerminal(task);
     task.state = 'abandoned';
     task.updatedAt = Date.now();
     this.persist(task);
@@ -509,6 +559,9 @@ export class WorkflowEngine {
    */
   recordResearch(taskId: string, entry: Omit<ResearchEntry, 'at'>): ResearchEntry {
     this.requireTask(taskId); // validate the task exists
+    if (!RESEARCH_ENTRY_TYPES.includes(entry.type)) {
+      throw new Error(`invalid research entry type '${entry.type}'`);
+    }
     const text = entry.text?.trim() ?? '';
     if (text.length === 0) throw new Error('research entry text must be non-empty');
     if (text.length > RESEARCH_TEXT_CAP) {
@@ -557,6 +610,17 @@ export class WorkflowEngine {
     const task = this.store.getState<TaskState>(workflowKey(taskId));
     if (!task) throw new Error(`Unknown task: ${taskId}`);
     return task;
+  }
+
+  /** Terminal-state guard shared by advance / setBlocked / abandon: `done` and
+   *  `abandoned` have no outgoing FSM edge, so no write may flip them back into
+   *  the lifecycle (that would resurrect a completed task and re-record gates). */
+  private assertNotTerminal(task: TaskState): void {
+    if (task.state === 'done' || task.state === 'abandoned') {
+      throw new Error(
+        `task is ${task.state} (terminal) — it cannot be advanced or jumped; start a new task`,
+      );
+    }
   }
 
   private persist(task: TaskState): void {

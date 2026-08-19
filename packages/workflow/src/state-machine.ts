@@ -15,7 +15,11 @@ const TRANSITIONS: Record<WorkflowState, WorkflowState[]> = {
   executing: ['verifying'],
   verifying: ['done'],
   done: [],
-  blocked: ['draft', 'clarifying', 'specified', 'planned', 'executing', 'verifying'],
+  // `blocked` has NO outgoing edges: the engine exits blocked only via an
+  // explicit `opts.to` jump (which bypasses this table), NOT a forward advance
+  // (nextPhase(blocked) is null). Declaring edges here would mislead a caller
+  // into calling advance(blockedTask) — which throws.
+  blocked: [],
   abandoned: [],
 };
 

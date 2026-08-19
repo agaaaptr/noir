@@ -59,25 +59,15 @@ describe('SDD state machine', () => {
       expect(() => applyTransition('abandoned', 'draft')).toThrow();
     });
 
-    it('blocked can transition to every non-terminal workflow state (the admin escape hatch)', () => {
-      // blocked → any in-flight state is how `setBlocked` is reversed: the
-      // engine uses opts.to (jump) to land back on a workflow phase, and the
-      // FSM must permit blocked → that state for the jump's audit invariant.
-      for (const target of [
-        'draft',
-        'clarifying',
-        'specified',
-        'planned',
-        'executing',
-        'verifying',
-      ] as const) {
-        expect(canTransition('blocked', target)).toBe(true);
-        expect(applyTransition('blocked', target)).toBe(target);
+    it('blocked has no FSM edges — exit is jump-only (opts.to), matching the engine', () => {
+      // The engine exits blocked via an explicit opts.to jump (which bypasses
+      // this table), never a forward advance — nextPhase(blocked) is null. The
+      // FSM must therefore declare NO blocked→X edges so a caller reading the
+      // table does not attempt advance(blockedTask), which throws.
+      for (const target of STATES) {
+        expect(canTransition('blocked', target)).toBe(false);
       }
-      // blocked → done/abandoned is NOT a FSM edge (those need a real gate run
-      // or the abandon() admin escape, not a direct flip).
-      expect(canTransition('blocked', 'done')).toBe(false);
-      expect(canTransition('blocked', 'abandoned')).toBe(false);
+      expect(() => applyTransition('blocked', 'executing')).toThrow();
     });
 
     it('stateForPhase maps every phase → its in-progress state (1:1 + onto)', () => {

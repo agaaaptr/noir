@@ -2,21 +2,25 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { join } from 'node:path';
 import {
   artifactFrontmatter,
+  type ConflictResolution,
+  type ConflictResolverReturn,
   findArtifact,
   paths,
   resolveArtifactPath,
   titleFromSlug,
+  uniqueAsideSync,
 } from '@noir-ai/core';
 import type { GateResult } from './types.js';
 
 /**
- * The SAME conflict-resolution seam @noir-ai/create's `regenerate` uses,
- * local to this package so workflow does NOT add a create dependency (mirrors
- * the @noir-ai/skills pattern). The CLI's `buildConflictOpts().onConflict` is
- * structurally compatible. Default behavior is unchanged from v1.2 (overwrite):
- * the seam fires only when a caller wires `onConflict`/`conflictPolicy`.
+ * The SAME conflict-resolution seam @noir-ai/create's `regenerate` uses, built
+ * on the shared `ConflictResolution` union + `uniqueAsideSync` helper from
+ * @noir-ai/core (no create dependency). The CLI's `buildConflictOpts().
+ * onConflict` is structurally compatible. Default behavior is unchanged from
+ * v1.2 (overwrite): the seam fires only when a caller wires `onConflict`/
+ * `conflictPolicy`.
  */
-export type WorkflowConflictResolution = 'replace' | 'preserve' | 'rename' | 'duplicate' | 'cancel';
+export type WorkflowConflictResolution = ConflictResolution;
 
 export interface WorkflowConflictContext {
   /** Repo-relative path (e.g. `.noir/specs/SP-0001-<taskId>-<slug>.md`). */
@@ -33,7 +37,7 @@ export type WorkflowConflictResolverReturn =
 
 export type WorkflowConflictResolver = (
   ctx: WorkflowConflictContext,
-) => Promise<WorkflowConflictResolverReturn> | WorkflowConflictResolverReturn;
+) => Promise<ConflictResolverReturn> | ConflictResolverReturn;
 
 export interface WorkflowConflictOpts {
   /** Default `'overwrite'` (v1.2 backward-compatible). */
@@ -101,12 +105,6 @@ function resolveAndWrite(
       return { write: false };
     }
   }
-}
-
-function uniqueAsideSync(abs: string, suffix: string): string {
-  let candidate = `${abs}${suffix}`;
-  for (let n = 1; existsSync(candidate); n++) candidate = `${abs}${suffix}.${n}`;
-  return candidate;
 }
 
 /** Repo-relative path from an absolute artifact path + its type dir name. */

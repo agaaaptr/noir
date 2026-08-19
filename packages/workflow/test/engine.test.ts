@@ -6,6 +6,7 @@ import { openStore } from '@noir-ai/store';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { writePrd } from '../src/artifacts.js';
 import { WorkflowEngine } from '../src/engine.js';
+import { readGateHistory } from '../src/gates.js';
 import type { GateResult, TaskState } from '../src/types.js';
 
 // Real-store setup (mirrors gates.test.ts): a fresh temp-dir DB per test so
@@ -52,6 +53,23 @@ describe('WorkflowEngine', () => {
         expect(again.slug).toBe('second');
         expect(again.mode).toBe('quick');
         expect(store.getState<TaskState>('workflow:task-1')?.slug).toBe('second');
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('re-starting a task clears the prior run audit + research (no stale derived state)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'first', 'full');
+        // Advance into a gate so a real audit entry is recorded.
+        await engine.advance('task-1'); // → clarifying
+        await engine.advance('task-1'); // → specified (records an approved spec gate)
+        expect(readGateHistory(store, 'task-1').length).toBeGreaterThan(0);
+
+        await engine.startTask('task-1', 'second', 'quick');
+        expect(readGateHistory(store, 'task-1')).toEqual([]);
       } finally {
         await store.close();
       }
@@ -240,7 +258,7 @@ describe('WorkflowEngine', () => {
         for (let i = 0; i < 6; i++) await engine.advance('task-1'); // → done
         expect(engine.status('task-1')?.state).toBe('done');
 
-        await expect(engine.advance('task-1')).rejects.toThrow(/No next phase from state done/);
+        await expect(engine.advance('task-1')).rejects.toThrow(/terminal/);
       } finally {
         await store.close();
       }
@@ -386,6 +404,52 @@ describe('WorkflowEngine', () => {
 
         const abandoned = await engine.abandon('task-1');
         expect(abandoned.state).toBe('abandoned');
+        expect(engine.status('task-1')?.state).toBe('abandoned');
+      } finally {
+        await store.close();
+      }
+    });
+
+    // Terminal-state guard (iter-2 M5): done/abandoned are terminal — flipping
+    // them to `blocked`/`abandoned` would bypass the advance() terminal guard
+    // and let a later jump resurrect a completed task + re-record its gates.
+    it('setBlocked on a done task throws (terminal) and leaves state unchanged', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'full');
+        // Walk to done (all gates fire by default — no verify config).
+        for (let i = 0; i < 6; i++) await engine.advance('task-1');
+        expect(engine.status('task-1')?.state).toBe('done');
+        await expect(engine.setBlocked('task-1', 'still need to work')).rejects.toThrow(/terminal/);
+        expect(engine.status('task-1')?.state).toBe('done');
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('abandon on a done task throws (terminal) and leaves state unchanged', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'full');
+        for (let i = 0; i < 6; i++) await engine.advance('task-1');
+        expect(engine.status('task-1')?.state).toBe('done');
+        await expect(engine.abandon('task-1')).rejects.toThrow(/terminal/);
+        expect(engine.status('task-1')?.state).toBe('done');
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('setBlocked on an abandoned task throws (terminal) and leaves state unchanged', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'full');
+        await engine.abandon('task-1');
+        expect(engine.status('task-1')?.state).toBe('abandoned');
+        await expect(engine.setBlocked('task-1', 'revive me')).rejects.toThrow(/terminal/);
         expect(engine.status('task-1')?.state).toBe('abandoned');
       } finally {
         await store.close();
@@ -647,6 +711,55 @@ describe('WorkflowEngine', () => {
         expect(same.history).toHaveLength(historyBefore);
         const audit = store.getState<GateResult[]>('audit:task-1');
         expect(audit).toHaveLength(historyBefore);
+      } finally {
+        await store.close();
+      }
+    });
+  });
+
+  // iter-2 M8 — a BACKWARD jump (target phase before the current phase) must
+  // land WITHOUT re-recording the target phase's gate: the task already passed
+  // that gate, and the audit is append-only, so re-recording would duplicate it.
+  describe('backward jump does not re-record a gate', () => {
+    it('jumping from verifying back to spec lands in specified WITHOUT a second spec gate', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'full');
+        for (let i = 0; i < 5; i++) await engine.advance('task-1'); // → verifying
+        expect(engine.status('task-1')?.state).toBe('verifying');
+        const specGatesBefore = (store.getState<GateResult[]>('audit:task-1') ?? []).filter(
+          (g) => g.phase === 'spec',
+        ).length;
+        expect(specGatesBefore).toBe(1);
+
+        // Jump BACK to spec — lands, but records NO second spec gate.
+        const landed = await engine.advance('task-1', { to: 'spec' });
+        expect(landed.state).toBe('specified');
+        expect(landed.phase).toBe('spec');
+        expect(landed.jumpEntry).toBe('spec');
+        const audit = store.getState<GateResult[]>('audit:task-1') ?? [];
+        const specGatesAfter = audit.filter((g) => g.phase === 'spec');
+        expect(specGatesAfter).toHaveLength(specGatesBefore);
+      } finally {
+        await store.close();
+      }
+    });
+
+    it('a FORWARD jump still records the target gate exactly once', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'full');
+        await engine.advance('task-1'); // → clarifying
+        // Jump FORWARD to document (state `done`) — a legit out-of-order move
+        // that must record the verify gate (the gate fires on entering `done`,
+        // not on entering the `verify` phase itself — see gatePhaseForState).
+        const landed = await engine.advance('task-1', { to: 'document' });
+        expect(landed.state).toBe('done');
+        expect(landed.jumpEntry).toBe('document');
+        const audit = store.getState<GateResult[]>('audit:task-1') ?? [];
+        expect(audit.filter((g) => g.phase === 'verify')).toHaveLength(1);
       } finally {
         await store.close();
       }
