@@ -26,7 +26,7 @@
 // daemon record on `status` → exit 4 (DAEMON_DOWN); an uninitialized project
 // (`loadProjectInfo` throws) → exit 1 with the hint.
 
-import { loadProjectInfo } from '@noir-ai/core';
+import { loadProjectInfo, type ProjectInfo } from '@noir-ai/core';
 import {
   clearDaemonRecord,
   ensureDaemonRunning,
@@ -34,6 +34,7 @@ import {
   readDaemonRecord,
   spawnDetachedDaemon,
 } from '@noir-ai/daemon';
+import { PROBE_TIMEOUT_MS } from '../daemon-client.js';
 import { type CliOptions, EXIT, fail, info, log, spinner } from '../output.js';
 
 /** Options accepted by `daemon` sub-commands (the global flags only). */
@@ -65,11 +66,20 @@ function formatUptime(sec: number): string {
   return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
 }
 
-/** Best-effort `/health` probe for the detach double-spawn guard (never throws). */
-async function isHealthy(port: number): Promise<boolean> {
+/** Best-effort `/health` probe (never throws). Bounded — a blackhole socket that
+ *  accepts TCP but never answers must not hang `noir daemon start/status/stop`
+ *  indefinitely. When `expectedPid` is given, the probe ALSO requires the
+ *  responding daemon's own pid to match (the PID-reuse guard: a foreign process
+ *  that recycled the recorded pid must never be signalled as "our daemon"). */
+async function isHealthy(port: number, expectedPid?: number): Promise<boolean> {
   try {
-    const res = await fetch(`http://127.0.0.1:${port}/health`);
-    return res.status === 200;
+    const res = await fetch(`http://127.0.0.1:${port}/health`, {
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
+    if (res.status !== 200) return false;
+    if (expectedPid === undefined) return true;
+    const body = (await res.json()) as HealthBody | undefined;
+    return body?.ok === true && body.pid === expectedPid;
   } catch {
     return false;
   }
@@ -107,7 +117,15 @@ async function isHealthy(port: number): Promise<boolean> {
  * `--json` emits the one envelope to stdout before the process blocks/returns.
  */
 export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
-  const project = loadProjectInfo(process.cwd());
+  // A throw from loadProjectInfo on an uninitialized project must route through
+  // fail() — otherwise under --json stdout stays EMPTY (the raw error only
+  // reaches stderr), violating the S9 `{ok:false}` envelope contract.
+  let project: ProjectInfo;
+  try {
+    project = loadProjectInfo(process.cwd());
+  } catch {
+    fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
+  }
 
   // D2 — detached CHILD path. The parent forked us via `--_detached-child`;
   // run the daemon in-process (the HTTP server keeps THIS process alive).
@@ -146,7 +164,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
     // Double-spawn guard: only spawn a child if no daemon is already healthy
     // (the child would merely reuse it and exit — a wasted detached process).
     const existing = readDaemonRecord();
-    if (existing && pidAlive(existing.pid) && (await isHealthy(existing.port))) {
+    if (existing && pidAlive(existing.pid) && (await isHealthy(existing.port, existing.pid))) {
       if (opts.json === true) {
         process.stdout.write(
           `${JSON.stringify({ ok: true, data: { mode: 'detached', reused: true } })}\n`,
@@ -240,15 +258,22 @@ export async function daemonStop(opts: DaemonOptions): Promise<void> {
   const ds = spinner(`Stopping daemon (pid ${rec.pid})...`, opts).start();
   let signalled = false;
   let errMsg: string | undefined;
-  try {
-    process.kill(rec.pid, 'SIGTERM');
-    signalled = true;
-  } catch (err) {
-    // Process may have already exited; report but still clear the record below.
-    errMsg = err instanceof Error ? err.message : String(err);
-  } finally {
-    clearDaemonRecord();
+  // Guard PID reuse: only SIGTERM the recorded pid if it still answers as OUR
+  // daemon on the recorded port. If the daemon crashed and the pid was recycled
+  // by an unrelated process, a blind `process.kill(pid)` would signal an
+  // innocent process — so probe `/health` first and clear the stale record if it
+  // does not answer.
+  const healthy = pidAlive(rec.pid) && (await isHealthy(rec.port, rec.pid));
+  if (healthy) {
+    try {
+      process.kill(rec.pid, 'SIGTERM');
+      signalled = true;
+    } catch (err) {
+      // Process may have already exited between the probe and the signal.
+      errMsg = err instanceof Error ? err.message : String(err);
+    }
   }
+  clearDaemonRecord();
 
   if (opts.json === true) {
     process.stdout.write(
@@ -298,10 +323,14 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
 
   // Live liveness probe: the daemon's HTTP server answers GET /health with
   // `{ok, pid, uptimeSec}`. A dead port / non-200 / unreachable host ⇒ stale.
+  // Bounded like the other probes — a blackhole socket must not hang `noir
+  // daemon status` (the "probed by script" exit-4 contract).
   const hs = spinner('Probing daemon health...', opts).start();
   let health: HealthBody | null = null;
   try {
-    const res = await fetch(`http://127.0.0.1:${rec.port}/health`);
+    const res = await fetch(`http://127.0.0.1:${rec.port}/health`, {
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
     if (res.status === 200) {
       health = (await res.json()) as HealthBody;
     }

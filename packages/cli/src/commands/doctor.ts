@@ -48,6 +48,7 @@ import {
 import { CURRENT_SCAFFOLD_VERSION, readScaffoldVersion } from '@noir-ai/create';
 import { pidAlive, readDaemonRecord } from '@noir-ai/daemon';
 import { resolveModelConfig } from '@noir-ai/model';
+import { PROBE_TIMEOUT_MS } from '../daemon-client.js';
 import {
   type CliOptions,
   EXIT,
@@ -224,7 +225,11 @@ async function checkDaemon(checks: CheckResult[]): Promise<void> {
     return;
   }
   try {
-    const res = await fetch(`http://127.0.0.1:${rec.port}/health`);
+    // Bounded probe — a stale record pointing at a blackhole socket (TCP
+    // accepted, HTTP never answered) must not hang `noir doctor` for minutes.
+    const res = await fetch(`http://127.0.0.1:${rec.port}/health`, {
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
     const body =
       res.status === 200 ? ((await res.json()) as { ok?: boolean; uptimeSec?: number }) : null;
     if (body && body.ok === true) {

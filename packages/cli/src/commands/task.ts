@@ -20,8 +20,7 @@
 // envelope to `null` and stays exit 0).
 
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { loadProjectInfo, nextArtifactSequence } from '@noir-ai/core';
+import { loadProjectInfo, nextArtifactSequence, type ProjectInfo, sha256Hex } from '@noir-ai/core';
 import {
   PHASES,
   type Phase,
@@ -465,13 +464,12 @@ export async function taskResume(opts: TaskResumeOptions): Promise<void> {
   }
   const res = await callDaemonTool<WorkflowResumeResult>(opts, 'workflow_resume', args);
   // resume is a read; the "nothing to resume" envelope is exit 1 (not a crash).
+  // Route through fail() in BOTH branches so --json also exits 1 (fail emits the
+  // canonical {ok:false,error} envelope on stdout) — previously --json wrote a
+  // non-canonical shape and exited 0.
   if (res.resumable !== true) {
     const detail =
       typeof res.error === 'string' && res.error.length > 0 ? res.error : 'nothing to resume';
-    if (opts.json === true) {
-      process.stdout.write(`${JSON.stringify({ ok: false, resumable: false, error: detail })}\n`);
-      return;
-    }
     fail(EXIT.ERROR, `task resume: ${detail}`, opts);
   }
   // `--prompt` records a resume intent (additive KV, observable — not an FSM
@@ -609,17 +607,25 @@ function runCheck(cmd: string): { exitCode: number; digest: string } {
     const status = buf.status;
     return {
       exitCode: typeof status === 'number' ? status : 1,
-      digest: createHash('sha256').update(out).digest('hex'),
+      digest: sha256Hex(out),
     };
   } catch {
-    return { exitCode: 1, digest: createHash('sha256').update('').digest('hex') };
+    return { exitCode: 1, digest: sha256Hex('') };
   }
 }
 
 export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
   // Resolve the check set from the project config (workflow.gate.verify.checks).
   // No checks resolvable → exit 2 (USAGE) rather than inventing commands.
-  const project = loadProjectInfo(process.cwd());
+  // A throw from loadProjectInfo on an uninitialized project must route through
+  // fail() — otherwise under --json stdout stays EMPTY (the raw error only
+  // reaches stderr), violating the S9 `{ok:false}` envelope contract.
+  let project: ProjectInfo;
+  try {
+    project = loadProjectInfo(process.cwd());
+  } catch {
+    fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
+  }
   const cfgChecks = project.config.workflow?.gate?.verify?.checks ?? [];
   const all: VerifyCheck[] = cfgChecks.map((c) => ({
     name: c.name,
@@ -641,7 +647,7 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
   if (checks.length === 0) {
     fail(
       EXIT.USAGE,
-      'task verify: no verify checks configured (set workflow.gate.verify.checks in noir.config)',
+      'task verify: no verify checks configured (set workflow.gate.verify.checks in .noir/config.yml)',
       opts,
     );
   }
@@ -670,16 +676,36 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
   const res = await callDaemonTool<WorkflowAdvanceResult>(opts, 'workflow_advance', { evidence });
   if (res.ok === true) {
     if (opts.json === true) {
-      process.stdout.write(`${JSON.stringify({ ok: true, data: res, evidence })}\n`);
+      // S9 `{ok:true, data}` — evidence nests INSIDE the payload (no ad-hoc
+      // top-level sibling keys), matching every other command's envelope shape.
+      process.stdout.write(`${JSON.stringify({ ok: true, data: { ...res, evidence } })}\n`);
       return;
     }
     success(`verify — ${evidence.summary} → gate approved`, opts);
     renderStatusRow(res as WorkflowStatusResult, opts);
     return;
   }
-  // Pending / failed: render recovery options.
+  // Pending / failed: a failing verify gate is a FAILURE (exit non-zero), never
+  // a silent exit-0 "success". Under --json emit the canonical {ok:false,error}
+  // envelope (not a flattened `{evidence, ...res}`), preserving pendingGate +
+  // recovery + evidence for consumers.
+  const detail = res.error ?? res.pendingGate?.reason ?? 'verify failed';
   if (opts.json === true) {
-    process.stdout.write(`${JSON.stringify({ evidence, ...res })}\n`);
+    process.stdout.write(
+      `${JSON.stringify({
+        ok: false,
+        error: { code: EXIT.ERROR, message: `task verify: ${detail}` },
+        // S9 `{ok:false, error}` + a payload — recovery context + evidence nest
+        // under `data`, not as top-level siblings (same envelope shape as the
+        // success path; consumers read `data` for the full picture).
+        data: {
+          ...(res.pendingGate !== undefined ? { pendingGate: res.pendingGate } : {}),
+          ...(res.recovery !== undefined ? { recovery: res.recovery } : {}),
+          evidence,
+        },
+      })}\n`,
+    );
+    process.exitCode = EXIT.ERROR;
     return;
   }
   if (res.pendingGate) {
@@ -701,9 +727,8 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
         .join(' | ')}`,
       opts,
     );
-  } else {
-    fail(EXIT.ERROR, `task verify: ${res.error ?? 'verify failed'}`, opts);
   }
+  fail(EXIT.ERROR, `task verify: ${detail}`, opts);
 }
 
 // ---------------------------------------------------------------------------
