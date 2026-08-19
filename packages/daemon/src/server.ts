@@ -329,8 +329,16 @@ export function createNoirServer(ctx: ServerContext): McpServer {
         description:
           'Start a Noir spec-driven task at draft/intake and make it the active task (workflow:active). Re-starting an existing taskId overwrites it (the KV is the source of truth, not a journal). Defaults to full mode. taskClass (feature/epic/…) drives the soft PRD gate at the spec gate; quick mode writes a stub spec + fast-forwards to executing.',
         inputSchema: {
-          taskId: z.string().min(1).describe('Stable task handle (re-starting overwrites).'),
-          slug: z.string().min(1).describe('Human-readable slug, e.g. "add-login".'),
+          taskId: z
+            .string()
+            .min(1)
+            .regex(/^[A-Za-z0-9._-]+$/, 'taskId allows [A-Za-z0-9._-] only (path-safe)')
+            .describe('Stable task handle (re-starting overwrites).'),
+          slug: z
+            .string()
+            .min(1)
+            .regex(/^[A-Za-z0-9._-]+$/, 'slug allows [A-Za-z0-9._-] only (path-safe)')
+            .describe('Human-readable slug, e.g. "add-login".'),
           mode: z.enum(['full', 'quick']).optional().describe("Mode: 'full' (default) or 'quick'."),
           taskClass: z
             .enum(TASK_CLASSES)
@@ -476,6 +484,12 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           let task: TaskState | null = null;
           if (taskId) {
             task = engine.status(taskId);
+            // Terminal tasks are not resumable — the same filter `resumeTask`
+            // (modes.ts) applies, so the named-task branch agrees with the
+            // active-task branch: done/abandoned are terminal, nothing else.
+            if (task && (task.state === 'done' || task.state === 'abandoned')) {
+              task = null;
+            }
           } else if (ctx.store) {
             // resumeTask reads workflow:active → the persisted TaskState and
             // returns null for terminal tasks. Uses only the public Store API.
@@ -961,7 +975,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       'integrations_auth',
       {
         description:
-          "Resolve an integration token VALUE server-side at call time (kills the non-interactive-shell gotcha). Pass {integration:'noir-clickup'} to resolve tokenEnv from the discovered declaration, or {envVar:'CLICKUP_API_TOKEN'} to name the env var directly. Returns {ok:true,token,envVar} when present, or {ok:false,reason:'no-token',envVar} when absent (the skill then does manual-paste fallback). The token is returned ONLY in this tool result — never logged, never persisted.",
+          "Resolve an integration token VALUE server-side at call time (kills the non-interactive-shell gotcha). Pass {integration:'noir-clickup'} to resolve tokenEnv from the discovered declaration (config override honored), or {envVar:'CLICKUP_API_TOKEN'} to name the env var directly — but envVar MUST be a tokenEnv name declared by a discovered integration (allowlisted; an arbitrary/undeclared name is refused to prevent secret exfiltration). Returns {ok:true,token,envVar} when present, or {ok:false,reason:'no-token',envVar} when absent (the skill then does manual-paste fallback). The token is returned ONLY in this tool result — never logged, never persisted.",
         inputSchema: {
           integration: z
             .string()
@@ -973,7 +987,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
             .string()
             .optional()
             .describe(
-              'Env-var name to read directly (e.g. CLICKUP_API_TOKEN). Used when no integration binding applies.',
+              'Env-var name to read directly (e.g. CLICKUP_API_TOKEN). Must be a tokenEnv name declared by a discovered integration (allowlisted) — an undeclared name is refused.',
             ),
         },
       },

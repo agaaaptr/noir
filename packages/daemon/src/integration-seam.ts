@@ -161,7 +161,11 @@ export type TokenResolution =
  * Two call shapes:
  *   - `{ integration: 'noir-clickup' }` → look up `tokenEnv` from the discovered
  *     declaration (config override honored), then read `process.env[tokenEnv]`.
- *   - `{ envVar: 'CLICKUP_API_TOKEN' }` → read `process.env[envVar]` directly.
+ *   - `{ envVar: 'CLICKUP_API_TOKEN' }` → read `process.env[envVar]` directly,
+ *     but ONLY when `envVar` is one of the DECLARED tokenEnv names. An
+ *     arbitrary/undeclared name is refused — otherwise any caller (or a hostile
+ *     prompt driving the agent) could exfiltrate an unrelated secret
+ *     (AWS_*, GITHUB_TOKEN, NPM_TOKEN, …) straight into the tool result.
  */
 export function resolveToken(
   svc: IntegrationService,
@@ -181,6 +185,16 @@ export function resolveToken(
     return { ok: false, reason: 'no-token', envVar: name };
   }
   if (envVar !== undefined) {
+    // Allowlist: only a tokenEnv name declared by a discovered integration may
+    // be read. This closes the arbitrary-env-read exfiltration gadget while
+    // still letting a workspace that renamed the var (config auth.tokenEnv
+    // override) resolve by its custom name.
+    const allowed = new Set(
+      [...svc.bindings.values()].map((b) => b.tokenEnv).filter((n) => n.length > 0),
+    );
+    if (!allowed.has(envVar)) {
+      return { ok: false, reason: 'no-token', envVar };
+    }
     const value = env[envVar];
     if (typeof value === 'string' && value.length > 0) {
       return { ok: true, token: value, envVar };

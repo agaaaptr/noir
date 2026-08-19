@@ -17,9 +17,16 @@ export interface EnsureResult {
   stop: () => Promise<void>;
 }
 
+/** Bounded `/health` probe timeout — a stale record whose port is held by a
+ *  blackhole socket (accepts TCP, never answers) must not hang every write
+ *  command indefinitely. Matches `@noir-ai/cli`'s `PROBE_TIMEOUT_MS`. */
+const HEALTH_PROBE_TIMEOUT_MS = 1500;
+
 async function isHealthy(port: number): Promise<boolean> {
   try {
-    const res = await fetch(`http://127.0.0.1:${port}/health`);
+    const res = await fetch(`http://127.0.0.1:${port}/health`, {
+      signal: AbortSignal.timeout(HEALTH_PROBE_TIMEOUT_MS),
+    });
     return res.status === 200;
   } catch {
     return false;

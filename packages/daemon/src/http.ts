@@ -117,8 +117,12 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
   const integrations = buildIntegrationService(opts.project.root, opts.project.config.integrations);
 
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-    lastActivity = Date.now();
+    // Update activity ONLY for requests that pass validation (a rejected bad
+    // host/origin must not reset the idle timer, else an attacker or
+    // misconfigured client could keep the daemon alive forever by pinging any
+    // path with an invalid origin).
     if (req.method === 'GET' && req.url === '/health') {
+      lastActivity = Date.now();
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(
         JSON.stringify({ ok: true, pid, uptimeSec: Math.floor((Date.now() - startedAt) / 1000) }),
@@ -126,6 +130,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
       return;
     }
     if (!validateHost(req, res) || !validateOrigin(req, res)) return;
+    lastActivity = Date.now();
     if (req.url === '/mcp') {
       const server = createNoirServer({
         project: opts.project,

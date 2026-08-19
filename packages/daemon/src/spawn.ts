@@ -45,10 +45,14 @@ async function waitFor(
   throw new Error(`timed out waiting for ${what} (after ${timeoutMs}ms)`);
 }
 
-/** True once `GET /health` on `port` answers 200 (best-effort, never throws). */
-async function healthOk(port: number): Promise<boolean> {
+/** True once `GET /health` on `port` answers 200 (best-effort, never throws).
+ *  Bounded — a blackhole socket that accepts TCP but never answers must not
+ *  hang the detach-wait loop past `healthTimeoutMs`. */
+async function healthOk(port: number, timeoutMs: number): Promise<boolean> {
   try {
-    const res = await fetch(`http://127.0.0.1:${port}/health`);
+    const res = await fetch(`http://127.0.0.1:${port}/health`, {
+      signal: AbortSignal.timeout(timeoutMs),
+    });
     return res.status === 200;
   } catch {
     return false;
@@ -121,7 +125,7 @@ export async function spawnDetachedDaemon(
 
   // Record exists — the port is real only once the server answers /health.
   await waitFor(`daemon /health on port ${rec.port}`, healthTimeoutMs, pollIntervalMs, () =>
-    healthOk(rec.port),
+    healthOk(rec.port, healthTimeoutMs),
   );
 
   return { pid, port: rec.port };

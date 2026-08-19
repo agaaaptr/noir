@@ -249,13 +249,24 @@ describe('integrations_auth — token resolution', () => {
     expect(res.envVar).toBe('CLICKUP_API_TOKEN');
   });
 
-  it('resolves by explicit envVar (no declaration needed)', async () => {
+  it('refuses an envVar that is NOT a declared integration tokenEnv (exfiltration guard)', async () => {
     process.env.MY_CUSTOM_TOKEN = 'tk_xyz';
     const server = newServer();
     const res = await callTool(server, 'integrations_auth', { envVar: 'MY_CUSTOM_TOKEN' });
-    expect(res.ok).toBe(true);
-    expect(res.token).toBe('tk_xyz');
+    // Arbitrary env-var reads are refused: only a declared tokenEnv name may be
+    // resolved (otherwise a caller could exfiltrate AWS_*/GITHUB_TOKEN/NPM_TOKEN).
+    expect(res.ok).toBe(false);
+    expect(res.token).toBeUndefined();
     delete process.env.MY_CUSTOM_TOKEN;
+  });
+
+  it('resolves by explicit envVar when it names the declared tokenEnv', async () => {
+    process.env.CLICKUP_API_TOKEN = 'tk_declared';
+    const server = newServer();
+    const res = await callTool(server, 'integrations_auth', { envVar: 'CLICKUP_API_TOKEN' });
+    expect(res.ok).toBe(true);
+    expect(res.token).toBe('tk_declared');
+    delete process.env.CLICKUP_API_TOKEN;
   });
 
   it('honors a config auth.tokenEnv override over the declaration default', async () => {
