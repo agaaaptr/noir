@@ -117,6 +117,38 @@ describe('FTS5 index + BM25 search', () => {
     }
   });
 
+  it('a huge opts.limit is clamped (never materializes unbounded rows)', async () => {
+    const store = await openAndIndex();
+    try {
+      // Pre-fix, limit: 1e9 flowed straight into 'LIMIT ?' — the clamp (MAX_HITS)
+      // keeps `.all()` bounded. With 3 docs the observable contract is: sane
+      // result set, no crash.
+      const huge = store.searchFt('noir', { limit: 1_000_000_000 });
+      expect(huge.length).toBeLessThanOrEqual(3);
+      expect(huge.length).toBeGreaterThan(0);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it('FTS5 operator characters in a query are treated literally (no syntax error)', async () => {
+    const store = await openAndIndex();
+    try {
+      // Pre-fix, these threw 'fts5: syntax error' (bare '*', unbalanced quote,
+      // leading ':', parens) or silently changed semantics. Post-fix each term is
+      // a quoted literal phrase — never an FTS5 expression.
+      expect(() => store.searchFt('*')).not.toThrow();
+      expect(() => store.searchFt('noir "daemon')).not.toThrow();
+      expect(() => store.searchFt('daemon:')).not.toThrow();
+      expect(() => store.searchFt('(noir')).not.toThrow();
+      expect(() => store.searchFt('daemon AND')).not.toThrow();
+      // A plain term still matches (escaping preserves normal search semantics).
+      expect(store.searchFt('daemon').length).toBeGreaterThan(0);
+    } finally {
+      await store.close();
+    }
+  });
+
   it('upserts on conflicting id (indexDoc is idempotent)', async () => {
     const store = await openStore({ projectId: id, root });
     try {

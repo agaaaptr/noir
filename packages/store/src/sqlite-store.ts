@@ -15,6 +15,31 @@ import type {
   VecUpsertMeta,
 } from './types.js';
 
+/** Hard cap on hits any single search/kNN call may materialize — the retriever
+ *  budgets/trims results anyway, so a caller passing `limit: 1e9` must not make
+ *  better-sqlite3 `.all()` build every row (with snippets + meta JSON) in memory
+ *  before the trim happens. */
+const MAX_HITS = 200;
+
+/**
+ * Escape a free-text user query into FTS5 literal-phrase syntax: split on
+ * whitespace and wrap each term in double quotes (embedded quotes doubled), so
+ * operator characters (`-` `*` `:` `(` `)` `NEAR` …) and bare boolean keywords
+ * are treated as LITERAL text instead of FTS5 expression syntax. Every search
+ * path funnels through `searchFt`, and every caller passes raw user text — no
+ * caller builds structured FTS5 queries — so escaping here is safe and single.
+ * An empty/whitespace-only input matches nothing (the caller's guards normally
+ * short-circuit first). */
+function ftsEscape(query: string): string {
+  const terms = query
+    .split(/\s+/)
+    .map((t) => t.replace(/"/g, '""'))
+    .filter((t) => t.length > 0)
+    .map((t) => `"${t}"`);
+  // `""` is a valid empty FTS5 phrase that matches nothing — never throws.
+  return terms.length > 0 ? terms.join(' ') : '""';
+}
+
 /** Internal row shape from the docs_fts JOIN docs query. */
 interface FtsRow {
   id: string;
@@ -55,8 +80,17 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
 
   const db = new Database(dbPath, { readonly: opts.readonly === true });
 
-  // Load sqlite-vec first (read-safe; needed for kNN in either mode).
-  sqliteVec.load(db);
+  // Load sqlite-vec (read-safe; needed for kNN in either mode) FAIL-SOFT: if the
+  // platform native binary is absent/broken (the exact case `vecAvailability()`
+  // probes for), we must NOT make the whole store — KV, FTS, workflow, memory —
+  // unopenable. Record the flag, skip the vec0 DDL, and let vec operations throw
+  // a clear "vec unavailable" error instead of crashing at open.
+  let vecMissing = false;
+  try {
+    sqliteVec.load(db);
+  } catch {
+    vecMissing = true;
+  }
 
   if (opts.readonly !== true) {
     db.pragma('journal_mode = WAL');
@@ -71,9 +105,11 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     // loaded (done above). `source`/`id` are metadata columns — filterable in
     // kNN (`source = ?`) and deletable for idempotent upsert (`id = ?`). vec0
     // keys on rowid (auto-assigned); there is no text primary key.
-    db.exec(
-      'CREATE VIRTUAL TABLE IF NOT EXISTS vec USING vec0(embedding float[384], source TEXT, id TEXT)',
-    );
+    if (!vecMissing) {
+      db.exec(
+        'CREATE VIRTUAL TABLE IF NOT EXISTS vec USING vec0(embedding float[384], source TEXT, id TEXT)',
+      );
+    }
   }
   // read-only: do not write. If the schema is missing, queries simply fail —
   // acceptable for degraded reads (e.g. inspecting a foreign DB).
@@ -118,11 +154,14 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
   };
 
   const searchFt = (query: string, opts?: SearchFtOpts): FtsHit[] => {
-    const limit = opts?.limit ?? 10;
+    const limit = Math.min(opts?.limit ?? 10, MAX_HITS);
     // bm25(): more negative = more relevant, so ORDER BY score ascending.
     // snippet(docs_fts, 0, ...): column 0 is `content`; 16-token window with
     // <<match>> markers — NEVER the full content (blueprint §9.2).
     const source = opts?.source;
+    // Escape the raw query into literal phrases (see ftsEscape) so operator
+    // chars in a user query are searched as text, not parsed as FTS5 syntax.
+    const match = ftsEscape(query);
     const sql = source
       ? `SELECT d.id AS id, d.source AS source, d.meta AS meta, bm25(docs_fts) AS score,
                 snippet(docs_fts, 0, '<<', '>>', '…', 16) AS snippet
@@ -135,8 +174,8 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
          WHERE docs_fts MATCH ?
          ORDER BY score LIMIT ?`;
     const rows = source
-      ? (db.prepare(sql).all(query, source, limit) as FtsRow[])
-      : (db.prepare(sql).all(query, limit) as FtsRow[]);
+      ? (db.prepare(sql).all(match, source, limit) as FtsRow[])
+      : (db.prepare(sql).all(match, limit) as FtsRow[]);
     return rows.map((r) => ({
       id: r.id,
       source: r.source,
@@ -149,6 +188,9 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
   const upsertVec = (id: string, vec: Float32Array, meta?: VecUpsertMeta): void => {
     if (readonly) {
       throw new Error('store is read-only (daemon down)');
+    }
+    if (vecMissing) {
+      throw new Error('vec unavailable (sqlite-vec native module not loadable)');
     }
     // Account for Float32Array views (byteOffset/byteLength) so a subarray
     // binds exactly its own bytes, not the whole backing ArrayBuffer.
@@ -167,13 +209,19 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     if (readonly) {
       throw new Error('store is read-only (daemon down)');
     }
+    if (vecMissing) {
+      throw new Error('vec unavailable (sqlite-vec native module not loadable)');
+    }
     // vec0 keys on rowid; `id` is a filterable metadata column, so delete-by-id
     // is a plain metadata predicate (same one upsertVec uses for idempotency).
     db.prepare('DELETE FROM vec WHERE id = ?').run(id);
   };
 
   const knn = (vec: Float32Array, opts?: VecOpts): VecHit[] => {
-    const limit = opts?.limit ?? 5;
+    if (vecMissing) {
+      throw new Error('vec unavailable (sqlite-vec native module not loadable)');
+    }
+    const limit = Math.min(opts?.limit ?? 5, MAX_HITS);
     const buf = Buffer.from(vec.buffer, vec.byteOffset, vec.byteLength);
     // `MATCH ? AND k = ?` is the canonical vec0 kNN form (version-independent;
     // `ORDER BY distance` is ascending by default — nearest first). distance is
@@ -192,8 +240,10 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
   const countDocs = (): number =>
     (db.prepare('SELECT count(*) AS c FROM docs').get() as { c: number }).c;
 
-  const countVecs = (): number =>
-    (db.prepare('SELECT count(*) AS c FROM vec').get() as { c: number }).c;
+  const countVecs = (): number => {
+    if (vecMissing) return 0;
+    return (db.prepare('SELECT count(*) AS c FROM vec').get() as { c: number }).c;
+  };
 
   return {
     projectId,

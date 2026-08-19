@@ -1,14 +1,15 @@
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { type ConflictResolution, uniqueAsideSync } from '@noir-ai/core';
 import type Database from 'better-sqlite3';
 
 /**
- * The SAME conflict-resolution seam @noir-ai/create's `regenerate` uses,
- * local to this package so store does NOT add a create dependency. Default
- * behavior is unchanged from v1.2 (overwrite): the seam fires only when a
- * caller wires `onConflict`/`conflictPolicy`.
+ * The SAME conflict-resolution seam @noir-ai/create's `regenerate` uses, built
+ * on the shared `ConflictResolution` union + `uniqueAsideSync` helper from
+ * @noir-ai/core (no create dependency). Default behavior is unchanged from v1.2
+ * (overwrite): the seam fires only when a caller wires `onConflict`/`conflictPolicy`.
  */
-export type MarkdownConflictResolution = 'replace' | 'preserve' | 'rename' | 'duplicate' | 'cancel';
+export type MarkdownConflictResolution = ConflictResolution;
 
 export interface MarkdownConflictContext {
   /** Path relative to the export dir (`<id>.md`). */
@@ -117,10 +118,4 @@ function resolveAndWrite(
       return false;
     }
   }
-}
-
-function uniqueAsideSync(abs: string, suffix: string): string {
-  let candidate = `${abs}${suffix}`;
-  for (let n = 1; existsSync(candidate); n++) candidate = `${abs}${suffix}.${n}`;
-  return candidate;
 }
