@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased — `noir run` hardening + run profiles + `.noir/.env` + config docs
+## 1.12.0 (2026-08-19) — `noir run` hardening + run profiles + `.noir/.env` + config docs
 
 ### Fixed
 - **Palette help-corpus wrap** — the two-column row budgeted label(26) + hint(34) = 60 columns, but the real text width inside the row is 58 (panel 64 − border 2 − panel padding 2 − row padding 2), so long keybinding descriptions wrapped to a flush-left second line. `HINT_WIDTH` is now derived from a named `ROW_TEXT_WIDTH` budget, and the active **help** row shows its full description as a `↳` detail line (matching command rows).
-- **`noir run` host-failure contract** — a failed host run used to exit 0 with a misleading "usage: 0 in / 0 out · 1 turns" line and, under `--json`, an `{ok:true}` envelope. Now an API-error assistant event is never streamed as the answer, `result.is_error` is surfaced, and a failed run exits 1 with an actionable message (auth → `claude /login`; otherwise the quoted host error + `--command`/profile hint), prints no usage line, and emits `{ok:false,error}` under `--json`. The raw transcript is still persisted.
+- **`noir run` host-failure contract** — a failed host run used to exit 0 with a misleading "usage: 0 in / 0 out · 1 turns" line and, under `--json`, an `{ok:true}` envelope. Now an API-error assistant event is never streamed as the answer, `result.is_error` is surfaced, and a failed run exits 1 with an actionable message (auth → the resolved binary's `/login`; otherwise the quoted host error + `--command`/profile hint), prints no usage line, and emits `{ok:false,error}` under `--json`. The raw transcript is still persisted.
 - **`noir run --command` ENOENT message** — now names the custom binary (`failed to run custom command 'claude-work': …`) instead of the host, and explains that shell aliases/functions from `.zshrc` are invisible to `spawn()` (use an executable on PATH, an absolute path, or a launcher script).
 - **`config.mode` now honored** — `workflow_start` falls back to the project's configured `mode` before the hard `full` default, so `mode: quick` in `.noir/config.yml` actually sets the default the docs describe.
 
@@ -14,7 +14,7 @@
 - **`.noir/.env` loading** — project-local env file (Node `--env-file` dialect, hand-rolled ~40-LOC parser in `@noir-ai/core`) loaded at CLI + daemon start; real env always wins; the file fills only unset keys. Gitignored by the managed `.gitignore` block, scaffolded as `.noir/.env.example`, and `noir doctor` warns if it is group/world-readable. See `docs/reference/environment.md` + `docs/how-to/clickup.md`.
 
 ### Changed
-- **Configuration reference is self-maintaining** — every `NoirConfigSchema` field now carries a `.describe()` and `docs:generate` walks one level into object/record fields, so `docs/reference/config.md` shows real descriptions + nested keys + defaults, with a precedence intro and honest notes for parsed-but-inert keys. New `docs/reference/environment.md`, `docs/how-to/clickup.md`, `docs/how-to/host-profiles.md`, and a `noir run` + Configuration section in `docs/getting-started.md`.
+- **Configuration reference is self-maintaining** — every `NoirConfigSchema` field now carries a `.describe()` and `docs:generate` walks one level into object/record fields, so `docs/reference/config.md` shows real descriptions + nested keys + defaults, with a precedence intro, grouped key tables, conditional-requirements + secrets-policy + version-since notes, and honest notes for parsed-but-inert keys. New `docs/reference/environment.md`, `docs/how-to/clickup.md`, `docs/how-to/host-profiles.md`, and a `noir run` + Configuration section in `docs/getting-started.md`.
 - **Doc drift fixes** — update-cache path corrected to `~/.noir/update-cache.json`; the `claude-hooks.md` memory template reworded to the explicit-save reality (no phantom `memory capture` command); `getting-started` mode claim now matches behavior.
 
 ---

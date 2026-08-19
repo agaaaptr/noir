@@ -6,9 +6,9 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 
 ---
 
-## Run orchestration + configuration surface (2026-08-19, unreleased)
+## Run orchestration + configuration surface (2026-08-19 → 1.12.0)
 
-> **Shipped 2026-08-19 on `develop`** (pending release): full gate green (1718 tests).
+> **Shipped 2026-08-19 as v1.12.0**: full gate green (1730 tests).
 
 - ✅ **Palette help-corpus wrap** — RESOLVED: two-column hint width derived from the real row budget (58), active help row shows the full description as a `↳` detail line.
 - ✅ **`noir run` host-failure contract** — RESOLVED: API-error assistant events flagged + never streamed as answers; `result.is_error` surfaced; failed runs exit 1 + `{ok:false}` under `--json` + actionable auth/ENOENT messages; no misleading usage line on failure.

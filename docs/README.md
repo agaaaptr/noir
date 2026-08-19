@@ -1,7 +1,7 @@
 # Documentation
 
 > Auto-generated documentation index.
-> Last updated: 2026-08-19T07:10:02.406Z
+> Last updated: 2026-08-19T07:34:05.220Z
 
 ## Getting Started
 
