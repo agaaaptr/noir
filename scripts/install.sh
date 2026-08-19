@@ -391,17 +391,33 @@ atomic_write() {  # $1 = path, $2 = content
 NOIR_PATH_BLOCK="# Noir CLI
 export PATH=\"\$HOME/.noir/bin:\$PATH\""
 
+# fish has no `export` builtin — it uses `set -gx`. Emitting the POSIX export
+# line into config.fish would print `fish: Unknown command: export` on every
+# launch and never add the PATH. fish_add_path is the idiomatic, idempotent form.
+NOIR_PATH_BLOCK_FISH="# Noir CLI
+fish_add_path -g \$HOME/.noir/bin"
+
 ensure_path_in_shell_profile() {
-  local shell_name profile marker
+  local shell_name profile marker path_block
   shell_name="$(basename "${SHELL:-/bin/sh}")"
 
-  # Pick the right profile file per shell. Fish has its own config layout;
-  # zsh/bash/ksh/dash all accept a POSIX export line in their rc/profile.
+  # Pick the right profile file per shell. Fish has its own config layout AND
+  # its own syntax; zsh/bash/ksh/dash all accept a POSIX export line.
   case "$shell_name" in
-    zsh)  profile="${HOME}/.zshrc" ;;
-    bash) profile="${HOME}/.bashrc" ;;  # most distros source .bashrc for interactive shells
-    fish) profile="${HOME}/.config/fish/config.fish"; mkdir -p "$(dirname "$profile")" ;;
-    *)    profile="${HOME}/.profile" ;;  # portable POSIX fallback
+    zsh)  profile="${HOME}/.zshrc"; path_block="$NOIR_PATH_BLOCK" ;;
+    # macOS bash login shells read ~/.bash_profile (not .bashrc); Linux distros
+    # source .bashrc for interactive shells. Pick per-platform so the PATH block
+    # lands in a file the login shell actually sources.
+    bash)
+      if [[ "$(uname -s)" == "Darwin" ]]; then
+        profile="${HOME}/.bash_profile"
+      else
+        profile="${HOME}/.bashrc"
+      fi
+      path_block="$NOIR_PATH_BLOCK"
+      ;;
+    fish) profile="${HOME}/.config/fish/config.fish"; mkdir -p "$(dirname "$profile")"; path_block="$NOIR_PATH_BLOCK_FISH" ;;
+    *)    profile="${HOME}/.profile"; path_block="$NOIR_PATH_BLOCK" ;;  # portable POSIX fallback
   esac
 
   # Idempotent: skip if the marker comment is already present (tolerates
@@ -414,9 +430,9 @@ ensure_path_in_shell_profile() {
   # re-running the installer doesn't duplicate the entry).
   info "Adding ~/.noir/bin to PATH in ${profile} ..."
   if [[ -f "$profile" ]]; then
-    printf '\n%s\n' "$NOIR_PATH_BLOCK" >> "$profile"
+    printf '\n%s\n' "$path_block" >> "$profile"
   else
-    printf '%s\n' "$NOIR_PATH_BLOCK" > "$profile"
+    printf '%s\n' "$path_block" > "$profile"
   fi
   good "Added Noir to ${profile} (start a new shell or run 'source ${profile}' to apply)."
 }

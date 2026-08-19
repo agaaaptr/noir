@@ -65,6 +65,7 @@ jobs:
       - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm docs:validate
 
   publish:
     name: Publish @noir-ai/* (unified, provenance; version-string-based channel)
@@ -230,7 +231,6 @@ jobs:
         env:
           FULL_VERSION: ${{ steps.extract.outputs.version }}
           CHANNEL: ${{ steps.channel.outputs.channel }}
-          BASE_VERSION: ${{ steps.extract.outputs.version }}
           DIST_TAG: ${{ steps.channel.outputs.tag }}
           GIT_TAG: ${{ github.ref_name }}
           GIT_SHA: ${{ github.sha }}

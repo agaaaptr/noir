@@ -14,7 +14,7 @@
 //
 // Usage:
 //   node scripts/release-registry.mjs add
-//     Environment: FULL_VERSION CHANNEL BASE_VERSION DIST_TAG GIT_TAG
+//     Environment: FULL_VERSION CHANNEL DIST_TAG GIT_TAG
 //                  GIT_SHA GIT_BRANCH
 //   node scripts/release-registry.mjs rebuild
 //   node scripts/release-registry.mjs validate [--quiet]
@@ -490,7 +490,6 @@ function validate(releases) {
 async function cmdAdd() {
   const version = process.env.FULL_VERSION;
   const channel = process.env.CHANNEL;
-  const baseVer = process.env.BASE_VERSION;
   const distTag = process.env.DIST_TAG;
   const gitTag = process.env.GIT_TAG;
   const gitSha = process.env.GIT_SHA;
@@ -531,7 +530,7 @@ async function cmdAdd() {
   const now = new Date().toISOString();
 
   const entry = {
-    baseVersion: baseVer || baseVersion(version),
+    baseVersion: baseVersion(version),
     fullVersion: version,
     prereleaseIdentifier: isStable ? null : 'beta',
     betaIteration: isStable ? null : betaIteration(version),
