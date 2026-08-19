@@ -9,9 +9,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@noir-ai/core': alias('core'),
+      '@noir-ai/create': alias('create'),
       '@noir-ai/daemon': alias('daemon'),
       '@noir-ai/adapters': alias('adapters'),
       '@noir-ai/cli': alias('cli'),
+      '@noir-ai/skills': alias('skills'),
       '@noir-ai/store': alias('store'),
       '@noir-ai/workflow': alias('workflow'),
       // @noir-ai/context is consumed at runtime by the daemon's context-seam

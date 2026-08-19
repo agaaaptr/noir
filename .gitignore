@@ -1,6 +1,11 @@
 # Local SDD / superpowers scratch (session planning state, not source)
 .superpowers/
 
+# Node-provision / test-run temp dirs (names derive from process.pid + Date.now(),
+# so they can never be a stable match otherwise — safety net against `git add -A`).
+.archive-*.tmp/
+.staging-*
+
 # OS / editor
 .DS_Store
 
