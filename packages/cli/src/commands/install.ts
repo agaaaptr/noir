@@ -257,30 +257,25 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
     minVersion,
   });
 
-  // I2 — refuse to install a version below the configured minVersion floor
-  // (same warn/refuse pattern as the installed-version downgrade guard).
+  // I2 — refuse to install a version below the configured minVersion floor, and
+  // refuse a downgrade, UNCONDITIONALLY. The floor/downgrade-guard exist as
+  // safety invariants; gating them on `--no-input` meant the common interactive
+  // path (and `--json`, which does not set input:false) silently proceeded with
+  // only a stderr warning — the invariant was never actually enforced.
   if (plan.belowMinVersion) {
-    warn(`Target ${plan.nativeVersion} is below the minVersion floor (${minVersion}).`);
-    if (opts.noInput === true || opts.input === false) {
-      fail(
-        EXIT.USAGE,
-        `refusing install of ${plan.nativeVersion} (below minVersion ${minVersion})`,
-        opts,
-      );
-    }
+    fail(
+      EXIT.USAGE,
+      `refusing install of ${plan.nativeVersion} (below minVersion ${minVersion})`,
+      opts,
+    );
   }
 
   if (plan.isDowngrade) {
-    warn(`Target ${plan.nativeVersion} is OLDER than installed ${plan.installedVersion}.`);
-    // (Interactive confirm is skipped under --no-input; we hard-stop to be safe.)
-    if (opts.noInput === true || opts.input === false) {
-      fail(
-        EXIT.USAGE,
-        `refusing downgrade to ${plan.nativeVersion} (installed ${plan.installedVersion})`,
-        opts,
-      );
-    }
-    // @clack confirm gate (lazy import) -- same pattern as home.ts.
+    fail(
+      EXIT.USAGE,
+      `refusing downgrade to ${plan.nativeVersion} (installed ${plan.installedVersion})`,
+      opts,
+    );
   }
 
   const installSpin = spinner('Installing Noir via native installer...', opts).start();

@@ -35,10 +35,9 @@
 // sole stdout writer. Colors via the A2 theme (`c.warn`/`c.dim`) so NO_COLOR /
 // non-TTY strip cleanly.
 
-import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ProjectInfo } from '@noir-ai/core';
+import { type ProjectInfo, sha256Hex, sha256Hex12 } from '@noir-ai/core';
 import type { ConflictRecord, ScaffoldResult } from '@noir-ai/create';
 import { collectDedupCandidates } from './commands/doctor.js';
 import { c } from './theme.js';
@@ -353,7 +352,7 @@ function saveCache(root: string, cache: DedupCache): void {
  *  stored vector WITHOUT calling `embed`; misses call `embed` and store. */
 function makeCachedEmbed(cache: DedupCache, embed: EmbedLike): EmbedLike {
   return async (text: string): Promise<Float32Array> => {
-    const key = createHash('sha256').update(text, 'utf8').digest('hex');
+    const key = sha256Hex(text);
     const cached = cache.entries[key];
     if (cached !== undefined) return Float32Array.from(cached.v);
     const v = await embed(text);
@@ -365,11 +364,6 @@ function makeCachedEmbed(cache: DedupCache, embed: EmbedLike): EmbedLike {
 // ---------------------------------------------------------------------------
 // Small helpers.
 // ---------------------------------------------------------------------------
-
-/** SHA-256 hex of content, first 12 chars (matches the sha convention). */
-function sha256Hex12(text: string): string {
-  return createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 12);
-}
 
 function safeRead(abs: string): string | undefined {
   try {

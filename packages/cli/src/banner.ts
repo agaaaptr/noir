@@ -35,7 +35,7 @@ const NOIR_GRADIENT = gradient('#2c5282', '#3b82f6', '#7dd3fc');
 /** One-line product tagline (shown under the wordmark). */
 export const NOIR_TAGLINE = 'discipline, context, and memory layer for agentic CLIs';
 
-export interface BannerOptions {
+interface BannerOptions {
   /** Terminal width in columns (defaults to process.stdout.columns, else 80). */
   width?: number;
   /** Apply the gradient. Default true. */

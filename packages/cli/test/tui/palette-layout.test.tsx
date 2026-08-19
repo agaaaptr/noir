@@ -48,6 +48,7 @@ describe('palette layout — help corpus (regression: two-column wrap)', () => {
     // Strip SGR color codes (ink emits them when color is on) before measuring.
     // The regex is assembled at runtime from String.fromCharCode(27) so the
     // source carries no control character (which biome forbids in regex literals).
+    // biome-ignore lint/style/useTemplate: the ANSI pattern is built at runtime to avoid a literal control char
     const ansi = String.fromCharCode(27) + '\\[[0-9;]*m';
     const stripAnsi = new RegExp(ansi, 'g');
     const max = 64;

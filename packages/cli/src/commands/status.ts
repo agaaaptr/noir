@@ -252,7 +252,7 @@ function buildPayload(
 // readable shape for a status snapshot; cli-table3 is auto-stripped under
 // NO_COLOR / non-TTY and the whole call is a no-op under --json.
 // ---------------------------------------------------------------------------
-export function formatDuration(sec?: number): string {
+function formatDuration(sec?: number): string {
   if (typeof sec !== 'number' || sec < 0) return 'unknown';
   if (sec < 60) return `${sec}s`;
   if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
