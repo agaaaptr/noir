@@ -12,7 +12,7 @@
 import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { type HostId, SUPPORTED_HOSTS } from '@noir-ai/adapters';
-import { NOIR_VERSION } from '@noir-ai/core';
+import { applyNoirEnv, NOIR_VERSION } from '@noir-ai/core';
 import { Command, Option } from 'commander';
 import { contextIndex, contextSearch, contextStatus } from './commands/context.js';
 import { daemonRestart, daemonStart, daemonStatus, daemonStop } from './commands/daemon.js';
@@ -50,11 +50,14 @@ import {
   fail,
   handleError,
   inferExitCode,
+  info,
   json,
   NoirCliError,
   requireInteractive,
+  table,
   tip,
 } from './output.js';
+import { listProfiles, loadRunConfig } from './run-profiles.js';
 import { serve } from './serve.js';
 import { buildPaletteCommands } from './tui/commands/registry.js';
 import type { PaletteCommand } from './tui/palette/types.js';
@@ -1124,6 +1127,8 @@ export function createProgram(): Command {
     .argument('[prompt...]', 'prompt to send to the host')
     .addOption(new Option('--host <id>', 'host to drive (default claude)').choices(SUPPORTED_HOSTS))
     .option('--command <binary>', 'custom host binary (e.g. claude-work)')
+    .option('--profile <name>', 'use a named run profile (run.profiles in .noir/config.yml)')
+    .option('--list-profiles', 'list configured run profiles and exit')
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();
@@ -1135,9 +1140,25 @@ export function createProgram(): Command {
         ...toCliOptions(g),
         ...(typeof g.host === 'string' ? { host: g.host } : {}),
         ...(typeof g.command === 'string' ? { command: g.command } : {}),
+        ...(typeof g.profile === 'string' ? { profile: g.profile } : {}),
       };
+      if (g.listProfiles === true) {
+        listProfilesCommand(opts);
+        return;
+      }
       await runHostCommand(prompt, opts);
     });
+
+  /** `noir run --list-profiles`: show the configured run profiles (NAME / DEFAULT / BINARY). */
+  function listProfilesCommand(opts: CliOptions): void {
+    const config = loadRunConfig(process.cwd());
+    const rows = config ? listProfiles(config) : [];
+    if (rows.length === 0) {
+      info('(no run profiles configured — add a run.profiles block to .noir/config.yml)', opts);
+      return;
+    }
+    table(rows, ['NAME', 'DEFAULT', 'BINARY'], opts);
+  }
 
   program.action(async (...args: unknown[]) => {
     const cmd = trailingCmd(args);
@@ -1196,6 +1217,11 @@ const homeDeps: HomeDeps = {
  * tests can either call this or drive `createProgram().parseAsync` directly.
  */
 export async function run(argv: readonly string[] = []): Promise<number> {
+  // Load project-local .noir/.env once at process start so tokens are visible
+  // to every command and to spawned children (the host, the daemon) regardless
+  // of how the process was launched (real env always wins; the file fills
+  // unset keys only — idempotent).
+  applyNoirEnv(process.cwd());
   try {
     await program.parseAsync([...argv], { from: 'user' });
   } catch (err) {

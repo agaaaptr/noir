@@ -7,15 +7,30 @@ export const NoirConfigSchema = z.object({
   // cycle — mirrors the existing pattern where `model`/`memory`/`context`/`prd`
   // redeclare shapes their resolvers consume). `claude` remains the default so
   // existing single-host projects are byte-equivalent (regression anchor).
-  host: z.enum(['claude', 'agents-md', 'gemini', 'cursor', 'opencode']).default('claude'),
-  name: z.string().optional(),
-  mode: z.enum(['full', 'quick']).default('full'),
+  host: z
+    .enum(['claude', 'agents-md', 'gemini', 'cursor', 'opencode'])
+    .default('claude')
+    .describe('Host adapter for emitted artifacts'),
+  name: z.string().optional().describe('Display name (defaults to the project dir basename)'),
+  mode: z.enum(['full', 'quick']).default('full').describe('Default SDD mode'),
   daemon: z
     .object({
-      idleTimeoutSec: z.number().int().positive().default(900),
-      port: z.number().int().min(0).max(65535).optional(),
+      idleTimeoutSec: z
+        .number()
+        .int()
+        .positive()
+        .default(900)
+        .describe('Idle timeout before the daemon auto-stops (seconds)'),
+      port: z
+        .number()
+        .int()
+        .min(0)
+        .max(65535)
+        .optional()
+        .describe('Daemon HTTP port (optional; not yet wired to a consumer)'),
     })
-    .default({ idleTimeoutSec: 900 }),
+    .default({ idleTimeoutSec: 900 })
+    .describe('Local daemon settings'),
   // Slice S6 context layer (@noir-ai/context). Mirrors the `daemon` idiom — a
   // top-level object with `.default({})` so a config with NO `context:` block
   // still parses and behaves as local-embedder-attempted (AC-7 / NFR-6). The
@@ -29,28 +44,49 @@ export const NoirConfigSchema = z.object({
     .object({
       embedder: z
         .object({
-          kind: z.enum(['local', 'remote', 'ollama', 'none']).default('local'),
+          kind: z
+            .enum(['local', 'remote', 'ollama', 'none'])
+            .default('local')
+            .describe('Embedder backend (local = offline in-process; remote/ollama = opt-in)'),
           // HF repo id (local) / provider model id (remote) / Ollama tag.
-          model: z.string().optional(),
+          model: z
+            .string()
+            .optional()
+            .describe('Embedder model id (HF repo / provider model / Ollama tag)'),
           // Remote provider key, e.g. 'openai' (only meaningful when kind:'remote').
           // Free-form string so openai-compatible providers stay expressible; the
           // resolver maps known names (openai/voyage/cohere) to their API-key env var.
-          provider: z.string().optional(),
+          provider: z
+            .string()
+            .optional()
+            .describe('Remote embedder provider (openai | voyage | cohere)'),
           // Ollama base URL, e.g. http://localhost:11434 (only when kind:'ollama').
-          baseURL: z.string().optional(),
+          baseURL: z.string().optional().describe('Ollama base URL'),
           // Target dimensionality — must be 384 to match the existing vec0 table.
-          dim: z.number().int().positive().default(384),
+          dim: z
+            .number()
+            .int()
+            .positive()
+            .default(384)
+            .describe('Embedding dimension (must match the vec0 table)'),
         })
-        .default({ kind: 'local', dim: 384 }),
+        .default({ kind: 'local', dim: 384 })
+        .describe('Embedder configuration'),
       // Configured index roots (informational in core; the daemon/indexer consume).
-      roots: z.array(z.string()).default([]),
+      roots: z.array(z.string()).default([]).describe('Configured index roots (informational)'),
       // Default token budget for a `context_search` result set (retriever default).
-      budgetTokens: z.number().int().positive().default(4096),
+      budgetTokens: z
+        .number()
+        .int()
+        .positive()
+        .default(4096)
+        .describe('Default context_search token budget'),
     })
     // Zod v4 requires the outer default to match the parsed output shape (every
     // inner field already carries its own default, so an absent `context:` block
     // still resolves to local-embedder/empty-roots/4096). Mirrors `daemon:`.
-    .default({ embedder: { kind: 'local', dim: 384 }, roots: [], budgetTokens: 4096 }),
+    .default({ embedder: { kind: 'local', dim: 384 }, roots: [], budgetTokens: 4096 })
+    .describe('Context retrieval settings'),
   // Slice S8 bounded model layer (@noir-ai/model). Mirrors the `daemon` idiom —
   // a top-level object with `.default({})` so a config with NO `model:` block
   // still parses and behaves as fully-degraded (every `complete()` call returns
@@ -74,36 +110,50 @@ export const NoirConfigSchema = z.object({
       // Fallback provider name (key into `providers`) when a call's tier resolves
       // no explicit provider. Free-form string so openai-compatible providers stay
       // expressible without an enum churn.
-      defaultProvider: z.string().optional(),
+      defaultProvider: z
+        .string()
+        .optional()
+        .describe('Fallback provider key (into `providers`) for unassigned tiers'),
       // Per-tier provider-key overrides (draft / title / summarize / consolidate).
       // Each value is a key into `providers{}`; resolution is the consumer's job
       // (tier → tier.provider → defaultProvider → providers[name]).
       tiers: z
         .object({
-          draft: z.string().optional(),
-          title: z.string().optional(),
-          summarize: z.string().optional(),
-          consolidate: z.string().optional(),
+          draft: z.string().optional().describe('Provider key for the draft tier'),
+          title: z.string().optional().describe('Provider key for the title tier'),
+          summarize: z.string().optional().describe('Provider key for the summarize tier'),
+          consolidate: z.string().optional().describe('Provider key for the consolidate tier'),
         })
-        .optional(),
+        .optional()
+        .describe('Per-tier provider overrides'),
       // Configured provider blocks, keyed by name. `model` is required (a provider
       // without a model id is meaningless); `apiKeyEnv` is omitted for anonymous
       // local providers (Ollama / LM Studio) which then send no auth header.
       providers: z
         .record(
           z.string(),
-          z.object({
-            model: z.string(),
-            baseURL: z.string().optional(),
-            apiKeyEnv: z.string().optional(),
-          }),
+          z
+            .object({
+              model: z.string().describe('Model id for this provider'),
+              baseURL: z
+                .string()
+                .optional()
+                .describe('OpenAI-compatible base URL (Ollama/LM Studio/vLLM)'),
+              apiKeyEnv: z
+                .string()
+                .optional()
+                .describe('Env-var NAME holding the API key (never the value)'),
+            })
+            .describe('A named provider block'),
         )
-        .optional(),
+        .optional()
+        .describe('Configured model providers, keyed by name'),
     })
     // Absent `model:` block ⇒ `{}` ⇒ every tier/provider is undefined ⇒ full
     // degradation (offline, free, the default). Inner fields are `.optional()`
     // (no inner `.default()`) so a present-but-empty block also degrades.
-    .default({}),
+    .default({})
+    .describe('Bounded model layer (provider-explicit; absent = fully degraded)'),
   // Cross-session memory (@noir-ai/memory). Mirrors the `daemon` idiom —
   // a top-level object with `.default({})` so a config with NO `memory:` block
   // still parses and behaves as consolidation-disabled (the safe default —
@@ -126,22 +176,27 @@ export const NoirConfigSchema = z.object({
         .object({
           // Master switch (default false). When false, `consolidate` refuses +
           // logs (`no-provider`) regardless of provider/model — the first gate.
-          enabled: z.boolean().default(false),
+          enabled: z
+            .boolean()
+            .default(false)
+            .describe('Master switch for LLM memory consolidation'),
           // Provider key, e.g. 'anthropic' | 'openai' | 'ollama'. Free-form
           // string so openai-compatible providers stay expressible without an
           // enum churn; required (alongside enabled) for consolidation to run.
-          provider: z.string().optional(),
+          provider: z.string().optional().describe('Provider key for consolidation'),
           // Provider-specific model id (consumed by S8 complete(); optional
           // here only because a future anonymous local provider may not need it
           // — runConsolidation still refuses when model is absent).
-          model: z.string().optional(),
+          model: z.string().optional().describe('Model id for consolidation'),
           // Restrict candidates to these types (default: every non-`lesson`).
-          types: z.array(z.string()).optional(),
+          types: z.array(z.string()).optional().describe('Candidate-type filter'),
         })
         // Absent consolidation block ⇒ disabled. Outer shape matches output.
-        .default({ enabled: false }),
+        .default({ enabled: false })
+        .describe('Memory consolidation (LLM; opt-in + provider-explicit)'),
     })
-    .default({ consolidation: { enabled: false } }),
+    .default({ consolidation: { enabled: false } })
+    .describe('Cross-session memory settings'),
   // Debt-batch A — `rules:` block. Additive, no-op when absent (defaults make it
   // a pass-through). Reserved for the upcoming rule-driven lint surface (the
   // `@noir-ai/workflow` rule registry + future `noir check`); for v1.x this
@@ -153,15 +208,21 @@ export const NoirConfigSchema = z.object({
       // Master switch (default true — the rule registry is opt-OUT; a project
       // that wants no part of it sets `enabled: false`). When the rule engine
       // ships, false ⇒ no rules registered + `noir check` is a no-op.
-      enabled: z.boolean().default(true),
+      enabled: z.boolean().default(true).describe('Rule registry master switch'),
       // Soft per-rule body budget in KB (targets file-size discipline for the
       // markdown rules; the future rule registry clips over-budget rule bodies
       // and surfaces a warning rather than rejecting the file). Positive int.
-      lengthBudgetKb: z.number().int().positive().default(6),
+      lengthBudgetKb: z
+        .number()
+        .int()
+        .positive()
+        .default(6)
+        .describe('Soft per-rule body budget (KB)'),
     })
     // Outer default matches the parsed output shape (Zod v4 requirement): an
     // absent `rules:` block resolves to enabled/6 — the registry-active default.
-    .default({ enabled: true, lengthBudgetKb: 6 }),
+    .default({ enabled: true, lengthBudgetKb: 6 })
+    .describe('Rules registry (parsed; consumer ships with the rule engine)'),
   // Slice P (PRD) — `prd:` block. Additive, escapable-soft-gate config for the
   // pre-SDD Product Requirements Document. The workflow engine reads
   // `mandatoryFor` to decide when a missing PRD warrants an observable,
@@ -181,9 +242,11 @@ export const NoirConfigSchema = z.object({
         .array(
           z.enum(['feature', 'epic', 'enhancement', 'bugfix', 'spike', 'quick-task', 'refactor']),
         )
-        .default(['feature', 'epic']),
+        .default(['feature', 'epic'])
+        .describe('Task classes that trigger the soft PRD gate at the spec gate'),
     })
-    .default({ mandatoryFor: ['feature', 'epic'] }),
+    .default({ mandatoryFor: ['feature', 'epic'] })
+    .describe('Soft PRD gate settings'),
   // c4-verify-gate-recovery — `workflow.gate.verify` block. Additive + default
   // OFF: a config with no `workflow:` block leaves the verify gate as the
   // legacy record-only gate (byte-identical to v1.9.4). When `required` resolves
@@ -213,19 +276,32 @@ export const NoirConfigSchema = z.object({
                     z.boolean(),
                   ),
                 ])
-                .default(false),
-              retryBudget: z.number().int().positive().default(2),
+                .default(false)
+                .describe('HARD verify gate when truthy (bool or per-task-class map)'),
+              retryBudget: z
+                .number()
+                .int()
+                .positive()
+                .default(2)
+                .describe('Allowed verify retries before the gate blocks'),
               checks: z
                 .array(
-                  z.object({
-                    name: z.string(),
-                    command: z.string(),
-                    tier: z.enum(['hard', 'soft']).optional(),
-                  }),
+                  z
+                    .object({
+                      name: z.string().describe('Check name (used by `noir task verify --check`)'),
+                      command: z.string().describe('Shell command the check runs (CLI-owned)'),
+                      tier: z
+                        .enum(['hard', 'soft'])
+                        .optional()
+                        .describe('hard blocks / soft nudges'),
+                    })
+                    .describe('A verify check definition'),
                 )
-                .optional(),
+                .optional()
+                .describe('Checks `noir task verify` resolves and runs'),
             })
-            .default({ required: false, retryBudget: 2 }),
+            .default({ required: false, retryBudget: 2 })
+            .describe('Evidence-backed verify gate'),
           // c4-research-grounding — soft grounding gate.
           research: z
             .object({
@@ -241,22 +317,29 @@ export const NoirConfigSchema = z.object({
                     'refactor',
                   ]),
                 )
-                .default(['feature', 'epic']),
-              requireSource: z.boolean().default(true),
+                .default(['feature', 'epic'])
+                .describe('Task classes that get the soft research-grounding recommendation'),
+              requireSource: z
+                .boolean()
+                .default(true)
+                .describe('Require research records to cite a source'),
             })
-            .default({ recommendFor: ['feature', 'epic'], requireSource: true }),
+            .default({ recommendFor: ['feature', 'epic'], requireSource: true })
+            .describe('Research grounding gate'),
         })
         .default({
           verify: { required: false, retryBudget: 2 },
           research: { recommendFor: ['feature', 'epic'], requireSource: true },
-        }),
+        })
+        .describe('Workflow gates (verify / research)'),
     })
     .default({
       gate: {
         verify: { required: false, retryBudget: 2 },
         research: { recommendFor: ['feature', 'epic'], requireSource: true },
       },
-    }),
+    })
+    .describe('SDD workflow engine settings'),
   // Slice X integration layer (@noir-ai/skills `integrations/<name>/`). Additive
   // block keyed by integration name — every field optional + default-`{}` so a
   // config with NO `integrations:` block still parses and behaves as "no
@@ -275,26 +358,37 @@ export const NoirConfigSchema = z.object({
   integrations: z
     .record(
       z.string(),
-      z.object({
-        auth: z
-          .object({
-            // Override the token env var name (defaults to the declaration's
-            // `auth.tokenEnv` when undefined). Min(1) matches the declaration
-            // schema's invariant (`integrations-schema.ts` tokenEnv is non-empty)
-            // — an empty-string override must FAIL validation, not silently
-            // disable the integration (env[''] is always undefined).
-            tokenEnv: z.string().min(1).optional(),
-          })
-          .partial()
-          .default({}),
-        runtime: z.enum(['none', 'gated-write-proxy', 'mcp-stdio', 'external-mcp']).default('none'),
-        // ClickUp-workspace binding (optional; flows 3 + 5 need a list_id).
-        teamId: z.string().optional(),
-        listId: z.string().optional(),
-        spaceId: z.string().optional(),
-      }),
+      z
+        .object({
+          auth: z
+            .object({
+              // Override the token env var name (defaults to the declaration's
+              // `auth.tokenEnv` when undefined). Min(1) matches the declaration
+              // schema's invariant (`integrations-schema.ts` tokenEnv is non-empty)
+              // — an empty-string override must FAIL validation, not silently
+              // disable the integration (env[''] is always undefined).
+              tokenEnv: z
+                .string()
+                .min(1)
+                .optional()
+                .describe('Override the token env-var name for this integration'),
+            })
+            .partial()
+            .default({})
+            .describe('Auth overrides'),
+          runtime: z
+            .enum(['none', 'gated-write-proxy', 'mcp-stdio', 'external-mcp'])
+            .default('none')
+            .describe('Runtime tier (none = read-only; downgrade to disable writes)'),
+          // ClickUp-workspace binding (optional; flows 3 + 5 need a list_id).
+          teamId: z.string().optional().describe('ClickUp team id (custom task IDs)'),
+          listId: z.string().optional().describe('ClickUp list id (create/batch flows)'),
+          spaceId: z.string().optional().describe('ClickUp space id'),
+        })
+        .describe('A per-integration config overlay'),
     )
-    .default({}),
+    .default({})
+    .describe('Opt-in integration overlays, keyed by integration name'),
   // C1 — `update:` block. Additive, no-op when absent (defaults make it a
   // pass-through). Configures the async startup version check + self-update
   // surface (`noir update`). Mirrors the `daemon:`/`rules:`/`prd:` idiom: an
@@ -305,11 +399,19 @@ export const NoirConfigSchema = z.object({
   // without a project file.
   update: z
     .object({
-      checkEnabled: z.boolean().default(true),
-      checkIntervalHours: z.number().int().positive().default(24),
-      channel: z.enum(['latest', 'beta']).default('latest'),
-      minVersion: z.string().default('1.6.0'),
-      display: z.enum(['notice', 'silent']).default('notice'),
+      checkEnabled: z.boolean().default(true).describe('Enable the async startup version check'),
+      checkIntervalHours: z
+        .number()
+        .int()
+        .positive()
+        .default(24)
+        .describe('Version-check cache TTL (hours)'),
+      channel: z.enum(['latest', 'beta']).default('latest').describe('Update channel'),
+      minVersion: z.string().default('1.6.0').describe('Floor — update never installs below this'),
+      display: z
+        .enum(['notice', 'silent'])
+        .default('notice')
+        .describe('Notice mode (parsed; notice path only)'),
     })
     .default({
       checkEnabled: true,
@@ -317,7 +419,49 @@ export const NoirConfigSchema = z.object({
       channel: 'latest',
       minVersion: '1.6.0',
       display: 'notice',
-    }),
+    })
+    .describe('Update checker (honors NOIR_DISABLE_UPDATE_CHECK / NOIR_DISABLE_UPDATES)'),
+  // D — `run:` block for the host orchestrator (`noir run`). Additive; an absent
+  // block behaves exactly as today (built-in host default, no profiles). The
+  // ssh_config / VS-Code-terminal-profiles pattern: `profiles` is a name-keyed
+  // map of host-binary bundles; `defaultProfile` names the fallback. Selection
+  // precedence: `--profile` flag > NOIR_PROFILE env > `run.defaultProfile` >
+  // built-in default. Profile names are strict [A-Za-z0-9_-] (no dots/spaces —
+  // keeps CLI quoting trivial and the name usable verbatim in shell bridges).
+  // `env` values support ${VAR} expansion from Noir's process env, and `null`
+  // deletes a variable from the child env — literal secrets should never be
+  // committed to config.yml (it is committable project state).
+  run: z
+    .object({
+      defaultProfile: z
+        .string()
+        .optional()
+        .describe('Fallback profile name when no --profile flag / NOIR_PROFILE is set'),
+      profiles: z
+        .record(
+          z.string().regex(/^[A-Za-z0-9_-]+$/, 'profile names allow [A-Za-z0-9_-] only'),
+          z
+            .object({
+              binary: z
+                .string()
+                .min(1)
+                .describe('Executable to spawn (absolute path or PATH name)'),
+              env: z
+                .record(z.string(), z.string().nullable())
+                .optional()
+                .describe('Env overlay (null deletes; $VAR expands from the process env)'),
+              args: z
+                .array(z.string())
+                .optional()
+                .describe('Extra args after the host headless flags'),
+            })
+            .describe('A named host-binary bundle'),
+        )
+        .default({})
+        .describe('Named run profiles, keyed by name'),
+    })
+    .default({ profiles: {} })
+    .describe('Host orchestrator run settings'),
 });
 
 export type NoirConfig = z.infer<typeof NoirConfigSchema>;
