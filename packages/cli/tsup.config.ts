@@ -23,6 +23,14 @@ export default defineConfig([
     clean: true,
     sourcemap: true,
     banner: { js: '#!/usr/bin/env node' },
+    // `splitting: false` is the INVARIANT behind the guard note above: tsup's
+    // default ESM code-splitting hoists shared modules (including bin.ts's
+    // `isMainModule` guard + `run()` entry body) into a `chunk-*.js` file. In
+    // that chunk `import.meta.url` points at the CHUNK, not the invoked
+    // `dist/bin.js`, so the realpath(argv[1]) === import.meta.url comparison
+    // fails and a global `noir` install silently exits 0 (main() never runs).
+    // Disabling splitting keeps bin.ts's entry body inline in dist/bin.js.
+    splitting: false,
   },
   {
     entry: ['src/tui/index.tsx'],
