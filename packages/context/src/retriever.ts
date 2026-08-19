@@ -29,7 +29,7 @@
 //     └─ greedy token-budget fill (default 4096) over the collapsed list:
 //          accumulate estimateTokens(snippet) until budgetTokens; the top hit is
 //          always admitted even if it alone exceeds the budget (avoid returning
-//          zero results for one large hit). truncated:true if the list is
+//          zero results for one large hit). truncated:true iff the budget cut
 //          exhausted before the budget.
 //
 // Degradation (F8): when the embedder is unavailable — `kind:'none'`, a native

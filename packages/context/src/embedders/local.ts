@@ -74,8 +74,16 @@ async function loadPipeline(model: string): Promise<LoadedEmbedder> {
       // the single normalization every provider funnels through.
       const out = await extractor(text, { pooling: 'mean' });
       // transformers.js `Tensor.data` is a typed array; copy into a fresh
-      // Float32Array of exactly the model's embedding width.
+      // Float32Array of exactly the model's embedding width. The width MUST
+      // match EMBED_DIM: the vec0 table is fixed at 384 columns, and a
+      // mismatched vector (e.g. a 768-dim model) throws at upsert time with no
+      // clear cause. Validate up front so the failure names the model + width.
       const dim = out.dims.at(-1) ?? EMBED_DIM;
+      if (dim !== EMBED_DIM) {
+        throw new Error(
+          `local embedder: model "${model}" produced ${dim}-dim vectors but the vec0 table is fixed at ${EMBED_DIM} — configure a ${EMBED_DIM}-dim model (default: ${DEFAULT_LOCAL_MODEL})`,
+        );
+      }
       const raw = new Float32Array(dim);
       for (let i = 0; i < dim; i++) raw[i] = out.data[i] ?? 0;
       return l2normalize(raw);

@@ -14,6 +14,7 @@
 // config that builds cleanly but throws from `embed()` so the engine degrades
 // to BM25-only (F8) rather than crashing at construction.
 
+import { EMBED_DIM } from './embedders/normalize.js';
 import type { EmbedderConfig } from './types.js';
 
 /**
@@ -89,7 +90,15 @@ export function resolveEmbedderConfig(ctx?: ContextUserConfig): EmbedderConfig {
       // `e?.kind === 'remote'` implies `e` is defined; `e?.` is defensive.
       const provider = e?.provider ?? 'openai';
       const model = e?.model ?? '';
-      const dim = e?.dim ?? 384;
+      const dim = e?.dim ?? EMBED_DIM;
+      // The vec0 table is fixed at EMBED_DIM (384); a configured dim ≠ 384 would
+      // produce a dimension-mismatch abort at the first upsert. Fail at resolve
+      // time (clear config error) instead of mid-index after docs were written.
+      if (dim !== EMBED_DIM) {
+        throw new Error(
+          `context.embedder.dim must be ${EMBED_DIM} (the vec0 table is fixed); got ${dim}`,
+        );
+      }
       const apiKey = apiKeyEnvVar(provider);
       return { kind: 'remote', provider, model, dim, ...(apiKey ? { apiKey } : {}) };
     }

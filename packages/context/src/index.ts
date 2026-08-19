@@ -44,6 +44,9 @@ export {
   createEmbedFn,
   DEFAULT_LOCAL_MODEL,
   EMBED_DIM,
+  // TEST-ONLY deterministic double — see the embedders/index.ts note. Exported
+  // so cross-package test suites (memory) share one definition; never used by
+  // a production path.
   fakeEmbedFn,
   type LocalEmbedder,
   type LocalEmbedderOptions,

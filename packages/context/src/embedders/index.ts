@@ -62,6 +62,11 @@ export function createEmbedFn(cfg: EmbedderConfig): ResolvedEmbedder {
   }
 }
 
+// `fakeEmbedFn` (./fake.js) is a TEST-ONLY deterministic double (SHA-256-seeded
+// 384-dim vectors). It is exported here so cross-package test suites (memory
+// consumes it too) share ONE definition — but it is NOT used by any production
+// path: `kind:'none'` deliberately throws its own stub rather than returning a
+// fake vector. Treat it as a test fixture, never as production surface.
 export { fakeEmbedFn } from './fake.js';
 export type { LocalEmbedder, LocalEmbedderOptions } from './local.js';
 export { DEFAULT_LOCAL_MODEL, localEmbedder, MODELS_DIR } from './local.js';

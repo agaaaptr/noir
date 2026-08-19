@@ -35,7 +35,7 @@
 // `docs` rows, and reports `degraded:true` — it never crashes on a bad embedder.
 
 import type { Dirent } from 'node:fs';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { chunkFile, inferLanguage, withIdentifierExplosion } from './chunker.js';
@@ -358,7 +358,19 @@ export interface Indexer {
  */
 export function createIndexer(opts: IndexerOptions): Indexer {
   const { store, embed, info } = opts;
-  const base = opts.root ?? process.cwd();
+  // Canonicalize the root ONCE so every confinement comparison and stored key
+  // operates on the same canonical namespace. Without this, on macOS (where
+  // `/var` → `/private/var` and `/tmp` → `/private/tmp` are symlinks) a
+  // realpath'd input lands in `/private/var/…` while `base` stays lexical
+  // `/var/…` — isWithinRoot would then reject every input. A nonexistent root
+  // falls back to the lexical path (the indexer will simply index nothing).
+  const lexicalBase = opts.root ?? process.cwd();
+  let base: string;
+  try {
+    base = realpathSync(lexicalBase);
+  } catch {
+    base = lexicalBase;
+  }
 
   // Single-flight serialization of mutating ops (post-review: prevent registry
   // KV races). `indexPaths` / `forget` / `reindex` do read-modify-write on the
@@ -384,9 +396,22 @@ export function createIndexer(opts: IndexerOptions): Indexer {
   }
 
   // path helpers --------------------------------------------------------------
-  const resolveAbs = (p: string): string => resolve(base, p);
-  // When `root` is given, keys are repo-relative (portable); otherwise absolute.
-  const toKey = (abs: string): string => (opts.root ? relative(opts.root, abs) : abs);
+  // Canonicalize inputs too (base is already realpath'd above): a symlinked
+  // input resolves to its TARGET, so confinement + keys + forget all operate on
+  // the same canonical namespace. A missing path falls back to the lexical form
+  // (forget/reconcile reference deleted files that no longer realpath).
+  const resolveAbs = (p: string): string => {
+    const abs = resolve(base, p);
+    try {
+      return realpathSync(abs);
+    } catch {
+      return abs;
+    }
+  };
+  // When `root` is given, keys are repo-relative to the CANONICAL base
+  // (portable); otherwise absolute. `relative(base, …)` — base is canonical, so
+  // this matches the canonical abs from resolveAbs/walk (not the lexical root).
+  const toKey = (abs: string): string => (opts.root ? relative(base, abs) : abs);
   const keyAbs = (key: string): string => posix(resolve(base, key));
 
   /**
@@ -421,11 +446,27 @@ export function createIndexer(opts: IndexerOptions): Indexer {
     return records;
   }
 
+  // chunkId → owner-key reverse index. Built lazily from the registry and
+  // invalidated on every persist, so readChunkContent is O(1) instead of an
+  // O(N) registry scan per kNN-only hit (which cost tens of thousands of KV
+  // reads per query on a large repo).
+  let chunkOwner: Map<string, string> | null = null;
+  function ownerOfChunk(id: string): string | null {
+    if (chunkOwner === null) {
+      chunkOwner = new Map();
+      for (const [key, rec] of loadRecords()) {
+        for (const cid of rec.chunkIds) chunkOwner.set(cid, key);
+      }
+    }
+    return chunkOwner.get(id) ?? null;
+  }
+
   /** Write back the registry + per-file records; tombstone the removed keys. */
   function persist(records: Map<string, FileRecord>, tombstones: string[]): void {
     store.setState(CTX_REGISTRY_KEY, [...records.keys()].sort());
     for (const [key, rec] of records) store.setState(ctxFileKey(key), rec);
     for (const key of tombstones) store.setState(ctxFileKey(key), null);
+    chunkOwner = null; // invalidate the reverse index — the registry changed
   }
 
   /**
@@ -492,13 +533,19 @@ export function createIndexer(opts: IndexerOptions): Indexer {
     const absRoots: string[] = [];
     const scanned = new Map<string, string>(); // key -> abs
     for (const input of inputPaths) {
+      // resolveAbs CANONICALIZES the input (realpath) — so a symlink whose
+      // target escapes `base` (e.g. `noir context index <symlink-to-/etc>`)
+      // resolves OUTSIDE and is skipped by the confinement check below. Walk
+      // entries are already safe: Dirent.isFile()/isDirectory() are false for
+      // symlinks, so the walk never follows an inner symlink.
       const abs = resolveAbs(input);
       // Path confinement: reject traversal / out-of-root ingestion. An absolute
-      // path (`/etc/passwd`) or a `../sibling` resolves outside `base`; skip it
-      // entirely — never stat, never walk, never store a `../` meta.path.
+      // path (`/etc/passwd`) or a `../sibling` (or a symlink escaping root)
+      // resolves outside `base`; skip it entirely — never stat, never walk,
+      // never store a `../` meta.path.
       if (!isWithinRoot(abs)) continue;
       const st = await stat(abs).catch(() => null);
-      if (st === null) continue; // missing path — nothing to index, nothing to reconcile here
+      if (st === null) continue; // missing path — nothing to index
       if (st.isDirectory()) {
         absRoots.push(abs);
         for (const file of await walk(abs)) {
@@ -519,6 +566,10 @@ export function createIndexer(opts: IndexerOptions): Indexer {
     let deleted = 0;
     // `kind:'none'` ⇒ no vectors from the start; a thrown embed() flips this mid-run.
     let embedDisabled = info.kind === 'none';
+    // A successful embed whose vector write FAILED (vec native layer absent /
+    // incompatible width) also degrades the run to BM25-only — same F8 policy,
+    // just from the store side instead of the embed side.
+    let vecStoreUnavailable = false;
     const tombstones: string[] = [];
 
     const tryEmbed = async (content: string): Promise<Float32Array | null> => {
@@ -608,7 +659,16 @@ export function createIndexer(opts: IndexerOptions): Indexer {
         language = chunk.meta.language;
         const vec = await tryEmbed(indexedContent);
         if (vec !== null) {
-          store.upsertVec(chunk.id, vec, { source: chunk.source });
+          try {
+            store.upsertVec(chunk.id, vec, { source: chunk.source });
+          } catch {
+            // vec store write failed (sqlite-vec native binary absent, or the
+            // vector width mismatches the fixed vec0 table) — degrade THIS run
+            // to BM25-only instead of aborting the whole index. Docs already
+            // indexed above stay; the remaining files keep indexing without
+            // vectors (mirrors memory's indexObservation try/catch).
+            vecStoreUnavailable = true;
+          }
         }
         chunkIds.push(chunk.id);
         indexed += 1;
@@ -628,8 +688,9 @@ export function createIndexer(opts: IndexerOptions): Indexer {
       failed,
       totalChunks,
       // `degraded` is truthful about "docs indexed without vectors": only set
-      // when embedding was off AND at least one doc went in without one.
-      degraded: embedDisabled && indexed > 0,
+      // when embedding was off (or its writes failed) AND at least one doc went
+      // in without one.
+      degraded: (embedDisabled || vecStoreUnavailable) && indexed > 0,
     };
   }
 
@@ -691,17 +752,9 @@ export function createIndexer(opts: IndexerOptions): Indexer {
    * content-mismatch miss, which surfaces honestly as `mode:'knn'`).
    */
   function readChunkContent(id: string): { content: string; meta: ChunkMeta } | null {
-    const records = loadRecords();
-    // Find the FileRecord that owns this chunk id. Short-circuit: most kNN
-    // queries hydrate 0–few hits, and the registry is small (one entry per
-    // indexed file), so the linear scan is cheap.
-    let ownerKey: string | null = null;
-    for (const [key, rec] of records) {
-      if (rec.chunkIds.includes(id)) {
-        ownerKey = key;
-        break;
-      }
-    }
+    // O(1) lookup via the chunkId → owner reverse index (built lazily, invalidated
+    // on persist) instead of scanning every FileRecord per hit.
+    const ownerKey = ownerOfChunk(id);
     if (ownerKey === null) return null;
     // Resolve the path key back to an absolute path the same way indexPaths
     // does (`base` is the indexer's `opts.root ?? process.cwd()`). POSIX-form

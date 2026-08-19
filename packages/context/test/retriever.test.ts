@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { createProjectId } from '@noir-ai/core';
 import { openStore, type Store, vecAvailability } from '@noir-ai/store';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { fakeEmbedFn } from '../src/embedders/index.js';
+import { fakeEmbedFn } from '../src/embedders/fake.js';
 import {
   createRetriever,
   DEFAULT_BUDGET_TOKENS,

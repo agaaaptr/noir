@@ -9,11 +9,13 @@
 // never touch the network or the model runtime.
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
+// `fakeEmbedFn` is deliberately not part of the public embedder barrel (it is a
+// test-only deterministic double) — import it directly from its module.
+import { fakeEmbedFn } from '../src/embedders/fake.js';
 import {
   createEmbedFn,
   DEFAULT_LOCAL_MODEL,
   EMBED_DIM,
-  fakeEmbedFn,
   l2normalize,
   localEmbedder,
 } from '../src/embedders/index.js';
