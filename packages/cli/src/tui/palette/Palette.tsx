@@ -21,10 +21,16 @@ import { Panel } from '../Panel.js';
 import { type Corpus, type PaletteRow, VISIBLE_ROWS } from './rows.js';
 
 const PALETTE_WIDTH = 64;
+/** Border + padding overhead between the panel width and a row's text budget:
+ *  round border (2) + Panel paddingX (2) + row paddingX (2) = 6. A row's
+ *  label(26) + hint must never exceed the remaining width or Ink wraps the
+ *  hint tail onto a flush-left second line (the v1.11.2 two-column bug). */
+const ROW_TEXT_WIDTH = PALETTE_WIDTH - 6; // 58
 /** Fixed label column: the `▸ `/`  ` prefix (2) + the label. */
 const LABEL_WIDTH = 26;
-/** Max hint column width (keeps the two-column row inside the panel). */
-const HINT_WIDTH = 34;
+/** Max hint column width — derived from the row budget so the two-column row
+ *  can never overflow again (was a hardcoded 34, off by 2). */
+const HINT_WIDTH = ROW_TEXT_WIDTH - LABEL_WIDTH; // 32
 
 /** Word-boundary wrap so a long description never truncates or overflows. */
 function wrap(text: string, width: number): string[] {
@@ -145,12 +151,15 @@ export function Palette({ corpus, query, active, rows }: PaletteProps): ReactEle
       );
     }
 
-    // Detail line: the FULL description on the active command row, wrapped so
-    // it is never truncated. A leading `↳` marks it as the detail of the row
+    // Detail line: the FULL description on the active row, wrapped so it is
+    // never truncated. Command rows always show it; help rows show it too
+    // (matching command-row UX — the hint column only truncates). Output-corpus
+    // rows are excluded: their secondary is a line number / empty-state text,
+    // not a description. A leading `↳` marks the detail as belonging to the row
     // above (not a new selectable item); continuation lines align under the
     // text so they read as one wrapped block.
-    if (isActive && row.argv && row.secondary) {
-      const detailLines = wrap(row.secondary, PALETTE_WIDTH - 12);
+    if (isActive && row.secondary && (row.argv || corpus === 'help')) {
+      const detailLines = wrap(row.secondary, ROW_TEXT_WIDTH - 4);
       for (let di = 0; di < detailLines.length; di++) {
         const line = detailLines[di] ?? '';
         const prefix = di === 0 ? '  ↳ ' : '    ';
