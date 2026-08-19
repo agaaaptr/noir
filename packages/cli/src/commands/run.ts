@@ -82,7 +82,9 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
   const resolved = resolveRunProfile(opts.profile, config, process.env);
   if (!resolved.ok) fail(EXIT.USAGE, resolved.message, opts);
   const profile = resolved.profile;
-  const customBinary = profile.binary ?? opts.command;
+  // An explicit `--command` (per-invocation override) wins over a profile's
+  // binary; the profile's binary is the fallback when --command is absent.
+  const customBinary = opts.command ?? profile.binary;
   const extraArgs = profile.args;
   const env = profile.env ? mergeEnv(process.env, profile.env) : undefined;
 

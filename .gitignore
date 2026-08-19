@@ -21,3 +21,5 @@ artifacts/
 .noir/.env
 .noir/.env.*
 !.noir/.env.example
+# `noir run` transcripts contain raw host prompts/output (may include secrets).
+.noir/transcripts/

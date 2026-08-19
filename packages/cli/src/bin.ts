@@ -295,6 +295,11 @@ export function createProgram(): Command {
         );
       }
     }
+    // Load project-local .noir/.env AFTER the --cwd chdir so the .env root
+    // matches the effective project (a `--cwd /other` run must never inherit the
+    // launch dir's tokens into the host subprocess). Idempotent — real env wins,
+    // the file fills only unset keys.
+    applyNoirEnv(process.cwd());
     // SP-G: propagate --json / --no-input to the deep conflict resolver via env
     // so a regenerate conflict never prompts under those flags (the @clack
     // prompt writes to stdout — it would corrupt --json output and violate
@@ -1223,11 +1228,6 @@ const homeDeps: HomeDeps = {
  * tests can either call this or drive `createProgram().parseAsync` directly.
  */
 export async function run(argv: readonly string[] = []): Promise<number> {
-  // Load project-local .noir/.env once at process start so tokens are visible
-  // to every command and to spawned children (the host, the daemon) regardless
-  // of how the process was launched (real env always wins; the file fills
-  // unset keys only — idempotent).
-  applyNoirEnv(process.cwd());
   try {
     await program.parseAsync([...argv], { from: 'user' });
   } catch (err) {

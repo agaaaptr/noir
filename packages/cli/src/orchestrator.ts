@@ -16,6 +16,7 @@
 //   - `runHost` — the spawn + readline integration over that core.
 
 import { spawn } from 'node:child_process';
+import { constants } from 'node:os';
 import { createInterface } from 'node:readline';
 import type { HostId } from '@noir-ai/adapters';
 import { buildBridgeArgs, resolveCommandViaShell } from './shell-bridge.js';
@@ -106,6 +107,12 @@ function str(v: unknown): string | undefined {
 
 function num(v: unknown): number | undefined {
   return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+}
+
+/** Map a POSIX signal name (e.g. "SIGKILL") to its numeric value, else undefined. */
+function signalNumber(signal: NodeJS.Signals): number | undefined {
+  const n = (constants.signals as Record<string, number>)[signal];
+  return typeof n === 'number' ? n : undefined;
 }
 
 function usageFrom(v: unknown): TokenUsage | undefined {
@@ -368,15 +375,20 @@ function spawnAndConsume(
       stderrBuf += chunk;
     });
 
-    child.on('close', (code) => {
+    child.on('close', (code, signal) => {
       if (spawnError !== null) return; // the error/fallback path owns this spawn
+      // A host terminated by a signal (crash/SIGKILL/OOM) yields code === null
+      // with no result event — without this it would be reported as exit 0
+      // success. Fold the kill into a non-zero exit + isError (128+n is the
+      // shell convention for signal termination).
+      const killed = code === null && signal != null;
       resolve({
-        exitCode: code ?? 0,
+        exitCode: killed ? 128 + (signalNumber(signal) ?? 0) : (code ?? 0),
         usage: reducer.snapshot(),
         eventCount,
         stderr: stderrBuf,
-        isError: errored,
-        errorText,
+        isError: errored || killed,
+        errorText: killed && errorText === undefined ? `terminated by signal ${signal}` : errorText,
         errorCategory,
       });
     });

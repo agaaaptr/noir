@@ -80,6 +80,13 @@ describe('runHost — failure surfacing (fixture hosts)', () => {
     expect(r.isError).toBe(false);
     expect(r.errorText).toBeUndefined();
   });
+
+  it('reports a signal-killed host (no result event, code null) as a failure, not exit 0', async () => {
+    const r = await runHost({ host: 'claude', prompt: 'x', customBinary: fix('host-killed.sh') });
+    expect(r.isError).toBe(true);
+    expect(r.exitCode).not.toBe(0);
+    expect(r.errorText).toContain('terminated by signal');
+  });
 });
 
 describe('runHost — shell-bridge ENOENT fallback (zsh alias)', () => {

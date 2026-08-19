@@ -122,6 +122,16 @@ describe('noir run — run profiles (CLI)', () => {
     expect(runHostMock.mock.calls[0]?.[0]?.customBinary).toBe('/usr/bin/claude-work');
   });
 
+  it('an explicit --command wins over the profile binary', async () => {
+    writeProject(`run:
+  profiles:
+    work: { binary: /usr/bin/claude-work }
+`);
+    const code = await runCli(['run', '--profile', 'work', '--command', 'claude-custom', 'hello']);
+    expect(code).toBe(0);
+    expect(runHostMock.mock.calls[0]?.[0]?.customBinary).toBe('claude-custom');
+  });
+
   it('an unknown --profile exits 2 with a message listing available profiles', async () => {
     writeProject(`run:
   profiles:

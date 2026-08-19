@@ -785,7 +785,7 @@ export async function taskDecompose(opts: TaskDecomposeOptions): Promise<void> {
   // pass would fill richer fields; the offline template gives a valid skeleton.
   const plan = {
     capabilityId: cap,
-    intent: `Capability ${cap} — details TBD (run with a provider for an LLM-drafted plan)`,
+    intent: `Capability ${cap} — offline template (run with a provider for an LLM-drafted plan)`,
     slices: [
       {
         id: 's1-walking-skeleton',
