@@ -319,7 +319,7 @@ async function checkStore(
  * readable env file can leak tokens. Warn (never fail) — ssh-style advisory.
  */
 function checkNoirEnv(checks: CheckResult[], root: string): void {
-  const path = join(root, '.noir', '.env');
+  const path = join(paths.noirDir(root), '.env');
   let st: Stats;
   try {
     st = statSync(path);

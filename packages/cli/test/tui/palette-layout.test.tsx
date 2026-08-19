@@ -40,6 +40,24 @@ describe('palette layout — help corpus (regression: two-column wrap)', () => {
     instance.unmount();
   });
 
+  it('every rendered line stays within the panel width (64 cols)', () => {
+    const instance = renderHelp();
+    const frame = instance.lastFrame() ?? '';
+    // The panel is 64 cols total (border 2 + padding 2 + text 58); no line may
+    // exceed that width — an over-wide row is what wraps (the v1.11.2 bug).
+    // Strip SGR color codes (ink emits them when color is on) before measuring.
+    // The regex is assembled at runtime from String.fromCharCode(27) so the
+    // source carries no control character (which biome forbids in regex literals).
+    const ansi = String.fromCharCode(27) + '\\[[0-9;]*m';
+    const stripAnsi = new RegExp(ansi, 'g');
+    const max = 64;
+    for (const raw of frame.split('\n')) {
+      const line = raw.replace(stripAnsi, '');
+      expect(line.length, `line exceeds ${max} cols: ${line}`).toBeLessThanOrEqual(max);
+    }
+    instance.unmount();
+  });
+
   it('shows the FULL keybinding description as a detail line on the active help row', () => {
     const instance = renderHelp();
     const frame = instance.lastFrame() ?? '';

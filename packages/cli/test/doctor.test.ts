@@ -8,7 +8,7 @@
 //
 // The daemon record is isolated per worker via NOIR_DAEMON_JSON so the daemon
 // check is deterministic (no record → warn, never fail).
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { paths } from '@noir-ai/core';
@@ -190,6 +190,34 @@ describe('noir doctor — initialized but store not yet created (fresh project)'
       expect(env.data.summary.fail).toBe(1);
       expect(store.status).toBe('warn'); // store is NOT the failing check
     }
+  });
+});
+
+describe('noir doctor — .noir/.env permission advisory', () => {
+  it('warns (never fails) when .noir/.env is group/world-readable', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-env-project\n', 'utf8');
+    writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
+    writeFileSync(join(paths.noirDir(root), '.env'), 'TOKEN=pk_fake\n', 'utf8');
+    chmodSync(join(paths.noirDir(root), '.env'), 0o644); // group/world-readable
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    const row = findCheck(env.data.checks, 'noir-env');
+    expect(row.status).toBe('warn');
+    expect(row.detail).toContain('chmod 600');
+    expect(row.detail).not.toContain('pk_fake'); // never leaks the value
+    expect(env.data.summary.fail).toBe(0);
+  });
+
+  it('reports ok when .noir/.env is 0600', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-env-ok-project\n', 'utf8');
+    writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
+    writeFileSync(join(paths.noirDir(root), '.env'), 'TOKEN=pk_fake\n', 'utf8');
+    chmodSync(join(paths.noirDir(root), '.env'), 0o600);
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    expect(findCheck(env.data.checks, 'noir-env').status).toBe('ok');
   });
 });
 

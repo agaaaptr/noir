@@ -125,10 +125,19 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
       result.errorText && result.errorText.trim().length > 0
         ? result.errorText.trim()
         : result.stderr.trim() || `exit code ${result.exitCode}`;
-    const isAuth = /not logged|login|authenticate|invalid api key/i.test(reason);
+    // Auth guidance is keyed off the stream's error CATEGORY (authoritative),
+    // falling back to a text heuristic only when the category is absent. The
+    // login hint names the RESOLVED binary, not a literal 'claude'.
+    const isAuth =
+      result.errorCategory === 'authentication_failed' ||
+      result.errorCategory === 'oauth_org_not_allowed' ||
+      /not logged|login|authenticate|invalid api key/i.test(reason);
     let message = `host '${binary}' failed (exit ${result.exitCode}): ${reason}`;
     if (isAuth) {
-      message += ` Open a terminal and run \`claude /login\` (interactive-only — it cannot run inside \`noir run\`), then retry.`;
+      message += ` Open a terminal and run \`${binary} /login\` (interactive-only — it cannot run inside \`noir run\`), then retry.`;
+      if (process.env.ANTHROPIC_API_KEY) {
+        message += ` Note: ANTHROPIC_API_KEY is set in your environment — it overrides the logged-in account in \`-p\` mode; unset it (or fix the key) if you meant to use your subscription.`;
+      }
     }
     message += ` If you use another profile, pass \`--command <binary>\` or define a run profile under run.profiles. transcript: ${transcript}`;
     fail(EXIT.ERROR, message, opts);
@@ -157,7 +166,7 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
 }
 
 /** Merge a profile's env overlay over the base env; `undefined` values delete the key. */
-function mergeEnv(
+export function mergeEnv(
   base: Record<string, string | undefined>,
   overlay: Record<string, string | undefined>,
 ): Record<string, string | undefined> {

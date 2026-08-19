@@ -245,22 +245,27 @@ function genConfigSchema() {
               '',
             default: defaultValue,
           };
+          // Zod v4 records expose the per-key value schema as _def.valueType
+          // (not valueSchema, which is the v3 name). The valueType carries the
+          // record's element schema + its .describe(), so run.profiles.<name>,
+          // integrations.<name>, and model.providers.<name> each get a row. A
+          // record has no object shape (so the walk below skips it) but may be
+          // nested one level deep (run.profiles), so this runs at every depth.
+          const recSchema = inner?._def?.valueType;
+          if (recSchema) {
+            result[key + '.<name>'] = {
+              type: 'record value',
+              required: true,
+              description: recSchema?._def?.description || recSchema?.description || '',
+              default: '—',
+            };
+          }
           if (depth < 1) {
             const objShape = inner?._def?.shape;
             if (objShape && typeof objShape === 'object') {
               for (const [childKey, childField] of Object.entries(objShape)) {
                 describeField(key + '.' + childKey, childField, depth + 1);
               }
-            }
-            const recSchema = inner?._def?.valueSchema;
-            if (recSchema) {
-              result[key + '.<name>'] = {
-                type: 'record value',
-                required: true,
-                description:
-                  recSchema?._def?.description || recSchema?.description || recSchema?.description || '',
-                default: '—',
-              };
             }
           }
         };
@@ -283,12 +288,29 @@ function genConfigSchema() {
         'See `packages/core/src/config.ts` for the authoritative `NoirConfigSchema` definition.',
       );
     } else {
-      lines.push('| Field | Type | Required | Default | Description |');
-      lines.push('|---|---|---|---|---|');
-      for (const [key, info] of Object.entries(shape)) {
-        lines.push(
-          `| \`${key}\` | \`${info.type}\` | ${info.required ? 'yes' : 'no'} | ${info.default || '—'} | ${info.description} |`,
-        );
+      // Group the flat dotted-key table by top-level section (host/name/mode are
+      // "General"; every other key belongs to its top-level block: daemon, context,
+      // model, memory, rules, prd, workflow, integrations, update, run).
+      const rows = Object.entries(shape);
+      const groups = new Map();
+      for (const [key, info] of rows) {
+        const top = key.split('.')[0];
+        const isGeneral = ['host', 'name', 'mode'].includes(top);
+        const bucket = isGeneral ? 'General' : top;
+        if (!groups.has(bucket)) groups.set(bucket, []);
+        groups.get(bucket).push([key, info]);
+      }
+      for (const [group, groupRows] of groups) {
+        lines.push(`### ${group}`);
+        lines.push('');
+        lines.push('| Field | Type | Required | Default | Description |');
+        lines.push('|---|---|---|---|---|');
+        for (const [key, info] of groupRows) {
+          lines.push(
+            `| \`${key}\` | \`${info.type}\` | ${info.required ? 'yes' : 'no'} | ${info.default || '—'} | ${info.description} |`,
+          );
+        }
+        lines.push('');
       }
     }
   } catch {
@@ -296,12 +318,35 @@ function genConfigSchema() {
   }
 
   lines.push('');
+  lines.push('## Conditional requirements');
+  lines.push('');
+  lines.push(
+    '- `model.providers.<name>.apiKeyEnv` — required only when the provider is remote',
+    '  (anonymous local providers like Ollama omit it).',
+    '- `integrations.<name>.{teamId,listId,spaceId}` — required only when the matching',
+    '  ClickUp flow needs workspace binding (see [ClickUp setup](../how-to/clickup.md)).',
+    '- `context.embedder.provider` / `context.embedder.model` / `context.embedder.baseURL` —',
+    '  only meaningful when `context.embedder.kind` is `remote` or `ollama`.',
+    '- `memory.consolidation.*` — only meaningful when `memory.consolidation.enabled` is true.',
+  );
+  lines.push('');
+  lines.push('## Secrets policy');
+  lines.push('');
+  lines.push(
+    '`.noir/config.yml` is **committable project state** — never paste a token value into it.',
+    'Use dollar-brace (`$VAR`-style) references (`apiKeyEnv`, `run.profiles.<name>.env`) so the',
+    'config stores a name, not a secret; export the real value in your shell or `.noir/.env`.',
+    'Never pass tokens as CLI arguments (visible in process lists). See',
+    '[Environment Variables](environment.md) for the full placement + precedence rules.',
+  );
+  lines.push('');
   lines.push('## Honest notes');
   lines.push('');
   lines.push(
     '- `rules.*`, `update.display`, `context.roots`, `context.budgetTokens`, and `daemon.port`',
     '  are parsed + validated but have no live consumer yet — declaring them now avoids',
     '  schema churn when their feature ships. Do not rely on them.',
+    '- `run.*` is new in 1.12.0 (host profiles). All other blocks predate it.',
   );
   lines.push('');
   return lines.join('\n');
@@ -389,10 +434,18 @@ function genMcpTools() {
       const toolMatches = content.matchAll(/registerTool\(\s*['"]([\w_]+)['"]/g);
       for (const m of toolMatches) {
         const name = m[1];
-        // Find the description in the options object following the name
-        const afterName = content.slice(m.index + m[0].length, m.index + m[0].length + 500);
-        const descMatch = afterName.match(/description:\s*['"]([^'"]+)['"]/);
-        const desc = descMatch ? descMatch[1] : '';
+        // Find the description in the options object following the name. Match a
+        // full JS string literal (quote-aware) so a description CONTAINING the
+        // other quote char (e.g. "Pass {integration:'noir-clickup'}") is captured
+        // whole instead of truncated at the first inner quote. Handles single-,
+        // double-quoted and template literals, to end-of-line for multi-line
+        // single-line strings.
+        const afterName = content.slice(m.index + m[0].length, m.index + m[0].length + 2000);
+        const descMatch =
+          afterName.match(
+            /description:\s*(?:'([^'\\]*(?:\\.[^'\\]*)*)'|"([^"\\]*(?:\\.[^"\\]*)*)")/,
+          ) ?? null;
+        const desc = descMatch ? (descMatch[1] ?? descMatch[2] ?? '') : '';
 
         // Determine category from file name
         let category = 'general';

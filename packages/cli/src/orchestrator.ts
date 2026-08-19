@@ -82,6 +82,9 @@ export type NoirEvent =
        *  (`is_api_error_message:true` or an `error` category string) — its text
        *  is a diagnostic, never the answer. */
       readonly isError?: boolean;
+      /** The host's error category string (e.g. "authentication_failed") when
+       *  the assistant event carries one — used for actionable auth guidance. */
+      readonly errorCategory?: string;
     }
   | {
       readonly kind: 'result';
@@ -165,7 +168,10 @@ export function normalizeStreamEvent(raw: unknown): NoirEvent | null {
       // caller never streams it as assistant text (optional-when-true keeps
       // exact-shape consumers of the existing union intact).
       ...(r.is_api_error_message === true || typeof r.error === 'string'
-        ? { isError: true as const }
+        ? {
+            isError: true as const,
+            ...(typeof r.error === 'string' ? { errorCategory: r.error } : {}),
+          }
         : {}),
     };
   }
@@ -276,6 +282,9 @@ export interface RunHostResult {
   /** The first API-error assistant text (e.g. "Not logged in · Please run
    *  /login"), quoted into the CLI's failure message. */
   readonly errorText?: string;
+  /** The first API-error category (e.g. "authentication_failed"), for
+   *  actionable auth guidance in the CLI. */
+  readonly errorCategory?: string;
 }
 
 /**
@@ -320,6 +329,7 @@ function spawnAndConsume(
     let stderrBuf = '';
     let errored = false;
     let errorText: string | undefined;
+    let errorCategory: string | undefined;
     // A failed spawn fires BOTH 'error' and 'close' (close with a synthetic
     // code like -2). The 'close' handler must defer to the 'error' path so the
     // shell fallback (or the rejection) owns the resolution, never a -2 result.
@@ -345,6 +355,7 @@ function spawnAndConsume(
       if (event.kind === 'assistant' && event.isError === true) {
         errored = true;
         if (errorText === undefined && event.text && event.text.length > 0) errorText = event.text;
+        if (errorCategory === undefined && event.errorCategory) errorCategory = event.errorCategory;
       } else if (event.kind === 'result' && event.isError === true) {
         errored = true;
       }
@@ -366,6 +377,7 @@ function spawnAndConsume(
         stderr: stderrBuf,
         isError: errored,
         errorText,
+        errorCategory,
       });
     });
   });

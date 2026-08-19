@@ -78,3 +78,9 @@ an rc file or an alias/function. PATH entries are re-spawned directly; aliases
 and functions are bridged through the shell with the prompt passed **only as
 argv** (never shell-parsed). This covers the "everything lives in `.zshrc`"
 setup — but a launcher script remains the most predictable option.
+
+Requirements + limits of the fallback: `$SHELL` must be set and be `zsh`,
+`bash`, or `fish` (GUI/launchd-launched processes often lack `$SHELL` — a
+launcher script or profile `binary` path is the reliable answer there); the
+probe is skipped entirely on Windows and for names containing `/`; a hanging rc
+file aborts the probe after ~3 s and surfaces the plain ENOENT error.

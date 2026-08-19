@@ -21,7 +21,7 @@ Noir's long-term strategic direction as an AI development platform. Several "vis
 ## Gap / roadmap delta
 
 - **Wire `draftPrd` into a real runtime consumer** — second caller beyond memory consolidation.
-- **Fix memory auto-capture CLI/doc mismatch** — template says `noir memory capture`; CLI exposes only recall/save/sessions/forget/consolidate.
+- **Ship memory auto-capture** — the hooks template documents the explicit-save surface; a `memory capture` command is a future slice (no CLI/doc mismatch — the template says the command does not exist yet).
 - **Technology radar artifact** (adopt/trial/assess/hold) — acceptance criterion claims it must exist; nothing does.
 - **Innovation backlog artifact** — items with objective/value/complexity/dependency/research-status/recommendation.
 - **New-technology evaluation mechanism + periodic research cadence.**

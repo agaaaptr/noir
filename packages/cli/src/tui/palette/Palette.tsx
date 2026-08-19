@@ -39,7 +39,7 @@ function wrap(text: string, width: number): string[] {
   let cur = '';
   for (const w of words) {
     if (cur.length === 0) cur = w;
-    else if ((cur + ' ' + w).length <= width) cur = `${cur} ${w}`;
+    else if (`${cur} ${w}`.length <= width) cur = `${cur} ${w}`;
     else {
       lines.push(cur);
       cur = w;

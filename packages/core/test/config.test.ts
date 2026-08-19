@@ -348,3 +348,36 @@ describe('parseConfig — update block', () => {
     expect(cfg.update.display).toBe('silent');
   });
 });
+
+describe('parseConfig — run block (host profiles)', () => {
+  it('defaults to an empty profiles map (no profile applied)', () => {
+    const cfg = parseConfig({});
+    expect(cfg.run).toEqual({ profiles: {} });
+  });
+
+  it('round-trips a run block with profiles + defaultProfile + nullable env', () => {
+    const cfg = parseConfig({
+      run: {
+        defaultProfile: 'work',
+        profiles: {
+          work: {
+            binary: '/Users/me/bin/claude-work',
+            env: { CLAUDE_CONFIG_DIR: '/tmp/cc', ANTHROPIC_API_KEY: null },
+            args: ['--foo'],
+          },
+        },
+      },
+    });
+    expect(cfg.run?.defaultProfile).toBe('work');
+    expect(cfg.run?.profiles?.work).toEqual({
+      binary: '/Users/me/bin/claude-work',
+      env: { CLAUDE_CONFIG_DIR: '/tmp/cc', ANTHROPIC_API_KEY: null },
+      args: ['--foo'],
+    });
+  });
+
+  it('rejects a profile name with an invalid charset', () => {
+    expect(() => parseConfig({ run: { profiles: { 'work.profile': { binary: 'x' } } } })).toThrow();
+    expect(() => parseConfig({ run: { profiles: { 'a b': { binary: 'x' } } } })).toThrow();
+  });
+});

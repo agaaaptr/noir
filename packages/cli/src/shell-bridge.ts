@@ -85,6 +85,15 @@ function shellKind(shell: string): 'zsh' | 'bash' | 'fish' | null {
   return (SUPPORTED_SHELLS.has(kind) ? kind : null) as 'zsh' | 'bash' | 'fish' | null;
 }
 
+/** Login+interactive flags per shell. fish has no separate login mode — `-i -c`
+ *  sources config.fish; zsh/bash use `-lic` (login+interactive) so rc files that
+ *  only load in login shells (PATH via .zprofile / /etc/zprofile) are visible. */
+const PROBE_FLAGS: Record<'zsh' | 'bash' | 'fish', string> = {
+  zsh: '-lic',
+  bash: '-lic',
+  fish: '-ic',
+};
+
 /**
  * One-shot probe scripts. The NAME is always read from `$1`/`$argv[1]` (argv),
  * never written into the script. bash login shells skip .bashrc, so it is
@@ -107,7 +116,8 @@ function probeCommand(
   const timeoutMs = opts.timeoutMs ?? PROBE_TIMEOUT_MS;
   return new Promise((resolve) => {
     const script = kind ? PROBE_SCRIPTS[kind] : '';
-    const child = spawn(shell, ['-lic', script, 'noirbridge', name], {
+    const flags = kind ? PROBE_FLAGS[kind] : '-lic';
+    const child = spawn(shell, [flags, script, 'noirbridge', name], {
       stdio: ['ignore', 'pipe', 'pipe'],
       detached: true, // new process group so the timeout can kill rc-spawned children
       ...(opts.env ? { env: opts.env as NodeJS.ProcessEnv } : {}),

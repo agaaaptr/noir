@@ -17,3 +17,7 @@ artifacts/
 # Noir local runtime data (the SQLite store; .noir/config.yml, .noir/NOIR.md,
 # .noir/specs, .noir/plans, etc. are project state and may be committed).
 .noir/store/
+# Dogfooding secrets — a dev's local .noir/.env must never be committed.
+.noir/.env
+.noir/.env.*
+!.noir/.env.example

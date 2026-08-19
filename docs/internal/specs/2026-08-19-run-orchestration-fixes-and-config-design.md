@@ -142,8 +142,10 @@ Only when the initial `spawn(binary)` fails **ENOENT**, and all guards pass:
   unquoted values; single/double quotes stripped (whitespace preserved); `export ` prefix
   ignored; `EMPTY=` → `''`; last definition wins; **no** `${}` interpolation or command
   substitution (documented); malformed line → one-line stderr warning with line number + skip.
-- Load eagerly **once**, before MCP server construction, in the **daemon** (covers
-  GUI/launchd/detached) and at CLI bin entry (covers `noir run` host spawns).
+- Load eagerly **once** at the CLI entry (`bin.ts run()`) and at the serve entry
+  (`serve.ts`) — both precede MCP-server/daemon construction, since the daemon is
+  always launched through the CLI. This covers GUI/launchd/detached contexts and
+  `noir run` host spawns.
 - Security: add `/.noir/.env` to `ignore-manager` `IGNORE_ENTRIES` (scaffold gitignore); ship a
   `.noir/.env.example` placeholder in the scaffold; `noir doctor` warns (names only, never
   values) if the file is group/world-readable; 0600 when Noir creates it.

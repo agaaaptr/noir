@@ -27,6 +27,7 @@ vi.mock('../src/orchestrator.js', async (importOriginal) => {
 });
 
 import { createProgram } from '../src/bin.js';
+import { mergeEnv } from '../src/commands/run.js';
 import { handleError } from '../src/output.js';
 
 /**
@@ -108,6 +109,30 @@ describe('noir run — host-failure contract', () => {
     expect(stderrText()).not.toContain('usage:');
   });
 
+  it('auth hint uses the resolved binary + notes ANTHROPIC_API_KEY when set (category-keyed)', async () => {
+    const prevKey = process.env.ANTHROPIC_API_KEY;
+    process.env.ANTHROPIC_API_KEY = 'sk-present';
+    try {
+      runHostMock.mockResolvedValueOnce({
+        exitCode: 1,
+        usage: { inputTokens: 0, outputTokens: 0, totalCostUsd: 0, numTurns: 1 },
+        eventCount: 1,
+        stderr: '',
+        isError: true,
+        errorCategory: 'authentication_failed',
+        errorText: 'Login expired',
+      });
+      const code = await runCli(['run', 'test', '--command', 'claude-work']);
+      expect(code).toBe(1);
+      const err = stderrText();
+      expect(err).toContain('claude-work /login'); // resolved binary, not literal 'claude'
+      expect(err).toContain('ANTHROPIC_API_KEY');
+    } finally {
+      if (prevKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+      else process.env.ANTHROPIC_API_KEY = prevKey;
+    }
+  });
+
   it('--json reports {ok:false,error} with exit 1 on host failure', async () => {
     runHostMock.mockResolvedValueOnce({
       exitCode: 1,
@@ -158,5 +183,19 @@ describe('noir run — host-failure contract', () => {
     const code = await runCli(['run', '--command', 'claude-work']);
     expect(code).toBe(2);
     expect(stderrText()).toContain('--command claude-work');
+  });
+});
+
+describe('mergeEnv — profile env overlay', () => {
+  it('overlays profile env over the base env', () => {
+    expect(mergeEnv({ A: '1' }, { B: '2' })).toEqual({ A: '1', B: '2' });
+  });
+
+  it('profile env overrides a base var (per-spawn override, not fill-unset)', () => {
+    expect(mergeEnv({ A: 'base' }, { A: 'overlay' })).toEqual({ A: 'overlay' });
+  });
+
+  it('an undefined profile value deletes the key (null → delete)', () => {
+    expect(mergeEnv({ A: 'base', B: 'keep' }, { A: undefined })).toEqual({ B: 'keep' });
   });
 });

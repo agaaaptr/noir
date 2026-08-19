@@ -3,10 +3,12 @@
 Every environment variable Noir reads, grouped by function. This is the
 single reference — feature pages link here instead of restating defaults.
 
-> **Precedence.** A real environment variable **always wins** over the project
-> file: `.noir/.env` (and any config value) only fills keys that are unset. This
-> is the 12-factor convention — the environment is the source of truth, the
-> project file is a fallback.
+> **Precedence.** A real environment variable **always wins** over `.noir/.env`,
+> which only fills keys that are unset. (One deliberate exception: a
+> `run.profiles.<name>.env` entry is an explicit per-spawn override that is merged
+> **over** the inherited environment — see
+> [Run profiles](../how-to/host-profiles.md).) This is the 12-factor convention —
+> the environment is the source of truth, the project file is a fallback.
 >
 > **Where env vars come from.** The CLI and daemon inherit the environment of
 > the process that launched them. From an interactive terminal, exports in
@@ -49,21 +51,28 @@ Remote embedders read their key by provider name (only when
 | `OPENAI_API_KEY` | — | conditional — `context.embedder.kind: remote` + `provider: openai` | OpenAI embedder key. |
 | `VOYAGE_API_KEY` | — | conditional — `provider: voyage` | Voyage embedder key. |
 | `COHERE_API_KEY` | — | conditional — `provider: cohere` | Cohere embedder key. |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | no | Ollama base URL used as the embedder baseURL fallback. |
+
+The local Ollama embedder (`context.embedder.kind: ollama`) reads its base URL
+from config (`context.embedder.baseURL`), falling back to this variable (empty
+unset means "baseURL required"):
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `OLLAMA_BASE_URL` | — (unset) | conditional — `context.embedder.kind: ollama` | Ollama base URL fallback (e.g. `http://localhost:11434`). |
 
 ## Updates
 
 | Variable | Default | Required | Description |
 |---|---|---|---|
-| `NOIR_DISABLE_UPDATE_CHECK` | — | no | Non-empty suppresses the **background** startup version check only; `noir update` still works. (`CI` also disables the background check.) |
-| `NOIR_DISABLE_UPDATES` | — | no | Non-empty makes `noir update` refuse (exit 2). |
+| `NOIR_DISABLE_UPDATE_CHECK` | — | no | **Present** (even empty) suppresses the **background** startup version check only; `noir update` still works. (`CI` also disables the background check.) |
+| `NOIR_DISABLE_UPDATES` | — | no | **Present** (even empty) makes `noir update` refuse (exit 2). |
 
 ## Terminal / output behavior
 
 | Variable | Default | Required | Description |
 |---|---|---|---|
 | `NO_COLOR` | — | no | Present **and non-empty** disables color AND interactive prompts (the NO_COLOR spec). |
-| `CLICOLOR_FORCE` | `1` | no | Forces color on even under a pipe or `CI` — the escape hatch for CI/log captures. |
+| `CLICOLOR_FORCE` | — (unset; auto) | no | Set to `1` to force color on even under a pipe or `CI` — the escape hatch for CI/log captures. |
 | `CI` | — | no | Forces color off + non-interactive behavior. Set `CI=0` or `CI=false` to opt out of the detection. |
 | `COLUMNS` | 80 (floored at 20) | no | Terminal-width override used by responsive tables and the TUI width budget. |
 | `NOIR_NO_BANNER` | — | no | Non-empty suppresses the startup banner even in an interactive terminal. |
@@ -78,7 +87,7 @@ need them.
 
 | Variable | Default | Required | Description |
 |---|---|---|---|
-| `NOIR_NODE_DIST_URL` | — | no | Node dist mirror URL for the native installer's managed-Node provisioning. |
+| `NOIR_NODE_DIST_URL` | `https://nodejs.org/dist/` | no | Node dist mirror URL for the native installer's managed-Node provisioning. |
 | `NOIR_RUNTIME_DIR` | `~/.noir/runtime` | no | Overrides the managed runtime directory. |
 | `NOIR_DAEMON_JSON` | `~/.noir/daemon.json` | no | Overrides the daemon record path. |
 | `NOIR_INSTALL_JSON` | `~/.noir/install.json` | no | Overrides the install-record path. |

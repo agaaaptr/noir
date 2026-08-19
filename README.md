@@ -26,7 +26,7 @@ The `noir` grouped home menu — section picker + per-section action lists with 
 **Current beta:** `1.11.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.11.2` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-19T04:41:49.248Z*
+*Last auto-generated: 2026-08-19T07:10:00.571Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
@@ -101,8 +101,8 @@ MCP tools → [MCP Tools Reference](docs/reference/mcp-tools.md).
 | | |
 |---|---|
 | **Tutorial** | [Getting Started](docs/getting-started.md) |
-| **How-to** | [Installation](docs/how-to/installation.md) · [Releasing](docs/how-to/releasing.md) · [Adding a Package](docs/how-to/packaging.md) |
-| **Reference** | [CLI Commands](docs/reference/cli.md) · [Configuration](docs/reference/config.md) · [MCP Tools](docs/reference/mcp-tools.md) · [Skills](docs/reference/skills.md) · [Packages](docs/reference/packages.md) |
+| **How-to** | [Installation](docs/how-to/installation.md) · [ClickUp integration](docs/how-to/clickup.md) · [Host profiles](docs/how-to/host-profiles.md) · [Releasing](docs/how-to/releasing.md) · [Adding a Package](docs/how-to/packaging.md) |
+| **Reference** | [CLI Commands](docs/reference/cli.md) · [Configuration](docs/reference/config.md) · [Environment Variables](docs/reference/environment.md) · [MCP Tools](docs/reference/mcp-tools.md) · [Skills](docs/reference/skills.md) · [Packages](docs/reference/packages.md) |
 | **Explanation** | [Architecture](docs/explanation/architecture.md) · [Privacy](docs/explanation/privacy.md) · [Spec-Driven Workflow](docs/explanation/sdd-workflow.md) |
 | **Records** | [Roadmap](docs/roadmap/) · [Changelog](CHANGELOG.md) · [Decisions (ADRs)](docs/decisions/) |
 

@@ -24,6 +24,9 @@ const IGNORE_ENTRIES: ReadonlyArray<[file: string, entries: readonly string[]]> 
       '/.noir/.env',
       '/.noir/.env.*',
       '!/.noir/.env.example',
+      // `noir run` transcripts may contain host prompts/output — runtime data,
+      // not reviewed source.
+      '/.noir/transcripts/',
     ],
   ],
   ['.dockerignore', ['.noir/']],

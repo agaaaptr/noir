@@ -56,7 +56,7 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 
 - **Graph / temporal-KG expansion** (Zep/Graphiti-style entities + edges; needs an extraction LLM + graph storage).
 - **LLM auto-tagging** (`concepts` / `type` on save).
-- **Auto-capture-by-default** — an opt-in Claude Code hooks template ships today (never auto-wired); CLI/docs mismatch: the template says `noir memory capture --stdin` but the CLI exposes only recall/save/sessions/forget/consolidate.
+- **Auto-capture-by-default** — an opt-in Claude Code hooks template ships today (never auto-wired), documenting the explicit-save surface. The `memory capture` command does not exist yet (the template says so); auto-capture is a future slice.
 - **Multi-user / org scoping** (per-user memory namespaces; v1 is solo power-user).
 
 ## Model

@@ -1149,10 +1149,16 @@ export function createProgram(): Command {
       await runHostCommand(prompt, opts);
     });
 
-  /** `noir run --list-profiles`: show the configured run profiles (NAME / DEFAULT / BINARY). */
+  /** `noir run --list-profiles`: show the configured run profiles (NAME / DEFAULT / BINARY).
+   *  Under --json the rows go to stdout as one {ok,data} envelope (S9 contract —
+   *  the table/info helpers are silenced in json mode, so json is handled FIRST). */
   function listProfilesCommand(opts: CliOptions): void {
     const config = loadRunConfig(process.cwd());
     const rows = config ? listProfiles(config) : [];
+    if (opts.json === true) {
+      json({ ok: true, data: rows });
+      return;
+    }
     if (rows.length === 0) {
       info('(no run profiles configured — add a run.profiles block to .noir/config.yml)', opts);
       return;

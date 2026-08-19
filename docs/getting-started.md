@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.11.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.11.2` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-19T04:41:49.760Z*
+*Last auto-generated: 2026-08-19T07:10:01.032Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -220,5 +220,5 @@ with [clickup.md](how-to/clickup.md).
 
 - [installation.md](how-to/installation.md) — the full install reference (every path, troubleshooting, the channel model).
 - [CLI Reference](reference/cli.md) — every command (auto-generated from `noir --help`). The `.noir/config.yml` schema is in [config.md](reference/config.md).
-- [architecture/README.md](explanation/architecture.md) — how the 11 packages fit together.
+- [Architecture](explanation/architecture.md) — how the 11 packages fit together.
 - [roadmap/](roadmap/) — project direction, capability index, releases & version targets.
