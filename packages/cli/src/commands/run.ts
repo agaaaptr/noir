@@ -182,8 +182,10 @@ function writeTranscript(host: string, lines: readonly string[]): string {
   const dir = join(process.cwd(), '.noir', 'transcripts');
   const file = join(dir, `${host}-${ts}.jsonl`);
   try {
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(file, `${lines.join('\n')}${lines.length > 0 ? '\n' : ''}`);
+    // Transcripts contain raw host prompts/output (may include secrets) — create
+    // the dir 0700 and the file 0600 so they are not group/world-readable.
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    writeFileSync(file, `${lines.join('\n')}${lines.length > 0 ? '\n' : ''}`, { mode: 0o600 });
   } catch {
     // Transcript persistence is best-effort — a read-only .noir/ must not fail
     // the run.
