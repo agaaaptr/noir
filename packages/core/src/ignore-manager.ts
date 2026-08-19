@@ -13,7 +13,18 @@ export const IGNORE_BLOCK = managedBlock('ignore', 'hash');
 const IGNORE_ENTRIES: ReadonlyArray<[file: string, entries: readonly string[]]> = [
   [
     '.gitignore',
-    ['/.noir/store/', '/.noir/handoff/', '/.noir/*.sock', '/.noir/daemon.pid', '/.noir/state/'],
+    [
+      '/.noir/store/',
+      '/.noir/handoff/',
+      '/.noir/*.sock',
+      '/.noir/daemon.pid',
+      '/.noir/state/',
+      // .noir/.env holds tokens — never commit it. The .env.example stays
+      // visible as the documented placeholder (github/gitignore convention).
+      '/.noir/.env',
+      '/.noir/.env.*',
+      '!/.noir/.env.example',
+    ],
   ],
   ['.dockerignore', ['.noir/']],
   ['.npmignore', ['/.noir/']],

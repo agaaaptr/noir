@@ -34,6 +34,7 @@ describe('buildManifest', () => {
     expect(snap).toEqual([
       { path: '.noir/project.id', mode: 'skipIfExists', host: null, hasBlock: false },
       { path: '.noir/config.yml', mode: 'skipIfExists', host: null, hasBlock: false },
+      { path: '.noir/.env.example', mode: 'skipIfExists', host: null, hasBlock: false },
       { path: '.noir/NOIR.md', mode: 'managedBlock', host: null, hasBlock: true },
       { path: '.noir/rules/RULES.md', mode: 'skipIfExists', host: null, hasBlock: false },
       // --- host-agnostic ignores (still host:null) ---

@@ -349,7 +349,10 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           });
         }
         try {
-          const resolvedMode: Mode = mode ?? 'full';
+          // Fall back to the project's configured mode (config.mode) before the
+          // hard default, so `mode: quick` in .noir/config.yml actually sets the
+          // default the docs describe (getting-started "full vs quick").
+          const resolvedMode: Mode = mode ?? ctx.project.config.mode ?? 'full';
           // taskClass plumbs into startTask so the soft PRD gate (prdRecommendation)
           // can fire for mandatoryFor classes (c4-surface-wiring S1).
           await engine.startTask(taskId, slug, resolvedMode, taskClass as TaskClass | undefined);

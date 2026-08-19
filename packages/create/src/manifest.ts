@@ -117,6 +117,7 @@ export const BRIEF_BLOCK: ManagedBlock = managedBlock('brief', 'html');
 const P = {
   projectId: `${NOIR_DIR}/project.id`,
   config: `${NOIR_DIR}/config.yml`,
+  envExample: `${NOIR_DIR}/.env.example`,
   noirMd: `${NOIR_DIR}/NOIR.md`,
   rulesMd: `${NOIR_DIR}/rules/RULES.md`,
 } as const;
@@ -175,6 +176,12 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
       mode: 'skipIfExists',
       template: 'config.yml.tmpl',
       description: 'user config seed (host + mode)',
+    },
+    {
+      path: P.envExample,
+      mode: 'skipIfExists',
+      template: 'env.example.tmpl',
+      description: '.noir/.env placeholder (gitignored; copy + fill real tokens)',
     },
     {
       path: P.noirMd,

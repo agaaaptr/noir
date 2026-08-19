@@ -1,7 +1,11 @@
-import { loadProjectInfo } from '@noir-ai/core';
+import { applyNoirEnv, loadProjectInfo } from '@noir-ai/core';
 import { ensureDaemonRunning, startStdioServer } from '@noir-ai/daemon';
 
 export async function serve(opts: { stdio: boolean }): Promise<void> {
+  // Load .noir/.env before constructing the MCP server so integration tokens
+  // (e.g. CLICKUP_API_TOKEN) are resolvable at call time even when the daemon
+  // was launched from a context that did not inherit the shell rc.
+  applyNoirEnv(process.cwd());
   const project = loadProjectInfo(process.cwd());
   if (opts.stdio) {
     await startStdioServer({ project, transport: 'stdio', daemon: false });

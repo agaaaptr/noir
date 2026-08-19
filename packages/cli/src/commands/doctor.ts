@@ -30,7 +30,7 @@
 // `npm audit --json` uses (valid JSON out, non-zero exit when issues found).
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, type Stats, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { type HostId, resolveAdapter } from '@noir-ai/adapters';
@@ -312,6 +312,31 @@ async function checkStore(
       }
     }
   }
+}
+
+/**
+ * `.noir/.env` permission advisory (names only, never values): a group/other-
+ * readable env file can leak tokens. Warn (never fail) — ssh-style advisory.
+ */
+function checkNoirEnv(checks: CheckResult[], root: string): void {
+  const path = join(root, '.noir', '.env');
+  let st: Stats;
+  try {
+    st = statSync(path);
+  } catch {
+    return; // no .env file — nothing to check
+  }
+  const mode = st.mode & 0o777;
+  const tooOpen = (st.mode & 0o077) !== 0;
+  checks.push(
+    tooOpen
+      ? {
+          name: 'noir-env',
+          status: 'warn',
+          detail: `${path} is ${mode.toString(8)} — readable by others; run chmod 600`,
+        }
+      : { name: 'noir-env', status: 'ok', detail: `${path} permissions ok (${mode.toString(8)})` },
+  );
 }
 
 function checkEmbedder(
@@ -1030,6 +1055,7 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   await checkStore(checks, project, root);
   checkEmbedder(checks, project, vecOk);
   checkProvider(checks, project);
+  checkNoirEnv(checks, root);
   const scaffold = checkScaffoldVersion(checks, root);
   const rules = checkRulesMdBudget(checks, root, project);
   const host = checkHostArtifacts(checks, root, project);

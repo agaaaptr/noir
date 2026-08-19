@@ -17,6 +17,7 @@ export {
   writeManagedRegion,
 } from './block-writer.js';
 export { type NoirConfig, NoirConfigSchema, parseConfig } from './config.js';
+export { applyNoirEnv, loadNoirEnv, parseEnvFile } from './env-file.js';
 export { IGNORE_BLOCK, syncIgnores } from './ignore-manager.js';
 export {
   type DetectResult,
