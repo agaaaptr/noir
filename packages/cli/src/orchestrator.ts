@@ -18,6 +18,7 @@
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import type { HostId } from '@noir-ai/adapters';
+import { buildBridgeArgs, resolveCommandViaShell } from './shell-bridge.js';
 
 /** A resolved spawn command: binary + the headless flags appended before prompt. */
 export interface HostRunSpec {
@@ -77,6 +78,10 @@ export type NoirEvent =
       readonly messageId?: string;
       readonly text?: string;
       readonly usage?: TokenUsage;
+      /** Set when the host flags the assistant message as an API error
+       *  (`is_api_error_message:true` or an `error` category string) — its text
+       *  is a diagnostic, never the answer. */
+      readonly isError?: boolean;
     }
   | {
       readonly kind: 'result';
@@ -156,6 +161,12 @@ export function normalizeStreamEvent(raw: unknown): NoirEvent | null {
       messageId: message ? str(message.id) : undefined,
       text: messageText(message),
       usage: message ? usageFrom(message.usage) : undefined,
+      // An API error message is a diagnostic, not the answer — flag it so the
+      // caller never streams it as assistant text (optional-when-true keeps
+      // exact-shape consumers of the existing union intact).
+      ...(r.is_api_error_message === true || typeof r.error === 'string'
+        ? { isError: true as const }
+        : {}),
     };
   }
   if (type === 'result') {
@@ -242,6 +253,10 @@ export interface RunHostOptions {
   readonly host: HostId;
   readonly prompt: string;
   readonly customBinary?: string;
+  /** Extra args appended after the host's headless flags (run-profile `args`). */
+  readonly extraArgs?: readonly string[];
+  /** Environment for the host spawn + shell fallback (defaults to process.env). */
+  readonly env?: Record<string, string | undefined>;
   /** Raw stream-json line (for transcript persistence). */
   onLine?: (line: string) => void;
   /** Normalized event (for streaming render). */
@@ -254,6 +269,13 @@ export interface RunHostResult {
   readonly eventCount: number;
   /** Host stderr (surfaced on a non-zero exit so errors are not swallowed). */
   readonly stderr: string;
+  /** Whether the host signalled an error (non-zero exit OR a stream-json
+   *  `is_error:true` result / API-error assistant event). Exit code alone is
+   *  not reliable — claude can exit 0 with `is_error:true` (#79500). */
+  readonly isError: boolean;
+  /** The first API-error assistant text (e.g. "Not logged in · Please run
+   *  /login"), quoted into the CLI's failure message. */
+  readonly errorText?: string;
 }
 
 /**
@@ -263,19 +285,54 @@ export interface RunHostResult {
  */
 export function runHost(opts: RunHostOptions): Promise<RunHostResult> {
   const spec = resolveHostRun(opts.host, opts.customBinary);
+  if (!spec) {
+    return Promise.reject(
+      new Error(`host '${opts.host}' is not a spawnable CLI (no default command)`),
+    );
+  }
+  return spawnAndConsume(
+    spec.binary,
+    [...spec.flags, ...(opts.extraArgs ?? []), opts.prompt],
+    opts,
+    false,
+  );
+}
+
+/**
+ * Spawn `binary` with `args` and consume its stream-json. On an ENOENT spawn
+ * error (and not already a shell-bridge run) it attempts the shell fallback:
+ * the name may be an alias/function or a PATH entry only visible inside the
+ * user's interactive shell — see `shell-bridge.ts` for the safety model.
+ */
+function spawnAndConsume(
+  binary: string,
+  args: readonly string[],
+  opts: RunHostOptions,
+  shellRun: boolean,
+): Promise<RunHostResult> {
   return new Promise((resolve, reject) => {
-    if (!spec) {
-      reject(new Error(`host '${opts.host}' is not a spawnable CLI (no default command)`));
-      return;
-    }
-    const child = spawn(spec.binary, [...spec.flags, opts.prompt], {
+    const child = spawn(binary, [...args], {
       stdio: ['ignore', 'pipe', 'pipe'],
+      ...(opts.env ? { env: opts.env as NodeJS.ProcessEnv } : {}),
     });
     const reducer = new UsageReducer();
     let eventCount = 0;
     let stderrBuf = '';
+    let errored = false;
+    let errorText: string | undefined;
+    // A failed spawn fires BOTH 'error' and 'close' (close with a synthetic
+    // code like -2). The 'close' handler must defer to the 'error' path so the
+    // shell fallback (or the rejection) owns the resolution, never a -2 result.
+    let spawnError: unknown = null;
 
-    child.on('error', (err) => reject(err));
+    child.on('error', (err) => {
+      spawnError = err;
+      if (!shellRun && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+        void shellFallback(binary, args, opts, resolve, reject, err);
+        return;
+      }
+      reject(err);
+    });
 
     const rl = createInterface({ input: child.stdout });
     rl.on('line', (line) => {
@@ -285,6 +342,12 @@ export function runHost(opts: RunHostOptions): Promise<RunHostResult> {
       const event = normalizeStreamEvent(raw);
       if (event === null) return;
       eventCount += 1;
+      if (event.kind === 'assistant' && event.isError === true) {
+        errored = true;
+        if (errorText === undefined && event.text && event.text.length > 0) errorText = event.text;
+      } else if (event.kind === 'result' && event.isError === true) {
+        errored = true;
+      }
       reducer.add(event);
       opts.onEvent?.(event);
     });
@@ -295,7 +358,46 @@ export function runHost(opts: RunHostOptions): Promise<RunHostResult> {
     });
 
     child.on('close', (code) => {
-      resolve({ exitCode: code ?? 0, usage: reducer.snapshot(), eventCount, stderr: stderrBuf });
+      if (spawnError !== null) return; // the error/fallback path owns this spawn
+      resolve({
+        exitCode: code ?? 0,
+        usage: reducer.snapshot(),
+        eventCount,
+        stderr: stderrBuf,
+        isError: errored,
+        errorText,
+      });
     });
   });
+}
+
+/**
+ * ENOENT shell-bridge attempt: probe the user's shell for `binary`; respawn the
+ * resolved absolute path directly, or bridge an alias/function via the shell
+ * (prompt + flags travel only as argv). On any failure re-reject the original
+ * ENOENT so run.ts builds the friendly "no executable found" message.
+ */
+async function shellFallback(
+  binary: string,
+  args: readonly string[],
+  opts: RunHostOptions,
+  resolve: (r: RunHostResult) => void,
+  reject: (e: unknown) => void,
+  originalErr: unknown,
+): Promise<void> {
+  try {
+    const res = await resolveCommandViaShell(binary, { env: opts.env ?? process.env });
+    if (res.kind === 'path') {
+      resolve(await spawnAndConsume(res.path, args, opts, true));
+      return;
+    }
+    if (res.kind === 'alias' || res.kind === 'function') {
+      const bridge = buildBridgeArgs(binary, args, res.shell);
+      resolve(await spawnAndConsume(bridge.binary, bridge.args, opts, true));
+      return;
+    }
+  } catch {
+    // fall through to the original ENOENT below
+  }
+  reject(originalErr);
 }

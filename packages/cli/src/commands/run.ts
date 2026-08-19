@@ -17,15 +17,24 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type HostId, SUPPORTED_HOSTS } from '@noir-ai/adapters';
-import { type NoirEvent, runHost, type UsageSnapshot } from '../orchestrator.js';
+import { parseConfig } from '@noir-ai/core';
+import {
+  type NoirEvent,
+  type RunHostResult,
+  runHost,
+  type UsageSnapshot,
+} from '../orchestrator.js';
 import { type CliOptions, EXIT, fail, json, log, success } from '../output.js';
+import { loadRunConfig, resolveRunProfile } from '../run-profiles.js';
 
-/** Options accepted by `noir run` (globals + host/command knobs). */
+/** Options accepted by `noir run` (globals + host/command/profile knobs). */
 export interface RunOptions extends CliOptions {
   /** Host to drive (default `claude`). */
   readonly host?: string;
   /** Custom host binary overriding the per-host default (D2a). */
   readonly command?: string;
+  /** Named run profile from .noir/config.yml `run.profiles` (D). */
+  readonly profile?: string;
 }
 
 /** A single-row token/cost summary (human-readable). */
@@ -41,7 +50,9 @@ function formatUsage(u: UsageSnapshot): string {
  */
 function streamEvent(event: NoirEvent, opts: RunOptions): void {
   if (opts.json === true) return; // json mode buffers; no streaming writes
-  if (event.kind === 'assistant' && event.text && event.text.length > 0) {
+  // API-error assistant text (e.g. "Not logged in · Please run /login") is a
+  // diagnostic, not the answer — never stream it to the data channel.
+  if (event.kind === 'assistant' && event.text && event.text.length > 0 && event.isError !== true) {
     process.stdout.write(event.text);
   }
 }
@@ -56,56 +67,102 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
     fail(EXIT.USAGE, `unknown host '${host}' (supported: ${SUPPORTED_HOSTS.join(', ')})`, opts);
   }
   if (prompt.length === 0) {
-    fail(EXIT.USAGE, 'a prompt is required: `noir run <prompt>`', opts);
+    const selectors: string[] = [];
+    if (opts.command) selectors.push(`--command ${opts.command}`);
+    if (opts.profile) selectors.push(`--profile ${opts.profile}`);
+    const usage =
+      selectors.length > 0 ? `noir run ${selectors.join(' ')} <prompt>` : 'noir run <prompt>';
+    fail(EXIT.USAGE, `a prompt is required: \`${usage}\``, opts);
   }
+
+  // Run-profile resolution: --profile > NOIR_PROFILE > run.defaultProfile >
+  // built-in default. Config load is best-effort — `noir run` keeps working
+  // outside an initialized project (no profiles, built-in host behavior).
+  const config = loadRunConfig(process.cwd()) ?? parseConfig({});
+  const resolved = resolveRunProfile(opts.profile, config, process.env);
+  if (!resolved.ok) fail(EXIT.USAGE, resolved.message, opts);
+  const profile = resolved.profile;
+  const customBinary = profile.binary ?? opts.command;
+  const extraArgs = profile.args;
+  const env = profile.env ? mergeEnv(process.env, profile.env) : undefined;
 
   const transcriptLines: string[] = [];
 
+  let result: RunHostResult;
   try {
-    const result = await runHost({
+    result = await runHost({
       host,
       prompt,
-      customBinary: opts.command,
+      customBinary,
+      extraArgs,
+      env,
       onLine: (line) => transcriptLines.push(line),
       onEvent: (event) => streamEvent(event, opts),
     });
-
-    if (opts.json !== true) {
-      // Separator so the streamed answer and the summary don't run together.
-      process.stdout.write('\n');
-    }
-
-    const transcript = writeTranscript(host, transcriptLines);
-
-    if (opts.json === true) {
-      json({
-        ok: true,
-        data: {
-          host,
-          prompt,
-          exitCode: result.exitCode,
-          usage: result.usage,
-          numTurns: result.usage.numTurns,
-          events: result.eventCount,
-          transcript,
-        },
-      });
-      return;
-    }
-
-    if (result.exitCode !== 0) {
-      log(`host exited ${result.exitCode}`, opts);
-      if (result.stderr.length > 0) log(result.stderr.trim(), opts);
-    }
-    success(`usage: ${formatUsage(result.usage)} (API-equivalent estimate, not billed)`, opts);
-    log(`transcript: ${transcript}`, opts);
   } catch (err) {
-    fail(
-      EXIT.ERROR,
-      `failed to run host '${host}': ${err instanceof Error ? err.message : String(err)}`,
-      opts,
-    );
+    const binary = customBinary && customBinary.length > 0 ? customBinary : host;
+    const detail = err instanceof Error ? err.message : String(err);
+    const enoent = (err as NodeJS.ErrnoException)?.code === 'ENOENT';
+    const guidance = enoent
+      ? ` No executable '${binary}' was found. Shell aliases and functions (e.g. from .zshrc) are invisible to noir — use an executable on PATH, an absolute path, or a launcher script such as ~/.local/bin/${binary}.`
+      : '';
+    const subject =
+      customBinary && customBinary.length > 0
+        ? `custom command '${customBinary}'`
+        : `host '${host}'`;
+    fail(EXIT.ERROR, `failed to run ${subject}: ${detail}.${guidance}`, opts);
   }
+
+  const transcript = writeTranscript(host, transcriptLines);
+  const failed = result.exitCode !== 0 || result.isError;
+
+  if (failed) {
+    // A failed host run is an error, not a success: exit 1, {ok:false} under
+    // --json, and no misleading "usage" line. The raw stream-json transcript is
+    // still persisted (it is the audit record) and referenced in the message.
+    const binary = customBinary && customBinary.length > 0 ? customBinary : host;
+    const reason =
+      result.errorText && result.errorText.trim().length > 0
+        ? result.errorText.trim()
+        : result.stderr.trim() || `exit code ${result.exitCode}`;
+    const isAuth = /not logged|login|authenticate|invalid api key/i.test(reason);
+    let message = `host '${binary}' failed (exit ${result.exitCode}): ${reason}`;
+    if (isAuth) {
+      message += ` Open a terminal and run \`claude /login\` (interactive-only — it cannot run inside \`noir run\`), then retry.`;
+    }
+    message += ` If you use another profile, pass \`--command <binary>\` or define a run profile under run.profiles. transcript: ${transcript}`;
+    fail(EXIT.ERROR, message, opts);
+  }
+
+  if (opts.json === true) {
+    json({
+      ok: true,
+      data: {
+        host,
+        prompt,
+        exitCode: result.exitCode,
+        usage: result.usage,
+        numTurns: result.usage.numTurns,
+        events: result.eventCount,
+        transcript,
+      },
+    });
+    return;
+  }
+
+  // Separator so the streamed answer and the summary don't run together.
+  process.stdout.write('\n');
+  success(`usage: ${formatUsage(result.usage)} (API-equivalent estimate, not billed)`, opts);
+  log(`transcript: ${transcript}`, opts);
+}
+
+/** Merge a profile's env overlay over the base env; `undefined` values delete the key. */
+function mergeEnv(
+  base: Record<string, string | undefined>,
+  overlay: Record<string, string | undefined>,
+): Record<string, string | undefined> {
+  const merged = { ...base, ...overlay };
+  return Object.fromEntries(Object.entries(merged).filter(([, v]) => v !== undefined));
 }
 
 /** Persist the raw stream-json lines to `.noir/transcripts/<host>-<ts>.jsonl`. */
