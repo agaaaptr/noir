@@ -412,6 +412,11 @@ export class MemoryEngineImpl implements MemoryEngine {
   }
 
   private async consolidateInternal(opts?: ConsolidateOptions): Promise<ConsolidationResult> {
+    // Refuse on a read-only store BEFORE any work — consolidation makes a PAID
+    // model call (when a provider is configured) and writes derived lessons;
+    // on a degraded store that call + write would be wasted (the write would
+    // throw mid-way). Mirrors the save/forget guards.
+    this.assertNotDegraded('consolidate');
     // Delegate to the standalone consolidation module. The engine
     // supplies the single-writer store handle, the optional S8 model injection,
     // the provider-explicit config, the canonical projectId, and an

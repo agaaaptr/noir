@@ -11,7 +11,7 @@
 Noir's memory layer is **explicit-save**: you (or the host, through the MCP
 tools) decide what is worth keeping, and it is stored locally and free.
 
-- CLI: `noir memory save|recall|search|forget|sessions|consolidate`
+- CLI: `noir memory save|recall|forget|sessions|consolidate`
 - MCP tools: `memory_save` / `memory_recall` / `memory_search` /
   `memory_forget` / `memory_sessions` (documented in the repo's
   `docs/reference/mcp-tools.md`)
