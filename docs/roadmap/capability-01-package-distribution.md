@@ -21,7 +21,7 @@ How Noir is distributed (npm monorepo, native installer, package-manager taps, r
 - **CLI self-update + migration** (`packages/cli/src/commands/{install,update}.ts`, `packages/core/src/install-*.ts`):
   - `noir install` / `noir migrate [spec]` — move an existing install to the native path; preserves all settings (`.noir/` + `~/.noir/` data untouched); `--list` detects every install; `--uninstall-prev` removes the prior method (never auto-uninstalls; prints the suggested command when omitted).
   - `noir update [spec]` / `noir update --check` — self-update via the active install method (native → re-provision; npm/pnpm/yarn/bun/Homebrew/Scoop → reinstall via that manager).
-  - **Async startup version check** — non-blocking, cached (`~/.noir/update.json`), 24h interval default; honors `NOIR_DISABLE_UPDATE_CHECK` (background check only) and `NOIR_DISABLE_UPDATES` (hard kill-switch for the whole self-update surface).
+  - **Async startup version check** — non-blocking, cached (`~/.noir/update-cache.json`), 24h interval default; honors `NOIR_DISABLE_UPDATE_CHECK` (background check only) and `NOIR_DISABLE_UPDATES` (hard kill-switch for the whole self-update surface).
   - **Version-assert** — `noir install`/`update` refuses a silent downgrade (per-segment numeric semver comparison); an explicit positional version pin prints a warning.
   - **Doctor install row** (`noir doctor`) — advisory `ok`/`warn` only, never `fail`, never a live network call; reports the detected method, installed version, latest-known version, and a `native recommended` nudge on non-native paths.
 - **Managed-Node auto-provisioning** (`packages/core/src/node-provision.ts`, `packages/core/src/layout.ts`, `scripts/node-version.env`):
@@ -36,7 +36,7 @@ How Noir is distributed (npm monorepo, native installer, package-manager taps, r
 ## Gap / roadmap delta
 
 - **winget / Chocolatey** — deferred by decision (see ADR-0005). Windows is covered by `install.ps1` (primary), Scoop, and npm; winget/Chocolatey add breadth but no new capability. Will revisit if Windows user demand surfaces.
-- **Per-channel update cache** — `~/.noir/update.json` records a single channel; cross-channel isolation is enforced by `latestVersionFromCache(cache, channel)` (returns null on mismatch), but a `Record<channel, version>` shape was deliberately not adopted to preserve the committed `UpdateCache` interface (see Task 11 report).
+- **Per-channel update cache** — `~/.noir/update-cache.json` records a single channel; cross-channel isolation is enforced by `latestVersionFromCache(cache, channel)` (returns null on mismatch), but a `Record<channel, version>` shape was deliberately not adopted to preserve the committed `UpdateCache` interface (see Task 11 report).
 - **`migrationNotes` / `breakingChanges` / `securityAdvisory`** — structured release metadata beyond `changelogRef` is not yet captured in the registry. `changelogRef` is populated for every entry.
 
 ## Acceptance criteria

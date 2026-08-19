@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.11.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.11.2` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-14T09:50:53.376Z*
+*Last auto-generated: 2026-08-19T04:41:49.760Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -183,7 +183,38 @@ noir task new --slug csv-export --mode quick
 - **full** — spec + plan are authored **and reviewed** (gates), then execute, then verify (tests/build). Use this for real features and risky changes. This is the default.
 - **quick** — spec + plan are **skipped** (a `<quick-mode stub spec>` is written, and the spec/plan gates are recorded as `skipped`), execute runs, and the **verify gate still fires**. Use this for small, trivial, or spike tasks. It is not a free-for-all — it only skips formal planning, not verification.
 
-The host picks up the configured mode via the `noir-brainstorming` skill / the `workflow_start` MCP tool. See [Spec-Driven modes](explanation/sdd-workflow.md#modes) for the details.
+The host picks up the configured mode via the `noir-brainstorming` skill / the `workflow_start` MCP tool (which falls back to the configured `mode`). See [Spec-Driven modes](explanation/sdd-workflow.md#modes) for the details.
+
+## Driving the host headlessly (`noir run`)
+
+`noir run <prompt>` drives a host agentic CLI (Claude Code by default) **headless**
+and streams its answer — no interactive session, scriptable under `--json`:
+
+```bash
+noir run "summarize the TODOs in src/"
+noir run --host gemini "…"          # a different host adapter
+noir run --command claude-work "…"  # a specific host binary
+noir run --profile work "…"         # a named run profile (see below)
+noir run --json "…"                 # one {ok,data} envelope on stdout
+```
+
+A raw stream-json transcript is always persisted to `.noir/transcripts/`.
+
+- If the host fails (e.g. not logged in), `noir run` exits non-zero with an
+  actionable message — `claude /login` in a terminal (interactive-only), or
+  `--command` / a profile for another binary.
+- **Multiple host setups?** Define **run profiles** in `.noir/config.yml`
+  (`run.profiles.<name>.binary` + optional `env`/`args`, and `run.defaultProfile`)
+  — see [Run profiles](how-to/host-profiles.md). Shell **aliases do not work**
+  as `--command` values; use an executable, a launcher script, or a profile.
+
+## Configuration
+
+Noir's knobs live in three places: `.noir/config.yml` (schema in
+[config.md](reference/config.md)), environment variables
+([environment.md](reference/environment.md)), and the project-local
+`.noir/.env` (gitignored, fills unset env keys). Set up the ClickUp integration
+with [clickup.md](how-to/clickup.md).
 
 ## Where to go next
 

@@ -190,7 +190,18 @@ function genConfigSchema() {
   const lines = [
     '# Configuration Reference',
     '',
-    '> Auto-generated from `NoirConfigSchema` (Zod v4) in `@noir-ai/core`.',
+    '> Auto-generated from `NoirConfigSchema` (Zod v4) in `@noir-ai/core` — the',
+    '> schema `.describe()` strings are the single source of truth for these rows.',
+    '',
+    '## Precedence',
+    '',
+    'CLI flag > environment variable (`NOIR_PROFILE`) > project `.noir/config.yml` >',
+    'built-in default. The real environment always wins over `.noir/.env`, which',
+    'fills only unset keys. Integration tokens (e.g. `CLICKUP_API_TOKEN`) are env',
+    'vars, never config keys — see',
+    '[Environment Variables](environment.md),',
+    '[Run profiles](../how-to/host-profiles.md), and',
+    '[ClickUp setup](../how-to/clickup.md).',
     '',
   ];
 
@@ -208,7 +219,9 @@ function genConfigSchema() {
         const rawShape = schema._def?.shape;
         const shape = typeof rawShape === 'function' ? rawShape() : (rawShape || {});
         const result = {};
-        for (const [key, field] of Object.entries(shape)) {
+        // Reflect a field (one level deep for object/record fields so nested
+        // keys — context.embedder.kind, run.profiles.<name>, … — appear too).
+        const describeField = (key, field, depth) => {
           // Zod v4: a wrapped field (optional/nullable/default) keeps its real
           // schema on _def.innerType; the type is a short string on _def.type
           // (e.g. "enum", "object", "string", "boolean") — NOT the v3 typeName.
@@ -222,9 +235,37 @@ function genConfigSchema() {
           result[key] = {
             type: typeName,
             required: !(field?.isOptional?.() ?? false),
-            description: inner?._def?.description || inner?.description || field?._def?.description || '',
+            // This Zod version stores .describe() on the schema's top-level
+            // description property, not _def.description — check both.
+            description:
+              inner?._def?.description ||
+              inner?.description ||
+              field?._def?.description ||
+              field?.description ||
+              '',
             default: defaultValue,
           };
+          if (depth < 1) {
+            const objShape = inner?._def?.shape;
+            if (objShape && typeof objShape === 'object') {
+              for (const [childKey, childField] of Object.entries(objShape)) {
+                describeField(key + '.' + childKey, childField, depth + 1);
+              }
+            }
+            const recSchema = inner?._def?.valueSchema;
+            if (recSchema) {
+              result[key + '.<name>'] = {
+                type: 'record value',
+                required: true,
+                description:
+                  recSchema?._def?.description || recSchema?.description || recSchema?.description || '',
+                default: '—',
+              };
+            }
+          }
+        };
+        for (const [key, field] of Object.entries(shape)) {
+          describeField(key, field, 0);
         }
         console.log(JSON.stringify(result, null, 2));
       }).catch((e) => { console.error('schema-reflection error:', e?.message); console.log('{}'); });
@@ -254,6 +295,14 @@ function genConfigSchema() {
     lines.push('_(Config schema unavailable — build packages first with `pnpm build`)_');
   }
 
+  lines.push('');
+  lines.push('## Honest notes');
+  lines.push('');
+  lines.push(
+    '- `rules.*`, `update.display`, `context.roots`, `context.budgetTokens`, and `daemon.port`',
+    '  are parsed + validated but have no live consumer yet — declaring them now avoids',
+    '  schema churn when their feature ships. Do not rely on them.',
+  );
   lines.push('');
   return lines.join('\n');
 }

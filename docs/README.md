@@ -1,7 +1,7 @@
 # Documentation
 
 > Auto-generated documentation index.
-> Last updated: 2026-08-14T09:50:54.748Z
+> Last updated: 2026-08-19T04:41:51.115Z
 
 ## Getting Started
 
@@ -13,6 +13,8 @@
 
 ## How-To Guides
 
+- [**Using the ClickUp integration (noir-clickup)**](how-to/clickup.md) — 
+- [**Running with multiple host profiles**](how-to/host-profiles.md) — 
 - [**Installing Noir**](how-to/installation.md) — 
 - [**Adding a package**](how-to/packaging.md) — 
 - [**Releasing Noir**](how-to/releasing.md) — 
@@ -22,6 +24,7 @@
 - [**Generated-artifact format & naming standard**](reference/artifact-format.md) — 
 - [**CLI Command Reference**](reference/cli.md) — 
 - [**Configuration Reference**](reference/config.md) — 
+- [**Environment Variables**](reference/environment.md) — 
 - [**MCP Tools Reference**](reference/mcp-tools.md) — 
 - [**Package Inventory**](reference/packages.md) — 
 - [**Builtin Skills**](reference/skills.md) — 
@@ -125,4 +128,5 @@
 - [**C4 Verify-Gate Automation + Recovery — evidence, blocking, and failure recovery (spec)**](internal/specs/2026-08-11-c4-verify-gate-recovery-design.md) — [ARCHIVED] 
 - [**C3 Generated Artifact Standard — file naming + frontmatter + per-type format (spec)**](internal/specs/2026-08-13-c3-generated-artifact-standard-design.md) — [ARCHIVED] 
 - [**Spec — v2 Orchestrator TUI: single-surface consolidation, streaming, and host-driving (Archetype B)**](internal/specs/2026-08-14-v2-orchestrator-tui-design.md) — [ARCHIVED] 
+- [**2026-08-19 — v2 TUI fixes + `noir run` orchestration + configuration surface**](internal/specs/2026-08-19-run-orchestration-fixes-and-config-design.md) — [ARCHIVED] 
 

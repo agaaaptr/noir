@@ -6,6 +6,17 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 
 ---
 
+## Run orchestration + configuration surface (2026-08-19, unreleased)
+
+> **Shipped 2026-08-19 on `develop`** (pending release): full gate green (1718 tests).
+
+- ✅ **Palette help-corpus wrap** — RESOLVED: two-column hint width derived from the real row budget (58), active help row shows the full description as a `↳` detail line.
+- ✅ **`noir run` host-failure contract** — RESOLVED: API-error assistant events flagged + never streamed as answers; `result.is_error` surfaced; failed runs exit 1 + `{ok:false}` under `--json` + actionable auth/ENOENT messages; no misleading usage line on failure.
+- ✅ **Run profiles** — RESOLVED: `run.profiles` + `--profile`/`--list-profiles`/`NOIR_PROFILE`/`run.defaultProfile`; `${VAR}` env expansion; unknown-name errors list available profiles.
+- ✅ **Shell-alias resolution fallback** — RESOLVED: ENOENT on `--command` probes the user's shell; PATH entries respawned directly; aliases/functions bridged with the prompt only as argv.
+- ✅ **`.noir/.env` loading** — RESOLVED: core parser (Node --env-file dialect), loaded at CLI + daemon start, real env wins, gitignored via the managed block, `.env.example` scaffolded, doctor permission check.
+- ✅ **Configuration documentation overhaul** — RESOLVED: `.describe()` on every schema field + nested generator walk → self-maintaining `config.md`; new `environment.md` / `clickup.md` / `host-profiles.md`; `noir run` section in getting-started; update-cache path + memory-hooks template drift fixed. **Also resolved the user-facing confusion:** `CLICKUP_TEAM_ID` is a dead env var (nothing reads it) — team binding is `integrations.clickup.teamId`; the docs now say so explicitly.
+
 ## Workflow / lifecycle (C4)
 
 > **Shipped 2026-08-11** — all 6 C4 slices implemented across 8 commits. Full gate green (lint/build/typecheck/test 1593/docs:validate). Each item below was resolved in this session.
@@ -74,7 +85,7 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 ## Distribution (from C1 grounding)
 
 - **winget / Chocolatey manifests** — deferred by decision (ADR-0005). Windows is covered by `install.ps1` (primary), Scoop, and npm; revisit if Windows user demand surfaces.
-- **Per-channel update cache** — `~/.noir/update.json` records a single channel; cross-channel isolation is enforced by `latestVersionFromCache` (null on mismatch), but a `Record<channel, version>` shape was deliberately not adopted to preserve the committed `UpdateCache` interface.
+- **Per-channel update cache** — `~/.noir/update-cache.json` records a single channel; cross-channel isolation is enforced by `latestVersionFromCache` (null on mismatch), but a `Record<channel, version>` shape was deliberately not adopted to preserve the committed `UpdateCache` interface.
 - **`migrationNotes` / `breakingChanges` / `securityAdvisory`** — structured release metadata beyond `changelogRef` is not yet captured in the registry. `changelogRef` is populated for every entry.
 - **Windows native-install bugs (deferred from the 1.7.3 audit)** — all PRE-EXISTING (not regressions), surfaced by the 23-agent pre-release audit, not fixed in 1.7.3 because they need a Windows VM to verify and Windows is excluded from the CI smoke matrix (better-sqlite3@13 is source-only; the runner lacks VS Build Tools):
   - win32 managed-Node provisioning computes `npmBin = …/npm.exe` (`node-provision.ts` `binName`), but Node Windows distributions ship `npm.cmd` (not `npm.exe`) → `noir install`/`update` on Windows fails the npm step with ENOENT. `install.ps1` and `probeSystemNode` already use `npm.cmd`.

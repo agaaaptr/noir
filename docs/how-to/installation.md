@@ -18,7 +18,7 @@
 **Current beta:** `1.11.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.11.2` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-14T09:50:53.864Z*
+*Last auto-generated: 2026-08-19T04:41:50.184Z*
 <!-- /noir:doc:status -->
 >
 > Pin a version with `NOIR_VERSION=<VERSION>` (POSIX) or `$env:NOIR_VERSION='<VERSION>'` (PowerShell).
@@ -188,7 +188,7 @@ The check is **network-bound and timeout-bounded** (2s abort on the async path).
 
 ### Async startup version check
 
-By default, Noir runs a **non-blocking, cached** version check at startup (no more than once per 24h, configurable in `.noir/config.yml` under `update:`). The check writes `~/.noir/update.json` (last-check timestamp + latest known version + channel) and prints a **non-blocking notice** when a newer version exists. It never blocks the CLI, never makes a paid call, and silent under `--quiet`/CI/non-TTY.
+By default, Noir runs a **non-blocking, cached** version check at startup (no more than once per 24h, configurable in `.noir/config.yml` under `update:`). The check writes `~/.noir/update-cache.json` (last-check timestamp + latest known version + channel) and prints a **non-blocking notice** when a newer version exists. It never blocks the CLI, never makes a paid call, and silent under `--quiet`/CI/non-TTY.
 
 Two env kill-switches are honored (independent of config):
 
