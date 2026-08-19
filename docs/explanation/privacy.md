@@ -22,7 +22,7 @@ Noir is local-first by design. No data leaves your machine unless you explicitly
 ## Governance
 
 - **Audit trail:** every gated write (e.g., `noir_clickup_write`) appends to `.noir/audit/integration-*.jsonl`.
-- **Memory operations:** `memory_forget` deletes with reason; `memory_export` exports all data as JSON.
+- **Memory operations:** `memory_forget` deletes with reason; `memory_sessions` lists per-session rollups. (Noir has no `memory_export` tool — that is the *agentmemory plugin*'s surface, not a Noir tool.)
 - **Never auto-captures.** Memory save is explicit; an opt-in hooks template is provided but never auto-wired.
 
 ## Environmental Variables
@@ -35,4 +35,4 @@ model:
       apiKeyEnv: ANTHROPIC_API_KEY   # name only — value read at runtime
 ```
 
-No `.env` files, no committed secrets.
+`.noir/.env` is a gitignored project-local fallback (real env vars always win over it); `.noir/config.yml` stores `${VAR}` names, never literal secret values — no committed secrets.

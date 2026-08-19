@@ -39,7 +39,7 @@ A package produced by the generator is automatically included in:
 
 - **Dependencies** the generator didn't pre-wire (it adds only `@noir-ai/core`). If other packages need to consume the new one, add `workspace:*` deps to those `package.json` files too.
 - **Honoring the blueprint + `AGENTS.md` rules** — local-first, provider-explicit (never silent paid) model use, project-scoped canonical IDs, native-skills-only, no agent-loop surface. The generator gives you an empty barrel; what you put in it is your responsibility.
-- **(Only under OIDC, later)** registering the new package's Trusted Publisher on npm before its first tag push. Under the current token path (Path A) there is nothing extra to do — the `NPM_TOKEN` already covers the whole `@noir-ai` scope. See [releasing.md §1e](releasing.md#1e-alternative-path-oidc-trusted-publishing-later).
+- **(Only under OIDC, later)** registering the new package's Trusted Publisher on npm before its first tag push. Under the current token path (Path A) there is nothing extra to do — the `NPM_TOKEN` already covers the whole `@noir-ai` scope. See [releasing.md §1e](releasing.md#1e-alternative-path--oidc-trusted-publishing-later).
 
 ## When to add a package vs. extend one
 

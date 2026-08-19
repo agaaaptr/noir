@@ -11,7 +11,7 @@
 **Current beta:** `1.11.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.12.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-19T07:34:04.804Z*
+*Last auto-generated: 2026-08-19T09:51:20.592Z*
 <!-- /noir:doc:status -->
 
 ---
@@ -134,7 +134,7 @@ Every stable release publishes the **native installers** as GitHub Release artif
 3. Runs [`actions/attest-build-provenance@v3`](https://github.com/actions/attest-build-provenance) over `install.sh`, `install.ps1`, and `SHA256SUMS`, persisting a Sigstore attestation to GitHub's attestations API (`attestations: write` permission).
 4. Uploads all three as Release assets and pastes the verification commands into the Release body.
 
-Consumer verification (also documented in [installation.md](installation.md#trust-verification-pinned-installers-checksums-attestation)):
+Consumer verification (also documented in [installation.md](installation.md#trust--verification-pinned-installers-checksums-attestation)):
 
 ```bash
 # 1. Verify the checksum against SHA256SUMS

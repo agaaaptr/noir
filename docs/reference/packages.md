@@ -6,7 +6,7 @@
 
 | Package | Version | Description | Binary |
 |---|---|---|---|
-| `@noir-ai/adapters` | 1.12.0 | Noir adapters — the HostAdapter abstraction and the Claude Code adapter (the default host). | — |
+| `@noir-ai/adapters` | 1.12.0 | Noir adapters — the HostAdapter abstraction and 5 host adapters (claude, agents-md, gemini, cursor, opencode). | — |
 | `@noir-ai/cli` | 1.12.0 | Noir CLI — the `noir` command tree (commander + Ink dashboard + @clack home menu), the shell entry point to the Noir AI toolkit. | `noir` |
 | `@noir-ai/context` | 1.12.0 | Noir context — SHA-256 incremental indexer and hybrid retrieval (BM25 + vector kNN + Reciprocal Rank Fusion). | — |
 | `@noir-ai/core` | 1.12.0 | Noir core — shared types, the config schema (NoirConfigSchema), the .noir/ layout, and markers. | — |

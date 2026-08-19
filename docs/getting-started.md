@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.11.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.12.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-08-19T07:34:03.863Z*
+*Last auto-generated: 2026-08-19T09:51:19.702Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -104,27 +104,20 @@ The daemon is a **long-lived** Noir server that multiple clients can share — t
 
 **Steps:**
 
-1. Initialize for the HTTP transport, pinning a localhost port:
+1. Initialize for the HTTP transport:
 
    ```bash
-   noir init --transport streamable-http --url http://127.0.0.1:8787/mcp
+   noir init --transport streamable-http
    ```
 
-2. Set the **same** port in `.noir/config.yml` so CLI commands find the daemon:
-
-   ```yaml
-   daemon:
-     port: 8787
-   ```
-
-3. Start the daemon (it runs in the **foreground**):
+2. Start the daemon (it runs in the **foreground**):
 
    ```bash
    noir daemon start
    # foreground mode; Ctrl+C to stop. Use --detach for background
    ```
 
-4. Open the project in Claude Code. It connects to `http://127.0.0.1:8787/mcp` via `.mcp.json`.
+3. Open the project in Claude Code. Noir's CLI commands auto-discover the daemon port from `~/.noir/daemon.json`; the `.mcp.json` URL must be filled in from the port the daemon reports (the daemon binds an ephemeral port — `daemon.port` in config is not yet wired).
 
 **Caveats:**
 

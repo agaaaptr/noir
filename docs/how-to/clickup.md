@@ -67,6 +67,9 @@ integrations:
 
 - Restart the daemon, then call `integrations_auth({ envVar: 'CLICKUP_API_TOKEN' })`
   (or run any ClickUp skill flow) — `{ok:true}` means the token resolved.
+  `envVar` must be one of the **declared** `tokenEnv` names (allowlisted by the
+  daemon to prevent secret exfiltration) — passing an undeclared name returns
+  `{ok:false, reason:'no-token'}`.
 - Every gated write is logged to `.noir/audit/integration-clickup.jsonl`.
 
 ## Reference

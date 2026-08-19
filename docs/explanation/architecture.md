@@ -57,7 +57,7 @@ The daemon is the **single writer** to the store; if it is down, reads (FTS/kNN/
 
 - **Local-first.** The default embedder runs in-process (`@huggingface/transformers` + `Xenova/all-MiniLM-L6-v2`, 384-dim) — offline and private. Remote embedders (OpenAI/Voyage/Cohere) and Ollama are opt-in, provider-explicit, never default.
 - **Never a silent paid call.** The model layer resolves the provider solely from explicit config (`req.provider || cfg.defaultProvider`); it is never inferred from env-var presence. Missing key ⇒ `null` / `{ok:false}` **before** an SDK client is constructed, so the SDKs' own env-var fallbacks can never trigger a paid call. Memory consolidation is opt-in (`memory.consolidation.enabled`) and refuses cleanly without a provider.
-- **Full governance** over memory: audit trail, delete-with-reason, export.
+- **Full governance** over memory: audit trail, delete-with-reason, per-session rollups.
 
 ## Governing principles
 
