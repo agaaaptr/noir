@@ -12,7 +12,7 @@
 //   - malformed lines are skipped with a one-line stderr warning + line number,
 //     never a crash.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { NOIR_DIR } from './layout.js';
 
@@ -89,6 +89,18 @@ export function loadNoirEnv(
     return { overlay: {}, warnings: [] }; // missing file — silent no-op
   }
   const { vars, warnings } = parseEnvFile(text);
+  // Permission advisory (names-only, never values): a group/world-readable .env
+  // leaks tokens to other local users — the ssh/aws-credentials convention.
+  try {
+    const st = statSync(path);
+    if ((st.mode & 0o077) !== 0) {
+      warnings.push(
+        `.noir/.env: permissions ${(st.mode & 0o777).toString(8)} allow others to read — run chmod 600`,
+      );
+    }
+  } catch {
+    /* stat race (deleted between read + stat) — no advisory */
+  }
   const overlay: Record<string, string> = {};
   for (const [k, v] of Object.entries(vars)) {
     if (env[k] === undefined) overlay[k] = v;

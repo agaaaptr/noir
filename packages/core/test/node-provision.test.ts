@@ -167,26 +167,44 @@ describe('downloadAndVerify', () => {
 
 /* ============================= extractNode ============================= */
 describe('extractNode', () => {
-  it('invokes the exec seam with tar -xzf for posix .tar.gz', async () => {
+  it('lists (tar -tzf) then extracts (tar -xzf) for posix .tar.gz', async () => {
     const exec = vi.fn(async () => ({ code: 0, stdout: '', stderr: '' }));
     const target: NodeTarget = { os: 'linux', arch: 'x64', archive: 'tar.gz' };
     await extractNode(Buffer.from('x'), target, dir, { exec });
-    expect(exec).toHaveBeenCalledTimes(1);
-    const call = exec.mock.calls[0];
-    expect(call).toBeDefined();
-    expect(call?.[0]).toBe('tar');
-    expect(call?.[1][0]).toBe('-xzf');
+    expect(exec).toHaveBeenCalledTimes(2); // 1 list (traversal guard) + 1 extract
+    const listCall = exec.mock.calls[0];
+    const extractCall = exec.mock.calls[1];
+    expect(listCall?.[0]).toBe('tar');
+    expect(listCall?.[1][0]).toBe('-tzf');
+    expect(extractCall?.[0]).toBe('tar');
+    expect(extractCall?.[1][0]).toBe('-xzf');
   });
 
-  it('invokes the exec seam with unzip for win32 .zip', async () => {
+  it('lists (unzip -Z1) then extracts (unzip -q) for win32 .zip', async () => {
     const exec = vi.fn(async () => ({ code: 0, stdout: '', stderr: '' }));
     const target: NodeTarget = { os: 'win32', arch: 'x64', archive: 'zip' };
     await extractNode(Buffer.from('x'), target, dir, { exec });
+    expect(exec).toHaveBeenCalledTimes(2);
+    const listCall = exec.mock.calls[0];
+    const extractCall = exec.mock.calls[1];
+    expect(listCall?.[0]).toBe('unzip');
+    expect(listCall?.[1][0]).toBe('-Z1');
+    expect(extractCall?.[0]).toBe('unzip');
+    expect(extractCall?.[1][0]).toBe('-q');
+  });
+
+  it('rejects a traversal entry (../) before extracting', async () => {
+    const exec = vi.fn(async () => ({ code: 0, stdout: '../evil\n', stderr: '' }));
+    const target: NodeTarget = { os: 'linux', arch: 'x64', archive: 'tar.gz' };
+    await expect(extractNode(Buffer.from('x'), target, dir, { exec })).rejects.toThrow(/escapes/);
+    expect(exec).toHaveBeenCalledTimes(1); // listing only — extraction never ran
+  });
+
+  it('rejects an absolute-path entry before extracting', async () => {
+    const exec = vi.fn(async () => ({ code: 0, stdout: '/etc/passwd\n', stderr: '' }));
+    const target: NodeTarget = { os: 'win32', arch: 'x64', archive: 'zip' };
+    await expect(extractNode(Buffer.from('x'), target, dir, { exec })).rejects.toThrow(/escapes/);
     expect(exec).toHaveBeenCalledTimes(1);
-    const call = exec.mock.calls[0];
-    expect(call).toBeDefined();
-    expect(call?.[0]).toBe('unzip');
-    expect(call?.[1][0]).toBe('-q');
   });
 
   it('throws when the extractor exits non-zero', async () => {

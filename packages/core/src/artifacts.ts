@@ -33,6 +33,16 @@ export function artifactDir(root: string, kind: ArtifactKind): string {
   return join(root, NOIR_DIR, ARTIFACT_TYPES[kind].dir);
 }
 
+/** Path-safe token: forbid separators, `..`, and leading dots so a
+ *  caller-supplied id cannot escape `.noir/` via a filename (the write paths
+ *  join this into a real path). Replaced with `_` on collision. SHARED by the
+ *  write name (`artifactFileName`) and the read match tail (`findArtifact`) so a
+ *  name round-trips exactly — a file written as `TS-0001-foo_bar.md` is found by
+ *  a `findArtifact` for `foo/bar`. */
+function safe(v: string): string {
+  return v.replace(/[^A-Za-z0-9._-]/g, '_');
+}
+
 /**
  * The canonical artifact filename: `<CODE>-<NNNN>-<taskId>-<slug>.md`.
  * `nnnn` is a per-type monotonic sequence (4 digits, zero-padded). `taskId`
@@ -45,8 +55,8 @@ export function artifactFileName(
 ): string {
   const t = ARTIFACT_TYPES[kind];
   const parts = [t.code, String(nnnn).padStart(4, '0')];
-  if (t.hasTaskId && opts.taskId) parts.push(opts.taskId);
-  if (t.hasSlug && opts.slug) parts.push(opts.slug);
+  if (t.hasTaskId && opts.taskId) parts.push(safe(opts.taskId));
+  if (t.hasSlug && opts.slug) parts.push(safe(opts.slug));
   return `${parts.join('-')}.md`;
 }
 
@@ -87,8 +97,11 @@ export function findArtifact(
   if (!existsSync(dir)) return null;
   const t = ARTIFACT_TYPES[kind];
   const parts: string[] = [];
-  if (t.hasTaskId && opts.taskId) parts.push(opts.taskId);
-  if (t.hasSlug && opts.slug) parts.push(opts.slug);
+  // Apply the SAME sanitizer as artifactFileName so a written name (with `_`
+  // substitutions) is matched back by the same inputs (with their original
+  // characters) — one canonical name for both directions.
+  if (t.hasTaskId && opts.taskId) parts.push(safe(opts.taskId));
+  if (t.hasSlug && opts.slug) parts.push(safe(opts.slug));
   const tail = parts.length > 0 ? `-${parts.join('-')}.md` : '.md';
   for (const name of readdirSync(dir)) {
     if (name.endsWith(tail)) return join(dir, name);

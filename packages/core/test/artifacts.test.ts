@@ -2,7 +2,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { artifactFileName, nextArtifactSequence, resolveArtifactPath } from '../src/artifacts.js';
+import {
+  artifactFileName,
+  findArtifact,
+  nextArtifactSequence,
+  resolveArtifactPath,
+} from '../src/artifacts.js';
 
 let root: string;
 beforeEach(() => {
@@ -42,5 +47,27 @@ describe('resolveArtifactPath', () => {
     writeFileSync(p1, 'x');
     const p2 = resolveArtifactPath(root, 'spec', { taskId: 't1', slug: 's' });
     expect(p2).toBe(p1); // reuse, no SP-0002 minted
+  });
+});
+
+describe('findArtifact', () => {
+  it('round-trips a WRITTEN name back from the RAW inputs (shared sanitizer)', () => {
+    // A taskId/slug containing chars artifactFileName sanitizes to `_` must be
+    // found by findArtifact using the SAME raw inputs — one canonical name for
+    // write and read (iter-2 minor: findArtifact used to build its match tail
+    // from the RAW id/slug, so a sanitized write was never matched back).
+    const dir = join(root, '.noir', 'specs');
+    mkdirSync(dir, { recursive: true });
+    const written = artifactFileName('spec', 1, { taskId: 'foo/bar', slug: 'a b(c)' });
+    expect(written).toBe('SP-0001-foo_bar-a_b_c_.md');
+    writeFileSync(join(dir, written), 'x');
+    const found = findArtifact(root, 'spec', { taskId: 'foo/bar', slug: 'a b(c)' });
+    expect(found).not.toBeNull();
+    expect(found?.endsWith(written)).toBe(true);
+  });
+
+  it('returns null when no artifact matches the identifying fields', () => {
+    mkdirSync(join(root, '.noir', 'specs'), { recursive: true });
+    expect(findArtifact(root, 'spec', { taskId: 't1', slug: 's' })).toBeNull();
   });
 });

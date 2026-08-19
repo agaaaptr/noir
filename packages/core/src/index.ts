@@ -18,12 +18,18 @@ export {
 } from './block-writer.js';
 export { type NoirConfig, NoirConfigSchema, parseConfig } from './config.js';
 export {
+  type ConflictResolution,
+  type ConflictResolverReturn,
+  uniqueAsideSync,
+} from './conflict.js';
+export {
   applyNoirEnv,
   type EnvFileParseResult,
   type LoadedEnv,
   loadNoirEnv,
   parseEnvFile,
 } from './env-file.js';
+export { sha256Hex, sha256Hex12 } from './hash.js';
 export { IGNORE_BLOCK, syncIgnores } from './ignore-manager.js';
 export {
   type DetectResult,
@@ -70,7 +76,7 @@ export {
   provisionManagedNode,
 } from './node-provision.js';
 export { loadProjectInfo, type ProjectInfo } from './project.js';
-export { createProjectId, type ProjectId } from './project-id.js';
+export { createProjectId, isValidProjectId, type ProjectId } from './project-id.js';
 export {
   fetchLatestVersion,
   isUpdateCheckDisabled,

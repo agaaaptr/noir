@@ -71,13 +71,21 @@ export function latestVersionFromCache(cache: UpdateCache, channel: string): str
   return cache.latestVersion;
 }
 
+/** Default registry-fetch bound when the caller passes no signal of its own
+ *  (5s) — an unresponsive registry must not hang `noir update --check` /
+ *  `noir update` for undici's default ~300s. The fire-and-forget background
+ *  check passes its own tighter 2s controller, which takes precedence. */
+export const UPDATE_FETCH_TIMEOUT_MS = 5_000;
+
 /** Fetch the current dist-tag version from npm. Offline-safe: any failure → null. */
 export async function fetchLatestVersion(
   channel: string,
   signal?: AbortSignal,
 ): Promise<string | null> {
   try {
-    const res = await fetch(`https://registry.npmjs.org/@noir-ai/cli/${channel}`, { signal });
+    const res = await fetch(`https://registry.npmjs.org/@noir-ai/cli/${channel}`, {
+      signal: signal ?? AbortSignal.timeout(UPDATE_FETCH_TIMEOUT_MS),
+    });
     if (!res.ok) return null;
     const body = (await res.json()) as { version?: string };
     return typeof body.version === 'string' ? body.version : null;

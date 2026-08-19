@@ -82,7 +82,11 @@ export function nodeArchiveUrl(version: string, target: NodeTarget): string {
   return `${base}v${version}/node-v${version}-${target.os}-${target.arch}.${target.archive}`;
 }
 
-/** URL of the GPG-signed checksum manifest for a given Node version. */
+/** URL of the SHA-256 checksum manifest for a given Node version. The digest is
+ *  an integrity check (detect corruption / truncated download), NOT an
+ *  authenticity signature: it is fetched from the same base URL as the archive,
+ *  so a caller who points `NOIR_NODE_DIST_URL` at an untrusted mirror is trusting
+ *  that mirror for BOTH. The default origin is HTTPS nodejs.org. */
 function shasumsUrl(version: string): string {
   return `${nodeDistBaseUrl()}v${version}/SHASUMS256.txt`;
 }
@@ -222,6 +226,11 @@ export async function extractNode(
   writeFileSync(tmpArchive, archiveBuf);
 
   try {
+    // Reject a crafted archive whose entries escape destDir (`../` or absolute
+    // paths) BEFORE extraction — tar/unzip do not contain this on their own,
+    // and a traversal entry would write arbitrary files outside the runtime dir.
+    await assertNoTraversal(target, tmpArchiveBase, destDir, exec, opts);
+
     let code: number;
     if (target.archive === 'zip') {
       // unzip writes <basename>/ into destDir.
@@ -243,6 +252,38 @@ export async function extractNode(
     }
   } finally {
     rmSync(tmpArchive, { force: true });
+  }
+}
+
+/**
+ * List an archive's entries and reject any that would escape `destDir` (a
+ * `../` segment or a leading `/`). Fail-closed: a listing error (e.g. an
+ * extractor that does not support `-t`/`-Z1`) also rejects, so no unvetted
+ * archive is ever extracted.
+ */
+async function assertNoTraversal(
+  target: NodeTarget,
+  archiveBase: string,
+  destDir: string,
+  exec: ExecSeam,
+  opts: { env?: NodeJS.ProcessEnv; timeoutMs?: number },
+): Promise<void> {
+  const listArgs = target.archive === 'zip' ? ['-Z1', archiveBase] : ['-tzf', archiveBase];
+  const listCmd = target.archive === 'zip' ? 'unzip' : 'tar';
+  const r = await exec(listCmd, listArgs, {
+    cwd: destDir,
+    env: opts.env,
+    timeoutMs: opts.timeoutMs,
+  });
+  if (r.code !== 0) {
+    throw new Error(`cannot list archive (code ${r.code}): ${r.stderr}`);
+  }
+  for (const entry of r.stdout.split('\n')) {
+    const name = entry.trim();
+    if (!name) continue;
+    if (name.startsWith('/') || name.split(/[\\/]/).includes('..')) {
+      throw new Error(`archive entry escapes the runtime dir: ${name}`);
+    }
   }
 }
 
