@@ -690,8 +690,17 @@ function validateDocs() {
     const slugs = new Set();
     const content = readFile(join(ROOT, relPath));
     if (content) {
-      for (const m of content.matchAll(/^#{1,6}[ \t]+(.+?)[ \t]*$/gm)) {
-        slugs.add(ghSlug(m[1]));
+      // Skip fenced code blocks: a shell `# comment` or markdown example inside
+      // ``` fences must not be mistaken for a real ATX heading.
+      let inFence = false;
+      for (const line of content.split('\n')) {
+        if (/^\s*(```|~~~)/.test(line)) {
+          inFence = !inFence;
+          continue;
+        }
+        if (inFence) continue;
+        const m = line.match(/^#{1,6}[ \t]+(.+?)[ \t]*$/);
+        if (m) slugs.add(ghSlug(m[1]));
       }
     }
     headingSlugCache.set(relPath, slugs);
