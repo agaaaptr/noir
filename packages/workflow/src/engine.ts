@@ -312,6 +312,16 @@ export class WorkflowEngine {
     // gate — looked up from the target STATE (see gatePhaseForState). Suppressed
     // on backward jumps (the original gate decision is already in the audit).
     const gatePhase = gatePhaseForState(targetState);
+    // Fail fast: evidence is ONLY meaningful when this advance crosses the
+    // verify gate (lands on `done`). Supplying evidence for any other advance
+    // (e.g. running `noir task verify` from `executing`, which lands on
+    // `verifying`) would silently discard the checks and let the CLI report a
+    // false "gate approved". Throw before any write so nothing is lost.
+    if (opts?.evidence !== undefined && gatePhase !== 'verify') {
+      throw new Error(
+        `verify evidence supplied but this advance does not cross the verify gate (lands on ${targetState}); run \`noir task verify\` when the task is at the verify phase`,
+      );
+    }
     if (gatePhase !== null && !backwardJump) {
       const forced = opts?.force !== undefined;
       const skipped = opts?.skip === true;

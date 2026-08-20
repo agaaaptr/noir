@@ -130,6 +130,26 @@ describe('verify gate — evidence-required', () => {
     }
   });
 
+  it('evidence on an advance that does NOT cross the verify gate is rejected (fail-fast)', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p', verifyOn);
+      await engine.startTask('t-ev', 'task-x', 'full', 'feature');
+      for (let i = 0; i < 4; i++) await engine.advance('t-ev'); // → executing
+      expect(engine.status('t-ev')?.state).toBe('executing');
+      // Advance from executing lands on verifying (NOT the verify gate), so
+      // supplying evidence must fail fast — never silently discard the checks
+      // and let a caller report a false "gate approved".
+      await expect(engine.advance('t-ev', { evidence: passEvidence() })).rejects.toThrow(
+        /does not cross the verify gate/,
+      );
+      expect(engine.status('t-ev')?.state).toBe('executing');
+      expect(engine.status('t-ev')?.history.find((g) => g.phase === 'verify')).toBeUndefined();
+    } finally {
+      await store.close();
+    }
+  });
+
   it('stale evidence (ranAt < updatedAt) ⇒ treated as no evidence', async () => {
     const store = await openStore({ projectId: 'p', root });
     try {

@@ -454,6 +454,10 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           if (err instanceof VerifyGateError) {
             return textResult({
               ok: false,
+              // A plain `noir task advance` at a required verify gate surfaces
+              // this `error` string (otherwise it degrades to the cryptic
+              // 'advance failed' fallback).
+              error: err.message,
               pendingGate: err.pendingGate,
               ...(err.evidence === undefined ? {} : { evidence: err.evidence }),
               recovery: ['retry', 'force', 'skip', 'block'],

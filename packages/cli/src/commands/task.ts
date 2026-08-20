@@ -680,7 +680,18 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
       process.stdout.write(`${JSON.stringify({ ok: true, data: { ...res, evidence } })}\n`);
       return;
     }
-    success(`verify — ${evidence.summary} → gate approved`, opts);
+    // Only a landing at `done` means the verify gate FIRED. If the advance
+    // landed elsewhere (e.g. from `executing` → `verifying` before the engine's
+    // evidence guard was added), be honest about it rather than claiming success.
+    const landed = (res as WorkflowStatusResult).state;
+    if (landed === 'done') {
+      success(`verify — ${evidence.summary} → gate approved`, opts);
+    } else {
+      info(
+        `verify — ${evidence.summary} → advanced to ${landed} (the verify gate fires at \`done\`; run \`noir task verify\` again when there)`,
+        opts,
+      );
+    }
     renderStatusRow(res as WorkflowStatusResult, opts);
     return;
   }
