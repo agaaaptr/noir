@@ -326,6 +326,16 @@ export class WorkflowEngine {
       gatePhase !== null &&
       gateAlreadyFired &&
       PHASES.indexOf(targetPhase) <= PHASES.indexOf(task.phase);
+
+    // A backward jump SUPPRESSES the gate write — so a force/skip supplied with
+    // it would be silently discarded. Reject explicitly (mirrors the no-op-jump
+    // guard).
+    if (backwardJump && (opts?.force !== undefined || opts?.skip === true)) {
+      throw new Error(
+        `cannot force/skip a BACKWARD jump to ${targetPhase} — its gate already fired; the suppression would discard your override`,
+      );
+    }
+
     // Fail fast: evidence is ONLY meaningful when this advance crosses the
     // verify gate (lands on `done`). Supplying evidence for any other advance
     // (e.g. running `noir task verify` from `executing`, which lands on

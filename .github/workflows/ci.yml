@@ -54,7 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]  # WINDOWS EXCLUDED: better-sqlite3@13 source-only (needs VS Build Tools on runner)
+        os: [ubuntu-latest, macos-latest]  # WINDOWS EXCLUDED: documented native-install gaps + win32-skipping chmod unit test — NOT a prebuilt-binary issue (better-sqlite3@13 ships win32 N-API prebuilds)
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -103,7 +103,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]  # WINDOWS EXCLUDED: better-sqlite3@13 source-only (needs VS Build Tools on runner)
+        os: [ubuntu-latest, macos-latest]  # WINDOWS EXCLUDED: documented native-install gaps + win32-skipping chmod unit test — NOT a prebuilt-binary issue (better-sqlite3@13 ships win32 N-API prebuilds)
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7

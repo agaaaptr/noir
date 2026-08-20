@@ -54,6 +54,9 @@ function depsOf(s: { dependsOn: unknown }): { id: string; mode: string }[] {
 /** Validate a SlicePlan deterministically — schema, deps, file conflicts. */
 export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: string[] } {
   const errors: string[] = [];
+  // Top-level guard: a malformed plan that omits `slices` must be a schema
+  // error, not a crash on `for (const s of plan.slices)`.
+  if (!Array.isArray(plan.slices)) return { ok: false, errors: ['slices must be an array'] };
   const ids = new Set<string>();
 
   for (const s of plan.slices) {
