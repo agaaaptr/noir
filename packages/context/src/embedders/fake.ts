@@ -1,4 +1,5 @@
-// Deterministic fake embedder for tests + degraded fallback.
+// Deterministic fake embedder for TESTS ONLY (no production path consumes it —
+// the `kind:'none'` branch throws its own stub rather than returning a fake).
 //
 // DESIGN (spec §13 / NFR-2 / NFR-5):
 //   - The full unit suite runs OFFLINE with no model download and no network.

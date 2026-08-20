@@ -50,6 +50,11 @@ import {
 /** Default cap on consolidation candidates (spec §7.4 — deterministic selection). */
 export const DEFAULT_CONSOLIDATE_LIMIT = 50;
 
+/** Hard ceiling on consolidation candidates — a caller passing an unbounded
+ *  `limit` must not hydrate every observation from KV and concatenate their full
+ *  content into one model prompt (OOM / context blowout). */
+const MAX_CONSOLIDATE_LIMIT = 200;
+
 /**
  * Single-shot consolidation instruction (D5: no tools, no loop). The lesson is
  * free-text PROSE (not JSON): a lesson is a synthesized insight, and free-text
@@ -150,7 +155,7 @@ export async function runConsolidation(
   const candidates = gatherCandidates(
     store,
     opts?.types ?? cons.types,
-    opts?.limit ?? DEFAULT_CONSOLIDATE_LIMIT,
+    Math.min(opts?.limit ?? DEFAULT_CONSOLIDATE_LIMIT, MAX_CONSOLIDATE_LIMIT),
   );
   if (candidates.length === 0) {
     appendConsolidationMiss(store, {

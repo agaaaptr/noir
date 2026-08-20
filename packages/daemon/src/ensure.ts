@@ -22,12 +22,18 @@ export interface EnsureResult {
  *  command indefinitely. Matches `@noir-ai/cli`'s `PROBE_TIMEOUT_MS`. */
 const HEALTH_PROBE_TIMEOUT_MS = 1500;
 
-async function isHealthy(port: number): Promise<boolean> {
+async function isHealthy(port: number, expectedPid?: number): Promise<boolean> {
   try {
     const res = await fetch(`http://127.0.0.1:${port}/health`, {
       signal: AbortSignal.timeout(HEALTH_PROBE_TIMEOUT_MS),
     });
-    return res.status === 200;
+    if (res.status !== 200) return false;
+    if (expectedPid === undefined) return true;
+    // PID-reuse guard (mirrors daemon.ts): on the reuse path, require the
+    // responding daemon's OWN pid to match the recorded one — a foreign process
+    // that recycled the pid and serves HTTP 200 must not be treated as OUR daemon.
+    const body = (await res.json()) as { ok?: boolean; pid?: number };
+    return body.ok === true && body.pid === expectedPid;
   } catch {
     return false;
   }
@@ -39,7 +45,7 @@ export async function ensureDaemonRunning(opts: {
 }): Promise<EnsureResult> {
   const rec = readDaemonRecord();
   if (rec) {
-    if (pidAlive(rec.pid) && (await isHealthy(rec.port))) {
+    if (pidAlive(rec.pid) && (await isHealthy(rec.port, rec.pid))) {
       return {
         port: rec.port,
         url: `http://127.0.0.1:${rec.port}/mcp`,

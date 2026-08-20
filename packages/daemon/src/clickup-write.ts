@@ -29,6 +29,10 @@
 // ClickUp API v2 base. Constant — the proxy never accepts a base URL from input.
 const CLICKUP_BASE = 'https://api.clickup.com/api/v2';
 
+/** Per-attempt bound on each ClickUp HTTP write — a stalled ClickUp endpoint
+ *  (accepts TCP, never answers) must not hang the gated write proxy. */
+const CLICKUP_FETCH_TIMEOUT_MS = 30_000;
+
 /** Strict charset for ClickUp ids (task/list/space/team). ClickUp task ids are
  *  alphanumeric (`abc123`) or numeric; custom ids look like `CU-42`. Allow
  *  letters, digits, underscore, hyphen only — rejects `/`, `?`, `#`, spaces, and
@@ -433,14 +437,21 @@ async function executeOne(
   token: string,
   fetchImpl: FetchLike,
 ): Promise<ExecResult> {
-  const init: RequestInit = {
-    method: req.method,
-    headers: authHeaders(token),
-    ...(req.body !== undefined ? { body: JSON.stringify(req.body) } : {}),
+  // Per-ATTEMPT init: each fetch gets a FRESH AbortSignal.timeout, so a 429
+  // retry (after `sleep(waitMs)`, which can be up to a minute) is not sabotaged
+  // by an already-expired signal from the first attempt.
+  const attempt = async (): Promise<Response> => {
+    const init: RequestInit = {
+      method: req.method,
+      headers: authHeaders(token),
+      ...(req.body !== undefined ? { body: JSON.stringify(req.body) } : {}),
+      signal: AbortSignal.timeout(CLICKUP_FETCH_TIMEOUT_MS),
+    };
+    return fetchImpl(req.url, init);
   };
   let res: Response;
   try {
-    res = await fetchImpl(req.url, init);
+    res = await attempt();
   } catch (err) {
     return {
       target: req.target,
@@ -457,7 +468,7 @@ async function executeOne(
     const waitMs = rateLimitWaitMs(res) ?? 1000;
     await sleep(waitMs);
     try {
-      res = await fetchImpl(req.url, init);
+      res = await attempt();
     } catch (err) {
       return {
         target: req.target,

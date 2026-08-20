@@ -154,7 +154,10 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
   };
 
   const searchFt = (query: string, opts?: SearchFtOpts): FtsHit[] => {
-    const limit = Math.min(opts?.limit ?? 10, MAX_HITS);
+    // Clamp BOTH bounds: a huge limit must not materialize every row, and a
+    // negative/NaN/0 limit must not reach SQLite (LIMIT -1 = no limit).
+    const raw = opts?.limit ?? 10;
+    const limit = Number.isFinite(raw) && raw > 0 ? Math.min(Math.floor(raw), MAX_HITS) : 10;
     // bm25(): more negative = more relevant, so ORDER BY score ascending.
     // snippet(docs_fts, 0, ...): column 0 is `content`; 16-token window with
     // <<match>> markers — NEVER the full content (blueprint §9.2).
@@ -221,7 +224,8 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     if (vecMissing) {
       throw new Error('vec unavailable (sqlite-vec native module not loadable)');
     }
-    const limit = Math.min(opts?.limit ?? 5, MAX_HITS);
+    const raw = opts?.limit ?? 5;
+    const limit = Number.isFinite(raw) && raw > 0 ? Math.min(Math.floor(raw), MAX_HITS) : 5;
     const buf = Buffer.from(vec.buffer, vec.byteOffset, vec.byteLength);
     // `MATCH ? AND k = ?` is the canonical vec0 kNN form (version-independent;
     // `ORDER BY distance` is ascending by default — nearest first). distance is

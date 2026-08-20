@@ -1,4 +1,4 @@
-import { readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type ConflictResolution, uniqueAsideSync } from '@noir-ai/core';
 import type Database from 'better-sqlite3';
@@ -62,6 +62,8 @@ export async function exportMarkdown(
     source: string;
     content: string;
   }[];
+  // Ensure the export dir exists before writing (a fresh export target may not).
+  mkdirSync(dir, { recursive: true });
   const written: string[] = [];
   for (const r of rows) {
     const p = join(dir, `${r.id}.md`);
