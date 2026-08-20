@@ -143,11 +143,10 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
       }
     } else {
       checkSpin.fail('Could not reach the registry.');
-      if (opts.json === true) {
-        process.stdout.write(
-          `${JSON.stringify({ ok: false, error: { code: EXIT.ERROR, message: 'could not reach the registry' } })}\n`,
-        );
-      }
+      // fail() emits the canonical {ok:false,error} envelope under --json AND
+      // exits 1 (a manual envelope here would leave the process at exit 0 while
+      // the payload claims code 1).
+      fail(EXIT.ERROR, 'Could not reach the registry.', opts);
     }
     return;
   }
@@ -157,8 +156,10 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
   const latest = await fetchLatestVersion('latest');
   if (latest === null) {
     fetchSpin.fail('Could not reach the registry.');
-    info('Could not reach the registry.', opts);
-    return;
+    // Registry-unreachable is a FAILURE: route through fail() so --json emits
+    // {ok:false,error} on stdout AND the process exits 1 (a silent return would
+    // leave stdout empty + exit 0 — indistinguishable from success for scripts).
+    fail(EXIT.ERROR, 'Could not reach the registry.', opts);
   }
   fetchSpin.succeed(`Latest: ${latest}`);
   // I2 — read the `update.minVersion` floor from the project config (falls

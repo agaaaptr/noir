@@ -215,12 +215,24 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
   if (opts.dismiss === true) {
     const rec = readInstallRecord();
     if (!rec) {
+      if (opts.json === true) {
+        process.stdout.write(
+          `${JSON.stringify({ ok: true, data: { dismissed: false, version: null } })}\n`,
+        );
+        return;
+      }
       info('No install record found; nothing to dismiss.');
       return;
     }
     const dismissed = new Set(rec.dismissedVersions ?? []);
     if (!dismissed.has(NOIR_VERSION)) dismissed.add(NOIR_VERSION);
     writeInstallRecord({ ...rec, dismissedVersions: [...dismissed] });
+    if (opts.json === true) {
+      process.stdout.write(
+        `${JSON.stringify({ ok: true, data: { dismissed: true, version: NOIR_VERSION } })}\n`,
+      );
+      return;
+    }
     success(`Migration banner dismissed for ${NOIR_VERSION}.`);
     if (opts.list !== true) return; // --dismiss alone is done; --list continues below.
   }
