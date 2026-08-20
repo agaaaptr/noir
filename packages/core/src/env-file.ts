@@ -33,7 +33,7 @@ const KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 // descendant keys. The boundary admits both the exact names and every
 // `npm_*` / `COREPACK_*` descendant.
 const PROCESS_INJECTION_ENV_RE =
-  /^(NODE_OPTIONS|NODE_PATH|NODE_ICU_DATA|NODE_EXTRA_CA_CERTS|NODE_TLS_REJECT_UNAUTHORIZED|LD_PRELOAD|LD_LIBRARY_PATH|DYLD_INSERT_LIBRARIES|ELECTRON_RUN_AS_NODE|npm|COREPACK)(?:$|_)/;
+  /^(NODE_OPTIONS|NODE_PATH|NODE_ICU_DATA|NODE_EXTRA_CA_CERTS|NODE_TLS_REJECT_UNAUTHORIZED|LD_PRELOAD|LD_LIBRARY_PATH|DYLD_INSERT_LIBRARIES|ELECTRON_RUN_AS_NODE|NOIR_NODE_DIST_URL|NOIR_UPDATE_CACHE_JSON|NOIR_RUNTIME_DIR|NOIR_DAEMON_JSON|NOIR_INSTALL_JSON|NOIR_MCP_COMMAND|npm|COREPACK)(?:$|_)/;
 
 export interface EnvFileParseResult {
   readonly vars: Record<string, string>;
@@ -70,12 +70,27 @@ export function parseEnvFile(text: string): EnvFileParseResult {
     let value = line.slice(eq + 1).trim();
     const first = value[0];
     if (first === '"' || first === "'") {
-      // Quoted value: take up to the MATCHING closing quote, so a trailing
-      // `# …` comment AFTER the quote is dropped and a `#` INSIDE the quotes is
-      // preserved (e.g. `FOO="a # b" # c` → `a # b`). The previous check only
-      // unquoted when the value BOTH started and ended with the quote, so a
-      // trailing comment broke the unquote and left the quotes (and comment) in.
-      const close = value.indexOf(first, 1);
+      // Quoted value: find the MATCHING closing quote (honoring backslash
+      // escapes and the doubled-quote idiom `''`/`""` for a literal quote), so
+      // an interior quote is NOT silently truncated (the previous first-
+      // occurrence scan sliced `FOO='it''s'` to `it`). A trailing `# …` after
+      // the closing quote is dropped; a `#` inside the quotes is preserved.
+      let close = -1;
+      for (let j = 1; j < value.length; j++) {
+        const c = value[j];
+        if (c === '\\' && j + 1 < value.length) {
+          j++; // skip the escaped char
+          continue;
+        }
+        if (c === first) {
+          if (value[j + 1] === first) {
+            j++; // doubled quote — a literal quote, keep scanning
+            continue;
+          }
+          close = j;
+          break;
+        }
+      }
       if (close === -1) {
         // Unterminated quote — malformed (Node's --env-file would error).
         warnings.push(`.noir/.env:${i + 1}: unterminated quoted value — skipped`);

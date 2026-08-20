@@ -58,6 +58,7 @@ beforeEach(() => {
   // Start each test from a clean baseline (no color env, no COLUMNS override).
   delete process.env.NO_COLOR;
   delete process.env.CLICOLOR_FORCE;
+  delete process.env.FORCE_COLOR;
   delete process.env.COLUMNS;
   delete process.env.NOIR_ACCESSIBLE;
   // Force a deterministic terminal width for the non-COLUMNS tests.
