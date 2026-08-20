@@ -421,12 +421,11 @@ export async function taskAdvance(opts: TaskAdvanceOptions): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// `noir task resume [<id>] [--last] [--prompt '<continue instruction>']`
+// `noir task resume [<id>] [--prompt '<continue instruction>']`
 //   → workflow_resume (c4-surface-wiring S2)
 // ---------------------------------------------------------------------------
 export interface TaskResumeOptions extends TaskOptions {
   id?: string;
-  last?: boolean;
   prompt?: string;
 }
 
@@ -458,7 +457,7 @@ function renderResumeBriefing(r: WorkflowResumeResult, opts: CliOptions): void {
 
 export async function taskResume(opts: TaskResumeOptions): Promise<void> {
   const args: Record<string, unknown> = {};
-  // `--last` / a positional id both target a specific task; omit both → active.
+  // A positional id targets a specific task; omit it → the active task.
   if (typeof opts.id === 'string' && opts.id.length > 0) {
     args.taskId = opts.id;
   }

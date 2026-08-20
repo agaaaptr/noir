@@ -163,8 +163,12 @@ describe('noir skills sync', () => {
       const r = await run(() => skillsSync({ json: true }));
       expect(r.err).toBeDefined();
       expect(inferExitCode(r.err)).toBe(1);
-      // No partial data envelope on a failure path — stdout stays empty.
-      expect(r.stdout).toBe('');
+      // S9 contract: --json emits the canonical {ok:false,error} envelope on
+      // stdout (a plain Error would leave it empty — the iter-3 fix).
+      const env = JSON.parse(r.stdout) as { ok: boolean; error: { code: number; message: string } };
+      expect(env.ok).toBe(false);
+      expect(env.error.code).toBe(1);
+      expect(env.error.message).toMatch(/noir init/);
     } finally {
       process.chdir(origCwd);
     }

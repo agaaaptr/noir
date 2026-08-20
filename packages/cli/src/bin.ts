@@ -899,19 +899,16 @@ export function createProgram(): Command {
     .command('resume')
     .description('resume the active (or named) in-flight/blocked task')
     .argument('[id]', 'task id (defaults to active)')
-    .option('--last', 'target the active task explicitly (scripting)')
     .option('--prompt <text>', 'a continue instruction to surface in the briefing')
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();
       const first = args[0];
       const id = typeof first === 'string' ? first : undefined;
-      const last = g.last === true;
       const prompt = typeof g.prompt === 'string' ? (g.prompt as string) : undefined;
       await taskResume({
         ...toCliOptions(g),
         ...(id === undefined ? {} : { id }),
-        ...(last ? { last } : {}),
         ...(prompt === undefined ? {} : { prompt }),
       });
     });

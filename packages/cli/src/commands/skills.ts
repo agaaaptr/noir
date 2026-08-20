@@ -14,7 +14,7 @@
 // these commands are safe on a pipe / CI unconditionally.
 
 import { claudeAdapter } from '@noir-ai/adapters';
-import { loadProjectInfo } from '@noir-ai/core';
+import { loadProjectInfo, type ProjectInfo } from '@noir-ai/core';
 import {
   type BuiltinSkill,
   buildRegistry,
@@ -194,9 +194,15 @@ export async function skillsList(opts: SkillsOptions): Promise<void> {
  */
 export async function skillsSync(opts: SkillsOptions): Promise<void> {
   const root = process.cwd();
-  // loadProjectInfo asserts Noir is initialized; its throw propagates as a
-  // plain Error → exit 1 with the actionable hint (not a daemon-down).
-  const project = loadProjectInfo(root);
+  // loadProjectInfo asserts Noir is initialized; route it through fail() so an
+  // uninitialized project emits the canonical S9 {ok:false,error} envelope under
+  // --json (a plain Error would leave stdout empty) — same as every other command.
+  let project: ProjectInfo;
+  try {
+    project = loadProjectInfo(root);
+  } catch {
+    fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
+  }
 
   if (!claudeAdapter.skillsDir) {
     const data = {
