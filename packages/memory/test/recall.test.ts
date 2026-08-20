@@ -20,7 +20,6 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fakeEmbedFn } from '@noir-ai/context';
 import { createProjectId } from '@noir-ai/core';
 import {
   type FtsHit,
@@ -38,6 +37,7 @@ import {
   obsKey,
   recallMemory,
 } from '../src/index.js';
+import { fakeEmbedFn } from './fake-embed.js';
 
 // CI gate: opening a store loads sqlite-vec (per-platform native binary). Probe
 // once; if absent, skip the store-backed describe with a labelled reason

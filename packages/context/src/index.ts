@@ -40,14 +40,15 @@ export {
   NEAREST_DUP_DEFAULT_THRESHOLD,
 } from './dedup.js';
 // --- Embedders (the EmbedFn seam) ---
+// NOTE: `fakeEmbedFn` (a TEST-ONLY deterministic double) is deliberately NOT
+// re-exported here — the package `exports` map exposes only `.`, so anything in
+// this barrel ships in the published tarball. Cross-package test suites keep
+// their own local copy; context's own tests import it via the relative
+// `../src/embedders/fake.js` path.
 export {
   createEmbedFn,
   DEFAULT_LOCAL_MODEL,
   EMBED_DIM,
-  // TEST-ONLY deterministic double — see the embedders/index.ts note. Exported
-  // so cross-package test suites (memory) share one definition; never used by
-  // a production path.
-  fakeEmbedFn,
   type LocalEmbedder,
   type LocalEmbedderOptions,
   l2normalize,

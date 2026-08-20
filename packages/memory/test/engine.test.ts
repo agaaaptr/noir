@@ -17,7 +17,6 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fakeEmbedFn } from '@noir-ai/context';
 import { createProjectId } from '@noir-ai/core';
 import { openStore, type ProjectId, type Store, vecAvailability } from '@noir-ai/store';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -28,6 +27,7 @@ import {
   type MemoryCompleteResult,
   type MemoryModel,
 } from '../src/index.js';
+import { fakeEmbedFn } from './fake-embed.js';
 
 // CI gate: opening a store loads sqlite-vec (per-platform native binary). Probe
 // once; if absent, skip the store-backed describes with a labelled reason
