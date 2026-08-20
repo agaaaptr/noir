@@ -35,6 +35,15 @@ describe('parseEnvFile — Node --env-file dialect', () => {
     expect(parseEnvFile("B='has#hash'").vars).toEqual({ B: 'has#hash' });
   });
 
+  it('a quoted value with a TRAILING # comment unquotes correctly (iter-5 fix)', () => {
+    // The closing quote is the boundary — a `# …` after it is a comment, a `#`
+    // inside the quotes is literal.
+    expect(parseEnvFile('TOKEN="abc # not-a-comment" # real comment').vars).toEqual({
+      TOKEN: 'abc # not-a-comment',
+    });
+    expect(parseEnvFile("K='v' # trailing").vars).toEqual({ K: 'v' });
+  });
+
   it('EMPTY= yields an empty string; last definition wins', () => {
     const { vars } = parseEnvFile('EMPTY=\nK=one\nK=two');
     expect(vars).toEqual({ EMPTY: '', K: 'two' });

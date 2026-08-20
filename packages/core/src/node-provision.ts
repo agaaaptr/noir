@@ -26,6 +26,11 @@ export const MANAGED_NODE_VERSION = '22.23.2';
 /** Minimum Node major version accepted for the SYSTEM fallback path. */
 export const MIN_SYSTEM_NODE_MAJOR = 22;
 
+/** Default bound on the SHASUMS256.txt + archive downloads — Node archives are
+ *  20-40MB, so 5 minutes is generous; a stalled connection must not hang
+ *  `noir install`/`noir update` for undici's implicit ~300s. */
+const NODE_DOWNLOAD_TIMEOUT_MS = 300_000;
+
 /**
  * Base URL for the Node.js distribution. `https://nodejs.org/dist/` by
  * default; overridable via `NOIR_NODE_DIST_URL` for mirrors / offline tests.
@@ -152,11 +157,15 @@ export async function downloadAndVerify(
   opts: { fetch?: FetchSeam; signal?: AbortSignal } = {},
 ): Promise<{ archiveBuf: Buffer; sha256: string }> {
   const doFetch = opts.fetch ?? globalThis.fetch;
+  // Default the bound at the seam so no caller can omit it — a stalled-but-not-
+  // dead download must not hang `noir install`/`noir update` for undici's
+  // implicit ~300s. Node archives are 20-40MB, so 5 minutes is generous.
+  const signal = opts.signal ?? AbortSignal.timeout(NODE_DOWNLOAD_TIMEOUT_MS);
   const archiveUrl = nodeArchiveUrl(version, target);
   const archiveBasename = archiveUrl.slice(archiveUrl.lastIndexOf('/') + 1);
 
   // 1) Fetch SHASUMS256.txt and find the line for OUR archive.
-  const sumsRes = await doFetch(shasumsUrl(version), { signal: opts.signal });
+  const sumsRes = await doFetch(shasumsUrl(version), { signal });
   if (!sumsRes.ok) {
     throw new Error(
       `failed to fetch SHASUMS256.txt (status ${sumsRes.status}) for Node v${version}`,
@@ -169,7 +178,7 @@ export async function downloadAndVerify(
   }
 
   // 2) Fetch the archive.
-  const archiveRes = await doFetch(archiveUrl, { signal: opts.signal });
+  const archiveRes = await doFetch(archiveUrl, { signal });
   if (!archiveRes.ok) {
     throw new Error(`failed to fetch Node archive (status ${archiveRes.status}): ${archiveUrl}`);
   }

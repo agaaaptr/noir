@@ -51,12 +51,15 @@ export function parseEnvFile(text: string): EnvFileParseResult {
       continue;
     }
     let value = line.slice(eq + 1).trim();
-    const quoted =
-      value.length >= 2 &&
-      ((value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'")));
-    if (quoted) {
-      value = value.slice(1, -1);
+    const first = value[0];
+    if (first === '"' || first === "'") {
+      // Quoted value: take up to the MATCHING closing quote, so a trailing
+      // `# …` comment AFTER the quote is dropped and a `#` INSIDE the quotes is
+      // preserved (e.g. `FOO="a # b" # c` → `a # b`). The previous check only
+      // unquoted when the value BOTH started and ended with the quote, so a
+      // trailing comment broke the unquote and left the quotes (and comment) in.
+      const close = value.indexOf(first, 1);
+      value = close === -1 ? value.slice(1) : value.slice(1, close);
     } else {
       const hash = value.indexOf('#');
       if (hash !== -1) value = value.slice(0, hash).trimEnd();
