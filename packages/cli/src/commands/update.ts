@@ -138,8 +138,16 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
     const latest = await fetchLatestVersion('latest');
     if (latest) {
       checkSpin.succeed(`Latest: ${latest} (you have ${currentVersion ?? 'unknown'})`);
+      if (opts.json === true) {
+        process.stdout.write(`${JSON.stringify({ ok: true, data: { latest, currentVersion } })}\n`);
+      }
     } else {
       checkSpin.fail('Could not reach the registry.');
+      if (opts.json === true) {
+        process.stdout.write(
+          `${JSON.stringify({ ok: false, error: { code: EXIT.ERROR, message: 'could not reach the registry' } })}\n`,
+        );
+      }
     }
     return;
   }
@@ -186,6 +194,12 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
 
   if (!target.isUpgrade) {
     fetchSpin.succeed(`noir ${currentVersion} is up to date`);
+    if (opts.json === true) {
+      process.stdout.write(
+        `${JSON.stringify({ ok: true, data: { version: currentVersion, upToDate: true } })}\n`,
+      );
+      return;
+    }
     info(`noir ${currentVersion} is up to date.`, opts);
     return;
   }
@@ -210,6 +224,10 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
     // installed — it runs in the NEW binary's process.
     ensureShimExecutable();
     updateSpin.succeed(`Updated to noir ${res.version}`);
+    if (opts.json === true) {
+      process.stdout.write(`${JSON.stringify({ ok: true, data: { version: res.version } })}\n`);
+      return;
+    }
     success(`Updated to ${res.version}.`);
     return;
   }
@@ -225,6 +243,10 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
     fail(EXIT.ERROR, `update failed: ${stderr.slice(0, 300)}`, opts);
   }
   mgrSpin.succeed('Updated');
+  if (opts.json === true) {
+    process.stdout.write(`${JSON.stringify({ ok: true, data: { version: target.targetSpec } })}\n`);
+    return;
+  }
   success('Updated.');
 }
 

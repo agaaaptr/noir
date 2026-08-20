@@ -294,6 +294,16 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
   }
   installSpin.succeed(`Installed noir ${result.version}`);
 
+  // S9 --json: emit the canonical {ok:true,data} success envelope on stdout (the
+  // diagnostics below go to stderr). The --uninstall-prev migration step above
+  // already ran; the envelope carries the install result a script would consume.
+  if (opts.json === true) {
+    process.stdout.write(
+      `${JSON.stringify({ ok: true, data: { version: result.version, runtimeSource: result.runtimeSource } })}\n`,
+    );
+    return;
+  }
+
   info(`Installed native: ${result.version}.`);
   if (plan.prevUninstallCmd && opts.uninstallPrev !== true) {
     warn(`To finish the migration, uninstall the previous install: ${plan.prevUninstallCmd}`);
