@@ -35,9 +35,13 @@ export type WorkflowConflictResolverReturn =
   | WorkflowConflictResolution
   | { resolution: WorkflowConflictResolution; applyToAll?: boolean };
 
+// SYNC resolver only: this seam is a synchronous wrapper around writeFileSync
+// (resolveAndWrite cannot await). A caller needing an async resolver (e.g. the
+// CLI's @clack-based one) should use @noir-ai/create's regenerate seam, which is
+// async-aware — passing an async resolver here would unwrap a Promise object.
 export type WorkflowConflictResolver = (
   ctx: WorkflowConflictContext,
-) => Promise<ConflictResolverReturn> | ConflictResolverReturn;
+) => WorkflowConflictResolverReturn;
 
 export interface WorkflowConflictOpts {
   /** Default `'overwrite'` (v1.2 backward-compatible). */

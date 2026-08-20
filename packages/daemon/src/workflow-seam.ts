@@ -78,7 +78,10 @@ export function resolveGateConfig(config?: NoirConfig): WorkflowGateConfig | und
       researchCfg.requireSource === true);
   if (prdAtDefault && verifyAtDefault && researchAtDefault) return undefined;
   return {
-    prd: { mandatoryFor },
+    // prdExplicit honors an explicit `mandatoryFor` (incl. `[]`); the ABSENT
+    // case keeps the feature/epic default — an earlier pass-through of the raw
+    // (empty) array silently suppressed the PRD recommendation for feature/epic.
+    prd: { mandatoryFor: prdExplicit ? mandatoryFor : ['feature', 'epic'] },
     verify: hasVerify
       ? {
           required: verifyCfg.required,

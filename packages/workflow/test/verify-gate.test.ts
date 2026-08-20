@@ -140,9 +140,9 @@ describe('verify gate — evidence-required', () => {
       // Advance from executing lands on verifying (NOT the verify gate), so
       // supplying evidence must fail fast — never silently discard the checks
       // and let a caller report a false "gate approved".
-      await expect(engine.advance('t-ev', { evidence: passEvidence() })).rejects.toThrow(
-        /does not cross the verify gate/,
-      );
+      await expect(engine.advance('t-ev', { evidence: passEvidence() })).rejects.toMatchObject({
+        kind: 'off-gate',
+      });
       expect(engine.status('t-ev')?.state).toBe('executing');
       expect(engine.status('t-ev')?.history.find((g) => g.phase === 'verify')).toBeUndefined();
     } finally {

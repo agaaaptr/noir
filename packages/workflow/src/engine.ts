@@ -108,11 +108,11 @@ function gatePhaseForState(state: WorkflowState): Phase | null {
  * can surface a structured recovery offer (retry / force / skip / block).
  */
 export class VerifyGateError extends Error {
-  readonly kind: 'evidence-required' | 'evidence-failed' | 'budget-exhausted';
+  readonly kind: 'evidence-required' | 'evidence-failed' | 'budget-exhausted' | 'off-gate';
   readonly pendingGate: { gate: 'verify'; reason: string };
   readonly evidence?: GateEvidence;
   constructor(
-    kind: 'evidence-required' | 'evidence-failed' | 'budget-exhausted',
+    kind: 'evidence-required' | 'evidence-failed' | 'budget-exhausted' | 'off-gate',
     updatedAt: number,
     evidence?: GateEvidence,
   ) {
@@ -127,7 +127,9 @@ export class VerifyGateError extends Error {
           ? 'evidence-required'
           : kind === 'budget-exhausted'
             ? `verify retry budget exhausted at ${updatedAt}`
-            : `evidence-failed at ${updatedAt}`,
+            : kind === 'off-gate'
+              ? 'verify evidence supplied for an advance that does not cross the verify gate'
+              : `evidence-failed at ${updatedAt}`,
     };
   }
 }
@@ -318,9 +320,7 @@ export class WorkflowEngine {
     // `verifying`) would silently discard the checks and let the CLI report a
     // false "gate approved". Throw before any write so nothing is lost.
     if (opts?.evidence !== undefined && gatePhase !== 'verify') {
-      throw new Error(
-        `verify evidence supplied but this advance does not cross the verify gate (lands on ${targetState}); run \`noir task verify\` when the task is at the verify phase`,
-      );
+      throw new VerifyGateError('off-gate', task.updatedAt);
     }
     if (gatePhase !== null && !backwardJump) {
       const forced = opts?.force !== undefined;

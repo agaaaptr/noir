@@ -47,13 +47,19 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
     if (ids.has(s.id)) errors.push(`duplicate slice id: ${s.id}`);
     ids.add(s.id);
 
-    // Required fields.
+    // Required fields. This is a runtime validator over LLM/opt-in content, so
+    // array fields are checked with Array.isArray — a malformed slice that omits
+    // them must produce a schema error, not a crash.
     if (!s.id) errors.push(`slice ${ids.size}: missing id`);
     if (!s.title) errors.push(`slice ${s.id}: missing title`);
     if (!s.rationale) errors.push(`slice ${s.id}: missing rationale`);
-    if (s.acceptance.length === 0) errors.push(`slice ${s.id}: missing acceptance criteria`);
-    if (s.doD.length === 0) errors.push(`slice ${s.id}: missing doD`);
+    if (!Array.isArray(s.acceptance) || s.acceptance.length === 0)
+      errors.push(`slice ${s.id}: missing acceptance criteria`);
+    if (!Array.isArray(s.doD) || s.doD.length === 0) errors.push(`slice ${s.id}: missing doD`);
     if (!s.rollbackPlan?.procedure) errors.push(`slice ${s.id}: missing rollbackPlan.procedure`);
+    if (!Array.isArray(s.dependsOn)) errors.push(`slice ${s.id}: dependsOn must be an array`);
+    if (!Array.isArray(s.files?.create) || !Array.isArray(s.files?.modify))
+      errors.push(`slice ${s.id}: files.create/modify must be arrays`);
   }
 
   // Dependency validation: self-refs + missing refs (cheap, deterministic), then
