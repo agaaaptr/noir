@@ -159,7 +159,7 @@ That's the whole loop. You don't drive the gates by hand — you talk to the hos
 
 You don't need to memorize every subcommand:
 
-- **Bare `noir`** (no arguments) opens a **grouped home menu** — a section picker (Status &amp; context / Memory / Workflow / Setup &amp; maintenance / Dashboard) then per-section action lists with hints and destructive-action confirmation. Use `↑/↓` and `1`–`6` to navigate; `Esc` steps back; `→`/`←` moves between sections.
+- **Bare `noir`** (no arguments) opens a **grouped home menu** — a section picker (Status &amp; context / Memory / Workflow / Setup &amp; maintenance / Dashboard (full-screen)) then per-section action lists with hints and destructive-action confirmation. Use `↑/↓` and `1`–`6` to navigate; `Esc` steps back; `→`/`←` moves between sections.
 - **`noir tui`** opens the **Ink dashboard** — live status, `/command` input, and one command surface (the palette): `Ctrl+K` all commands, `h` quick actions, `?` keybindings, `Ctrl+F` find-in-output, `Tab` to switch the palette view.
 - **`noir palette`** opens the fuzzy command palette directly (type to filter, `↑/↓` to choose, `Enter` to run).
 

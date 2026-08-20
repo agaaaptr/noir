@@ -105,7 +105,7 @@ $env:NOIR_CHANNEL='beta'; powershell -ExecutionPolicy Bypass -c "irm https://raw
 $env:NOIR_VERSION='<VERSION>'; powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.ps1 | iex"
 ```
 
-It provisions the runtime under `%USERPROFILE%\.noir\runtime\node\node.exe`, installs into `.noir\cli\`, writes the `.noir\bin\noir.cmd` shim (the only PATH contract), and writes `.noir\install.json`. If the managed runtime isn't provisioned yet, it falls back to a system `node`/`npm` ≥ 22 if present. There is **no need for Git Bash, MSYS2, or WSL** — run the PowerShell one-liner from a normal PowerShell prompt.
+It provisions the runtime under `%USERPROFILE%\.noir\runtime\v<version>\node.exe` (versioned, matching the POSIX `~/.noir/runtime/v<version>/`), installs into `.noir\cli\`, writes the `.noir\bin\noir.cmd` shim (the only PATH contract), and writes `.noir\install.json`. If the managed runtime isn't provisioned yet, it falls back to a system `node`/`npm` ≥ 22 if present. There is **no need for Git Bash, MSYS2, or WSL** — run the PowerShell one-liner from a normal PowerShell prompt.
 
 **Safer than blind `curl | sh` / `irm | iex`:** download, review, then run.
 
