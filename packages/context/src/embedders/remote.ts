@@ -20,6 +20,11 @@
 import type { EmbedFn } from '../types.js';
 import { EMBED_DIM, l2normalize } from './normalize.js';
 
+/** Default bound on the remote embedding POST — a cloud endpoint that accepts
+ *  TCP but never answers (or trickles) must not hang search/index/recall. 60s
+ *  is generous for embedding latency. Mirrors the ollama embedder. */
+const REMOTE_FETCH_TIMEOUT_MS = 60_000;
+
 export interface RemoteEmbedderOptions {
   /** Provider key: `'openai'` | `'voyage'` | `'cohere'` (others fall back to the OpenAI shape). */
   provider: string;
@@ -112,6 +117,7 @@ export function remoteEmbedder(opts: RemoteEmbedderOptions): EmbedFn {
         authorization: `Bearer ${opts.apiKey}`,
       },
       body: buildRequestBody(opts.provider, opts.model, text),
+      signal: AbortSignal.timeout(REMOTE_FETCH_TIMEOUT_MS),
     });
 
     if (!res.ok) {

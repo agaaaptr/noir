@@ -26,6 +26,13 @@
 import { registerProviderAdapter } from '../complete.js';
 import type { CompleteRequest, CompleteResult, ProviderAdapter } from '../types.js';
 
+/** Default wall-clock bound on the completion POST when the caller passes no
+ *  signal (the common path — `complete()`/consolidation/draft inject none). A
+ *  local compatible endpoint that accepts TCP but never answers (model loading,
+ *  hung gateway) must not hang the daemon MCP handler indefinitely; 120s is
+ *  generous for a single-shot completion. */
+const OPENAI_COMPATIBLE_FETCH_TIMEOUT_MS = 120_000;
+
 // The OpenAI Chat Completions response shape — only the fields we read. The
 // `content` may be `null` (e.g. a tool-call frame, which we never request, or a
 // content-filtered refusal); we treat non-string content as a structured miss.
@@ -84,8 +91,9 @@ export const openaiCompatibleAdapter: ProviderAdapter = {
         headers,
         body: JSON.stringify(body),
         // Pass-through abort so a caller can bound wall-clock (single shot; no
-        // stream to cancel). `undefined` is a no-op for fetch.
-        signal: req.signal,
+        // stream to cancel). Default a bound when the caller passes none — this
+        // is the only raw-fetch provider path and must not hang indefinitely.
+        signal: req.signal ?? AbortSignal.timeout(OPENAI_COMPATIBLE_FETCH_TIMEOUT_MS),
       });
 
       if (!res.ok) {

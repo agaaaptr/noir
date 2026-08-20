@@ -59,6 +59,10 @@ export function stateForPhase(p: Phase): WorkflowState {
       return 'verifying';
     case 'document':
       return 'done';
+    default:
+      // Defensive: an out-of-band phase (e.g. an unvalidated MCP `to`) must not
+      // yield `undefined` and let the engine persist a task with state undefined.
+      throw new Error(`Unknown phase: ${String(p)}`);
   }
 }
 
