@@ -43,6 +43,14 @@ function arr<T>(x: T[] | undefined | null): T[] {
   return Array.isArray(x) ? x : [];
 }
 
+/** Deps coerced + filtered to OBJECT elements (a string/number element has no
+ *  `id`/`mode` and must not be dereferenced). */
+function depsOf(s: { dependsOn: unknown }): { id: string; mode: string }[] {
+  return arr(s.dependsOn as { id: string; mode: string }[]).filter(
+    (d): d is { id: string; mode: string } => d !== null && typeof d === 'object',
+  );
+}
+
 /** Validate a SlicePlan deterministically — schema, deps, file conflicts. */
 export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -71,7 +79,7 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
   // Dependency validation: self-refs + missing refs (cheap, deterministic), then
   // a real DFS cycle check (A→B→A or any longer loop) over the dep graph.
   for (const s of plan.slices) {
-    for (const dep of arr(s.dependsOn)) {
+    for (const dep of depsOf(s)) {
       if (dep.id === s.id) errors.push(`slice ${s.id}: self-referencing dependency`);
       if (!ids.has(dep.id)) errors.push(`slice ${s.id}: depends on unknown slice ${dep.id}`);
     }
@@ -83,7 +91,7 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
   for (const s of plan.slices)
     deps.set(
       s.id,
-      arr(s.dependsOn)
+      depsOf(s)
         .map((d) => d.id)
         .filter((id) => ids.has(id)),
     );
@@ -117,7 +125,7 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
   // flagged, so two siblings that BOTH modify the same file (or one creates and
   // one modifies the same path) slipped past validation.
   for (const s of plan.slices) {
-    const parallelDeps = arr(s.dependsOn).filter((d) => d.mode === 'parallel');
+    const parallelDeps = depsOf(s).filter((d) => d.mode === 'parallel');
     for (const pd of parallelDeps) {
       const sibling = plan.slices.find((x) => x.id === pd.id);
       if (!sibling) continue;

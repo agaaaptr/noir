@@ -302,15 +302,6 @@ export class WorkflowEngine {
       return task;
     }
 
-    // Guard: a BACKWARD jump (target phase at-or-before the current phase) must
-    // NOT re-record the target phase's gate as approved — the task already
-    // passed through that gate and its authoritative audit carries the original
-    // decision. The jump still LANDS (a jump is an explicit out-of-order admin
-    // move), but no duplicate gate entry is appended. The `jumpEntry` marker
-    // below still records where the jump landed. Forward jumps (including the
-    // normal FSM path, where `jump` is false) record gates exactly as before.
-    const backwardJump = jump && PHASES.indexOf(targetPhase) <= PHASES.indexOf(task.phase);
-
     const targetState = stateForPhase(targetPhase);
     if (!jump) {
       // applyTransition surfaces the FSM's gate hint on illegal moves.
@@ -318,9 +309,23 @@ export class WorkflowEngine {
     }
 
     // Observable checkpoint: entering specified/planned/done always records a
-    // gate — looked up from the target STATE (see gatePhaseForState). Suppressed
-    // on backward jumps (the original gate decision is already in the audit).
+    // gate — looked up from the target STATE (see gatePhaseForState).
     const gatePhase = gatePhaseForState(targetState);
+
+    // Guard: a BACKWARD jump (target phase at-or-before the current phase) must
+    // NOT re-record a gate that ALREADY fired — the authoritative audit carries
+    // the original decision, and the audit is append-only. The suppression is
+    // CONDITIONAL on the gate actually being in the audit: a task that JUMPED
+    // over a gate (e.g. clarifying → verifying via a forward jump) has NOT fired
+    // the intermediate gate, so jumping back to it MUST record it (the
+    // observable-checkpoint invariant). The jump still LANDS; `jumpEntry` below
+    // records where. Forward jumps (incl. the normal FSM path) record as before.
+    const gateAlreadyFired = gatePhase !== null && task.history.some((g) => g.phase === gatePhase);
+    const backwardJump =
+      jump &&
+      gatePhase !== null &&
+      gateAlreadyFired &&
+      PHASES.indexOf(targetPhase) <= PHASES.indexOf(task.phase);
     // Fail fast: evidence is ONLY meaningful when this advance crosses the
     // verify gate (lands on `done`). Supplying evidence for any other advance
     // (e.g. running `noir task verify` from `executing`, which lands on

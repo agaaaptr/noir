@@ -404,27 +404,28 @@ export async function handoff(opts: HandoffOptions): Promise<void> {
   };
   full.directive = resolveDirective(project.root, full);
 
+  // --write persists the markdown artifact BEFORE the --json early-return so
+  // `--write --json` writes the file too (previously --json silently skipped it).
+  if (opts.write === true) {
+    const md = renderMarkdown(full);
+    const path = handoffFilePath(project.root, task?.taskId, project.id);
+    mkdirSync(join(project.root, NOIR_DIR, 'handoff'), { recursive: true });
+    writeFileSync(path, md, 'utf8');
+    // Diagnostic → STDERR (stream discipline: stdout is reserved for the
+    // artifact/envelope; --write reports its path here, never on stdout).
+    info(`handoff written to ${path}`, opts);
+  }
+
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: full })}\n`);
     return;
   }
 
-  const md = renderMarkdown(full);
-
-  if (opts.write === true) {
-    const path = handoffFilePath(project.root, task?.taskId, project.id);
-    mkdirSync(join(project.root, NOIR_DIR, 'handoff'), { recursive: true });
-    writeFileSync(path, md, 'utf8');
-    // Diagnostic → STDERR (stream discipline: stdout is reserved for the
-    // artifact under the default path; --write is a convenience that reports
-    // its path here, never on stdout).
-    info(`handoff written to ${path}`, opts);
-    return;
-  }
-
   // Default: markdown → STDOUT ONLY (pasteability — the user pipes this into a
-  // file or straight into the host). No trailing diagnostics on stdout.
-  process.stdout.write(md);
+  // file or straight into the host). No trailing diagnostics on stdout. When
+  // --write was set (and not --json), the file is already persisted and its
+  // path reported to stderr — do not ALSO dump the artifact to stdout.
+  if (opts.write !== true) process.stdout.write(renderMarkdown(full));
 }
 
 // Re-export so bin.ts can wire `noir wrap` as a sibling alias dispatching the

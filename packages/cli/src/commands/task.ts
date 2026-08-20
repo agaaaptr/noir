@@ -20,6 +20,7 @@
 // envelope to `null` and stays exit 0).
 
 import { spawnSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
 import { loadProjectInfo, nextArtifactSequence, type ProjectInfo, sha256Hex } from '@noir-ai/core';
 import {
   PHASES,
@@ -211,6 +212,9 @@ const GATE_PHASES = ['spec', 'plan', 'verify'] as const satisfies readonly Phase
 
 /** The next gate-phase strictly ahead of `phase`, or `null` (past verify). */
 function nextGateAfter(phase: string): Phase | null {
+  // The verify gate is ASYMMETRIC: it fires on entering DONE, so a task AT the
+  // verify phase still has it ahead (mirrors the daemon's nextGateAfter).
+  if (phase === 'verify') return 'verify';
   const cur = PHASES.indexOf(phase as Phase);
   for (const p of GATE_PHASES) {
     if (PHASES.indexOf(p) > cur) return p;
@@ -843,6 +847,21 @@ export async function taskDecompose(opts: TaskDecomposeOptions): Promise<void> {
     ],
     status: { 's1-walking-skeleton': 'planned' as const },
   };
+
+  // `--out <path>`: persist the plan JSON (a silent no-op before — the flag was
+  // declared + forwarded but never acted on).
+  if (typeof opts.out === 'string' && opts.out.length > 0) {
+    try {
+      writeFileSync(opts.out, `${JSON.stringify(plan, null, 2)}\n`, 'utf8');
+    } catch (err) {
+      fail(
+        EXIT.ERROR,
+        `task decompose: could not write ${opts.out}: ${err instanceof Error ? err.message : String(err)}`,
+        opts,
+      );
+    }
+    if (opts.json !== true) info(`wrote plan to ${opts.out}`, opts);
+  }
 
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: plan })}\n`);

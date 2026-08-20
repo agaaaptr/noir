@@ -71,7 +71,7 @@ const pkgJson = {
   scripts: { build: 'tsup', typecheck: 'tsc --noEmit' },
   // Default: every package depends on core (types/config/layout). Add more as needed.
   dependencies: { '@noir-ai/core': 'workspace:*' },
-  devDependencies: { '@types/node': '^26.1.1' },
+  devDependencies: { '@types/node': '^22.17.0' },
 };
 await writeFile(join(pkgDir, 'package.json'), `${JSON.stringify(pkgJson, null, 2)}\n`, 'utf8');
 
