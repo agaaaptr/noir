@@ -2,7 +2,7 @@ version: 2
 
 current_phase: shipped
 
-active_capability: 4
+active_capability: null
 
 active_slice: null  # v2 orchestrator TUI shipped 2026-08-14 (1.11.0, ADR-0008)
 

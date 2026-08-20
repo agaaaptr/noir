@@ -21,7 +21,7 @@ The local runtime behind the Noir CLI: an `@noir-ai/daemon` MCP server with a si
 
 ## Gap / roadmap delta
 
-- **Detached/backgrounded daemon** — `--detach` is refused today; no socket activation for spawning the daemon on demand.
+- **Detached/backgrounded daemon** — `--detach` shipped in 1.8.0; the remaining gap is **socket activation** for spawning the daemon on demand.
 - **Daemon auth token** — the transport validates localhost host+origin only; no credential on the wire.
 - **Per-project `daemon.json`** — a single global record clobbers across concurrent projects.
 - **Configured persistent daemon port** — `daemon.port` is parsed but never consumed; the port is ephemeral.
