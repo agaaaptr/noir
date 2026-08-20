@@ -9,7 +9,6 @@
 //   pnpm release:tag                  # auto-detects branch + computes version
 //   pnpm release:tag --dry-run        # preview only, no tag created
 //   pnpm release:tag --force          # skip safety checks
-//   pnpm release:tag --delete-stale   # clean up failed/unpublished tags
 //
 // Behavior (version-string-based, branch-validated):
 //   - On `develop`: reads base version from source → computes next beta from
@@ -37,12 +36,6 @@ const ROOT = join(__dirname, '..');
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const FORCE = args.includes('--force');
-const DELETE_STALE = args.includes('--delete-stale');
-
-if (DRY_RUN && DELETE_STALE) {
-  console.error('Error: --dry-run and --delete-stale are mutually exclusive.');
-  process.exit(1);
-}
 
 // ── Helpers ────────────────────────────────────────────────────────
 

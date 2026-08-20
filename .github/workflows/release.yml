@@ -238,11 +238,6 @@ jobs:
         run: |
           node scripts/release-registry.mjs add
 
-      # ── 8b. Regenerate auto-generated documentation ────────────
-      - name: Regenerate documentation
-        if: success() && steps.check.outputs.already_published == 'false'
-        run: node scripts/docs-generate.mjs generate
-
       # ── 9. Commit and push registry + docs update ──────────────
       - name: Commit release registry + docs update
         if: success() && steps.check.outputs.already_published == 'false'
