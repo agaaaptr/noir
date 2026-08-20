@@ -294,6 +294,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
             .describe("'save' flushes state; 'restore' returns the in-flight task state."),
           taskId: z
             .string()
+            .regex(/^[A-Za-z0-9._-]+$/)
             .optional()
             .describe('Task id; defaults to the active task (workflow:active).'),
         },

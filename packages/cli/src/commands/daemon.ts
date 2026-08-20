@@ -378,18 +378,18 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
   }
   // PID-reuse guard (same invariant as @noir-ai/daemon ensure.ts isHealthy +
   // this file's isHealthy): the responding /health must carry OUR recorded pid —
-  // a missing or mismatched pid means a foreign process (or one that recycled
+  // a MISSING or mismatched pid means a foreign process (or one that recycled
   // the pid) holds the port. Report stale, never "running" with the wrong
   // process's uptime. Distinguish "no health body at all" (port unresponsive)
-  // from "body present but pid wrong" (foreign process).
-  const pidMismatch = health !== null && typeof health?.pid === 'number' && health.pid !== rec.pid;
-  if (health?.ok !== true || pidMismatch) {
+  // from "body present but pid missing/mismatched" (foreign process).
+  const pidOk = typeof health?.pid === 'number' && health.pid === rec.pid;
+  if (health?.ok !== true || !pidOk) {
     hs.fail('Daemon not responding');
     clearDaemonRecord();
     fail(
       EXIT.DAEMON_DOWN,
-      pidMismatch
-        ? 'Noir daemon is not running (pid mismatch — a foreign process holds the recorded port; stale record removed).'
+      health !== null && !pidOk
+        ? 'Noir daemon is not running (pid missing/mismatched — a foreign process holds the recorded port; stale record removed).'
         : 'Noir daemon is not running (port unresponsive; stale record removed).',
       opts,
     );

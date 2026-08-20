@@ -18,6 +18,18 @@ import { NOIR_DIR } from './layout.js';
 
 const KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
+/**
+ * Keys a `.noir/.env` may NEVER set — process-injection vectors. Noir spawns
+ * node child processes (the daemon, the host binary), so a `.noir/.env` from an
+ * untrusted checkout (e.g. an attacker-committed file in a cloned repo) setting
+ * `NODE_OPTIONS=--require=/tmp/evil.js` (or `LD_PRELOAD`, npm_config_*, …) would
+ * be inherited by a spawned node child → arbitrary code execution as the user.
+ * These keys are refused + warned, preserving the "fills only UNSET keys" rule
+ * for normal token vars.
+ */
+const PROCESS_INJECTION_ENV_RE =
+  /^(NODE_OPTIONS|NODE_PATH|NODE_ICU_DATA|NODE_EXTRA_CA_CERTS|NODE_TLS_REJECT_UNAUTHORIZED|LD_PRELOAD|LD_LIBRARY_PATH|DYLD_INSERT_LIBRARIES|npm_config_|npm_|COREPACK_|ELECTRON_RUN_AS_NODE)$/;
+
 export interface EnvFileParseResult {
   readonly vars: Record<string, string>;
   /** `file:line: reason` diagnostics for skipped lines. */
@@ -111,6 +123,10 @@ export function loadNoirEnv(
   }
   const overlay: Record<string, string> = {};
   for (const [k, v] of Object.entries(vars)) {
+    if (PROCESS_INJECTION_ENV_RE.test(k)) {
+      warnings.push(`.noir/.env: refusing process-injection key '${k}' — ignored`);
+      continue;
+    }
     if (env[k] === undefined) overlay[k] = v;
   }
   return { overlay, warnings };
