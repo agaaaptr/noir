@@ -63,11 +63,11 @@ export function createEmbedFn(cfg: EmbedderConfig): ResolvedEmbedder {
 }
 
 // `fakeEmbedFn` (./fake.js) is a TEST-ONLY deterministic double (SHA-256-seeded
-// 384-dim vectors). It is exported here so cross-package test suites (memory
-// consumes it too) share ONE definition — but it is NOT used by any production
-// path: `kind:'none'` deliberately throws its own stub rather than returning a
-// fake vector. Treat it as a test fixture, never as production surface.
-export { fakeEmbedFn } from './fake.js';
+// 384-dim vectors) and is deliberately NOT re-exported here — this barrel is
+// shipped via the package `exports` map, so re-exporting it would publish a test
+// fixture as (unreachable) production surface. context's own tests import it via
+// the relative `../src/embedders/fake.js` path; cross-package suites keep a
+// local copy.
 export type { LocalEmbedder, LocalEmbedderOptions } from './local.js';
 export { DEFAULT_LOCAL_MODEL, localEmbedder, MODELS_DIR } from './local.js';
 // Re-export the building blocks so the engine, tests, and t10's

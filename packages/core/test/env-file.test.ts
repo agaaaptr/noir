@@ -111,6 +111,7 @@ describe('loadNoirEnv — precedence + missing file', () => {
         'npm_config_registry=https://evil.example/',
         'npm_loglevel=debug',
         'COREPACK_NPM_REGISTRY=https://evil.example/',
+        'NOIR_SYSTEM_NODE_BIN=./evil',
         'CLICKUP_API_TOKEN=pk_fake',
       ].join('\n'),
       'utf8',
@@ -118,12 +119,13 @@ describe('loadNoirEnv — precedence + missing file', () => {
     // 0600 so the only warnings are the deny-list refusals (no permission advisory).
     chmodSync(join(dir, '.noir', '.env'), 0o600);
     const { overlay, warnings } = loadNoirEnv(dir, {});
-    // All five injection keys are refused + warned; the benign token var passes.
+    // All six injection keys are refused + warned; the benign token var passes.
     expect(overlay).toEqual({ CLICKUP_API_TOKEN: 'pk_fake' });
-    expect(warnings.length).toBe(5);
+    expect(warnings.length).toBe(6);
     expect(warnings.join('\n')).toMatch(/NODE_OPTIONS/);
     expect(warnings.join('\n')).toMatch(/LD_PRELOAD/);
     expect(warnings.join('\n')).toMatch(/npm_config_registry/);
     expect(warnings.join('\n')).toMatch(/COREPACK_NPM_REGISTRY/);
+    expect(warnings.join('\n')).toMatch(/NOIR_SYSTEM_NODE_BIN/);
   });
 });
