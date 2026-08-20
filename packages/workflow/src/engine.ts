@@ -331,6 +331,14 @@ export class WorkflowEngine {
           // a clear pendingGate envelope + recovery options.
           throw new VerifyGateError('evidence-required', task.updatedAt);
         }
+        // Empty checks is FAUX evidence: `Array.some` on [] returns false, so a
+        // {ranAt, checks:[], summary} payload would otherwise be admitted as
+        // "all HARD green" and pass a required verify gate with zero actual
+        // validation. Treat it as no evidence (same defense the research-
+        // grounding work guards against).
+        if (fresh.checks.length === 0) {
+          throw new VerifyGateError('evidence-required', task.updatedAt, fresh);
+        }
         const hardFail = fresh.checks.some(
           (c) => c.exitCode !== 0 && (c.tier ?? 'hard') === 'hard',
         );

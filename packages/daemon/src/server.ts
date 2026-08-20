@@ -409,15 +409,17 @@ export function createNoirServer(ctx: ServerContext): McpServer {
             .object({
               ranAt: z.number(),
               summary: z.string(),
-              checks: z.array(
-                z.object({
-                  name: z.string(),
-                  exitCode: z.number(),
-                  outputDigest: z.string(),
-                  command: z.string(),
-                  tier: z.enum(['hard', 'soft']).optional(),
-                }),
-              ),
+              checks: z
+                .array(
+                  z.object({
+                    name: z.string(),
+                    exitCode: z.number(),
+                    outputDigest: z.string(),
+                    command: z.string(),
+                    tier: z.enum(['hard', 'soft']).optional(),
+                  }),
+                )
+                .min(1),
             })
             .optional()
             .describe(

@@ -108,6 +108,28 @@ describe('verify gate — evidence-required', () => {
     }
   });
 
+  it('empty checks ⇒ throws evidence-required (faux evidence is rejected), no transition', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      const engine = new WorkflowEngine(store, root, 'p', verifyOn);
+      await toVerifying(engine, 't2-empty');
+      const fakeEmpty = { ranAt: Date.now(), summary: '0 checks', checks: [] };
+      try {
+        await engine.advance('t2-empty', { evidence: fakeEmpty });
+        expect.fail('should have thrown evidence-required');
+      } catch (err) {
+        expect(err).toBeInstanceOf(VerifyGateError);
+        expect((err as VerifyGateError).kind).toBe('evidence-required');
+      }
+      // No transition, no gate recorded.
+      const after = engine.status('t2-empty');
+      expect(after?.state).toBe('verifying');
+      expect(after?.history.find((g) => g.phase === 'verify')).toBeUndefined();
+    } finally {
+      await store.close();
+    }
+  });
+
   it('stale evidence (ranAt < updatedAt) ⇒ treated as no evidence', async () => {
     const store = await openStore({ projectId: 'p', root });
     try {

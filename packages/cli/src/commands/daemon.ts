@@ -177,7 +177,16 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
       );
       return;
     }
-    const spawned = await spawnDetachedDaemon({ project });
+    let spawned: Awaited<ReturnType<typeof spawnDetachedDaemon>>;
+    try {
+      spawned = await spawnDetachedDaemon({ project });
+    } catch (err) {
+      fail(
+        EXIT.ERROR,
+        `noir daemon start --detach failed: ${err instanceof Error ? err.message : String(err)}`,
+        opts,
+      );
+    }
     if (opts.json === true) {
       process.stdout.write(
         `${JSON.stringify({ ok: true, data: { mode: 'detached', pid: spawned.pid, port: spawned.port } })}\n`,
@@ -191,10 +200,20 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
 
   // Foreground (default) — run the daemon in-process.
   const ds = spinner('Starting Noir daemon...', opts).start();
-  const ensured = await ensureDaemonRunning({
-    project,
-    idleTimeoutSec: project.config.daemon.idleTimeoutSec,
-  });
+  let ensured: Awaited<ReturnType<typeof ensureDaemonRunning>>;
+  try {
+    ensured = await ensureDaemonRunning({
+      project,
+      idleTimeoutSec: project.config.daemon.idleTimeoutSec,
+    });
+  } catch (err) {
+    ds.fail('Daemon failed to start');
+    fail(
+      EXIT.ERROR,
+      `noir daemon start failed: ${err instanceof Error ? err.message : String(err)}`,
+      opts,
+    );
+  }
 
   if (ensured.started) {
     ds.succeed('Daemon started');
