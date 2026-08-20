@@ -311,8 +311,14 @@ export async function daemonStop(opts: DaemonOptions): Promise<void> {
   if (signalled) {
     ds.succeed(`Stopped Noir daemon (pid ${rec.pid})`);
   } else {
-    ds.warn(`Daemon (pid ${rec.pid}) could not be signalled: ${errMsg}`);
-    info(`Noir daemon (pid ${rec.pid}) could not be signalled: ${errMsg}`, opts);
+    // Distinguish "not our daemon anymore" (pid-reuse guard declined to signal)
+    // from "probe was healthy but the signal failed" (errMsg set).
+    const reason =
+      errMsg !== undefined
+        ? errMsg
+        : 'the recorded pid did not answer as our daemon (stale record cleared)';
+    ds.warn(`Daemon (pid ${rec.pid}) could not be signalled: ${reason}`);
+    info(`Noir daemon (pid ${rec.pid}) could not be signalled: ${reason}`, opts);
   }
 }
 
@@ -358,17 +364,18 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
     health = null;
   }
   // PID-reuse guard (same invariant as @noir-ai/daemon ensure.ts isHealthy +
-  // this file's isHealthy): the responding
-  // /health must carry OUR recorded pid — a missing or mismatched pid means a
-  // foreign process (or one that recycled the pid) holds the port. Report
-  // stale, never "running" with the wrong process's uptime.
-  const pidOk = typeof health?.pid === 'number' && health.pid === rec.pid;
-  if (health?.ok !== true || !pidOk) {
+  // this file's isHealthy): the responding /health must carry OUR recorded pid —
+  // a missing or mismatched pid means a foreign process (or one that recycled
+  // the pid) holds the port. Report stale, never "running" with the wrong
+  // process's uptime. Distinguish "no health body at all" (port unresponsive)
+  // from "body present but pid wrong" (foreign process).
+  const pidMismatch = health !== null && typeof health?.pid === 'number' && health.pid !== rec.pid;
+  if (health?.ok !== true || pidMismatch) {
     hs.fail('Daemon not responding');
     clearDaemonRecord();
     fail(
       EXIT.DAEMON_DOWN,
-      !pidOk
+      pidMismatch
         ? 'Noir daemon is not running (pid mismatch — a foreign process holds the recorded port; stale record removed).'
         : 'Noir daemon is not running (port unresponsive; stale record removed).',
       opts,

@@ -48,7 +48,11 @@ vi.mock('../src/daemon-client.js', () => ({
         // `memoryRecall`'s fallback now uses `recallWithMeta` (`{hits, degraded,
         // mode}`) — mirror the engine contract.
         recall: vi.fn(async () => []),
-        recallWithMeta: vi.fn(async () => ({ hits: [], degraded: true, mode: 'bm25-only' as const })),
+        recallWithMeta: vi.fn(async () => ({
+          hits: [],
+          degraded: true,
+          mode: 'bm25-only' as const,
+        })),
         sessions: vi.fn(() => []),
       },
       context: {},

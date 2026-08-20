@@ -54,20 +54,27 @@ export function buildUpdateTarget(opts: {
   minVersion?: string;
 }): UpdateTarget {
   const targetSpec = opts.spec ?? opts.channel;
-  // Semver downgrade guard (T6 hardening): only treat the latest-known version
-  // as an upgrade when it is STRICTLY NEWER than the current one. The prior
-  // inequality check (`latestKnown !== currentVersion`) would treat a registry
-  // that returned an OLDER version (e.g. beta/prerelease channel lag, or a
-  // pinned `--spec` older than installed) as an "upgrade" and silently
-  // downgrade the install.
+  // The guard target: a concrete `--spec` (an exact version) WINS over the
+  // fetched registry version — the T6/I2 guards must evaluate what we will
+  // ACTUALLY install, not what the registry happens to offer. A pinned
+  // `--spec 1.9.0` against a 1.12.0 registry is a DOWNGRADE, and a pinned
+  // `--spec 1.5.0` can trip the minVersion floor — both were previously missed
+  // because the guards only ever looked at `latestKnown`.
+  const concrete =
+    opts.spec != null && opts.spec !== 'latest' && opts.spec !== 'beta'
+      ? opts.spec
+      : opts.latestKnown;
+  // Semver downgrade guard (T6 hardening): only treat the target as an upgrade
+  // when it is STRICTLY NEWER than the current one. The prior inequality check
+  // (`latestKnown !== currentVersion`) would treat a registry that returned an
+  // OLDER version (e.g. beta/prerelease channel lag) as an "upgrade" and
+  // silently downgrade the install.
   const isUpgrade =
-    opts.latestKnown != null &&
-    opts.currentVersion != null &&
-    semverGt(opts.latestKnown, opts.currentVersion);
-  // I2 — minVersion floor: refuse a registry-offered version below the floor.
-  // null latestKnown is handled separately (registry-unreachable branch).
+    concrete != null && opts.currentVersion != null && semverGt(concrete, opts.currentVersion);
+  // I2 — minVersion floor: refuse a target version below the floor. null
+  // latestKnown is handled separately (registry-unreachable branch).
   const floor = opts.minVersion ?? '1.6.0';
-  const belowMinVersion = opts.latestKnown != null && semverLt(opts.latestKnown, floor);
+  const belowMinVersion = concrete != null && semverLt(concrete, floor);
   return {
     method: opts.method,
     targetSpec,
