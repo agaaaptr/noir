@@ -280,7 +280,16 @@ export class WorkflowEngine {
     // Guard: a jump to the CURRENT phase is a no-op. Previously the engine
     // re-stamped the audit (the landing gate fired again), producing a spurious
     // duplicate entry. Return the task unchanged — no gate, no state change.
-    if (jump && targetPhase === task.phase) {
+    //
+    // EXCEPT when the task is BLOCKED: setBlocked flips state to 'blocked' but
+    // leaves phase untouched, and blocked has no FSM edges, so the only way out
+    // is an explicit jump. A jump to the SAME phase on a blocked task is exactly
+    // that unblock — fall through so `targetState = stateForPhase(targetPhase)`
+    // reassigns the phase's live state (blocked → executing/specified/…). The
+    // backward-jump suppression below already treats the equal phase as backward,
+    // so no duplicate gate is recorded. Without this, a task blocked mid-phase
+    // could only escape lossily (jump forward to skip work, or backward to regress).
+    if (jump && targetPhase === task.phase && task.state !== 'blocked') {
       return task;
     }
 
@@ -541,9 +550,9 @@ export class WorkflowEngine {
   /** Set state directly to `abandoned` (terminal; no FSM edge). */
   async abandon(taskId: string): Promise<TaskState> {
     const task = this.requireTask(taskId);
-    // Re-abandoning is a no-op guard for consistency: `abandon` on a done task
-    // must not relabel it (done stays done — it was verified). advance() and
-    // setBlocked share the same terminal policy.
+    // Terminal tasks stay terminal: `abandon` on a done/abandoned task THROWS
+    // (assertNotTerminal) rather than relabelling it (done stays done — it was
+    // verified). advance() and setBlocked share the same terminal policy.
     this.assertNotTerminal(task);
     task.state = 'abandoned';
     task.updatedAt = Date.now();

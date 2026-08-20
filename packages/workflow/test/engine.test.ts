@@ -715,6 +715,28 @@ describe('WorkflowEngine', () => {
         await store.close();
       }
     });
+
+    it('a jump to the CURRENT phase on a BLOCKED task unblocks (state restored, no gate re-record)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'full');
+        for (let i = 0; i < 4; i++) await engine.advance('task-1'); // → executing (phase 'execute')
+        expect(engine.status('task-1')?.state).toBe('executing');
+        await engine.setBlocked('task-1', 'waiting on infra');
+        expect(engine.status('task-1')?.state).toBe('blocked');
+        const historyBefore = engine.status('task-1')?.history.length ?? 0;
+
+        // Jump to the SAME phase ('execute') — must UNBLOCK back to executing.
+        const unblocked = await engine.advance('task-1', { to: 'execute' });
+        expect(unblocked.state).toBe('executing');
+        expect(unblocked.phase).toBe('execute');
+        // No new gate entry (execute is not a gate phase; the audit is unchanged).
+        expect(unblocked.history).toHaveLength(historyBefore);
+      } finally {
+        await store.close();
+      }
+    });
   });
 
   // iter-2 M8 — a BACKWARD jump (target phase before the current phase) must

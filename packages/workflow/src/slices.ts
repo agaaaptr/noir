@@ -122,6 +122,15 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
             `slice ${s.id}: parallel preserve conflict on '${f}' with sibling ${pd.id} (preserve vs write)`,
           );
       }
+      // Reverse direction: this slice PRESERVES a path the sibling writes
+      // (a symmetric pair — the check must not depend on slice ordering).
+      const siblingWrites = new Set([...sibling.files.create, ...sibling.files.modify]);
+      for (const f of s.files.preserve) {
+        if (siblingWrites.has(f))
+          errors.push(
+            `slice ${s.id}: parallel preserve conflict on '${f}' with sibling ${pd.id} (write vs preserve)`,
+          );
+      }
     }
   }
 

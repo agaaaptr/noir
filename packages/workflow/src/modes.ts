@@ -48,6 +48,15 @@ export async function runQuick(
   if (task.mode !== 'quick') {
     throw new Error(`runQuick requires a quick-mode task (got ${task.mode})`);
   }
+  // Guard: runQuick is a one-shot bootstrapper (draft → executing). Re-running
+  // it on an already-advanced quick task would re-write the spec stub and
+  // re-record the skipped spec/plan gates. Refuse unless the task is still in
+  // its initial state.
+  if (task.state !== 'draft') {
+    throw new Error(
+      `runQuick requires a task still in its initial state (got ${task.state}); the quick path already ran`,
+    );
+  }
 
   // Flush the stub spec first so the artifact exists before any gate fires.
   writeSpec(engine.root, taskId, task.slug, opts?.specBody ?? QUICK_SPEC_STUB);
