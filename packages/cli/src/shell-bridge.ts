@@ -117,7 +117,12 @@ function probeCommand(
   return new Promise((resolve) => {
     const script = kind ? PROBE_SCRIPTS[kind] : '';
     const flags = kind ? PROBE_FLAGS[kind] : '-lic';
-    const child = spawn(shell, [flags, script, 'noirbridge', name], {
+    // bash/zsh consume a positional `$0` (the `noirbridge` dummy) and read the
+    // command name from `$1`; fish has NO `$0` — its positional args ARE `$argv`
+    // starting at $argv[1] — so the dummy must be omitted there or $argv[1] would
+    // resolve the literal "noirbridge" and the probe would always come back empty.
+    const probeArgs = kind === 'fish' ? [name] : ['noirbridge', name];
+    const child = spawn(shell, [flags, script, ...probeArgs], {
       stdio: ['ignore', 'pipe', 'pipe'],
       detached: true, // new process group so the timeout can kill rc-spawned children
       ...(opts.env ? { env: opts.env as NodeJS.ProcessEnv } : {}),
@@ -203,7 +208,8 @@ export function buildBridgeArgs(
 ): BridgeSpec {
   const kind = shellKind(shell) ?? 'zsh';
   if (kind === 'fish') {
-    return { binary: shell, args: ['-ic', `${name} $argv`, 'noirbridge', ...hostArgs] };
+    // fish has no `$0`; positional args ARE `$argv` from $argv[1], so no dummy.
+    return { binary: shell, args: ['-ic', `${name} $argv`, ...hostArgs] };
   }
   if (kind === 'bash') {
     return {
