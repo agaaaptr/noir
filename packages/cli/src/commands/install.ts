@@ -50,8 +50,11 @@ export interface MigrationPlan {
 
 /** Per-segment numeric semver comparison. Returns true when `a < b`. */
 function semverLt(a: string, b: string): boolean {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
+  // Strip a leading `v` (npm-idiomatic exact-version spelling that
+  // installManagedNode explicitly supports) — bare Number('v1.9.0') is NaN → 0.
+  const seg = (s: string): number => Number(s.replace(/^v/, '')) || 0;
+  const pa = a.split('.').map(seg);
+  const pb = b.split('.').map(seg);
   for (let i = 0; i < 3; i++) {
     const x = pa[i] ?? 0;
     const y = pb[i] ?? 0;

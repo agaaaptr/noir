@@ -146,6 +146,7 @@ function toStatusOptions(g: Record<string, unknown>): StatusOptions {
     quiet: g.quiet === true,
     verbose: g.verbose === true,
     input: g.input !== false,
+    ...(g.tips === false ? { noTips: true } : {}),
   };
 }
 

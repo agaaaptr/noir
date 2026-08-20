@@ -163,6 +163,10 @@ export interface WorkflowStatus {
  * still to come. Returns `null` past `verify` (nothing left to gate).
  */
 export function nextGateAfter(phase: Phase): Phase | null {
+  // The verify gate is ASYMMETRIC: it fires on entering DONE (phase document),
+  // not on entering the verify phase — so a task AT phase 'verify' still has the
+  // verify gate ahead of it (reporting null here would mislead a resume briefing).
+  if (phase === 'verify') return 'verify';
   const cur = PHASES.indexOf(phase);
   for (const p of GATE_PHASES) {
     if (PHASES.indexOf(p) > cur) return p;

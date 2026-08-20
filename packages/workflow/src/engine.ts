@@ -292,6 +292,13 @@ export class WorkflowEngine {
     // so no duplicate gate is recorded. Without this, a task blocked mid-phase
     // could only escape lossily (jump forward to skip work, or backward to regress).
     if (jump && targetPhase === task.phase && task.state !== 'blocked') {
+      // A no-op jump must not silently swallow a force/skip/evidence that was
+      // intended for a gate landing — reject it explicitly.
+      if (opts?.force !== undefined || opts?.skip === true || opts?.evidence !== undefined) {
+        throw new Error(
+          `cannot force/skip/verify a jump to the current phase (${task.phase}) — it is a no-op`,
+        );
+      }
       return task;
     }
 

@@ -37,6 +37,12 @@ export interface SlicePlan {
   status: Record<string, 'planned' | 'in-progress' | 'done'>;
 }
 
+/** Coerce a possibly-malformed array field to an iterable (schema errors were
+ *  already pushed above; the downstream passes must never crash on them). */
+function arr<T>(x: T[] | undefined | null): T[] {
+  return Array.isArray(x) ? x : [];
+}
+
 /** Validate a SlicePlan deterministically — schema, deps, file conflicts. */
 export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -65,7 +71,7 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
   // Dependency validation: self-refs + missing refs (cheap, deterministic), then
   // a real DFS cycle check (A→B→A or any longer loop) over the dep graph.
   for (const s of plan.slices) {
-    for (const dep of s.dependsOn) {
+    for (const dep of arr(s.dependsOn)) {
       if (dep.id === s.id) errors.push(`slice ${s.id}: self-referencing dependency`);
       if (!ids.has(dep.id)) errors.push(`slice ${s.id}: depends on unknown slice ${dep.id}`);
     }
@@ -77,7 +83,9 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
   for (const s of plan.slices)
     deps.set(
       s.id,
-      s.dependsOn.map((d) => d.id).filter((id) => ids.has(id)),
+      arr(s.dependsOn)
+        .map((d) => d.id)
+        .filter((id) => ids.has(id)),
     );
   const WHITE = 0;
   const GRAY = 1;
@@ -109,20 +117,25 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
   // flagged, so two siblings that BOTH modify the same file (or one creates and
   // one modifies the same path) slipped past validation.
   for (const s of plan.slices) {
-    const parallelDeps = s.dependsOn.filter((d) => d.mode === 'parallel');
+    const parallelDeps = arr(s.dependsOn).filter((d) => d.mode === 'parallel');
     for (const pd of parallelDeps) {
       const sibling = plan.slices.find((x) => x.id === pd.id);
       if (!sibling) continue;
+      // Malformed file arrays were already flagged above; coerce to [] so a
+      // null/absent files field cannot crash the conflict pass.
+      const sFiles = arr(s.files?.create).concat(arr(s.files?.modify));
+      const siblingFiles = arr(sibling.files?.create).concat(arr(sibling.files?.modify));
+      const sPreserve = arr(s.files?.preserve);
+      const siblingPreserve = arr(sibling.files?.preserve);
       // What this slice WRITES (creates + modifies) — its own footprint.
-      const sWrites = new Set([...s.files.create, ...s.files.modify]);
+      const sWrites = new Set(sFiles);
       // What the sibling writes (creates + modifies) AND preserves (a sibling
       // preserving a path we also create/modify is equally a conflict).
-      const siblingFootprint = [...sibling.files.create, ...sibling.files.modify];
-      for (const f of siblingFootprint) {
+      for (const f of siblingFiles) {
         if (sWrites.has(f))
           errors.push(`slice ${s.id}: parallel file conflict on '${f}' with sibling ${pd.id}`);
       }
-      for (const f of sibling.files.preserve) {
+      for (const f of siblingPreserve) {
         if (sWrites.has(f))
           errors.push(
             `slice ${s.id}: parallel preserve conflict on '${f}' with sibling ${pd.id} (preserve vs write)`,
@@ -130,8 +143,8 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
       }
       // Reverse direction: this slice PRESERVES a path the sibling writes
       // (a symmetric pair — the check must not depend on slice ordering).
-      const siblingWrites = new Set([...sibling.files.create, ...sibling.files.modify]);
-      for (const f of s.files.preserve) {
+      const siblingWrites = new Set(siblingFiles);
+      for (const f of sPreserve) {
         if (siblingWrites.has(f))
           errors.push(
             `slice ${s.id}: parallel preserve conflict on '${f}' with sibling ${pd.id} (write vs preserve)`,

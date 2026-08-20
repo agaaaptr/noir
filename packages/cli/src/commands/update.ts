@@ -94,8 +94,10 @@ export function buildUpdateTarget(opts: {
  * unchanged (the same helper lives in install.ts for the downgrade guard).
  */
 function semverGt(a: string, b: string): boolean {
-  const pa = a.split('.').map((s) => Number(s) || 0);
-  const pb = b.split('.').map((s) => Number(s) || 0);
+  // Strip a leading `v` (npm-idiomatic) — bare Number('v1') is NaN.
+  const seg = (s: string): number => Number(s.replace(/^v/, '')) || 0;
+  const pa = a.split('.').map(seg);
+  const pb = b.split('.').map(seg);
   for (let i = 0; i < 3; i++) {
     const x = pa[i] ?? 0;
     const y = pb[i] ?? 0;
@@ -110,8 +112,10 @@ function semverGt(a: string, b: string): boolean {
  * segment, non-numeric → 0. Returns true when `a` is strictly less than `b`.
  */
 function semverLt(a: string, b: string): boolean {
-  const pa = a.split('.').map((s) => Number(s) || 0);
-  const pb = b.split('.').map((s) => Number(s) || 0);
+  // Strip a leading `v` (npm-idiomatic) — bare Number('v1') is NaN.
+  const seg = (s: string): number => Number(s.replace(/^v/, '')) || 0;
+  const pa = a.split('.').map(seg);
+  const pb = b.split('.').map(seg);
   for (let i = 0; i < 3; i++) {
     const x = pa[i] ?? 0;
     const y = pb[i] ?? 0;
@@ -192,10 +196,11 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
   // Checked before the isUpgrade branch: a below-floor offer is unsafe even if
   // it happens to be newer than the (very old) current install.
   if (target.belowMinVersion) {
-    warn(`Latest known ${target.latestKnown} is below the minVersion floor (${minVersion}).`);
+    // Name the ACTUAL target (a concrete --spec), not the registry's latest.
+    warn(`Target ${target.targetSpec} is below the minVersion floor (${minVersion}).`);
     fail(
       EXIT.USAGE,
-      `refusing update to ${target.latestKnown} (below minVersion ${minVersion})`,
+      `refusing update to ${target.targetSpec} (below minVersion ${minVersion})`,
       opts,
     );
   }

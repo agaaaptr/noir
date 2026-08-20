@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import {
   artifactFrontmatter,
   type ConflictResolution,
-  type ConflictResolverReturn,
   findArtifact,
   paths,
   resolveArtifactPath,

@@ -246,7 +246,14 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
 
   const countVecs = (): number => {
     if (vecMissing) return 0;
-    return (db.prepare('SELECT count(*) AS c FROM vec').get() as { c: number }).c;
+    // A read-only degraded handle over a DB whose original writer had a broken
+    // binary may have NO vec0 table (it was never created) — return 0 instead
+    // of throwing 'no such table'.
+    try {
+      return (db.prepare('SELECT count(*) AS c FROM vec').get() as { c: number }).c;
+    } catch {
+      return 0;
+    }
   };
 
   return {

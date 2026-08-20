@@ -24,9 +24,11 @@ export type MarkdownConflictResolverReturn =
   | MarkdownConflictResolution
   | { resolution: MarkdownConflictResolution; applyToAll?: boolean };
 
+// SYNC resolver only — resolveAndWrite cannot await. Async callers use
+// @noir-ai/create's regenerate seam (which is async-aware).
 export type MarkdownConflictResolver = (
   ctx: MarkdownConflictContext,
-) => Promise<MarkdownConflictResolverReturn> | MarkdownConflictResolverReturn;
+) => MarkdownConflictResolverReturn;
 
 export interface MarkdownConflictOpts {
   /** Default `'overwrite'` (v1.2 backward-compatible). */

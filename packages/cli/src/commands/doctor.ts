@@ -231,8 +231,13 @@ async function checkDaemon(checks: CheckResult[]): Promise<void> {
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     });
     const body =
-      res.status === 200 ? ((await res.json()) as { ok?: boolean; uptimeSec?: number }) : null;
-    if (body && body.ok === true) {
+      res.status === 200
+        ? ((await res.json()) as { ok?: boolean; pid?: number; uptimeSec?: number })
+        : null;
+    // PID-reuse guard (mirrors daemonStatus): require the responding /health to
+    // carry OUR recorded pid — a foreign process serving /health is not our daemon.
+    const pidOk = typeof body?.pid === 'number' && body.pid === rec.pid;
+    if (body && body.ok === true && pidOk) {
       checks.push({
         name: 'daemon',
         status: 'ok',
