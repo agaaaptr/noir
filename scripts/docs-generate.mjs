@@ -671,6 +671,33 @@ function validateDocs() {
 
   const docPaths = new Set(allMd.map((f) => f.relPath));
 
+  // github-slugger heading-slug replica (what GitHub's rendered anchors use):
+  // lowercase → strip punctuation/non-word chars (keeps `_`, `-`, space) → trim
+  // → each SPACE becomes a hyphen with NO collapsing (so `A & B` → `a--b`).
+  // This is what lets docs:validate catch broken anchors, not just broken files.
+  function ghSlug(value) {
+    return value
+      .toLowerCase()
+      .replace(/[^\w\- ]/g, '')
+      .trim()
+      .replace(/ /g, '-');
+  }
+
+  // Cache of every ATX heading slug per doc (relPath → Set of slugs).
+  const headingSlugCache = new Map();
+  function getHeadingSlugs(relPath) {
+    if (headingSlugCache.has(relPath)) return headingSlugCache.get(relPath);
+    const slugs = new Set();
+    const content = readFile(join(ROOT, relPath));
+    if (content) {
+      for (const m of content.matchAll(/^#{1,6}[ \t]+(.+?)[ \t]*$/gm)) {
+        slugs.add(ghSlug(m[1]));
+      }
+    }
+    headingSlugCache.set(relPath, slugs);
+    return slugs;
+  }
+
   for (const file of allMd) {
     const content = readFile(file.path);
     if (!content) continue;
@@ -680,9 +707,19 @@ function validateDocs() {
     const matches = [...content.matchAll(linkRe)];
     for (const match of matches) {
       const linkTarget = match[2];
-      // Skip external URLs and anchors
+      // Skip external URLs
       if (linkTarget.startsWith('http://') || linkTarget.startsWith('https://')) continue;
-      if (linkTarget.startsWith('#')) continue;
+
+      // In-page anchor (`#fragment`) — target is THIS file.
+      if (linkTarget.startsWith('#')) {
+        const fragment = linkTarget.slice(1);
+        if (fragment && !getHeadingSlugs(file.relPath).has(fragment)) {
+          issues.push(
+            `[BROKEN-ANCHOR] ${file.relPath}: anchor "#${fragment}" not found in this file.`,
+          );
+        }
+        continue;
+      }
 
       // Resolve relative link, normalizing ./ and ../ but preserving .md extensions
       const fileDir = dirname(file.relPath);
@@ -690,11 +727,27 @@ function validateDocs() {
       // Strip leading ./ segments only (preserve file extensions)
       resolved = resolved.replace(/(^|\/)\.\//g, '$1');
 
-      // Check if the file exists (strip fragment)
-      const cleanTarget = resolved.split('#')[0];
+      // Split the fragment (if any) from the file path.
+      const hashIdx = resolved.indexOf('#');
+      const cleanTarget = hashIdx >= 0 ? resolved.slice(0, hashIdx) : resolved;
+      const fragment = hashIdx >= 0 ? resolved.slice(hashIdx + 1) : '';
+
+      // Check if the file exists.
       if (cleanTarget && !docPaths.has(cleanTarget) && !existsSync(join(ROOT, cleanTarget))) {
         issues.push(
           `[BROKEN-LINK] ${file.relPath}: link to "${linkTarget}" (resolved: ${cleanTarget}) not found.`,
+        );
+        continue;
+      }
+      // Check the fragment resolves to a real heading in the target doc.
+      if (
+        fragment &&
+        cleanTarget &&
+        docPaths.has(cleanTarget) &&
+        !getHeadingSlugs(cleanTarget).has(fragment)
+      ) {
+        issues.push(
+          `[BROKEN-ANCHOR] ${file.relPath}: anchor "#${fragment}" not found in ${cleanTarget}.`,
         );
       }
     }
