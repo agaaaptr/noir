@@ -74,7 +74,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 - `docs/reference/config.md` + `mcp-tools.md` were stale skeletons — regenerated 2026-08-03.
 - `docs/reference/cli-auto.md` duplicate removed 2026-08-03 (single source: `cli.md`; stale ref in `capability-02` also cleared).
 - `CHANGELOG.md` unified to root (docs/CHANGELOG.md is now a pointer) — 2026-08-03.
-- Stale doc path labels in `AGENTS.md` + ADR-0001 (`docs/internal/`/`docs/internal/specs/` → real `docs/internal/{specs,plans}`) — tracked, not yet fixed.
+- ~~Stale doc path labels in `AGENTS.md` + ADR-0001~~ — resolved (the path labels are correct).
 - **Windows native-install bugs (deferred from the 1.7.3 audit):** win32 managed-Node `npmBin` computes `npm.exe` (Node ships `npm.cmd`); extraction shells out to `unzip` (absent on stock Windows); `install.ps1` lacks the auto-PATH + shadow-detection parity with `install.sh`; Scoop manifest `bin` points at a `.js` with no `node` invocation. All pre-existing, not regressions; need a Windows VM to verify (CI has no Windows smoke — better-sqlite3@13 is source-only). Tracked below.
 
 ## Notes

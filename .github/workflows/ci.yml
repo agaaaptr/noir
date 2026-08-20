@@ -15,9 +15,10 @@ jobs:
         # binaries), and node-gyp@11.1.0 cannot detect Visual Studio 18 (the
         # 2026 version shipped on windows-latest runners) — its version map
         # only goes up to VS 17 (2022). This is a node-gyp infrastructure issue,
-        # not a Noir code defect. Windows is still validated by the smoke-test
-        # jobs below (they exercise the full managed-Node pipeline on Windows).
-        # The one POSIX-only unit test (chmod-based degraded store open) skips.
+        # not a Noir code defect. Windows is NOT covered by CI anywhere (the
+        # install/provision smoke jobs below also exclude it) — Windows coverage
+        # is manual. The one POSIX-only unit test (chmod-based degraded store
+        # open) skips.
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:

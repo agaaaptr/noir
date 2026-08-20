@@ -36,7 +36,7 @@ Make every already-shipped workflow-engine capability **reachable and exercisabl
   - degraded (read-only store): resume is a read — allow it (mirrors `workflow_status`).
 - **`packages/cli/src/commands/task.ts`** — new `noir task resume` command:
   - `noir task resume` (no arg) → calls `workflow_resume`, renders a **resume briefing**: state, phase, `blockReason` if blocked, next phase + gate + skill hint, and the artifact paths. Exit 0 when resumable, exit 1 ("nothing to resume") when terminal/none.
-  - `noir task resume --last` → same but explicitly targets the active task (for scripting).
+  - `noir task resume --last` → same but explicitly targets the active task (for scripting). *(Removed as dead code before 1.12.0 — omitting the id already targets the active task.)*
   - `noir task resume <taskId>` → targets that task (non-terminal check).
   - `--prompt '<continue instruction>'` → records a `resume:<taskId>` KV entry `{ prompt, at }` (append-only, observable — mirrors the gate-audit invariant) so the host can see the resume intent; no FSM state change.
   - Add the command to the commander tree (`bin.ts`) and surface it in `noir task --help` + the home-menu sections if applicable.
@@ -83,7 +83,7 @@ Make every already-shipped workflow-engine capability **reachable and exercisabl
 3. Overriding `prd.mandatoryFor: ['epic']` in `noir.config` (or equivalent) makes `feature` tasks NOT trigger the recommendation — proving the config bridge works in both daemon and in-process-read paths.
 4. `noir task new --mode quick` → stub spec at `.noir/specs/<id>-<slug>.md`, spec+plan gates recorded `skipped` in the audit, task lands at `executing`; verify gate still fires `approved` on `done`.
 5. `noir task block <reason>` sets the active task to `blocked` with `blockReason`; `noir task status` shows it; `noir task advance --to <phase>` resumes it (jumpEntry recorded); `noir task abandon` (confirmed) makes it terminal.
-6. `noir task resume` on an active non-terminal task prints a briefing (state, phase, next action + skill hint, artifact paths) and exits 0; on a `done`/`abandoned`/none task prints "nothing to resume" and exits 1; `noir task resume --last --prompt 'continue X'` writes the resume KV record.
+6. `noir task resume` on an active non-terminal task prints a briefing (state, phase, next action + skill hint, artifact paths) and exits 0; on a `done`/`abandoned`/none task prints "nothing to resume" and exits 1; `noir task resume --prompt 'continue X'` writes the resume KV record. *(The `--last` flag in the original design was removed as dead code before 1.12.0.)*
 7. `noir status` shows the `resume: noir task resume` hint when a resumable task exists.
 8. Full gate green: lint → build → typecheck → test → docs:validate (test count grows; the audit-KV/engine contract tests must stay unchanged).
 9. Backward compatible: existing calls without `taskClass` / with `mode` omitted behave exactly as before (byte-identical for a bare `noir task new --slug`).
