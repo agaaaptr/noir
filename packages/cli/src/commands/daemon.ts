@@ -357,12 +357,19 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
     // ECONNREFUSED / DNS / timeout — treat as not-running below.
     health = null;
   }
-  if (health?.ok !== true) {
+  // PID-reuse guard (same invariant as the start/stop probes): when the
+  // responding /health carries a pid that is NOT the recorded one, the port is
+  // held by a foreign process that recycled the pid — report stale, never
+  // "running" with the wrong process's uptime.
+  const pidMismatch = typeof health?.pid === 'number' && health.pid !== rec.pid;
+  if (health?.ok !== true || pidMismatch) {
     hs.fail('Daemon not responding');
     clearDaemonRecord();
     fail(
       EXIT.DAEMON_DOWN,
-      'Noir daemon is not running (port unresponsive; stale record removed).',
+      pidMismatch
+        ? 'Noir daemon is not running (pid mismatch — a foreign process holds the recorded port; stale record removed).'
+        : 'Noir daemon is not running (port unresponsive; stale record removed).',
       opts,
     );
   }

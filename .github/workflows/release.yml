@@ -324,5 +324,5 @@ jobs:
       - name: Skip (already published)
         if: steps.check.outputs.already_published == 'true'
         run: |
-          echo "Version $VERSION is already published on npm. Skipping publish."
+          echo "Version ${{ steps.extract.outputs.version }} is already published on npm. Skipping publish."
           echo "This is expected on workflow re-runs — the version is immutable."

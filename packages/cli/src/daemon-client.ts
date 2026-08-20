@@ -167,8 +167,17 @@ export async function probeDaemon(opts: DaemonClientOptions = {}): Promise<Daemo
       pid?: number;
       uptimeSec?: number;
     } | null;
-    if (body?.ok !== true) {
-      if (opts.verbose) process.stderr.write('noir: daemon probe: /health body not ok\n');
+    // PID-reuse guard (mirrors daemon.ts isHealthy): when the responding /health
+    // carries a pid that is NOT the recorded one, the port is held by a foreign
+    // process that recycled the pid — report NOT running.
+    const pidMismatch = typeof body?.pid === 'number' && body.pid !== rec.pid;
+    if (body?.ok !== true || pidMismatch) {
+      if (opts.verbose)
+        process.stderr.write(
+          pidMismatch
+            ? 'noir: daemon probe: pid mismatch (foreign process on recorded port)\n'
+            : 'noir: daemon probe: /health body not ok\n',
+        );
       return { running: false };
     }
     return {

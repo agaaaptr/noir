@@ -152,11 +152,14 @@ export async function runConsolidation(
   // Candidates: deterministic selection (no clustering LLM). Recent first;
   // never consolidate an existing lesson; honor the optional type filter.
   // `opts.types` overrides the configured filter; `opts.limit` caps the set.
-  const candidates = gatherCandidates(
-    store,
-    opts?.types ?? cons.types,
-    Math.min(opts?.limit ?? DEFAULT_CONSOLIDATE_LIMIT, MAX_CONSOLIDATE_LIMIT),
-  );
+  // Clamp BOTH bounds: a huge limit must not hydrate every observation into one
+  // prompt, and a negative/NaN/0 limit must not truncate to nothing/bizarre.
+  const rawLimit = opts?.limit ?? DEFAULT_CONSOLIDATE_LIMIT;
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(Math.floor(rawLimit), MAX_CONSOLIDATE_LIMIT)
+      : DEFAULT_CONSOLIDATE_LIMIT;
+  const candidates = gatherCandidates(store, opts?.types ?? cons.types, limit);
   if (candidates.length === 0) {
     appendConsolidationMiss(store, {
       ts: Date.now(),
