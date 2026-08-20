@@ -431,7 +431,14 @@ export function createIndexer(opts: IndexerOptions): Indexer {
   function deleteChunks(ids: string[]): void {
     for (const id of ids) {
       store.deleteDoc(id);
-      store.deleteVec(id);
+      // Best-effort vector purge: on a vec-unavailable host (sqlite-vec native
+      // binary absent), deleteVec throws — the docs row is gone, and the index
+      // must NOT crash the whole reconcile/forget/reindex for a missing vec.
+      try {
+        store.deleteVec(id);
+      } catch {
+        /* vec store unavailable — the doc row is already removed */
+      }
     }
   }
 

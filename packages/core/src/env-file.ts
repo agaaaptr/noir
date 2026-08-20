@@ -27,8 +27,13 @@ const KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
  * These keys are refused + warned, preserving the "fills only UNSET keys" rule
  * for normal token vars.
  */
+// The `npm`/`COREPACK` alternatives use a `(?:$|_)` boundary, NOT a bare `$`:
+// an anchored alternation's `npm_` would match ONLY the literal string `npm_`
+// (never `npm_config_registry`), silently defeating the deny-list for real
+// descendant keys. The boundary admits both the exact names and every
+// `npm_*` / `COREPACK_*` descendant.
 const PROCESS_INJECTION_ENV_RE =
-  /^(NODE_OPTIONS|NODE_PATH|NODE_ICU_DATA|NODE_EXTRA_CA_CERTS|NODE_TLS_REJECT_UNAUTHORIZED|LD_PRELOAD|LD_LIBRARY_PATH|DYLD_INSERT_LIBRARIES|npm_config_|npm_|COREPACK_|ELECTRON_RUN_AS_NODE)$/;
+  /^(NODE_OPTIONS|NODE_PATH|NODE_ICU_DATA|NODE_EXTRA_CA_CERTS|NODE_TLS_REJECT_UNAUTHORIZED|LD_PRELOAD|LD_LIBRARY_PATH|DYLD_INSERT_LIBRARIES|ELECTRON_RUN_AS_NODE|npm|COREPACK)(?:$|_)/;
 
 export interface EnvFileParseResult {
   readonly vars: Record<string, string>;

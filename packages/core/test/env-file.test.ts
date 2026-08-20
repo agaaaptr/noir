@@ -2,7 +2,7 @@
 // precedence rule (real environment always wins; the file fills only unset
 // keys). All offline; the parser test matrix is copied from Node's documented
 // --env-file behavior so the dialect has an independent conformance oracle.
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -98,5 +98,32 @@ describe('loadNoirEnv — precedence + missing file', () => {
     writeFileSync(join(dir, '.noir', '.env'), 'CLICKUP_API_TOKEN=pk_fake\n', 'utf8');
     const { overlay } = loadNoirEnv(dir, {});
     expect(overlay).toEqual({ CLICKUP_API_TOKEN: 'pk_fake' });
+  });
+
+  it('refuses process-injection keys (exact names AND npm_/COREPACK_ descendants) with a warning', () => {
+    dir = mkdtempSync(join(tmpdir(), 'noir-env-deny-'));
+    mkdirSync(join(dir, '.noir'), { recursive: true });
+    writeFileSync(
+      join(dir, '.noir', '.env'),
+      [
+        'NODE_OPTIONS=--require=/tmp/evil.js',
+        'LD_PRELOAD=/tmp/evil.so',
+        'npm_config_registry=https://evil.example/',
+        'npm_loglevel=debug',
+        'COREPACK_NPM_REGISTRY=https://evil.example/',
+        'CLICKUP_API_TOKEN=pk_fake',
+      ].join('\n'),
+      'utf8',
+    );
+    // 0600 so the only warnings are the deny-list refusals (no permission advisory).
+    chmodSync(join(dir, '.noir', '.env'), 0o600);
+    const { overlay, warnings } = loadNoirEnv(dir, {});
+    // All five injection keys are refused + warned; the benign token var passes.
+    expect(overlay).toEqual({ CLICKUP_API_TOKEN: 'pk_fake' });
+    expect(warnings.length).toBe(5);
+    expect(warnings.join('\n')).toMatch(/NODE_OPTIONS/);
+    expect(warnings.join('\n')).toMatch(/LD_PRELOAD/);
+    expect(warnings.join('\n')).toMatch(/npm_config_registry/);
+    expect(warnings.join('\n')).toMatch(/COREPACK_NPM_REGISTRY/);
   });
 });
