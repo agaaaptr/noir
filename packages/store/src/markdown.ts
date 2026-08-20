@@ -66,6 +66,10 @@ export async function exportMarkdown(
   mkdirSync(dir, { recursive: true });
   const written: string[] = [];
   for (const r of rows) {
+    // Defense-in-depth: ids are internally generated (sha256#chunk / UUID), but
+    // a docs-row id carrying `..` or `/` would escape the export dir or create a
+    // nested path. Skip unsafe ids rather than writing outside `dir`.
+    if (!/^[A-Za-z0-9._:#@+-]+$/.test(r.id)) continue;
     const p = join(dir, `${r.id}.md`);
     const proposed = `---\nid: ${r.id}\nsource: ${r.source}\n---\n\n${r.content}\n`;
     if (!resolveAndWrite(p, `${r.id}.md`, proposed, conflict)) continue;

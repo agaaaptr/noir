@@ -59,7 +59,12 @@ export function parseEnvFile(text: string): EnvFileParseResult {
       // unquoted when the value BOTH started and ended with the quote, so a
       // trailing comment broke the unquote and left the quotes (and comment) in.
       const close = value.indexOf(first, 1);
-      value = close === -1 ? value.slice(1) : value.slice(1, close);
+      if (close === -1) {
+        // Unterminated quote — malformed (Node's --env-file would error).
+        warnings.push(`.noir/.env:${i + 1}: unterminated quoted value — skipped`);
+        continue;
+      }
+      value = value.slice(1, close);
     } else {
       const hash = value.indexOf('#');
       if (hash !== -1) value = value.slice(0, hash).trimEnd();

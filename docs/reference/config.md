@@ -125,7 +125,8 @@ Never pass tokens as CLI arguments (visible in process lists). See
 
 ## Honest notes
 
-- `rules.*`, `update.display`, `context.roots`, `context.budgetTokens`, and `daemon.port`
+- `rules.enabled`, `update.display`, `context.roots`, `context.budgetTokens`, and `daemon.port`
   are parsed + validated but have no live consumer yet — declaring them now avoids
   schema churn when their feature ships. Do not rely on them.
+- `rules.lengthBudgetKb` IS read: `noir doctor`'s RULES.md budget check.
 - `run.*` is new in 1.12.0 (host profiles). All other blocks predate it.
