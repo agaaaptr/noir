@@ -59,19 +59,29 @@ function mockFetch(archiveBuf: Buffer, sha256: string, archiveUrlEnd: string) {
 }
 
 /** Fake exec seam: pretends extraction succeeded by writing bin/node & bin/npm
- *  into the dest dir. Lets provisionManagedNode proceed without real tar. */
+ *  into the dest dir. Lets provisionManagedNode proceed without real tar.
+ *
+ *  Mirrors BOTH exec calls `extractNode` makes:
+ *   1. LIST (assertNoTraversal): `tar -tzf <tmp-basename>` / `unzip -Z1 <tmp>`
+ *      → return a canned listing and create NOTHING (the prior mock built a tree
+ *      under the last ARG here, which for the list call is the RELATIVE tmp
+ *      basename → it wrote `.archive-<pid>-<ts>.tmp/…` into the repo root and
+ *      never cleaned it).
+ *   2. EXTRACT: `tar -xzf <tmp> -C <destDir>` → build the tree under the exec
+ *      `cwd` (which is destDir), mirroring the real tar's `node-v…/` subdir so
+ *      the flatten step is exercised. */
 function fakeExecThatExtracts(version: string) {
   return vi.fn(
     async (
       _cmd: string,
-      _args: string[],
-      _opts: { cwd?: string; env?: NodeJS.ProcessEnv; timeoutMs?: number },
+      args: string[],
+      opts: { cwd?: string; env?: NodeJS.ProcessEnv; timeoutMs?: number },
     ) => {
-      // The real tar extracts into a `node-v<version>-<os>-<arch>/` subdir,
-      // and provisionManagedNode flattens it into destDir. To exercise that
-      // flatten step, mirror the same layout here.
-      const destDir = _args[_args.length - 1] ?? '';
-      // For tar/unzip we pass destDir as the last arg (see implementation).
+      if (args[0] === '-tzf' || args[0] === '-Z1') {
+        // Listing call — canned entry, no filesystem writes.
+        return { code: 0, stdout: `node-v${version}-fakeos-fakearch\n`, stderr: '' };
+      }
+      const destDir = opts.cwd ?? '';
       const extractedRoot = join(destDir, `node-v${version}-fakeos-fakearch`);
       mkdirSync(join(extractedRoot, 'bin'), { recursive: true });
       writeFileSync(join(extractedRoot, 'bin', 'node'), '#!/bin/sh\necho fake-node\n');

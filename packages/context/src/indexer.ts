@@ -758,8 +758,11 @@ export function createIndexer(opts: IndexerOptions): Indexer {
     if (ownerKey === null) return null;
     // Resolve the path key back to an absolute path the same way indexPaths
     // does (`base` is the indexer's `opts.root ?? process.cwd()`). POSIX-form
-    // the result to match the on-disk key separator.
+    // the result to match the on-disk key separator. Confine the READ the same
+    // way writes are confined — a corrupted/foreign registry entry must never
+    // read a file outside the project root.
     const abs = keyAbs(ownerKey);
+    if (!isWithinRoot(abs)) return null;
     let content: string;
     try {
       content = readFileSync(abs, 'utf8');

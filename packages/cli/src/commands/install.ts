@@ -219,22 +219,23 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
         process.stdout.write(
           `${JSON.stringify({ ok: true, data: { dismissed: false, version: null } })}\n`,
         );
-        return;
+      } else {
+        info('No install record found; nothing to dismiss.');
       }
-      info('No install record found; nothing to dismiss.');
-      return;
+      if (opts.list !== true) return; // --dismiss alone; --list continues below.
+    } else {
+      const dismissed = new Set(rec.dismissedVersions ?? []);
+      if (!dismissed.has(NOIR_VERSION)) dismissed.add(NOIR_VERSION);
+      writeInstallRecord({ ...rec, dismissedVersions: [...dismissed] });
+      if (opts.json === true) {
+        process.stdout.write(
+          `${JSON.stringify({ ok: true, data: { dismissed: true, version: NOIR_VERSION } })}\n`,
+        );
+      } else {
+        success(`Migration banner dismissed for ${NOIR_VERSION}.`);
+      }
+      if (opts.list !== true) return; // --dismiss alone is done; --list continues below.
     }
-    const dismissed = new Set(rec.dismissedVersions ?? []);
-    if (!dismissed.has(NOIR_VERSION)) dismissed.add(NOIR_VERSION);
-    writeInstallRecord({ ...rec, dismissedVersions: [...dismissed] });
-    if (opts.json === true) {
-      process.stdout.write(
-        `${JSON.stringify({ ok: true, data: { dismissed: true, version: NOIR_VERSION } })}\n`,
-      );
-      return;
-    }
-    success(`Migration banner dismissed for ${NOIR_VERSION}.`);
-    if (opts.list !== true) return; // --dismiss alone is done; --list continues below.
   }
 
   if (opts.list === true) {
@@ -306,17 +307,10 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
   }
   installSpin.succeed(`Installed noir ${result.version}`);
 
-  // S9 --json: emit the canonical {ok:true,data} success envelope on stdout (the
-  // diagnostics below go to stderr). The --uninstall-prev migration step above
-  // already ran; the envelope carries the install result a script would consume.
-  if (opts.json === true) {
-    process.stdout.write(
-      `${JSON.stringify({ ok: true, data: { version: result.version, runtimeSource: result.runtimeSource } })}\n`,
-    );
-    return;
-  }
-
-  info(`Installed native: ${result.version}.`);
+  // Migration step runs FIRST, in BOTH modes — the --json early-return below
+  // must not skip it (a scripted/CI migration relying on --uninstall-prev would
+  // otherwise silently leave the stale install in place while reporting success).
+  // Its diagnostics go to stderr (warn/success), which --json leaves untouched.
   if (plan.prevUninstallCmd && opts.uninstallPrev !== true) {
     warn(`To finish the migration, uninstall the previous install: ${plan.prevUninstallCmd}`);
     warn(
@@ -327,6 +321,16 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
     if (code === 0) success('Previous install removed.');
     else warn('Previous install NOT removed (non-zero exit). You can remove it manually.');
   }
+
+  // S9 --json: emit the canonical {ok:true,data} success envelope on stdout.
+  if (opts.json === true) {
+    process.stdout.write(
+      `${JSON.stringify({ ok: true, data: { version: result.version, runtimeSource: result.runtimeSource } })}\n`,
+    );
+    return;
+  }
+
+  info(`Installed native: ${result.version}.`);
   // Claude Code #41806/#27910 mitigation: the old npm bin may still resolve
   // first in $PATH after migration (the shell hashes command paths, and a
   // stale global install can shadow ~/.noir/bin). Hint the user to refresh.

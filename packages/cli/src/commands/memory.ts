@@ -205,7 +205,9 @@ export async function memoryRecall(opts: MemoryRecallOptions): Promise<void> {
       const result = await engines.memory.recall(opts.query, {
         ...(limit === undefined ? {} : { limit }),
       });
-      const data = { query: opts.query, hits: result, degraded: false };
+      // This branch runs because the daemon is DOWN — the in-process read-only
+      // fallback is by definition a degraded (read-only) path; report it.
+      const data = { query: opts.query, hits: result, degraded: true };
       if (opts.json === true) {
         process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
         return;
