@@ -212,37 +212,35 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
   // version. Idempotent (no duplicate entries). Typically combined with
   // `--list`; works standalone too. Requires an existing install record —
   // if there's none, there's nothing to dismiss (no banner was shown).
+  // Track the dismiss outcome so `--dismiss --list --json` folds it into the
+  // SINGLE list envelope — never two JSON documents on stdout.
+  let dismissOutcome: { dismissed: boolean; version: string | null } | undefined;
   if (opts.dismiss === true) {
     const rec = readInstallRecord();
     if (!rec) {
-      if (opts.json === true) {
-        process.stdout.write(
-          `${JSON.stringify({ ok: true, data: { dismissed: false, version: null } })}\n`,
-        );
-      } else {
-        info('No install record found; nothing to dismiss.');
-      }
-      if (opts.list !== true) return; // --dismiss alone; --list continues below.
+      dismissOutcome = { dismissed: false, version: null };
+      if (!opts.json) info('No install record found; nothing to dismiss.');
     } else {
       const dismissed = new Set(rec.dismissedVersions ?? []);
       if (!dismissed.has(NOIR_VERSION)) dismissed.add(NOIR_VERSION);
       writeInstallRecord({ ...rec, dismissedVersions: [...dismissed] });
-      if (opts.json === true) {
-        process.stdout.write(
-          `${JSON.stringify({ ok: true, data: { dismissed: true, version: NOIR_VERSION } })}\n`,
-        );
-      } else {
-        success(`Migration banner dismissed for ${NOIR_VERSION}.`);
-      }
-      if (opts.list !== true) return; // --dismiss alone is done; --list continues below.
+      dismissOutcome = { dismissed: true, version: NOIR_VERSION };
+      if (!opts.json) success(`Migration banner dismissed for ${NOIR_VERSION}.`);
     }
+  }
+
+  // --dismiss alone (no --list): emit the single result now.
+  if (opts.dismiss === true && opts.list !== true) {
+    if (opts.json) process.stdout.write(`${JSON.stringify({ ok: true, data: dismissOutcome })}\n`);
+    return;
   }
 
   if (opts.list === true) {
     const detected = await detectInstallMethods(process.env);
-    const jsonOutput = { ok: true, data: { detected } };
-    if (opts.json === true) {
-      process.stdout.write(`${JSON.stringify(jsonOutput)}\n`);
+    if (opts.json) {
+      process.stdout.write(
+        `${JSON.stringify({ ok: true, data: { ...(dismissOutcome ?? {}), detected } })}\n`,
+      );
       return;
     }
     info('Detected installs:');

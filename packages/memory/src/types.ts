@@ -327,6 +327,15 @@ export interface MemoryEngine {
    * BM25-only when the embedder is unavailable.
    */
   recall(query: string, opts?: RecallOptions): Promise<MemoryHit[]>;
+  /**
+   * Hybrid recall WITH the per-call outcome signal. The wire (daemon
+   * `memory_recall`, CLI in-process fallback) uses this so a BM25-only
+   * degradation is honestly reported instead of always surfacing degraded:false.
+   */
+  recallWithMeta(
+    query: string,
+    opts?: RecallOptions,
+  ): Promise<{ hits: MemoryHit[]; degraded: boolean; mode: 'hybrid' | 'bm25-only' }>;
   /** Instant BM25-only lookup scoped to `source:'memory'` (no embed cost). */
   search(query: string, opts?: SearchOptions): Promise<MemoryHit[]>;
   /** Per-session rollups from KV `memory:sessions`. */

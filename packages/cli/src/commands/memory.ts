@@ -202,17 +202,18 @@ export async function memoryRecall(opts: MemoryRecallOptions): Promise<void> {
   }
   if (!probe.running) {
     await withInProcessRead(opts, async (engines) => {
-      const result = await engines.memory.recall(opts.query, {
+      const { hits, degraded, mode } = await engines.memory.recallWithMeta(opts.query, {
         ...(limit === undefined ? {} : { limit }),
       });
-      // This branch runs because the daemon is DOWN — the in-process read-only
-      // fallback is by definition a degraded (read-only) path; report it.
-      const data = { query: opts.query, hits: result, degraded: true };
+      // Honest per-call outcome: this branch runs because the daemon is DOWN
+      // (read-only fallback), AND the recall itself reports its own degraded
+      // (BM25-only) state — both feed the rendered flag.
+      const data = { query: opts.query, hits, degraded, mode };
       if (opts.json === true) {
         process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
         return;
       }
-      renderRecall(data.query, result, data.degraded, opts);
+      renderRecall(data.query, data.hits, data.degraded, opts);
     });
     return;
   }

@@ -307,15 +307,22 @@ export class MemoryEngineImpl implements MemoryEngine {
 
   /** @inheritDoc MemoryEngine.recall */
   async recall(query: string, opts?: RecallOptions): Promise<MemoryHit[]> {
+    const { hits } = await this.recallWithMeta(query, opts);
+    return hits;
+  }
+
+  /** @inheritDoc MemoryEngine.recallWithMeta */
+  async recallWithMeta(
+    query: string,
+    opts?: RecallOptions,
+  ): Promise<{ hits: MemoryHit[]; degraded: boolean; mode: 'hybrid' | 'bm25-only' }> {
     // Hybrid (t3): BM25 ∪ kNN fused by RRF (k=60, weights [0.5,0.5]) scoped to
     // source:'memory', + cheap regex entity-boost, hydrated to FULL content from
     // the authoritative KV row. Degrades to BM25-only when the
     // embedder is unavailable (F8) — `recallMemory` carries the `degraded` /
-    // `mode` signal; the public {@link MemoryEngine.recall} contract returns the
-    // hits. Read-only against the injected store; not serialized (concurrent
-    // recalls are safe — they never mutate state).
-    const { hits } = await recallMemory({ store: this.store, embed: this.embed }, query, opts);
-    return hits;
+    // `mode` signal. Read-only against the injected store; not serialized
+    // (concurrent recalls are safe — they never mutate state).
+    return recallMemory({ store: this.store, embed: this.embed }, query, opts);
   }
 
   // -------------------------------------------------------------------------

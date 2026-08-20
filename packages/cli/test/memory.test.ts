@@ -45,9 +45,10 @@ vi.mock('../src/daemon-client.js', () => ({
   withInProcessRead: vi.fn(async (_opts: unknown, fn: (c: unknown) => Promise<unknown>) =>
     fn({
       memory: {
-        // `memoryRecall`'s fallback treats the engine recall result AS the
-        // hits array (`data = { query, hits: result }`), so return an array.
+        // `memoryRecall`'s fallback now uses `recallWithMeta` (`{hits, degraded,
+        // mode}`) — mirror the engine contract.
         recall: vi.fn(async () => []),
+        recallWithMeta: vi.fn(async () => ({ hits: [], degraded: true, mode: 'bm25-only' as const })),
         sessions: vi.fn(() => []),
       },
       context: {},

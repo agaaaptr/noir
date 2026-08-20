@@ -53,6 +53,9 @@ const MEMORY_SOURCE = 'memory';
 /** Default recall hit cap (mirrors Store.searchFt + the S6 retriever default). */
 const DEFAULT_RECALL_LIMIT = 10;
 
+/** Hard cap on a single recall — a huge caller limit must not hydrate every row. */
+const MAX_RECALL_LIMIT = 200;
+
 /**
  * Minimum token length to count as an entity. Filters noise from tiny tokens
  * (`ts`, `a`, `an`, `is`) that would otherwise substring-match half the corpus.
@@ -250,7 +253,14 @@ export async function recallMemory(
   opts?: RecallOptions,
 ): Promise<RecallMemoryResult> {
   const store = deps.store;
-  const limit = opts?.limit ?? DEFAULT_RECALL_LIMIT;
+  // Clamp the hit cap on BOTH bounds (mirrors Store.searchFt) — a huge limit
+  // must not materialize every row, and a negative/NaN/0 limit must not reach
+  // `hits.slice(0, limit)` as a no-op.
+  const rawLimit = opts?.limit ?? DEFAULT_RECALL_LIMIT;
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(Math.floor(rawLimit), MAX_RECALL_LIMIT)
+      : DEFAULT_RECALL_LIMIT;
 
   // --- BM25 leg (always attempted; the cheap, always-available signal) ---
   let ftsHits: FtsHit[] = [];

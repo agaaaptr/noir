@@ -655,6 +655,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
         inputSchema: {
           query: z
             .string()
+            .min(1)
             .describe('Natural-language or identifier query (e.g. "ContextEngine").'),
           limit: z
             .number()
@@ -832,7 +833,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
         description:
           'Hybrid recall over cross-session memory: BM25 ∪ cosine-kNN fused by Reciprocal Rank Fusion (k=60) scoped to source:"memory", plus a cheap entity-boost. Returns ranked observations with FULL content (hydrated from the authoritative KV row — never the truncated FTS snippet). Degrades to BM25-only when the embedder is unavailable.',
         inputSchema: {
-          query: z.string().describe('Natural-language or identifier query.'),
+          query: z.string().min(1).describe('Natural-language or identifier query.'),
           limit: z.number().int().positive().optional().describe('Max results (default 10).'),
           type: z.string().optional().describe('Filter to a single observation type.'),
           sessionId: z.string().optional().describe('Filter to a single host session.'),
@@ -840,8 +841,12 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       },
       async ({ query, limit, type, sessionId }) => {
         try {
-          const results = await memory.recall(query, { limit, type, sessionId });
-          return textResult({ ok: true, results });
+          const { hits, degraded, mode } = await memory.recallWithMeta(query, {
+            limit,
+            type,
+            sessionId,
+          });
+          return textResult({ ok: true, results: hits, degraded, mode });
         } catch (err) {
           return textResult({ ok: false, degraded: true, error: errorMessage(err) });
         }
@@ -854,7 +859,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
         description:
           'Instant BM25-only lookup over cross-session memory (no embedding cost). Returns ranked observations with FULL content, scoped to source:"memory". Use memory_recall for the hybrid (vector + BM25) path.',
         inputSchema: {
-          query: z.string().describe('Natural-language or identifier query.'),
+          query: z.string().min(1).describe('Natural-language or identifier query.'),
           limit: z.number().int().positive().optional().describe('Max results (default 10).'),
         },
       },
