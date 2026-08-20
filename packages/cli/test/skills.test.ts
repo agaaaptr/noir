@@ -191,8 +191,10 @@ describe('noir skills lint', () => {
       expect(Array.isArray(s.errors)).toBe(true);
       expect(Array.isArray(s.warnings)).toBe(true);
     }
-    // The gate currently reports the un-migrated pack (missing metadata) as
-    // errored — that's the expected pre-content-rewrite state. `ok` reflects it.
+    // The shipped pack validates clean (0 errored), so the clean path emits
+    // ok:true + exit 0. `ok` is asserted boolean (the failure path — exit 1 +
+    // {ok:false,error} — is exercised by the code contract in skillsLint, but a
+    // forced-error test would need to mock @noir-ai/skills).
     expect(typeof env.ok).toBe('boolean');
   });
 

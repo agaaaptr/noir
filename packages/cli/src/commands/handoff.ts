@@ -37,14 +37,14 @@ import {
   hostLaunchDirective,
   resolveAdapter,
 } from '@noir-ai/adapters';
-import { loadProjectInfo, NOIR_DIR, resolveArtifactPath } from '@noir-ai/core';
+import { loadProjectInfo, NOIR_DIR, type ProjectInfo, resolveArtifactPath } from '@noir-ai/core';
 import {
   type DaemonClientOptions,
   type DaemonProbe,
   probeDaemon,
   withRunningDaemon,
 } from '../daemon-client.js';
-import { type CliOptions, info } from '../output.js';
+import { type CliOptions, EXIT, fail, info } from '../output.js';
 import { gatherStatusPayload, tryTool } from './status.js';
 import { PHASE_SKILL, skillFor } from './task.js';
 
@@ -359,8 +359,14 @@ async function probeOnly(opts: HandoffOptions): Promise<DaemonProbe> {
  */
 export async function handoff(opts: HandoffOptions): Promise<void> {
   // In-process project info — no daemon round-trip. Uninitialized → exit 1
-  // (same as status / every other command).
-  const project = loadProjectInfo(process.cwd());
+  // (same as status / every other command). Route through fail() so --json
+  // emits the canonical {ok:false,error} envelope (not empty stdout).
+  let project: ProjectInfo;
+  try {
+    project = loadProjectInfo(process.cwd());
+  } catch {
+    fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
+  }
   const host = project.config.host;
 
   // Snapshot — the SAME path `noir status` uses (single source). gatherStatusPayload

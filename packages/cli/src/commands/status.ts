@@ -41,7 +41,7 @@ import {
   probeDaemon,
   withRunningDaemon,
 } from '../daemon-client.js';
-import { type CliOptions, definitionList, log, tip } from '../output.js';
+import { type CliOptions, definitionList, EXIT, fail, log, tip } from '../output.js';
 import { badge } from '../theme.js';
 import { DEFAULT_UPDATE_CONFIG, runAsyncUpdateCheck } from './update.js';
 
@@ -329,9 +329,15 @@ function renderHuman(p: StatusPayload, opts: CliOptions): void {
  */
 export async function gatherStatusPayload(opts: StatusOptions): Promise<StatusPayload> {
   // In-process project info — no daemon round-trip. Uninitialized → exit 1
-  // (propagated; both `status` and `handoff` treat an uninitialized project as a
-  // hard error — there is no project to snapshot).
-  const project = loadProjectInfo(process.cwd());
+  // (both `status` and `handoff` treat an uninitialized project as a hard error
+  // — there is no project to snapshot). Route through fail() so --json emits the
+  // canonical {ok:false,error} envelope (a plain Error would leave stdout empty).
+  let project: ProjectInfo;
+  try {
+    project = loadProjectInfo(process.cwd());
+  } catch {
+    fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
+  }
   // Probe — never starts a daemon. A down daemon is reported honestly.
   const probe = await probeDaemon(opts);
 

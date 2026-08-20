@@ -274,22 +274,41 @@ export async function skillsLint(opts: SkillsOptions): Promise<void> {
   const warned = skills.filter((s) => s.warnings.length > 0 && s.errors.length === 0);
 
   const data = { count: skills.length, errored: errored.length, skills };
-  if (opts.json === true) {
-    process.stdout.write(`${JSON.stringify({ ok: errored.length === 0, data })}\n`);
-    return;
-  }
 
-  if (errored.length === 0) {
-    log(`noir skills lint — ${skills.length} skills, all validate clean.`, opts);
-  } else {
+  // Exit-1 contract (the gate must FAIL, not silently pass): a lint error
+  // produces a non-zero exit + the canonical S9 failure envelope under --json
+  // (`{ok:false,error:{code,message}}` — no ad-hoc `{ok:false,data}` shape).
+  if (errored.length > 0) {
+    const message = `skills lint: ${errored.length} skill${errored.length === 1 ? '' : 's'} failed validation`;
+    if (opts.json === true) {
+      process.stdout.write(
+        `${JSON.stringify({ ok: false, error: { code: EXIT.ERROR, message }, data })}\n`,
+      );
+      process.exitCode = EXIT.ERROR;
+      return;
+    }
     warn(
       `noir skills lint — ${errored.length} skill${errored.length === 1 ? '' : 's'} FAIL validation:`,
       opts,
     );
+    for (const s of errored) {
+      for (const e of s.errors) warn(`  ${s.name}: ${e}`, opts);
+    }
+    if (warned.length > 0) {
+      info(`  ${warned.length} skill${warned.length === 1 ? '' : 's'} carry lint warnings:`, opts);
+      for (const s of warned) {
+        for (const w of s.warnings) info(`  ${s.name}: ${w}`, opts);
+      }
+    }
+    fail(EXIT.ERROR, message, opts);
   }
-  for (const s of errored) {
-    for (const e of s.errors) warn(`  ${s.name}: ${e}`, opts);
+
+  // Clean: exit 0.
+  if (opts.json === true) {
+    process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
+    return;
   }
+  log(`noir skills lint — ${skills.length} skills, all validate clean.`, opts);
   if (warned.length > 0) {
     info(`  ${warned.length} skill${warned.length === 1 ? '' : 's'} carry lint warnings:`, opts);
     for (const s of warned) {

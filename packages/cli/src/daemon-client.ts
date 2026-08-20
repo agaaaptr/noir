@@ -193,10 +193,17 @@ async function resolveDaemon(
 ): Promise<{ url: string; stop: () => Promise<void> }> {
   // Lazy default: when the caller didn't inject a project (the common case from
   // command modules, which only forward --json/--verbose), resolve one here.
-  // Deliberately OUTSIDE the try below: an uninitialized project (`loadProjectInfo`
-  // throws "Run `noir init` first") is a usage error, not a daemon-down — letting
-  // it propagate as a plain Error surfaces exit 1 with that hint instead of exit 4.
-  const project = opts.project ?? loadProjectInfo(process.cwd());
+  // An uninitialized project (`loadProjectInfo` throws "Run `noir init` first")
+  // is a USAGE error (exit 1), not a daemon-down (exit 4) — so route it through
+  // fail() BEFORE the ensureDaemonRunning try, which maps errors to exit 4. This
+  // keeps exit-1 semantics AND emits the canonical {ok:false,error} envelope on
+  // stdout under --json (a plain Error would leave stdout EMPTY).
+  let project: ProjectInfo;
+  try {
+    project = opts.project ?? loadProjectInfo(process.cwd());
+  } catch {
+    fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
+  }
   const idleTimeoutSec = opts.idleTimeoutSec ?? project.config.daemon.idleTimeoutSec;
   try {
     const ensured = await ensureDaemonRunning({ project, idleTimeoutSec });
@@ -437,7 +444,12 @@ export async function withInProcessRead<T>(
   opts: DaemonClientOptions,
   fn: (engines: InProcessEngines) => Promise<T>,
 ): Promise<T> {
-  const project = opts.project ?? loadProjectInfo(process.cwd());
+  let project: ProjectInfo;
+  try {
+    project = opts.project ?? loadProjectInfo(process.cwd());
+  } catch {
+    fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
+  }
   const store = await openStore({ projectId: project.id, root: project.root, readonly: true });
   try {
     // READ-ONLY handle: `storeDegraded` is threaded so status/degraded flags are
