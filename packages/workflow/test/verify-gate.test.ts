@@ -198,6 +198,34 @@ describe('verify gate — passing evidence', () => {
   });
 });
 
+describe('verify gate — deep-merged partial config', () => {
+  it('a PARTIAL verify config (no retryBudget) still defaults retryBudget to 2', async () => {
+    const store = await openStore({ projectId: 'p', root });
+    try {
+      // Only `required` is set — the constructor must deep-merge the default
+      // retryBudget (a shallow merge would leave it undefined and make the
+      // budget check misfire on the FIRST failure).
+      const partial: WorkflowGateConfig = {
+        prd: { mandatoryFor: ['feature', 'epic'] },
+        verify: { required: { feature: true } } as never,
+      } as never;
+      const engine = new WorkflowEngine(store, root, 'p', partial);
+      await toVerifying(engine, 't-partial');
+      // First hard-fail must be evidence-failed (not budget-exhausted) — proving
+      // the default retryBudget (2) survived the deep-merge.
+      try {
+        await engine.advance('t-partial', { evidence: failHardEvidence() });
+        expect.fail('should have thrown');
+      } catch (err) {
+        expect(err).toBeInstanceOf(VerifyGateError);
+        expect((err as VerifyGateError).kind).toBe('evidence-failed');
+      }
+    } finally {
+      await store.close();
+    }
+  });
+});
+
 describe('verify gate — evidence-failed', () => {
   it('required + failed HARD ⇒ throws evidence-failed, `failed` recorded WITH evidence, no transition', async () => {
     const store = await openStore({ projectId: 'p', root });

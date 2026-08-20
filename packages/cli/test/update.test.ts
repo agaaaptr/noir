@@ -70,6 +70,28 @@ describe('buildUpdateTarget (pure)', () => {
     });
     expect(t.isUpgrade).toBe(false);
   });
+  it('a pinned --spec (with a leading `v`) is the guard target, not latestKnown', () => {
+    // current 1.10.0, registry 1.12.0, but --spec v1.9.0 is a DOWNGRADE — the
+    // guards must evaluate the concrete spec, not the registry's latest.
+    const t = buildUpdateTarget({
+      method: 'native',
+      channel: 'latest',
+      spec: 'v1.9.0',
+      currentVersion: '1.10.0',
+      latestKnown: '1.12.0',
+    });
+    expect(t.isUpgrade).toBe(false);
+    // And `v1.5.0` (a leading v) trips the minVersion floor.
+    const below = buildUpdateTarget({
+      method: 'native',
+      channel: 'latest',
+      spec: 'v1.5.0',
+      currentVersion: '1.10.0',
+      latestKnown: '1.12.0',
+      minVersion: '1.6.0',
+    });
+    expect(below.belowMinVersion).toBe(true);
+  });
   it('isUpgrade compares semantically, not lexically (1.10.0 > 1.9.0)', () => {
     // A naive string comparison would call 1.10.0 < 1.9.0 ('1.1' < '1.9'). The
     // semver comparison must treat numeric components as numbers.

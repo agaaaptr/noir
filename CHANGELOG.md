@@ -93,7 +93,7 @@
 - **Structural quality gate** in `validateSkill`: metadata presence, required sections, line budget (<500), one-level refs, WHAT+WHEN descriptions.
 - **`noir skills lint`** CLI — per-skill errors + warnings.
 - **Offline evals harness:** `evals/evals.json` (agentskills.io format) + vitest runner, 2 shipped example evals (noir-tdd, noir-debug).
-- ClickUp integration: STEP-0 auth gate, 12 API pitfalls with corrective patterns (subtasks, pagination, custom task IDs, attachments, status values, rate limits, auth header), verb dispatch grammar (`fetch|update|create|comment|batch`), attachment handling.
+- ClickUp integration: STEP-0 auth gate, 14 API pitfalls with corrective patterns (subtasks, pagination, custom task IDs, attachments, status values, rate limits, auth header), verb dispatch grammar (`fetch|update|create|comment|batch`), attachment handling.
 
 ### Changed
 - **All 26 builtins are full playbooks** (zero stubs). Every skill: WHAT+WHEN trigger-first description with boundary, when_to_use section, numbered procedure, verification checklist, notes, and "when done → next skill" footer.

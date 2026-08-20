@@ -28,6 +28,29 @@ describe('validateSlicePlan', () => {
     expect(validateSlicePlan(validSlice)).toMatchObject({ ok: true, errors: [] });
   });
 
+  it('rejects a missing/non-array top-level slices (schema error, not a crash)', () => {
+    expect(validateSlicePlan({} as never).ok).toBe(false);
+    expect(validateSlicePlan({ ...validSlice, slices: null as never }).ok).toBe(false);
+  });
+
+  it('rejects a null/non-object slice element (schema error, not a crash)', () => {
+    const plan = { ...validSlice, slices: [null as never] };
+    const r = validateSlicePlan(plan);
+    expect(r.ok).toBe(false);
+    expect(r.errors.join('\n')).toMatch(/slice element must be an object/);
+  });
+
+  it('rejects a non-object dependency element (schema error, not a crash)', () => {
+    const plan = {
+      ...validSlice,
+      slices: [{ ...validSlice.slices[0], dependsOn: ['s1'] as never }],
+    };
+    const r = validateSlicePlan(plan);
+    // The string dep is filtered out (no crash); the schema error surfaces via
+    // the unknown-id path (the element has no .id to match).
+    expect(r.errors.join('\n')).not.toMatch(/is not iterable|Cannot read/);
+  });
+
   it('rejects duplicate slice ids', () => {
     const plan = { ...validSlice, slices: [validSlice.slices[0], validSlice.slices[0]] };
     const r = validateSlicePlan(plan);

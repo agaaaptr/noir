@@ -40,14 +40,14 @@ describe('release pipeline workflows (offline structural lint)', () => {
   describe('.github/workflows/ci.yml', () => {
     const yaml = readWorkflow('ci.yml');
 
-    it('runs the verify matrix on ubuntu and macos (Windows excluded — better-sqlite3@13 source-only, node-gyp/VS 18 incompatibility on the runner)', () => {
+    it('runs the verify matrix on ubuntu and macos (Windows excluded — documented native-install gaps, not a prebuilt-binary issue)', () => {
       // The verify job's matrix is the first `os: [...]` block in the file.
       // Extract just that block so the install-smoke matrix (which also lists
       // OSes) can't satisfy this assertion by accident.
-      // Windows is excluded from verify because better-sqlite3@13.0.1 is
-      // source-only (`node-gyp rebuild`) and node-gyp@11.1.0 cannot detect
-      // Visual Studio 18 on the `windows-latest` runner. Windows is still
-      // validated by the install-smoke and node-provision-smoke jobs.
+      // Windows is excluded from verify (and the smoke jobs below) because of
+      // the documented native-install gaps + the win32-skipping chmod unit test
+      // — NOT a prebuilt-binary issue (better-sqlite3@13 SHIPS win32 N-API
+      // prebuilds).
       const verifyBlock = yaml.split('install-smoke')[0] ?? '';
       const osMatch = verifyBlock.match(/os:\s*\[([^\]]+)\]/);
       expect(osMatch, 'verify matrix has an os: [...] list').not.toBeNull();
@@ -71,12 +71,12 @@ describe('release pipeline workflows (offline structural lint)', () => {
       expect(yaml).toContain('bash scripts/install.sh');
     });
 
-    it('install-smoke excludes Windows (better-sqlite3@13 source-only, needs VS Build Tools not on runner)', () => {
+    it('install-smoke excludes Windows (documented native-install gaps, not a prebuilt-binary issue)', () => {
       // The install-smoke matrix (and node-provision-smoke matrix) only
-      // includes ubuntu-latest and macos-latest. Windows is excluded because
-      // better-sqlite3@13.0.1 compiles from source on the runner
-      // (`node-gyp rebuild`, needs Visual Studio Build Tools). Re-add when
-      // a matching Windows prebuild ships.
+      // includes ubuntu-latest and macos-latest. Windows is excluded for the
+      // documented native-install gaps (npm.exe vs npm.cmd, `unzip` absent on
+      // stock Windows, install.ps1 parity, Scoop .js shim), NOT a source-compile
+      // limitation — better-sqlite3@13 ships win32 N-API prebuilds.
       const smokeBlock = yaml.split('install-smoke')[1] ?? '';
       const osP = smokeBlock.match(/os:\s*\[([^\]]+)\]/);
       expect(osP, 'smoke matrix has an os: [...] list').not.toBeNull();
@@ -98,7 +98,7 @@ describe('release pipeline workflows (offline structural lint)', () => {
       expect(yaml).toContain('needs: verify');
     });
 
-    it('node-provision-smoke runs on ubuntu and macos (Windows excluded: better-sqlite3 source-compile limitation)', () => {
+    it('node-provision-smoke runs on ubuntu and macos (Windows excluded: documented native-install gaps)', () => {
       const block = yaml.split('node-provision-smoke')[1] ?? '';
       // Windows is excluded from smoke matrices; only ubuntu + macos run.
       // See the comment block above install-smoke for the detailed explanation.

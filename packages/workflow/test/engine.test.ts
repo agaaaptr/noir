@@ -786,6 +786,28 @@ describe('WorkflowEngine', () => {
         await store.close();
       }
     });
+
+    it('a backward jump to a gate that was JUMPED OVER records it (observable checkpoint)', async () => {
+      const store = await openStore({ projectId, root });
+      try {
+        const engine = new WorkflowEngine(store, root, projectId);
+        await engine.startTask('task-1', 'x', 'full');
+        // Jump FORWARD from intake to verify — the spec/plan gates are JUMPED
+        // OVER and never fire.
+        const jumped = await engine.advance('task-1', { to: 'verify' });
+        expect(jumped.state).toBe('verifying');
+        expect(store.getState<GateResult[]>('audit:task-1') ?? []).toHaveLength(0);
+
+        // Jump BACK to spec — the spec gate NEVER fired, so it MUST now record
+        // (the suppression is conditional on the gate already being in the audit).
+        const back = await engine.advance('task-1', { to: 'spec' });
+        expect(back.state).toBe('specified');
+        const audit = store.getState<GateResult[]>('audit:task-1') ?? [];
+        expect(audit.filter((g) => g.phase === 'spec')).toHaveLength(1);
+      } finally {
+        await store.close();
+      }
+    });
   });
 
   // Debt-batch A — checkpoint save was vestigial (just bumped updatedAt,
