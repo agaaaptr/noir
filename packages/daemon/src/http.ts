@@ -14,6 +14,7 @@ import {
   clearDaemonRecord,
   DAEMON_MODE_ENV,
   type DaemonRecord,
+  readDaemonRecord,
   writeDaemonRecord,
 } from './lifecycle.js';
 import { buildMemoryEngine, resolveConsolidationCapability } from './memory-seam.js';
@@ -130,7 +131,12 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     if (req.method === 'GET' && req.url === '/health') {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(
-        JSON.stringify({ ok: true, pid, uptimeSec: Math.floor((Date.now() - startedAt) / 1000) }),
+        JSON.stringify({
+          ok: true,
+          pid,
+          projectId: opts.project.id,
+          uptimeSec: Math.floor((Date.now() - startedAt) / 1000),
+        }),
       );
       return;
     }
@@ -177,6 +183,10 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     // The detached child sets NOIR_DAEMON_MODE=detached so `daemon status`
     // reports honest ownership (foreground vs backgrounded). Default foreground.
     mode: process.env[DAEMON_MODE_ENV] === 'detached' ? 'detached' : 'foreground',
+    // Project isolation: the store is baked in for THIS project, so the record
+    // (and /health) carry the projectId so a caller for another project refuses
+    // to reuse it.
+    projectId: opts.project.id,
   };
   writeDaemonRecord(rec);
 
@@ -187,7 +197,11 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     }
     await new Promise<void>((r) => httpServer.close(() => r()));
     await daemonStore?.store.close().catch(() => undefined);
-    clearDaemonRecord();
+    // Only clear the record if it is OURS (the pid matches) — an old daemon
+    // that was slow to die after `noir daemon stop` (or a daemon another
+    // process is mid-restarting) must not have its record wiped by this one.
+    const rec = readDaemonRecord();
+    if (rec && rec.pid === pid) clearDaemonRecord();
   }
 
   for (const sig of ['SIGTERM', 'SIGINT'] as const) {

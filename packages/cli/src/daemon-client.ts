@@ -38,7 +38,7 @@ import {
   resolveGateConfig,
 } from '@noir-ai/daemon';
 import { createMemoryEngine, type MemoryEngine } from '@noir-ai/memory';
-import { openStore } from '@noir-ai/store';
+import { openStore, type Store } from '@noir-ai/store';
 import { WorkflowEngine } from '@noir-ai/workflow';
 import { EXIT, fail } from './bin.js';
 
@@ -165,6 +165,7 @@ export async function probeDaemon(opts: DaemonClientOptions = {}): Promise<Daemo
     const body = (await res.json().catch(() => null)) as {
       ok?: boolean;
       pid?: number;
+      projectId?: string;
       uptimeSec?: number;
     } | null;
     // PID-reuse guard (same invariant as @noir-ai/daemon ensure.ts isHealthy +
@@ -172,12 +173,32 @@ export async function probeDaemon(opts: DaemonClientOptions = {}): Promise<Daemo
     // carry OUR recorded pid — a missing or mismatched pid means a foreign
     // process holds the port; report NOT running.
     const pidOk = typeof body?.pid === 'number' && body.pid === rec.pid;
-    if (body?.ok !== true || !pidOk) {
+    // CROSS-PROJECT isolation: the daemon serves the store baked in at its
+    // start time. When the caller knows its project, a daemon whose /health
+    // projectId differs (or is absent — a pre-1.12 daemon) must NOT be treated
+    // as serving this project; report NOT running so the caller falls back to
+    // its in-process read (never silently reading/writing another project's
+    // store). The wrong-project daemon's record is left intact for its owner.
+    const expectedProject =
+      opts.project?.id ??
+      (() => {
+        try {
+          return loadProjectInfo(process.cwd()).id;
+        } catch {
+          return undefined; // uninitialized — no caller project to protect
+        }
+      })();
+    const projectOk =
+      expectedProject === undefined ||
+      (body?.projectId !== undefined && body.projectId === expectedProject);
+    if (body?.ok !== true || !pidOk || !projectOk) {
       if (opts.verbose)
         process.stderr.write(
           !pidOk
             ? 'noir: daemon probe: pid missing/mismatched (foreign process on recorded port)\n'
-            : 'noir: daemon probe: /health body not ok\n',
+            : !projectOk
+              ? `noir: daemon probe: daemon serves a different project (${body?.projectId ?? 'unknown'}); using in-process fallback\n`
+              : 'noir: daemon probe: /health body not ok\n',
         );
       return { running: false };
     }
@@ -460,7 +481,18 @@ export async function withInProcessRead<T>(
   } catch {
     fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
   }
-  const store = await openStore({ projectId: project.id, root: project.root, readonly: true });
+  // Route a store-open failure through fail() so --json emits {ok:false,error}
+  // (a raw throw would leave stdout empty).
+  let store: Store;
+  try {
+    store = await openStore({ projectId: project.id, root: project.root, readonly: true });
+  } catch (err) {
+    fail(
+      EXIT.ERROR,
+      `could not open the store read-only: ${err instanceof Error ? err.message : String(err)}`,
+      opts,
+    );
+  }
   try {
     // READ-ONLY handle: `storeDegraded` is threaded so status/degraded flags are
     // honest and any accidental write refuses cleanly (single writer preserved).

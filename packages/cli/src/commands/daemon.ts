@@ -56,6 +56,7 @@ const MODE = 'foreground' as const;
 interface HealthBody {
   ok?: boolean;
   pid?: number;
+  projectId?: string;
   uptimeSec?: number;
 }
 
@@ -71,7 +72,11 @@ function formatUptime(sec: number): string {
  *  indefinitely. When `expectedPid` is given, the probe ALSO requires the
  *  responding daemon's own pid to match (the PID-reuse guard: a foreign process
  *  that recycled the recorded pid must never be signalled as "our daemon"). */
-async function isHealthy(port: number, expectedPid?: number): Promise<boolean> {
+async function isHealthy(
+  port: number,
+  expectedPid?: number,
+  expectedProjectId?: string,
+): Promise<boolean> {
   try {
     const res = await fetch(`http://127.0.0.1:${port}/health`, {
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
@@ -79,7 +84,11 @@ async function isHealthy(port: number, expectedPid?: number): Promise<boolean> {
     if (res.status !== 200) return false;
     if (expectedPid === undefined) return true;
     const body = (await res.json()) as HealthBody | undefined;
-    return body?.ok === true && body.pid === expectedPid;
+    if (body?.ok !== true || body.pid !== expectedPid) return false;
+    // Cross-project isolation: only reuse a daemon that serves the expected
+    // project (absent /health projectId — a pre-1.12 daemon — is not trusted).
+    if (expectedProjectId !== undefined && body.projectId !== expectedProjectId) return false;
+    return true;
   } catch {
     return false;
   }
@@ -164,7 +173,11 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
     // Double-spawn guard: only spawn a child if no daemon is already healthy
     // (the child would merely reuse it and exit — a wasted detached process).
     const existing = readDaemonRecord();
-    if (existing && pidAlive(existing.pid) && (await isHealthy(existing.port, existing.pid))) {
+    if (
+      existing &&
+      pidAlive(existing.pid) &&
+      (await isHealthy(existing.port, existing.pid, project.id))
+    ) {
       if (opts.json === true) {
         process.stdout.write(
           `${JSON.stringify({ ok: true, data: { mode: 'detached', reused: true } })}\n`,

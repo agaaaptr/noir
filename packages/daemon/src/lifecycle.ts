@@ -9,6 +9,13 @@ export interface DaemonRecord {
   startedAt: number;
   /** Ownership: `foreground` (this CLI process) or `detached` (backgrounded via --detach). */
   mode?: 'foreground' | 'detached';
+  /**
+   * The project the daemon serves (its store is baked in at start time). The
+   * reuse guard requires this to match the CALLER's project — a daemon started
+   * for project A must never be silently reused by project B (that would read/
+   * write A's data). Absent on pre-1.12 records → treated as non-reusable.
+   */
+  projectId?: string;
 }
 
 /** The env var `spawnDetachedDaemon` sets so the child writes a `detached` record. */

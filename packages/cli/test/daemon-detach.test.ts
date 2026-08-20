@@ -125,9 +125,12 @@ describe('noir daemon start --detach (parent path)', () => {
     const server: Server = createServer((req, res) => {
       if (req.url === '/health') {
         res.writeHead(200, { 'content-type': 'application/json' });
-        // The real daemon's /health returns {ok, pid, uptimeSec} — the
-        // double-spawn guard now verifies pid, so the fixture must model it.
-        res.end(JSON.stringify({ ok: true, pid: process.pid }));
+        // The real daemon's /health returns {ok, pid, projectId, uptimeSec} —
+        // the double-spawn guard verifies pid + project, so the fixture models
+        // the project the test chdir'd into (seeded below).
+        res.end(
+          JSON.stringify({ ok: true, pid: process.pid, projectId: 'daemon-detach-test-project' }),
+        );
       } else {
         res.writeHead(404).end();
       }
