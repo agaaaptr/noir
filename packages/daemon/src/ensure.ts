@@ -56,22 +56,29 @@ export async function ensureDaemonRunning(opts: {
   const rec = readDaemonRecord();
   if (rec) {
     // Cross-project isolation: a daemon serves the store baked in at its start
-    // time. A record for ANOTHER project (or a pre-1.12 record with no
-    // projectId) is treated as stale — clear it and start a fresh daemon for
-    // THIS project. Never silently reuse a wrong-project daemon.
-    if (rec.projectId !== undefined && rec.projectId !== project.id) {
-      clearDaemonRecord();
-    } else if (pidAlive(rec.pid) && (await isHealthy(rec.port, rec.pid, project.id))) {
-      return {
-        port: rec.port,
-        url: `http://127.0.0.1:${rec.port}/mcp`,
-        started: false,
-        stop: async () => {
-          /* no-op: reused daemon is owned elsewhere */
-        },
-      };
+    // time. A record for ANOTHER project (a 1.12+ record with a mismatched
+    // projectId) is cleared so we start a fresh daemon for THIS project — two
+    // daemons serve DIFFERENT DBs, so no single-writer violation.
+    //
+    // A PRE-1.12 record (no projectId) is REUSED on a pid+port match: we cannot
+    // project-verify it, and reusing it is safer than clearing it + starting a
+    // SECOND writer on the same .noir/store/<projectId>.db (the old daemon would
+    // still be running and holding that DB open — a single-writer violation).
+    const wrongProject = rec.projectId !== undefined && rec.projectId !== project.id;
+    if (!wrongProject) {
+      const expectProject = rec.projectId === undefined ? undefined : project.id;
+      if (pidAlive(rec.pid) && (await isHealthy(rec.port, rec.pid, expectProject))) {
+        return {
+          port: rec.port,
+          url: `http://127.0.0.1:${rec.port}/mcp`,
+          started: false,
+          stop: async () => {
+            /* no-op: reused daemon is owned elsewhere */
+          },
+        };
+      }
     }
-    clearDaemonRecord(); // stale — pid dead or /health failed
+    clearDaemonRecord(); // stale — pid dead or /health failed, or a wrong-project record
   }
   const running = await startHttpServer({
     project: opts.project,
