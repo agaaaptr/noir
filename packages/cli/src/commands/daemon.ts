@@ -357,7 +357,8 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
     // ECONNREFUSED / DNS / timeout — treat as not-running below.
     health = null;
   }
-  // PID-reuse guard (same invariant as ensure.ts isHealthy): the responding
+  // PID-reuse guard (same invariant as @noir-ai/daemon ensure.ts isHealthy +
+  // this file's isHealthy): the responding
   // /health must carry OUR recorded pid — a missing or mismatched pid means a
   // foreign process (or one that recycled the pid) holds the port. Report
   // stale, never "running" with the wrong process's uptime.

@@ -544,10 +544,15 @@ export function createIndexer(opts: IndexerOptions): Indexer {
       // resolves outside `base`; skip it entirely — never stat, never walk,
       // never store a `../` meta.path.
       if (!isWithinRoot(abs)) continue;
+      // Register the input as a reconcile ROOT even when it no longer exists: a
+      // previously-indexed FILE that was deleted must still be in-scope for the
+      // reconcile step (which removes stale chunks/records). Without this, a
+      // deleted single-file input is skipped here, never lands in absRoots, and
+      // its stale chunks survive forever.
+      absRoots.push(abs);
       const st = await stat(abs).catch(() => null);
-      if (st === null) continue; // missing path — nothing to index
+      if (st === null) continue; // missing path — nothing to index (reconcile handles it)
       if (st.isDirectory()) {
-        absRoots.push(abs);
         for (const file of await walk(abs)) {
           // Defensive confinement on walk entries: the walk starts in-root, but
           // a symlink resolved by stat/readdir could point outside — re-check.
@@ -555,7 +560,6 @@ export function createIndexer(opts: IndexerOptions): Indexer {
           scanned.set(posix(toKey(file)), file);
         }
       } else if (st.isFile()) {
-        absRoots.push(abs);
         scanned.set(posix(toKey(abs)), abs);
       }
     }

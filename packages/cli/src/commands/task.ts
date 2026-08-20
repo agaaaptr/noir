@@ -370,6 +370,8 @@ export async function taskNew(opts: TaskNewOptions): Promise<void> {
 export interface TaskAdvanceOptions extends TaskOptions {
   to?: string;
   force?: string;
+  /** Record the landing gate as `skipped` (advance continues). */
+  skip?: boolean;
   /** Skip the document-phase artifact writes (changelog + decision stubs). */
   noArtifacts?: boolean;
 }
@@ -386,6 +388,9 @@ export async function taskAdvance(opts: TaskAdvanceOptions): Promise<void> {
   }
   if (typeof opts.force === 'string' && opts.force.length > 0) {
     args.force = { reason: opts.force };
+  }
+  if (opts.skip === true) {
+    args.skip = true;
   }
   // Omit taskId → the daemon targets the active task (workflow:active).
   const res = await callDaemonTool<WorkflowStatusResult | WorkflowNotFound>(

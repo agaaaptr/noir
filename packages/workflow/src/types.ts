@@ -122,8 +122,8 @@ export interface TaskState {
   blockReason?: string;
   /**
    * c4-research-grounding: open questions raised during clarify. When non-empty,
-   * the clarify→spec transition is gated (force/skip escape it). Set by the
-   * engine from `advance({ resolveOpenQuestions })` or the clarify artifact.
+   * the clarify→spec transition is gated (force/skip escape it). Set via the
+   * engine's `setOpenQuestions(taskId, questions)` (engine.ts).
    */
   openQuestions?: string[];
   updatedAt: number;

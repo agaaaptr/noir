@@ -88,6 +88,9 @@ need them.
 | Variable | Default | Required | Description |
 |---|---|---|---|
 | `NOIR_NODE_DIST_URL` | `https://nodejs.org/dist/` | no | Node dist mirror URL for the native installer's managed-Node provisioning. |
+| `NOIR_SYSTEM_NODE_BIN` | — | no | Hard override for the system-Node probe (managed-Node fallback in the native installer / `provisionManagedNode`). |
+| `NOIR_CHANNEL` | `latest` | no | npm dist-tag for `install.sh` / `install.ps1` (`beta` selects the beta channel). |
+| `NOIR_VERSION` | — | no | Pin an exact version for `install.sh` / `install.ps1` (overrides `NOIR_CHANNEL`). |
 | `NOIR_RUNTIME_DIR` | `~/.noir/runtime` | no | Overrides the managed runtime directory. |
 | `NOIR_DAEMON_JSON` | `~/.noir/daemon.json` | no | Overrides the daemon record path. |
 | `NOIR_INSTALL_JSON` | `~/.noir/install.json` | no | Overrides the install-record path. |

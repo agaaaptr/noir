@@ -75,7 +75,7 @@ export function latestVersionFromCache(cache: UpdateCache, channel: string): str
  *  (5s) — an unresponsive registry must not hang `noir update --check` /
  *  `noir update` for undici's default ~300s. The fire-and-forget background
  *  check passes its own tighter 2s controller, which takes precedence. */
-export const UPDATE_FETCH_TIMEOUT_MS = 5_000;
+const UPDATE_FETCH_TIMEOUT_MS = 5_000;
 
 /** Fetch the current dist-tag version from npm. Offline-safe: any failure → null. */
 export async function fetchLatestVersion(

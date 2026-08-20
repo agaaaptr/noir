@@ -49,12 +49,12 @@ export type EmbedLike = (text: string) => Promise<Float32Array>;
 const HOST_CONTEXT_RELS = new Set(['CLAUDE.md', 'AGENTS.md', 'GEMINI.md', '.noir/rules/RULES.md']);
 
 /** Cosine ≥ this → ACTION prompt (interactive) or conflict record (--json). */
-export const ACTION_THRESHOLD = 0.95;
+const ACTION_THRESHOLD = 0.95;
 /** Cosine ≥ this (and < ACTION) → INFO-only hint. Below → silent. */
-export const INFO_THRESHOLD = 0.85;
+const INFO_THRESHOLD = 0.85;
 /** The first embed() call triggers ONNX load + possibly a model download; bound
  *  it so init/sync/create never block indefinitely on a cold cache. */
-export const EMBEDDER_PING_TIMEOUT_MS = 5000;
+const EMBEDDER_PING_TIMEOUT_MS = 5000;
 /** Bump on disk-format changes; an older file is discarded (no migration). */
 const DEDUP_CACHE_VERSION = 1;
 

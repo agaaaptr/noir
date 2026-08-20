@@ -57,8 +57,12 @@ export function resolveGateConfig(config?: NoirConfig): WorkflowGateConfig | und
   // Verify slice — pass through the user's shape (the engine applies it).
   const verifyCfg = config?.workflow?.gate?.verify;
   const hasVerify = verifyCfg !== undefined;
+  // An EXPLICIT `prd.mandatoryFor` (including `[]` — "recommend a PRD for no
+  // task class") is user intent, never coerced to the default. Only the ABSENCE
+  // of the prd block (or an explicit default pair) counts as "at default".
+  const prdExplicit = mandatoryForRaw !== undefined;
   const prdAtDefault =
-    mandatoryFor.length === 0 ||
+    !prdExplicit ||
     (mandatoryFor.length === 2 &&
       mandatoryFor.includes('feature') &&
       mandatoryFor.includes('epic'));
@@ -74,7 +78,7 @@ export function resolveGateConfig(config?: NoirConfig): WorkflowGateConfig | und
       researchCfg.requireSource === true);
   if (prdAtDefault && verifyAtDefault && researchAtDefault) return undefined;
   return {
-    prd: mandatoryFor.length === 0 ? { mandatoryFor: ['feature', 'epic'] } : { mandatoryFor },
+    prd: { mandatoryFor },
     verify: hasVerify
       ? {
           required: verifyCfg.required,

@@ -167,7 +167,8 @@ export async function probeDaemon(opts: DaemonClientOptions = {}): Promise<Daemo
       pid?: number;
       uptimeSec?: number;
     } | null;
-    // PID-reuse guard (mirrors ensure.ts isHealthy): the responding /health must
+    // PID-reuse guard (same invariant as @noir-ai/daemon ensure.ts isHealthy +
+    // commands/daemon.ts isHealthy): the responding /health must
     // carry OUR recorded pid — a missing or mismatched pid means a foreign
     // process holds the port; report NOT running.
     const pidOk = typeof body?.pid === 'number' && body.pid === rec.pid;

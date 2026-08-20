@@ -811,6 +811,7 @@ export function createProgram(): Command {
     .description('advance the active task to the next phase')
     .option('--to <phase>', 'target phase')
     .option('--force <reason>', 'force the gate with a reason')
+    .option('--skip', 'record the landing gate as skipped (advance continues)')
     .option('--no-artifacts', 'skip the document-phase artifact writes at done')
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
@@ -821,6 +822,7 @@ export function createProgram(): Command {
         ...toCliOptions(g),
         ...(to === undefined ? {} : { to }),
         ...(force === undefined ? {} : { force }),
+        ...(g.skip === true ? { skip: true } : {}),
         ...(g.artifacts === false ? { noArtifacts: true } : {}),
       });
     });

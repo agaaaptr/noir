@@ -9,8 +9,9 @@
 // never touch the network or the model runtime.
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-// `fakeEmbedFn` is deliberately not part of the public embedder barrel (it is a
-// test-only deterministic double) — import it directly from its module.
+// `fakeEmbedFn` is a test-only deterministic double. It IS re-exported through
+// the public barrel for cross-package test reuse (memory consumes it too), but
+// no production path uses it — importing directly here keeps the test explicit.
 import { fakeEmbedFn } from '../src/embedders/fake.js';
 import {
   createEmbedFn,
