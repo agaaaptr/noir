@@ -13,11 +13,12 @@
 // under NO_COLOR / non-TTY / --json. No interactive input is ever required, so
 // these commands are safe on a pipe / CI unconditionally.
 
-import { claudeAdapter } from '@noir-ai/adapters';
+import { resolveAdapter } from '@noir-ai/adapters';
 import { loadProjectInfo, type ProjectInfo } from '@noir-ai/core';
 import {
   type BuiltinSkill,
   buildRegistry,
+  type CompileTarget,
   discoverAll,
   emitSkillsToDir,
   type IntegrationSkill,
@@ -204,7 +205,12 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
     fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
   }
 
-  if (!claudeAdapter.skillsDir) {
+  // Resolve the PROJECT's host adapter (not a hardcoded claude) — mirroring
+  // sync.ts. A non-claude host (cursor/agents-md/opencode) has its own skillsDir
+  // (e.g. .cursor/rules), and a host with NO skillsDir must report no-emitter
+  // instead of silently writing a spurious .claude/skills/ tree.
+  const adapter = resolveAdapter(project.config.host);
+  if (!adapter.skillsDir) {
     const data = {
       emitted: [],
       references: 0,
@@ -219,8 +225,9 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
     return;
   }
 
-  const dir = claudeAdapter.skillsDir({ root });
-  const summary = await emitSkillsToDir(dir);
+  const dir = adapter.skillsDir({ root });
+  const target: CompileTarget = project.config.host;
+  const summary = await emitSkillsToDir(dir, { target });
   const pruned = summary.pruned ?? [];
   const data = {
     emitted: summary.emitted,
