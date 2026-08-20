@@ -55,11 +55,20 @@ function depsOf(s: { dependsOn: unknown }): { id: string; mode: string }[] {
 export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: string[] } {
   const errors: string[] = [];
   // Top-level guard: a malformed plan that omits `slices` must be a schema
-  // error, not a crash on `for (const s of plan.slices)`.
+  // error, not a crash on `for (const s of slices)`.
   if (!Array.isArray(plan.slices)) return { ok: false, errors: ['slices must be an array'] };
+  // Filter null/non-object elements up front (schema error + excluded from ALL
+  // downstream passes, which dereference s.id / s.dependsOn / s.files).
+  const slices = plan.slices.filter((s): s is SlicePlan['slices'][number] => {
+    if (s === null || typeof s !== 'object') {
+      errors.push(`slice element must be an object (got ${String(s)})`);
+      return false;
+    }
+    return true;
+  });
   const ids = new Set<string>();
 
-  for (const s of plan.slices) {
+  for (const s of slices) {
     // Duplicate IDs.
     if (ids.has(s.id)) errors.push(`duplicate slice id: ${s.id}`);
     ids.add(s.id);
@@ -81,7 +90,7 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
 
   // Dependency validation: self-refs + missing refs (cheap, deterministic), then
   // a real DFS cycle check (A→B→A or any longer loop) over the dep graph.
-  for (const s of plan.slices) {
+  for (const s of slices) {
     for (const dep of depsOf(s)) {
       if (dep.id === s.id) errors.push(`slice ${s.id}: self-referencing dependency`);
       if (!ids.has(dep.id)) errors.push(`slice ${s.id}: depends on unknown slice ${dep.id}`);
@@ -91,7 +100,7 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
   // DFS cycle detection (three-color). Any back-edge to a gray (in-progress)
   // node is a cycle. Deterministic + no graph dependency.
   const deps = new Map<string, string[]>();
-  for (const s of plan.slices)
+  for (const s of slices)
     deps.set(
       s.id,
       depsOf(s)
@@ -101,7 +110,7 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
   const WHITE = 0;
   const GRAY = 1;
   const BLACK = 2;
-  const color = new Map<string, number>(plan.slices.map((s) => [s.id, WHITE]));
+  const color = new Map<string, number>(slices.map((s) => [s.id, WHITE]));
   const stack: string[] = [];
   const visit = (id: string): void => {
     color.set(id, GRAY);
@@ -120,17 +129,17 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
     stack.pop();
     color.set(id, BLACK);
   };
-  for (const s of plan.slices) if (color.get(s.id) === WHITE) visit(s.id);
+  for (const s of slices) if (color.get(s.id) === WHITE) visit(s.id);
 
   // File conflicts between parallel siblings: ANY overlap in a slice's written
   // paths (create ∪ modify, and create-vs-preserve) between two parallel
   // siblings is a real merge conflict. Previously only create-vs-create was
   // flagged, so two siblings that BOTH modify the same file (or one creates and
   // one modifies the same path) slipped past validation.
-  for (const s of plan.slices) {
+  for (const s of slices) {
     const parallelDeps = depsOf(s).filter((d) => d.mode === 'parallel');
     for (const pd of parallelDeps) {
-      const sibling = plan.slices.find((x) => x.id === pd.id);
+      const sibling = slices.find((x) => x.id === pd.id);
       if (!sibling) continue;
       // Malformed file arrays were already flagged above; coerce to [] so a
       // null/absent files field cannot crash the conflict pass.

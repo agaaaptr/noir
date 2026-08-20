@@ -37,7 +37,7 @@
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type ProjectInfo, sha256Hex, sha256Hex12 } from '@noir-ai/core';
+import { type ConflictResolution, type ProjectInfo, sha256Hex, sha256Hex12 } from '@noir-ai/core';
 import type { ConflictRecord, ScaffoldResult } from '@noir-ai/create';
 import { collectDedupCandidates } from './commands/doctor.js';
 import { c } from './theme.js';
@@ -144,9 +144,14 @@ export async function checkWritePathDedup(
     const sim = best.similarity;
     result.found.push({ proposedRel, matchedRel, similarity: sim });
 
+    // The conflict record's resolution reflects what actually happened — not a
+    // hardcoded 'preserve'. Non-interactive + cancel default to 'preserve'
+    // (Create anyway); the prompt's replace/mirror choices map onto the
+    // ConflictResolution union.
+    let resolution: ConflictResolution = 'preserve';
     if (sim >= ACTION_THRESHOLD) {
       if (opts.interactive) {
-        await promptDedupAction(root, proposedRel, matchedRel, proposedText, sim);
+        resolution = await promptDedupAction(root, proposedRel, matchedRel, proposedText, sim);
       } else {
         // --json / --no-input: record + proceed with the default (Create
         // anyway). Never prompt under non-interactive.
@@ -173,7 +178,7 @@ export async function checkWritePathDedup(
       similarity: sim,
       existingSha: sha256Hex12(matchedText ?? ''),
       proposedSha: sha256Hex12(proposedText),
-      resolution: 'preserve',
+      resolution,
     });
   }
 
@@ -252,7 +257,7 @@ async function promptDedupAction(
   matchedRel: string,
   proposedText: string,
   sim: number,
-): Promise<void> {
+): Promise<ConflictResolution> {
   const clack = await import('@clack/prompts');
   type Choice = 'create' | 'skip' | 'replace' | 'mirror';
   const choice = await clack.select({
@@ -277,19 +282,21 @@ async function promptDedupAction(
       },
     ],
   });
-  if (clack.isCancel(choice)) return; // cancel = keep the default (Create anyway)
+  if (clack.isCancel(choice)) return 'preserve'; // cancel = keep the default (Create anyway)
   if (choice === 'skip') {
     try {
       rmSync(join(root, proposedRel), { force: true });
     } catch {
       /* best-effort; the write already happened */
     }
+    return 'preserve'; // the matched file is kept
   } else if (choice === 'replace') {
     try {
       writeFileSync(join(root, matchedRel), proposedText, 'utf8');
     } catch {
       /* best-effort */
     }
+    return 'replace';
   } else if (choice === 'mirror') {
     try {
       const existing = readFileSync(join(root, matchedRel), 'utf8');
@@ -301,8 +308,10 @@ async function promptDedupAction(
     } catch {
       /* best-effort */
     }
+    return 'duplicate'; // the proposed content was folded into the existing file
   }
   // 'create' → no-op (the just-written file stands).
+  return 'preserve';
 }
 
 // ---------------------------------------------------------------------------

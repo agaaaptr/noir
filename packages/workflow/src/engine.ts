@@ -173,13 +173,15 @@ export class WorkflowEngine {
      */
     gateConfig?: WorkflowGateConfig,
   ) {
-    // Deep-merge with defaults: a partial gateConfig (e.g., only prd) must
-    // not strip verify/research defaults — the engine accesses all three.
+    // Deep-merge with defaults: a partial gateConfig (e.g. `verify: { required:
+    // true }` only) must not strip the sibling defaults (retryBudget/checks) —
+    // the engine accesses all fields. A shallow presence-merge here would leave
+    // `verify.retryBudget` undefined and make the budget check misfire.
     this.gateConfig = gateConfig
       ? {
-          prd: gateConfig.prd ?? DEFAULT_GATE_CONFIG.prd,
-          verify: gateConfig.verify ?? DEFAULT_GATE_CONFIG.verify,
-          research: gateConfig.research ?? DEFAULT_GATE_CONFIG.research,
+          prd: { ...DEFAULT_GATE_CONFIG.prd, ...(gateConfig.prd ?? {}) },
+          verify: { ...DEFAULT_GATE_CONFIG.verify, ...(gateConfig.verify ?? {}) },
+          research: { ...DEFAULT_GATE_CONFIG.research, ...(gateConfig.research ?? {}) },
         }
       : DEFAULT_GATE_CONFIG;
   }
@@ -427,6 +429,12 @@ export class WorkflowEngine {
         const input: GateResultInput = {
           phase: gatePhase,
           decision,
+          // When a caller supplied verify evidence but the task's class does NOT
+          // require the verify gate, still RECORD the evidence (never silently
+          // discard a validation run) — the gate simply isn't blocking.
+          ...(gatePhase === 'verify' && opts?.evidence !== undefined
+            ? { evidence: opts.evidence }
+            : {}),
           // exactOptionalPropertyTypes is false; spread reason only when present.
           // Force-path wins over the soft hints (a user who forces is explicitly
           // accepting the recommendations; their reason is the override signal).

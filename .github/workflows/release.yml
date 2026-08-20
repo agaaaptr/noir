@@ -48,6 +48,11 @@ jobs:
   verify:
     name: Build + test (${{ github.ref_name }})
     runs-on: ubuntu-latest
+    # Least privilege: the verify job only reads source + installs deps — it
+    # must NOT inherit the workflow-level write/id-token/attestations grants
+    # (those are for the publish job).
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
