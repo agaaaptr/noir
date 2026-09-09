@@ -90,3 +90,24 @@ export {
   writeUpdateCache,
 } from './update-check.js';
 export { NOIR_VERSION } from './version.js';
+export {
+  clearWorkspaceMarker,
+  ensureWorkspaceRegistry,
+  isWorkspaceMember,
+  isValidWorkspaceName,
+  readWorkspaceMarker,
+  readWorkspaceRegistry,
+  removeWorkspaceMember,
+  upsertWorkspaceMember,
+  type WorkspaceMember,
+  type WorkspaceRegistry,
+  workspaceDir,
+  workspaceHomeDir,
+  workspaceMarkerPath,
+  workspaceRegistryPath,
+  workspaceStoreDbPath,
+  writeWorkspaceMarker,
+  writeWorkspaceRegistry,
+  WORKSPACE_NAME_RE,
+  WORKSPACES_DIR_ENV,
+} from './workspace.js';
