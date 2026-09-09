@@ -16,6 +16,13 @@ import { applyNoirEnv, NOIR_VERSION } from '@noir-ai/core';
 import { Command, Option } from 'commander';
 import { contextIndex, contextSearch, contextStatus } from './commands/context.js';
 import { daemonRestart, daemonStart, daemonStatus, daemonStop } from './commands/daemon.js';
+import {
+  daemonJoin,
+  workspaceLeave,
+  workspaceList,
+  workspaceStatus,
+  workspaceStop,
+} from './commands/workspace.js';
 import { doctor } from './commands/doctor.js';
 import { type HandoffOptions, handoff } from './commands/handoff.js';
 import { type HomeDeps, home } from './commands/home.js';
@@ -541,6 +548,7 @@ export function createProgram(): Command {
     .command('start')
     .description('start the Noir daemon (foreground, or background with --detach)')
     .option('--detach', 'run the daemon in the background and exit')
+    .option('--workspace <name>', 'start a shared cross-repo workspace daemon instead')
     .addOption(
       new Option('--_detached-child', 'reserved: detached daemon child (internal)').hideHelp(),
     )
@@ -549,11 +557,24 @@ export function createProgram(): Command {
       const g = cmd.optsWithGlobals();
       const detach = g.detach === true;
       const detachChild = g._detachedChild === true;
+      const workspace = typeof g.workspace === 'string' ? g.workspace : undefined;
       await daemonStart({
         ...toCliOptions(g),
         ...(detach ? { detach } : {}),
         ...(detachChild ? { detachChild } : {}),
+        ...(workspace !== undefined ? { workspace } : {}),
       });
+    });
+  daemonGrp
+    .command('join')
+    .description('join a shared workspace from this repo')
+    .argument('<name>', 'workspace name')
+    .option('--force', 'overwrite a non-Noir .mcp.json entry')
+    .action(async (...args: unknown[]) => {
+      const cmd = trailingCmd(args);
+      const g = cmd.optsWithGlobals();
+      const name = typeof args[0] === 'string' ? (args[0] as string) : '';
+      await daemonJoin({ ...toCliOptions(g), name, ...(g.force === true ? { force: true } : {}) });
     });
   daemonGrp
     .command('stop')
@@ -574,7 +595,42 @@ export function createProgram(): Command {
       await daemonRestart(toCliOptions(trailingCmd(args).optsWithGlobals()));
     });
   daemonGrp.action(() => {
-    throw new NoirCliError(EXIT.USAGE, 'Usage: noir daemon start|stop|status|restart');
+    throw new NoirCliError(EXIT.USAGE, 'Usage: noir daemon start|join|stop|status|restart');
+  });
+
+  const workspaceGrp = program.command('workspace').description('shared cross-repo workspaces');
+  workspaceGrp
+    .command('list')
+    .description('list workspaces on this machine')
+    .action(async (...args: unknown[]) => {
+      await workspaceList(toCliOptions(trailingCmd(args).optsWithGlobals()));
+    });
+  workspaceGrp
+    .command('status')
+    .description('members + daemon liveness for a workspace')
+    .argument('[name]', 'workspace name (defaults to this repo\'s joined workspace)')
+    .action(async (...args: unknown[]) => {
+      const cmd = trailingCmd(args);
+      const name = typeof args[0] === 'string' && (args[0] as string).length > 0 ? (args[0] as string) : undefined;
+      await workspaceStatus({ ...toCliOptions(cmd.optsWithGlobals()), ...(name !== undefined ? { name } : {}) });
+    });
+  workspaceGrp
+    .command('leave')
+    .description('leave the workspace this repo joined (restore stdio)')
+    .action(async (...args: unknown[]) => {
+      await workspaceLeave(toCliOptions(trailingCmd(args).optsWithGlobals()));
+    });
+  workspaceGrp
+    .command('stop')
+    .description('stop a workspace daemon (membership retained)')
+    .argument('[name]', 'workspace name (defaults to this repo\'s joined workspace)')
+    .action(async (...args: unknown[]) => {
+      const cmd = trailingCmd(args);
+      const name = typeof args[0] === 'string' && (args[0] as string).length > 0 ? (args[0] as string) : undefined;
+      await workspaceStop({ ...toCliOptions(cmd.optsWithGlobals()), ...(name !== undefined ? { name } : {}) });
+    });
+  workspaceGrp.action(() => {
+    throw new NoirCliError(EXIT.USAGE, 'Usage: noir workspace list|status|leave|stop');
   });
 
   program

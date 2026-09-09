@@ -58,4 +58,9 @@ export {
   type StartWorkspaceHttpOptions,
   startWorkspaceHttpServer,
 } from './workspace-http.js';
+export {
+  ensureWorkspaceDaemonRunning,
+  spawnDetachedWorkspaceDaemon,
+  type WorkspaceEnsureResult,
+} from './workspace-ensure.js';
 export { buildWorkflowEngine, resolveGateConfig } from './workflow-seam.js';

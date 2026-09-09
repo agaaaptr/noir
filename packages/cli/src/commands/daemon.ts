@@ -36,6 +36,7 @@ import {
 } from '@noir-ai/daemon';
 import { PROBE_TIMEOUT_MS } from '../daemon-client.js';
 import { type CliOptions, EXIT, fail, info, log, spinner } from '../output.js';
+import { daemonStartWorkspace } from './workspace.js';
 
 /** Options accepted by `daemon` sub-commands (the global flags only). */
 export interface DaemonOptions extends CliOptions {}
@@ -47,6 +48,8 @@ export interface DaemonStartOptions extends DaemonOptions {
   detach?: boolean;
   /** `--_detached-child` (hidden, reserved): we ARE the detached child. */
   detachChild?: boolean;
+  /** `--workspace <name>`: start a shared cross-repo workspace daemon instead. */
+  workspace?: string;
 }
 
 /** Human label for the detached mode in `status` output. */
@@ -136,6 +139,17 @@ async function isHealthy(
  * `--json` emits the one envelope to stdout before the process blocks/returns.
  */
 export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
+  // Workspace mode: `--workspace <name>` founds/joins a cross-repo workspace and
+  // starts its daemon (a separate daemon kind — never the project daemon).
+  if (opts.workspace !== undefined) {
+    await daemonStartWorkspace({
+      ...opts,
+      name: opts.workspace,
+      ...(opts.detach === true ? { detach: true } : {}),
+      ...(opts.detachChild === true ? { detachChild: true } : {}),
+    });
+    return;
+  }
   // A throw from loadProjectInfo on an uninitialized project must route through
   // fail() — otherwise under --json stdout stays EMPTY (the raw error only
   // reaches stderr), violating the S9 `{ok:false}` envelope contract.
