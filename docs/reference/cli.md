@@ -32,6 +32,7 @@ Commands:
                                     skills
   mcp                               MCP server control
   daemon                            control the Noir daemon
+  workspace                         shared cross-repo workspaces
   doctor [options]                  environment + project health
   status                            project + daemon + workflow + store
                                     snapshot

@@ -1,7 +1,7 @@
 # Documentation
 
 > Auto-generated documentation index.
-> Last updated: 2026-08-20T05:02:57.907Z
+> Last updated: 2026-09-09T06:55:00.725Z
 
 ## Getting Started
 
@@ -18,6 +18,7 @@
 - [**Installing Noir**](how-to/installation.md) — 
 - [**Adding a package**](how-to/packaging.md) — 
 - [**Releasing Noir**](how-to/releasing.md) — 
+- [**Sharing context across repositories (workspaces)**](how-to/shared-workspaces.md) — 
 
 ## Reference
 
@@ -49,6 +50,7 @@
 - [**ADR-0006: C2 TUI command palette + daemon `--detach` (and the deferred v2 orchestrator TUI)**](decisions/0006-c2-tui-and-daemon-detach.md) — 
 - [**ADR-0007: C3 generated-artifact standard — type codes, frontmatter, per-type outlines**](decisions/0007-generated-artifact-standard.md) — 
 - [**ADR-0008: v2 orchestrator TUI — single-surface consolidation + `noir run` headless host-driving**](decisions/0008-v2-orchestrator-tui.md) — 
+- [**ADR-0009 — Shared cross-repo workspaces**](decisions/0009-shared-workspaces.md) — 
 - [**Architecture Decision Records**](decisions/README.md) — 
 
 ## Roadmap
@@ -99,6 +101,7 @@
 - [**C3 Skills Enhancement — Implementation Plan**](internal/plans/2026-08-10-c3-skills-enhancement.md) — [ARCHIVED] 
 - [**C3 Generated Artifact Standard — implementation plan**](internal/plans/2026-08-13-c3-generated-artifact-standard.md) — [ARCHIVED] 
 - [**Plan — v2 Orchestrator TUI implementation**](internal/plans/2026-08-14-v2-orchestrator-tui.md) — [ARCHIVED] 
+- [**Shared Workspace Context Implementation Plan**](internal/plans/2026-09-09-shared-workspace-context.md) — [ARCHIVED] 
 - [**Noir — AI Toolkit Design Blueprint**](internal/specs/2026-07-23-noir-toolkit-design.md) — [ARCHIVED] 
 - [**Noir — Walking Skeleton Design (S0 → S2 → S3)**](internal/specs/2026-07-23-noir-walking-skeleton-design.md) — [ARCHIVED] 
 - [**Noir — S1 Stores Design (`@noir-ai/store`)**](internal/specs/2026-07-23-s1-stores-design.md) — [ARCHIVED] 
@@ -129,4 +132,5 @@
 - [**C3 Generated Artifact Standard — file naming + frontmatter + per-type format (spec)**](internal/specs/2026-08-13-c3-generated-artifact-standard-design.md) — [ARCHIVED] 
 - [**Spec — v2 Orchestrator TUI: single-surface consolidation, streaming, and host-driving (Archetype B)**](internal/specs/2026-08-14-v2-orchestrator-tui-design.md) — [ARCHIVED] 
 - [**2026-08-19 — v2 TUI fixes + `noir run` orchestration + configuration surface**](internal/specs/2026-08-19-run-orchestration-fixes-and-config-design.md) — [ARCHIVED] 
+- [**Shared Workspace Context — Design**](internal/specs/2026-09-09-shared-workspace-context-design.md) — [ARCHIVED] 
 
