@@ -56,6 +56,12 @@ vi.mock('../src/daemon-client.js', () => ({
   withDaemon: vi.fn(async (_opts: unknown, fn: (c: unknown) => Promise<unknown>) =>
     fn({ listTools: async () => Object.keys(payloads.current) }),
   ),
+  // `memory` commands now probe for workspace membership first (ADR-0009); the
+  // flow fixtures are NOT joined, so `workspaceRoutingTarget` returns null and
+  // the commands take the project-daemon path. (`probeDaemon`/`withInProcessRead`
+  // are deliberately left UNMOCKED — undefined → the command's try/catch folds a
+  // probe miss onto `{running:true}` and uses the mocked `callDaemonTool`.)
+  workspaceRoutingTarget: () => null,
 }));
 
 // `doctor` imports ONLY `resolveModelConfig` from @noir-ai/model — a partial

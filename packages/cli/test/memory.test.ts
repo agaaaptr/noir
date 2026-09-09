@@ -32,34 +32,39 @@ const { probeResult } = vi.hoisted(() => ({
   probeResult: { current: { running: true } as { running: boolean } },
 }));
 
-vi.mock('../src/daemon-client.js', () => ({
-  callDaemonTool: vi.fn(
-    async (_opts: unknown, name: string, _args?: Record<string, unknown>) => payloads.current[name],
-  ),
-  // withDaemon invokes fn(caller); caller.listTools() returns the payload keys
-  // so `consolidate`'s capability discovery is controllable per-test.
-  withDaemon: vi.fn(async (_opts: unknown, fn: (c: unknown) => Promise<unknown>) =>
-    fn({ listTools: async () => Object.keys(payloads.current) }),
-  ),
-  probeDaemon: vi.fn(async () => probeResult.current),
-  withInProcessRead: vi.fn(async (_opts: unknown, fn: (c: unknown) => Promise<unknown>) =>
-    fn({
-      memory: {
-        // `memoryRecall`'s fallback now uses `recallWithMeta` (`{hits, degraded,
-        // mode}`) — mirror the engine contract.
-        recall: vi.fn(async () => []),
-        recallWithMeta: vi.fn(async () => ({
-          hits: [],
-          degraded: true,
-          mode: 'bm25-only' as const,
-        })),
-        sessions: vi.fn(() => []),
-      },
-      context: {},
-      workflow: {},
-    }),
-  ),
-}));
+vi.mock('../src/daemon-client.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/daemon-client.js')>();
+  return {
+    ...actual,
+    callDaemonTool: vi.fn(
+      async (_opts: unknown, name: string, _args?: Record<string, unknown>) =>
+        payloads.current[name],
+    ),
+    // withDaemon invokes fn(caller); caller.listTools() returns the payload keys
+    // so `consolidate`'s capability discovery is controllable per-test.
+    withDaemon: vi.fn(async (_opts: unknown, fn: (c: unknown) => Promise<unknown>) =>
+      fn({ listTools: async () => Object.keys(payloads.current) }),
+    ),
+    probeDaemon: vi.fn(async () => probeResult.current),
+    withInProcessRead: vi.fn(async (_opts: unknown, fn: (c: unknown) => Promise<unknown>) =>
+      fn({
+        memory: {
+          // `memoryRecall`'s fallback now uses `recallWithMeta` (`{hits, degraded,
+          // mode}`) — mirror the engine contract.
+          recall: vi.fn(async () => []),
+          recallWithMeta: vi.fn(async () => ({
+            hits: [],
+            degraded: true,
+            mode: 'bm25-only' as const,
+          })),
+          sessions: vi.fn(() => []),
+        },
+        context: {},
+        workflow: {},
+      }),
+    ),
+  };
+});
 
 vi.mock('@clack/prompts', () => clackMock);
 

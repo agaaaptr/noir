@@ -23,13 +23,19 @@
 // honored as exit 1 with the reason; it is NEVER a silent paid call.
 
 import { readFileSync } from 'node:fs';
+import { loadProjectInfo, type ProjectInfo } from '@noir-ai/core';
 import {
   callDaemonTool,
   type DaemonClientOptions,
   type DaemonProbe,
   probeDaemon,
+  probeWorkspaceDaemon,
+  type WorkspaceRouting,
   withDaemon,
   withInProcessRead,
+  withWorkspaceDaemon,
+  withWorkspaceMemoryRead,
+  workspaceRoutingTarget,
 } from '../daemon-client.js';
 import {
   type CliOptions,
@@ -45,6 +51,37 @@ import { badge } from '../theme.js';
 
 /** Options accepted by every `memory` sub-command (globals + daemon knobs). */
 export interface MemoryOptions extends CliOptions, DaemonClientOptions {}
+
+/**
+ * Resolve this repo's workspace membership (marker → routing + project), or
+ * `null` when it is not joined. Memory commands route to the WORKSPACE daemon
+ * when joined (spec §6); context/workflow/task stay per-project.
+ */
+function resolveWorkspace(): {
+  routing: WorkspaceRouting;
+  project: ProjectInfo;
+} | null {
+  const routing = workspaceRoutingTarget(process.cwd());
+  if (routing === null) return null;
+  try {
+    return { routing, project: loadProjectInfo(process.cwd()) };
+  } catch {
+    return null;
+  }
+}
+
+/** Call a memory tool — workspace daemon when joined, else the project daemon. */
+async function callMemory<T>(
+  opts: MemoryOptions,
+  name: string,
+  args: Record<string, unknown> = {},
+): Promise<T> {
+  const ws = resolveWorkspace();
+  if (ws === null) return callDaemonTool<T>(opts, name, args);
+  return withWorkspaceDaemon<T>(opts, ws.routing, ws.project, (caller) =>
+    caller.callTool<T>(name, args),
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Tool result shapes (slices of the daemon wire payloads; CLI depends only on
@@ -195,6 +232,38 @@ export interface MemoryRecallOptions extends MemoryOptions {
  */
 export async function memoryRecall(opts: MemoryRecallOptions): Promise<void> {
   const limit = parseLimit(opts.limit, 'memory recall', opts);
+  // Workspace mode: route to the workspace daemon / workspace read-only store.
+  const ws = resolveWorkspace();
+  if (ws !== null) {
+    const probe = await probeWorkspaceDaemon(ws.routing);
+    if (!probe.running) {
+      await withWorkspaceMemoryRead(opts, ws.routing, ws.project, async (memory) => {
+        const { hits, degraded, mode } = await memory.recallWithMeta(opts.query, {
+          ...(limit === undefined ? {} : { limit }),
+        });
+        const data = { query: opts.query, hits, degraded, mode };
+        if (opts.json === true) {
+          process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
+          return;
+        }
+        renderRecall(data.query, data.hits, data.degraded, opts);
+      });
+      return;
+    }
+    const res = await callMemory<MemoryRecallResult | ToolFailure>(opts, 'memory_recall', {
+      query: opts.query,
+      ...(limit === undefined ? {} : { limit }),
+    });
+    if (res.ok !== true) failTool('memory recall', res, opts);
+    const hits = Array.isArray(res.results) ? (res.results as unknown[]).map(toHit) : [];
+    const data = { query: opts.query, hits, degraded: res.degraded === true };
+    if (opts.json === true) {
+      process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
+      return;
+    }
+    renderRecall(data.query, hits, data.degraded, opts);
+    return;
+  }
   let probe: DaemonProbe;
   try {
     probe = await probeDaemon(opts);
@@ -279,7 +348,7 @@ export async function memorySave(opts: MemorySaveOptions): Promise<void> {
   if (typeof opts.type === 'string' && opts.type.length > 0) args.type = opts.type;
   if (files !== undefined) args.files = files;
 
-  const res = await callDaemonTool<MemorySaveResult | ToolFailure>(opts, 'memory_save', args);
+  const res = await callMemory<MemorySaveResult | ToolFailure>(opts, 'memory_save', args);
   if (res.ok !== true) failTool('memory save', res, opts);
 
   const id = typeof res.id === 'string' ? res.id : '';
@@ -351,7 +420,7 @@ export async function memoryCapture(opts: MemoryCaptureOptions): Promise<void> {
   if (typeof opts.eventType === 'string' && opts.eventType.length > 0)
     args.eventType = opts.eventType;
 
-  const res = await callDaemonTool<MemorySaveResult | ToolFailure>(opts, 'memory_capture', args);
+  const res = await callMemory<MemorySaveResult | ToolFailure>(opts, 'memory_capture', args);
   if (res.ok !== true) failTool('memory capture', res, opts);
 
   const id = typeof res.id === 'string' ? res.id : '';
@@ -400,6 +469,45 @@ async function resolveCaptureContent(opts: MemoryCaptureOptions): Promise<string
 // `noir memory sessions`
 // ---------------------------------------------------------------------------
 export async function memorySessions(opts: MemoryOptions): Promise<void> {
+  const ws = resolveWorkspace();
+  if (ws !== null) {
+    const probe = await probeWorkspaceDaemon(ws.routing);
+    if (!probe.running) {
+      await withWorkspaceMemoryRead(opts, ws.routing, ws.project, async (memory) => {
+        const sessions: SessionRow[] = memory.sessions().map((s) => ({
+          id: s.id,
+          count: s.count,
+          lastTs: s.lastTs,
+        }));
+        const data = { sessions };
+        if (opts.json === true) {
+          process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
+          return;
+        }
+        renderSessions(sessions, opts);
+      });
+      return;
+    }
+    const res = await callMemory<MemorySessionsResult | ToolFailure>(opts, 'memory_sessions');
+    if (res.ok !== true) failTool('memory sessions', res, opts);
+    const sessions: SessionRow[] = Array.isArray(res.sessions)
+      ? (res.sessions as unknown[]).map((raw) => {
+          const s = (raw ?? {}) as Record<string, unknown>;
+          return {
+            id: typeof s.id === 'string' ? s.id : '',
+            count: typeof s.count === 'number' ? s.count : 0,
+            lastTs: typeof s.lastTs === 'number' ? s.lastTs : 0,
+          };
+        })
+      : [];
+    const data = { sessions };
+    if (opts.json === true) {
+      process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
+      return;
+    }
+    renderSessions(sessions, opts);
+    return;
+  }
   let probe: DaemonProbe;
   try {
     probe = await probeDaemon(opts);
@@ -466,7 +574,7 @@ export async function memoryForget(opts: MemoryForgetOptions): Promise<void> {
   if (opts.ids.length === 0) {
     fail(EXIT.USAGE, 'memory forget requires at least one <id>', opts);
   }
-  const res = await callDaemonTool<MemoryForgetResult | ToolFailure>(opts, 'memory_forget', {
+  const res = await callMemory<MemoryForgetResult | ToolFailure>(opts, 'memory_forget', {
     ids: opts.ids,
   });
   if (res.ok !== true) failTool('memory forget', res, opts);

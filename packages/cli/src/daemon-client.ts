@@ -30,11 +30,19 @@
 
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { ContextEngine, createEmbedFn, resolveEmbedderConfig } from '@noir-ai/context';
-import { loadProjectInfo, NOIR_VERSION, type ProjectInfo } from '@noir-ai/core';
+import {
+  loadProjectInfo,
+  NOIR_VERSION,
+  type ProjectInfo,
+  readWorkspaceMarker,
+  workspaceStoreDbPath,
+} from '@noir-ai/core';
 import {
   ensureDaemonRunning,
+  ensureWorkspaceDaemonRunning,
   pidAlive,
   readDaemonRecord,
+  readWorkspaceDaemonRecord,
   resolveGateConfig,
 } from '@noir-ai/daemon';
 import { createMemoryEngine, type MemoryEngine } from '@noir-ai/memory';
@@ -519,6 +527,128 @@ export async function withInProcessRead<T>(
       resolveGateConfig(project.config),
     );
     return await fn({ context, memory, workflow });
+  } finally {
+    await store.close().catch(() => {
+      /* a close error must not mask the command's outcome */
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Workspace-aware routing (ADR-0009). In a repo that joined a workspace (a
+// `.noir/workspace.json` marker), `memory *` commands route to the WORKSPACE
+// daemon (`?p=<projectId>`), not the per-project daemon. The read fallback opens
+// the workspace store read-only (single-writer preserved). Context/workflow/task
+// commands keep the project daemon (spec §6).
+// ---------------------------------------------------------------------------
+
+/** A repo's workspace membership (name + this repo's project id), or null. */
+export interface WorkspaceRouting {
+  name: string;
+  projectId: string;
+}
+
+export function workspaceRoutingTarget(root: string): WorkspaceRouting | null {
+  const name = readWorkspaceMarker(root);
+  if (name === null) return null;
+  try {
+    return { name, projectId: loadProjectInfo(root).id };
+  } catch {
+    return null;
+  }
+}
+
+/** Read-only probe of a workspace daemon (never starts one). */
+export async function probeWorkspaceDaemon(routing: WorkspaceRouting): Promise<DaemonProbe> {
+  const rec = readWorkspaceDaemonRecord(routing.name);
+  if (rec === null || !pidAlive(rec.pid)) return { running: false };
+  try {
+    const res = await fetch(`http://127.0.0.1:${rec.port}/health`, {
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
+    if (!res.ok) return { running: false };
+    const body = (await res.json().catch(() => null)) as {
+      ok?: boolean;
+      pid?: number;
+      workspace?: string;
+    } | null;
+    if (body?.ok !== true || body.workspace !== routing.name || body.pid !== rec.pid) {
+      return { running: false };
+    }
+    return { running: true, pid: rec.pid, port: rec.port };
+  } catch {
+    return { running: false };
+  }
+}
+
+/** Connect to the workspace daemon (`?p=<projectId>`) and run `fn` (active path). */
+export async function withWorkspaceDaemon<T>(
+  opts: DaemonClientOptions,
+  routing: WorkspaceRouting,
+  project: ProjectInfo,
+  fn: (caller: DaemonToolCaller) => Promise<T>,
+): Promise<T> {
+  const ensured = await ensureWorkspaceDaemonRunning({
+    name: routing.name,
+    project,
+    idleTimeoutSec: project.config.workspace.idleTimeoutSec,
+  });
+  const url = `${ensured.url}?p=${routing.projectId}`;
+  let client: Client | undefined;
+  try {
+    client = new Client(
+      { name: 'noir-cli', version: NOIR_VERSION },
+      { versionNegotiation: { mode: 'auto' } },
+    );
+    const connected: Client = client;
+    await connectClient(connected, url, opts);
+    return await fn(buildCaller(connected, opts));
+  } finally {
+    if (client) {
+      await client.close().catch(() => {
+        /* a close error must not mask the real failure */
+      });
+    }
+    await ensured.stop().catch(() => {
+      /* ditto */
+    });
+  }
+}
+
+/** Open the workspace store read-only and run `fn` over a memory engine (read fallback). */
+export async function withWorkspaceMemoryRead<T>(
+  opts: DaemonClientOptions,
+  routing: WorkspaceRouting,
+  project: ProjectInfo,
+  fn: (memory: MemoryEngine) => Promise<T>,
+): Promise<T> {
+  let store: Store;
+  try {
+    store = await openStore({
+      projectId: `ws-${routing.name}`,
+      root: project.root,
+      dbPath: workspaceStoreDbPath(routing.name),
+      readonly: true,
+    });
+  } catch (err) {
+    fail(
+      EXIT.ERROR,
+      `could not open the workspace store read-only: ${err instanceof Error ? err.message : String(err)}`,
+      opts,
+    );
+  }
+  const embedderCfg = resolveEmbedderConfig(project.config.context);
+  const embed = createEmbedFn(embedderCfg).embed;
+  const memory = createMemoryEngine({
+    store,
+    root: project.root,
+    projectId: `ws-${routing.name}`,
+    embed,
+    storeDegraded: true,
+    softForget: true,
+  });
+  try {
+    return await fn(memory);
   } finally {
     await store.close().catch(() => {
       /* a close error must not mask the command's outcome */

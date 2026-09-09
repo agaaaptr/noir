@@ -1,11 +1,37 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ensureWorkspaceRegistry, paths, readWorkspaceMarker } from '@noir-ai/core';
+import {
+  ensureWorkspaceRegistry,
+  paths,
+  readWorkspaceMarker,
+  writeWorkspaceMarker,
+} from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Shared mock state: which daemon path a memory command took.
+const mocks = vi.hoisted(() => ({
+  withWorkspaceDaemon: vi.fn(
+    async (_opts: unknown, _r: unknown, _p: unknown, fn: (c: unknown) => Promise<unknown>) =>
+      fn({
+        callTool: async () => ({
+          ok: true,
+          id: 'obs-1',
+          observation: { id: 'obs-1', content: 'x' },
+        }),
+        listTools: async () => [],
+      }),
+  ),
+  callDaemonTool: vi.fn(async () => ({
+    ok: true,
+    id: 'obs-1',
+    observation: { id: 'obs-1', content: 'x' },
+  })),
+}));
+
 // Mock the daemon's workspace ensure so join does not really spawn a detached
-// server (offline + fast). Everything else (registry, marker, .mcp.json) is real.
+// server (offline + fast). The daemon-client `withWorkspaceDaemon`/`callDaemonTool`
+// are spied so the routing tests can assert which path a memory command takes.
 vi.mock('@noir-ai/daemon', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@noir-ai/daemon')>();
   return {
@@ -19,6 +45,16 @@ vi.mock('@noir-ai/daemon', async (importOriginal) => {
   };
 });
 
+vi.mock('../src/daemon-client.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/daemon-client.js')>();
+  return {
+    ...actual,
+    withWorkspaceDaemon: mocks.withWorkspaceDaemon,
+    callDaemonTool: mocks.callDaemonTool,
+  };
+});
+
+import { memorySave } from '../src/commands/memory.js';
 import { daemonJoin, workspaceLeave } from '../src/commands/workspace.js';
 
 let home: string;
@@ -34,6 +70,8 @@ beforeEach(() => {
   writeFileSync(paths.projectId(root), 'fe-repo\n', 'utf8');
   writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
   process.chdir(root);
+  mocks.withWorkspaceDaemon.mockClear();
+  mocks.callDaemonTool.mockClear();
 });
 afterEach(() => {
   process.chdir(origCwd);
@@ -71,5 +109,24 @@ describe('noir daemon join / workspace leave', () => {
   it('join fails cleanly when the workspace does not exist', async () => {
     await expect(daemonJoin({ name: 'missing' })).rejects.toThrow();
     expect(existsSync(join(root, '.noir', 'workspace.json'))).toBe(false);
+  });
+});
+
+describe('CLI memory routing via the join marker', () => {
+  it('a joined repo routes memory commands to the workspace daemon', async () => {
+    ensureWorkspaceRegistry('demo');
+    writeWorkspaceMarker(root, 'demo');
+
+    await expect(
+      memorySave({ content: 'fe expects page-based pagination' }),
+    ).resolves.toBeUndefined();
+    expect(mocks.withWorkspaceDaemon).toHaveBeenCalledTimes(1);
+    expect(mocks.callDaemonTool).not.toHaveBeenCalled();
+  });
+
+  it('a repo without a marker keeps the project-daemon path', async () => {
+    await memorySave({ content: 'solo note' });
+    expect(mocks.withWorkspaceDaemon).not.toHaveBeenCalled();
+    expect(mocks.callDaemonTool).toHaveBeenCalledTimes(1);
   });
 });

@@ -462,6 +462,20 @@ export const NoirConfigSchema = z.object({
     })
     .default({ profiles: {} })
     .describe('Host orchestrator run settings'),
+  // Shared cross-repo workspaces (ADR-0009). A workspace daemon is a long-lived
+  // shared server, so its idle timeout defaults to 0 (never auto-stop) — the
+  // user stops it explicitly with `noir workspace stop`.
+  workspace: z
+    .object({
+      idleTimeoutSec: z
+        .number()
+        .int()
+        .min(0)
+        .default(0)
+        .describe('Idle timeout before a workspace daemon auto-stops (seconds; 0 = never)'),
+    })
+    .default({ idleTimeoutSec: 0 })
+    .describe('Shared workspace settings'),
 });
 
 export type NoirConfig = z.infer<typeof NoirConfigSchema>;

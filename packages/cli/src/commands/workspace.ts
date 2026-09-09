@@ -85,7 +85,7 @@ export async function daemonStartWorkspace(opts: WorkspaceStartOptions): Promise
     const ensured = await ensureWorkspaceDaemonRunning({
       name: opts.name,
       project,
-      idleTimeoutSec: 0,
+      idleTimeoutSec: project.config.workspace.idleTimeoutSec,
     });
     if (opts.json === true) {
       process.stdout.write(`${JSON.stringify({ ok: true, data: { mode: 'detached' } })}\n`);
@@ -117,7 +117,7 @@ export async function daemonStartWorkspace(opts: WorkspaceStartOptions): Promise
   const ensured = await ensureWorkspaceDaemonRunning({
     name: opts.name,
     project,
-    idleTimeoutSec: 0,
+    idleTimeoutSec: project.config.workspace.idleTimeoutSec,
   });
   finishJoin(project, opts.name, ensured.url, opts);
   if (opts.json === true) {
@@ -147,7 +147,7 @@ export async function daemonJoin(opts: WorkspaceJoinOptions): Promise<void> {
   const ensured = await ensureWorkspaceDaemonRunning({
     name: opts.name,
     project,
-    idleTimeoutSec: 0,
+    idleTimeoutSec: project.config.workspace.idleTimeoutSec,
   });
   upsertWorkspaceMember(reg, { projectId: project.id, root: project.root, joinedAt: Date.now() });
   finishJoin(project, opts.name, ensured.url, opts);
