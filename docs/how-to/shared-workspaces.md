@@ -85,5 +85,9 @@ noir memory capture --content "Frontend expects the /users contract from backend
   feature (not in this release).
 - **A non-member repo is refused** by the daemon; a repo that never joins is
   byte-for-byte unchanged.
-- A workspace daemon never idles out (it stays up while you develop). Stop it
-  explicitly with `noir workspace stop`.
+- A workspace daemon defaults to never idling out (`workspace.idleTimeoutSec: 0`
+  — set a positive value under `workspace:` in `.noir/config.yml` to auto-stop it
+  after N idle seconds). Stop it explicitly with `noir workspace stop`.
+- In a joined repo, `noir memory recall|save|capture|sessions|forget` route to
+  the workspace daemon; `context`/`workflow`/`task` commands keep the project
+  daemon.

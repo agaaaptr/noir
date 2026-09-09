@@ -104,6 +104,13 @@ vars, never config keys — see
 | `run.profiles` | `record` | no | {} | Named run profiles, keyed by name |
 | `run.profiles.<name>` | `record value` | yes | — | A named host-binary bundle |
 
+### workspace
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `workspace` | `object` | no | {"idleTimeoutSec":0} | Shared workspace settings |
+| `workspace.idleTimeoutSec` | `number` | no | 0 | Idle timeout before a workspace daemon auto-stops (seconds; 0 = never) |
+
 
 ## Conditional requirements
 

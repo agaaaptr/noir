@@ -42,8 +42,10 @@ served by **one detached daemon**:
 
 - Cross-repo sharing works on one machine, localhost-only, with an explicit
   per-repo opt-in; solo-project behavior is unchanged.
-- The workspace daemon never idles out in v1 (`idleTimeoutSec: 0`). A
-  `workspace.idleTimeoutSec` config knob is a deliberate follow-up (not shipped).
+- The workspace daemon defaults to never idling out (`workspace.idleTimeoutSec:
+  0`); the knob is user-configurable via the `workspace:` config block.
 - `memory_capture` is wired as a manual CLI verb (provenance `auto:<hook>`); no
   auto-installed hooks.
+- `noir memory *` in a joined repo routes to the workspace daemon (`?p=`
+  identity); `context`/`workflow`/`task` stay per-project.
 - Cross-machine / team / multi-user sharing remains v2.0 (see `releases.md`).
