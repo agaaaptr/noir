@@ -39,7 +39,7 @@ Deferred engineering items are tracked per-area in [`docs/roadmap/backlog.md`](b
 - **MET** — Hybrid retrieval, vector search, host-agnostic core, structured output, and MCP exist and are exercised (context engine, model layer, host adapters, daemon).
 - **MET** — Multi-agent collaboration, autonomous engineering, and enterprise readiness are explicitly recorded as non-goals / v2.0, not as active backlog.
 - **DONE** — `draftPrd` has a runtime consumer beyond memory consolidation (new caller wired in `packages/*/src`).
-- **DONE** — `noir memory capture` exists in the CLI or the template's documented command matches the CLI surface ([`packages/memory/src/engine.ts`](../../packages/memory/src/engine.ts), [`packages/cli/src/bin.ts`](../../packages/cli/src/bin.ts)).
+- **DONE (1.13.0)** — `noir memory capture` ships as a manual CLI verb (provenance `auto:<hook>` via `memory_capture` MCP tool; auto-capture-by-default remains deferred).
 - **DONE** — Technology radar artifact exists with items classified adopt/trial/assess/hold.
 - **DONE** — Innovation backlog artifact exists with the required item fields.
 - **DONE** — Sunset/deprecation mechanism is documented as a repeatable evaluate/deprecate/migrate/remove process (beyond ADR-0002).

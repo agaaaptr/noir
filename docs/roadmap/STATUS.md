@@ -60,14 +60,14 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 
 ## Active slice
 
-- (none — v2 orchestrator TUI fully shipped 2026-08-14 as 1.11.0).
+- **`shared-workspace`** (spec + plan committed 2026-09-09, implemented on `develop`, targeting **v1.13.0**) — cross-repo shared decision memory through one detached workspace daemon: `noir daemon start --workspace <name>` / `daemon join`, `?p=`-routed multiplexing (memory→shared store, project tools→member store), provenance + append-only supersede/soft-forget, a change feed (`changes_since` + long-poll `await_changes`), and manual `noir memory capture`. ADR-0009.
 
 
 
 
 ## Next milestone
 
-- (TBD) — the v2 orchestrator TUI shipped as 1.11.0. Remaining v2.0 work is long-term ecosystem (memory cloud sync, team/multi-user, first-class skill registry, theming/plugin SDK) — see `releases.md` version targets.
+- **v1.13.0 — shared cross-repo workspaces** (spec `2026-09-09-shared-workspace-context-design.md`). After it ships, remaining v2.0 work stays long-term ecosystem (memory cloud sync, team/multi-user, first-class skill registry, theming/plugin SDK) — see `releases.md` version targets.
 
 ## Current technical debt
 

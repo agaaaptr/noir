@@ -35,7 +35,7 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 - **Per-project `daemon.json`** — today a single global `~/.noir/daemon.json` clobbers under concurrent projects.
 - **Fixed/configured daemon port** — `daemon.port` config is parsed (and tested) but never consumed; the daemon binds an ephemeral 127.0.0.1 port each start.
 - **Background worker architecture** — indexing is on-demand today; no scheduled workers for cleanup, update-checks, docs sync, or integration polling.
-- **Event bus / pub-sub observability** — today observability is status tools + `.noir/audit/` JSONL; no structured metrics/tracing endpoints.
+- **Event bus / pub-sub observability** — today observability is status tools + `.noir/audit/` JSONL; no structured metrics/tracing endpoints. (Workspace change feed shipped a cursor + long-poll `await_changes` in 1.13.0 — a signal-only push equivalent, not a general event bus.)
 
 ## CLI / TUI
 
@@ -56,7 +56,7 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 
 - **Graph / temporal-KG expansion** (Zep/Graphiti-style entities + edges; needs an extraction LLM + graph storage).
 - **LLM auto-tagging** (`concepts` / `type` on save).
-- **Auto-capture-by-default** — an opt-in Claude Code hooks template ships today (never auto-wired), documenting the explicit-save surface. The `memory capture` command does not exist yet (the template says so); auto-capture is a future slice.
+- **Auto-capture-by-default** — an opt-in Claude Code hooks template ships today (never auto-wired), documenting the explicit-save surface. `noir memory capture` shipped in **1.13.0** (manual only — never auto-wired); auto-capture-by-default remains a future slice.
 - **Multi-user / org scoping** (per-user memory namespaces; v1 is solo power-user).
 
 ## Model
