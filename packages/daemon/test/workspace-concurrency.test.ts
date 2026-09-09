@@ -1,0 +1,79 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
+import { ensureWorkspaceRegistry, parseConfig, paths, upsertWorkspaceMember } from '@noir-ai/core';
+import { afterAll, describe, expect, it } from 'vitest';
+import { clearDaemonRecord } from '../src/lifecycle.js';
+import { startWorkspaceHttpServer } from '../src/workspace-http.js';
+
+const home = mkdtempSync(join(tmpdir(), 'noir-wsconc-home-'));
+process.env.NOIR_WORKSPACES_DIR = join(home, 'workspaces');
+process.env.NOIR_DAEMON_JSON = join(home, 'daemon.json');
+const rootA = mkdtempSync(join(tmpdir(), 'noir-wsconc-a-'));
+mkdirSync(paths.noirDir(rootA), { recursive: true });
+writeFileSync(paths.projectId(rootA), 'conc-a\n', 'utf8');
+writeFileSync(paths.config(rootA), 'host: claude\nmode: full\ncontext:\n  embedder:\n    kind: none\n', 'utf8');
+afterAll(() => {
+  clearDaemonRecord();
+  rmSync(home, { recursive: true, force: true });
+  rmSync(rootA, { recursive: true, force: true });
+});
+
+async function mkClient(port: number) {
+  const client = new Client(
+    { name: 'noir-conc', version: '0.0.0' },
+    { versionNegotiation: { mode: 'auto' } },
+  );
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp?p=conc-a`)),
+  );
+  return client;
+}
+
+describe('two concurrent clients on one workspace daemon', () => {
+  it('interleaved writes are visible to both, and await_changes wakes across clients', async () => {
+    upsertWorkspaceMember(ensureWorkspaceRegistry('conc'), {
+      projectId: 'conc-a',
+      root: rootA,
+      joinedAt: Date.now(),
+    });
+    const { port, stop } = await startWorkspaceHttpServer({
+      name: 'conc',
+      project: {
+        id: 'conc-a',
+        name: 'conc',
+        root: rootA,
+        config: parseConfig({ host: 'claude', mode: 'full', context: { embedder: { kind: 'none' } } }),
+      },
+      idleTimeoutSec: 0,
+    });
+    try {
+      const c1 = await mkClient(port);
+      const c2 = await mkClient(port);
+      const write = (c: Client, content: string) => c.callTool({ name: 'memory_save', arguments: { content } });
+      await Promise.all([write(c1, 'c1 decision one'), write(c2, 'c2 decision two'), write(c1, 'c1 decision three')]);
+
+      const read = await c2.callTool({ name: 'memory_recall', arguments: { query: 'decision' } });
+      const env = JSON.parse((read.content?.[0] as { text: string }).text) as { ok: boolean; results: Array<{ content: string }> };
+      expect(env.ok).toBe(true);
+      expect(env.results.length).toBeGreaterThanOrEqual(3);
+
+      // long-poll wakes: c1 holds await_changes(cursor=0), c2 writes, c1 returns promptly
+      const poll = c1.callTool({ name: 'await_changes', arguments: { cursor: 0, timeoutMs: 25000 } });
+      await new Promise((r) => setTimeout(r, 200));
+      await write(c2, 'c2 wake the poller');
+      const pollEnv = JSON.parse(((await poll).content?.[0] as { text: string }).text) as {
+        ok: boolean;
+        changes: Array<{ id: string }>;
+      };
+      expect(pollEnv.ok).toBe(true);
+      expect(pollEnv.changes.length).toBeGreaterThanOrEqual(1);
+
+      await Promise.all([c1.close(), c2.close()]);
+    } finally {
+      await stop();
+      clearDaemonRecord();
+    }
+  }, 30000);
+});
