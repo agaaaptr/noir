@@ -4,6 +4,8 @@ export interface OpenOptions {
   projectId: ProjectId;
   root: string;
   readonly?: boolean;
+  /** Open the database at this exact path (default: <root>/.noir/store/<projectId>.db). */
+  dbPath?: string;
 }
 
 export interface FtsHit {

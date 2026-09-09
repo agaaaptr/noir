@@ -1,4 +1,5 @@
 import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { type ProjectId, paths } from '@noir-ai/core';
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
@@ -73,9 +74,9 @@ interface VecRow {
  */
 export async function openStore(opts: OpenOptions): Promise<Store & { __db: Database.Database }> {
   const projectId: ProjectId = opts.projectId;
-  const dbPath = paths.storeDb(opts.root, projectId);
+  const dbPath = opts.dbPath ?? paths.storeDb(opts.root, projectId);
   if (opts.readonly !== true) {
-    mkdirSync(paths.storeDir(opts.root), { recursive: true });
+    mkdirSync(dirname(dbPath), { recursive: true });
   }
 
   const db = new Database(dbPath, { readonly: opts.readonly === true });
