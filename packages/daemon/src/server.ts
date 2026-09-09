@@ -32,9 +32,22 @@ import {
   writeIntegrationAudit,
 } from './integration-seam.js';
 import { buildStatus, type Transport } from './status.js';
+import { appendFeed, changesSince, summarize, waitForFeedChange } from './feed.js';
 
 /** Gate phases in lifecycle order (spec → plan → verify), used by {@link nextGateAfter}. */
 const GATE_PHASES: readonly Phase[] = ['spec', 'plan', 'verify'] as const;
+
+/** Workspace-specific server context (spec §6). */
+export interface WorkspaceServerContext {
+  /** Workspace name (identity + reported by `/health`). */
+  name: string;
+  /** The requesting member's canonical project id (provenance source). */
+  repo: string;
+  /** The workspace store handle (KV cursor + feed live here). */
+  feedStore: Store;
+  /** Wake long-poll `await_changes` waiters after a write. */
+  wakeFeed: () => void;
+}
 
 export interface ServerContext {
   project: ProjectInfo;
@@ -106,6 +119,15 @@ export interface ServerContext {
    * `Authorization` header).
    */
   integrations?: IntegrationService;
+  /**
+   * Workspace context — set on a workspace daemon request (spec §6). When
+   * present, memory tools are the WORKSPACE memory engine (shared across
+   * members), provenance is stamped from {@link WorkspaceServerContext.repo}
+   * (the `?p=` identity, never caller-supplied), and the change-feed tools
+   * (`changes_since` / `await_changes`) are registered against the workspace
+   * store. Absent on single-project serves — project behavior is unchanged.
+   */
+  workspace?: WorkspaceServerContext;
 }
 
 /** JSON returned by the `store_status` tool. */
@@ -810,6 +832,10 @@ export function createNoirServer(ctx: ServerContext): McpServer {
             .optional()
             .describe('Salience 0..1 (defaults to 0.5).'),
           sessionId: z.string().optional().describe('Host session id (recorded when known).'),
+          supersedes: z
+            .string()
+            .optional()
+            .describe('Observation id this new row corrects (the target is marked superseded — append-only).'),
         },
       },
       async (input) => {
@@ -824,7 +850,23 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           });
         }
         try {
-          const observation = await memory.save(input);
+          // Workspace mode: provenance is stamped from the request identity
+          // (`?p=`), NEVER from caller args — a caller cannot claim a false repo.
+          const workspace = ctx.workspace;
+          const observation = await memory.save(
+            workspace ? { ...input, repo: workspace.repo, status: 'active' } : input,
+          );
+          if (workspace) {
+            appendFeed(workspace.feedStore, {
+              kind: input.supersedes !== undefined ? 'supersede' : 'save',
+              id: observation.id,
+              repo: workspace.repo,
+              type: String(observation.type),
+              summary: summarize(observation.content),
+              ts: Date.now(),
+            });
+            workspace.wakeFeed();
+          }
           return textResult({ ok: true, id: observation.id, observation });
         } catch (err) {
           return textResult({ ok: false, degraded: true, error: errorMessage(err) });
@@ -842,14 +884,19 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           limit: z.number().int().positive().optional().describe('Max results (default 10).'),
           type: z.string().optional().describe('Filter to a single observation type.'),
           sessionId: z.string().optional().describe('Filter to a single host session.'),
+          includeInactive: z
+            .boolean()
+            .optional()
+            .describe('Include superseded/forgotten rows (default: hidden).'),
         },
       },
-      async ({ query, limit, type, sessionId }) => {
+      async ({ query, limit, type, sessionId, includeInactive }) => {
         try {
           const { hits, degraded, mode } = await memory.recallWithMeta(query, {
             limit,
             type,
             sessionId,
+            includeInactive,
           });
           return textResult({ ok: true, results: hits, degraded, mode });
         } catch (err) {
@@ -913,12 +960,59 @@ export function createNoirServer(ctx: ServerContext): McpServer {
         }
         try {
           const result = memory.forget(ids);
+          if (ctx.workspace) {
+            for (const id of ids) {
+              appendFeed(ctx.workspace.feedStore, {
+                kind: 'forget',
+                id,
+                repo: ctx.workspace.repo,
+                type: 'fact',
+                summary: `forgot ${id}`,
+                ts: Date.now(),
+              });
+            }
+            ctx.workspace.wakeFeed();
+          }
           return textResult({ ok: true, ...result });
         } catch (err) {
           return textResult({ ok: false, degraded: true, error: errorMessage(err) });
         }
       },
     );
+
+    // Workspace change feed (spec §8): registered ONLY on a workspace daemon.
+    // `changes_since` is the pull backstop (always works); `await_changes` is the
+    // long-poll "notification" — signal-only, the agent still reads on demand
+    // (content push is an anti-pattern — spec §2).
+    if (ctx.workspace) {
+      const feedStore = ctx.workspace.feedStore;
+      server.registerTool(
+        'changes_since',
+        {
+          description:
+            'List workspace memory changes newer than a cursor (id + one-line summary per entry; fetch full entries via memory_recall). Returns the current cursor + the new entries.',
+          inputSchema: {
+            cursor: z.number().int().min(0).describe('Last cursor seen (0 = everything).'),
+          },
+        },
+        async ({ cursor }) => textResult({ ok: true, ...changesSince(feedStore, cursor) }),
+      );
+      server.registerTool(
+        'await_changes',
+        {
+          description:
+            'Long-poll: resolve as soon as the workspace change feed advances past cursor (or on timeout). Returns the current cursor + any new entries. Call at turn boundaries to notice other sessions without polling.',
+          inputSchema: {
+            cursor: z.number().int().min(0).describe('Last cursor seen.'),
+            timeoutMs: z.number().int().min(0).max(25000).optional().describe('Max wait (default 5000).'),
+          },
+        },
+        async ({ cursor, timeoutMs }) => {
+          const timedOut = !(await waitForFeedChange(feedStore, cursor, timeoutMs ?? 5000));
+          return textResult({ ok: true, timedOut, ...changesSince(feedStore, cursor) });
+        },
+      );
+    }
 
     // Consolidation is OPT-IN + provider-explicit (blueprint D5/D6 / §9):
     // the tool is registered ONLY when the daemon wired a consolidation-capable

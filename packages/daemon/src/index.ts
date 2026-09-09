@@ -53,4 +53,9 @@ export {
   workspaceRecordPath,
   writeWorkspaceDaemonRecord,
 } from './workspace-record.js';
+export {
+  type RunningWorkspaceDaemon,
+  type StartWorkspaceHttpOptions,
+  startWorkspaceHttpServer,
+} from './workspace-http.js';
 export { buildWorkflowEngine, resolveGateConfig } from './workflow-seam.js';
