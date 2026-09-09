@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/server';
 import type { ContextEngine } from '@noir-ai/context';
 import type { ProjectInfo } from '@noir-ai/core';
 import { NOIR_VERSION } from '@noir-ai/core';
-import type { MemoryEngine } from '@noir-ai/memory';
+import { captureSource, type CaptureEventType, type MemoryEngine } from '@noir-ai/memory';
 import type { Store } from '@noir-ai/store';
 import type {
   AdvanceOpts,
@@ -974,6 +974,48 @@ export function createNoirServer(ctx: ServerContext): McpServer {
             ctx.workspace.wakeFeed();
           }
           return textResult({ ok: true, ...result });
+        } catch (err) {
+          return textResult({ ok: false, degraded: true, error: errorMessage(err) });
+        }
+      },
+    );
+
+    server.registerTool(
+      'memory_capture',
+      {
+        description:
+          'Distill a transcript/notes payload into a memory observation with capture provenance (manual only — never auto-installed hooks). Use for a session-end summary or a non-obvious conclusion you want remembered with its origin.',
+        inputSchema: {
+          content: z.string().min(1).describe('Distilled content to remember.'),
+          eventType: z.string().optional().describe('Capture hook label (defaults to Stop).'),
+        },
+      },
+      async ({ content, eventType }) => {
+        if (storeDegraded) {
+          return textResult({
+            ok: false,
+            degraded: true,
+            error: 'store is read-only (daemon down) — memory_capture is unavailable',
+          });
+        }
+        try {
+          const workspace = ctx.workspace;
+          const obs = await memory.saveCaptured(
+            workspace ? { content, repo: workspace.repo, status: 'active' } : { content },
+            captureSource((eventType as CaptureEventType) ?? 'Stop'),
+          );
+          if (workspace) {
+            appendFeed(workspace.feedStore, {
+              kind: 'save',
+              id: obs.id,
+              repo: workspace.repo,
+              type: String(obs.type),
+              summary: summarize(obs.content),
+              ts: Date.now(),
+            });
+            workspace.wakeFeed();
+          }
+          return textResult({ ok: true, id: obs.id, observation: obs });
         } catch (err) {
           return textResult({ ok: false, degraded: true, error: errorMessage(err) });
         }

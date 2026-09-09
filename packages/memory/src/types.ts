@@ -352,6 +352,8 @@ export interface MemoryStatus {
 export interface MemoryEngine {
   /** Persist an observation (FTS5 + vec0 + KV `memory:obs:<id>`); returns the row. */
   save(input: SaveInput): Promise<Observation>;
+  /** Persist with an explicit capture provenance source (the `memory capture` path). */
+  saveCaptured(input: SaveInput, source: MemorySource): Promise<Observation>;
   /**
    * Hybrid recall: BM25 ∪ kNN fused by RRF (k=60), scoped to `source:'memory'`,
    * + cheap regex entity-boost, hydrated from KV. Degrades to

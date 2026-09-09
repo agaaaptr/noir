@@ -27,6 +27,7 @@ import { doctor } from './commands/doctor.js';
 import { type HandoffOptions, handoff } from './commands/handoff.js';
 import { type HomeDeps, home } from './commands/home.js';
 import {
+  memoryCapture,
   memoryConsolidate,
   memoryForget,
   memoryRecall,
@@ -788,10 +789,29 @@ export function createProgram(): Command {
         ...(limit === undefined ? {} : { limit }),
       });
     });
+  memoryGrp
+    .command('capture')
+    .description('distill a transcript/notes file (or stdin) into a memory (manual)')
+    .argument('[file]', 'transcript/notes file (or pipe stdin)')
+    .option('--content <text>', 'inline distilled content')
+    .option('--event-type <type>', 'capture hook label (defaults to Stop)')
+    .action(async (...args: unknown[]) => {
+      const cmd = trailingCmd(args);
+      const g = cmd.optsWithGlobals();
+      const file = typeof args[0] === 'string' && (args[0] as string).length > 0 ? (args[0] as string) : undefined;
+      const content = typeof g.content === 'string' ? (g.content as string) : undefined;
+      const eventType = typeof g.eventType === 'string' ? (g.eventType as string) : undefined;
+      await memoryCapture({
+        ...toCliOptions(g),
+        ...(file === undefined ? {} : { file }),
+        ...(content === undefined ? {} : { content }),
+        ...(eventType === undefined ? {} : { eventType }),
+      });
+    });
   memoryGrp.action(() => {
     throw new NoirCliError(
       EXIT.USAGE,
-      'Usage: noir memory recall|save|sessions|forget|consolidate',
+      'Usage: noir memory recall|save|capture|sessions|forget|consolidate',
     );
   });
 

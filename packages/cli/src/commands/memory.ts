@@ -22,6 +22,7 @@
 // (`{ok:false,reason:'no-provider'|'model-unavailable'|'no-candidates'}`) is
 // honored as exit 1 with the reason; it is NEVER a silent paid call.
 
+import { readFileSync } from 'node:fs';
 import {
   callDaemonTool,
   type DaemonClientOptions,
@@ -330,6 +331,68 @@ function renderObservation(obs: Record<string, unknown>, opts: CliOptions): void
   if (rows.length > 0) definitionList(rows, opts);
   const content = obs.content;
   if (typeof content === 'string') log(`\n${content}`, opts);
+}
+
+// ---------------------------------------------------------------------------
+// `noir memory capture [file]` — manual transcript/notes distill (S9)
+// ---------------------------------------------------------------------------
+export interface MemoryCaptureOptions extends MemoryOptions {
+  /** A transcript/notes file to distill (or pipe stdin). */
+  file?: string;
+  /** Inline distilled content (overrides file/stdin). */
+  content?: string;
+  /** Capture hook label for provenance (defaults to 'Stop'). */
+  eventType?: string;
+}
+
+export async function memoryCapture(opts: MemoryCaptureOptions): Promise<void> {
+  const content = await resolveCaptureContent(opts);
+  const args: Record<string, unknown> = { content };
+  if (typeof opts.eventType === 'string' && opts.eventType.length > 0) args.eventType = opts.eventType;
+
+  const res = await callDaemonTool<MemorySaveResult | ToolFailure>(opts, 'memory_capture', args);
+  if (res.ok !== true) failTool('memory capture', res, opts);
+
+  const id = typeof res.id === 'string' ? res.id : '';
+  const observation = res.observation ?? {};
+  if (opts.json === true) {
+    process.stdout.write(`${JSON.stringify({ ok: true, data: { id, observation } })}\n`);
+    return;
+  }
+  log(`Captured memory ${id}.`, opts);
+  renderObservation(observation, opts);
+}
+
+/**
+ * Resolve capture content: `--content` > `--file` (read the file) > piped stdin
+ * > interactive prompt. Missing all sources under non-interactive ⇒ exit 2.
+ */
+async function resolveCaptureContent(opts: MemoryCaptureOptions): Promise<string> {
+  if (typeof opts.content === 'string' && opts.content.length > 0) return opts.content;
+  if (typeof opts.file === 'string' && opts.file.length > 0) {
+    try {
+      return readFileSync(opts.file, 'utf8');
+    } catch {
+      fail(EXIT.USAGE, `memory capture could not read --file ${opts.file}`, opts);
+    }
+  }
+  if (!process.stdin.isTTY) {
+    return readFileSync(0, 'utf8');
+  }
+  if (!isInteractive(opts)) {
+    fail(
+      EXIT.USAGE,
+      'memory capture requires --content <text> or --file <path> (or piped stdin).',
+      opts,
+    );
+  }
+  const clack = await import('@clack/prompts');
+  const value = await clack.text({ message: 'Captured memory content:' });
+  if (clack.isCancel(value)) {
+    clack.cancel('Cancelled.');
+    fail(EXIT.CANCELLED, 'cancelled', opts);
+  }
+  return String(value);
 }
 
 // ---------------------------------------------------------------------------

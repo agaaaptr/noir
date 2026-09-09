@@ -76,6 +76,7 @@ import {
   type MemoryConfig,
   type MemoryEngine,
   type MemoryHit,
+  type MemorySource,
   type MemoryStatus,
   type Observation,
   type ObservationStatus,
@@ -232,10 +233,15 @@ export class MemoryEngineImpl implements MemoryEngine {
 
   /** @inheritDoc MemoryEngine.save */
   save(input: SaveInput): Promise<Observation> {
-    return this.serialized(() => this.saveInternal(input));
+    return this.serialized(() => this.saveInternal(input, 'explicit'));
   }
 
-  private async saveInternal(input: SaveInput): Promise<Observation> {
+  /** @inheritDoc MemoryEngine.saveCaptured */
+  saveCaptured(input: SaveInput, source: MemorySource): Promise<Observation> {
+    return this.serialized(() => this.saveInternal(input, source));
+  }
+
+  private async saveInternal(input: SaveInput, source: MemorySource = 'explicit'): Promise<Observation> {
     this.assertNotDegraded('save');
     const ts = Date.now();
     const observation: Observation = {
@@ -249,7 +255,7 @@ export class MemoryEngineImpl implements MemoryEngine {
       importance: input.importance ?? DEFAULT_IMPORTANCE,
       concepts: input.concepts ?? [],
       files: input.files ?? [],
-      source: 'explicit',
+      source,
       // Optional workspace provenance — copied only when provided (legacy/project
       // rows keep the exact shape they have today; no invented defaults).
       ...(input.repo !== undefined ? { repo: input.repo } : {}),
