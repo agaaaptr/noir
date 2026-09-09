@@ -46,4 +46,11 @@ export { type SpawnTiming, spawnDetachedDaemon } from './spawn.js';
 export { buildStatus, type HostStatus, type StatusContext, type Transport } from './status.js';
 export { startStdioServer } from './stdio.js';
 export { type DaemonStore, openStoreForDaemon } from './store-seam.js';
+export {
+  clearWorkspaceDaemonRecord,
+  readWorkspaceDaemonRecord,
+  type WorkspaceDaemonRecord,
+  workspaceRecordPath,
+  writeWorkspaceDaemonRecord,
+} from './workspace-record.js';
 export { buildWorkflowEngine, resolveGateConfig } from './workflow-seam.js';
