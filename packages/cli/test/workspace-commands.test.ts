@@ -48,7 +48,10 @@ describe('noir daemon join / workspace leave', () => {
     await daemonJoin({ name: 'demo' });
     expect(readWorkspaceMarker(root)).toBe('demo');
     const mcp = JSON.parse(readFileSync(join(root, '.mcp.json'), 'utf8')) as {
-      mcpServers: Record<string, { type?: string; url?: string; command?: string; args?: string[] }>;
+      mcpServers: Record<
+        string,
+        { type?: string; url?: string; command?: string; args?: string[] }
+      >;
     };
     expect(mcp.mcpServers.noir?.type).toBe('http');
     expect(mcp.mcpServers.noir?.url).toContain('?p=fe-repo');
@@ -56,7 +59,10 @@ describe('noir daemon join / workspace leave', () => {
     await workspaceLeave({});
     expect(readWorkspaceMarker(root)).toBeNull();
     const restored = JSON.parse(readFileSync(join(root, '.mcp.json'), 'utf8')) as {
-      mcpServers: Record<string, { type?: string; url?: string; command?: string; args?: string[] }>;
+      mcpServers: Record<
+        string,
+        { type?: string; url?: string; command?: string; args?: string[] }
+      >;
     };
     expect(restored.mcpServers.noir?.command).toBeTruthy();
     expect(restored.mcpServers.noir?.args).toEqual(['mcp', 'serve', '--stdio']);

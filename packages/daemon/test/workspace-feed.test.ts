@@ -3,7 +3,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openStore } from '@noir-ai/store';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { appendFeed, changesSince, clearFeedState, summarize, wakeFeedWaiters, waitForFeedChange } from '../src/feed.js';
+import {
+  appendFeed,
+  changesSince,
+  clearFeedState,
+  summarize,
+  waitForFeedChange,
+  wakeFeedWaiters,
+} from '../src/feed.js';
 
 let root: string;
 let store: Awaited<ReturnType<typeof openStore>>;
@@ -19,8 +26,22 @@ afterEach(async () => {
 describe('workspace feed', () => {
   it('assigns monotonic cursors and reports changes since a cursor', () => {
     clearFeedState(store);
-    const e1 = appendFeed(store, { kind: 'save', id: 'a', repo: 'be', type: 'decision', summary: 'one', ts: 1 });
-    const e2 = appendFeed(store, { kind: 'supersede', id: 'b', repo: 'fe', type: 'fact', summary: 'two', ts: 2 });
+    const e1 = appendFeed(store, {
+      kind: 'save',
+      id: 'a',
+      repo: 'be',
+      type: 'decision',
+      summary: 'one',
+      ts: 1,
+    });
+    const e2 = appendFeed(store, {
+      kind: 'supersede',
+      id: 'b',
+      repo: 'fe',
+      type: 'fact',
+      summary: 'two',
+      ts: 2,
+    });
     expect(e2.cursor).toBeGreaterThan(e1.cursor);
     const since0 = changesSince(store, 0);
     expect(since0.changes).toHaveLength(2);

@@ -4,7 +4,7 @@
 // not look Noir-emitted unless `--force` (never a silent overwrite).
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { resolveAdapter, type HostId } from '@noir-ai/adapters';
+import { type HostId, resolveAdapter } from '@noir-ai/adapters';
 import { resolveNoirCommand } from '@noir-ai/core';
 import { type CliOptions, EXIT, fail } from './output.js';
 
@@ -38,21 +38,36 @@ export function writeWorkspaceHttpEntry(
   const path = mcpPathFor(root, host);
   const existing = readJson(path);
   if (existing !== null && !isNoirEmitted(existing.mcpServers) && opts.force !== true) {
-    fail(EXIT.ERROR, `Refusing to rewrite ${path}: it does not look like a Noir-emitted config (add --force to overwrite).`, opts);
+    fail(
+      EXIT.ERROR,
+      `Refusing to rewrite ${path}: it does not look like a Noir-emitted config (add --force to overwrite).`,
+      opts,
+    );
   }
   const next = {
     ...(existing ?? {}),
-    mcpServers: { ...(existing?.mcpServers ?? {}), noir: { type: 'http', url: `${url}?p=${projectId}` } },
+    mcpServers: {
+      ...(existing?.mcpServers ?? {}),
+      noir: { type: 'http', url: `${url}?p=${projectId}` },
+    },
   };
   writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
 }
 
 /** Restore the repo's `noir` MCP entry to stdio (used by `workspace leave`). */
-export function writeStdioEntry(root: string, host: HostId, opts: CliOptions & { force?: boolean }): void {
+export function writeStdioEntry(
+  root: string,
+  host: HostId,
+  opts: CliOptions & { force?: boolean },
+): void {
   const path = mcpPathFor(root, host);
   const existing = readJson(path);
   if (existing !== null && !isNoirEmitted(existing.mcpServers) && opts.force !== true) {
-    fail(EXIT.ERROR, `Refusing to rewrite ${path}: it does not look like a Noir-emitted config (add --force to overwrite).`, opts);
+    fail(
+      EXIT.ERROR,
+      `Refusing to rewrite ${path}: it does not look like a Noir-emitted config (add --force to overwrite).`,
+      opts,
+    );
   }
   const noir = { command: resolveNoirCommand(), args: ['mcp', 'serve', '--stdio'] };
   const next = { ...(existing ?? {}), mcpServers: { ...(existing?.mcpServers ?? {}), noir } };

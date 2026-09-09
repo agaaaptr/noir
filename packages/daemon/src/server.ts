@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/server';
 import type { ContextEngine } from '@noir-ai/context';
 import type { ProjectInfo } from '@noir-ai/core';
 import { NOIR_VERSION } from '@noir-ai/core';
-import { captureSource, type CaptureEventType, type MemoryEngine } from '@noir-ai/memory';
+import { type CaptureEventType, captureSource, type MemoryEngine } from '@noir-ai/memory';
 import type { Store } from '@noir-ai/store';
 import type {
   AdvanceOpts,
@@ -24,6 +24,7 @@ import {
   normalizeOp,
   previewRows,
 } from './clickup-write.js';
+import { appendFeed, changesSince, summarize, waitForFeedChange } from './feed.js';
 import {
   findBinding,
   type IntegrationAuditEntry,
@@ -32,7 +33,6 @@ import {
   writeIntegrationAudit,
 } from './integration-seam.js';
 import { buildStatus, type Transport } from './status.js';
-import { appendFeed, changesSince, summarize, waitForFeedChange } from './feed.js';
 
 /** Gate phases in lifecycle order (spec → plan → verify), used by {@link nextGateAfter}. */
 const GATE_PHASES: readonly Phase[] = ['spec', 'plan', 'verify'] as const;
@@ -835,7 +835,9 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           supersedes: z
             .string()
             .optional()
-            .describe('Observation id this new row corrects (the target is marked superseded — append-only).'),
+            .describe(
+              'Observation id this new row corrects (the target is marked superseded — append-only).',
+            ),
         },
       },
       async (input) => {
@@ -1046,7 +1048,13 @@ export function createNoirServer(ctx: ServerContext): McpServer {
             'Long-poll: resolve as soon as the workspace change feed advances past cursor (or on timeout). Returns the current cursor + any new entries. Call at turn boundaries to notice other sessions without polling.',
           inputSchema: {
             cursor: z.number().int().min(0).describe('Last cursor seen.'),
-            timeoutMs: z.number().int().min(0).max(25000).optional().describe('Max wait (default 5000).'),
+            timeoutMs: z
+              .number()
+              .int()
+              .min(0)
+              .max(25000)
+              .optional()
+              .describe('Max wait (default 5000).'),
           },
         },
         async ({ cursor, timeoutMs }) => {

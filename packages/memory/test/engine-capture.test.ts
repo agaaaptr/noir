@@ -24,7 +24,10 @@ afterEach(async () => {
 describe('saveCaptured', () => {
   it('persists with a capture provenance source', async () => {
     const mem = createMemoryEngine({ store, root, projectId, embed: fakeEmbedFn() });
-    const obs = await mem.saveCaptured({ content: 'BE session distilled decision: drop offset param' }, captureSource('Stop'));
+    const obs = await mem.saveCaptured(
+      { content: 'BE session distilled decision: drop offset param' },
+      captureSource('Stop'),
+    );
     expect(obs.source).toBe('auto:stop');
     const hit = await mem.recall('offset param decision');
     expect(hit[0]?.source).toBe('auto:stop');

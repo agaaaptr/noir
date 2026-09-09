@@ -306,7 +306,8 @@ export async function recallMemory(
     if (opts?.type !== undefined && obs.type !== opts.type) continue;
     if (opts?.sessionId !== undefined && obs.sessionId !== opts.sessionId) continue;
     // Workspace lifecycle: hide superseded/forgotten rows by default.
-    if (obs.status !== undefined && obs.status !== 'active' && opts?.includeInactive !== true) continue;
+    if (obs.status !== undefined && obs.status !== 'active' && opts?.includeInactive !== true)
+      continue;
     hits.push(toMemoryHit(obs, row.score + entityBoostForObs(obs, entities)));
   }
 

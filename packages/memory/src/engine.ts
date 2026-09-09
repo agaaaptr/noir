@@ -241,7 +241,10 @@ export class MemoryEngineImpl implements MemoryEngine {
     return this.serialized(() => this.saveInternal(input, source));
   }
 
-  private async saveInternal(input: SaveInput, source: MemorySource = 'explicit'): Promise<Observation> {
+  private async saveInternal(
+    input: SaveInput,
+    source: MemorySource = 'explicit',
+  ): Promise<Observation> {
     this.assertNotDegraded('save');
     const ts = Date.now();
     const observation: Observation = {
@@ -397,7 +400,8 @@ export class MemoryEngineImpl implements MemoryEngine {
       if (opts?.sessionId !== undefined && obs.sessionId !== opts.sessionId) continue;
       // Workspace lifecycle: hide superseded/forgotten rows by default (legacy
       // rows with no `status` are active).
-      if (obs.status !== undefined && obs.status !== 'active' && opts?.includeInactive !== true) continue;
+      if (obs.status !== undefined && obs.status !== 'active' && opts?.includeInactive !== true)
+        continue;
       out.push(toMemoryHit(obs, row.score));
     }
     return out;

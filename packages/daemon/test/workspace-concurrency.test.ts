@@ -13,7 +13,11 @@ process.env.NOIR_DAEMON_JSON = join(home, 'daemon.json');
 const rootA = mkdtempSync(join(tmpdir(), 'noir-wsconc-a-'));
 mkdirSync(paths.noirDir(rootA), { recursive: true });
 writeFileSync(paths.projectId(rootA), 'conc-a\n', 'utf8');
-writeFileSync(paths.config(rootA), 'host: claude\nmode: full\ncontext:\n  embedder:\n    kind: none\n', 'utf8');
+writeFileSync(
+  paths.config(rootA),
+  'host: claude\nmode: full\ncontext:\n  embedder:\n    kind: none\n',
+  'utf8',
+);
 afterAll(() => {
   clearDaemonRecord();
   rmSync(home, { recursive: true, force: true });
@@ -31,6 +35,11 @@ async function mkClient(port: number) {
   return client;
 }
 
+function parseResult(res: { content?: unknown }): Record<string, unknown> {
+  const block = (res.content as Array<{ text?: string }> | undefined)?.[0];
+  return JSON.parse(block?.text ?? '') as Record<string, unknown>;
+}
+
 describe('two concurrent clients on one workspace daemon', () => {
   it('interleaved writes are visible to both, and await_changes wakes across clients', async () => {
     upsertWorkspaceMember(ensureWorkspaceRegistry('conc'), {
@@ -44,26 +53,41 @@ describe('two concurrent clients on one workspace daemon', () => {
         id: 'conc-a',
         name: 'conc',
         root: rootA,
-        config: parseConfig({ host: 'claude', mode: 'full', context: { embedder: { kind: 'none' } } }),
+        config: parseConfig({
+          host: 'claude',
+          mode: 'full',
+          context: { embedder: { kind: 'none' } },
+        }),
       },
       idleTimeoutSec: 0,
     });
     try {
       const c1 = await mkClient(port);
       const c2 = await mkClient(port);
-      const write = (c: Client, content: string) => c.callTool({ name: 'memory_save', arguments: { content } });
-      await Promise.all([write(c1, 'c1 decision one'), write(c2, 'c2 decision two'), write(c1, 'c1 decision three')]);
+      const write = (c: Client, content: string) =>
+        c.callTool({ name: 'memory_save', arguments: { content } });
+      await Promise.all([
+        write(c1, 'c1 decision one'),
+        write(c2, 'c2 decision two'),
+        write(c1, 'c1 decision three'),
+      ]);
 
       const read = await c2.callTool({ name: 'memory_recall', arguments: { query: 'decision' } });
-      const env = JSON.parse((read.content?.[0] as { text: string }).text) as { ok: boolean; results: Array<{ content: string }> };
+      const env = parseResult(read) as {
+        ok: boolean;
+        results: Array<{ content: string }>;
+      };
       expect(env.ok).toBe(true);
       expect(env.results.length).toBeGreaterThanOrEqual(3);
 
       // long-poll wakes: c1 holds await_changes(cursor=0), c2 writes, c1 returns promptly
-      const poll = c1.callTool({ name: 'await_changes', arguments: { cursor: 0, timeoutMs: 25000 } });
+      const poll = c1.callTool({
+        name: 'await_changes',
+        arguments: { cursor: 0, timeoutMs: 25000 },
+      });
       await new Promise((r) => setTimeout(r, 200));
       await write(c2, 'c2 wake the poller');
-      const pollEnv = JSON.parse(((await poll).content?.[0] as { text: string }).text) as {
+      const pollEnv = parseResult(await poll) as {
         ok: boolean;
         changes: Array<{ id: string }>;
       };

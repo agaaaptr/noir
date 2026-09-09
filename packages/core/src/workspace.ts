@@ -24,7 +24,8 @@ export function workspaceHomeDir(): string {
 
 /** A single workspace's directory. Throws on an invalid name (never joins a bad path). */
 export function workspaceDir(name: string): string {
-  if (!isValidWorkspaceName(name)) throw new Error(`invalid workspace name: ${JSON.stringify(name)}`);
+  if (!isValidWorkspaceName(name))
+    throw new Error(`invalid workspace name: ${JSON.stringify(name)}`);
   return join(workspaceHomeDir(), name);
 }
 
@@ -80,12 +81,15 @@ export function writeWorkspaceRegistry(reg: WorkspaceRegistry): void {
   const p = workspaceRegistryPath(reg.name);
   mkdirSync(join(p, '..'), { recursive: true });
   const tmp = `${p}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(reg, null, 2) + '\n', 'utf8');
+  writeFileSync(tmp, `${JSON.stringify(reg, null, 2)}\n`, 'utf8');
   renameSync(tmp, p);
 }
 
 /** Add-or-replace a member by projectId (idempotent). Returns the persisted registry. */
-export function upsertWorkspaceMember(reg: WorkspaceRegistry, member: WorkspaceMember): WorkspaceRegistry {
+export function upsertWorkspaceMember(
+  reg: WorkspaceRegistry,
+  member: WorkspaceMember,
+): WorkspaceRegistry {
   const next: WorkspaceRegistry = {
     ...reg,
     members: [...reg.members.filter((m) => m.projectId !== member.projectId), member],
@@ -94,8 +98,14 @@ export function upsertWorkspaceMember(reg: WorkspaceRegistry, member: WorkspaceM
   return next;
 }
 
-export function removeWorkspaceMember(reg: WorkspaceRegistry, projectId: string): WorkspaceRegistry {
-  const next: WorkspaceRegistry = { ...reg, members: reg.members.filter((m) => m.projectId !== projectId) };
+export function removeWorkspaceMember(
+  reg: WorkspaceRegistry,
+  projectId: string,
+): WorkspaceRegistry {
+  const next: WorkspaceRegistry = {
+    ...reg,
+    members: reg.members.filter((m) => m.projectId !== projectId),
+  };
   writeWorkspaceRegistry(next);
   return next;
 }
@@ -116,7 +126,7 @@ export function readWorkspaceMarker(root: string): string | null {
 
 export function writeWorkspaceMarker(root: string, name: string): void {
   mkdirSync(join(root, '.noir'), { recursive: true });
-  writeFileSync(workspaceMarkerPath(root), JSON.stringify({ name }, null, 2) + '\n', 'utf8');
+  writeFileSync(workspaceMarkerPath(root), `${JSON.stringify({ name }, null, 2)}\n`, 'utf8');
 }
 
 export function clearWorkspaceMarker(root: string): void {

@@ -25,7 +25,11 @@ describe('memory provenance + lifecycle', () => {
     const mem = createMemoryEngine({ store, root, projectId, embed: fakeEmbedFn() });
     const first = await mem.save({ content: 'GET /users returns {items: User[]}', repo: 'be' });
     expect(first.repo).toBe('be');
-    await mem.save({ content: 'pagination param is page, not offset', repo: 'be', supersedes: first.id });
+    await mem.save({
+      content: 'pagination param is page, not offset',
+      repo: 'be',
+      supersedes: first.id,
+    });
     // first is now superseded -> hidden by default
     const hidden = await mem.recall('pagination offset users');
     expect(hidden.some((h) => h.id === first.id)).toBe(false);
@@ -35,7 +39,13 @@ describe('memory provenance + lifecycle', () => {
   });
 
   it('softForget marks forgotten (not deleted) and hides from recall', async () => {
-    const mem = createMemoryEngine({ store, root, projectId, embed: fakeEmbedFn(), softForget: true });
+    const mem = createMemoryEngine({
+      store,
+      root,
+      projectId,
+      embed: fakeEmbedFn(),
+      softForget: true,
+    });
     const obs = await mem.save({ content: 'scratch note to drop' });
     const res = mem.forget([obs.id]);
     expect(res.deleted).toBe(1);

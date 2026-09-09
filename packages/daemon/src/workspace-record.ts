@@ -5,7 +5,7 @@
 // the global record) can never adopt or stop a workspace daemon. The record
 // carries the workspace NAME as its identity (a projectId is meaningless here —
 // a workspace spans projects).
-import { readFileSync, existsSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { atomicWriteFile, workspaceDir } from '@noir-ai/core';
 

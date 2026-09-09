@@ -93,12 +93,14 @@ export { NOIR_VERSION } from './version.js';
 export {
   clearWorkspaceMarker,
   ensureWorkspaceRegistry,
-  isWorkspaceMember,
   isValidWorkspaceName,
+  isWorkspaceMember,
   readWorkspaceMarker,
   readWorkspaceRegistry,
   removeWorkspaceMember,
   upsertWorkspaceMember,
+  WORKSPACE_NAME_RE,
+  WORKSPACES_DIR_ENV,
   type WorkspaceMember,
   type WorkspaceRegistry,
   workspaceDir,
@@ -108,6 +110,4 @@ export {
   workspaceStoreDbPath,
   writeWorkspaceMarker,
   writeWorkspaceRegistry,
-  WORKSPACE_NAME_RE,
-  WORKSPACES_DIR_ENV,
 } from './workspace.js';

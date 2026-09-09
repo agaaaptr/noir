@@ -17,7 +17,11 @@ export interface WorkspaceEnsureResult {
 
 const HEALTH_PROBE_TIMEOUT_MS = 1500;
 
-async function isWorkspaceHealthy(port: number, expectedPid: number | undefined, name: string): Promise<boolean> {
+async function isWorkspaceHealthy(
+  port: number,
+  expectedPid: number | undefined,
+  name: string,
+): Promise<boolean> {
   try {
     const res = await fetch(`http://127.0.0.1:${port}/health`, {
       signal: AbortSignal.timeout(HEALTH_PROBE_TIMEOUT_MS),
@@ -66,7 +70,12 @@ const DEFAULT_RECORD_TIMEOUT_MS = 5_000;
 const DEFAULT_HEALTH_TIMEOUT_MS = 5_000;
 const DEFAULT_POLL_INTERVAL_MS = 100;
 
-async function waitFor(what: string, timeoutMs: number, pollMs: number, cond: () => boolean | Promise<boolean>): Promise<void> {
+async function waitFor(
+  what: string,
+  timeoutMs: number,
+  pollMs: number,
+  cond: () => boolean | Promise<boolean>,
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (await cond()) return;
@@ -86,7 +95,16 @@ export async function spawnDetachedWorkspaceDaemon(opts: {
   }
   const child = spawn(
     process.execPath,
-    [binEntry, 'daemon', 'start', '--workspace', opts.name, '--_detached-child', '--cwd', opts.project.root],
+    [
+      binEntry,
+      'daemon',
+      'start',
+      '--workspace',
+      opts.name,
+      '--_detached-child',
+      '--cwd',
+      opts.project.root,
+    ],
     { detached: true, stdio: 'ignore', windowsHide: true },
   );
   child.unref();
@@ -94,16 +112,24 @@ export async function spawnDetachedWorkspaceDaemon(opts: {
   if (typeof pid !== 'number') {
     throw new Error('failed to spawn detached workspace daemon (no pid)');
   }
-  await waitFor(`workspace daemon record for pid ${pid}`, DEFAULT_RECORD_TIMEOUT_MS, DEFAULT_POLL_INTERVAL_MS, () => {
-    const rec = readWorkspaceDaemonRecord(opts.name);
-    return rec?.pid === pid;
-  });
+  await waitFor(
+    `workspace daemon record for pid ${pid}`,
+    DEFAULT_RECORD_TIMEOUT_MS,
+    DEFAULT_POLL_INTERVAL_MS,
+    () => {
+      const rec = readWorkspaceDaemonRecord(opts.name);
+      return rec?.pid === pid;
+    },
+  );
   const rec = readWorkspaceDaemonRecord(opts.name);
   if (!rec || rec.pid !== pid) {
     throw new Error(`timed out waiting for workspace daemon record for pid ${pid}`);
   }
-  await waitFor(`workspace /health on port ${rec.port}`, DEFAULT_HEALTH_TIMEOUT_MS, DEFAULT_POLL_INTERVAL_MS, () =>
-    isWorkspaceHealthy(rec.port, pid, opts.name),
+  await waitFor(
+    `workspace /health on port ${rec.port}`,
+    DEFAULT_HEALTH_TIMEOUT_MS,
+    DEFAULT_POLL_INTERVAL_MS,
+    () => isWorkspaceHealthy(rec.port, pid, opts.name),
   );
   return { pid, port: rec.port };
 }

@@ -15,12 +15,12 @@ import {
   localhostOriginValidation,
   NodeStreamableHTTPServerTransport,
 } from '@modelcontextprotocol/node';
-import { createEmbedFn, resolveEmbedderConfig, type ContextEngine } from '@noir-ai/context';
+import { type ContextEngine, createEmbedFn, resolveEmbedderConfig } from '@noir-ai/context';
 import {
   isWorkspaceMember,
   loadProjectInfo,
-  readWorkspaceRegistry,
   type ProjectInfo,
+  readWorkspaceRegistry,
   workspaceStoreDbPath,
 } from '@noir-ai/core';
 import { createMemoryEngine, type MemoryEngine } from '@noir-ai/memory';
@@ -29,9 +29,13 @@ import type { WorkflowEngine } from '@noir-ai/workflow';
 import { buildContextEngine } from './context-seam.js';
 import { wakeFeedWaiters } from './feed.js';
 import { createNoirServer } from './server.js';
-import { openStoreForDaemon, type DaemonStore } from './store-seam.js';
-import { clearWorkspaceDaemonRecord, readWorkspaceDaemonRecord, writeWorkspaceDaemonRecord } from './workspace-record.js';
+import { type DaemonStore, openStoreForDaemon } from './store-seam.js';
 import { buildWorkflowEngine, resolveGateConfig } from './workflow-seam.js';
+import {
+  clearWorkspaceDaemonRecord,
+  readWorkspaceDaemonRecord,
+  writeWorkspaceDaemonRecord,
+} from './workspace-record.js';
 
 export interface StartWorkspaceHttpOptions {
   /** Workspace name (identity + store location). */
@@ -83,7 +87,7 @@ async function openWorkspaceStore(name: string, root: string): Promise<DaemonSto
   }
 }
 
-async function buildMember(projectId: string, root: string): Promise<MemberContext | null> {
+async function buildMember(root: string): Promise<MemberContext | null> {
   let project: ProjectInfo;
   try {
     project = loadProjectInfo(root);
@@ -96,13 +100,26 @@ async function buildMember(projectId: string, root: string): Promise<MemberConte
   } catch {
     return null;
   }
-  const engine = buildWorkflowEngine(store.store, project.root, project.id, resolveGateConfig(project.config));
+  const engine = buildWorkflowEngine(
+    store.store,
+    project.root,
+    project.id,
+    resolveGateConfig(project.config),
+  );
   const embedderCfg = resolveEmbedderConfig(project.config.context);
-  const context = buildContextEngine(store.store, project.root, project.id, embedderCfg, store.degraded);
+  const context = buildContextEngine(
+    store.store,
+    project.root,
+    project.id,
+    embedderCfg,
+    store.degraded,
+  );
   return { project, store, engine, context };
 }
 
-export async function startWorkspaceHttpServer(opts: StartWorkspaceHttpOptions): Promise<RunningWorkspaceDaemon> {
+export async function startWorkspaceHttpServer(
+  opts: StartWorkspaceHttpOptions,
+): Promise<RunningWorkspaceDaemon> {
   const { name } = opts;
   const startedAt = Date.now();
   const pid = process.pid;
@@ -144,7 +161,7 @@ export async function startWorkspaceHttpServer(opts: StartWorkspaceHttpOptions):
     const registry = readWorkspaceRegistry(name);
     const member = registry?.members.find((m) => m.projectId === repo);
     if (!member) return null;
-    const built = await buildMember(member.projectId, member.root);
+    const built = await buildMember(member.root);
     if (built) memberCache.set(repo, built);
     return built;
   }
@@ -182,7 +199,9 @@ export async function startWorkspaceHttpServer(opts: StartWorkspaceHttpOptions):
       const member = await getMember(repo);
       if (!member) {
         res.writeHead(500, { 'content-type': 'application/json' });
-        res.end(JSON.stringify({ ok: false, error: `could not open the store for member ${repo}` }));
+        res.end(
+          JSON.stringify({ ok: false, error: `could not open the store for member ${repo}` }),
+        );
         return;
       }
       // Prune members that left the registry (fresh read above).

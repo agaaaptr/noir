@@ -348,7 +348,8 @@ export interface MemoryCaptureOptions extends MemoryOptions {
 export async function memoryCapture(opts: MemoryCaptureOptions): Promise<void> {
   const content = await resolveCaptureContent(opts);
   const args: Record<string, unknown> = { content };
-  if (typeof opts.eventType === 'string' && opts.eventType.length > 0) args.eventType = opts.eventType;
+  if (typeof opts.eventType === 'string' && opts.eventType.length > 0)
+    args.eventType = opts.eventType;
 
   const res = await callDaemonTool<MemorySaveResult | ToolFailure>(opts, 'memory_capture', args);
   if (res.ok !== true) failTool('memory capture', res, opts);

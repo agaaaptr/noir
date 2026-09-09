@@ -11,16 +11,16 @@ import { readdirSync } from 'node:fs';
 import {
   clearWorkspaceMarker,
   ensureWorkspaceRegistry,
-  isWorkspaceMember,
   isValidWorkspaceName,
+  isWorkspaceMember,
   loadProjectInfo,
+  type ProjectInfo,
   readWorkspaceMarker,
   readWorkspaceRegistry,
   removeWorkspaceMember,
   upsertWorkspaceMember,
   workspaceHomeDir,
   writeWorkspaceMarker,
-  type ProjectInfo,
 } from '@noir-ai/core';
 import {
   clearWorkspaceDaemonRecord,
@@ -53,7 +53,12 @@ function loadProjectOrFail(opts: CliOptions): ProjectInfo {
   }
 }
 
-function finishJoin(project: ProjectInfo, name: string, url: string, opts: CliOptions & { force?: boolean }): void {
+function finishJoin(
+  project: ProjectInfo,
+  name: string,
+  url: string,
+  opts: CliOptions & { force?: boolean },
+): void {
   writeWorkspaceMarker(project.root, name);
   writeWorkspaceHttpEntry(project.root, project.config.host, url, project.id, opts);
 }
@@ -62,7 +67,11 @@ function finishJoin(project: ProjectInfo, name: string, url: string, opts: CliOp
 export async function daemonStartWorkspace(opts: WorkspaceStartOptions): Promise<void> {
   const project = loadProjectOrFail(opts);
   if (!isValidWorkspaceName(opts.name)) {
-    fail(EXIT.USAGE, `invalid workspace name ${JSON.stringify(opts.name)} (letters, digits, and dashes).`, opts);
+    fail(
+      EXIT.USAGE,
+      `invalid workspace name ${JSON.stringify(opts.name)} (letters, digits, and dashes).`,
+      opts,
+    );
   }
   // Found/join: register THIS repo as a member (idempotent by projectId).
   upsertWorkspaceMember(ensureWorkspaceRegistry(opts.name), {
@@ -73,7 +82,11 @@ export async function daemonStartWorkspace(opts: WorkspaceStartOptions): Promise
 
   // Detached-child path (set by spawnDetachedWorkspaceDaemon): run in-process.
   if (opts.detachChild === true) {
-    const ensured = await ensureWorkspaceDaemonRunning({ name: opts.name, project, idleTimeoutSec: 0 });
+    const ensured = await ensureWorkspaceDaemonRunning({
+      name: opts.name,
+      project,
+      idleTimeoutSec: 0,
+    });
     if (opts.json === true) {
       process.stdout.write(`${JSON.stringify({ ok: true, data: { mode: 'detached' } })}\n`);
       return;
@@ -88,18 +101,29 @@ export async function daemonStartWorkspace(opts: WorkspaceStartOptions): Promise
     const spawned = await spawnDetachedWorkspaceDaemon({ name: opts.name, project });
     finishJoin(project, opts.name, `http://127.0.0.1:${spawned.port}/mcp`, opts);
     if (opts.json === true) {
-      process.stdout.write(`${JSON.stringify({ ok: true, data: { mode: 'detached', pid: spawned.pid, port: spawned.port } })}\n`);
+      process.stdout.write(
+        `${JSON.stringify({ ok: true, data: { mode: 'detached', pid: spawned.pid, port: spawned.port } })}\n`,
+      );
       return;
     }
-    info(`workspace "${opts.name}" daemon started (pid ${spawned.pid}, port ${spawned.port}).`, opts);
+    info(
+      `workspace "${opts.name}" daemon started (pid ${spawned.pid}, port ${spawned.port}).`,
+      opts,
+    );
     return;
   }
 
   // Foreground: the workspace server keeps this process alive.
-  const ensured = await ensureWorkspaceDaemonRunning({ name: opts.name, project, idleTimeoutSec: 0 });
+  const ensured = await ensureWorkspaceDaemonRunning({
+    name: opts.name,
+    project,
+    idleTimeoutSec: 0,
+  });
   finishJoin(project, opts.name, ensured.url, opts);
   if (opts.json === true) {
-    process.stdout.write(`${JSON.stringify({ ok: true, data: { url: ensured.url, port: ensured.port, reused: !ensured.started } })}\n`);
+    process.stdout.write(
+      `${JSON.stringify({ ok: true, data: { url: ensured.url, port: ensured.port, reused: !ensured.started } })}\n`,
+    );
     return;
   }
   info('noir workspace daemon: foreground mode. Ctrl+C to stop.', opts);
@@ -120,11 +144,17 @@ export async function daemonJoin(opts: WorkspaceJoinOptions): Promise<void> {
       opts,
     );
   }
-  const ensured = await ensureWorkspaceDaemonRunning({ name: opts.name, project, idleTimeoutSec: 0 });
+  const ensured = await ensureWorkspaceDaemonRunning({
+    name: opts.name,
+    project,
+    idleTimeoutSec: 0,
+  });
   upsertWorkspaceMember(reg, { projectId: project.id, root: project.root, joinedAt: Date.now() });
   finishJoin(project, opts.name, ensured.url, opts);
   if (opts.json === true) {
-    process.stdout.write(`${JSON.stringify({ ok: true, data: { joined: true, url: ensured.url, port: ensured.port } })}\n`);
+    process.stdout.write(
+      `${JSON.stringify({ ok: true, data: { joined: true, url: ensured.url, port: ensured.port } })}\n`,
+    );
     return;
   }
   info(`joined workspace ${JSON.stringify(opts.name)} (${ensured.url}).`, opts);
@@ -142,7 +172,11 @@ export async function workspaceList(opts: CliOptions): Promise<void> {
   }
   const rows = names.map((n) => {
     const reg = readWorkspaceRegistry(n);
-    return { name: n, members: reg?.members.length ?? 0, running: readWorkspaceDaemonRecord(n) !== null };
+    return {
+      name: n,
+      members: reg?.members.length ?? 0,
+      running: readWorkspaceDaemonRecord(n) !== null,
+    };
   });
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: { workspaces: rows } })}\n`);
@@ -176,7 +210,10 @@ export async function workspaceStatus(opts: WorkspaceStatusOptions): Promise<voi
     process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
     return;
   }
-  log(`workspace ${name}: ${running ? `running (pid ${rec?.pid}, port ${rec?.port})` : 'not running'}`, opts);
+  log(
+    `workspace ${name}: ${running ? `running (pid ${rec?.pid}, port ${rec?.port})` : 'not running'}`,
+    opts,
+  );
   for (const m of data.members) log(`  member: ${m}`, opts);
 }
 
@@ -209,7 +246,9 @@ export async function workspaceStop(opts: WorkspaceStatusOptions): Promise<void>
   const rec = readWorkspaceDaemonRecord(name);
   if (rec === null || !pidAlive(rec.pid)) {
     if (opts.json === true) {
-      process.stdout.write(`${JSON.stringify({ ok: true, data: { running: false, stopped: false } })}\n`);
+      process.stdout.write(
+        `${JSON.stringify({ ok: true, data: { running: false, stopped: false } })}\n`,
+      );
       return;
     }
     info('workspace daemon is not running.', opts);
@@ -222,7 +261,9 @@ export async function workspaceStop(opts: WorkspaceStatusOptions): Promise<void>
   }
   clearWorkspaceDaemonRecord(name);
   if (opts.json === true) {
-    process.stdout.write(`${JSON.stringify({ ok: true, data: { running: false, stopped: true, pid: rec.pid } })}\n`);
+    process.stdout.write(
+      `${JSON.stringify({ ok: true, data: { running: false, stopped: true, pid: rec.pid } })}\n`,
+    );
     return;
   }
   info(`stopped workspace daemon (pid ${rec.pid}).`, opts);

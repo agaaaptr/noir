@@ -46,7 +46,10 @@ export function appendFeed(store: Store, entry: Omit<FeedEntry, 'cursor'>): Feed
   return full;
 }
 
-export function changesSince(store: Store, cursor: number): { cursor: number; changes: FeedEntry[] } {
+export function changesSince(
+  store: Store,
+  cursor: number,
+): { cursor: number; changes: FeedEntry[] } {
   const feed = store.getState<FeedEntry[]>(WORKSPACE_FEED_KEY) ?? [];
   return { cursor: currentCursor(store), changes: feed.filter((e) => e.cursor > cursor) };
 }
@@ -81,7 +84,11 @@ export function wakeFeedWaiters(store: Store): void {
 }
 
 /** Resolve true as soon as the cursor advances past `cursor`, false on timeout. */
-export function waitForFeedChange(store: Store, cursor: number, timeoutMs: number): Promise<boolean> {
+export function waitForFeedChange(
+  store: Store,
+  cursor: number,
+  timeoutMs: number,
+): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     if (currentCursor(store) > cursor) {
       resolve(true);

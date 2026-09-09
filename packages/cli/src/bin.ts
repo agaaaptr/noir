@@ -16,13 +16,6 @@ import { applyNoirEnv, NOIR_VERSION } from '@noir-ai/core';
 import { Command, Option } from 'commander';
 import { contextIndex, contextSearch, contextStatus } from './commands/context.js';
 import { daemonRestart, daemonStart, daemonStatus, daemonStop } from './commands/daemon.js';
-import {
-  daemonJoin,
-  workspaceLeave,
-  workspaceList,
-  workspaceStatus,
-  workspaceStop,
-} from './commands/workspace.js';
 import { doctor } from './commands/doctor.js';
 import { type HandoffOptions, handoff } from './commands/handoff.js';
 import { type HomeDeps, home } from './commands/home.js';
@@ -51,6 +44,13 @@ import {
   taskStatus,
   taskVerify,
 } from './commands/task.js';
+import {
+  daemonJoin,
+  workspaceLeave,
+  workspaceList,
+  workspaceStatus,
+  workspaceStop,
+} from './commands/workspace.js';
 import { init } from './init.js';
 import {
   type CliOptions,
@@ -609,11 +609,17 @@ export function createProgram(): Command {
   workspaceGrp
     .command('status')
     .description('members + daemon liveness for a workspace')
-    .argument('[name]', 'workspace name (defaults to this repo\'s joined workspace)')
+    .argument('[name]', "workspace name (defaults to this repo's joined workspace)")
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
-      const name = typeof args[0] === 'string' && (args[0] as string).length > 0 ? (args[0] as string) : undefined;
-      await workspaceStatus({ ...toCliOptions(cmd.optsWithGlobals()), ...(name !== undefined ? { name } : {}) });
+      const name =
+        typeof args[0] === 'string' && (args[0] as string).length > 0
+          ? (args[0] as string)
+          : undefined;
+      await workspaceStatus({
+        ...toCliOptions(cmd.optsWithGlobals()),
+        ...(name !== undefined ? { name } : {}),
+      });
     });
   workspaceGrp
     .command('leave')
@@ -624,11 +630,17 @@ export function createProgram(): Command {
   workspaceGrp
     .command('stop')
     .description('stop a workspace daemon (membership retained)')
-    .argument('[name]', 'workspace name (defaults to this repo\'s joined workspace)')
+    .argument('[name]', "workspace name (defaults to this repo's joined workspace)")
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
-      const name = typeof args[0] === 'string' && (args[0] as string).length > 0 ? (args[0] as string) : undefined;
-      await workspaceStop({ ...toCliOptions(cmd.optsWithGlobals()), ...(name !== undefined ? { name } : {}) });
+      const name =
+        typeof args[0] === 'string' && (args[0] as string).length > 0
+          ? (args[0] as string)
+          : undefined;
+      await workspaceStop({
+        ...toCliOptions(cmd.optsWithGlobals()),
+        ...(name !== undefined ? { name } : {}),
+      });
     });
   workspaceGrp.action(() => {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir workspace list|status|leave|stop');
@@ -798,7 +810,10 @@ export function createProgram(): Command {
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       const g = cmd.optsWithGlobals();
-      const file = typeof args[0] === 'string' && (args[0] as string).length > 0 ? (args[0] as string) : undefined;
+      const file =
+        typeof args[0] === 'string' && (args[0] as string).length > 0
+          ? (args[0] as string)
+          : undefined;
       const content = typeof g.content === 'string' ? (g.content as string) : undefined;
       const eventType = typeof g.eventType === 'string' ? (g.eventType as string) : undefined;
       await memoryCapture({

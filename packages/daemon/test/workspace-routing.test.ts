@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
-import { ensureWorkspaceRegistry, parseConfig, paths, readWorkspaceRegistry, upsertWorkspaceMember } from '@noir-ai/core';
+import { ensureWorkspaceRegistry, parseConfig, paths, upsertWorkspaceMember } from '@noir-ai/core';
 import { afterAll, describe, expect, it } from 'vitest';
 import { clearDaemonRecord } from '../src/lifecycle.js';
 import { startWorkspaceHttpServer } from '../src/workspace-http.js';
@@ -37,11 +37,16 @@ async function mcpClient(port: number, repo: string) {
   return client;
 }
 
+function parseResult(res: { content?: unknown }): Record<string, unknown> {
+  const block = (res.content as Array<{ text?: string }> | undefined)?.[0];
+  return JSON.parse(block?.text ?? '') as Record<string, unknown>;
+}
+
 describe('workspace http routing', () => {
   it('shares memory across members and refuses a non-member at the transport boundary', async () => {
     const founder = { projectId: 'repo-a', root: repoA, joinedAt: Date.now() };
-    upsertWorkspaceMember(ensureWorkspaceRegistry('demo'), founder);
-    upsertWorkspaceMember(readWorkspaceRegistry('demo')!, {
+    const reg = upsertWorkspaceMember(ensureWorkspaceRegistry('demo'), founder);
+    upsertWorkspaceMember(reg, {
       projectId: 'repo-b',
       root: repoB,
       joinedAt: Date.now(),
@@ -53,7 +58,11 @@ describe('workspace http routing', () => {
         id: 'repo-a',
         name: 'demo-founder',
         root: repoA,
-        config: parseConfig({ host: 'claude', mode: 'full', context: { embedder: { kind: 'none' } } }),
+        config: parseConfig({
+          host: 'claude',
+          mode: 'full',
+          context: { embedder: { kind: 'none' } },
+        }),
       },
       idleTimeoutSec: 0,
     });
@@ -70,14 +79,17 @@ describe('workspace http routing', () => {
         name: 'memory_save',
         arguments: { content: 'be contract: GET /users returns {items: User[]}' },
       });
-      const envelope = JSON.parse((saved.content?.[0] as { text: string }).text) as Record<string, unknown>;
+      const envelope = parseResult(saved);
       expect(envelope.ok).toBe(true);
       expect((envelope.observation as { repo?: string }).repo).toBe('repo-a');
 
       // member B recalls the same entry from the shared store
       const b = await mcpClient(port, 'repo-b');
-      const recalled = await b.callTool({ name: 'memory_recall', arguments: { query: 'users contract' } });
-      const renv = JSON.parse((recalled.content?.[0] as { text: string }).text) as Record<string, unknown>;
+      const recalled = await b.callTool({
+        name: 'memory_recall',
+        arguments: { query: 'users contract' },
+      });
+      const renv = parseResult(recalled);
       expect(renv.ok).toBe(true);
       const hits = renv.results as Array<{ content: string; repo?: string }>;
       expect(hits.length).toBeGreaterThanOrEqual(1);
