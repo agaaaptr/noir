@@ -68,6 +68,15 @@ export type MemoryType = (typeof MEMORY_TYPES)[number] | (string & {});
  */
 export type MemorySource = 'explicit' | `auto:${string}`;
 
+/**
+ * Lifecycle status of an observation in a workspace store. `active` is the
+ * normal state; `superseded` marks a row corrected by a newer observation
+ * (append-only — the original is never mutated, just down-ranked/hidden by
+ * default); `forgotten` marks a soft-deleted row (hidden from default recall,
+ * kept in KV for audit). Absent on legacy/project rows ⇒ treated as `active`.
+ */
+export type ObservationStatus = 'active' | 'superseded' | 'forgotten';
+
 // ---------------------------------------------------------------------------
 // Defaults (applied at save time / on derived consolidation lessons)
 // ---------------------------------------------------------------------------
@@ -121,6 +130,14 @@ export interface Observation {
    * are never mutated or deleted (append-only — reversible + auditable).
    */
   provenance?: string[];
+  /** Originating repo (canonical project id) — stamped by the workspace daemon. */
+  repo?: string;
+  /** Workspace lifecycle status (absent on legacy/project rows ⇒ active). */
+  status?: ObservationStatus;
+  /** Position in the workspace change feed (absent outside workspace stores). */
+  cursor?: number;
+  /** Id of the observation this row corrects (append-only supersede). */
+  supersedes?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -146,6 +163,12 @@ export interface SaveInput {
   importance?: number;
   /** Host session id (recorded when known). */
   sessionId?: string;
+  /** Originating repo (workspace daemon stamps this from request identity). */
+  repo?: string;
+  /** Explicit lifecycle status (defaults to `'active'` when omitted). */
+  status?: ObservationStatus;
+  /** Id of the observation this new row corrects (target is flipped to `superseded`). */
+  supersedes?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -163,6 +186,8 @@ export interface RecallOptions {
   type?: MemoryType;
   /** Filter to a single host session. */
   sessionId?: string;
+  /** Include `superseded`/`forgotten` rows (default: hidden). */
+  includeInactive?: boolean;
 }
 
 /** Options for {@link MemoryEngine.search} (the BM25-only instant path). */
@@ -190,6 +215,12 @@ export interface MemoryHit {
   ts: number;
   importance: number;
   source: MemorySource;
+  /** Workspace lifecycle status (absent on legacy rows). */
+  status?: ObservationStatus;
+  /** Originating repo (absent outside workspace stores). */
+  repo?: string;
+  /** Feed cursor (absent outside workspace stores). */
+  cursor?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -340,8 +371,12 @@ export interface MemoryEngine {
   search(query: string, opts?: SearchOptions): Promise<MemoryHit[]>;
   /** Per-session rollups from KV `memory:sessions`. */
   sessions(): SessionInfo[];
-  /** Remove observations: KV row + best-effort doc/vec purge. */
+  /** Remove observations: KV row + best-effort doc/vec purge (or soft-mark when `softForget`). */
   forget(ids: string[]): ForgetResult;
+  /** True when `forget` marks `forgotten` (keeps the KV row) instead of hard-deleting. */
+  readonly softForget: boolean;
+  /** Flip an observation's lifecycle status (KV row + FTS meta re-projection). */
+  markStatus(id: string, status: ObservationStatus): void;
   /**
    * Explicit consolidation job. Provider-gated: refuses + logs if no
    * provider is configured — NEVER a silent paid call. Appends derived

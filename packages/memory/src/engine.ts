@@ -78,6 +78,7 @@ import {
   type MemoryHit,
   type MemoryStatus,
   type Observation,
+  type ObservationStatus,
   type ProjectId,
   type RecallOptions,
   type SaveInput,
@@ -170,6 +171,8 @@ export interface MemoryEngineOptions {
   config?: MemoryConfig;
   /** True when `store` was opened read-only (the daemon-down fallback). */
   storeDegraded?: boolean;
+  /** True ⇒ `forget` marks `forgotten` (keeps the KV row) instead of hard-deleting. */
+  softForget?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -201,6 +204,8 @@ export class MemoryEngineImpl implements MemoryEngine {
    * (recall/search/sessions/status) keep working.
    */
   readonly degraded: boolean;
+  /** True ⇒ `forget` soft-marks (`forgotten`) instead of hard-deleting. */
+  readonly softForget: boolean;
 
   private readonly embed: EmbedFn;
   private readonly model: MemoryModel | undefined;
@@ -218,6 +223,7 @@ export class MemoryEngineImpl implements MemoryEngine {
     this.model = opts.model;
     this.config = opts.config ?? {};
     this.degraded = opts.storeDegraded === true;
+    this.softForget = opts.softForget === true;
   }
 
   // -------------------------------------------------------------------------
@@ -244,12 +250,22 @@ export class MemoryEngineImpl implements MemoryEngine {
       concepts: input.concepts ?? [],
       files: input.files ?? [],
       source: 'explicit',
+      // Optional workspace provenance — copied only when provided (legacy/project
+      // rows keep the exact shape they have today; no invented defaults).
+      ...(input.repo !== undefined ? { repo: input.repo } : {}),
+      ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.supersedes !== undefined ? { supersedes: input.supersedes } : {}),
     };
     // Embed BEFORE the synchronous KV block so the read-modify-write of
     // `memory:index` / `memory:sessions` runs without an `await` in between
     // (atomic w.r.t. the event loop — see file header).
     const vec = await this.embedBestEffort(observation.content);
     this.indexObservation(observation, vec);
+    // Append-only supersede: the new row corrects an older one — flip the target
+    // to `superseded` (never delete it) so recall hides it by default.
+    if (input.supersedes !== undefined) {
+      this.markStatus(input.supersedes, 'superseded');
+    }
     return observation;
   }
 
@@ -299,6 +315,19 @@ export class MemoryEngineImpl implements MemoryEngine {
    */
   get(id: string): Observation | null {
     return getObservation(this.store, id);
+  }
+
+  /**
+   * Flip an observation's lifecycle status: update the authoritative KV row and
+   * re-project the FTS `docs.meta` so search projections stay consistent. A
+   * missing id is a no-op (supersede/forget are best-effort against the id).
+   */
+  markStatus(id: string, status: ObservationStatus): void {
+    const obs = getObservation(this.store, id);
+    if (obs === null) return;
+    const next: Observation = { ...obs, status };
+    setObservation(this.store, next);
+    this.store.indexDoc({ id, source: MEMORY_SOURCE, content: obs.content, meta: obsMeta(next) });
   }
 
   // -------------------------------------------------------------------------
@@ -360,6 +389,9 @@ export class MemoryEngineImpl implements MemoryEngine {
       if (obs === null) continue;
       if (opts?.type !== undefined && obs.type !== opts.type) continue;
       if (opts?.sessionId !== undefined && obs.sessionId !== opts.sessionId) continue;
+      // Workspace lifecycle: hide superseded/forgotten rows by default (legacy
+      // rows with no `status` are active).
+      if (obs.status !== undefined && obs.status !== 'active' && opts?.includeInactive !== true) continue;
       out.push(toMemoryHit(obs, row.score));
     }
     return out;
@@ -394,9 +426,14 @@ export class MemoryEngineImpl implements MemoryEngine {
       } catch {
         // vec0 unavailable — the KV + FTS cleanup is the load-bearing part.
       }
-      clearObservation(this.store, id);
-      if (obs.sessionId !== null) {
-        decrementSession(this.store, obs.sessionId);
+      if (this.softForget) {
+        // Workspace store: keep the authoritative KV row (audit), mark forgotten.
+        this.markStatus(id, 'forgotten');
+      } else {
+        clearObservation(this.store, id);
+        if (obs.sessionId !== null) {
+          decrementSession(this.store, obs.sessionId);
+        }
       }
       deleted += 1;
     }
@@ -540,6 +577,10 @@ function obsMeta(obs: Observation): Record<string, unknown> {
     source: obs.source,
   };
   if (obs.provenance !== undefined) meta.provenance = obs.provenance;
+  if (obs.repo !== undefined) meta.repo = obs.repo;
+  if (obs.status !== undefined) meta.status = obs.status;
+  if (obs.cursor !== undefined) meta.cursor = obs.cursor;
+  if (obs.supersedes !== undefined) meta.supersedes = obs.supersedes;
   return meta;
 }
 
@@ -555,5 +596,8 @@ function toMemoryHit(obs: Observation, score: number): MemoryHit {
     ts: obs.ts,
     importance: obs.importance,
     source: obs.source,
+    ...(obs.status !== undefined ? { status: obs.status } : {}),
+    ...(obs.repo !== undefined ? { repo: obs.repo } : {}),
+    ...(obs.cursor !== undefined ? { cursor: obs.cursor } : {}),
   };
 }

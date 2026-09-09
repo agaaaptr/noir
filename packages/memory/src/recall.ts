@@ -305,6 +305,8 @@ export async function recallMemory(
     if (obs === null) continue;
     if (opts?.type !== undefined && obs.type !== opts.type) continue;
     if (opts?.sessionId !== undefined && obs.sessionId !== opts.sessionId) continue;
+    // Workspace lifecycle: hide superseded/forgotten rows by default.
+    if (obs.status !== undefined && obs.status !== 'active' && opts?.includeInactive !== true) continue;
     hits.push(toMemoryHit(obs, row.score + entityBoostForObs(obs, entities)));
   }
 
@@ -336,5 +338,8 @@ function toMemoryHit(obs: Observation, score: number): MemoryHit {
     ts: obs.ts,
     importance: obs.importance,
     source: obs.source,
+    ...(obs.status !== undefined ? { status: obs.status } : {}),
+    ...(obs.repo !== undefined ? { repo: obs.repo } : {}),
+    ...(obs.cursor !== undefined ? { cursor: obs.cursor } : {}),
   };
 }
