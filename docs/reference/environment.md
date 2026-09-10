@@ -94,8 +94,10 @@ need them.
 | `NOIR_RUNTIME_DIR` | `~/.noir/runtime` | no | Overrides the managed runtime directory. |
 | `NOIR_DAEMON_JSON` | `~/.noir/daemon.json` | no | Overrides the daemon record path. |
 | `NOIR_INSTALL_JSON` | `~/.noir/install.json` | no | Overrides the install-record path. |
+| `NOIR_WORKSPACES_DIR` | `~/.noir/workspaces` | no | Overrides the user-global workspace root (the shared-workspace registry, store, and daemon record). |
 | `NOIR_UPDATE_CACHE_JSON` | `~/.noir/update-cache.json` | no | Overrides the update-cache path. |
 | `NOIR_MCP_COMMAND` | — | no | Overrides the command written into `.mcp.json`. **Test seam** — not a supported user knob. |
+| `NOIR_DAEMON_MODE` | — | no | Internal — the `--detach` daemon child sets it to `detached` so the daemon record self-reports its mode. Not a user knob. |
 | `NOIR_TEMPLATES_DIR` | — | no | Overrides the scaffold template directory (downstream packs). |
 | `NOIR_TEST_FORCE_CONFLICT` | — | no | Forces scaffold conflict behavior (test seam). |
 

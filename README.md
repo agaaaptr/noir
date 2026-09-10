@@ -26,7 +26,7 @@ The `noir` grouped home menu — section picker + per-section action lists with 
 **Current beta:** `1.13.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.13.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-10T03:57:24.852Z*
+*Last auto-generated: 2026-09-10T04:23:18.889Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
@@ -79,6 +79,7 @@ noir create [dir]               AI-layer scaffold
 noir run [prompt...]            ask the host agent a question headless
 noir status                     probe-only health (daemon-down safe)
 noir doctor                     config / store / embedder / deps / install
+noir mcp serve [--stdio]        MCP server control (stdio transport)
 noir daemon {start,stop,status,restart,join}  persistent MCP server
 noir workspace {list,status,stop,leave}  shared cross-repo workspace
 noir context {search,index,status}     hybrid retrieval

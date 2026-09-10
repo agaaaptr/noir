@@ -326,7 +326,8 @@ function genConfigSchema() {
     '- `integrations.<name>.{teamId,listId,spaceId}` — required only when the matching',
     '  ClickUp flow needs workspace binding (see [ClickUp setup](../how-to/clickup.md)).',
     '- `context.embedder.provider` / `context.embedder.model` / `context.embedder.baseURL` —',
-    '  only meaningful when `context.embedder.kind` is `remote` or `ollama`.',
+    '  `provider` is only meaningful when `kind` is `remote`; `baseURL` when `kind` is',
+    '  `ollama`; `model` applies to all three (a HuggingFace repo id for `local`).',
     '- `memory.consolidation.*` — only meaningful when `memory.consolidation.enabled` is true.',
   );
   lines.push('');

@@ -8,7 +8,7 @@ Noir's documentation is a Diátaxis-structured, auto-generated knowledge system:
 
 ## Shipped today
 
-- **Diátaxis layout live** — `docs/how-to/` (installation, packaging, releasing), `docs/reference/`, `docs/explanation/`, `docs/tutorial/`, `docs/decisions/` (ADR series), `docs/internal/` (archived discovery/spec/plan history).
+- **Diátaxis layout live** — `docs/how-to/` (installation, packaging, releasing), `docs/reference/`, `docs/explanation/`, `docs/getting-started.md` (the tutorial), `docs/decisions/` (ADR series), `docs/internal/` (archived discovery/spec/plan history).
 - **Auto-generation engine** — `scripts/docs-generate.mjs` with `generate | validate | registry | index` subcommands, wired to `pnpm docs:generate` / `docs:validate` / `docs:registry` / `docs:index` in `package.json`.
 - **CI validation** — `pnpm docs:validate` runs on every push/PR in `.github/workflows/ci.yml` (broken links, stale version refs, registry integrity).
 - **Release integration** — `pnpm release:docs` regenerates docs after every publish (see `scripts/docs-generate.mjs`).
@@ -21,7 +21,7 @@ Noir's documentation is a Diátaxis-structured, auto-generated knowledge system:
 ## Gap / roadmap delta
 
 - **Extend the crawler to roadmap** — teach `findDocs()` / `buildRegistry()` / `cmdIndex()` in `scripts/docs-generate.mjs` to crawl `docs/roadmap/` and register a `roadmap` category (category stubbed in 2026-08 restructure; generation not wired).
-- **Activate release-history generation** — `_genReleaseHistory()` in `scripts/docs-generate.mjs` (line 436) is currently dead code; wire it into a `generate` step.
+- **Wire the release-history managed block** — `<!-- noir:doc:release-history -->` (fed by `.noir/releases/releases.json`, written by `scripts/release-registry.mjs`) is documented in `scripts/docs-generate.mjs` but not yet emitted into a `generate` step.
 - **Regenerate stale reference docs** — `config.md` / `mcp-tools.md` are out of date; rebuild + `pnpm docs:generate` required.
 - **Real drift detection** — command/flag drift vs `noir --help`; capability-status vs implementation; stale `STATUS` markers.
 - **Health-check surface** — extend `validateDocs()` toward orphan / duplicate / superseded detection.
@@ -35,7 +35,7 @@ Noir's documentation is a Diátaxis-structured, auto-generated knowledge system:
 - **MET** — `docs/README.md` regenerates from the registry with correct Diátaxis grouping and `[ARCHIVED]` labels.
 - **MET** — docs regenerate automatically as part of the publish pipeline (`pnpm release:docs`).
 - **DONE-WHEN** — `docs/roadmap/` files appear in the registry under a `roadmap` category after `pnpm docs:generate`.
-- **DONE-WHEN** — `pnpm docs:generate` emits release-history sections via the wired `_genReleaseHistory()`.
+- **DONE-WHEN** — `pnpm docs:generate` emits the release-history section from `.noir/releases/releases.json` via the `noir:doc:release-history` managed block.
 - **DONE-WHEN** — `pnpm docs:validate` reports (not silently tolerates) drift between generated reference docs and `noir --help`, plus orphan/duplicate/superseded docs.
 - **DONE-WHEN** — ADR-0001's layout description matches the real `docs/internal/` tree, or the ADR is amended.
 

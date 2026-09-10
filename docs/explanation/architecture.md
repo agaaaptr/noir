@@ -44,7 +44,7 @@ Noir is a **host-agnostic orchestration layer** — not an LLM runtime. The host
 A host connects to Noir the same way every host will — over **MCP**:
 
 1. `noir init` scaffolds `.noir/` (config, store) and emits the native skill pack + host wiring (for Claude Code: a `.mcp.json` pointing at `noir mcp serve --stdio`, plus a managed `CLAUDE.md` `@import` of `.noir/NOIR.md`).
-2. The host spawns `noir mcp serve --stdio` (or talks to the long-lived daemon over HTTP). It receives a curated tool surface: `host_status`, `store_status`, `workflow_*`, `checkpoint`, `context_*`, and `memory_*`.
+2. The host spawns `noir mcp serve --stdio` (or talks to the long-lived daemon over HTTP). It receives a curated tool surface: `host_status`, `store_status`, `workflow_*`, `checkpoint`, `context_*`, `memory_*`, the shared-workspace feed tools `changes_since` / `await_changes`, and — when an integration is configured — `integrations_auth` / `noir_clickup_write`.
 3. The host agent then calls those tools as it works — `context_search` for focused snippets, `memory_save`/`memory_recall` for cross-session continuity, `workflow_*`/`checkpoint` for lifecycle state.
 
 The daemon is the **single writer** to the store; if it is down, reads (FTS/kNN/counts/state) keep working in read-only FS-fallback and `noir status` reports `degraded` honestly.
