@@ -72,28 +72,28 @@ Full inventory → [Package Reference](docs/reference/packages.md).
 
 ## The `noir` CLI
 
-```
-noir init [--host <id>]         scaffold .noir/ + skills + host wiring
-noir sync                       re-emit skills + host config
-noir create [dir]               AI-layer scaffold
-noir run [prompt...]            ask the host agent a question headless
-noir status                     probe-only health (daemon-down safe)
-noir doctor                     config / store / embedder / deps / install
-noir mcp serve [--stdio]        MCP server control (stdio transport)
-noir daemon {start,stop,status,restart,join}  persistent MCP server
-noir workspace {list,status,stop,leave}  shared cross-repo workspace
-noir context {search,index,status}     hybrid retrieval
-noir memory {recall,save,capture,sessions,forget,consolidate}  cross-session memory
-noir task {new,next,status,advance,verify,resume,block,abandon,decompose,research,research-record}  spec-driven workflow
-noir skills {list,sync,lint,registry}   builtin skills + quality gate
-noir install|migrate [spec]     native install / migrate from another method
-noir update [spec]              self-update via the active install method
-noir release [version]          step-by-step release helper
-noir handoff                    pasteable host handoff artifact
-noir wrap                       session-end handoff alias
-noir palette                    fuzzy command palette — run any command (Ink)
-noir tui                        interactive Ink dashboard
-```
+| Command | What it does |
+|---|---|
+| `noir init [--host <id>]` | scaffold `.noir/` + skills + host wiring |
+| `noir sync` | re-emit skills + host config |
+| `noir create [dir]` | AI-layer scaffold |
+| `noir run [prompt...]` | ask the host agent a question headless |
+| `noir status` | probe-only health (daemon-down safe) |
+| `noir doctor` | config / store / embedder / deps / install |
+| `noir mcp serve [--stdio]` | MCP server control (stdio transport) |
+| `noir daemon {start,stop,status,restart,join}` | persistent MCP server |
+| `noir workspace {list,status,stop,leave}` | shared cross-repo workspace |
+| `noir context {search,index,status}` | hybrid retrieval |
+| `noir memory {recall,save,capture,sessions,forget,consolidate}` | cross-session memory |
+| `noir task {new,next,status,advance,verify,resume,block,abandon,decompose,research,research-record}` | spec-driven workflow |
+| `noir skills {list,sync,lint,registry}` | builtin skills + quality gate |
+| `noir install\|migrate [spec]` | native install / migrate from another method |
+| `noir update [spec]` | self-update via the active install method |
+| `noir release [version]` | step-by-step release helper |
+| `noir handoff` | pasteable host handoff artifact |
+| `noir wrap` | session-end handoff alias |
+| `noir palette` | fuzzy command palette — run any command (Ink) |
+| `noir tui` | interactive Ink dashboard |
 
 Full reference → [CLI Reference](docs/reference/cli.md).  
 MCP tools → [MCP Tools Reference](docs/reference/mcp-tools.md).
