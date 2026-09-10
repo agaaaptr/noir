@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { createProjectId } from '@noir-ai/core';
 import { openStore } from '@noir-ai/store';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { gatherCandidates } from '../src/consolidate.js';
 import { createMemoryEngine } from '../src/engine.js';
 import { fakeEmbedFn } from './fake-embed.js';
 
@@ -61,5 +62,27 @@ describe('memory provenance + lifecycle', () => {
     const obs = await mem.save({ content: 'to hard delete' });
     expect(mem.forget([obs.id]).deleted).toBe(1);
     expect(mem.get(obs.id)).toBeNull();
+  });
+
+  it('carries the supersede link through recall hydration', async () => {
+    const mem = createMemoryEngine({ store, root, projectId, embed: fakeEmbedFn() });
+    const first = await mem.save({ content: 'endpoint contract v1', repo: 'be' });
+    const second = await mem.save({
+      content: 'endpoint contract v2 replaces v1',
+      repo: 'be',
+      supersedes: first.id,
+    });
+    const hit = (await mem.recall('endpoint contract')).find((h) => h.id === second.id);
+    expect(hit?.supersedes).toBe(first.id);
+  });
+
+  it('gatherCandidates skips superseded/forgotten rows (never distills retracted facts)', async () => {
+    const mem = createMemoryEngine({ store, root, projectId, embed: fakeEmbedFn() });
+    const active = await mem.save({ content: 'still true fact' });
+    const old = await mem.save({ content: 'corrected later fact' });
+    await mem.save({ content: 'the correction fact', supersedes: old.id });
+    const ids = gatherCandidates(store, undefined, 100).map((c) => c.id);
+    expect(ids).toContain(active.id);
+    expect(ids).not.toContain(old.id);
   });
 });

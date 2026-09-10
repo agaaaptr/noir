@@ -249,6 +249,10 @@ export function gatherCandidates(
     if (obs === null) continue;
     if (obs.type === 'lesson') continue; // never re-consolidate a lesson
     if (types !== undefined && !types.includes(obs.type)) continue;
+    // Workspace lifecycle: recall hides superseded/forgotten rows by default, so
+    // consolidation must too — otherwise a corrected or retracted observation
+    // would still be distilled into the derived lesson. (Legacy rows: no status.)
+    if (obs.status !== undefined && obs.status !== 'active') continue;
     out.push(obs);
   }
   return out;

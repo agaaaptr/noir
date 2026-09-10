@@ -221,6 +221,8 @@ export interface MemoryHit {
   repo?: string;
   /** Feed cursor (absent outside workspace stores). */
   cursor?: number;
+  /** Id of the observation this one supersedes (absent outside workspace stores). */
+  supersedes?: string;
 }
 
 // ---------------------------------------------------------------------------

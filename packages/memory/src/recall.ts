@@ -342,5 +342,6 @@ function toMemoryHit(obs: Observation, score: number): MemoryHit {
     ...(obs.status !== undefined ? { status: obs.status } : {}),
     ...(obs.repo !== undefined ? { repo: obs.repo } : {}),
     ...(obs.cursor !== undefined ? { cursor: obs.cursor } : {}),
+    ...(obs.supersedes !== undefined ? { supersedes: obs.supersedes } : {}),
   };
 }

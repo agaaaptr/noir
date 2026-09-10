@@ -131,6 +131,7 @@ export {
   type MemoryStatus,
   type MemoryType,
   type Observation,
+  type ObservationStatus,
   type ProjectId,
   type RecallOptions,
   type SaveInput,
