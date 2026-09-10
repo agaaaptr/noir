@@ -74,7 +74,14 @@ describe('workspace feed', () => {
     clearFeedState(store);
     // Fill past the 500-entry ring so the earliest entries are evicted.
     for (let i = 0; i < 510; i++) {
-      appendFeed(store, { kind: 'save', id: `e${i}`, repo: 'be', type: 'fact', summary: `s${i}`, ts: i });
+      appendFeed(store, {
+        kind: 'save',
+        id: `e${i}`,
+        repo: 'be',
+        type: 'fact',
+        summary: `s${i}`,
+        ts: i,
+      });
     }
     // A client at cursor 0 predates the oldest surviving entry → gapped.
     const stale = changesSince(store, 0);
