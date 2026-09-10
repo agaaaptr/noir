@@ -1400,6 +1400,8 @@ git commit -m "docs(workspace): shared-workspaces how-to + ADR-0009 + roadmap/re
 1. Feed lives in `@noir-ai/daemon` (daemon-side KV + waiters), not `@noir-ai/memory` — the feed is a daemon concern over the shared workspace store handle; memory stays host-agnostic. Consistent with spec §7.2 ("daemon is one process… in-process waiters").
 2. `memory_forget` soft-forget is engine-flagged (`softForget`) rather than a store-wide semantic change, so project-store forget semantics are untouched (backward compatibility).
 3. Supersede/uniqueness: Task 5 `memory_save` passes `status:'active'` + `supersedes` so the engine flips the target to `superseded` and the hydration filter hides it by default (spec §8.1).
+4. `repo` provenance is a **plain string** (the canonical `projectId`), not spec §7.1's `{ projectId, root? }` object. The project invariant is "canonical ProjectId — never a filesystem path", so `root` provenance is deliberately dropped (portable, no absolute paths in the shared store).
+5. `noir memory capture` reads raw file/stdin text and calls the `memory_capture` tool directly (which stamps `captureSource`); it does **not** run the pure `toSaveInput` mapper (spec §9). The capture-provenance requirement is met; the structured-event mapping step was relaxed for the manual CLI path.
 
 **Placeholder scan:** no TBD/TODO/“handle edge cases”; every code step carries real code or an exact file:line anchor. Two steps reference “mirror existing file X” only where the executor must copy an existing seam verbatim (embedded to reduce duplication risk) — the surrounding code is concrete.
 

@@ -15,7 +15,8 @@ own project store for context/workflow/tasks.
 cd /repo-backend
 noir daemon start --workspace my-app
 # → creates the workspace, joins this repo as the founder,
-#   starts the detached daemon, points this repo's .mcp.json at it
+#   starts the workspace daemon (foreground by default), points
+#   this repo's .mcp.json at it
 ```
 
 Use `--detach` to background the daemon and return to the shell:
@@ -49,8 +50,10 @@ caller-supplied):
   `memory_recall { query: "users list pagination" }`
 - To *notice* what the other session just recorded, call
   `changes_since { cursor }` (pull) or `await_changes { cursor, timeoutMs }`
-  (long-poll — resolves as soon as a new entry lands). The daemon tells every
-  attached agent to check these at turn boundaries.
+  (long-poll — resolves as soon as a new entry lands). The daemon's connect
+  instructions tell each attached agent to check these at turn boundaries;
+  it is signal-only — the agent pulls content on demand, nothing is pushed
+  into its context.
 
 Corrections are append-only: `memory_save { supersedes: "<older-id>", ... }`
 marks the target `superseded` (hidden by default; see it with
