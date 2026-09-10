@@ -379,6 +379,8 @@ export interface MemoryEngine {
   readonly softForget: boolean;
   /** Flip an observation's lifecycle status (KV row + FTS meta re-projection). */
   markStatus(id: string, status: ObservationStatus): void;
+  /** Stamp the workspace change-feed cursor onto an observation row. */
+  setCursor(id: string, cursor: number): void;
   /**
    * Explicit consolidation job. Provider-gated: refuses + logs if no
    * provider is configured — NEVER a silent paid call. Appends derived

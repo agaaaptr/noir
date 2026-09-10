@@ -78,9 +78,17 @@ async function callMemory<T>(
 ): Promise<T> {
   const ws = resolveWorkspace();
   if (ws === null) return callDaemonTool<T>(opts, name, args);
-  return withWorkspaceDaemon<T>(opts, ws.routing, ws.project, (caller) =>
-    caller.callTool<T>(name, args),
-  );
+  return withWorkspaceDaemon<T>(opts, ws.routing, (caller) => caller.callTool<T>(name, args));
+}
+
+/** Multi-call memory path (capability discovery): workspace daemon when joined. */
+async function withMemoryDaemon<T>(
+  opts: MemoryOptions,
+  fn: (caller: import('../daemon-client.js').DaemonToolCaller) => Promise<T>,
+): Promise<T> {
+  const ws = resolveWorkspace();
+  if (ws === null) return withDaemon(opts, fn);
+  return withWorkspaceDaemon<T>(opts, ws.routing, fn);
 }
 
 // ---------------------------------------------------------------------------
@@ -603,7 +611,7 @@ export async function memoryConsolidate(opts: MemoryConsolidateOptions): Promise
   // message"): a daemon that didn't opt into consolidation registers no
   // `memory_consolidate` tool. Detecting that via listTools lets us say so
   // honestly instead of calling a missing tool (which would mis-map to exit 4).
-  const exposed = await withDaemon(opts, async (caller) => caller.listTools());
+  const exposed = await withMemoryDaemon(opts, async (caller) => caller.listTools());
   if (!exposed.includes('memory_consolidate')) {
     fail(
       EXIT.ERROR,
@@ -618,7 +626,7 @@ export async function memoryConsolidate(opts: MemoryConsolidateOptions): Promise
   if (types !== undefined) args.types = types;
   if (limit !== undefined) args.limit = limit;
 
-  const res = await callDaemonTool<MemoryConsolidateOk | MemoryConsolidateRefusal | ToolFailure>(
+  const res = await callMemory<MemoryConsolidateOk | MemoryConsolidateRefusal | ToolFailure>(
     opts,
     'memory_consolidate',
     args,

@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // Shared mock state: which daemon path a memory command took.
 const mocks = vi.hoisted(() => ({
   withWorkspaceDaemon: vi.fn(
-    async (_opts: unknown, _r: unknown, _p: unknown, fn: (c: unknown) => Promise<unknown>) =>
+    async (_opts: unknown, _r: unknown, fn: (c: unknown) => Promise<unknown>) =>
       fn({
         callTool: async () => ({
           ok: true,

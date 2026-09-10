@@ -8,8 +8,9 @@
 // registry (registry.json) is the single source of truth for who may talk to the
 // workspace daemon; a project's join marker (`.noir/workspace.json`) is a local
 // pointer that makes its CLI memory commands route to the workspace daemon.
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { atomicWriteFile } from './install-method.js';
 import { noirHome } from './layout.js';
 import type { ProjectId } from './project-id.js';
 
@@ -78,11 +79,7 @@ export function ensureWorkspaceRegistry(name: string): WorkspaceRegistry {
 }
 
 export function writeWorkspaceRegistry(reg: WorkspaceRegistry): void {
-  const p = workspaceRegistryPath(reg.name);
-  mkdirSync(join(p, '..'), { recursive: true });
-  const tmp = `${p}.${process.pid}.tmp`;
-  writeFileSync(tmp, `${JSON.stringify(reg, null, 2)}\n`, 'utf8');
-  renameSync(tmp, p);
+  atomicWriteFile(workspaceRegistryPath(reg.name), `${JSON.stringify(reg, null, 2)}\n`);
 }
 
 /** Add-or-replace a member by projectId (idempotent). Returns the persisted registry. */
@@ -125,8 +122,7 @@ export function readWorkspaceMarker(root: string): string | null {
 }
 
 export function writeWorkspaceMarker(root: string, name: string): void {
-  mkdirSync(join(root, '.noir'), { recursive: true });
-  writeFileSync(workspaceMarkerPath(root), `${JSON.stringify({ name }, null, 2)}\n`, 'utf8');
+  atomicWriteFile(workspaceMarkerPath(root), `${JSON.stringify({ name }, null, 2)}\n`);
 }
 
 export function clearWorkspaceMarker(root: string): void {

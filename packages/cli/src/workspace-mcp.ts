@@ -2,10 +2,10 @@
 // file a join/leave touches. It rewrites just the `noir` server entry (preserving
 // every other server the user added) and refuses to clobber a config that does
 // not look Noir-emitted unless `--force` (never a silent overwrite).
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type HostId, resolveAdapter } from '@noir-ai/adapters';
-import { resolveNoirCommand } from '@noir-ai/core';
+import { atomicWriteFile, resolveNoirCommand } from '@noir-ai/core';
 import { type CliOptions, EXIT, fail } from './output.js';
 
 function mcpPathFor(root: string, host: HostId): string {
@@ -51,7 +51,7 @@ export function writeWorkspaceHttpEntry(
       noir: { type: 'http', url: `${url}?p=${projectId}` },
     },
   };
-  writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
+  atomicWriteFile(path, `${JSON.stringify(next, null, 2)}\n`);
 }
 
 /** Restore the repo's `noir` MCP entry to stdio (used by `workspace leave`). */
@@ -71,5 +71,5 @@ export function writeStdioEntry(
   }
   const noir = { command: resolveNoirCommand(), args: ['mcp', 'serve', '--stdio'] };
   const next = { ...(existing ?? {}), mcpServers: { ...(existing?.mcpServers ?? {}), noir } };
-  writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
+  atomicWriteFile(path, `${JSON.stringify(next, null, 2)}\n`);
 }

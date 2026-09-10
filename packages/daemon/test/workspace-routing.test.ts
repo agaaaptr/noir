@@ -81,7 +81,11 @@ describe('workspace http routing', () => {
       });
       const envelope = parseResult(saved);
       expect(envelope.ok).toBe(true);
-      expect((envelope.observation as { repo?: string }).repo).toBe('repo-a');
+      const obs = envelope.observation as { repo?: string; status?: string; cursor?: number };
+      expect(obs.repo).toBe('repo-a');
+      expect(obs.status).toBe('active');
+      expect(typeof obs.cursor).toBe('number');
+      expect(obs.cursor).toBeGreaterThan(0);
 
       // member B recalls the same entry from the shared store
       const b = await mcpClient(port, 'repo-b');

@@ -222,6 +222,10 @@ export async function startWorkspaceHttpServer(
         ...(wsMemory && wsStore
           ? {
               memory: wsMemory,
+              // The memory engine writes to the WORKSPACE store, whose degraded
+              // flag differs from the member's project store — thread it so the
+              // memory tools fence on the right handle (server.ts memoryStoreDegraded).
+              memoryStoreDegraded: wsStore.degraded,
               workspace: {
                 name,
                 repo,

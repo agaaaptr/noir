@@ -9,9 +9,9 @@
 // cross-host-reliable "notification" (content push is an anti-pattern — spec §2).
 import type { Store } from '@noir-ai/store';
 
-export const WORKSPACE_CURSOR_KEY = 'workspace:cursor';
-export const WORKSPACE_FEED_KEY = 'workspace:feed';
-export const FEED_RING_LIMIT = 500;
+const WORKSPACE_CURSOR_KEY = 'workspace:cursor';
+const WORKSPACE_FEED_KEY = 'workspace:feed';
+const FEED_RING_LIMIT = 500;
 
 export type FeedKind = 'save' | 'supersede' | 'forget';
 
@@ -26,11 +26,11 @@ export interface FeedEntry {
   ts: number;
 }
 
-export function currentCursor(store: Store): number {
+function currentCursor(store: Store): number {
   return store.getState<number>(WORKSPACE_CURSOR_KEY) ?? 0;
 }
 
-export function bumpCursor(store: Store): number {
+function bumpCursor(store: Store): number {
   const next = currentCursor(store) + 1;
   store.setState(WORKSPACE_CURSOR_KEY, next);
   return next;

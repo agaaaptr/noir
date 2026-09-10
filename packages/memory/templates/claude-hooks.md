@@ -11,20 +11,22 @@
 Noir's memory layer is **explicit-save**: you (or the host, through the MCP
 tools) decide what is worth keeping, and it is stored locally and free.
 
-- CLI: `noir memory save|recall|forget|sessions|consolidate`
+- CLI: `noir memory save|recall|capture|forget|sessions|consolidate`
 - MCP tools: `memory_save` / `memory_recall` / `memory_search` /
-  `memory_forget` / `memory_sessions` (documented in the repo's
-  `docs/reference/mcp-tools.md`)
+  `memory_capture` / `memory_forget` / `memory_sessions` (documented in the
+  repo's `docs/reference/mcp-tools.md`)
 - Storage is always local (`.noir/store/`), never sent to a remote service. The
   only LLM touch is **consolidation**, which is separately provider-gated and
   off by default.
 
-## A dedicated `memory capture` command does not exist yet
+## `noir memory capture` is manual (not auto-wired)
 
-An earlier draft of this template wired hooks to a `noir memory capture`
-subcommand. That command is **not shipped** — a hook invoking it would exit
-non-zero (a non-blocking error Claude Code ignores). Auto-capture is tracked as
-a future slice; until it lands, use one of the explicit paths below.
+`noir memory capture [file]` distills a transcript/notes file (or piped stdin)
+into a memory observation with capture provenance (`auto:<hook>`), via the
+`memory_capture` MCP tool. It is a **manual** command — Noir never auto-installs
+hooks. Auto-capture-by-default (wiring the `PreToolUse`/`PostToolUse`/
+`UserPromptSubmit`/`Stop` hooks so the host saves on its own) is tracked as a
+future slice; until it lands, use the explicit paths below.
 
 ## Wiring a hook today (explicit save)
 

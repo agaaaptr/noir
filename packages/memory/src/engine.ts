@@ -339,6 +339,15 @@ export class MemoryEngineImpl implements MemoryEngine {
     this.store.indexDoc({ id, source: MEMORY_SOURCE, content: obs.content, meta: obsMeta(next) });
   }
 
+  /** @inheritDoc MemoryEngine.setCursor */
+  setCursor(id: string, cursor: number): void {
+    const obs = getObservation(this.store, id);
+    if (obs === null) return;
+    const next: Observation = { ...obs, cursor };
+    setObservation(this.store, next);
+    this.store.indexDoc({ id, source: MEMORY_SOURCE, content: obs.content, meta: obsMeta(next) });
+  }
+
   // -------------------------------------------------------------------------
   // recall (t3: hybrid BM25 ∪ kNN + RRF + entity-boost — see recall.ts)
   // -------------------------------------------------------------------------

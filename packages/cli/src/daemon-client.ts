@@ -39,7 +39,6 @@ import {
 } from '@noir-ai/core';
 import {
   ensureDaemonRunning,
-  ensureWorkspaceDaemonRunning,
   pidAlive,
   readDaemonRecord,
   readWorkspaceDaemonRecord,
@@ -585,15 +584,20 @@ export async function probeWorkspaceDaemon(routing: WorkspaceRouting): Promise<D
 export async function withWorkspaceDaemon<T>(
   opts: DaemonClientOptions,
   routing: WorkspaceRouting,
-  project: ProjectInfo,
   fn: (caller: DaemonToolCaller) => Promise<T>,
 ): Promise<T> {
-  const ensured = await ensureWorkspaceDaemonRunning({
-    name: routing.name,
-    project,
-    idleTimeoutSec: project.config.workspace.idleTimeoutSec,
-  });
-  const url = `${ensured.url}?p=${routing.projectId}`;
+  // Spec §11: a write/read against a workspace whose daemon is DOWN must fail
+  // with clear guidance, NOT silently auto-start a fresh daemon (which would
+  // look identical to "up" but surprise the user). Probe-only — no ensure.
+  const probe = await probeWorkspaceDaemon(routing);
+  if (!probe.running || probe.port === undefined) {
+    fail(
+      EXIT.DAEMON_DOWN,
+      `workspace ${JSON.stringify(routing.name)} daemon is not running — start it with \`noir daemon start --workspace ${routing.name}\` (or run \`noir workspace status\`).`,
+      opts,
+    );
+  }
+  const url = `http://127.0.0.1:${probe.port}/mcp?p=${routing.projectId}`;
   let client: Client | undefined;
   try {
     client = new Client(
@@ -609,9 +613,6 @@ export async function withWorkspaceDaemon<T>(
         /* a close error must not mask the real failure */
       });
     }
-    await ensured.stop().catch(() => {
-      /* ditto */
-    });
   }
 }
 
