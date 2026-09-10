@@ -1,5 +1,9 @@
 # Sharing context across repositories (workspaces)
 
+> **Availability:** shared cross-repo workspaces are implemented on `develop`
+> and target **v1.13.0** — not yet in a published release. See
+> [releases](../roadmap/releases.md) for the current release.
+
 Two agent sessions in **different repos** (e.g. a backend repo and a frontend
 repo) can share decision memory through **one workspace daemon** (foreground by
 default, or backgrounded with `--detach`) — no handoff

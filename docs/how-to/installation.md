@@ -18,7 +18,7 @@
 **Current beta:** `1.12.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.12.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-10T02:09:45.657Z*
+*Last auto-generated: 2026-09-10T03:05:39.688Z*
 <!-- /noir:doc:status -->
 >
 > Pin a version with `NOIR_VERSION=<VERSION>` (POSIX) or `$env:NOIR_VERSION='<VERSION>'` (PowerShell).

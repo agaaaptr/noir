@@ -419,6 +419,8 @@ function genMcpTools() {
     '',
     '> Auto-generated from daemon tool registrations.',
     '',
+    '> **Availability:** the shared-workspace tools (`changes_since`, `await_changes`) and `memory_capture` are implemented on `develop` and ship in **v1.13.0** — not yet in a published release.',
+    '',
   ];
 
   // MCP tools are registered in packages/daemon/src/*.ts — grep for registration patterns

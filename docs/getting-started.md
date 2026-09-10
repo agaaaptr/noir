@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.12.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.12.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-10T02:09:45.215Z*
+*Last auto-generated: 2026-09-10T03:05:39.128Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -212,7 +212,7 @@ with [clickup.md](how-to/clickup.md).
 ## Where to go next
 
 - [installation.md](how-to/installation.md) — the full install reference (every path, troubleshooting, the channel model).
-- [shared-workspaces.md](how-to/shared-workspaces.md) — share decision memory across repositories (BE ↔ FE) through one workspace daemon.
+- [shared-workspaces.md](how-to/shared-workspaces.md) — share decision memory across repositories (BE ↔ FE) through one workspace daemon (v1.13.0).
 - [CLI Reference](reference/cli.md) — every command (auto-generated from `noir --help`). The `.noir/config.yml` schema is in [config.md](reference/config.md).
 - [Architecture](explanation/architecture.md) — how the 11 packages fit together.
 - [roadmap/](roadmap/) — project direction, capability index, releases & version targets.
