@@ -24,9 +24,9 @@ The `noir` grouped home menu — section picker + per-section action lists with 
 <!-- noir:doc:status -->
 **Latest stable:** `1.11.2` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
 **Current beta:** `1.12.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
-**Source version:** `1.12.0` (clean SemVer in `packages/*/package.json`)
+**Source version:** `1.13.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-10T03:05:38.506Z*
+*Last auto-generated: 2026-09-10T03:30:22.335Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
@@ -79,10 +79,11 @@ noir create [dir]               AI-layer scaffold
 noir run [prompt...]            ask the host agent a question headless
 noir status                     probe-only health (daemon-down safe)
 noir doctor                     config / store / embedder / deps / install
-noir daemon start|stop|status|restart  persistent MCP server
+noir daemon {start,stop,status,restart,join}  persistent MCP server
+noir workspace {list,status,stop,leave}  shared cross-repo workspace
 noir context {search,index,status}     hybrid retrieval
-noir memory {recall,save,sessions,forget,consolidate}  cross-session memory
-noir task {new,next,status,advance}    spec-driven workflow
+noir memory {recall,save,capture,sessions,forget,consolidate}  cross-session memory
+noir task {new,next,status,advance,verify,resume,block,abandon,decompose,research,research-record}  spec-driven workflow
 noir skills {list,sync,lint,registry}   builtin skills + quality gate
 noir install|migrate [spec]     native install / migrate from another method
 noir update [spec]              self-update via the active install method

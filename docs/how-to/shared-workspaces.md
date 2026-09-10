@@ -1,9 +1,5 @@
 # Sharing context across repositories (workspaces)
 
-> **Availability:** shared cross-repo workspaces are implemented on `develop`
-> and target **v1.13.0** — not yet in a published release. See
-> [releases](../roadmap/releases.md) for the current release.
-
 Two agent sessions in **different repos** (e.g. a backend repo and a frontend
 repo) can share decision memory through **one workspace daemon** (foreground by
 default, or backgrounded with `--detach`) — no handoff
@@ -85,7 +81,10 @@ cat notes.md | noir memory capture
 noir memory capture --content "Frontend expects the /users contract from backend #42"
 ```
 
-`noir init`/`sync` never install hooks — capture is an explicit action.
+`noir init`/`sync` never install **memory-capture** hooks — capture is an
+explicit action. (The `claude` host does get an unrelated `SessionStart`
+*context* hook at `noir init` — that bootstraps project context, it does not
+capture memory.)
 
 ## Notes
 
@@ -98,4 +97,5 @@ noir memory capture --content "Frontend expects the /users contract from backend
   after N idle seconds). Stop it explicitly with `noir workspace stop`.
 - In a joined repo, `noir memory recall|save|capture|sessions|forget` route to
   the workspace daemon; `context`/`workflow`/`task` commands keep the project
-  daemon.
+  daemon. `noir memory consolidate` is **not supported** on a shared workspace
+  (consolidation is a per-project concern) and is refused with a clear message.

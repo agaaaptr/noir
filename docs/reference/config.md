@@ -136,4 +136,4 @@ Never pass tokens as CLI arguments (visible in process lists). See
   are parsed + validated but have no live consumer yet — declaring them now avoids
   schema churn when their feature ships. Do not rely on them.
 - `rules.lengthBudgetKb` IS read: `noir doctor`'s RULES.md budget check.
-- `run.*` is new in 1.12.0 (host profiles). All other blocks predate it.
+- `run.*` is new in 1.13.0 (host profiles; first surfaced on `beta` as 1.12.0-beta.1). All other blocks predate it.

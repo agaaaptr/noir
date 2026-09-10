@@ -1,7 +1,7 @@
 # Shared Workspace Context — Design
 
-> **Status:** approved-for-spec (brainstormed 2026-09-09) — awaiting implementation plan
-> **Target:** v1.13.0 (after 1.12.0 stable ships)
+> **Status:** implemented (shipped 2026-09-10 in v1.13.0)
+> **Target:** v1.13.0 (1.12.0 stable was superseded by 1.13.0 — see `docs/roadmap/releases.md`)
 > **Capability:** C5 Runtime Infrastructure (extension) + C9 AI Platform Evolution (first concrete slice)
 > **Slice id:** `shared-workspace`
 > **Requires ADR:** ADR-0009 (new "workspace" top-level concept)
@@ -123,8 +123,7 @@ The workspace store reuses the existing observation architecture (FTS5 + sqlite-
 
 Existing `Observation` already carries `project`, `sessionId`, `type`, `ts`, `concepts`, `files`, `source` (`engine.ts`, `saveInternal`). In workspace mode the daemon stamps additional fields (extend the type **open-enum style** — absent on legacy rows, never required on read):
 
-- `repo: { projectId, root? }` — which member repo wrote it (auto-stamped from the `?p=` identity; never caller-supplied).
-- `host` — optional host/session label when the caller supplies it (e.g. a session id) — already partly covered by `sessionId`.
+- `repo: string` — the member's canonical projectId (auto-stamped from the `?p=` identity; never caller-supplied).
 - `status: 'active' | 'superseded' | 'forgotten'` (default `'active'`).
 - `cursor: number` — the entry's position in the workspace change feed.
 - `supersedes?: <observationId>` — when this entry is a correction of another.
@@ -136,7 +135,7 @@ Existing `Observation` already carries `project`, `sessionId`, `type`, `ts`, `co
 A monotonic cursor is the workspace's single ordering authority:
 
 - A counter `workspace:cursor` in the KV row set, incremented once per mutation (save / supersede / forget); every affected observation is stamped with the new value.
-- Feed entries are the **minimal denormalized projection** the search layer already writes (`docs.meta`) plus `status` and `repo.projectId` — never full content. The authoritative row stays in KV; full content is fetched on demand (token-efficiency lemma from §2).
+- Feed entries are the **minimal denormalized projection** the search layer already writes (`docs.meta`) plus `status` and `repo` — never full content. The authoritative row stays in KV; full content is fetched on demand (token-efficiency lemma from §2).
 - Because the daemon is one process, `await_changes` is implemented with **in-process waiters**: each pending long-poll registers on the mutation path and is woken once the cursor advances past its starting point. No polling, no cross-process signalling, no external broker.
 
 ## 8. MCP tool surface
@@ -145,14 +144,14 @@ A monotonic cursor is the workspace's single ordering authority:
 
 `memory_save`, `memory_recall`, `memory_search`, `memory_sessions`, `memory_forget` operate on the **workspace store** when the request is a workspace member (§6). Two behavior notes:
 
-- **Retrieval framing (poisoning mitigation):** update the tool descriptions so recall/search results are presented as *sourced evidence* (each hit shows `repo.projectId` + session + ts + status) rather than unlabelled facts the agent is expected to treat as truth. This is a **description-level** change plus a stable result shape — the store does not change its recall semantics.
-- **Superseded handling:** default recall/search exclude `status: 'superseded' | 'forgotten'`; add an `includeSuperseded` flag for audit.
+- **Retrieval framing (poisoning mitigation):** update the tool descriptions so recall/search results are presented as *sourced evidence* (each hit shows `repo` + session + ts + status) rather than unlabelled facts the agent is expected to treat as truth. This is a **description-level** change plus a stable result shape — the store does not change its recall semantics.
+- **Superseded handling:** default recall/search exclude `status: 'superseded' | 'forgotten'`; add an `includeInactive` flag for audit.
 
 `memory_save` gains an optional `supersedes` input (see §7.1). Tool descriptions gain a one-line "in a workspace this writes to the shared store" note so the agent knows the write is visible to joined sessions.
 
 ### 8.2 New tools (feed)
 
-- `changes_since(cursor: number) → { ok, cursor, changes: FeedEntry[] }` — non-blocking; returns entries (id, cursor, kind: `save|supersede|forget`, repo, type, one-line summary) with cursor above the caller's, and the current high-water cursor. FeedEntry summaries are bounded (~120 chars) — never full content.
+- `changes_since(cursor: number) → { ok, cursor, changes: FeedEntry[], gapped: boolean }` — non-blocking; returns entries (id, cursor, kind: `save|supersede|forget`, repo, type, one-line summary) with cursor above the caller's, and the current high-water cursor. `gapped` is true when the caller's cursor predates the trimmed 500-entry ring and it must re-pull from scratch. FeedEntry summaries are bounded (~120 chars) — never full content.
 - `await_changes(cursor: number, timeoutMs: number ≤ 25000) → same shape, + timedOut` — long-poll; resolves as soon as the workspace cursor advances, or returns the current cursor + empty changes on timeout so the caller can advance and re-arm. `timeoutMs` is capped at 25 s to sit under common MCP client request timeouts.
 
 ### 8.3 Server instructions
@@ -170,7 +169,7 @@ Close the documented gap (`docs/roadmap/backlog.md` "The `memory capture` comman
 ## 10. Security & isolation
 
 - **Localhost only.** The daemon binds `127.0.0.1`; the init/join URL gate rejects non-localhost. Auth token on the transport stays a backlog item (out of scope), but the workspace adds its own boundary: **membership in `registry.json` is mandatory** — a non-member `?p=` is refused, so a stray local client cannot read or write the shared store.
-- **Provenance is stamped, not accepted.** `repo.projectId` is derived from the request URL identity, never from the caller's payload, so an entry cannot claim a false origin.
+- **Provenance is stamped, not accepted.** `repo` is derived from the request URL identity, never from the caller's payload, so an entry cannot claim a false origin.
 - **Write trust boundary.** Tool descriptions tell the agent that memory content is data (quoted candidate context), not instructions; nothing in the store can override daemon/session operational rules (description-level + instructions-string level, per §8).
 - **No secrets / chain-of-thought policy** applies to capture: `noir memory capture` is for decision summaries the user chooses to distill; no raw transcript flooding.
 
@@ -226,7 +225,7 @@ Planned as sequential slices, each with its own spec-level acceptance:
 
 The slice is done when, all offline and on one machine:
 
-1. Two repos joined to one workspace: a `memory_save` from a session attached in repo A is returned by `memory_recall`/`memory_search` from a session attached in repo B, with correct `repo.projectId` provenance — **no handoff document involved**.
+1. Two repos joined to one workspace: a `memory_save` from a session attached in repo A is returned by `memory_recall`/`memory_search` from a session attached in repo B, with correct `repo` provenance — **no handoff document involved**.
 2. An `await_changes` long-poll held by repo B's session returns within milliseconds of repo A's `memory_save`, without busy-polling.
 3. A session in a non-member repo (or a bare `?p=` for a non-member) is refused by the workspace daemon; single-project behavior (`noir init` default, project stores, project-gated daemon commands) is byte-for-byte unchanged.
 4. `noir memory capture` persists a distilled payload with `captureSource` provenance.

@@ -65,6 +65,6 @@ Commands:
 | `--no-input` | Never prompt; CI/pipe-safe |
 | `--quiet` | Suppress non-error output |
 | `--verbose` | Detailed diagnostics |
-| `--cwd <dir>` | Working directory |
+| `--cwd <path>` | Working directory |
 | `--tui` / `--no-tui` | Advisory routing for bare `noir` |
 | `--no-tips` | Suppress hints on stderr |

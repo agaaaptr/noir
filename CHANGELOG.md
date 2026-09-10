@@ -1,6 +1,19 @@
 # Changelog
 
-## 1.12.0 (2026-08-19) — `noir run` hardening + run profiles + `.noir/.env` + config docs
+## 1.13.0 (2026-09-10) — shared cross-repo workspaces + `noir memory capture`
+
+### Added
+- **Shared cross-repo workspaces** (ADR-0009) — a named, cross-repo sharing unit served by one workspace daemon: `noir daemon start --workspace <name>` (founder; foreground by default or `--detach`) and `noir daemon join <name>`. The daemon multiplexes on the `?p=` project identity — `memory_*` + feed tools route to the shared workspace store (`~/.noir/workspaces/<name>/store.db`), while `context`/`workflow`/`task` keep the member's own project store. The default transport stays stdio; joining writes a `.noir/workspace.json` marker and rewrites only the `noir` entry of the repo's host MCP config. See `docs/how-to/shared-workspaces.md`.
+- **Workspace change feed** — a monotonic cursor plus `changes_since {cursor}` (pull) and `await_changes {cursor, timeoutMs}` (long-poll, capped at 25s), implemented with in-process waiters. Signal-only: the agent pulls content on demand; nothing is pushed into its context.
+- **Provenance-stamped, append-only memory** — `repo` (the member's canonical projectId) is stamped from the request identity, never caller-supplied; `memory_save {supersedes}` flips the target to `superseded`, `memory_forget` marks `forgotten`; default recall/search hide both, `includeInactive` surfaces them.
+- **`noir memory capture`** — a manual verb (`noir memory capture <file>`, piped stdin, or `--content`) to distill a transcript/notes file into memory. Manual only — no auto-installed capture hooks.
+
+### Changed
+- **Folded in the `1.12.0-beta.1` content** — run profiles, `.noir/.env` loading, the `noir run` host-failure contract, the config-docs overhaul, and the security/robustness hardening (cross-project daemon isolation, `.noir/.env` injection deny-list, FTS5 literal escaping + hit clamps) ship on `latest` for the first time; `1.12.0` had no stable release.
+
+---
+
+## 1.12.0 (2026-08-19, beta-only — published as `1.12.0-beta.1`; no stable, superseded by 1.13.0) — `noir run` hardening + run profiles + `.noir/.env` + config docs
 
 ### Fixed
 - **Palette help-corpus wrap** — the two-column row budgeted label(26) + hint(34) = 60 columns, but the real text width inside the row is 58 (panel 64 − border 2 − panel padding 2 − row padding 2), so long keybinding descriptions wrapped to a flush-left second line. `HINT_WIDTH` is now derived from a named `ROW_TEXT_WIDTH` budget, and the active **help** row shows its full description as a `↳` detail line (matching command rows).

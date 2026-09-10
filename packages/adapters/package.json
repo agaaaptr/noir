@@ -1,6 +1,6 @@
 {
   "name": "@noir-ai/adapters",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "description": "Noir adapters — the HostAdapter abstraction and 5 host adapters (claude, agents-md, gemini, cursor, opencode).",
   "license": "MIT",
   "author": "agaaaptr",

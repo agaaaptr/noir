@@ -178,7 +178,7 @@ function genCliReference() {
   lines.push('| `--no-input` | Never prompt; CI/pipe-safe |');
   lines.push('| `--quiet` | Suppress non-error output |');
   lines.push('| `--verbose` | Detailed diagnostics |');
-  lines.push('| `--cwd <dir>` | Working directory |');
+  lines.push('| `--cwd <path>` | Working directory |');
   lines.push('| `--tui` / `--no-tui` | Advisory routing for bare `noir` |');
   lines.push('| `--no-tips` | Suppress hints on stderr |');
   lines.push('');
@@ -347,7 +347,7 @@ function genConfigSchema() {
     '  are parsed + validated but have no live consumer yet — declaring them now avoids',
     '  schema churn when their feature ships. Do not rely on them.',
     "- `rules.lengthBudgetKb` IS read: `noir doctor`'s RULES.md budget check.",
-    '- `run.*` is new in 1.12.0 (host profiles). All other blocks predate it.',
+    '- `run.*` is new in 1.13.0 (host profiles; first surfaced on `beta` as 1.12.0-beta.1). All other blocks predate it.',
   );
   lines.push('');
   return lines.join('\n');
@@ -418,8 +418,6 @@ function genMcpTools() {
     '# MCP Tools Reference',
     '',
     '> Auto-generated from daemon tool registrations.',
-    '',
-    '> **Availability:** the shared-workspace tools (`changes_since`, `await_changes`) and `memory_capture` are implemented on `develop` and ship in **v1.13.0** — not yet in a published release.',
     '',
   ];
 

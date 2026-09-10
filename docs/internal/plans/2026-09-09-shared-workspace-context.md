@@ -1355,7 +1355,7 @@ Create `docs/decisions/0009-shared-workspaces.md` recording (extract spec §16):
 - [ ] **Step 4: Roadmap sync**
 
 - `docs/roadmap/STATUS.md`: set Active capability/slice to the shared-workspace slice under C5 (add to the status table `C5` row's current-phase note) and fill "Next milestone" with the shared-workspace spec link.
-- `docs/roadmap/releases.md`: version target v1.13.0 + a release-sequence note ("1.12.0 stable first, then 1.13.0 shared workspaces").
+- `docs/roadmap/releases.md`: version target v1.13.0 + a release-sequence note (1.13.0 shared workspaces; `1.12.0` stable was superseded — it shipped beta-only as `1.12.0-beta.1`).
 - `docs/roadmap/backlog.md`: resolve/annotate the event-bus item → `await_changes` long-poll shipped in 1.13; close the `memory capture` gap line; add a resolved-history entry.
 - `docs/roadmap/capability-09-platform-evolution.md`: mark the auto-capture slice's CLI portion done (DONE line) and note the workspace slice in C5.
 - `docs/roadmap/roadmap.manifest.yaml`: bump the package note / active fields.

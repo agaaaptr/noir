@@ -45,7 +45,10 @@ served by **one workspace daemon** (foreground by default, or `--detach`):
 - The workspace daemon defaults to never idling out (`workspace.idleTimeoutSec:
   0`); the knob is user-configurable via the `workspace:` config block.
 - `memory_capture` is wired as a manual CLI verb (provenance `auto:<hook>`); no
-  auto-installed hooks.
+  auto-installed **capture** hooks. (The `claude` host does get an unrelated
+  `SessionStart` *context* hook at `noir init` — it bootstraps context, it does
+  not capture memory.)
 - `noir memory *` in a joined repo routes to the workspace daemon (`?p=`
-  identity); `context`/`workflow`/`task` stay per-project.
+  identity); `context`/`workflow`/`task` stay per-project. `noir memory
+  consolidate` is refused on a shared workspace (a per-project concern).
 - Cross-machine / team / multi-user sharing remains v2.0 (see `releases.md`).
