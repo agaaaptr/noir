@@ -20,7 +20,9 @@ export const WORKSPACE_NAME_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 /** User-global workspace root: `~/.noir/workspaces/` (NOIR_WORKSPACES_DIR override). */
 export function workspaceHomeDir(): string {
-  return process.env[WORKSPACES_DIR_ENV] ?? join(noirHome(), 'workspaces');
+  // An empty (or whitespace) override must not resolve the workspace root to a
+  // relative path off the CWD — treat it as unset and fall back to the default.
+  return process.env[WORKSPACES_DIR_ENV]?.trim() || join(noirHome(), 'workspaces');
 }
 
 /** A single workspace's directory. Throws on an invalid name (never joins a bad path). */

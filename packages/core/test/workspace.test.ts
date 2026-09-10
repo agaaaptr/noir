@@ -10,6 +10,7 @@ import {
   removeWorkspaceMember,
   upsertWorkspaceMember,
   workspaceDir,
+  workspaceHomeDir,
   workspaceRegistryPath,
   workspaceStoreDbPath,
 } from '../src/workspace.js';
@@ -17,6 +18,23 @@ import {
 const home = mkdtempSync(join(tmpdir(), 'noir-ws-home-'));
 process.env.NOIR_WORKSPACES_DIR = join(home, 'workspaces');
 afterAll(() => rmSync(home, { recursive: true, force: true }));
+
+describe('workspaceHomeDir', () => {
+  it('treats an empty NOIR_WORKSPACES_DIR as unset (never a relative CWD path)', () => {
+    const saved = process.env.NOIR_WORKSPACES_DIR;
+    try {
+      delete process.env.NOIR_WORKSPACES_DIR;
+      expect(workspaceHomeDir()).toContain('workspaces'); // default under ~/.noir
+      process.env.NOIR_WORKSPACES_DIR = '';
+      expect(workspaceHomeDir()).toContain('workspaces'); // empty ⇒ default, not ''
+      process.env.NOIR_WORKSPACES_DIR = '   ';
+      expect(workspaceHomeDir()).toContain('workspaces'); // whitespace ⇒ default
+    } finally {
+      if (saved === undefined) delete process.env.NOIR_WORKSPACES_DIR;
+      else process.env.NOIR_WORKSPACES_DIR = saved;
+    }
+  });
+});
 
 describe('workspace name validation', () => {
   it('accepts path-safe names and rejects traversal/uppercase', () => {
