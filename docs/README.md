@@ -1,7 +1,7 @@
 # Documentation
 
 > Auto-generated documentation index.
-> Last updated: 2026-09-10T04:23:20.919Z
+> Last updated: 2026-09-10T07:05:22.883Z
 
 ## Getting Started
 
@@ -18,7 +18,7 @@
 - [**Installing Noir**](how-to/installation.md) — 
 - [**Adding a package**](how-to/packaging.md) — 
 - [**Releasing Noir**](how-to/releasing.md) — 
-- [**Sharing context across repositories (workspaces)**](how-to/shared-workspaces.md) — 
+- [**Sharing memory across repositories (workspaces)**](how-to/shared-workspaces.md) — 
 
 ## Reference
 

@@ -26,6 +26,20 @@ Save durable insights so the next session doesn't start from zero.
 3. **Persist it.** On Noir projects, use `noir memory save <content>` (or the `memory_save` / `noir.remember` MCP tool).
 4. **Confirm.** Say what was saved so the user knows it'll survive.
 
+## In a shared workspace
+
+If this repo has joined a **shared workspace** (two repos, one product — e.g. a
+backend and a frontend, via `noir daemon join <name>`), **every** save goes to
+the **shared** store. There is no per-repo memory while a repo is joined: a
+sibling repo's sessions can read what you write here, immediately.
+
+Two consequences for what you save:
+
+- **Write for the outsider.** The sibling repo's agent never saw your files. Prefer
+  a decision plus its reason over a repo-local detail it cannot act on.
+- **Provenance is automatic.** The daemon stamps which repo wrote the entry from
+  the request identity — never state it yourself, and never guess a sibling's.
+
 ## Verification
 
 - [ ] The entry is one focused fact (not a grab-bag).

@@ -606,6 +606,17 @@ export function createProgram(): Command {
   daemonGrp.action(() => {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir daemon start|join|stop|status|restart');
   });
+  daemonGrp.addHelpText(
+    'after',
+    [
+      '',
+      'Shared workspaces (two repos, one product — e.g. backend + frontend):',
+      '  noir daemon start --workspace <name> --detach   found a workspace from this repo',
+      '  noir daemon join <name>                         join it from the other repo',
+      '',
+      'Guide: docs/how-to/shared-workspaces.md',
+    ].join('\n'),
+  );
 
   const workspaceGrp = program.command('workspace').description('shared cross-repo workspaces');
   workspaceGrp
@@ -656,6 +667,17 @@ export function createProgram(): Command {
         ...(name !== undefined ? { name } : {}),
       });
     });
+  workspaceGrp.addHelpText(
+    'after',
+    [
+      '',
+      'This group only inspects and leaves workspaces. To CREATE or JOIN one:',
+      '  noir daemon start --workspace <name> --detach   found it (from the first repo)',
+      '  noir daemon join <name>                         join it (from the second repo)',
+      '',
+      'Guide: docs/how-to/shared-workspaces.md',
+    ].join('\n'),
+  );
   workspaceGrp.action(() => {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir workspace list|status|leave|stop');
   });

@@ -20,7 +20,7 @@ Noir is a **host-agnostic orchestration layer** — not an LLM runtime. The host
 │  `noir` CLI  (commander + @clack/prompts; thin daemon client)  │  ← user-facing
 └────────────▲───────────────────────────────────────────────────┘
              │  single source of truth
-   .noir/ (project, ProjectId-keyed)        ~/.noir/ (user-global: models, daemon record)
+   .noir/ (project, ProjectId-keyed)        ~/.noir/ (user-global: models, daemon record, workspaces/<name>/)
 ```
 
 ## The 11 packages (`@noir-ai/*`)
@@ -52,6 +52,31 @@ The daemon is the **single writer** to the store; if it is down, reads (FTS/kNN/
 ## The `.noir/` portable store
 
 `.noir/` is the project's single source of truth, keyed by a **canonical `ProjectId` — never a filesystem path** (paths break across machines). It holds `config.yml`, `NOIR.md` (the canonical context file the host merely `@import`s), the ProjectId-keyed SQLite DB, and SDD artifacts (`intake/`, `specs/`, `plans/`, `tasks/`, `decisions/`, `audit/`, `CHANGELOG.md`). `~/.noir/` holds user-global concerns (the embedder model cache, the singleton daemon record, and — for shared cross-repo workspaces — `workspaces/<name>/` with a registry + shared store, see ADR-0009). Generated host artifacts are pointers/transforms of `.noir/`, never drifting copies.
+
+## Workspaces (cross-repo sharing)
+
+A **workspace** is a named, cross-repo sharing unit: two agent sessions in
+different repos (e.g. backend + frontend) share **decision memory** through one
+**workspace daemon**, localhost-only, without handoff documents. It is opt-in —
+`noir daemon start --workspace <name>` (founder) and `noir daemon join <name>`
+join a repo by writing a `.noir/workspace.json` marker and rewriting only the
+`noir` entry of the repo's host MCP config to
+`http://127.0.0.1:<port>/mcp?p=<projectId>`.
+
+The workspace daemon **multiplexes on the `?p=` project identity**:
+
+- `memory_*` + the shared-workspace feed tools (`changes_since` / `await_changes`)
+  route to the **shared** store at `~/.noir/workspaces/<name>/store.db`;
+- `context_*`, `workflow_*`, and `task_*` route to the requesting member's **own
+  project store**.
+
+A non-member `?p=` is refused, and the **one-writer-per-DB invariant** is
+preserved: a single daemon process holds N store handles (one shared, N member
+projects). Provenance on a shared observation is stamped server-side from the
+request identity, never caller-supplied. See
+[ADR-0009](../decisions/0009-shared-workspaces.md) and the
+[user-facing guide](../how-to/shared-workspaces.md); cross-machine/team sharing
+remains a v2.0 item.
 
 ## Privacy + provider-explicit stance
 

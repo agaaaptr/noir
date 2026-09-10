@@ -26,6 +26,17 @@ Query cross-session memory for what was already decided, discovered, or document
 3. **Surface 2-4 top matches.** State what was found and when it was recorded. If nothing found, say so — don't fabricate.
 4. **Apply to the current task.** If a prior decision is relevant, cite it; if it's stale, note that and ask the user.
 
+## In a shared workspace
+
+If this repo has joined a **shared workspace** (two repos, one product — e.g. a
+backend and a frontend, via `noir daemon join <name>`), `memory_recall` searches
+the **shared** store. Hits may therefore have been saved by a session in the
+*other* repo.
+
+Every hit carries a `repo` provenance field naming the repo it came from. Check
+it before relying on a hit: a decision made in the sibling repo may not hold in
+this one. Cite the `repo` alongside the date when you report what you found.
+
 ## Verification
 
 - [ ] Memory was queried before making assumptions.

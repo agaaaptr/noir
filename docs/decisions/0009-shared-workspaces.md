@@ -52,3 +52,7 @@ served by **one workspace daemon** (foreground by default, or `--detach`):
   identity); `context`/`workflow`/`task` stay per-project. `noir memory
   consolidate` is refused on a shared workspace (a per-project concern).
 - Cross-machine / team / multi-user sharing remains v2.0 (see `releases.md`).
+
+## See also
+
+- **User-facing guide:** [Sharing memory across repositories (workspaces)](../how-to/shared-workspaces.md)

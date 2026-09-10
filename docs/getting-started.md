@@ -127,6 +127,21 @@ The daemon is a **long-lived** Noir server that multiple clients can share — t
 
 Pick the daemon **only** if you need a persistent shared server across host sessions. Active terminal commands start a daemon when needed; otherwise, stdio is the simplest host transport. See [transports](explanation/sdd-workflow.md#transports) for the full comparison.
 
+### Share memory across two repos (workspaces)
+
+Working on one product across a **backend and a frontend repo**? Two separate
+sessions can share **decision memory** through one workspace daemon — no
+handoff documents:
+
+```bash
+cd /repo-backend  && noir daemon start --workspace my-app --detach
+cd /repo-frontend && noir daemon join my-app
+```
+
+See [Shared workspaces](how-to/shared-workspaces.md) for the full walkthrough —
+the `noir init` prerequisite, the per-host config file, how to verify sharing
+works, and troubleshooting.
+
 ## Your first session in Claude Code
 
 You work **through** the host. After `noir init` and opening the project in Claude Code, just ask it to build something — for example, *"add a CSV export to the reports module."* The native skills pick up the request and run Noir's spec-driven lifecycle:

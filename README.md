@@ -103,10 +103,12 @@ MCP tools → [MCP Tools Reference](docs/reference/mcp-tools.md).
 | | |
 |---|---|
 | **Tutorial** | [Getting Started](docs/getting-started.md) |
-| **How-to** | [Installation](docs/how-to/installation.md) · [ClickUp integration](docs/how-to/clickup.md) · [Host profiles](docs/how-to/host-profiles.md) · [Releasing](docs/how-to/releasing.md) · [Adding a Package](docs/how-to/packaging.md) |
+| **How-to** | [Installation](docs/how-to/installation.md) · [ClickUp integration](docs/how-to/clickup.md) · [Host profiles](docs/how-to/host-profiles.md) · [Releasing](docs/how-to/releasing.md) · [Adding a Package](docs/how-to/packaging.md) · [Shared workspaces](docs/how-to/shared-workspaces.md) |
 | **Reference** | [CLI Commands](docs/reference/cli.md) · [Configuration](docs/reference/config.md) · [Environment Variables](docs/reference/environment.md) · [MCP Tools](docs/reference/mcp-tools.md) · [Skills](docs/reference/skills.md) · [Packages](docs/reference/packages.md) |
 | **Explanation** | [Architecture](docs/explanation/architecture.md) · [Privacy](docs/explanation/privacy.md) · [Spec-Driven Workflow](docs/explanation/sdd-workflow.md) |
 | **Records** | [Roadmap](docs/roadmap/) · [Changelog](CHANGELOG.md) · [Decisions (ADRs)](docs/decisions/) |
+
+Complete index of every page → [Documentation](docs/README.md).
 
 ## Development
 
