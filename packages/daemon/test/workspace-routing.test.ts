@@ -124,4 +124,93 @@ describe('workspace http routing', () => {
       clearDaemonRecord();
     }
   }, 30000);
+
+  it('refuses a member whose registered root no longer resolves to that projectId', async () => {
+    // "ghost" is registered as a member, but its root is repoA whose REAL id is
+    // repo-a — a stale pairing (re-`noir init` in place). The daemon must refuse
+    // (500) rather than serve repo-a's store under the authenticated "ghost"
+    // identity.
+    upsertWorkspaceMember(ensureWorkspaceRegistry('stale-identity'), {
+      projectId: 'ghost',
+      root: repoA,
+      joinedAt: Date.now(),
+    });
+    const { port, stop } = await startWorkspaceHttpServer({
+      name: 'stale-identity',
+      project: {
+        id: 'repo-a',
+        name: 'stale-founder',
+        root: repoA,
+        config: parseConfig({
+          host: 'claude',
+          mode: 'full',
+          context: { embedder: { kind: 'none' } },
+        }),
+      },
+      idleTimeoutSec: 0,
+    });
+    try {
+      const refused = await fetch(`http://127.0.0.1:${port}/mcp?p=ghost`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      });
+      expect(refused.status).toBe(500);
+      const body = (await refused.json()) as Record<string, unknown>;
+      expect(body.ok).toBe(false);
+    } finally {
+      await stop();
+      clearDaemonRecord();
+    }
+  }, 30000);
+
+  it('answers 500 — never hangs — when a member config is rejected after its store opens', async () => {
+    // repoC passes config validation (core constrains `dim` only to a positive
+    // int) but `resolveEmbedderConfig` throws mid-build, AFTER the store open.
+    // The daemon must close that store, answer 500, and stay up — an unguarded
+    // throw here would strand the handle and reject the request handler, which
+    // has no catch, so the client would hang with no envelope.
+    const repoC = mkdtempSync(join(tmpdir(), 'noir-wsrout-c-'));
+    mkdirSync(paths.noirDir(repoC), { recursive: true });
+    writeFileSync(paths.projectId(repoC), 'repo-c\n', 'utf8');
+    writeFileSync(
+      paths.config(repoC),
+      'host: claude\nmode: full\ncontext:\n  embedder:\n    kind: remote\n    dim: 768\n',
+      'utf8',
+    );
+    upsertWorkspaceMember(ensureWorkspaceRegistry('bad-config'), {
+      projectId: 'repo-c',
+      root: repoC,
+      joinedAt: Date.now(),
+    });
+    const { port, stop } = await startWorkspaceHttpServer({
+      name: 'bad-config',
+      project: {
+        id: 'repo-a',
+        name: 'bad-config-founder',
+        root: repoA,
+        config: parseConfig({
+          host: 'claude',
+          mode: 'full',
+          context: { embedder: { kind: 'none' } },
+        }),
+      },
+      idleTimeoutSec: 0,
+    });
+    try {
+      const bad = await fetch(`http://127.0.0.1:${port}/mcp?p=repo-c`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      });
+      expect(bad.status).toBe(500);
+      expect(((await bad.json()) as Record<string, unknown>).ok).toBe(false);
+      // The daemon survives the bad member (no leaked handle, no crash).
+      expect((await fetch(`http://127.0.0.1:${port}/health`)).status).toBe(200);
+    } finally {
+      await stop();
+      clearDaemonRecord();
+      rmSync(repoC, { recursive: true, force: true });
+    }
+  }, 30000);
 });

@@ -56,10 +56,13 @@ export function changesSince(
 ): { cursor: number; changes: FeedEntry[]; gapped: boolean } {
   const feed = store.getState<FeedEntry[]>(WORKSPACE_FEED_KEY) ?? [];
   const trimmed = store.getState<boolean>(WORKSPACE_FEED_TRIMMED_KEY) === true;
-  // A client whose cursor predates the oldest surviving entry has missed evicted
-  // changes — surface it so it re-pulls from scratch instead of believing it is
-  // caught up (spec: changes_since is the always-works backstop).
-  const gapped = trimmed && feed.length > 0 && cursor < (feed[0]?.cursor ?? 0);
+  // A client whose cursor predates the oldest surviving entry has missed
+  // evicted changes — surface it so it re-pulls from scratch instead of
+  // believing it is caught up (spec: changes_since is the always-works
+  // backstop). `- 1` matters: a client whose cursor is exactly one behind the
+  // oldest surviving entry is fully caught up (the ring holds everything newer),
+  // so only a cursor strictly older than that is gapped.
+  const gapped = trimmed && feed.length > 0 && cursor < (feed[0]?.cursor ?? 0) - 1;
   return { cursor: currentCursor(store), changes: feed.filter((e) => e.cursor > cursor), gapped };
 }
 

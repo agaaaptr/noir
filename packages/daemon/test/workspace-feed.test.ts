@@ -91,4 +91,27 @@ describe('workspace feed', () => {
     expect(fresh.gapped).toBe(false);
     expect(fresh.changes).toHaveLength(0);
   });
+
+  it('does not signal a gap for a client exactly one behind the oldest surviving entry', () => {
+    clearFeedState(store);
+    // 510 appends, ring keeps the newest 500 → cursors 11..510 survive.
+    for (let i = 0; i < 510; i++) {
+      appendFeed(store, {
+        kind: 'save',
+        id: `e${i}`,
+        repo: 'be',
+        type: 'fact',
+        summary: `s${i}`,
+        ts: i,
+      });
+    }
+    // A client at cursor 10 has missed nothing: entry 11 is precisely the next
+    // change it needs, and 11 is still in the ring. (An off-by-one here would
+    // falsely flag every caught-up client sitting on the trim boundary.)
+    const boundary = changesSince(store, 10);
+    expect(boundary.gapped).toBe(false);
+    expect(boundary.changes).toHaveLength(500);
+    // One further back genuinely lost entry 10 to eviction → gapped.
+    expect(changesSince(store, 9).gapped).toBe(true);
+  });
 });

@@ -100,21 +100,34 @@ async function buildMember(root: string): Promise<MemberContext | null> {
   } catch {
     return null;
   }
-  const engine = buildWorkflowEngine(
-    store.store,
-    project.root,
-    project.id,
-    resolveGateConfig(project.config),
-  );
-  const embedderCfg = resolveEmbedderConfig(project.config.context);
-  const context = buildContextEngine(
-    store.store,
-    project.root,
-    project.id,
-    embedderCfg,
-    store.degraded,
-  );
-  return { project, store, engine, context };
+  // Everything after the store open must not strand the handle. A member config
+  // the context layer rejects (e.g. `context.embedder.dim !== 384` for a remote
+  // embedder — the core schema constrains only to a positive int) throws HERE,
+  // after the store is open: without this guard it would leak an open SQLite
+  // connection for the daemon's life (the member never reaches memberCache, so
+  // shutdown never closes it) AND reject the request handler, which has no
+  // catch — hanging the client with no 500 envelope. Close and return null so
+  // getMember yields null and the handler's 500 path answers.
+  try {
+    const engine = buildWorkflowEngine(
+      store.store,
+      project.root,
+      project.id,
+      resolveGateConfig(project.config),
+    );
+    const embedderCfg = resolveEmbedderConfig(project.config.context);
+    const context = buildContextEngine(
+      store.store,
+      project.root,
+      project.id,
+      embedderCfg,
+      store.degraded,
+    );
+    return { project, store, engine, context };
+  } catch {
+    await store.store.close().catch(() => undefined);
+    return null;
+  }
 }
 
 export async function startWorkspaceHttpServer(
@@ -158,16 +171,40 @@ export async function startWorkspaceHttpServer(
     : undefined;
 
   const memberCache = new Map<string, MemberContext>();
+  // A cold-cache miss is async (store open). Without an in-flight slot, two
+  // requests for the same member that miss the cache in the same tick each
+  // reach a second `openStoreForDaemon` — a second write handle to one DB,
+  // the first of which is then silently dropped (leak) and never closed.
+  const memberInFlight = new Map<string, Promise<MemberContext | null>>();
 
   async function getMember(repo: string): Promise<MemberContext | null> {
     const cached = memberCache.get(repo);
     if (cached) return cached;
+    const inFlight = memberInFlight.get(repo);
+    if (inFlight) return inFlight;
     const registry = readWorkspaceRegistry(name);
     const member = registry?.members.find((m) => m.projectId === repo);
     if (!member) return null;
-    const built = await buildMember(member.root);
-    if (built) memberCache.set(repo, built);
-    return built;
+    const pending = (async () => {
+      const built = await buildMember(member.root);
+      // The registry pairs a projectId with the root it joined from. If the root
+      // no longer resolves to that same projectId (re-`noir init`, moved dir),
+      // the member is stale — refuse rather than serve another project's store
+      // under this authenticated identity.
+      if (built === null) return null;
+      if (built.project.id !== repo) {
+        await built.store.store.close().catch(() => undefined);
+        return null;
+      }
+      memberCache.set(repo, built);
+      return built;
+    })();
+    memberInFlight.set(repo, pending);
+    try {
+      return await pending;
+    } finally {
+      memberInFlight.delete(repo);
+    }
   }
 
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
