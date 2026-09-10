@@ -69,4 +69,19 @@ describe('workspace feed', () => {
     const woken = await waitForFeedChange(store, 0, 50);
     expect(woken).toBe(false);
   });
+
+  it('signals a gap when the ring evicted entries older than the caller cursor', () => {
+    clearFeedState(store);
+    // Fill past the 500-entry ring so the earliest entries are evicted.
+    for (let i = 0; i < 510; i++) {
+      appendFeed(store, { kind: 'save', id: `e${i}`, repo: 'be', type: 'fact', summary: `s${i}`, ts: i });
+    }
+    // A client at cursor 0 predates the oldest surviving entry → gapped.
+    const stale = changesSince(store, 0);
+    expect(stale.gapped).toBe(true);
+    // A client past the oldest surviving entry is NOT gapped.
+    const fresh = changesSince(store, stale.cursor);
+    expect(fresh.gapped).toBe(false);
+    expect(fresh.changes).toHaveLength(0);
+  });
 });
