@@ -80,19 +80,30 @@ describe('two concurrent clients on one workspace daemon', () => {
       expect(env.ok).toBe(true);
       expect(env.results.length).toBeGreaterThanOrEqual(3);
 
-      // long-poll wakes: c1 holds await_changes(cursor=0), c2 writes, c1 returns promptly
+      // long-poll wakes: first learn the CURRENT cursor so await_changes actually
+      // registers a waiter (polling with cursor:0 would short-circuit on the
+      // three entries already written and prove nothing about the wake path).
+      const cur = parseResult(
+        await c1.callTool({ name: 'changes_since', arguments: { cursor: 0 } }),
+      ) as {
+        cursor: number;
+      };
       const poll = c1.callTool({
         name: 'await_changes',
-        arguments: { cursor: 0, timeoutMs: 25000 },
+        arguments: { cursor: cur.cursor, timeoutMs: 10000 },
       });
       await new Promise((r) => setTimeout(r, 200));
       await write(c2, 'c2 wake the poller');
       const pollEnv = parseResult(await poll) as {
         ok: boolean;
-        changes: Array<{ id: string }>;
+        timedOut: boolean;
+        changes: Array<{ summary: string }>;
       };
       expect(pollEnv.ok).toBe(true);
-      expect(pollEnv.changes.length).toBeGreaterThanOrEqual(1);
+      expect(pollEnv.timedOut).toBe(false);
+      // Only the ONE new write may have landed; it must be the wake entry, not the
+      // three pre-existing ones the waiter was already past.
+      expect(pollEnv.changes.some((c) => c.summary === 'c2 wake the poller')).toBe(true);
 
       await Promise.all([c1.close(), c2.close()]);
     } finally {

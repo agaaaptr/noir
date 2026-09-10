@@ -141,17 +141,21 @@ export async function startWorkspaceHttpServer(
   const wsStore = await openWorkspaceStore(name, opts.project.root);
   const embedderCfg = resolveEmbedderConfig(opts.project.config.context);
   const embed = createEmbedFn(embedderCfg).embed;
-  const wsMemory: MemoryEngine | undefined =
-    wsStore && !wsStore.degraded
-      ? createMemoryEngine({
-          store: wsStore.store,
-          root: opts.project.root,
-          projectId: `ws-${name}`,
-          embed,
-          storeDegraded: false,
-          softForget: true,
-        })
-      : undefined;
+  // Build the workspace memory engine even when the store opened degraded
+  // (read-only fallback): reads (recall/search) keep working, writes fence with a
+  // clear "store is read-only" envelope via the engine's own degraded flag — the
+  // same degraded story as the project daemon. Only a totally unopenable store
+  // (wsStore === undefined) omits memory tools entirely.
+  const wsMemory: MemoryEngine | undefined = wsStore
+    ? createMemoryEngine({
+        store: wsStore.store,
+        root: opts.project.root,
+        projectId: `ws-${name}`,
+        embed,
+        storeDegraded: wsStore.degraded,
+        softForget: true,
+      })
+    : undefined;
 
   const memberCache = new Map<string, MemberContext>();
 
@@ -204,9 +208,15 @@ export async function startWorkspaceHttpServer(
         );
         return;
       }
-      // Prune members that left the registry (fresh read above).
+      // Prune members that left the registry (fresh read above). Close their
+      // open project-store handles before dropping them — a long-lived daemon
+      // must not leak a departed member's SQLite connection + WAL mapping.
       for (const key of memberCache.keys()) {
-        if (!isWorkspaceMember(registry, key)) memberCache.delete(key);
+        if (!isWorkspaceMember(registry, key)) {
+          const departed = memberCache.get(key);
+          memberCache.delete(key);
+          if (departed) void departed.store.store.close().catch(() => {});
+        }
       }
       const server = createNoirServer({
         project: member.project,

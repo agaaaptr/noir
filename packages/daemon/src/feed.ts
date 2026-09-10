@@ -11,6 +11,7 @@ import type { Store } from '@noir-ai/store';
 
 const WORKSPACE_CURSOR_KEY = 'workspace:cursor';
 const WORKSPACE_FEED_KEY = 'workspace:feed';
+const WORKSPACE_FEED_TRIMMED_KEY = 'workspace:feed-trimmed';
 const FEED_RING_LIMIT = 500;
 
 export type FeedKind = 'save' | 'supersede' | 'forget';
@@ -41,7 +42,10 @@ export function appendFeed(store: Store, entry: Omit<FeedEntry, 'cursor'>): Feed
   const full: FeedEntry = { ...entry, cursor: bumpCursor(store) };
   const feed = store.getState<FeedEntry[]>(WORKSPACE_FEED_KEY) ?? [];
   feed.push(full);
-  if (feed.length > FEED_RING_LIMIT) feed.splice(0, feed.length - FEED_RING_LIMIT);
+  if (feed.length > FEED_RING_LIMIT) {
+    feed.splice(0, feed.length - FEED_RING_LIMIT);
+    store.setState(WORKSPACE_FEED_TRIMMED_KEY, true);
+  }
   store.setState(WORKSPACE_FEED_KEY, feed);
   return full;
 }
@@ -49,9 +53,14 @@ export function appendFeed(store: Store, entry: Omit<FeedEntry, 'cursor'>): Feed
 export function changesSince(
   store: Store,
   cursor: number,
-): { cursor: number; changes: FeedEntry[] } {
+): { cursor: number; changes: FeedEntry[]; gapped: boolean } {
   const feed = store.getState<FeedEntry[]>(WORKSPACE_FEED_KEY) ?? [];
-  return { cursor: currentCursor(store), changes: feed.filter((e) => e.cursor > cursor) };
+  const trimmed = store.getState<boolean>(WORKSPACE_FEED_TRIMMED_KEY) === true;
+  // A client whose cursor predates the oldest surviving entry has missed evicted
+  // changes — surface it so it re-pulls from scratch instead of believing it is
+  // caught up (spec: changes_since is the always-works backstop).
+  const gapped = trimmed && feed.length > 0 && cursor < (feed[0]?.cursor ?? 0);
+  return { cursor: currentCursor(store), changes: feed.filter((e) => e.cursor > cursor), gapped };
 }
 
 /** One-line, bounded summary for a feed entry (never full content — token-efficient). */
@@ -64,6 +73,7 @@ export function summarize(content: string, max = 120): string {
 export function clearFeedState(store: Store): void {
   store.setState(WORKSPACE_CURSOR_KEY, 0);
   store.setState(WORKSPACE_FEED_KEY, []);
+  store.setState(WORKSPACE_FEED_TRIMMED_KEY, false);
 }
 
 // --- long-poll waiters (single-daemon process only) ---

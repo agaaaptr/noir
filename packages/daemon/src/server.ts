@@ -971,7 +971,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       'memory_forget',
       {
         description:
-          'Remove observations from cross-session memory: deletes the authoritative KV row + best-effort FTS/vector purge. Returns the count actually removed.',
+          'Remove observations from cross-session memory. On a shared workspace this soft-forgets (append-only: the row is marked forgotten and hidden from default recall, kept for audit); on a project store it deletes the authoritative KV row + best-effort FTS/vector purge. Returns the count actually removed.',
         inputSchema: {
           ids: z.array(z.string()).min(1).describe('Observation ids to remove.'),
         },

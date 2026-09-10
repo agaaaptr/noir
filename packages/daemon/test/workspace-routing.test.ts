@@ -95,9 +95,18 @@ describe('workspace http routing', () => {
       });
       const renv = parseResult(recalled);
       expect(renv.ok).toBe(true);
-      const hits = renv.results as Array<{ content: string; repo?: string }>;
+      const hits = renv.results as Array<{
+        content: string;
+        repo?: string;
+        status?: string;
+        cursor?: number;
+      }>;
       expect(hits.length).toBeGreaterThanOrEqual(1);
       expect(hits[0].repo).toBe('repo-a');
+      // Provenance must round-trip: the recall hydration (from the authoritative
+      // KV row) carries the same status + feed cursor the save stamped.
+      expect(hits[0].status).toBe('active');
+      expect(hits[0].cursor).toBeGreaterThan(0);
 
       // non-member is refused at the transport boundary (before the MCP handshake)
       const refused = await fetch(`http://127.0.0.1:${port}/mcp?p=not-a-member`, {

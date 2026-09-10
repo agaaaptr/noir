@@ -28,6 +28,7 @@ import {
   callDaemonTool,
   type DaemonClientOptions,
   type DaemonProbe,
+  type DaemonToolCaller,
   probeDaemon,
   probeWorkspaceDaemon,
   type WorkspaceRouting,
@@ -84,7 +85,7 @@ async function callMemory<T>(
 /** Multi-call memory path (capability discovery): workspace daemon when joined. */
 async function withMemoryDaemon<T>(
   opts: MemoryOptions,
-  fn: (caller: import('../daemon-client.js').DaemonToolCaller) => Promise<T>,
+  fn: (caller: DaemonToolCaller) => Promise<T>,
 ): Promise<T> {
   const ws = resolveWorkspace();
   if (ws === null) return withDaemon(opts, fn);
@@ -615,7 +616,9 @@ export async function memoryConsolidate(opts: MemoryConsolidateOptions): Promise
   if (!exposed.includes('memory_consolidate')) {
     fail(
       EXIT.ERROR,
-      'memory consolidate: the daemon does not expose the memory_consolidate tool. Enable it in .noir/config under memory.consolidation (enabled: true + a provider + model), then restart the daemon.',
+      resolveWorkspace() !== null
+        ? 'memory consolidate is not supported on shared workspaces (the workspace memory store has no consolidation model).'
+        : 'memory consolidate: the daemon does not expose the memory_consolidate tool. Enable it in .noir/config under memory.consolidation (enabled: true + a provider + model), then restart the daemon.',
       opts,
     );
   }
