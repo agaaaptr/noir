@@ -50,6 +50,8 @@ export interface DaemonStartOptions extends DaemonOptions {
   detachChild?: boolean;
   /** `--workspace <name>`: start a shared cross-repo workspace daemon instead. */
   workspace?: string;
+  /** `--force`: overwrite a non-Noir `.mcp.json` entry (the `--workspace` join). */
+  force?: boolean;
 }
 
 /** Human label for the detached mode in `status` output. */
@@ -488,7 +490,7 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
  * blocks too — the honest behavior; with `--detach` the parent exits after the
  * detached child is confirmed serving.
  */
-export async function daemonRestart(opts: DaemonOptions): Promise<void> {
+export async function daemonRestart(opts: DaemonOptions & { detach?: boolean }): Promise<void> {
   // Force the stop to be quiet + non-JSON: its output would either duplicate
   // the start envelope (--json) or noise up the headline (human). The verbose
   // flag is forwarded so a `--verbose` caller still sees stop diagnostics.

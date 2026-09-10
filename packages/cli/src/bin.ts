@@ -550,6 +550,7 @@ export function createProgram(): Command {
     .description('start the Noir daemon (foreground, or background with --detach)')
     .option('--detach', 'run the daemon in the background and exit')
     .option('--workspace <name>', 'start a shared cross-repo workspace daemon instead')
+    .option('--force', 'overwrite a non-Noir .mcp.json entry (--workspace only)')
     .addOption(
       new Option('--_detached-child', 'reserved: detached daemon child (internal)').hideHelp(),
     )
@@ -564,6 +565,7 @@ export function createProgram(): Command {
         ...(detach ? { detach } : {}),
         ...(detachChild ? { detachChild } : {}),
         ...(workspace !== undefined ? { workspace } : {}),
+        ...(g.force === true ? { force: true } : {}),
       });
     });
   daemonGrp
@@ -592,8 +594,14 @@ export function createProgram(): Command {
   daemonGrp
     .command('restart')
     .description('stop then start the daemon')
+    .option('--detach', 'run the daemon in the background and exit')
     .action(async (...args: unknown[]) => {
-      await daemonRestart(toCliOptions(trailingCmd(args).optsWithGlobals()));
+      const cmd = trailingCmd(args);
+      const g = cmd.optsWithGlobals();
+      await daemonRestart({
+        ...toCliOptions(g),
+        ...(g.detach === true ? { detach: true } : {}),
+      });
     });
   daemonGrp.action(() => {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir daemon start|join|stop|status|restart');
@@ -624,8 +632,14 @@ export function createProgram(): Command {
   workspaceGrp
     .command('leave')
     .description('leave the workspace this repo joined (restore stdio)')
+    .option('--force', 'overwrite a non-Noir .mcp.json entry')
     .action(async (...args: unknown[]) => {
-      await workspaceLeave(toCliOptions(trailingCmd(args).optsWithGlobals()));
+      const cmd = trailingCmd(args);
+      const g = cmd.optsWithGlobals();
+      await workspaceLeave({
+        ...toCliOptions(g),
+        ...(g.force === true ? { force: true } : {}),
+      });
     });
   workspaceGrp
     .command('stop')

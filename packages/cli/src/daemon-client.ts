@@ -632,9 +632,14 @@ export async function withWorkspaceMemoryRead<T>(
       readonly: true,
     });
   } catch (err) {
+    // Reached only when the workspace daemon is already down (this is its read
+    // fallback). The dominant cause is a store that was never created, so give
+    // the same actionable guidance + DAEMON_DOWN exit code the active path uses
+    // rather than a bare store-open error — the caller's next step is the same
+    // either way: start the daemon.
     fail(
-      EXIT.ERROR,
-      `could not open the workspace store read-only: ${err instanceof Error ? err.message : String(err)}`,
+      EXIT.DAEMON_DOWN,
+      `workspace ${JSON.stringify(routing.name)} store is unavailable (${err instanceof Error ? err.message : String(err)}) — start its daemon with \`noir daemon start --workspace ${routing.name}\` (or run \`noir workspace status\`).`,
       opts,
     );
   }

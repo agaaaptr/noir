@@ -456,7 +456,18 @@ async function resolveCaptureContent(opts: MemoryCaptureOptions): Promise<string
     }
   }
   if (!process.stdin.isTTY) {
-    return readFileSync(0, 'utf8');
+    // A non-TTY stdin can still be unreadable (closed fd 0, EAGAIN under CI).
+    // Route that through fail() so `--json` gets its {ok:false} envelope instead
+    // of a raw readFileSync error on stderr.
+    try {
+      return readFileSync(0, 'utf8');
+    } catch {
+      fail(
+        EXIT.USAGE,
+        'memory capture could not read piped stdin — pass --content <text> or --file <path>.',
+        opts,
+      );
+    }
   }
   if (!isInteractive(opts)) {
     fail(

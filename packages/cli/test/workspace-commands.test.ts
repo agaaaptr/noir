@@ -5,6 +5,7 @@ import {
   ensureWorkspaceRegistry,
   paths,
   readWorkspaceMarker,
+  readWorkspaceRegistry,
   writeWorkspaceMarker,
 } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -55,7 +56,13 @@ vi.mock('../src/daemon-client.js', async (importOriginal) => {
 });
 
 import { memorySave } from '../src/commands/memory.js';
-import { daemonJoin, workspaceLeave } from '../src/commands/workspace.js';
+import {
+  daemonJoin,
+  workspaceLeave,
+  workspaceList,
+  workspaceStatus,
+  workspaceStop,
+} from '../src/commands/workspace.js';
 
 let home: string;
 let root: string;
@@ -110,6 +117,28 @@ describe('noir daemon join / workspace leave', () => {
     await expect(daemonJoin({ name: 'missing' })).rejects.toThrow();
     expect(existsSync(join(root, '.noir', 'workspace.json'))).toBe(false);
   });
+
+  it('leave refuses on a non-Noir .mcp.json and never half-leaves the repo', async () => {
+    ensureWorkspaceRegistry('demo');
+    await daemonJoin({ name: 'demo' });
+    expect(readWorkspaceMarker(root)).toBe('demo');
+    // A comment makes it unparseable JSON — the stdio restore must refuse.
+    writeFileSync(join(root, '.mcp.json'), '{\n  // user comment\n  "mcpServers": {}\n}\n', 'utf8');
+
+    await expect(workspaceLeave({})).rejects.toThrow();
+    // The refusal happens BEFORE any state is torn down: the repo is still fully
+    // joined, so a retry with --force can finish the job.
+    expect(readWorkspaceMarker(root)).toBe('demo');
+    expect(readWorkspaceRegistry('demo')?.members.some((m) => m.projectId === 'fe-repo')).toBe(
+      true,
+    );
+
+    await workspaceLeave({ force: true });
+    expect(readWorkspaceMarker(root)).toBeNull();
+    expect(readWorkspaceRegistry('demo')?.members.some((m) => m.projectId === 'fe-repo')).toBe(
+      false,
+    );
+  });
 });
 
 describe('CLI memory routing via the join marker', () => {
@@ -128,5 +157,36 @@ describe('CLI memory routing via the join marker', () => {
     await memorySave({ content: 'solo note' });
     expect(mocks.withWorkspaceDaemon).not.toHaveBeenCalled();
     expect(mocks.callDaemonTool).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('workspace name + liveness guards', () => {
+  it('status and stop reject a non-schema name instead of throwing a raw path error', async () => {
+    await expect(workspaceStatus({ name: 'Bad Name' })).rejects.toThrow(/invalid workspace name/);
+    await expect(workspaceStop({ name: '../evil' })).rejects.toThrow(/invalid workspace name/);
+  });
+
+  it('workspace list reports a stale daemon record as not running', async () => {
+    ensureWorkspaceRegistry('demo');
+    mkdirSync(join(home, 'workspaces', 'demo'), { recursive: true });
+    writeFileSync(
+      join(home, 'workspaces', 'demo', 'daemon.json'),
+      JSON.stringify({ pid: 999999, port: 1234, startedAt: 1, workspace: 'demo' }),
+      'utf8',
+    );
+    const writes: string[] = [];
+    const spy = vi.spyOn(process.stdout, 'write').mockImplementation((c: unknown) => {
+      writes.push(String(c));
+      return true;
+    });
+    try {
+      await workspaceList({ json: true });
+    } finally {
+      spy.mockRestore();
+    }
+    const env = JSON.parse(writes.join('')) as {
+      data: { workspaces: Array<{ name: string; running: boolean }> };
+    };
+    expect(env.data.workspaces.find((w) => w.name === 'demo')?.running).toBe(false);
   });
 });

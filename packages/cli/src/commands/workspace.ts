@@ -36,6 +36,7 @@ export interface WorkspaceStartOptions extends CliOptions {
   name: string;
   detach?: boolean;
   detachChild?: boolean;
+  force?: boolean;
 }
 export interface WorkspaceJoinOptions extends CliOptions {
   name: string;
@@ -43,6 +44,9 @@ export interface WorkspaceJoinOptions extends CliOptions {
 }
 export interface WorkspaceStatusOptions extends CliOptions {
   name?: string;
+}
+export interface WorkspaceLeaveOptions extends CliOptions {
+  force?: boolean;
 }
 
 function loadProjectOrFail(opts: CliOptions): ProjectInfo {
@@ -69,7 +73,7 @@ export async function daemonStartWorkspace(opts: WorkspaceStartOptions): Promise
   if (!isValidWorkspaceName(opts.name)) {
     fail(
       EXIT.USAGE,
-      `invalid workspace name ${JSON.stringify(opts.name)} (letters, digits, and dashes).`,
+      `invalid workspace name ${JSON.stringify(opts.name)} (lowercase letters, digits, and dashes).`,
       opts,
     );
   }
@@ -175,7 +179,12 @@ export async function workspaceList(opts: CliOptions): Promise<void> {
     return {
       name: n,
       members: reg?.members.length ?? 0,
-      running: readWorkspaceDaemonRecord(n) !== null,
+      // A record file whose pid is dead (daemon killed without cleanup) must not
+      // read as "running" — mirror the pidAlive liveness `workspace status` uses.
+      running: (() => {
+        const rec = readWorkspaceDaemonRecord(n);
+        return rec !== null && pidAlive(rec.pid);
+      })(),
     };
   });
   if (opts.json === true) {
@@ -196,6 +205,9 @@ export async function workspaceStatus(opts: WorkspaceStatusOptions): Promise<voi
   const name = opts.name ?? readWorkspaceMarker(process.cwd()) ?? undefined;
   if (name === undefined) {
     fail(EXIT.USAGE, 'workspace status requires a name (or run from a joined repo).', opts);
+  }
+  if (!isValidWorkspaceName(name)) {
+    fail(EXIT.USAGE, `invalid workspace name ${JSON.stringify(name)}.`, opts);
   }
   const reg = readWorkspaceRegistry(name);
   const rec = readWorkspaceDaemonRecord(name);
@@ -218,18 +230,22 @@ export async function workspaceStatus(opts: WorkspaceStatusOptions): Promise<voi
 }
 
 /** `noir workspace leave` — remove this repo from membership + restore stdio. */
-export async function workspaceLeave(opts: CliOptions): Promise<void> {
+export async function workspaceLeave(opts: WorkspaceLeaveOptions): Promise<void> {
   const project = loadProjectOrFail(opts);
   const name = readWorkspaceMarker(project.root);
   if (name === null) {
     fail(EXIT.USAGE, 'this repo is not joined to a workspace.', opts);
   }
+  // Restore stdio FIRST — it is the one step that can fail (a non-Noir .mcp.json
+  // is refused without `--force`). Doing it last would strand the repo mid-leave:
+  // membership removed + marker cleared, but .mcp.json still pointed at a
+  // workspace the repo no longer belongs to.
+  writeStdioEntry(project.root, project.config.host, opts);
   const reg = readWorkspaceRegistry(name);
   if (reg && isWorkspaceMember(reg, project.id)) {
     removeWorkspaceMember(reg, project.id);
   }
   clearWorkspaceMarker(project.root);
-  writeStdioEntry(project.root, project.config.host, opts);
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: { left: name } })}\n`);
     return;
@@ -242,6 +258,9 @@ export async function workspaceStop(opts: WorkspaceStatusOptions): Promise<void>
   const name = opts.name ?? readWorkspaceMarker(process.cwd()) ?? undefined;
   if (name === undefined) {
     fail(EXIT.USAGE, 'workspace stop requires a name (or run from a joined repo).', opts);
+  }
+  if (!isValidWorkspaceName(name)) {
+    fail(EXIT.USAGE, `invalid workspace name ${JSON.stringify(name)}.`, opts);
   }
   const rec = readWorkspaceDaemonRecord(name);
   if (rec === null || !pidAlive(rec.pid)) {
