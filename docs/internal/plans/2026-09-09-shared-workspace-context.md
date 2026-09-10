@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Let ≥2 agent sessions in different repos (e.g. a backend repo and a frontend repo) on one machine share decision memory through one detached daemon — `noir daemon start --workspace <name>` / `noir daemon join <name>` — with provenance-stamped entries and a change feed (`changes_since` + long-poll `await_changes`). Default transport stays stdio; sharing is explicit per-repo.
+**Goal:** Let ≥2 agent sessions in different repos (e.g. a backend repo and a frontend repo) on one machine share decision memory through one workspace daemon (foreground by default, or `--detach`) — `noir daemon start --workspace <name>` / `noir daemon join <name>` — with provenance-stamped entries and a change feed (`changes_since` + long-poll `await_changes`). Default transport stays stdio; sharing is explicit per-repo.
 
 **Architecture:** A **workspace** is a named cross-repo unit under `~/.noir/workspaces/<name>/` (registry.json + store.db + its own daemon record). One daemon serves it over Streamable HTTP; each member repo's `.mcp.json` points at `http://127.0.0.1:<port>/mcp?p=<its-own-projectId>`. The daemon routes `memory_*` + feed tools to the **workspace store** and `context_*`/`workflow_*`/`task_*` to the **requesting member's own project store** (lazily opened). A `.noir/workspace.json` join marker in a member repo makes CLI `memory`/`capture` commands route to the workspace daemon. Supersede is append-only (target marked `superseded`); forget is soft (`forgotten`) in workspace stores. Feed = monotonic cursor in KV + in-process long-poll waiters (content push is an anti-pattern per spec §2).
 
@@ -947,7 +947,7 @@ git commit -m "feat(daemon): workspace change feed (cursor, changes_since, await
 **Interfaces:**
 - Consumes: core workspace helpers (Task 2), daemon workspace record/ensure/spawn (Task 4), adapter `emitMcpConfig`/`mcpConfigPath`, `resolveAdapter`, `resolveNoirCommand`, `assertLocalhostUrl` (init.ts:235), `CliOptions`, `fail`/`EXIT`, conflict seam via `buildConflictOpts` in `packages/cli/src/conflict.ts`.
 - Produces:
-  - `daemonStart(opts & { workspace?: string })` — when `workspace` set: ensure workspace registry exists, upsert founding member (current project), start/ensure the detached workspace daemon, write the join marker, rewrite `.mcp.json`.
+  - `daemonStart(opts & { workspace?: string })` — when `workspace` set: ensure workspace registry exists, upsert founding member (current project), start/ensure the workspace daemon, write the join marker, rewrite `.mcp.json`.
   - `daemonJoin(opts & { name: string })` — registry must exist (else fail with guidance to `start --workspace` from the founder), upsert current project as member, ensure the workspace daemon, write marker, rewrite `.mcp.json`.
   - `workspaceList()`, `workspaceStatus(name?)`, `workspaceLeave()`, `workspaceStop(name?)` handlers.
   - `.mcp.json` rewrite helper: `writeWorkspaceHttpEntry(root, host, url, projectId)` → `{ mcpServers: { ...existing, noir: { type:'http', url: `${url}?p=${projectId}` } } }`; restore helper `writeStdioEntry(root, host, command)`; both reuse `buildMcpServersJson` + preserve the user's other servers, and refuse to clobber a `.mcp.json` that does not look Noir-emitted unless `--force`.
@@ -1323,7 +1323,7 @@ explicit.
 
 ## 1. Start a workspace (from the backend repo)
 noir daemon start --workspace my-app
-# → starts the detached workspace daemon, joins this repo, points .mcp.json at it
+# → starts the workspace daemon (foreground), joins this repo, points .mcp.json at it
 
 ## 2. Join from the other repo (frontend)
 noir daemon join my-app
@@ -1402,6 +1402,7 @@ git commit -m "docs(workspace): shared-workspaces how-to + ADR-0009 + roadmap/re
 3. Supersede/uniqueness: Task 5 `memory_save` passes `status:'active'` + `supersedes` so the engine flips the target to `superseded` and the hydration filter hides it by default (spec §8.1).
 4. `repo` provenance is a **plain string** (the canonical `projectId`), not spec §7.1's `{ projectId, root? }` object. The project invariant is "canonical ProjectId — never a filesystem path", so `root` provenance is deliberately dropped (portable, no absolute paths in the shared store).
 5. `noir memory capture` reads raw file/stdin text and calls the `memory_capture` tool directly (which stamps `captureSource`); it does **not** run the pure `toSaveInput` mapper (spec §9). The capture-provenance requirement is met; the structured-event mapping step was relaxed for the manual CLI path.
+6. If a member's own project store fails to open, the workspace daemon returns HTTP 500 and the CLI maps it to exit 4 "daemon not reachable" — the specific "could not open the store for member X" body is lost (the MCP handshake has no tool-result channel for it). Accepted as a known edge-case limitation; surfacing the 500 body would require changes to the shared daemon-client.
 
 **Placeholder scan:** no TBD/TODO/“handle edge cases”; every code step carries real code or an exact file:line anchor. Two steps reference “mirror existing file X” only where the executor must copy an existing seam verbatim (embedded to reduce duplication risk) — the surrounding code is concrete.
 

@@ -18,3 +18,4 @@ ADRs record *why* a choice was made — not *what* the code does (the skills the
 - [ADR-0006 — C2 TUI command palette + daemon `--detach` (v2 orchestrator TUI scope superseded by ADR-0008)](0006-c2-tui-and-daemon-detach.md)
 - [ADR-0007 — C3 generated-artifact standard — type codes, frontmatter, per-type outlines](0007-generated-artifact-standard.md)
 - [ADR-0008 — v2 orchestrator TUI — single-surface consolidation + `noir run` headless host-driving](0008-v2-orchestrator-tui.md)
+- [ADR-0009 — Shared cross-repo workspaces](0009-shared-workspaces.md)

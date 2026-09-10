@@ -60,7 +60,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 
 ## Active slice
 
-- **`shared-workspace`** (spec + plan committed 2026-09-09, implemented on `develop`, targeting **v1.13.0**) — cross-repo shared decision memory through one detached workspace daemon: `noir daemon start --workspace <name>` / `daemon join`, `?p=`-routed multiplexing (memory→shared store, project tools→member store), provenance + append-only supersede/soft-forget, a change feed (`changes_since` + long-poll `await_changes`), and manual `noir memory capture`. ADR-0009.
+- **`shared-workspace`** (spec + plan committed 2026-09-09, implemented on `develop`, targeting **v1.13.0**) — cross-repo shared decision memory through one workspace daemon (foreground by default, or `--detach`): `noir daemon start --workspace <name>` / `daemon join`, `?p=`-routed multiplexing (memory→shared store, project tools→member store), provenance + append-only supersede/soft-forget, a change feed (`changes_since` + long-poll `await_changes`), and manual `noir memory capture`. ADR-0009.
 
 
 

@@ -21,7 +21,7 @@ Noir's long-term strategic direction as an AI development platform. Several "vis
 ## Gap / roadmap delta
 
 - **Wire `draftPrd` into a real runtime consumer** — second caller beyond memory consolidation.
-- **Ship memory auto-capture** — `noir memory capture` shipped as a manual verb (1.13.0); auto-capture-by-default (host hooks wired so the host saves on its own) remains a future slice.
+- **Ship memory auto-capture** — `noir memory capture` lands in 1.13.0 as a manual verb (implemented on `develop`); auto-capture-by-default (host hooks wired so the host saves on its own) remains a future slice.
 - **Technology radar artifact** (adopt/trial/assess/hold) — acceptance criterion claims it must exist; nothing does.
 - **Innovation backlog artifact** — items with objective/value/complexity/dependency/research-status/recommendation.
 - **New-technology evaluation mechanism + periodic research cadence.**
@@ -39,7 +39,7 @@ Deferred engineering items are tracked per-area in [`docs/roadmap/backlog.md`](b
 - **MET** — Hybrid retrieval, vector search, host-agnostic core, structured output, and MCP exist and are exercised (context engine, model layer, host adapters, daemon).
 - **MET** — Multi-agent collaboration, autonomous engineering, and enterprise readiness are explicitly recorded as non-goals / v2.0, not as active backlog.
 - **DONE** — `draftPrd` has a runtime consumer beyond memory consolidation (new caller wired in `packages/*/src`).
-- **DONE (1.13.0)** — `noir memory capture` ships as a manual CLI verb (provenance `auto:<hook>` via `memory_capture` MCP tool; auto-capture-by-default remains deferred).
+- **DONE** (implemented on `develop`; targets 1.13.0) — `noir memory capture` is a manual CLI verb (provenance `auto:<hook>` via `memory_capture` MCP tool; auto-capture-by-default remains deferred).
 - **DONE** — Technology radar artifact exists with items classified adopt/trial/assess/hold.
 - **DONE** — Innovation backlog artifact exists with the required item fields.
 - **DONE** — Sunset/deprecation mechanism is documented as a repeatable evaluate/deprecate/migrate/remove process (beyond ADR-0002).

@@ -1,7 +1,8 @@
 # Sharing context across repositories (workspaces)
 
 Two agent sessions in **different repos** (e.g. a backend repo and a frontend
-repo) can share decision memory through **one detached daemon** — no handoff
+repo) can share decision memory through **one workspace daemon** (foreground by
+default, or backgrounded with `--detach`) — no handoff
 documents. This is a **workspace**: a named, cross-repo sharing unit.
 
 The default transport stays **stdio**; nothing changes unless a repo explicitly

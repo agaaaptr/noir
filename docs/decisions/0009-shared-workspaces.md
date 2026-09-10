@@ -17,7 +17,7 @@ isolation (`ensureDaemonRunning` reuses a daemon only when its recorded
 
 Introduce a **workspace** — a named, cross-repo sharing unit under
 `~/.noir/workspaces/<name>/` (registry.json + store.db + its own daemon record) —
-served by **one detached daemon**:
+served by **one workspace daemon** (foreground by default, or `--detach`):
 
 - **Default stays stdio.** A repo joins explicitly via
   `noir daemon start --workspace <name>` (founder) or `noir daemon join <name>`;
