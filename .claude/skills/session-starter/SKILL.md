@@ -18,15 +18,15 @@ Read only what establishes direction; load detail on demand. Do **not** read eve
 
 1. **Read the roadmap index + status:**
    - `docs/roadmap/README.md` — capability index, canonical philosophy, dependency graph, "how to use".
-   - `docs/roadmap/STATUS.md` — per-capability status (shipped / partial / vision), active capability (C2 CLI Runtime), active slice (`cli-runtime`).
-   - `docs/roadmap/releases.md` — current release (1.11.2), version targets, deferred features.
+   - `docs/roadmap/STATUS.md` — per-capability status (shipped / partial / vision) and the **Active capability** section (read it — do not assume; it is often "none in-flight" between milestones).
+   - `docs/roadmap/releases.md` — the current release (the top status block names the version on `latest`), version targets, deferred features.
    - Optionally `docs/roadmap/backlog.md` — consolidated debt, if the session may touch deferred work.
 2. **Recall cross-session memory** — run `/recall noir` (agentmemory) to load prior-session decisions, goals, and learnings for this project.
 3. **Query the knowledge base** — `ctx_search` (context-mode) for project knowledge indexed from prior sessions (e.g. architecture decisions, past fixes, design rationale). Query with project-specific terms.
 4. **Build a working summary** — distill into a compact context you carry through the session:
    - Project vision (AI-native, host-agnostic, spec-driven platform).
    - Which capabilities are shipped vs research.
-   - Active capability / slice (C2 / cli-runtime).
+   - Active capability / slice, as stated in `STATUS.md` — quoted from there, not hardcoded here.
    - Current release + any deferred work that may be relevant.
    - Constraints & engineering principles (single source of truth, spec-first, research-first, local-first).
 
