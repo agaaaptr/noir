@@ -57,8 +57,13 @@ const ENV_FILE_REL_PATH = '.noir/.env';
 // (never `npm_config_registry`), silently defeating the deny-list for real
 // descendant keys. The boundary admits both the exact names and every
 // `npm_*` / `COREPACK_*` descendant.
+//
+// That same boundary is why each NOIR_* name must be its own alternative: it
+// admits descendants (`NOIR_RUNTIME_DIR_X`) but never sibling names, so
+// `NOIR_DAEMON_JSON` does NOT cover `NOIR_DAEMON_DIR` (spec 4.4 — the daemon
+// record directory is read through, so redirecting it is a hijack vector).
 const PROCESS_INJECTION_ENV_RE =
-  /^(NODE_OPTIONS|NODE_PATH|NODE_ICU_DATA|NODE_EXTRA_CA_CERTS|NODE_TLS_REJECT_UNAUTHORIZED|LD_PRELOAD|LD_LIBRARY_PATH|DYLD_INSERT_LIBRARIES|ELECTRON_RUN_AS_NODE|NOIR_NODE_DIST_URL|NOIR_UPDATE_CACHE_JSON|NOIR_RUNTIME_DIR|NOIR_DAEMON_JSON|NOIR_INSTALL_JSON|NOIR_MCP_COMMAND|NOIR_SYSTEM_NODE_BIN|NOIR_WORKSPACES_DIR|npm|COREPACK)(?:$|_)/;
+  /^(NODE_OPTIONS|NODE_PATH|NODE_ICU_DATA|NODE_EXTRA_CA_CERTS|NODE_TLS_REJECT_UNAUTHORIZED|LD_PRELOAD|LD_LIBRARY_PATH|DYLD_INSERT_LIBRARIES|ELECTRON_RUN_AS_NODE|NOIR_NODE_DIST_URL|NOIR_UPDATE_CACHE_JSON|NOIR_RUNTIME_DIR|NOIR_DAEMON_JSON|NOIR_DAEMON_DIR|NOIR_INSTALL_JSON|NOIR_MCP_COMMAND|NOIR_SYSTEM_NODE_BIN|NOIR_WORKSPACES_DIR|npm|COREPACK)(?:$|_)/;
 
 export interface EnvFileParseResult {
   readonly vars: Record<string, string>;

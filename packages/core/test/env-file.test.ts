@@ -208,4 +208,14 @@ describe('loadNoirEnv — precedence + missing file', () => {
     expect(warnings.join('\n')).toMatch(/NOIR_SYSTEM_NODE_BIN/);
     expect(warnings.join('\n')).toMatch(/NOIR_WORKSPACES_DIR/);
   });
+
+  it('refuses NOIR_DAEMON_DIR from .noir/.env', () => {
+    dir = mkdtempSync(join(tmpdir(), 'noir-env-daemon-dir-'));
+    mkdirSync(join(dir, '.noir'), { recursive: true });
+    writeFileSync(join(dir, '.noir', '.env'), 'NOIR_DAEMON_DIR=/tmp/evil\n');
+    chmodSync(join(dir, '.noir', '.env'), 0o600);
+    const { overlay, warnings } = loadNoirEnv(dir, {});
+    expect(overlay.NOIR_DAEMON_DIR).toBeUndefined();
+    expect(warnings.join()).toMatch(/process-injection/);
+  });
 });
