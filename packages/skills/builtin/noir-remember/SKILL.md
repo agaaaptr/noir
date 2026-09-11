@@ -23,7 +23,7 @@ Save durable insights so the next session doesn't start from zero.
 
 1. **Identify what's worth keeping.** A decision with a reason, a pattern that recurred, a bug with its root cause, a preference the user stated.
 2. **Write a short, searchable entry.** Key concepts + why it matters. Keep it focused — one fact per entry.
-3. **Persist it.** On Noir projects, use `noir memory save <content>` (or the `memory_save` / `noir.remember` MCP tool).
+3. **Persist it.** On Noir projects, use `noir memory save <content>` (or the `memory_save` MCP tool).
 4. **Confirm.** Say what was saved so the user knows it'll survive.
 
 ## In a shared workspace

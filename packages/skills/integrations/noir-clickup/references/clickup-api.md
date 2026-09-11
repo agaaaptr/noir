@@ -122,7 +122,7 @@ Content-Type: application/json
 ### 5. Batch create — loop `POST /list/{list_id}/task`
 
 There is NO bulk-create endpoint. Loop with:
-- Concurrency cap: 4-8 simultaneous requests.
+- Concurrency cap: 4 simultaneous requests.
 - 429 backoff keyed on `X-RateLimit-Reset` (see below).
 
 Input shape (the proxy's normalized intermediate, derived from H2-per-task markdown or a CSV adapter):

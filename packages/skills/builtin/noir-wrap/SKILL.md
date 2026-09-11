@@ -22,7 +22,7 @@ Close a session in a clean, recoverable state. This skill absorbs `noir-document
 
 1. **Run final verification.** Same gate as `noir-verifying`: test suite, lint, typecheck. Evidence, not assumption.
 2. **Update docs.** CHANGELOG, ADRs, decisions, reference docs — anything that should reflect the session's work. The rule: docs reflect shipped reality, never a stale plan.
-3. **Save memory.** Persist observations, decisions, patterns the next session should recall. `noir memory save` (or `noir.remember` MCP tool).
+3. **Save memory.** Persist observations, decisions, patterns the next session should recall. `noir memory save` (or the `memory_save` MCP tool).
 4. **Confirm commits.** Commits are made and intentional (local or pushed). Noir defaults to local.
 5. **Advance the workflow task.** `noir task advance --to <phase>` if a gate is satisfied.
 6. **Emit the handoff.** `noir handoff` (text-only prompt; `--write` persists to `.noir/handoff/`; `--json` for CI). Names the active task, next gate's skill, and the host-launch directive.

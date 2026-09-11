@@ -25,7 +25,7 @@ The project's AI working-rules at `.noir/rules/RULES.md` — the always-on contr
 
 1. **One rule, one line.** If it needs a paragraph, it belongs in a skill, a memory, or an ADR.
 2. **Use the most specific mechanism.** A directive you want ALWAYS active → rule. A directive you want on-demand → skill. A decision worth recalling → memory. An architecture decision with rationale → ADR.
-3. **Prune stale rules.** `noir doctor rules` checks the budget.
+3. **Prune stale rules.** Plain `noir doctor` reports the RULES.md size under its `rules budget` row (over-budget is a `warn`, never a `fail`).
 
 ## When done → next skill
 

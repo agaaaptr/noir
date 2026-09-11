@@ -137,7 +137,7 @@ noir_clickup_write({ op: 'task:comment', taskId, commentText, notifyAll?, assign
 
 ### Flow 5 — Batch create tasks
 
-No bulk endpoint. The proxy loops `POST /list/{list_id}/task` with concurrency 4-8 and 429 backoff. Input: H2-per-task markdown.
+No bulk endpoint. The proxy loops `POST /list/{list_id}/task` with a concurrency cap of 4 and 429 backoff. Input: H2-per-task markdown.
 
 **Batch template** (paste this, fill in your tasks):
 ```md
@@ -307,7 +307,7 @@ Tasks with status "Complete" or "Closed" are **filtered OUT** from list queries.
 ClickUp limits to ~100 requests per minute per token. When you hit it:
 - Response: `429 Too Many Requests` with header `X-RateLimit-Reset: <epoch_seconds>`.
 - **Don't blind-retry.** Calculate `wait_seconds = X-RateLimit-Reset - now()` and sleep EXACTLY that long.
-- Batch operations (Flow 5) are especially vulnerable — the proxy caps concurrency at 4-8 for this reason.
+- Batch operations (Flow 5) are especially vulnerable — the proxy caps concurrency at 4 for this reason.
 - If fetching N subtasks individually (pitfall #2), space them out.
 
 ---
@@ -405,8 +405,8 @@ ClickUp returns `429` with `X-RateLimit-Reset: <epoch-seconds>`. Both skill-side
 
 ## SDD two-way sync
 
-- `sdd.intakeFrom:'task'` — `noir-brainstorming` can consume a fetched task as the initial statement of intent, seeding the SDD lifecycle.
-- `sdd.writeBack:['status','subtasks']` — `noir-wrap` calls Flow 2 (status) and Flow 3 (subtasks) at session end. The proxy's confirm gate surfaces changes before posting.
+- `sdd.intakeFrom:'task'` — **declared metadata only**: it records the external artifact kind this integration binds to. Nothing in Noir consumes it today (no automatic task → SDD intake), so treat it as a declaration, not a wired behaviour.
+- `sdd.writeBack:['status','subtasks']` — **declared but not wired**: it enumerates the fields an integration would push back at session end. No code calls Flow 2 (status) or Flow 3 (subtasks) at session end today; those flows run only when you invoke `noir_clickup_write` explicitly.
 
 ## Notes
 

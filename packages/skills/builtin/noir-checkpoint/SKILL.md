@@ -20,7 +20,7 @@ Save in-flight state so work survives an interruption, context-loss, or session 
 
 ## Procedure
 
-1. **Record open task state.** Which task is active, what phase it's in, what files are touched, what tests are in-flight. Use `noir task save` (or the SDD engine's checkpoint tooling).
+1. **Record open task state.** Which task is active, what phase it's in, what files are touched, what tests are in-flight. Use the `checkpoint` MCP tool with `action: 'save'` — it flushes the in-flight task state to the store KV (omit `taskId` to target the active task).
 2. **Note open decisions.** Anything the user and agent agreed on that hasn't been committed.
 3. **Mark the workspace.** Dirty files, branch state, any uncommitted changes. The next session needs to know.
 4. **Save memory.** Key insights from this session segment.
