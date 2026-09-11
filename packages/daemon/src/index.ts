@@ -37,6 +37,16 @@ export {
   resolveMemoryConsolidation,
 } from './memory-seam.js';
 export {
+  clearProjectDaemonRecord,
+  listProjectDaemonRecords,
+  NOIR_DAEMON_DIR_ENV,
+  type ProjectDaemonRecord,
+  projectRecordDir,
+  projectRecordPath,
+  readProjectDaemonRecord,
+  writeProjectDaemonRecord,
+} from './project-record.js';
+export {
   createNoirServer,
   type ServerContext,
   type StoreStatus,
