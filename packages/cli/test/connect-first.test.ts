@@ -43,6 +43,7 @@ import {
   callDaemonTool,
   DAEMON_DOWN_HINT,
   type DaemonClientOptions,
+  PROBE_TIMEOUT_MS,
   withWorkspaceDaemon,
 } from '../src/daemon-client.js';
 
@@ -248,7 +249,7 @@ describe('withDaemon — connect-first on a configured daemon.port', () => {
 
   it('a permanently dead port gives up with the S9 hint instead of hanging (one probe, one spawn, one retry)', async () => {
     const clients = installFakeClients([{ connect: refused() }, { connect: refused() }]);
-    installEnsure();
+    const { stop } = installEnsure();
 
     const err = await thrownBy(() => callDaemonTool(portedOpts, 'host_status'));
 
@@ -262,6 +263,62 @@ describe('withDaemon — connect-first on a configured daemon.port', () => {
     expect(ensureDaemonRunning).toHaveBeenCalledTimes(1);
     // The failed retry client is closed before the throw — no leaked connection.
     expect(clientAt(clients, 1).close).toHaveBeenCalledTimes(1);
+    // Regression (I-1): resolveDaemon throws from here, so withDaemon's finally
+    // never runs. The daemon ensureDaemonRunning just STARTED must still be torn
+    // down, or it is stranded — running, with no caller left to stop it.
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('bounds the direct probe — a port that never answers falls through instead of stalling', async () => {
+    // A "blackhole": the port accepts the connection and never answers, so the
+    // probe can only end by its own deadline. Real timers are faked so the test
+    // advances that deadline itself — no 5-minute wait, no sleep.
+    vi.useFakeTimers();
+    try {
+      const clients = installFakeClients([
+        // `connect` never settles: this is the stall the bound exists for.
+        { connect: () => new Promise<void>(() => {}) },
+        {
+          callTool: async () => ({
+            content: [{ type: 'text', text: JSON.stringify({ ok: true, via: 'ensured' }) }],
+          }),
+        },
+      ]);
+      installEnsure();
+
+      const pending = callDaemonTool(portedOpts, 'host_status');
+      // Advance by exactly the probe window (+1ms so the deadline is past).
+      await vi.advanceTimersByTimeAsync(PROBE_TIMEOUT_MS + 1);
+      const payload = await pending;
+
+      expect(payload).toEqual({ ok: true, via: 'ensured' });
+      // The stall was abandoned for the spawn path rather than waited out.
+      expect(ensureDaemonRunning).toHaveBeenCalledTimes(1);
+      // …and the stalled probe was released, not leaked.
+      expect(clientAt(clients, 0).close).toHaveBeenCalledTimes(1);
+      expect(clientAt(clients, 1).connect).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a timed-out probe reports the deadline under --verbose', async () => {
+    vi.useFakeTimers();
+    try {
+      installFakeClients([{ connect: () => new Promise<void>(() => {}) }]);
+      installEnsure();
+
+      const out = await captureStderr(async () => {
+        const pending = callDaemonTool({ ...portedOpts, verbose: true }, 'host_status');
+        await vi.advanceTimersByTimeAsync(PROBE_TIMEOUT_MS + 1);
+        await pending;
+      });
+
+      expect(out).toMatch(/no daemon at the configured port 65432/);
+      expect(out).toMatch(new RegExp(`no response within ${PROBE_TIMEOUT_MS}ms`));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('a failed spawn after a refused direct connect also gives up with the hint', async () => {

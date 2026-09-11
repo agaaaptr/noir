@@ -245,12 +245,17 @@ export async function probeDaemon(opts: DaemonClientOptions = {}): Promise<Daemo
  * configured `daemon.port` there is no address to probe, so the previous
  * ensure-first ordering is retained verbatim (spec 7.1: D depends on B).
  *
- * The failure path is BOUNDED — at most one direct attempt, one ensure, and one
- * retry connect; never a loop. A permanently dead port therefore ends in the S9
- * exit-4 DAEMON_DOWN envelope via {@link failDaemonDown}, not a hang.
+ * The failure path is BOUNDED, in both senses. Structurally: at most one direct
+ * attempt, one ensure, and one retry connect — never a loop. In time: the direct
+ * probe is raced against {@link PROBE_TIMEOUT_MS}, so a port that accepts TCP
+ * and never answers ("blackhole") costs the probe window, not a multi-minute
+ * stall. A permanently dead port therefore ends in the S9 exit-4 DAEMON_DOWN
+ * envelope via {@link failDaemonDown}, not a hang.
  *
- * Every client created here is closed before a throw, so a caller never
- * inherits a half-open connection.
+ * This function cleans up after ITSELF before any throw: every client it created
+ * is closed, and a daemon it started (an ensure result's `stop`) is torn down —
+ * because throwing from here means `withDaemon`'s `finally` never runs, so the
+ * caller's tear-down cannot be relied on for this leg.
  */
 async function resolveDaemon(
   opts: DaemonClientOptions,
@@ -279,21 +284,40 @@ async function resolveDaemon(
   if (preferred !== undefined && preferred !== 0) {
     const direct = `http://127.0.0.1:${preferred}/mcp`;
     const probe = newClient();
+    let probeTimer: ReturnType<typeof setTimeout> | undefined;
     try {
       // Raw connect, NOT connectClient: a failure here is the SIGNAL TO SPAWN,
       // not a command-fatal error, so it must never be mapped onto exit 4.
-      await probe.connect(httpTransport(direct, project.id));
+      //
+      // BOUNDED, exactly like every other address probe in this module: a
+      // configured port is a BLIND address — unlike the port
+      // `ensureDaemonRunning` has just verified via `/health`, a foreign process
+      // may hold it and accept TCP without ever answering. `connect()` carries
+      // no deadline of its own (the only backstop would be undici's ~300s
+      // headersTimeout), so the probe is raced against the same
+      // {@link PROBE_TIMEOUT_MS} window the `/health` probe uses and a timeout
+      // is treated as "no daemon here", i.e. fall through to the spawn.
+      await Promise.race([
+        probe.connect(httpTransport(direct, project.id)),
+        new Promise<never>((_, reject) => {
+          probeTimer = setTimeout(
+            () => reject(new Error(`no response within ${PROBE_TIMEOUT_MS}ms`)),
+            PROBE_TIMEOUT_MS,
+          );
+        }),
+      ]);
       // A daemon was already answering at the configured address. Nothing was
       // started, so tear-down is a no-op — `stop` must stay inert (there is no
       // ensure result to defer to, and stopping a daemon we did not start would
       // kill the user's).
       return { client: probe, stop: async () => {} };
     } catch (err) {
-      // Refused connection (nothing listening), a stale token from a before-
-      // restart daemon, or a foreign process holding the port — each means "no
-      // USABLE daemon at this address". Discard the probe and fall through to
-      // ensure + one retry; the token is re-read at retry connect time, so a
-      // stale-token case self-heals against the same (still healthy) daemon.
+      // Refused connection (nothing listening), no answer inside the probe
+      // window (a blackhole port), a stale token from a before-restart daemon,
+      // or a foreign process holding the port — each means "no USABLE daemon at
+      // this address". Discard the probe and fall through to ensure + one retry;
+      // the token is re-read at retry connect time, so a stale-token case
+      // self-heals against the same (still healthy) daemon.
       if (opts.verbose) {
         process.stderr.write(
           `noir: no daemon at the configured port ${preferred} (${describeCause(err)})\n`,
@@ -302,6 +326,12 @@ async function resolveDaemon(
       await probe.close().catch(() => {
         /* the probe connection is already unusable; never mask the spawn path */
       });
+    } finally {
+      // Release the loser: on success the pending timer must not hold the event
+      // loop open, and on failure it has already fired. (A connect that settles
+      // AFTER the timeout is ignored by the settled race — and `close()` above
+      // has already torn its transport down.)
+      if (probeTimer !== undefined) clearTimeout(probeTimer);
     }
   }
 
@@ -326,8 +356,17 @@ async function resolveDaemon(
   try {
     await connectClient(client, url, opts, project.id);
   } catch (err) {
+    // This function is about to THROW, so `withDaemon`'s finally — the one that
+    // tears down a daemon we started — never runs. Tear down BOTH here, or a
+    // daemon `ensureDaemonRunning` just spawned is stranded (running, with no
+    // caller left to stop it) behind an exit-4 failure. Reachable on the plain
+    // ensure-first path too, not just connect-first: ensure succeeds, then the
+    // connect to the daemon it returned fails.
     await client.close().catch(() => {
-      /* ditto: never mask the connect failure with a close failure */
+      /* never mask the connect failure with a close failure */
+    });
+    await stop().catch(() => {
+      /* ditto for the tear-down — the connect failure is the real error */
     });
     throw err;
   }
@@ -468,6 +507,11 @@ function buildCaller(client: Client, opts: DaemonClientOptions): DaemonToolCalle
  * strands a server or leaks a connection, while a reused (already-running)
  * daemon is left untouched (both `ensureDaemonRunning`'s `stop` for a reused
  * daemon and the connect-first path's `stop` are no-ops in that case).
+ *
+ * That `finally` is reached only once `resolveDaemon` has RETURNED. A throw from
+ * `resolveDaemon` itself (exit 4) skips it entirely, so the same tear-down is
+ * performed inside `resolveDaemon` before it throws — the two legs must stay in
+ * step, or a spawned daemon is stranded. See the retry-failure catch there.
  *
  * `fn`'s own errors propagate untouched (the command module owns their exit
  * code); only transport / connection / tool-parse failures map to exit 4 here.
