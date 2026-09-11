@@ -180,11 +180,10 @@ describe('noir init — .noir/.env.example doctrine + full variable set (spec §
     const doctrine = [
       '# This file is the recommended home for project-scoped configuration and',
       '# secrets. Precedence:',
-      '#   1. one-shot            VAR=value noir ...        (this invocation only)',
-      '#   2. run profile env     run.profiles.<n>.env      (merges over)',
-      '#   3. THIS FILE           .noir/.env                 <- recommended here',
-      '#   4. real environment    CI / container / launchd / shell rc',
-      '#   5. built-in default',
+      '#   1. run profile env     run.profiles.<n>.env      (per-invocation; merges OVER)',
+      '#   2. .noir/.env          <- recommended home for project-scoped configuration',
+      '#   3. real environment    CI / container / launchd / shell rc',
+      '#   4. built-in default',
     ].join('\n');
     expect(real).toContain(doctrine);
     expect(example).toContain(doctrine);

@@ -29,11 +29,14 @@ daemon afterward**: `noir daemon restart`.
    # .noir/.env  (gitignored — never commit)
    CLICKUP_API_TOKEN=pk_your_token_here
    ```
-2. **Real environment — an export in `~/.zshenv`, or a one-shot for a single
-   command.** `~/.zshenv` works for non-interactive shells;
-   `CLICKUP_API_TOKEN=pk_your_token_here noir ...` is the CI escape hatch and
-   persists nothing. Both rank **below** `.noir/.env`: any key the file defines
-   wins over the ambient value.
+2. **Real environment — a CI secret store, or an export in `~/.zshenv`.** This
+   is the fallback level: it applies only to keys `.noir/.env` leaves unset, so
+   any key the file defines wins over the ambient value. `~/.zshenv` works for
+   non-interactive shells; a CI job exports the token from its secret store.
+   There is no `VAR=value noir …` per-command prefix override — a prefix arrives
+   in `process.env` exactly like the inherited environment, so it is this same
+   level. For a real per-invocation value, use a `run.profiles.<n>.env` entry
+   (see [host-profiles.md](host-profiles.md)).
 3. **Machine-global host file — `~/.claude/settings.json` `env` block.** A
    fallback for a host-launched daemon when you would rather not keep the token
    in the repository; it cannot shadow `.noir/.env`:

@@ -7,26 +7,29 @@ single reference — feature pages link here instead of restating defaults.
 > environment is the fallback for the keys the file does not define:
 >
 > ```
-> 1. one-shot          VAR=value noir ...
-> 2. run profile env   run.profiles.<n>.env   (merges over)
-> 3. THIS FILE         .noir/.env             <- recommended here
-> 4. real environment  CI / container / launchd / shell rc
-> 5. built-in default
+> 1. run profile env   run.profiles.<n>.env          (per-invocation; merges OVER)
+> 2. .noir/.env        <- recommended home for project-scoped configuration
+> 3. real environment  CI / container / launchd / shell rc
+> 4. built-in default
 > ```
 >
-> A machine-global export therefore **cannot shadow** `.noir/.env`. Two
-> consequences worth knowing: a git-*tracked* `.noir/.env` is refused outright
-> (none of its keys are in effect), and `noir env` shows which source won for
-> each key. This is a deliberate departure from the 12-factor convention — the
-> project file describes the project, so it outranks the ambient environment.
+> A machine-global export therefore **cannot shadow** `.noir/.env`. There is no
+> `VAR=value noir …` prefix level: a one-shot prefix arrives in `process.env`
+> indistinguishably from the inherited environment, so it *is* level 3, not an
+> override above the file — use a `run.profiles.<n>.env` entry when you need a
+> real per-invocation value. Two further consequences worth knowing: a
+> git-*tracked* `.noir/.env` is refused outright (none of its keys are in
+> effect), and `noir env` shows which source won for each key. This is a
+> deliberate departure from the 12-factor convention — the project file
+> describes the project, so it outranks the ambient environment.
 >
-> **Where env vars come from.** Level 4 *is* the environment the CLI and daemon
+> **Where env vars come from.** Level 3 *is* the environment the CLI and daemon
 > inherit from the process that launched them. From an interactive terminal,
 > exports in `~/.zshrc` / `~/.bashrc` work. From a GUI-launched host (VS Code, a
 > desktop MCP client), CI, or launchd, shell rc files are **not** sourced — the
 > machine-global fallbacks there are the `env` block in
 > `~/.claude/settings.json` and `~/.zshenv`. The project-local `.noir/.env`
-> (level 3) is the one placement that works in every launch mode, which is why
+> (level 2) is the one placement that works in every launch mode, which is why
 > it is the recommended home. Restart the daemon after changing a token — the
 > daemon's env is a snapshot taken at spawn time.
 >

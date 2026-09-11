@@ -38,11 +38,10 @@ Before building ANY request, check the token:
 You need a ClickUp personal token (`pk_...`). Placement follows Noir's standard precedence chain — a key `.noir/.env` defines **wins**, and the real environment is only the fallback for the keys the file leaves unset:
 
 ```
-1. one-shot            VAR=value noir ...        (this invocation only)
-2. run profile env     run.profiles.<n>.env      (merges over)
-3. THIS FILE           .noir/.env                 <- recommended here
-4. real environment    CI / container / launchd / shell rc
-5. built-in default
+1. run profile env   run.profiles.<n>.env          (per-invocation; merges OVER)
+2. .noir/.env        <- recommended home for project-scoped configuration
+3. real environment  CI / container / launchd / shell rc
+4. built-in default
 ```
 
 **1. Recommended — `.noir/.env`** (project-scoped: gitignored, never committed, and `noir init` already created it at mode 0600):
@@ -52,11 +51,12 @@ CLICKUP_API_TOKEN=pk_your_token_here
 ```
 This works no matter how the process was launched (terminal, GUI MCP client, launchd, CI) — and because the file wins, a machine-global export **cannot shadow it**. Two conditions are reported by `noir doctor`: if git TRACKS `.noir/.env` Noir **refuses to load it** (none of its keys apply) — `git rm --cached .noir/.env`; if its mode is group/world readable the tokens are exposed (an advisory only — the file still loads) — `chmod 600 .noir/.env`.
 
-**2. CI / one-shot — the real environment, or a per-command prefix:**
+**2. CI / real environment — a secret store, or a run profile:**
 ```bash
-CLICKUP_API_TOKEN=pk_your_token_here noir run "…"    # this invocation only
+export CLICKUP_API_TOKEN="pk_your_token_here"       # level 3 — the fallback level
+noir run --profile ci "…"                            # level 1 — per-invocation
 ```
-A CI job exports the token from its secret store as a plain environment variable — level 4, the fallback, applying only to keys `.noir/.env` leaves unset. The one-shot prefix (level 1) is the narrowest override and the right tool for testing a rotated token without editing any file.
+A CI job exports the token from its secret store as a plain environment variable — level 3, the fallback, applying only to keys `.noir/.env` leaves unset. A `VAR=value noir …` prefix is NOT an override: it lands in `process.env` exactly like the inherited environment, so it is that same level. When you genuinely need a per-invocation value, put it in a `run.profiles.<n>.env` entry (level 1, merged OVER the inherited environment) rather than a prefix.
 
 **3. Machine-global fallback — `~/.claude/settings.json` `env` block** (a *fallback only* — it cannot shadow `.noir/.env`):
 ```json

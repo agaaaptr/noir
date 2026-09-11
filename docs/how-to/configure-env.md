@@ -68,11 +68,10 @@ The rule: **`.noir/.env` wins for every key it defines; the real environment is
 the fallback for the keys the file does not define.**
 
 ```
-1. one-shot            VAR=value noir ...        (this invocation only)
-2. run profile env     run.profiles.<n>.env      (merges over)
-3. THIS FILE           .noir/.env                 <- recommended here
-4. real environment    CI / container / launchd / shell rc
-5. built-in default
+1. run profile env   run.profiles.<n>.env          (per-invocation; merges OVER)
+2. .noir/.env        <- recommended home for project-scoped configuration
+3. real environment  CI / container / launchd / shell rc
+4. built-in default
 ```
 
 A machine-global export therefore **cannot shadow** a value in this file. This
@@ -80,6 +79,11 @@ is a deliberate departure from the Node `--env-file` / dotenv convention
 (fill-only-unset): for project configuration the project file must be able to
 describe the project, otherwise a token exported from `~/.zshrc` silently
 overrides the one you just put in the repository.
+
+There is deliberately **no `VAR=value noir …` prefix level**. Such a prefix
+lands in `process.env` indistinguishably from the inherited environment, so it
+is level 3 — it cannot override this file. The genuine per-invocation override
+is a `run.profiles.<n>.env` entry (level 1).
 
 Shadows are not silent — when the file defines a key the environment *also*
 defines with a **different** value, Noir emits one stderr line naming the key
@@ -213,15 +217,30 @@ Precedence for the selection itself: `--profile <name>` flag > `NOIR_PROFILE` >
 `run.defaultProfile` > built-in host default. Define the profiles in
 `.noir/config.yml` — see [host-profiles.md](host-profiles.md).
 
-### A one-shot override (CI, or a single command)
+### A per-invocation override — a run profile
 
-```bash
-CLICKUP_API_TOKEN=pk_your_token_here noir context search "where is auth handled"
+```yaml
+# .noir/config.yml
+run:
+  profiles:
+    ci:
+      binary: claude
+      env:
+        CLICKUP_API_TOKEN: ${CLICKUP_API_TOKEN}   # values come from your CI secret store
 ```
 
-Level 1 of the chain: this invocation only, nothing persisted. It ranks **above**
-the file, so it is the right escape hatch for CI jobs and for testing a rotated
-token without editing anything — and it keeps the value out of every file.
+```bash
+noir run --profile ci "…"
+```
+
+Level 1 of the chain, and the only per-invocation override Noir has: a
+`run.profiles.<n>.env` entry is merged **over** the inherited environment for
+that spawn, so it also outranks this file. It is the right escape hatch for a CI
+job (export the value in the job environment, reference it here rather than
+writing it into the file) and for testing a rotated token without editing
+anything. A `VAR=value noir …` prefix is **not** an override — it arrives in
+`process.env` exactly like the inherited environment (level 3), so this file
+still wins.
 
 ## 6. Safety
 

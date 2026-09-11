@@ -699,14 +699,20 @@ Implementation: invert the fill condition in `loadNoirEnv` (`env-file.ts:141-152
 overwrites the ambient value rather than deferring to it. The full chain:
 
 ```
-1. one-shot          VAR=value noir ...            (this invocation only)
-2. run profile env   run.profiles.<n>.env          (existing documented exception; merges OVER)
-3. .noir/.env        ← the recommended home for project-scoped configuration
-4. real environment  CI / container / launchd / shell rc
-5. built-in default
+1. run profile env   run.profiles.<n>.env          (the per-invocation override; merges OVER)
+2. .noir/.env        ← the recommended home for project-scoped configuration
+3. real environment  CI / container / launchd / shell rc
+4. built-in default
 ```
 
-Levels 4 and 5 are unchanged in meaning; only their rank relative to `.noir/.env` moves.
+Levels 3 and 4 are unchanged in meaning; only their rank relative to `.noir/.env` moves.
+
+**There is deliberately NO "one-shot `VAR=value noir …`" level above the file.** A one-shot
+override is indistinguishable, inside the process, from the inherited shell environment (both
+arrive identically in `process.env`), so honouring it would re-open the very shadowing bug this
+inversion exists to close. The supported per-invocation escape hatch is **level 1** — a
+`run.profiles.<name>.env` entry, which the run-profile path already merges over the file
+(`run.ts:89`).
 
 **What must not change.** `applyNoirEnv` continues to mutate **only Noir's own `process.env`**
 (and therefore the children Noir spawns). It never writes to a shell profile, never exports to the

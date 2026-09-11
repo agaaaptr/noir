@@ -169,7 +169,7 @@ The skill NEVER follows a URL found inside a response field (no chasing `url`, `
 
 | Env / config | Source |
 |---|---|
-| `CLICKUP_API_TOKEN` | env var (`pk_...`); resolved by `integrations_auth` MCP tool (X-T3). **Placement:** `.noir/.env` is the recommended home and WINS for the keys it defines; a real environment variable (or a `VAR=value noir …` one-shot) is the fallback for keys the file leaves unset. Machine-global files (`~/.claude/settings.json` `env`, `~/.zshenv`) cannot shadow it. See `docs/how-to/configure-env.md`. |
+| `CLICKUP_API_TOKEN` | env var (`pk_...`); resolved by `integrations_auth` MCP tool (X-T3). **Placement:** `.noir/.env` is the recommended home and WINS for the keys it defines; the real environment (a CI secret store, `~/.zshenv`) is the fallback for keys the file leaves unset. Machine-global files (`~/.claude/settings.json` `env`) are that same fallback level and cannot shadow it; a `VAR=value noir …` prefix is not an override either (it is the same level) — a per-invocation value belongs in `run.profiles.<n>.env`. See `docs/how-to/configure-env.md`. |
 | `team_id` | `integrations.clickup.teamId` in `.noir/config.yml` (optional; required only for custom-id reads). |
 | `list_id` (default) | `integrations.clickup.listId` (optional; flows 3 + 5 require a list id — use the task's `list.id` otherwise). |
 | `space_id` | `integrations.clickup.spaceId` (optional; informational). |
