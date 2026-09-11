@@ -72,10 +72,12 @@ export interface ScaffoldOptions {
   /** Explicit project id; bypasses generate/read. Mainly for tests + `create`
    *  flows that want deterministic ids. */
   projectId?: string;
-  /** `noir init --upgrade`: run migrations, then emit the FULL manifest.
-   *  `skipIfExists` keeps its create-only-if-absent semantics, so an upgrade
-   *  backfills seeds added since initialization without ever touching a file
-   *  the user owns. Only meaningful with mode `'init'`. */
+  /** `noir init --upgrade`: run migrations, then re-emit every manifest mode
+   *  EXCEPT `mergeJson` (`.claude/settings.local.json` is user-owned and
+   *  write-once at init/create). `skipIfExists` keeps its
+   *  create-only-if-absent semantics, so an upgrade backfills seeds added since
+   *  initialization without ever touching a file the user owns. Only meaningful
+   *  with mode `'init'`. */
   upgrade?: boolean;
   /** SP-A: re-scaffold even when the target is already initialized (bypasses
    *    the already-initialized no-op guard). Does NOT bypass `assertSafeRoot`
@@ -216,22 +218,32 @@ export type ConflictResolverReturn =
   | ConflictResolution
   | { resolution: ConflictResolution; applyToAll?: boolean };
 
-const WRITER_BY_MODE: Record<WriteMode, 'all' | 'runtime'> = {
-  // 'runtime' subset = regenerate + managedBlock (the always-safe-to-rewrite
-  // entries). `sync` emits only this subset; `skipIfExists` is excluded there
-  // because sync is not a scaffold event — it refreshes the host pointers, it
-  // does not (re)create a project's seeds.
-  // `init --upgrade` deliberately emits EVERY mode (see `emitRuntimeOnly`
-  // below): `skipIfExists` is created-only-if-absent, so running it on an
-  // upgrade backfills a seed added to the manifest after initialization while
-  // remaining unable to touch a file the user owns (spec §11.1).
-  // 'mergeJson' (C3 SessionStart hook) is 'all' — the settings entry is
-  // written once at init/create; a runtime-only emit (sync) never re-adds the
-  // user-owned entry.
-  regenerate: 'runtime',
-  managedBlock: 'runtime',
-  skipIfExists: 'all',
-  mergeJson: 'all',
+/** A partial emit — the two contexts that re-emit a SUBSET of the manifest.
+ *  A fresh `init`/`create` (and `--force`) is neither: it emits every mode, so
+ *  {@link EMITTED_IN} is only consulted for these. */
+type EmitContext = 'sync' | 'upgrade';
+
+/** Which emit contexts a write mode participates in. Per-mode (never
+ *  special-cased by path), so a new manifest entry inherits the right behavior
+ *  from its mode alone.
+ *
+ *  - `sync` re-emits the **runtime subset** — the always-safe-to-rewrite
+ *    entries (`regenerate` + `managedBlock`). `skipIfExists` is excluded
+ *    because sync is not a scaffold event: it refreshes the host pointers, it
+ *    does not (re)create a project's seeds.
+ *  - `upgrade` (`noir init --upgrade`) re-emits the runtime subset PLUS
+ *    `skipIfExists`, which creates only when the file is ABSENT — so an upgrade
+ *    backfills a seed added to the manifest after a project was initialized
+ *    while remaining unable to touch a file the user owns (spec §11.1).
+ *    `mergeJson` stays OUT: `.claude/settings.local.json` is user-owned and
+ *    write-ONCE by its own contract (init/create only), and the merge re-appends
+ *    the SessionStart hook whenever the dedup substring is gone — i.e. an
+ *    upgrade emit would resurrect a hook the user deliberately removed. */
+const EMITTED_IN: Record<WriteMode, { sync: boolean; upgrade: boolean }> = {
+  regenerate: { sync: true, upgrade: true },
+  managedBlock: { sync: true, upgrade: true },
+  skipIfExists: { sync: false, upgrade: true },
+  mergeJson: { sync: false, upgrade: false },
 };
 
 /**
@@ -383,14 +395,21 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     command,
     stack,
   });
-  // `sync` alone emits the runtime subset (regenerate + managedBlock).
-  // `init --upgrade` emits the FULL manifest on purpose: `skipIfExists` keeps
-  // its create-only-if-absent semantics there, which is exactly what backfills a
-  // seed added to the manifest after a project was initialized — the §1.6
-  // regression, where `.noir/.env.example` was reachable by no command at all
-  // (spec §11.1). The writer never opens an existing file, so a user's own
-  // seed, and its mode, cannot be touched by this.
-  const emitRuntimeOnly = opts.mode === 'sync';
+  // Which subset this run emits — `null` means every mode (a fresh
+  // `init`/`create`, and `--force`). `sync` re-emits the runtime subset;
+  // `init --upgrade` additionally re-emits `skipIfExists`, whose
+  // create-only-if-absent semantics are exactly what backfills a seed added to
+  // the manifest after a project was initialized — the §1.6 regression, where
+  // `.noir/.env.example` was reachable by no command at all (spec §11.1). The
+  // writer never opens an existing file, so a user's own seed, and its mode,
+  // cannot be touched by this. `--upgrade` still excludes `mergeJson` — see
+  // {@link EMITTED_IN}.
+  const emitContext: EmitContext | null =
+    opts.mode === 'sync'
+      ? 'sync'
+      : opts.mode === 'init' && opts.upgrade === true
+        ? 'upgrade'
+        : null;
   const vars: BuildManifestContext = {
     root: opts.root,
     projectId,
@@ -435,7 +454,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   // brief, the ignore files, and the regenerated `.mcp.json`. dryRun uses the
   // SAME grouping so its reported paths match what a real run would write
   // (CLAUDE.md reported once, not twice).
-  const groups = groupApplicableByPath(manifest, host, emitRuntimeOnly);
+  const groups = groupApplicableByPath(manifest, host, emitContext);
   for (const [relPath, entries] of groups) {
     const abs = join(opts.root, relPath);
     const managed = entries.filter((e) => e.mode === 'managedBlock');
@@ -915,12 +934,15 @@ function uniqueAside(abs: string, relPath: string, suffix: string): { abs: strin
 function groupApplicableByPath(
   manifest: readonly ManifestEntry[],
   host: HostTag,
-  emitRuntimeOnly: boolean,
+  /** The partial emit this run performs, or `null` for "every mode". Modes not
+   *  listed in {@link EMITTED_IN} for the context are dropped here — the single
+   *  place the manifest subset is decided. */
+  emitContext: EmitContext | null,
 ): Map<string, ManifestEntry[]> {
   const groups = new Map<string, ManifestEntry[]>();
   for (const entry of manifest) {
     if (entry.host !== undefined && entry.host !== host) continue; // host filter
-    if (emitRuntimeOnly && WRITER_BY_MODE[entry.mode] !== 'runtime') continue;
+    if (emitContext !== null && !EMITTED_IN[entry.mode][emitContext]) continue;
     const list = groups.get(entry.path);
     if (list) list.push(entry);
     else groups.set(entry.path, [entry]);

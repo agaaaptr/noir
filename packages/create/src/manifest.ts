@@ -469,7 +469,9 @@ export function buildHostArtifacts(
   //    ownerships (research-validated "both + split" design):
   //      a. `.claude/settings.local.json` SessionStart entry — user-owned,
   //         written ONCE via mergeJson (init/create only, deduped by command
-  //         substring). NEVER re-written by sync; preserves permissions/env.
+  //         substring). NEVER re-written by sync or `init --upgrade` (a
+  //         re-emit would resurrect a hook the user removed); preserves
+  //         permissions/env.
   //      b. `.noir/hooks/noir-session-start.mjs` — Noir-owned runner,
   //         regenerate (init + sync), emits additionalContext from router.md.
   //      c. `.noir/router.md` — co-owned mutable router contract, managedBlock
