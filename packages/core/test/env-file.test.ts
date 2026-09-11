@@ -1,12 +1,14 @@
 // .noir/.env loader (Slice E): a Node --env-file dialect parser + the
-// precedence rule (real environment always wins; the file fills only unset
-// keys). All offline; the parser test matrix is copied from Node's documented
-// --env-file behavior so the dialect has an independent conformance oracle.
+// precedence rule (spec 12.1 — a key the file DEFINES wins; the real
+// environment is the fallback for keys the file omits). All offline; the
+// parser test matrix is copied from Node's documented --env-file behavior so
+// the dialect has an independent conformance oracle. The parser dialect is
+// still Node's, and deliberately so; only the PRECEDENCE departs from it.
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
-import { loadNoirEnv, parseEnvFile } from '../src/env-file.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { applyNoirEnv, loadNoirEnv, parseEnvFile } from '../src/env-file.js';
 
 // Build a `${NAME}` placeholder at runtime so the source never contains a
 // literal `${` (the noTemplateCurlyInString lint would flag it).
@@ -84,12 +86,83 @@ describe('loadNoirEnv — precedence + missing file', () => {
     expect(warnings).toEqual([]);
   });
 
-  it('fills only keys that are unset in the real environment (real env wins)', () => {
+  it('a file key WINS over the ambient environment', () => {
+    dir = mkdtempSync(join(tmpdir(), 'noir-env-wins-'));
+    mkdirSync(join(dir, '.noir'), { recursive: true });
+    writeFileSync(join(dir, '.noir', '.env'), 'CLICKUP_API_TOKEN=from_file\n');
+    const env = { CLICKUP_API_TOKEN: 'from_env' };
+    const { overlay, sources } = loadNoirEnv(dir, env);
+    expect(overlay.CLICKUP_API_TOKEN).toBe('from_file');
+    expect(sources.CLICKUP_API_TOKEN).toBe('file');
+  });
+
+  it('a key absent from the file still falls back to the environment', () => {
+    dir = mkdtempSync(join(tmpdir(), 'noir-env-fallback-'));
+    mkdirSync(join(dir, '.noir'), { recursive: true });
+    writeFileSync(join(dir, '.noir', '.env'), 'A=file\n');
+    const env = { B: 'from_env' };
+    expect(loadNoirEnv(dir, env).sources.B).toBe('env');
+  });
+
+  it('an ambient value is NOT in the overlay once the file defines the key', () => {
+    // The inversion, stated as the observable difference: pre-12.1 this
+    // overlay was `{ NEW: 'from-file' }` — the file lost.
     dir = mkdtempSync(join(tmpdir(), 'noir-env-precedence-'));
     mkdirSync(join(dir, '.noir'), { recursive: true });
     writeFileSync(join(dir, '.noir', '.env'), 'ALREADY=file\nNEW=from-file\n', 'utf8');
-    const { overlay } = loadNoirEnv(dir, { ALREADY: 'shell', OTHER: 'x' });
-    expect(overlay).toEqual({ NEW: 'from-file' });
+    const { overlay, sources } = loadNoirEnv(dir, { ALREADY: 'shell', OTHER: 'x' });
+    expect(overlay).toEqual({ ALREADY: 'file', NEW: 'from-file' });
+    // Provenance: both file keys are 'file'; the ambient-only key is 'env'.
+    expect(sources).toEqual({ ALREADY: 'file', NEW: 'file', OTHER: 'env' });
+  });
+
+  it('confines the overlay to the object it is given', () => {
+    dir = mkdtempSync(join(tmpdir(), 'noir-env-confine-'));
+    mkdirSync(join(dir, '.noir'), { recursive: true });
+    writeFileSync(join(dir, '.noir', '.env'), 'CLI_ENV_CONFINE_TEST=file\n', 'utf8');
+    const env: Record<string, string | undefined> = {};
+    applyNoirEnv(dir, env);
+    expect(env.CLI_ENV_CONFINE_TEST).toBe('file');
+    expect(process.env.CLI_ENV_CONFINE_TEST).toBeUndefined(); // never leaks to the real process env
+    expect(loadNoirEnv(dir, {}).sources.CLI_ENV_CONFINE_TEST).toBe('file');
+  });
+
+  it('warns once per shadowed key — naming the KEY, never a value', () => {
+    dir = mkdtempSync(join(tmpdir(), 'noir-env-shadow-'));
+    mkdirSync(join(dir, '.noir'), { recursive: true });
+    writeFileSync(
+      join(dir, '.noir', '.env'),
+      'SHADOWED_ONE=file_one\nSHADOWED_TWO=file_two\nSAME_VALUE=identical\n',
+      'utf8',
+    );
+    chmodSync(join(dir, '.noir', '.env'), 0o600); // no permission advisory noise
+    const written: string[] = [];
+    const spy = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation((chunk: string | Uint8Array): boolean => {
+        written.push(String(chunk));
+        return true;
+      });
+    try {
+      const env: Record<string, string | undefined> = {
+        SHADOWED_ONE: 'env_one',
+        SHADOWED_TWO: 'env_two',
+        SAME_VALUE: 'identical',
+      };
+      applyNoirEnv(dir, env);
+    } finally {
+      spy.mockRestore();
+    }
+    const stderr = written.join('');
+    // Both differing keys warned; the key whose value already matched did not.
+    expect(stderr).toContain('SHADOWED_ONE');
+    expect(stderr).toContain('SHADOWED_TWO');
+    expect(stderr).not.toContain('SAME_VALUE');
+    expect(written.length).toBe(2);
+    // The invariant: a warning names the key only — no value from either side.
+    for (const value of ['env_one', 'env_two', 'file_one', 'file_two']) {
+      expect(stderr).not.toContain(value);
+    }
   });
 
   it('reads the file under .noir/.env in the given root', () => {

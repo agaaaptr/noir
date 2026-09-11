@@ -2,8 +2,15 @@
 // CLICKUP_API_TOKEN) are available even when the CLI/daemon is launched from a
 // context that does not inherit the user's shell rc (GUI MCP clients, launchd).
 //
-// Semantics (the 12-factor / dotenv / Node --env-file consensus):
-//   - the REAL environment always wins; `.noir/.env` fills only UNSET keys;
+// Semantics (spec 12.1). NOTE the deliberate departure from the 12-factor /
+// dotenv / Node --env-file consensus, which fills only UNSET keys:
+//   - a key `.noir/.env` DEFINES wins; the REAL environment is the FALLBACK for
+//     the keys the file omits. For PROJECT configuration the project file must
+//     be able to describe the project — under fill-only-unset a token exported
+//     from `~/.zshrc` silently shadows the one the user just put in the project
+//     file, which is the bug this precedence exists to kill;
+//   - `sources` records which side won, per key, so `noir env` + doctor can
+//     report provenance without re-reading anything (names only, never values);
 //   - a missing file is a silent no-op (Node --env-file-if-exists behavior);
 //   - the parser is the documented Node --env-file dialect (the conformance
 //     oracle for this hand-rolled ~40-LOC subset — no new dependency);
@@ -24,8 +31,8 @@ const KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
  * untrusted checkout (e.g. an attacker-committed file in a cloned repo) setting
  * `NODE_OPTIONS=--require=/tmp/evil.js` (or `LD_PRELOAD`, npm_config_*, …) would
  * be inherited by a spawned node child → arbitrary code execution as the user.
- * These keys are refused + warned, preserving the "fills only UNSET keys" rule
- * for normal token vars.
+ * These keys are refused + warned, preserving the "the file wins for normal
+ * token vars" precedence rule for ordinary configuration.
  */
 // The `npm`/`COREPACK` alternatives use a `(?:$|_)` boundary, NOT a bare `$`:
 // an anchored alternation's `npm_` would match ONLY the literal string `npm_`
@@ -107,15 +114,22 @@ export function parseEnvFile(text: string): EnvFileParseResult {
 }
 
 export interface LoadedEnv {
-  /** Key→value overlay to apply (only keys UNSET in the real environment). */
+  /** Key→value overlay to apply: every non-refused key the file defines. */
   readonly overlay: Record<string, string>;
   readonly warnings: string[];
+  /**
+   * Provenance of every key that resolves to something, key→winner:
+   * `'file'` when `.noir/.env` defines it, `'env'` when the key is only in the
+   * ambient environment and the file therefore falls through to it. NAMES ONLY,
+   * never a value — this object is renderable by `noir env` / doctor.
+   */
+  readonly sources: Record<string, 'file' | 'env'>;
 }
 
 /**
  * Read `<root>/.noir/.env` (missing = no-op) and compute the overlay to apply:
- * every parsed var whose key is NOT already set in `env` (real env wins; the
- * file never overrides).
+ * every parsed var the deny-list does not refuse. A key the file defines WINS
+ * over `env`; `env` is the fallback for keys the file omits (spec 12.1).
  */
 export function loadNoirEnv(
   root: string,
@@ -126,7 +140,7 @@ export function loadNoirEnv(
   try {
     text = readFileSync(path, 'utf8');
   } catch {
-    return { overlay: {}, warnings: [] }; // missing file — silent no-op
+    return { overlay: {}, warnings: [], sources: {} }; // missing file — silent no-op
   }
   const { vars, warnings } = parseEnvFile(text);
   // Permission advisory (names-only, never values): a group/world-readable .env
@@ -141,21 +155,54 @@ export function loadNoirEnv(
   } catch {
     /* stat race (deleted between read + stat) — no advisory */
   }
+  // PRECEDENCE (spec 12.1): a key this file defines WINS; the real environment
+  // is the FALLBACK for keys the file omits. This departs from Node --env-file
+  // fill-only-unset deliberately: for PROJECT configuration, the project file
+  // must be able to describe the project. `sources` records the winner so
+  // `noir env` and doctor can report provenance without re-reading anything.
   const overlay: Record<string, string> = {};
+  const sources: Record<string, 'file' | 'env'> = {};
   for (const [k, v] of Object.entries(vars)) {
     if (PROCESS_INJECTION_ENV_RE.test(k)) {
       warnings.push(`.noir/.env: refusing process-injection key '${k}' — ignored`);
       continue;
     }
-    if (env[k] === undefined) overlay[k] = v;
+    if (env[k] !== undefined && env[k] !== v) {
+      // Names the KEY only, never a value: stderr is loggable/shareable, and
+      // the point is "your shell value is not the one in effect", not a diff.
+      warnings.push(
+        `.noir/.env: '${k}' overrides the environment value for this run ` +
+          `(run \`noir env\` to see every resolved key)`,
+      );
+    }
+    overlay[k] = v;
+    sources[k] = 'file';
   }
-  return { overlay, warnings };
+  // Ambient keys the file does not define are the fallback: they still resolve,
+  // so record them as 'env' — `noir env` can then report every resolved key's
+  // source without re-reading the environment. Read from the `env` argument
+  // only (never the `process.env` global), so this stays as confined as the
+  // overlay itself. Process-injection names are skipped on this side too: they
+  // are never project configuration, and npm/pnpm export a crowd of
+  // `npm_*` keys that would otherwise bury the real ones.
+  for (const [k, v] of Object.entries(env)) {
+    if (v === undefined || sources[k] !== undefined) continue;
+    if (PROCESS_INJECTION_ENV_RE.test(k)) continue;
+    sources[k] = 'env';
+  }
+  return { overlay, warnings, sources };
 }
 
 /**
  * Load + apply `.noir/.env` to `env` (default `process.env`) in place, warning
- * on malformed lines. Returns the applied overlay. Idempotent — call once at
- * process start (CLI entry + daemon/serve entry).
+ * on malformed lines and on every key whose file value overrides an ambient
+ * one. Returns the applied overlay. Idempotent — call once at process start
+ * (CLI entry + daemon/serve entry).
+ *
+ * CONFINEMENT INVARIANT: writes go into the `env` object it is handed and
+ * nowhere else — never the `process.env` global. A caller that passes its own
+ * object (a child-spawn env, a test) is therefore fully insulated, and a user's
+ * manual `claude` invocations are untouched by anything Noir does here.
  */
 export function applyNoirEnv(
   root: string,
