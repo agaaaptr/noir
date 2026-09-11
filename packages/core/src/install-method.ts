@@ -106,6 +106,9 @@ export function resolveNoirCommand(): string {
  *  chmod explicitly (the shim write at installManagedNode does); this only
  *  preserves an existing exec file across a rewrite.
  *
+ *  An explicit `opts.mode` OVERRIDES that preservation contract: it is
+ *  authoritative on every write (see {@link AtomicWriteOptions}).
+ *
  *  NOTE: this does NOT call `fsync()` on the temp fd before the rename — the
  *  rename itself is atomic on POSIX, but a hard crash before the OS flushes
  *  the temp's dirty pages could leave a partially-written file visible at
@@ -115,9 +118,13 @@ export function resolveNoirCommand(): string {
  *  data through this helper, add an `fsync(fd)` + `close(fd)` path here and
  *  switch off `writeFileSync`. */
 export interface AtomicWriteOptions {
-  /** Mode for a NEWLY created file, applied to the temp file BEFORE the rename
-   *  (so the destination never exists with a laxer mode). Ignored when the
-   *  target already exists — a rewrite preserves the existing mode. */
+  /** Requested mode, applied to the temp file BEFORE the rename (so the
+   *  destination never exists with a laxer mode). Authoritative on EVERY write
+   *  that passes it — including a rewrite of an existing file, whose mode is
+   *  then NOT restored (a caller asking for 0600 on a file that is currently
+   *  0644 must end at 0600). Omit it to keep the legacy behaviour: create at
+   *  the umask default, and restore the pre-existing target's mode on a
+   *  rewrite. */
   mode?: number;
 }
 
@@ -136,21 +143,24 @@ export function atomicWriteFile(path: string, data: string, opts: AtomicWriteOpt
   const tmp = `${path}.tmp-${process.pid}-${Date.now()}`;
   // `opts.mode` is applied to the TEMP file, never to `path` after the rename:
   // a chmod-after-rename would leave a window in which the file exists at its
-  // final path with the umask default (a credential readable by others).
+  // final path with the umask default (a credential readable by others). The
+  // temp is unique per write, so a requested mode always lands on CREATION —
+  // which is why it applies to a rewrite too, not just to a first write.
   // `mode` on writeFileSync is masked by umask, but 0o600 has no group/other
-  // bits, so it survives any umask. It is only meaningful for a CREATED file,
-  // so it is dropped when the target already existed — that rewrite keeps the
-  // target's own mode (restored below). On Windows the argument is ignored
+  // bits, so it survives any umask. On Windows the argument is ignored
   // (permissions are ACL-based), so callers must not assert a POSIX mode there.
   writeFileSync(
     tmp,
     data,
-    prevMode === undefined && opts.mode !== undefined
-      ? { encoding: 'utf8', mode: opts.mode }
-      : 'utf8',
+    opts.mode !== undefined ? { encoding: 'utf8', mode: opts.mode } : 'utf8',
   );
   renameSync(tmp, path);
-  if (prevMode !== undefined) {
+  // Restore the pre-existing mode ONLY when the caller requested none. The
+  // restore exists to keep an EXISTING file's perms across a rewrite (the
+  // exec-bit-preservation contract); when a mode WAS requested it would undo
+  // that request — silently leaving a rewritten credential at the lax mode it
+  // was supposed to tighten.
+  if (opts.mode === undefined && prevMode !== undefined) {
     try {
       chmodSync(path, prevMode);
     } catch {

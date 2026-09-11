@@ -72,14 +72,29 @@ describe('atomicWriteFile', () => {
   });
 
   it.skipIf(process.platform === 'win32')(
-    "ignores `mode` when the target exists — a rewrite preserves the file's mode",
+    'applies `mode` on a rewrite too — the requested mode wins over the existing one',
+    () => {
+      const target = join(dir, 'tightens.txt');
+      atomicWriteFile(target, 'first');
+      chmodSync(target, 0o644);
+      // Regression: a mode argument must not be dropped just because the target
+      // already existed. The old behaviour wrote the temp at umask (0644),
+      // renamed, then chmod'd BACK to the pre-existing 0644 — so a rewritten
+      // credential silently stayed world-readable.
+      atomicWriteFile(target, 'second', { mode: 0o600 });
+      expect(readFileSync(target, 'utf8')).toBe('second');
+      expect(statSync(target).mode & 0o777).toBe(0o600);
+    },
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    "with no `mode`, a rewrite still preserves the existing file's mode",
     () => {
       const target = join(dir, 'keeps.txt');
       atomicWriteFile(target, 'first');
       chmodSync(target, 0o640);
-      // A mode argument on an EXISTING target must not be applied: the rewrite
-      // keeps 0o640 rather than dropping to the requested 0o600.
-      atomicWriteFile(target, 'second', { mode: 0o600 });
+      // The legacy contract is unchanged for callers that pass no mode.
+      atomicWriteFile(target, 'second');
       expect(readFileSync(target, 'utf8')).toBe('second');
       expect(statSync(target).mode & 0o777).toBe(0o640);
     },

@@ -1,7 +1,15 @@
 // Daemon HTTP-transport token (spec 6.1): one 0600 secret per daemon identity,
 // regenerated on every start. The file is a credential the moment it exists, so
 // the mode is asserted here and the HTTP enforcement is asserted in http.test.ts.
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -44,6 +52,24 @@ describe('daemon token', () => {
       writeDaemonToken('proj-rewrite', 'second');
       expect(readDaemonToken('proj-rewrite')).toBe('second');
       expect(statSync(join(tmpRoot, 'proj-rewrite.token')).mode & 0o777).toBe(0o600);
+    },
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'tightens a pre-existing lax token file to 0600 on the next write',
+    () => {
+      // Abnormal-exit case: a token file left behind by a daemon that never
+      // reached its cleanup (or written by an older build) sits at the umask
+      // default. The next start must TIGHTEN it, not preserve the lax mode —
+      // otherwise the credential stays world-readable for the daemon's life.
+      const path = tokenPath('proj-lax');
+      writeFileSync(path, 'stale\n', 'utf8');
+      chmodSync(path, 0o644);
+
+      writeDaemonToken('proj-lax', 'abc123');
+
+      expect(readDaemonToken('proj-lax')).toBe('abc123');
+      expect(statSync(path).mode & 0o777).toBe(0o600);
     },
   );
 
