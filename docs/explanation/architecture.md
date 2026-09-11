@@ -43,7 +43,7 @@ Noir is a **host-agnostic orchestration layer** — not an LLM runtime. The host
 
 A host connects to Noir the same way every host will — over **MCP**:
 
-1. `noir init` scaffolds `.noir/` (config, store) and emits the native skill pack + host wiring (for Claude Code: a `.mcp.json` pointing at `noir mcp serve --stdio`, plus a managed `CLAUDE.md` `@import` of `.noir/NOIR.md`).
+1. `noir init` scaffolds `.noir/` (config, store, the `0600` gitignored `.noir/.env` + its committable `.env.example`) and emits the native skill pack + host wiring (for Claude Code: a `.mcp.json` pointing at `noir mcp serve --stdio`, plus a managed `CLAUDE.md` `@import` of `.noir/NOIR.md`).
 2. The host spawns `noir mcp serve --stdio` (or talks to the long-lived daemon over HTTP). It receives a curated tool surface: `host_status`, `store_status`, `workflow_*`, `checkpoint`, `context_*`, `memory_*`, the shared-workspace feed tools `changes_since` / `await_changes`, and — when an integration is configured — `integrations_auth` / `noir_clickup_write`.
 3. The host agent then calls those tools as it works — `context_search` for focused snippets, `memory_save`/`memory_recall` for cross-session continuity, `workflow_*`/`checkpoint` for lifecycle state.
 
@@ -51,7 +51,7 @@ The daemon is the **single writer** to the store; if it is down, reads (FTS/kNN/
 
 ## The `.noir/` portable store
 
-`.noir/` is the project's single source of truth, keyed by a **canonical `ProjectId` — never a filesystem path** (paths break across machines). It holds `config.yml`, `NOIR.md` (the canonical context file the host merely `@import`s), the ProjectId-keyed SQLite DB, and SDD artifacts (`intake/`, `specs/`, `plans/`, `tasks/`, `decisions/`, `audit/`, `CHANGELOG.md`). `~/.noir/` holds user-global concerns (the embedder model cache, the singleton daemon record, and — for shared cross-repo workspaces — `workspaces/<name>/` with a registry + shared store, see ADR-0009). Generated host artifacts are pointers/transforms of `.noir/`, never drifting copies.
+`.noir/` is the project's single source of truth, keyed by a **canonical `ProjectId` — never a filesystem path** (paths break across machines). It holds `config.yml`, `.env` (the gitignored `0600` project configuration/secrets file, read in-process and winning for every key it defines — see [configure-env.md](../how-to/configure-env.md)), `.env.example` (its committable, never-loaded documentation twin), `NOIR.md` (the canonical context file the host merely `@import`s), the ProjectId-keyed SQLite DB, and SDD artifacts (`intake/`, `specs/`, `plans/`, `tasks/`, `decisions/`, `audit/`, `CHANGELOG.md`). `~/.noir/` holds user-global concerns (the embedder model cache, the singleton daemon record, and — for shared cross-repo workspaces — `workspaces/<name>/` with a registry + shared store, see ADR-0009). Generated host artifacts are pointers/transforms of `.noir/`, never drifting copies.
 
 ## Workspaces (cross-repo sharing)
 

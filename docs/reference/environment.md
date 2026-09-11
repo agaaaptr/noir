@@ -3,20 +3,32 @@
 Every environment variable Noir reads, grouped by function. This is the
 single reference — feature pages link here instead of restating defaults.
 
-> **Precedence.** A real environment variable **always wins** over `.noir/.env`,
-> which only fills keys that are unset. (One deliberate exception: a
-> `run.profiles.<name>.env` entry is an explicit per-spawn override that is merged
-> **over** the inherited environment — see
-> [Run profiles](../how-to/host-profiles.md).) This is the 12-factor convention —
-> the environment is the source of truth, the project file is a fallback.
+> **Precedence.** `.noir/.env` **wins for every key it defines**; the real
+> environment is the fallback for the keys the file does not define:
 >
-> **Where env vars come from.** The CLI and daemon inherit the environment of
-> the process that launched them. From an interactive terminal, exports in
-> `~/.zshrc` / `~/.bashrc` work. From a GUI-launched host (VS Code, a desktop MCP
-> client), CI, or launchd, shell rc files are **not** sourced — the most
-> reliable placement is the `env` block in `~/.claude/settings.json`, or the
-> project-local `.noir/.env` (see [Configuration](config.md)). Restart the daemon
-> after changing a token — the daemon's env is a snapshot taken at spawn time.
+> ```
+> 1. one-shot          VAR=value noir ...
+> 2. run profile env   run.profiles.<n>.env   (merges over)
+> 3. THIS FILE         .noir/.env             <- recommended here
+> 4. real environment  CI / container / launchd / shell rc
+> 5. built-in default
+> ```
+>
+> A machine-global export therefore **cannot shadow** `.noir/.env`. Two
+> consequences worth knowing: a git-*tracked* `.noir/.env` is refused outright
+> (none of its keys are in effect), and `noir env` shows which source won for
+> each key. This is a deliberate departure from the 12-factor convention — the
+> project file describes the project, so it outranks the ambient environment.
+>
+> **Where env vars come from.** Level 4 *is* the environment the CLI and daemon
+> inherit from the process that launched them. From an interactive terminal,
+> exports in `~/.zshrc` / `~/.bashrc` work. From a GUI-launched host (VS Code, a
+> desktop MCP client), CI, or launchd, shell rc files are **not** sourced — the
+> machine-global fallbacks there are the `env` block in
+> `~/.claude/settings.json` and `~/.zshenv`. The project-local `.noir/.env`
+> (level 3) is the one placement that works in every launch mode, which is why
+> it is the recommended home. Restart the daemon after changing a token — the
+> daemon's env is a snapshot taken at spawn time.
 >
 > **How-to:** [Configuring a project with `.noir/.env`](../how-to/configure-env.md)
 > — the full precedence chain, what belongs in the file, and `noir env` for
@@ -26,7 +38,7 @@ single reference — feature pages link here instead of restating defaults.
 
 | Variable | Default | Required | Description |
 |---|---|---|---|
-| `CLICKUP_API_TOKEN` | — | conditional — required only when the **noir-clickup** integration is enabled (see [ClickUp how-to](../how-to/clickup.md)) | ClickUp personal token (`pk_...`). Resolved by the daemon at call time; set it via `~/.claude/settings.json` `env`, `~/.zshenv` (NOT `.zshrc`), or `.noir/.env`. **Restart the daemon after changing it.** |
+| `CLICKUP_API_TOKEN` | — | conditional — required only when the **noir-clickup** integration is enabled (see [ClickUp how-to](../how-to/clickup.md)) | ClickUp personal token (`pk_...`). Resolved by the daemon at call time. Put it in `.noir/.env` — the recommended project-scoped home, and the winner for every key it defines. Machine-global fallbacks: the `env` block of `~/.claude/settings.json`, or `~/.zshenv` (NOT `.zshrc` — non-interactive shells skip it). **Restart the daemon after changing it.** |
 
 > **`CLICKUP_TEAM_ID` is NOT an env var** — Noir never reads it. Workspace
 > binding (team/list/space ids) is configured as config.yml keys:
@@ -42,10 +54,18 @@ single reference — feature pages link here instead of restating defaults.
 ## Model provider + embedder keys
 
 Provider keys are **named** in config (`model.providers.<name>.apiKeyEnv`), and
-the **value** is read from the environment at call time — the config stores the
-var NAME, never the secret. Example: `apiKeyEnv: ANTHROPIC_API_KEY` reads the
-`ANTHROPIC_API_KEY` environment variable. Anonymous local providers (Ollama,
-LM Studio) omit `apiKeyEnv`.
+the **value** is read at call time from the resolved environment — the config
+stores the var NAME, never the secret. Example: `apiKeyEnv: ANTHROPIC_API_KEY`
+reads the `ANTHROPIC_API_KEY` environment variable. `apiKeyEnv` is a bare name,
+never an interpolation: `apiKeyEnv: ${ANTHROPIC_API_KEY}` resolves
+`process.env['${ANTHROPIC_API_KEY}']` → `undefined` → a provider with no key,
+silently. (Only `run.profiles.<name>.env` interpolates `${VAR}`.) Anonymous
+local providers (Ollama, LM Studio) omit `apiKeyEnv`.
+
+Place the **value** in `.noir/.env` — recommended, since it is project-scoped,
+`0600`, gitignored and the winner for every key it defines — or in the real
+environment for a machine-wide value (see
+[Configuring a project with `.noir/.env`](../how-to/configure-env.md)).
 
 Remote embedders read their key by provider name (only when
 `context.embedder.kind` is `remote`):
@@ -93,6 +113,7 @@ need them.
 |---|---|---|---|
 | `NOIR_NODE_DIST_URL` | `https://nodejs.org/dist/` | no | Node dist mirror URL for the native installer's managed-Node provisioning. |
 | `NOIR_SYSTEM_NODE_BIN` | — | no | Hard override for the system-Node probe (managed-Node fallback in the native installer / `provisionManagedNode`). |
+| `NOIR_SKIP_NODE_PROVISION` | — | no | Set **and non-empty** makes the native installer (`install.sh` / `install.ps1`) skip managed-Node provisioning and use system Node ≥ 22 only. Also the remedy the installer prints when `npm install` fails. |
 | `NOIR_CHANNEL` | `latest` | no | npm dist-tag for `install.sh` / `install.ps1` (`beta` selects the beta channel). |
 | `NOIR_VERSION` | — | no | Pin an exact version for `install.sh` / `install.ps1` (overrides `NOIR_CHANNEL`). |
 | `NOIR_RUNTIME_DIR` | `~/.noir/runtime` | no | Overrides the managed runtime directory. |
@@ -105,15 +126,44 @@ need them.
 | `NOIR_TEMPLATES_DIR` | — | no | Overrides the scaffold template directory (downstream packs). |
 | `NOIR_TEST_FORCE_CONFLICT` | — | no | Forces scaffold conflict behavior (test seam). |
 
+### Keys refused from `.noir/.env`
+
+Two classes of name are **never** read from `.noir/.env`, even when the file
+defines them:
+
+- **A git-tracked file.** If `.noir/.env` is tracked by git, the whole file is
+  refused — none of its keys are in effect. Remedy: add `.noir/.env` to
+  `.gitignore` (Noir's managed block already does) and
+  `git rm --cached .noir/.env`.
+- **The process-injection deny-list.** `NODE_OPTIONS`, `NODE_PATH`,
+  `LD_PRELOAD`, `DYLD_INSERT_LIBRARIES`, `npm_config_*`, `COREPACK_*`, and
+  Noir's own plumbing names (`NOIR_DAEMON_DIR`, `NOIR_RUNTIME_DIR`,
+  `NOIR_MCP_COMMAND`, …) are ignored with a one-line warning. Noir spawns Node
+  children (the daemon, the host), so a file that arrived inside a cloned
+  repository must not be able to inject into them.
+
+`noir doctor`'s `noir-env` check reports the file's permissions and warns when
+it is tracked by git; `noir env` lists only the keys that actually won. Full
+detail: [Configuring a project with `.noir/.env`](../how-to/configure-env.md).
+
 ## Secrets policy
 
 - **Never commit tokens.** `.noir/.env` is gitignored by the managed
-  `.gitignore` block; `.noir/config.yml` is committable project state — use
-  `${VAR}` references there, never literal secrets.
-- Prefer the `env` block of `~/.claude/settings.json` for host-launched
-  daemons, or `.noir/.env` for project-local tokens. `~/.zshenv` works for
-  non-interactive shells; `~/.zshrc` is the least reliable (interactive only).
+  `.gitignore` block; `.noir/config.yml` is committable project state — never
+  paste a literal secret into it.
+- **`apiKeyEnv` stores a NAME, never an interpolation.** Write
+  `apiKeyEnv: ANTHROPIC_API_KEY`; the model layer reads
+  `process.env[<that name>]` at call time, so `apiKeyEnv: ${ANTHROPIC_API_KEY}`
+  resolves `process.env['${ANTHROPIC_API_KEY}']` → `undefined` → a provider
+  with no key, silently. Only `run.profiles.<name>.env` in `config.yml`
+  interpolates `${VAR}`.
+- **Put the value in `.noir/.env`** — the recommended home: project-scoped,
+  `0600`, gitignored, and the winner for every key it defines. The
+  machine-global fallbacks are the `env` block of `~/.claude/settings.json`
+  (for GUI-launched daemons) and `~/.zshenv` (non-interactive shells);
+  `~/.zshrc` is the least reliable (interactive only).
 - Keep `.noir/.env` private (`chmod 600`); `noir doctor` warns if it is
-  group/world-readable.
+  group/world-readable, and warns — naming the remedy — if it is tracked by
+  git.
 - Never pass tokens as CLI arguments (they are visible in process lists).
 - Use clearly fake placeholders in docs and examples (`pk_...`, `sk-...`).

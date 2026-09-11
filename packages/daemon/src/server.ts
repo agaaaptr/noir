@@ -1161,7 +1161,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       'integrations_auth',
       {
         description:
-          "Resolve an integration token VALUE server-side at call time (kills the non-interactive-shell gotcha). Pass {integration:'noir-clickup'} to resolve tokenEnv from the discovered declaration (config override honored), or {envVar:'CLICKUP_API_TOKEN'} to name the env var directly — but envVar MUST be a tokenEnv name declared by a discovered integration (allowlisted; an arbitrary/undeclared name is refused to prevent secret exfiltration). Returns {ok:true,token,envVar} when present, or {ok:false,reason:'no-token',envVar} when absent (the skill then does manual-paste fallback). The token is returned ONLY in this tool result — never logged, never persisted.",
+          "Resolve an integration token VALUE server-side at call time (kills the non-interactive-shell gotcha). The token is placed in `.noir/.env` (recommended — project-scoped, gitignored, and the winner for every key it defines) or in the real environment; `noir env` shows which source won. Pass {integration:'noir-clickup'} to resolve tokenEnv from the discovered declaration (config override honored), or {envVar:'CLICKUP_API_TOKEN'} to name the env var directly — but envVar MUST be a tokenEnv name declared by a discovered integration (allowlisted; an arbitrary/undeclared name is refused to prevent secret exfiltration). Returns {ok:true,token,envVar} when present, or {ok:false,reason:'no-token',envVar} when absent (the skill then does manual-paste fallback). The token is returned ONLY in this tool result — never logged, never persisted.",
         inputSchema: {
           integration: z
             .string()
@@ -1213,7 +1213,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
         'noir_clickup_write',
         {
           description:
-            'ClickUp gated-write-proxy: renders a DRY-RUN preview of the exact HTTP request(s) for an op, and ONLY on explicit {confirm:true} executes them server-side with the pk_ token (NO Bearer). Ops: status (PUT /task/{id}), subtask (POST /list/{list_id}/task + optional PUT status), comment (POST /task/{id}/comment), batch (loop POST /list/{list_id}/task, concurrency 4, 429 backoff on X-RateLimit-Reset). URLs are allowlisted — a caller-supplied url is ignored (prompt-injection defense). Executed writes are audited to .noir/audit/.',
+            'ClickUp gated-write-proxy: renders a DRY-RUN preview of the exact HTTP request(s) for an op, and ONLY on explicit {confirm:true} executes them server-side with the pk_ token (NO Bearer). The token is read from `.noir/.env` (recommended, project-scoped) or the real environment — see the `configure-env` how-to. Ops: status (PUT /task/{id}), subtask (POST /list/{list_id}/task + optional PUT status), comment (POST /task/{id}/comment), batch (loop POST /list/{list_id}/task, concurrency 4, 429 backoff on X-RateLimit-Reset). URLs are allowlisted — a caller-supplied url is ignored (prompt-injection defense). Executed writes are audited to .noir/audit/.',
           inputSchema: {
             op: z
               .enum([

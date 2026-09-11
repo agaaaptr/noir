@@ -66,11 +66,13 @@ There is no stored state — the config is the single source of truth.
 ## Security
 
 `.noir/config.yml` is **committable project state**. Never paste a token into
-`env`; write `ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}` and export the real value
-in your shell / `.noir/.env` instead (see
-[Environment Variables](../reference/environment.md)). The project file is the
-recommended home for that value — see
-[Configuring a project with `.noir/.env`](configure-env.md).
+`env`; `run.profiles.<name>.env` is the one place `${VAR}` is interpolated, so
+write `ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}` and put the real value in
+`.noir/.env` — the recommended home: project-scoped, `0600`, gitignored, and
+the winner for every key it defines. A machine-global export in your shell or
+`~/.claude/settings.json` is a fallback and cannot shadow the file. See
+[Configuring a project with `.noir/.env`](configure-env.md) and
+[Environment Variables](../reference/environment.md).
 
 ## Note: shell resolution fallback
 

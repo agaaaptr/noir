@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.13.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.13.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-10T04:23:19.466Z*
+*Last auto-generated: 2026-09-11T09:05:10.957Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -61,6 +61,8 @@ noir init
 |---|---|
 | `.noir/project.id` | A UUID — the project's canonical `ProjectId` (Noir keys everything on this, never on a filesystem path). |
 | `.noir/config.yml` | Project config. Starts as `host: claude` + `mode: full`. See [configuration](reference/config.md). |
+| `.noir/.env` | The project's configuration/secrets file, created at mode `0600` and gitignored. Every line starts commented out, so creating it changes nothing until you edit it. See [configure-env.md](how-to/configure-env.md). |
+| `.noir/.env.example` | The committable counterpart — the same variable set with commented-out fake placeholders. Documentation only; it is never loaded. |
 | `.noir/NOIR.md` | The canonical context file. The host merely `@import`s it. |
 | `.noir/rules/RULES.md` | The Noir-curated rules seed; wired into the host context file via a managed `RULES_BLOCK`. |
 | `.noir/scaffold-version` | The scaffold-engine version stamp; `noir doctor` reports drift, `noir init --upgrade` runs migrations. |
@@ -221,12 +223,15 @@ A raw stream-json transcript is always persisted to `.noir/transcripts/`.
 Noir's knobs live in three places: `.noir/config.yml` (schema in
 [config.md](reference/config.md)), environment variables
 ([environment.md](reference/environment.md)), and the project-local
-`.noir/.env` (gitignored, fills unset env keys). Set up the ClickUp integration
-with [clickup.md](how-to/clickup.md).
+`.noir/.env`.
 
-**Project-scoped configuration starts here:** what belongs in `.noir/.env`,
-which `noir init` already created for you, plus the precedence chain and the
-commands that show which value is in effect —
+**`.noir/.env` is the recommended home for project-scoped values**, and it
+**wins for every key it defines** — the real environment is only the fallback
+for the keys it does not define, so a machine-global export cannot shadow it.
+Set up the ClickUp integration with [clickup.md](how-to/clickup.md).
+
+The precedence chain, what belongs in the file, and the commands that show
+which value is in effect (`noir env`) —
 [configure-env.md](how-to/configure-env.md).
 
 ## Where to go next

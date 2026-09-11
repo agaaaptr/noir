@@ -195,9 +195,25 @@ function genConfigSchema() {
     '',
     '## Precedence',
     '',
-    'CLI flag > environment variable (`NOIR_PROFILE`) > project `.noir/config.yml` >',
-    'built-in default. The real environment always wins over `.noir/.env`, which',
-    'fills only unset keys. Integration tokens (e.g. `CLICKUP_API_TOKEN`) are env',
+    '**Environment variables** resolve in this order (highest first):',
+    '',
+    '```',
+    '1. one-shot          VAR=value noir ...',
+    '2. run profile env   run.profiles.<n>.env   (merges over)',
+    '3. THIS FILE         .noir/.env             <- recommended here',
+    '4. real environment  CI / container / launchd / shell rc',
+    '5. built-in default',
+    '```',
+    '',
+    '`.noir/.env` therefore **wins for every key it defines** — a machine-global',
+    'export (`~/.zshrc`, `~/.claude/settings.json`, launchd, CI) cannot shadow it.',
+    'A git-*tracked* `.noir/.env` is refused outright, and `noir env` shows which',
+    'source won for each key. Full chain + recipes:',
+    '[Configuring a project with `.noir/.env`](../how-to/configure-env.md).',
+    '',
+    '**Config keys** (`.noir/config.yml`) resolve by their own order: CLI flag >',
+    'environment variable (`NOIR_PROFILE`) > project `.noir/config.yml` >',
+    'built-in default. Integration tokens (e.g. `CLICKUP_API_TOKEN`) are env',
     'vars, never config keys — see',
     '[Environment Variables](environment.md),',
     '[Run profiles](../how-to/host-profiles.md), and',
@@ -333,11 +349,21 @@ function genConfigSchema() {
   lines.push('');
   lines.push('## Secrets policy');
   lines.push('');
+  // Assembled from parts: biome's `noTemplateCurlyInString` rule flags a literal
+  // dollar-brace inside a string, and the rendered reference has to show the
+  // WRONG `apiKeyEnv` form verbatim for the trap to be recognizable.
+  const brace = '$' + '{';
   lines.push(
     '`.noir/config.yml` is **committable project state** — never paste a token value into it.',
-    'Use dollar-brace (`$VAR`-style) references (`apiKeyEnv`, `run.profiles.<name>.env`) so the',
-    'config stores a name, not a secret; export the real value in your shell or `.noir/.env`.',
-    'Never pass tokens as CLI arguments (visible in process lists). See',
+    '`apiKeyEnv` stores a variable **NAME**, never an interpolation — write',
+    `\`apiKeyEnv: ANTHROPIC_API_KEY\`, never \`apiKeyEnv: ${brace}ANTHROPIC_API_KEY}\`. The`,
+    'model layer reads `process.env[<that name>]`, so the dollar-brace form resolves to',
+    '`undefined` and silently disables the provider. Only `run.profiles.<name>.env`',
+    'interpolates a dollar-brace reference. Put the **value** in `.noir/.env` — the',
+    'recommended project-scoped home, `0600` and gitignored, and the winner for every key',
+    'it defines — or in the real environment. Never pass tokens as CLI arguments (visible',
+    'in process lists). See',
+    '[Configuring a project with `.noir/.env`](../how-to/configure-env.md) and',
     '[Environment Variables](environment.md) for the full placement + precedence rules.',
   );
   lines.push('');

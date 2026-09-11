@@ -35,4 +35,4 @@ model:
       apiKeyEnv: ANTHROPIC_API_KEY   # name only — value read at runtime
 ```
 
-`.noir/.env` is a gitignored project-local fallback (real env vars always win over it); `.noir/config.yml` stores `${VAR}` names, never literal secret values — no committed secrets.
+`.noir/.env` is the **recommended home for project-scoped values** — gitignored, created at `0600` by `noir init`, and read in-process so it applies however the command was launched. It **wins for every key it defines**; the real environment is the fallback for the keys it does not define, so a machine-global export cannot shadow it. (A git-*tracked* `.noir/.env` is refused outright; `noir env` shows which source won for each key — see [configure-env.md](../how-to/configure-env.md).) `.noir/config.yml` stores a variable **name**, never literal secret values — `apiKeyEnv: ANTHROPIC_API_KEY`, never `apiKeyEnv: ${ANTHROPIC_API_KEY}`, which would resolve `process.env['${ANTHROPIC_API_KEY}']` → `undefined` and silently disable the provider. Only `run.profiles.<name>.env` interpolates `${VAR}`.

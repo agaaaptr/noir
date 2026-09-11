@@ -20,21 +20,30 @@ The token is read by the **daemon at call time**. The daemon's env is a
 **snapshot taken when it spawned** — so wherever you put it, **restart the
 daemon afterward**: `noir daemon restart`.
 
-1. **Most reliable — `~/.claude/settings.json` `env` block.** Inherited by the
-   daemon no matter how Claude Code was launched (terminal, desktop, CI):
-   ```json
-   { "env": { "CLICKUP_API_TOKEN": "pk_your_token_here" } }
-   ```
-2. **Project-local — `.noir/.env`.** Works even when the process was not
-   launched from a shell that exported the token (GUI MCP clients, launchd).
-   `.noir/.env` is gitignored; real env vars always win over it:
+1. **Recommended — `.noir/.env`.** Project-scoped, gitignored, created at
+   `0600` by `noir init`, and it works no matter how the process was launched
+   (terminal, GUI MCP client, launchd, CI). Under Noir's precedence this file
+   **wins for every key it defines** — a machine-global export cannot shadow
+   it:
    ```bash
    # .noir/.env  (gitignored — never commit)
    CLICKUP_API_TOKEN=pk_your_token_here
    ```
-3. **Shell export — `~/.zshenv` (NOT `.zshrc`).** Non-interactive shells source
-   `.zshenv` but skip `.zshrc`, so `.zshrc` exports are invisible to the Bash
-   tool and detached daemons.
+2. **Real environment — an export in `~/.zshenv`, or a one-shot for a single
+   command.** `~/.zshenv` works for non-interactive shells;
+   `CLICKUP_API_TOKEN=pk_your_token_here noir ...` is the CI escape hatch and
+   persists nothing. Both rank **below** `.noir/.env`: any key the file defines
+   wins over the ambient value.
+3. **Machine-global host file — `~/.claude/settings.json` `env` block.** A
+   fallback for a host-launched daemon when you would rather not keep the token
+   in the repository; it cannot shadow `.noir/.env`:
+   ```json
+   { "env": { "CLICKUP_API_TOKEN": "pk_your_token_here" } }
+   ```
+   (Note: `~/.zshrc` is the least reliable of all — interactive shells only, so
+   `.zshrc` exports are invisible to detached daemons.)
+
+`noir env` shows which source actually won for `CLICKUP_API_TOKEN`.
 
 If the token is missing, `integrations_auth` returns `no-token` and the skill
 stops with this setup guidance — it never guesses or invents a token.

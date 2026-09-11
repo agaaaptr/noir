@@ -59,6 +59,23 @@ noir daemon join my-app
 preserved. It refuses to overwrite a config that doesn't look Noir-emitted
 unless you pass `--force`. Joining twice is idempotent.
 
+> **The workspace daemon requires a bearer token.** Its HTTP transport
+> authenticates every `/mcp` request — the same rule as the project daemon —
+> and mints a **fresh token on every start**, written at `0600` to
+> `~/.noir/daemons/<workspace-name>.token`. `/health` stays token-free, so
+> liveness probes and `noir workspace status` keep working.
+>
+> The entry `join` writes into your host config names only the URL, so the host
+> has to send `Authorization: Bearer <token>` for that server. Read the token
+> from the file above (it changes whenever the daemon restarts); a 401 body
+> names the same path. `noir daemon token` is **project**-scoped — it does not
+> print a workspace token. On Claude Code a `headersHelper` command that emits
+> the header at connect time keeps the secret out of `.mcp.json`; note that
+> Claude Code has open bugs where `.mcp.json` custom headers are not forwarded
+> on tool-call POSTs, so a workspace joined into a `.mcp.json` may need
+> `claude mcp add -s user` (or stdio) instead. The CLI is unaffected: it reads
+> the token file directly and sends the header itself.
+
 Where the config lives depends on the host (set at `noir init --host <id>`):
 
 | Host | Config file rewritten by `join` |
