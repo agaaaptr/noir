@@ -37,7 +37,9 @@ import { type HostId, resolveAdapter } from '@noir-ai/adapters';
 import {
   detectActiveMethod,
   type InstallMethod,
+  type LoadedEnv,
   latestVersionFromCache,
+  loadNoirEnv,
   loadProjectInfo,
   NOIR_VERSION,
   type ProjectInfo,
@@ -336,16 +338,47 @@ async function checkStore(
 }
 
 /**
- * `.noir/.env` permission advisory (names only, never values): a group/other-
- * readable env file can leak tokens. Warn (never fail) — ssh-style advisory.
+ * The tracked-file refusal line emitted by `loadNoirEnv` (spec 12.2). Matched by
+ * its stable PREFIX: @noir-ai/core owns the wording, and this warning is the one
+ * signal the loader returns that a `.noir/.env` was refused outright rather than
+ * loaded (a refused file yields `overlay: {}` + `sources: {}` + this one line).
  */
-function checkNoirEnv(checks: CheckResult[], root: string): void {
+const ENV_REFUSAL_PREFIX = '.noir/.env: refusing to load';
+
+/**
+ * `.noir/.env` rows (names only, never values).
+ *
+ * Three concerns, in the order the user should read them:
+ *
+ *   1. REFUSAL (spec 12.2) — a git-tracked file contributes NOTHING. Reporting
+ *      only its permissions here would tell the user everything is fine while
+ *      every key in it is being ignored, which is precisely the "I edited
+ *      `.noir/.env` and nothing changed" confusion this check exists to kill.
+ *      The permissions advisory is skipped for a refused file, mirroring the
+ *      loader, which refuses before it even parses (so it emits no other
+ *      diagnostic either).
+ *   2. PERMISSION advisory — a group/world-readable file can leak tokens
+ *      (ssh/aws-credentials convention). Warn, never fail.
+ *   3. PROVENANCE — one `ok` row per key the file DEFINES, naming the side that
+ *      won. The file is the user's own short list, so this is not an
+ *      enumeration of the environment (see `noir env` for the curated view);
+ *      the value is never read, only the key name.
+ */
+function checkNoirEnv(checks: CheckResult[], root: string, loaded: LoadedEnv): void {
   const path = join(paths.noirDir(root), '.env');
   let st: Stats;
   try {
     st = statSync(path);
   } catch {
     return; // no .env file — nothing to check
+  }
+  if (loaded.warnings.some((w) => w.startsWith(ENV_REFUSAL_PREFIX))) {
+    checks.push({
+      name: 'noir-env',
+      status: 'warn',
+      detail: `${path} is tracked by git — refused, so NONE of its keys are in effect. Fix: add \`.noir/.env\` to .gitignore and run \`git rm --cached .noir/.env\`.`,
+    });
+    return;
   }
   const mode = st.mode & 0o777;
   const tooOpen = (st.mode & 0o077) !== 0;
@@ -358,6 +391,12 @@ function checkNoirEnv(checks: CheckResult[], root: string): void {
         }
       : { name: 'noir-env', status: 'ok', detail: `${path} permissions ok (${mode.toString(8)})` },
   );
+  // Provenance rows. Named `noir-env:<KEY>` so they group under the permission
+  // row in the table and stay uniquely addressable in the `--json` payload.
+  for (const [key, source] of Object.entries(loaded.sources)) {
+    if (source !== 'file') continue;
+    checks.push({ name: `noir-env:${key}`, status: 'ok', detail: 'from .noir/.env' });
+  }
 }
 
 function checkEmbedder(
@@ -396,7 +435,11 @@ function checkEmbedder(
   });
 }
 
-function checkProvider(checks: CheckResult[], project: ProjectInfo | undefined): void {
+function checkProvider(
+  checks: CheckResult[],
+  project: ProjectInfo | undefined,
+  sources: LoadedEnv['sources'],
+): void {
   if (!project) {
     checks.push({ name: 'provider', status: 'warn', detail: 'skipped — not initialized' });
     return;
@@ -418,7 +461,18 @@ function checkProvider(checks: CheckResult[], project: ProjectInfo | undefined):
   for (const name of names) {
     const p = resolved.providers[name];
     if (!p) continue;
-    const key = p.hasKey ? 'key present' : p.apiKeyEnv ? `missing ${p.apiKeyEnv}` : 'anonymous';
+    // Provenance (spec 12.3): when the winning source for the key is
+    // `.noir/.env`, say so — "key present" alone leaves the user staring at an
+    // empty shell export wondering where the key came from. The NAME only; the
+    // value is never read here, let alone printed.
+    const fromFile = p.apiKeyEnv !== undefined && sources[p.apiKeyEnv] === 'file';
+    const key = p.hasKey
+      ? fromFile
+        ? 'key present (from .noir/.env)'
+        : 'key present'
+      : p.apiKeyEnv
+        ? `missing ${p.apiKeyEnv}`
+        : 'anonymous';
     if (!p.hasKey && p.apiKeyEnv) missing = true;
     parts.push(`${name}/${p.model ?? '?'} (${key})`);
   }
@@ -1075,8 +1129,12 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   const { vecOk } = await checkNativeDeps(checks);
   await checkStore(checks, project, root);
   checkEmbedder(checks, project, vecOk);
-  checkProvider(checks, project);
-  checkNoirEnv(checks, root);
+  // `.noir/.env` is read ONCE and shared by the provider + noir-env rows — both
+  // need "which side won for this key". Names only: the loader never opens a
+  // value into anything doctor prints.
+  const noirEnv = loadNoirEnv(root);
+  checkProvider(checks, project, noirEnv.sources);
+  checkNoirEnv(checks, root, noirEnv);
   const scaffold = checkScaffoldVersion(checks, root);
   const rules = checkRulesMdBudget(checks, root, project);
   const host = checkHostArtifacts(checks, root, project);

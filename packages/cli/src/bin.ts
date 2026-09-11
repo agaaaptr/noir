@@ -23,6 +23,7 @@ import {
   daemonToken,
 } from './commands/daemon.js';
 import { doctor } from './commands/doctor.js';
+import { captureAmbientEnv, env } from './commands/env.js';
 import { type HandoffOptions, handoff } from './commands/handoff.js';
 import { type HomeDeps, home } from './commands/home.js';
 import {
@@ -317,6 +318,13 @@ export function createProgram(): Command {
     // environment is the fallback for keys the file omits. The overlay is
     // confined to this process tree (see applyNoirEnv), so a sibling shell and
     // the user's own manual `claude` invocations are untouched.
+    //
+    // `noir env` is the ONE command that must also see the AMBIENT environment
+    // as it was before that overlay: reporting "the file's value won, and the
+    // one you exported is being ignored" needs the pre-overlay values, which are
+    // indistinguishable from the file's own afterwards. Capture it for that
+    // command only — every other command just applies the overlay.
+    if (actionCmd.name() === 'env') captureAmbientEnv();
     applyNoirEnv(process.cwd());
     // SP-G: propagate --json / --no-input to the deep conflict resolver via env
     // so a regenerate conflict never prompts under those flags (the @clack
@@ -721,6 +729,15 @@ export function createProgram(): Command {
       // Global flags (`--json`/`--verbose`/…) reach status via the trailing
       // Command; the action itself owns no command-specific options.
       await status(toStatusOptions(actionGlobals(args)));
+    });
+
+  // `noir env` — which configuration is in effect and where each value comes
+  // from. READ-ONLY, and names-and-shapes only: never a value (spec 12.4).
+  program
+    .command('env')
+    .description('which configuration is in effect and where each value comes from')
+    .action(async (...args: unknown[]) => {
+      await env(toCliOptions(actionGlobals(args)));
     });
 
   const contextGrp = program.command('context').description('context engine');

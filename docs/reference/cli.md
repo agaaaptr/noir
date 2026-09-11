@@ -36,6 +36,8 @@ Commands:
   doctor [options]                  environment + project health
   status                            project + daemon + workflow + store
                                     snapshot
+  env                               which configuration is in effect and where
+                                    each value comes from
   context                           context engine
   memory                            memory engine
   skills                            builtin skills
