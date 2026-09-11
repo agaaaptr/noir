@@ -39,6 +39,7 @@ export {
   uninstallCommandFor,
 } from './install-detect.js';
 export {
+  type AtomicWriteOptions,
   atomicWriteFile,
   clearInstallRecord,
   ensureShimExecutable,

@@ -114,7 +114,14 @@ export function resolveNoirCommand(): string {
  *  fsync latency isn't justified. If a caller ever writes truly irrecoverable
  *  data through this helper, add an `fsync(fd)` + `close(fd)` path here and
  *  switch off `writeFileSync`. */
-export function atomicWriteFile(path: string, data: string): void {
+export interface AtomicWriteOptions {
+  /** Mode for a NEWLY created file, applied to the temp file BEFORE the rename
+   *  (so the destination never exists with a laxer mode). Ignored when the
+   *  target already exists — a rewrite preserves the existing mode. */
+  mode?: number;
+}
+
+export function atomicWriteFile(path: string, data: string, opts: AtomicWriteOptions = {}): void {
   mkdirSync(dirname(path), { recursive: true });
   // Stat the existing target (if any) so we can restore its mode after the
   // atomic rename — a rewrite must not silently strip the exec bit. The temp
@@ -127,7 +134,21 @@ export function atomicWriteFile(path: string, data: string): void {
     // Absent on first write — nothing to preserve; caller chmods if exec.
   }
   const tmp = `${path}.tmp-${process.pid}-${Date.now()}`;
-  writeFileSync(tmp, data, 'utf8');
+  // `opts.mode` is applied to the TEMP file, never to `path` after the rename:
+  // a chmod-after-rename would leave a window in which the file exists at its
+  // final path with the umask default (a credential readable by others).
+  // `mode` on writeFileSync is masked by umask, but 0o600 has no group/other
+  // bits, so it survives any umask. It is only meaningful for a CREATED file,
+  // so it is dropped when the target already existed — that rewrite keeps the
+  // target's own mode (restored below). On Windows the argument is ignored
+  // (permissions are ACL-based), so callers must not assert a POSIX mode there.
+  writeFileSync(
+    tmp,
+    data,
+    prevMode === undefined && opts.mode !== undefined
+      ? { encoding: 'utf8', mode: opts.mode }
+      : 'utf8',
+  );
   renameSync(tmp, path);
   if (prevMode !== undefined) {
     try {

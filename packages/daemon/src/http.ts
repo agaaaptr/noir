@@ -19,6 +19,13 @@ import {
 } from './project-record.js';
 import { createNoirServer } from './server.js';
 import { openStoreForDaemon } from './store-seam.js';
+import {
+  clearDaemonToken,
+  generateToken,
+  scopeKeyForProject,
+  tokenMatches,
+  writeDaemonToken,
+} from './token.js';
 import { buildWorkflowEngine, resolveGateConfig } from './workflow-seam.js';
 
 export interface StartHttpOptions {
@@ -37,6 +44,12 @@ export interface RunningDaemon {
 export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDaemon> {
   const startedAt = Date.now();
   const pid = process.pid;
+  // One token per serve lifecycle (spec 6.1): a fresh secret per start, so a
+  // token can never outlive the process that issued it (a restarted daemon
+  // invalidates every previously handed-out token). Generated before the
+  // server accepts a request; written to disk after listen, below.
+  const daemonToken = generateToken();
+  const tokenScopeKey = scopeKeyForProject(opts.project.id);
   const validateHost = localhostHostValidation();
   const validateOrigin = localhostOriginValidation();
   let lastActivity = Date.now();
@@ -140,6 +153,23 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
       return;
     }
     if (req.url === '/mcp') {
+      // Auth on the HTTP transport only (spec 6.1). The guard shares its exact
+      // predicate with the route below, so no request can reach the MCP handler
+      // without passing it. /health stays token-free — the liveness probe
+      // depends on it and its body carries no secret — but it remains
+      // host/origin validated above.
+      const provided = req.headers.authorization?.replace(/^Bearer\s+/i, '');
+      if (!tokenMatches(daemonToken, provided)) {
+        res.writeHead(401, { 'content-type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            ok: false,
+            error:
+              'unauthorized: this daemon requires a token. Set it via the host MCP `headersHelper` (run `noir daemon token`), or use the stdio transport.',
+          }),
+        );
+        return;
+      }
       const server = createNoirServer({
         project: opts.project,
         transport: 'streamable-http',
@@ -198,6 +228,10 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     } else throw err;
   }
 
+  // Write the token BEFORE the record: the record is what tells a client a
+  // daemon is live, so a client that can see the record must already be able to
+  // read the secret it needs to talk to it (no 401 window on a fresh start).
+  writeDaemonToken(tokenScopeKey, daemonToken);
   writeProjectDaemonRecord(opts.project.id, {
     pid,
     port,
@@ -218,7 +252,16 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     // Only clear OUR record (pid match) — a slow-dying predecessor or a
     // restarting daemon must not have its record wiped by this one.
     const rec = readProjectDaemonRecord(opts.project.id);
-    if (rec && rec.pid === pid) clearProjectDaemonRecord(opts.project.id);
+    if (rec && rec.pid === pid) {
+      clearProjectDaemonRecord(opts.project.id);
+      // The token is cleared under the SAME ownership guard, for the same
+      // reason: a predecessor shutting down late must never delete the secret
+      // of the daemon that already replaced it (that would 401 every client of
+      // the live daemon). A token left behind by a record-less exit is benign —
+      // the next start overwrites the file, and a token for a dead daemon
+      // authenticates nothing (the record + /health probe gate first).
+      clearDaemonToken(tokenScopeKey);
+    }
   }
 
   for (const sig of ['SIGTERM', 'SIGINT'] as const) {

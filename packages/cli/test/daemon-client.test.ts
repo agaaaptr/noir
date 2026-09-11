@@ -13,13 +13,15 @@ vi.mock('@modelcontextprotocol/client', () => ({
 }));
 
 vi.mock('@noir-ai/daemon', () => ({
-  // Only `ensureDaemonRunning` is imported by daemon-client.ts; the record
-  // reader lives behind it, so no other export needs mocking here.
+  // daemon-client.ts imports `ensureDaemonRunning` (the ensure/start seam) and
+  // `readDaemonToken` (the HTTP bearer token, spec 6.1); the record readers live
+  // behind those, so no other export needs mocking here.
   ensureDaemonRunning: vi.fn(),
+  readDaemonToken: vi.fn(),
 }));
 
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
-import { ensureDaemonRunning } from '@noir-ai/daemon';
+import { ensureDaemonRunning, readDaemonToken } from '@noir-ai/daemon';
 import { EXIT, NoirCliError } from '../src/bin.js';
 import {
   callDaemonTool,
@@ -76,7 +78,18 @@ function installFakeClient(
   vi.mocked(StreamableHTTPClientTransport).mockImplementation(
     () => ({}) as unknown as StreamableHTTPClientTransport,
   );
+  // Default: no daemon token on disk for this project (a stdio-only or
+  // pre-auth daemon). Tests that need a bearer override this AFTER this call
+  // (`vi.resetAllMocks()` in beforeEach wipes any earlier implementation).
+  vi.mocked(readDaemonToken).mockReturnValue(null);
   return fake;
+}
+
+/** The options object the mocked transport was constructed with, if any. */
+function transportOptions(call = 0): { requestInit?: { headers?: Record<string, string> } } {
+  return (vi.mocked(StreamableHTTPClientTransport).mock.calls[call]?.[1] ?? {}) as {
+    requestInit?: { headers?: Record<string, string> };
+  };
 }
 
 /** Install a fake `ensureDaemonRunning` result. */
@@ -184,6 +197,31 @@ describe('callDaemonTool — success', () => {
     const payload = await callDaemonTool(baseOpts, 'memory_save', { content: 'x' });
 
     expect(payload).toEqual({ ok: false, degraded: true, error: 'read-only' });
+  });
+});
+
+describe('connectClient — bearer token (spec 6.1)', () => {
+  it('sends the daemon bearer token for this project on the /mcp connect', async () => {
+    installEnsure();
+    installFakeClient();
+    vi.mocked(readDaemonToken).mockReturnValue('tok-123');
+
+    await callDaemonTool(baseOpts, 'host_status');
+
+    // The token is read for THIS project's scope key and delivered verbatim as
+    // a bearer header — the daemon 401s the request otherwise.
+    expect(vi.mocked(readDaemonToken)).toHaveBeenCalledWith(project.id);
+    expect(transportOptions().requestInit?.headers?.Authorization).toBe('Bearer tok-123');
+  });
+
+  it('sends no Authorization header when no token is on disk', async () => {
+    installEnsure();
+    installFakeClient();
+
+    await callDaemonTool(baseOpts, 'host_status');
+
+    expect(readDaemonToken).toHaveBeenCalledWith(project.id);
+    expect(transportOptions().requestInit).toBeUndefined();
   });
 });
 

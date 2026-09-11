@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -63,6 +63,37 @@ describe('Gate 1 — stdio round-trip', () => {
     } finally {
       await client.close();
     }
+  }, 20000);
+
+  it('stdio serves with NO daemon token present (stdio is token-free)', async () => {
+    // The HTTP transport requires a bearer token (spec 6.1); stdio must NOT.
+    // Nothing in this file ever starts an HTTP daemon, so no token has ever been
+    // written under the isolated daemon dir — the session below has to succeed
+    // against an empty credential store, and must not mint one of its own.
+    const tokenFiles = () => readdirSync(tmpRoot).filter((f) => f.endsWith('.token'));
+    expect(tokenFiles()).toEqual([]);
+
+    const client = new Client(
+      { name: 'noir-test', version: '0.0.0' },
+      { versionNegotiation: { mode: 'auto' } },
+    );
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: ['--import', TSX_LOADER, BIN, 'mcp', 'serve', '--stdio'],
+      cwd,
+    });
+    await client.connect(transport);
+    try {
+      const result = await client.callTool({ name: 'host_status', arguments: {} });
+      const content = result.content?.[0] as { text: string } | undefined;
+      const parsed = JSON.parse(content?.text ?? '');
+      expect(parsed.transport).toBe('stdio');
+      expect(parsed.daemon).toBe(false);
+    } finally {
+      await client.close();
+    }
+    // Still no token: serving over stdio never required (or created) one.
+    expect(tokenFiles()).toEqual([]);
   }, 20000);
 
   it('stdio still works when no daemon is running (FS-fallback)', async () => {
