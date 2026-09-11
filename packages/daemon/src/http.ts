@@ -166,14 +166,37 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     res.writeHead(404).end('not found');
   });
 
-  const port: number = await new Promise((resolve, reject) => {
-    httpServer.once('error', reject);
-    httpServer.listen(opts.port ?? 0, '127.0.0.1', () => {
-      const addr = httpServer.address();
-      httpServer.removeListener('error', reject);
-      resolve(typeof addr === 'object' && addr ? addr.port : 0);
+  // `daemon.port` is a PREFERENCE, not a demand: two projects may legitimately
+  // configure the same port, and failing the command would be worse than
+  // degrading. On EADDRINUSE we retry ephemeral and warn — and the record below
+  // always carries the port actually bound, so the record never lies.
+  async function listenOn(port: number): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const onError = (err: NodeJS.ErrnoException) => reject(err);
+      httpServer.once('error', onError);
+      httpServer.listen(port, '127.0.0.1', () => {
+        httpServer.removeListener('error', onError);
+        const addr = httpServer.address();
+        resolve(typeof addr === 'object' && addr ? addr.port : 0);
+      });
     });
-  });
+  }
+
+  let port: number;
+  try {
+    port = await listenOn(opts.port ?? 0);
+  } catch (err) {
+    if (
+      opts.port !== undefined &&
+      opts.port !== 0 &&
+      (err as NodeJS.ErrnoException).code === 'EADDRINUSE'
+    ) {
+      process.stderr.write(
+        `noir: port ${opts.port} is in use — falling back to an ephemeral port.\n`,
+      );
+      port = await listenOn(0);
+    } else throw err;
+  }
 
   writeProjectDaemonRecord(opts.project.id, {
     pid,

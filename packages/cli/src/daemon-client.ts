@@ -242,7 +242,11 @@ async function resolveDaemon(
   }
   const idleTimeoutSec = opts.idleTimeoutSec ?? project.config.daemon.idleTimeoutSec;
   try {
-    const ensured = await ensureDaemonRunning({ project, idleTimeoutSec });
+    const ensured = await ensureDaemonRunning({
+      project,
+      idleTimeoutSec,
+      ...(project.config.daemon.port !== undefined ? { port: project.config.daemon.port } : {}),
+    });
     return { url: ensured.url, stop: ensured.stop };
   } catch (err) {
     failDaemonDown(opts, err);

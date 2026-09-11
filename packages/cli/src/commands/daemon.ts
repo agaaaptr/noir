@@ -169,6 +169,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
     const child = await ensureDaemonRunning({
       project,
       idleTimeoutSec: project.config.daemon.idleTimeoutSec,
+      ...(project.config.daemon.port !== undefined ? { port: project.config.daemon.port } : {}),
     });
     if (child.started) {
       if (opts.json === true) {
@@ -247,6 +248,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
     ensured = await ensureDaemonRunning({
       project,
       idleTimeoutSec: project.config.daemon.idleTimeoutSec,
+      ...(project.config.daemon.port !== undefined ? { port: project.config.daemon.port } : {}),
     });
   } catch (err) {
     ds.fail('Daemon failed to start');

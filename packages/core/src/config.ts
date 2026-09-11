@@ -27,7 +27,7 @@ export const NoirConfigSchema = z.object({
         .min(0)
         .max(65535)
         .optional()
-        .describe('Daemon HTTP port (optional; not yet wired to a consumer)'),
+        .describe('Preferred daemon HTTP port (a preference: if taken, an ephemeral port is used)'),
     })
     .default({ idleTimeoutSec: 900 })
     .describe('Local daemon settings'),
