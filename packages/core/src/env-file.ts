@@ -12,6 +12,10 @@
 //   - `sources` records which side won, per key, so `noir env` + doctor can
 //     report provenance without re-reading anything (names only, never values);
 //   - a missing file is a silent no-op (Node --env-file-if-exists behavior);
+//   - a file git TRACKS is refused outright (spec 12.2): it may have arrived
+//     with the clone, and under this precedence it could redirect a credential
+//     that the fallback supplies. Untracked (the normal case — Noir's managed
+//     .gitignore block lists `/.noir/.env`) is trusted;
 //   - the parser is the documented Node --env-file dialect (the conformance
 //     oracle for this hand-rolled ~40-LOC subset — no new dependency);
 //   - NO `${VAR}` interpolation and NO command substitution, by design (a
@@ -21,6 +25,7 @@
 
 import { readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { isGitTracked } from './git-tracked.js';
 import { NOIR_DIR } from './layout.js';
 
 const KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -130,6 +135,12 @@ export interface LoadedEnv {
  * Read `<root>/.noir/.env` (missing = no-op) and compute the overlay to apply:
  * every parsed var the deny-list does not refuse. A key the file defines WINS
  * over `env`; `env` is the fallback for keys the file omits (spec 12.1).
+ *
+ * A file git TRACKS is refused outright (spec 12.2, see `isGitTracked`): it may
+ * have arrived with the clone, and under 12.1 precedence it would be able to
+ * redirect credentials that the ambient environment supplies. The refusal is
+ * decided BEFORE parsing, so a tracked file's contents are never even read into
+ * the overlay — the only thing emitted for it is the remedy.
  */
 export function loadNoirEnv(
   root: string,
@@ -141,6 +152,21 @@ export function loadNoirEnv(
     text = readFileSync(path, 'utf8');
   } catch {
     return { overlay: {}, warnings: [], sources: {} }; // missing file — silent no-op
+  }
+  // TRACKED-FILE REFUSAL (spec 12.2). Runs before the parse so a repo-supplied
+  // file is never interpreted at all — a refused file must not be able to warn
+  // about, shadow, or contribute a single key. Same early-return shape as the
+  // missing-file no-op (empty overlay), plus the refusal warning.
+  if (isGitTracked(root, join(NOIR_DIR, '.env'))) {
+    return {
+      overlay: {},
+      warnings: [
+        `.noir/.env: refusing to load — it is tracked by git. A cloned repository ` +
+          `could redirect credentials through it. Fix: add \`.noir/.env\` to .gitignore ` +
+          `(Noir's managed block already does) and run \`git rm --cached .noir/.env\`.`,
+      ],
+      sources: {},
+    };
   }
   const { vars, warnings } = parseEnvFile(text);
   // Permission advisory (names-only, never values): a group/world-readable .env
