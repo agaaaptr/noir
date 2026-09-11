@@ -68,7 +68,9 @@ There is no stored state — the config is the single source of truth.
 `.noir/config.yml` is **committable project state**. Never paste a token into
 `env`; write `ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}` and export the real value
 in your shell / `.noir/.env` instead (see
-[Environment Variables](../reference/environment.md)).
+[Environment Variables](../reference/environment.md)). The project file is the
+recommended home for that value — see
+[Configuring a project with `.noir/.env`](configure-env.md).
 
 ## Note: shell resolution fallback
 

@@ -17,6 +17,10 @@ single reference — feature pages link here instead of restating defaults.
 > reliable placement is the `env` block in `~/.claude/settings.json`, or the
 > project-local `.noir/.env` (see [Configuration](config.md)). Restart the daemon
 > after changing a token — the daemon's env is a snapshot taken at spawn time.
+>
+> **How-to:** [Configuring a project with `.noir/.env`](../how-to/configure-env.md)
+> — the full precedence chain, what belongs in the file, and `noir env` for
+> seeing which source is winning for each key.
 
 ## Integrations (opt-in)
 

@@ -224,6 +224,11 @@ Noir's knobs live in three places: `.noir/config.yml` (schema in
 `.noir/.env` (gitignored, fills unset env keys). Set up the ClickUp integration
 with [clickup.md](how-to/clickup.md).
 
+**Project-scoped configuration starts here:** what belongs in `.noir/.env`,
+which `noir init` already created for you, plus the precedence chain and the
+commands that show which value is in effect —
+[configure-env.md](how-to/configure-env.md).
+
 ## Where to go next
 
 - [installation.md](how-to/installation.md) — the full install reference (every path, troubleshooting, the channel model).

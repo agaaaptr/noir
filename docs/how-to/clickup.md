@@ -39,6 +39,10 @@ daemon afterward**: `noir daemon restart`.
 If the token is missing, `integrations_auth` returns `no-token` and the skill
 stops with this setup guidance — it never guesses or invents a token.
 
+Placement doctrine — what belongs in `.noir/.env`, the exact precedence chain,
+and how to confirm which value is in effect (`noir env`):
+[configure-env.md](configure-env.md).
+
 ## 3. Workspace binding (optional)
 
 Team/list/space ids are **config.yml keys, not env vars**:

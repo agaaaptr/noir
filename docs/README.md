@@ -1,7 +1,7 @@
 # Documentation
 
 > Auto-generated documentation index.
-> Last updated: 2026-09-10T07:05:22.883Z
+> Last updated: 2026-09-11T08:45:20.239Z
 
 ## Getting Started
 
@@ -14,6 +14,7 @@
 ## How-To Guides
 
 - [**Using the ClickUp integration (noir-clickup)**](how-to/clickup.md) — 
+- [**Configuring a project with `.noir/.env`**](how-to/configure-env.md) — 
 - [**Running with multiple host profiles**](how-to/host-profiles.md) — 
 - [**Installing Noir**](how-to/installation.md) — 
 - [**Adding a package**](how-to/packaging.md) — 
@@ -102,6 +103,7 @@
 - [**C3 Generated Artifact Standard — implementation plan**](internal/plans/2026-08-13-c3-generated-artifact-standard.md) — [ARCHIVED] 
 - [**Plan — v2 Orchestrator TUI implementation**](internal/plans/2026-08-14-v2-orchestrator-tui.md) — [ARCHIVED] 
 - [**Shared Workspace Context Implementation Plan**](internal/plans/2026-09-09-shared-workspace-context.md) — [ARCHIVED] 
+- [**Daemon Hardening + Init Completeness + `.noir/.env` Consolidation — Implementation Plan**](internal/plans/2026-09-11-daemon-hardening-init-completeness.md) — [ARCHIVED] 
 - [**Noir — AI Toolkit Design Blueprint**](internal/specs/2026-07-23-noir-toolkit-design.md) — [ARCHIVED] 
 - [**Noir — Walking Skeleton Design (S0 → S2 → S3)**](internal/specs/2026-07-23-noir-walking-skeleton-design.md) — [ARCHIVED] 
 - [**Noir — S1 Stores Design (`@noir-ai/store`)**](internal/specs/2026-07-23-s1-stores-design.md) — [ARCHIVED] 
@@ -133,4 +135,5 @@
 - [**Spec — v2 Orchestrator TUI: single-surface consolidation, streaming, and host-driving (Archetype B)**](internal/specs/2026-08-14-v2-orchestrator-tui-design.md) — [ARCHIVED] 
 - [**2026-08-19 — v2 TUI fixes + `noir run` orchestration + configuration surface**](internal/specs/2026-08-19-run-orchestration-fixes-and-config-design.md) — [ARCHIVED] 
 - [**Shared Workspace Context — Design**](internal/specs/2026-09-09-shared-workspace-context-design.md) — [ARCHIVED] 
+- [**Daemon Hardening + Init Completeness — Design**](internal/specs/2026-09-11-daemon-hardening-init-completeness-design.md) — [ARCHIVED] 
 
