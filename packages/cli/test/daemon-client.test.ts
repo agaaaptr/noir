@@ -15,19 +15,28 @@ vi.mock('@modelcontextprotocol/client', () => ({
 vi.mock('@noir-ai/daemon', () => ({
   // daemon-client.ts imports `ensureDaemonRunning` (the ensure/start seam) and
   // `readDaemonToken` (the HTTP bearer token, spec 6.1); the record readers live
-  // behind those, so no other export needs mocking here.
+  // behind those, so no other export needs mocking here. The workspace path
+  // (`probeWorkspaceDaemon`) additionally reads the workspace record + pid.
   ensureDaemonRunning: vi.fn(),
   readDaemonToken: vi.fn(),
+  readWorkspaceDaemonRecord: vi.fn(),
+  pidAlive: vi.fn(),
 }));
 
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
-import { ensureDaemonRunning, readDaemonToken } from '@noir-ai/daemon';
+import {
+  ensureDaemonRunning,
+  pidAlive,
+  readDaemonToken,
+  readWorkspaceDaemonRecord,
+} from '@noir-ai/daemon';
 import { EXIT, NoirCliError } from '../src/bin.js';
 import {
   callDaemonTool,
   DAEMON_DOWN_HINT,
   type DaemonClientOptions,
   withDaemon,
+  withWorkspaceDaemon,
 } from '../src/daemon-client.js';
 
 const project: ProjectInfo = {
@@ -140,6 +149,7 @@ async function captureStdout(fn: () => Promise<void>): Promise<string> {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe('callDaemonTool — success', () => {
@@ -222,6 +232,38 @@ describe('connectClient — bearer token (spec 6.1)', () => {
 
     expect(readDaemonToken).toHaveBeenCalledWith(project.id);
     expect(transportOptions().requestInit).toBeUndefined();
+  });
+
+  it('the workspace path sends the WORKSPACE token (scope key = workspace name), never the project token', async () => {
+    // A workspace daemon's identity is its NAME (spec §6.3): the connect must
+    // present THAT secret, not the caller's project token — the two are
+    // different daemons and different credentials.
+    const routing = { name: 'ws-demo', projectId: project.id };
+    vi.mocked(readWorkspaceDaemonRecord).mockReturnValue({
+      pid: process.pid,
+      port: 65432,
+      startedAt: Date.now(),
+      workspace: 'ws-demo',
+    });
+    vi.mocked(pidAlive).mockReturnValue(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ ok: true, pid: process.pid, workspace: 'ws-demo' }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+      ),
+    );
+    installFakeClient();
+    vi.mocked(readDaemonToken).mockReturnValue('ws-tok-456');
+
+    await withWorkspaceDaemon(baseOpts, routing, (caller) => caller.callTool('memory_recall'));
+
+    expect(readDaemonToken).toHaveBeenCalledWith('ws-demo');
+    expect(readDaemonToken).not.toHaveBeenCalledWith(project.id);
+    expect(transportOptions().requestInit?.headers?.Authorization).toBe('Bearer ws-tok-456');
   });
 });
 

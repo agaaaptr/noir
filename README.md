@@ -81,7 +81,7 @@ Full inventory → [Package Reference](docs/reference/packages.md).
 | `noir status` | probe-only health (daemon-down safe) |
 | `noir doctor` | config / store / embedder / deps / install |
 | `noir mcp serve [--stdio]` | MCP server control (stdio transport) |
-| `noir daemon {start,stop,status,restart,join}` | persistent MCP server |
+| `noir daemon {start,stop,status,restart,token,join}` | persistent MCP server |
 | `noir workspace {list,status,stop,leave}` | shared cross-repo workspace |
 | `noir context {search,index,status}` | hybrid retrieval |
 | `noir memory {recall,save,capture,sessions,forget,consolidate}` | cross-session memory |

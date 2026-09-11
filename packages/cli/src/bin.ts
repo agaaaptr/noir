@@ -15,7 +15,13 @@ import { type HostId, SUPPORTED_HOSTS } from '@noir-ai/adapters';
 import { applyNoirEnv, NOIR_VERSION } from '@noir-ai/core';
 import { Command, Option } from 'commander';
 import { contextIndex, contextSearch, contextStatus } from './commands/context.js';
-import { daemonRestart, daemonStart, daemonStatus, daemonStop } from './commands/daemon.js';
+import {
+  daemonRestart,
+  daemonStart,
+  daemonStatus,
+  daemonStop,
+  daemonToken,
+} from './commands/daemon.js';
 import { doctor } from './commands/doctor.js';
 import { type HandoffOptions, handoff } from './commands/handoff.js';
 import { type HomeDeps, home } from './commands/home.js';
@@ -592,6 +598,12 @@ export function createProgram(): Command {
       await daemonStatus(toCliOptions(trailingCmd(args).optsWithGlobals()));
     });
   daemonGrp
+    .command('token')
+    .description('print the daemon bearer token to stdout (for a host headersHelper)')
+    .action(async (...args: unknown[]) => {
+      await daemonToken(toCliOptions(trailingCmd(args).optsWithGlobals()));
+    });
+  daemonGrp
     .command('restart')
     .description('stop then start the daemon')
     .option('--detach', 'run the daemon in the background and exit')
@@ -604,7 +616,7 @@ export function createProgram(): Command {
       });
     });
   daemonGrp.action(() => {
-    throw new NoirCliError(EXIT.USAGE, 'Usage: noir daemon start|join|stop|status|restart');
+    throw new NoirCliError(EXIT.USAGE, 'Usage: noir daemon start|join|stop|status|restart|token');
   });
   daemonGrp.addHelpText(
     'after',

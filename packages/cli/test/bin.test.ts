@@ -23,6 +23,7 @@ vi.mock('../src/commands/daemon.js', () => ({
   daemonStop: vi.fn(async () => {}),
   daemonStatus: vi.fn(async () => {}),
   daemonRestart: vi.fn(async () => {}),
+  daemonToken: vi.fn(async () => {}),
 }));
 vi.mock('../src/commands/skills.js', () => ({
   skillsList: vi.fn(async () => {}),
@@ -78,7 +79,13 @@ vi.mock('../src/commands/update.js', () => ({
 import { createProgram, EXIT, inferExitCode, NoirCliError } from '../src/bin.js';
 import { contextIndex, contextSearch, contextStatus } from '../src/commands/context.js';
 import { create } from '../src/commands/create.js';
-import { daemonRestart, daemonStart, daemonStatus, daemonStop } from '../src/commands/daemon.js';
+import {
+  daemonRestart,
+  daemonStart,
+  daemonStatus,
+  daemonStop,
+  daemonToken,
+} from '../src/commands/daemon.js';
 import { doctor } from '../src/commands/doctor.js';
 import { home } from '../src/commands/home.js';
 import { install } from '../src/commands/install.js';
@@ -357,6 +364,18 @@ describe('commander migration — behavior preservation (migrated commands)', ()
     expect(daemonStart).not.toHaveBeenCalledWith(expect.objectContaining({ detach: true }));
     expect((await parse(['daemon', 'stop'])).exitCode).toBe(EXIT.OK);
     expect(daemonStop).toHaveBeenCalledWith(expect.objectContaining({ json: false, input: true }));
+  });
+
+  it('daemon token dispatches with globals (argv → module)', async () => {
+    const r = await parse(['daemon', 'token']);
+    expect(r.exitCode).toBe(EXIT.OK);
+    expect(daemonToken).toHaveBeenCalledTimes(1);
+    expect(daemonToken).toHaveBeenLastCalledWith(
+      expect.objectContaining({ json: false, quiet: false, verbose: false, input: true }),
+    );
+    const j = await parse(['daemon', 'token', '--json']);
+    expect(j.exitCode).toBe(EXIT.OK);
+    expect(daemonToken).toHaveBeenLastCalledWith(expect.objectContaining({ json: true }));
   });
 
   it('daemon start --detach forwards the flag (the refusal lives in daemon.test)', async () => {

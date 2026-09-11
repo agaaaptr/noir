@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { ensureWorkspaceRegistry, parseConfig, paths, upsertWorkspaceMember } from '@noir-ai/core';
 import { afterAll, describe, expect, it } from 'vitest';
+import { readDaemonToken } from '../src/token.js';
 import { startWorkspaceHttpServer } from '../src/workspace-http.js';
 
 const home = mkdtempSync(join(tmpdir(), 'noir-wsconc-home-'));
@@ -29,8 +30,12 @@ async function mkClient(port: number) {
     { name: 'noir-conc', version: '0.0.0' },
     { versionNegotiation: { mode: 'auto' } },
   );
+  // The workspace daemon's bearer is scoped to the workspace NAME.
+  const token = readDaemonToken('conc');
   await client.connect(
-    new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp?p=conc-a`)),
+    new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp?p=conc-a`), {
+      requestInit: { headers: { Authorization: `Bearer ${token}` } },
+    }),
   );
   return client;
 }

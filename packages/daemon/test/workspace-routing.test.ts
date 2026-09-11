@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { ensureWorkspaceRegistry, parseConfig, paths, upsertWorkspaceMember } from '@noir-ai/core';
 import { afterAll, describe, expect, it } from 'vitest';
+import { readDaemonToken } from '../src/token.js';
 import { startWorkspaceHttpServer } from '../src/workspace-http.js';
 
 const home = mkdtempSync(join(tmpdir(), 'noir-wsrout-home-'));
@@ -26,13 +27,22 @@ afterAll(() => {
   for (const d of [home, repoA, repoB]) rmSync(d, { recursive: true, force: true });
 });
 
-async function mcpClient(port: number, repo: string) {
+/** The workspace daemon's bearer header (its token is scoped to the NAME). */
+function authHeader(name: string): Record<string, string> {
+  const token = readDaemonToken(name);
+  if (token === null) throw new Error(`no workspace token on disk for ${name}`);
+  return { Authorization: `Bearer ${token}` };
+}
+
+async function mcpClient(port: number, repo: string, name: string) {
   const client = new Client(
     { name: 'noir-test', version: '0.0.0' },
     { versionNegotiation: { mode: 'auto' } },
   );
   await client.connect(
-    new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp?p=${repo}`)),
+    new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp?p=${repo}`), {
+      requestInit: { headers: authHeader(name) },
+    }),
   );
   return client;
 }
@@ -74,7 +84,7 @@ describe('workspace http routing', () => {
       expect(body.memberCount).toBe(2);
 
       // member A saves → workspace store, repo stamped from request identity
-      const a = await mcpClient(port, 'repo-a');
+      const a = await mcpClient(port, 'repo-a', 'demo');
       const saved = await a.callTool({
         name: 'memory_save',
         arguments: { content: 'be contract: GET /users returns {items: User[]}' },
@@ -88,7 +98,7 @@ describe('workspace http routing', () => {
       expect(obs.cursor).toBeGreaterThan(0);
 
       // member B recalls the same entry from the shared store
-      const b = await mcpClient(port, 'repo-b');
+      const b = await mcpClient(port, 'repo-b', 'demo');
       const recalled = await b.callTool({
         name: 'memory_recall',
         arguments: { query: 'users contract' },
@@ -111,7 +121,7 @@ describe('workspace http routing', () => {
       // non-member is refused at the transport boundary (before the MCP handshake)
       const refused = await fetch(`http://127.0.0.1:${port}/mcp?p=not-a-member`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...authHeader('demo') },
         body: '{}',
       });
       expect(refused.status).toBe(403);
@@ -151,7 +161,7 @@ describe('workspace http routing', () => {
     try {
       const refused = await fetch(`http://127.0.0.1:${port}/mcp?p=ghost`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...authHeader('stale-identity') },
         body: '{}',
       });
       expect(refused.status).toBe(500);
@@ -198,7 +208,7 @@ describe('workspace http routing', () => {
     try {
       const bad = await fetch(`http://127.0.0.1:${port}/mcp?p=repo-c`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...authHeader('bad-config') },
         body: '{}',
       });
       expect(bad.status).toBe(500);

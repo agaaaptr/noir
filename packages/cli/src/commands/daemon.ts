@@ -1,4 +1,4 @@
-// S9 — `noir daemon {start,stop,status,restart}`.
+// S9 — `noir daemon {start,stop,status,restart}` (+ `token`, spec 6.1).
 //
 // Honest daemon UX (S9 / spec §8). `noir daemon start` runs the daemon either
 // FOREGROUND or DETACHED, depending on flags:
@@ -31,6 +31,7 @@ import {
   clearProjectDaemonRecord,
   ensureDaemonRunning,
   pidAlive,
+  readDaemonToken,
   readProjectDaemonRecord,
   spawnDetachedDaemon,
 } from '@noir-ai/daemon';
@@ -478,6 +479,72 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
     `Noir daemon: running (pid ${data.pid}, port ${data.port}, up ${formatUptime(uptimeSec)}, ${data.mode})`,
     opts,
   );
+}
+
+// ---------------------------------------------------------------------------
+// `noir daemon token`
+// ---------------------------------------------------------------------------
+/**
+ * Print this project's daemon bearer token (spec 6.1) — the command a host's
+ * MCP `headersHelper` runs at connect time so no secret lives in a config file.
+ *
+ * stdout carries the token and NOTHING else: no banner, no decoration, no
+ * second line — the command's whole purpose is to be consumed by a program.
+ * `--json` emits the S9 `{ok:true,data:{token}}` envelope instead (the same data
+ * channel, self-describing). Every diagnostic goes to stderr.
+ *
+ * Every "no usable token" outcome is exit 4 (DAEMON_DOWN), like `daemon status`:
+ * an uninitialized project, no daemon record, a record whose daemon is gone, or
+ * a record with no token file beside it. A token is a credential for a LIVE
+ * daemon — printing the token of a daemon that is not running would authenticate
+ * nothing while looking like success, which is exactly the silent failure the
+ * `headersHelper` contract must not have.
+ *
+ * The token is read from disk at CALL time (`~/.noir/daemons/<projectId>.token`)
+ * and never cached: the daemon regenerates it on every start, so a remembered
+ * copy is a 401.
+ */
+export async function daemonToken(opts: DaemonOptions): Promise<void> {
+  // Same caller-scope resolution as status/stop: the project id IS the record
+  // (and token) lookup key, so a daemon serving another project is invisible
+  // here rather than mis-reported.
+  const callerProject = resolveCallerProjectId();
+  if (callerProject === undefined) {
+    fail(EXIT.DAEMON_DOWN, 'Noir daemon is not running (not a Noir project).', opts);
+  }
+  const rec = readProjectDaemonRecord(callerProject);
+  if (!rec) {
+    fail(
+      EXIT.DAEMON_DOWN,
+      'Noir daemon is not running (no daemon record — start it with `noir daemon start`).',
+      opts,
+    );
+  }
+  // A record whose process is gone is stale: the pid-reuse guard proves liveness
+  // only, but the record is already scoped to THIS project, so an alive pid is
+  // the strongest ownership this read-only command can assert without a probe.
+  if (!pidAlive(rec.pid)) {
+    fail(
+      EXIT.DAEMON_DOWN,
+      'Noir daemon is not running (stale record — start it with `noir daemon start`).',
+      opts,
+    );
+  }
+  const token = readDaemonToken(callerProject);
+  if (token === null) {
+    fail(
+      EXIT.DAEMON_DOWN,
+      'Noir daemon is not running (the record has no token beside it — restart it with `noir daemon start`).',
+      opts,
+    );
+  }
+
+  if (opts.json === true) {
+    process.stdout.write(`${JSON.stringify({ ok: true, data: { token } })}\n`);
+    return;
+  }
+  // The ONLY stdout write on the human path — a headersHelper reads exactly this.
+  process.stdout.write(`${token}\n`);
 }
 
 // ---------------------------------------------------------------------------

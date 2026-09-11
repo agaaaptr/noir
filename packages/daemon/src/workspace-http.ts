@@ -9,6 +9,13 @@
 // whose `p` is not a current member is refused. The workspace daemon is STILL the
 // single writer per DB: the workspace store is opened once here, and each member
 // store is opened once per member (no second process holds a write handle).
+//
+// Transport auth (spec 6.1, §6.3) mirrors the project daemon: one bearer token
+// per serve lifecycle, regenerated on every start, scoped to the WORKSPACE NAME
+// (the identity keying this daemon's record — a projectId is meaningless here,
+// since a workspace spans projects). `/mcp` requires it and answers 401 without
+// it; `/health` stays token-free because `probeWorkspaceDaemon` depends on it
+// and its body carries no secret.
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import {
   localhostHostValidation,
@@ -30,6 +37,13 @@ import { buildContextEngine } from './context-seam.js';
 import { wakeFeedWaiters } from './feed.js';
 import { createNoirServer } from './server.js';
 import { type DaemonStore, openStoreForDaemon } from './store-seam.js';
+import {
+  clearDaemonToken,
+  generateToken,
+  tokenMatches,
+  tokenPath,
+  writeDaemonToken,
+} from './token.js';
 import { buildWorkflowEngine, resolveGateConfig } from './workflow-seam.js';
 import {
   clearWorkspaceDaemonRecord,
@@ -136,6 +150,13 @@ export async function startWorkspaceHttpServer(
   const { name } = opts;
   const startedAt = Date.now();
   const pid = process.pid;
+  // One token per serve lifecycle (spec 6.1): a fresh secret per start, so a
+  // token can never outlive the process that issued it (a restarted daemon
+  // invalidates every previously handed-out token). Generated before the server
+  // accepts a request; written to disk after listen, below. The scope key is the
+  // workspace NAME — the same identity keying this daemon's record.
+  const daemonToken = generateToken();
+  const tokenScopeKey = name;
   const validateHost = localhostHostValidation();
   const validateOrigin = localhostOriginValidation();
 
@@ -225,6 +246,22 @@ export async function startWorkspaceHttpServer(
       return;
     }
     if (req.url === '/mcp' || req.url?.startsWith('/mcp?')) {
+      // Auth on the HTTP transport only (spec 6.1, §6.3) and AHEAD of the
+      // membership check: an unauthenticated caller must not learn whether a
+      // given projectId is a member of this workspace (401 before 403).
+      // `/health` stays token-free — `probeWorkspaceDaemon` depends on it — but
+      // it remains host/origin validated above.
+      const provided = req.headers.authorization?.replace(/^Bearer\s+/i, '');
+      if (!tokenMatches(daemonToken, provided)) {
+        res.writeHead(401, { 'content-type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            ok: false,
+            error: `unauthorized: this workspace daemon requires a token — set \`Authorization: Bearer <token>\` on its MCP entry (the token file is ${tokenPath(tokenScopeKey)}), or use the stdio transport.`,
+          }),
+        );
+        return;
+      }
       const repo = parseRepo(req.url);
       const registry = readWorkspaceRegistry(name);
       if (!repo || !registry || !isWorkspaceMember(registry, repo)) {
@@ -299,6 +336,11 @@ export async function startWorkspaceHttpServer(
     });
   });
 
+  // Write the token BEFORE the record (same invariant as the project daemon):
+  // the record is what tells a client a daemon is live, so a client that can see
+  // the record must already be able to read the secret it needs to talk to it —
+  // no 401 window on a fresh start.
+  writeDaemonToken(tokenScopeKey, daemonToken);
   writeWorkspaceDaemonRecord(name, { pid, port, startedAt, workspace: name });
 
   async function shutdown(): Promise<void> {
@@ -312,7 +354,14 @@ export async function startWorkspaceHttpServer(
       await m.store.store.close().catch(() => undefined);
     }
     const rec = readWorkspaceDaemonRecord(name);
-    if (rec && rec.pid === pid) clearWorkspaceDaemonRecord(name);
+    if (rec && rec.pid === pid) {
+      clearWorkspaceDaemonRecord(name);
+      // The token is cleared under the SAME ownership guard, for the same
+      // reason as the project daemon: a predecessor shutting down late must
+      // never delete the secret of the daemon that already replaced it (that
+      // would 401 every client of the live daemon).
+      clearDaemonToken(tokenScopeKey);
+    }
   }
 
   for (const sig of ['SIGTERM', 'SIGINT'] as const) {
