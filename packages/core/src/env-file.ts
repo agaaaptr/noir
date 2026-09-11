@@ -31,6 +31,19 @@ import { NOIR_DIR } from './layout.js';
 const KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /**
+ * Repo-relative path of the env file, spelled as a POSIX literal.
+ *
+ * This must NEVER be a `path.join(NOIR_DIR, '.env')` product. Git pathspecs are
+ * canonically forward-slash separated on every platform, and on Windows `join`
+ * yields `.noir\.env` — which `ls-files --error-unmatch` can match nothing
+ * against, reporting a TRACKED file as untracked and silently disabling the
+ * git-tracked refusal on Windows only. Same convention as `IGNORE_ENTRIES` in
+ * ignore-manager.ts (which also spells `/.noir/.env` literally). Keep in sync
+ * with `NOIR_DIR`.
+ */
+const ENV_FILE_REL_PATH = '.noir/.env';
+
+/**
  * Keys a `.noir/.env` may NEVER set — process-injection vectors. Noir spawns
  * node child processes (the daemon, the host binary), so a `.noir/.env` from an
  * untrusted checkout (e.g. an attacker-committed file in a cloned repo) setting
@@ -157,7 +170,7 @@ export function loadNoirEnv(
   // file is never interpreted at all — a refused file must not be able to warn
   // about, shadow, or contribute a single key. Same early-return shape as the
   // missing-file no-op (empty overlay), plus the refusal warning.
-  if (isGitTracked(root, join(NOIR_DIR, '.env'))) {
+  if (isGitTracked(root, ENV_FILE_REL_PATH)) {
     return {
       overlay: {},
       warnings: [

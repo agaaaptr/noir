@@ -17,9 +17,19 @@
 // missing one refusal in a broken git environment.
 import { execFileSync } from 'node:child_process';
 
+/** Git pathspecs are forward-slash separated on EVERY platform, so a Windows
+ *  `path.join` product (`dir\file`) would match nothing and report a tracked
+ *  file as untracked — silently disabling the guard on Windows only. Callers
+ *  pass a POSIX literal; this canonicalizes anyway, so the refusal cannot be
+ *  defeated by a future caller handing over a platform-native path. A backslash
+ *  is never a legal separator on POSIX, so this is safe there too. */
+function toPosixPath(relPath: string): string {
+  return relPath.includes('\\') ? relPath.replaceAll('\\', '/') : relPath;
+}
+
 /**
- * Is `relPath` (relative to `root`) tracked by git? `false` on every failure,
- * never a throw.
+ * Is `relPath` (relative to `root`, forward-slash separated) tracked by git?
+ * `false` on every failure, never a throw.
  *
  * `git ls-files --error-unmatch -- <path>` exits non-zero when the pathspec
  * matches nothing in the index, which is exactly "not tracked" — and it reads
@@ -28,7 +38,7 @@ import { execFileSync } from 'node:child_process';
  */
 export function isGitTracked(root: string, relPath: string): boolean {
   try {
-    execFileSync('git', ['ls-files', '--error-unmatch', '--', relPath], {
+    execFileSync('git', ['ls-files', '--error-unmatch', '--', toPosixPath(relPath)], {
       cwd: root,
       stdio: 'ignore',
       timeout: 2_000,
