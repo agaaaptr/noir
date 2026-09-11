@@ -218,4 +218,15 @@ describe('loadNoirEnv — precedence + missing file', () => {
     expect(overlay.NOIR_DAEMON_DIR).toBeUndefined();
     expect(warnings.join()).toMatch(/process-injection/);
   });
+
+  it('refuses NOIR_TEMPLATES_DIR from .noir/.env (a template-directory redirect)', () => {
+    dir = mkdtempSync(join(tmpdir(), 'noir-env-templates-dir-'));
+    mkdirSync(join(dir, '.noir'), { recursive: true });
+    writeFileSync(join(dir, '.noir', '.env'), 'NOIR_TEMPLATES_DIR=/tmp/evil\n');
+    chmodSync(join(dir, '.noir', '.env'), 0o600);
+    const { overlay, warnings, sources } = loadNoirEnv(dir, {});
+    expect(overlay.NOIR_TEMPLATES_DIR).toBeUndefined();
+    expect(sources.NOIR_TEMPLATES_DIR).toBeUndefined();
+    expect(warnings.join()).toMatch(/process-injection/);
+  });
 });

@@ -62,8 +62,11 @@ const ENV_FILE_REL_PATH = '.noir/.env';
 // admits descendants (`NOIR_RUNTIME_DIR_X`) but never sibling names, so
 // `NOIR_DAEMON_JSON` does NOT cover `NOIR_DAEMON_DIR` (spec 4.4 — the daemon
 // record directory is read through, so redirecting it is a hijack vector).
+// `NOIR_TEMPLATES_DIR` is here for the identical reason: template-loader.ts
+// resolves it as a path override (the templates directory is read through), so
+// a `.noir/.env` redirecting it would substitute the scaffold's contents.
 const PROCESS_INJECTION_ENV_RE =
-  /^(NODE_OPTIONS|NODE_PATH|NODE_ICU_DATA|NODE_EXTRA_CA_CERTS|NODE_TLS_REJECT_UNAUTHORIZED|LD_PRELOAD|LD_LIBRARY_PATH|DYLD_INSERT_LIBRARIES|ELECTRON_RUN_AS_NODE|NOIR_NODE_DIST_URL|NOIR_UPDATE_CACHE_JSON|NOIR_RUNTIME_DIR|NOIR_DAEMON_JSON|NOIR_DAEMON_DIR|NOIR_INSTALL_JSON|NOIR_MCP_COMMAND|NOIR_SYSTEM_NODE_BIN|NOIR_WORKSPACES_DIR|npm|COREPACK)(?:$|_)/;
+  /^(NODE_OPTIONS|NODE_PATH|NODE_ICU_DATA|NODE_EXTRA_CA_CERTS|NODE_TLS_REJECT_UNAUTHORIZED|LD_PRELOAD|LD_LIBRARY_PATH|DYLD_INSERT_LIBRARIES|ELECTRON_RUN_AS_NODE|NOIR_NODE_DIST_URL|NOIR_UPDATE_CACHE_JSON|NOIR_RUNTIME_DIR|NOIR_DAEMON_JSON|NOIR_DAEMON_DIR|NOIR_INSTALL_JSON|NOIR_MCP_COMMAND|NOIR_SYSTEM_NODE_BIN|NOIR_TEMPLATES_DIR|NOIR_WORKSPACES_DIR|npm|COREPACK)(?:$|_)/;
 
 export interface EnvFileParseResult {
   readonly vars: Record<string, string>;
