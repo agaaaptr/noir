@@ -46,6 +46,36 @@ describe('claudeAdapter', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// PARITY GATE — the claude surface is the regression anchor for `noir init`.
+// Slice E grows the init output (.noir/README.md, .noir/.env) and drops three
+// vestigial ignore entries, but it may not move a byte of what CLAUDE.md and
+// .mcp.json contain. These literals are byte-frozen on purpose: any drift in
+// the adapter (or in the templates that must render to the same bytes) fails
+// here rather than silently in a user's repo.
+// ---------------------------------------------------------------------------
+describe('claudeAdapter — byte-frozen emission (noir init regression anchor)', () => {
+  const ctx = { root: '/tmp/demo' };
+
+  it('emitContext() output is byte-frozen', () => {
+    expect(claudeAdapter.emitContext(ctx)).toBe(
+      '<!-- noir:context begin -->\n@import ".noir/NOIR.md"\n<!-- noir:context end -->\n',
+    );
+  });
+
+  it('emitRules() output is byte-frozen', () => {
+    expect(claudeAdapter.emitRules?.(ctx)).toBe(
+      '<!-- noir:rules begin -->\n@import ".noir/rules/RULES.md"\n<!-- noir:rules end -->\n',
+    );
+  });
+
+  it('emitMcpConfig() (stdio) output is byte-frozen', () => {
+    expect(claudeAdapter.emitMcpConfig(ctx, { transport: 'stdio' })).toBe(
+      '{\n  "mcpServers": {\n    "noir": {\n      "command": "noir",\n      "args": [\n        "mcp",\n        "serve",\n        "--stdio"\n      ]\n    }\n  }\n}',
+    );
+  });
+});
+
 describe('claudeAdapter.emitMcpConfig — Slice X integration overload', () => {
   const ctx = { root: '/tmp/demo' };
 

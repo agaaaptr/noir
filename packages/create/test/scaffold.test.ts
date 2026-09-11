@@ -1,11 +1,23 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { claudeAdapter, emitAgentsMd } from '@noir-ai/adapters';
 import { CONTEXT_BLOCK, paths, RULES_BLOCK, readManagedBlock, syncIgnores } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { BRIEF_BLOCK } from '../src/manifest.js';
 import { scaffold } from '../src/scaffold.js';
 import { CURRENT_SCAFFOLD_VERSION, readScaffoldVersion } from '../src/scaffold-version.js';
+import { render } from '../src/template.js';
+import { loadTemplate } from '../src/template-loader.js';
+import { buildRegion } from '../src/writers.js';
 
 let root: string;
 beforeEach(() => {
@@ -260,6 +272,121 @@ describe('scaffold parity with @noir-ai/adapters + syncIgnores (S-T2 refactor ga
     } finally {
       rmSync(sib, { recursive: true, force: true });
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Slice E (T9) — the `.noir/README.md` runtime map. ADDITIVE: two files are
+// added (`.noir/README.md`, `.noir/.env`) and exactly ONE pre-existing file's
+// content changed (`.noir/.env.example`, spec 9.1, landed in T8). Every other
+// pre-existing entry stays byte-identical — claude is the regression anchor.
+// ---------------------------------------------------------------------------
+describe('scaffold — .noir/README.md runtime map (slice E)', () => {
+  it('writes .noir/README.md and reports it', async () => {
+    const res = await init(root);
+    expect(existsSync(join(root, '.noir', 'README.md'))).toBe(true);
+    expect(res.written).toContain('.noir/README.md');
+  });
+
+  it('maps every runtime directory that appears LATER to the command that creates it', async () => {
+    await init(root);
+    const md = readFileSync(join(root, '.noir', 'README.md'), 'utf8');
+    for (const dir of [
+      'store/',
+      'specs/',
+      'plans/',
+      'tasks/',
+      'intake/',
+      'clarifications/',
+      'audit/',
+      'transcripts/',
+      'handoff/',
+    ]) {
+      expect(md, dir).toContain(dir);
+    }
+    // Each row names its trigger, not just the directory.
+    expect(md).toContain('noir run');
+    expect(md).toContain('noir task new');
+    expect(md).toContain('noir handoff');
+  });
+
+  it('lists the files init just wrote', async () => {
+    await init(root);
+    const md = readFileSync(join(root, '.noir', 'README.md'), 'utf8');
+    for (const f of [
+      'project.id',
+      'config.yml',
+      'NOIR.md',
+      'rules/RULES.md',
+      '.env',
+      '.env.example',
+      'scaffold-version',
+    ]) {
+      expect(md, f).toContain(f);
+    }
+  });
+
+  it('is co-owned (managed block) and re-syncs byte-identically', async () => {
+    await init(root);
+    const target = join(root, '.noir', 'README.md');
+    const first = readFileSync(target, 'utf8');
+    // The map lives inside markers, so content the user adds outside them
+    // survives — the same shape NOIR.md and router.md use.
+    expect(first).toContain('<!-- noir:readme begin -->');
+    expect(first).toContain('<!-- noir:readme end -->');
+    const res = await scaffold({ root, mode: 'sync' });
+    expect(res.identical).toContain('.noir/README.md');
+    expect(readFileSync(target, 'utf8')).toBe(first);
+  });
+
+  it('user notes outside the markers survive a sync (the point of co-ownership)', async () => {
+    await init(root);
+    const target = join(root, '.noir', 'README.md');
+    appendFileSync(target, '\n## Our conventions\n\nKeep this line.\n', 'utf8');
+    await scaffold({ root, mode: 'sync' });
+    const after = readFileSync(target, 'utf8');
+    // The note is preserved (core's managed writer re-emits the region into the
+    // file's remaining content — position may change, bytes do not vanish).
+    expect(after).toContain('## Our conventions');
+    expect(after).toContain('Keep this line.');
+    // Still exactly one managed region — no duplication on re-emit.
+    expect((after.match(/<!-- noir:readme begin -->/g) ?? []).length).toBe(1);
+    expect((after.match(/<!-- noir:readme end -->/g) ?? []).length).toBe(1);
+  });
+});
+
+describe('scaffold — parity: additive only, .env.example the one permitted change', () => {
+  it('reports both new entries as written additions', async () => {
+    const res = await init(root);
+    expect(res.written).toContain('.noir/.env');
+    expect(res.written).toContain('.noir/README.md');
+  });
+
+  it('every pre-existing seed still renders its template byte-for-byte', async () => {
+    const res = await init(root);
+    const vars = {
+      root,
+      projectId: res.projectId,
+      host: 'claude',
+      transport: 'stdio',
+      command: 'noir',
+    };
+    // The skipIfExists seeds are the template bytes, verbatim — no post-write
+    // transform. A change to any pre-existing seed's content fails here.
+    for (const [rel, tmpl] of [
+      ['.noir/config.yml', 'config.yml.tmpl'],
+      ['.noir/rules/RULES.md', 'rules-seed.md.tmpl'],
+      ['.noir/.env', 'config.env.tmpl'],
+      // The ONE deliberate content change of slice E (spec 9.1): asserted as
+      // "it equals its template", never against a frozen pre-E golden.
+      ['.noir/.env.example', 'env.example.tmpl'],
+    ] as const) {
+      expect(readFileSync(join(root, rel), 'utf8'), rel).toBe(render(loadTemplate(tmpl), vars));
+    }
+    // NOIR.md = the brief region wrapped in its own markers.
+    expect(readFileSync(paths.noirMd(root), 'utf8')).toBe(
+      buildRegion(BRIEF_BLOCK, render(loadTemplate('noir.md.tmpl'), vars)),
+    );
   });
 });
 

@@ -1,0 +1,55 @@
+# `.noir/` — the Noir project store
+
+This directory is the canonical project state — not the host's own files.
+Everything here is either emitted by `noir init` / `noir sync` or written by
+the feature named beside it.
+
+## What exists now
+
+| Path | What it is |
+| --- | --- |
+| `project.id` | Canonical project id. It names the store database (`store/<project.id>.db`) — don't regenerate it by hand. |
+| `config.yml` | Your config seed: host, mode, integrations, context / memory / model settings. Yours to edit. |
+| `NOIR.md` | The context brief the host context file `@`-imports. Noir-managed region. |
+| `rules/RULES.md` | The AI working contract the host `@`-imports. Yours to edit. |
+| `.env` | Project-scoped configuration and secrets (mode 0600, gitignored). |
+| `.env.example` | Committable documentation of the same variable set. Never loaded. |
+| `scaffold-version` | Which scaffold version produced this tree — drives `noir init --upgrade`. |
+| `ancestors.json` | Merge base for Noir's managed regions (leave it alone). |
+| `README.md` | This map. |
+
+Host-side pointers sit at the repository root, not here: `CLAUDE.md` (claude),
+`AGENTS.md` (agents-md / cursor / opencode) or `GEMINI.md` (gemini), plus that
+host's MCP config (`.mcp.json`, `.gemini/mcp.json`, `.cursor/mcp.json`,
+`opencode.json`). With `--host claude`, `router.md` and `hooks/` (the
+SessionStart contract and its runner) live here too.
+
+## What appears later
+
+Nothing below is created eagerly — each directory shows up the first time the
+feature that owns it runs, so an empty project stays empty. `store/`, `handoff/`
+and `transcripts/` hold runtime data and are gitignored; everything else is
+committed.
+
+| Directory | Written by | Triggered by |
+| --- | --- | --- |
+| `store/` | The daemon — single-writer SQLite + FTS5 + vectors | the first command that touches the store (`store/<project.id>.db`) |
+| `intake/`, `specs/`, `plans/`, `tasks/`, `clarifications/` | The SDD workflow phases | `noir task new` → `noir task advance` |
+| `decisions/` | The ADR stub written in the document phase | a task landing at `done` |
+| `audit/` | Task gate results, plus integration call logs | `noir task verify`, and the first integration call |
+| `transcripts/` | Raw host output (best effort) | `noir run <prompt>` |
+| `handoff/` | Session handoff prompts | `noir handoff --write` |
+
+## Where to go next
+
+- **Configuration** — `.noir/config.yml` holds host, mode, integrations and the
+  context / memory / model settings. `noir doctor` reports what is drifted and
+  what a re-emit would change.
+- **Environment variables** — put project-scoped values (and secrets) in
+  `.noir/.env`; `.noir/.env.example` documents the full set and is the file to
+  commit. A real environment variable is only a fallback for keys `.noir/.env`
+  leaves unset. One-shot overrides: `VAR=value noir ...`; `noir run --profile
+  <name>` selects a run profile; `noir env` shows which source wins per key.
+- **The workflow** — `noir task new` starts the spec → plan → implement →
+  verify → document lifecycle, `noir status` shows where every task stands, and
+  `noir skills list` lists the on-demand skills your host can load.

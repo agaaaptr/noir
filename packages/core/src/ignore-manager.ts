@@ -9,16 +9,19 @@ export const IGNORE_BLOCK = managedBlock('ignore', 'hash');
  *
  *  `/.noir/handoff/` is gitignored so `noir handoff --write` artifacts (host
  *  handoff prompts, often session-specific and machine-local) never pollute
- *  commits — they're paste-and-go prompts, not reviewed source. */
+ *  commits — they're paste-and-go prompts, not reviewed source.
+ *
+ *  NO project-local daemon paths are listed: the daemon records live under
+ *  `~/.noir/daemons/` (HOME-scoped, keyed by ProjectId), no socket is ever
+ *  created, and `.noir/state/` never existed. The former `/.noir/*.sock`,
+ *  `/.noir/daemon.pid` and `/.noir/state/` entries described a layout that
+ *  never shipped and were removed rather than relocated. */
 const IGNORE_ENTRIES: ReadonlyArray<[file: string, entries: readonly string[]]> = [
   [
     '.gitignore',
     [
       '/.noir/store/',
       '/.noir/handoff/',
-      '/.noir/*.sock',
-      '/.noir/daemon.pid',
-      '/.noir/state/',
       // .noir/.env holds tokens — never commit it. The .env.example stays
       // visible as the documented placeholder (github/gitignore convention).
       '/.noir/.env',

@@ -40,6 +40,11 @@ describe('buildManifest', () => {
       { path: '.noir/.env', mode: 'skipIfExists', host: null, hasBlock: false },
       { path: '.noir/NOIR.md', mode: 'managedBlock', host: null, hasBlock: true },
       { path: '.noir/rules/RULES.md', mode: 'skipIfExists', host: null, hasBlock: false },
+      // Slice E (§9): the `.noir/` runtime map. A co-owned managed block — the
+      // map is re-emitted on sync/upgrade (so it can never describe a layout
+      // that no longer exists) while user notes outside the markers survive,
+      // the same shape NOIR.md and router.md use.
+      { path: '.noir/README.md', mode: 'managedBlock', host: null, hasBlock: true },
       // --- host-agnostic ignores (still host:null) ---
       { path: '.gitignore', mode: 'managedBlock', host: null, hasBlock: true },
       { path: '.dockerignore', mode: 'managedBlock', host: null, hasBlock: true },
@@ -72,6 +77,18 @@ describe('buildManifest', () => {
     // Both files coexist: the example stays the committable documentation.
     expect(m.find((e) => e.path === '.noir/.env.example')?.template).toBe('env.example.tmpl');
     expect(m.filter((e) => e.fileMode !== undefined).map((e) => e.path)).toEqual(['.noir/.env']);
+  });
+
+  it('the .noir/README.md map is a host-agnostic managed block, not a seed', () => {
+    // Every host gets the map (it describes the canonical store, which is
+    // host-agnostic), and it is re-emitted rather than written once — a stale
+    // map is worse than no map. `skipIfExists` would freeze it at init time.
+    const readme = m.find((e) => e.path === '.noir/README.md');
+    expect(readme?.mode).toBe('managedBlock');
+    expect(readme?.host).toBeUndefined();
+    expect(readme?.block?.name).toBe('readme');
+    expect(readme?.template).toBe('noir-readme.md.tmpl');
+    expect(readme?.fileMode).toBeUndefined(); // not a credential seed
   });
 
   it('every path is repo-relative POSIX (no leading "/", no drive, no "..")', () => {

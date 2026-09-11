@@ -118,6 +118,14 @@ export type BuildManifestContext = {
  *  shape stays consistent with the rest of the family. */
 export const BRIEF_BLOCK: ManagedBlock = managedBlock('brief', 'html');
 
+/** Co-owned `.noir/README.md` runtime map (slice E, spec §9). Defined locally
+ *  for the same reason as {@link BRIEF_BLOCK}: core's keystone-K named
+ *  instances cover only the regions core itself writes. The map describes
+ *  paths that appear LATER in the project's life, so it must be re-emitted —
+ *  `regenerate` would clobber a user's annotations and `skipIfExists` would
+ *  freeze it at init time; a managed block keeps both sides honest. */
+export const README_BLOCK: ManagedBlock = managedBlock('readme', 'html');
+
 // --- repo-relative path constants (mirror @noir-ai/core/layout.ts) -----------
 // Inlined as string literals so the manifest has zero runtime dep on layout
 // for path strings; the test suite cross-checks against `paths.*`.
@@ -129,6 +137,7 @@ const P = {
   env: `${NOIR_DIR}/.env`,
   noirMd: `${NOIR_DIR}/NOIR.md`,
   rulesMd: `${NOIR_DIR}/rules/RULES.md`,
+  readme: `${NOIR_DIR}/README.md`,
 } as const;
 
 // Aliases for the parity test (kept here so a layout rename breaks the test
@@ -161,6 +170,8 @@ export const MANIFEST_PATH_PARITY: ReadonlyArray<
  *    chosen host for `noir sync` to read back.)
  *  - `NOIR.md`     → managedBlock (BRIEF_BLOCK). Auto-brief is co-owned.
  *  - `RULES.md`    → skipIfExists. User-owned working-contract seed.
+ *  - `README.md`   → managedBlock (README_BLOCK). The `.noir/` runtime map is
+ *    regenerated as the layout grows; user notes outside the markers survive.
  *  - ignore files  → managedBlock (IGNORE_BLOCK). Matches syncIgnores.
  *  - host entries  → SEE {@link buildHostArtifacts} (regenerate / managedBlock).
  */
@@ -217,6 +228,18 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
       mode: 'skipIfExists',
       template: 'rules-seed.md.tmpl',
       description: 'AI working-rules seed',
+    },
+    {
+      // Slice E (spec §9): the `.noir/` runtime map — what init just wrote,
+      // what appears later (and which command creates it), and where to go
+      // next. Host-agnostic: it describes the canonical store, which every
+      // host shares. Co-owned (README_BLOCK) so user notes survive while the
+      // map stays current through `noir sync` / `init --upgrade`.
+      path: P.readme,
+      mode: 'managedBlock',
+      block: README_BLOCK,
+      template: 'noir-readme.md.tmpl',
+      description: '.noir/ runtime map (what exists now / what appears later)',
     },
 
     // --- ignore files (host-agnostic; co-owned via IGNORE_BLOCK) ------------
