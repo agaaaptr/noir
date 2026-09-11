@@ -784,9 +784,10 @@ others:
 
 ```ts
 export interface AtomicWriteOptions {
-  /** Mode for a NEWLY created file, applied to the temp file before the rename
-   *  (so the destination never exists with a laxer mode). Ignored when the
-   *  target already exists — a rewrite preserves the existing mode. */
+  /** Mode applied to the temp file before the rename, on EVERY write that
+   *  requests it (so the destination never exists with a laxer mode). When set,
+   *  the post-rename prevMode restore is skipped — the caller's mode is
+   *  authoritative. */
   mode?: number;
 }
 
@@ -798,11 +799,11 @@ export function atomicWriteFile(path: string, data: string, opts: AtomicWriteOpt
   // `mode` on writeFileSync is masked by umask; 0o600 has no group/other bits,
   // so it survives any umask. On Windows the argument is ignored — the
   // permission model there is ACL-based, so tests must not assert 0600 on win32.
-  writeFileSync(tmp, data, prevMode === undefined && opts.mode !== undefined
+  writeFileSync(tmp, data, opts.mode !== undefined
     ? { encoding: 'utf8', mode: opts.mode }
     : 'utf8');
   renameSync(tmp, path);
-  if (prevMode !== undefined) {
+  if (opts.mode === undefined && prevMode !== undefined) {
     try { chmodSync(path, prevMode); } catch { /* best-effort */ }
   }
 }
