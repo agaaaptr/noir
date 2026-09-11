@@ -23,6 +23,13 @@ single reference — feature pages link here instead of restating defaults.
 > deliberate departure from the 12-factor convention — the project file
 > describes the project, so it outranks the ambient environment.
 >
+> **Changed in 1.14.0.** This order is the *inverse* of what 1.12.0/1.13.0
+> shipped, where the file filled only unset keys ("real env wins"). If the same
+> key is set in both places, you now get the **file's** value — and the loader
+> prints one line naming that key the first time it loads the file, so the change
+> announces itself rather than being discovered. Run `noir env` to see the winner
+> for every key. Nothing is rewritten automatically.
+>
 > **Where env vars come from.** Level 3 *is* the environment the CLI and daemon
 > inherit from the process that launched them. From an interactive terminal,
 > exports in `~/.zshrc` / `~/.bashrc` work. From a GUI-launched host (VS Code, a
@@ -120,7 +127,8 @@ need them.
 | `NOIR_CHANNEL` | `latest` | no | npm dist-tag for `install.sh` / `install.ps1` (`beta` selects the beta channel). |
 | `NOIR_VERSION` | — | no | Pin an exact version for `install.sh` / `install.ps1` (overrides `NOIR_CHANNEL`). |
 | `NOIR_RUNTIME_DIR` | `~/.noir/runtime` | no | Overrides the managed runtime directory. |
-| `NOIR_DAEMON_JSON` | `~/.noir/daemon.json` | no | Overrides the daemon record path. |
+| `NOIR_DAEMON_DIR` | `~/.noir/daemons` | no | Overrides the directory holding the per-project daemon records (`<projectId>.json`) and their `0600` bearer tokens (`<projectId>.token`). Primary use is test isolation — a normal run never sets it, and it is **refused from `.noir/.env`** (redirecting it would point Noir at someone else's records). |
+| `NOIR_DAEMON_JSON` | `~/.noir/daemon.json` | no | **Legacy only** — the pre-1.14 single global daemon record. Read exactly once by the self-deleting migration (`retireLegacyDaemonRecord`) when it retires a daemon from a previous version, then the file is deleted and no code path reads this path again. It does **not** relocate the current per-project records; that is `NOIR_DAEMON_DIR`. |
 | `NOIR_INSTALL_JSON` | `~/.noir/install.json` | no | Overrides the install-record path. |
 | `NOIR_WORKSPACES_DIR` | `~/.noir/workspaces` | no | Overrides the user-global workspace root (the shared-workspace registry, store, and daemon record). |
 | `NOIR_UPDATE_CACHE_JSON` | `~/.noir/update-cache.json` | no | Overrides the update-cache path. |

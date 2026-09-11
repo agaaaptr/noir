@@ -10,7 +10,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 | C2 CLI Runtime & UX | 🟩 Completed | Ship | 2026-08-14 |
 | C3 Built-in Skill System | 🟩 Completed — 26 skills + registry + quality gate + evals | Ship | 2026-08-10 |
 | C4 AI Development Workflow | 🟩 Completed — shipped core + all 6 deltas implemented (2026-08-11) | Ship | 2026-08-11 |
-| C5 Runtime Infrastructure & Daemon | 🟩 Shipped (daemon + store) | Ship | 2026-08-03 |
+| C5 Runtime Infrastructure & Daemon | 🟩 Shipped — per-project records + configured port + HTTP auth | Ship + Research (socket activation/workers) | 2026-09-11 |
 | C5.5 Host Abstraction Layer | 🟦 Partial — 5 adapters shipped | Ship + Research (negotiation/certification) | 2026-08-03 |
 | C6 Documentation & Knowledge System | 🟦 Partial — Diátaxis + auto-gen shipped | Ship + Research (drift detection) | 2026-08-03 |
 | C7 Engineering Governance | 🟦 Partial — ADRs + CI gates shipped | Ship + Research (tech-debt registry) | 2026-08-03 |
@@ -31,6 +31,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 
 ## Current sprint
 
+- **2026-09-11** — **daemon hardening + `noir init` completeness + `.noir/.env` precedence (1.14.0 slice — implemented on `develop`, release pending).** **Daemon:** the single global `~/.noir/daemon.json` is replaced by per-project records at `~/.noir/daemons/<projectId>.json` (the three `wrongProject` guards are deleted — foreign-record access is impossible by construction), the pre-1.14 global record is read exactly once by a self-deleting migration (boot-boundary-aware SIGTERM, then delete), `daemon.port` is honoured as a preference (on `EADDRINUSE` it degrades to ephemeral with a warning and the record names the port actually bound), the Streamable HTTP transport mints a fresh 32-byte token per start at `0600` in `~/.noir/daemons/<scopeKey>.token` enforced on `/mcp` with a constant-time compare (`/health` stays token-free; `noir daemon token` prints it for a `headersHelper`), and `withDaemon` became connect-first on the project path (spawning only on `ECONNREFUSED`, workspace path exempt per ADR-0009 §11). **`noir init`:** creates `.noir/.env` at `0600` (comments only) and `.noir/README.md` (the runtime map, a managed block), aligns `.env.example` with the full variable reference, drops the vestigial `/.noir/*.sock` / `/.noir/daemon.pid` / `/.noir/state/` ignore entries, and `--upgrade` now emits every manifest mode except `mergeJson` so it backfills missing seeds without touching a user's file (`CURRENT_SCAFFOLD_VERSION` `1.0.0 → 1.1.0`, first real migration). **`.noir/.env` doctrine (BREAKING):** the file now **wins** over the ambient environment for every key it defines (the real environment is the fallback), a git-tracked `.noir/.env` is refused outright, a tracked/deny-listed key can never contribute, and provenance is a first-class surface — `noir env` + doctor report the winning source per key and the loader warns on each shadowed key (names only, never values). ADR-0010 + ADR-0011; spec `2026-09-11-daemon-hardening-init-completeness-design.md`. Full gate green.
 - **2026-09-10** — **v1.13.0 shipped — shared cross-repo workspaces + `noir memory capture`.** Cross-repo shared decision memory through one workspace daemon: `noir daemon start --workspace <name>` (founder, foreground by default or `--detach`) / `noir daemon join <name>`, `?p=`-routed multiplexing (memory + feed tools → shared store, `context`/`workflow`/`task` → member store), provenance stamped from the request identity (never caller-supplied), append-only supersede/soft-forget, a change feed (`changes_since` + long-poll `await_changes`), and manual `noir memory capture`. ADR-0009; spec `2026-09-09-shared-workspace-context-design.md`. Folds in the 1.12.0-beta.1 content (run profiles, `.noir/.env`, config docs, cross-project daemon isolation). Full gate green (1796 tests).
 - **2026-08-03** — C1 native installer + migration + self-update shipped (Tasks 1–11): managed-Node installer (`install.sh` + `install.ps1`), `noir install`/`migrate`, `noir update` + async cached version check, doctor install row, Homebrew formula (real url/sha256), Scoop manifest, installer attestation (SHA256SUMS + Sigstore). ADR-0005 records the managed-Node-not-single-binary decision; winget/Chocolatey deferred.
 - **2026-08-03** — Roadmap restructure: capability docs rewritten grounded against the shipped codebase; `releases.md` + `backlog.md` created; roadmap made the project reference.
@@ -62,13 +63,15 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 ## Active slice
 
 - (none in-flight). The **`shared-workspace`** slice — cross-repo shared decision memory through one workspace daemon (`noir daemon start --workspace <name>` / `daemon join`, `?p=`-routed multiplexing, provenance + append-only supersede/soft-forget, a change feed `changes_since` + long-poll `await_changes`, manual `noir memory capture`) — **shipped in v1.13.0** (2026-09-10). ADR-0009.
+- **`daemon-hardening-init-completeness`** — implemented on `develop` 2026-09-11 (per-project daemon records + HTTP token + configured port + connect-first activation, `noir init` completeness and `--upgrade` backfill, the `.noir/.env` precedence inversion and doctrine consolidation). **Awaiting the 1.14.0 release flow.** ADR-0010 + ADR-0011.
 
 
 
 
 ## Next milestone
 
-- **v2.0 ecosystem (long-term).** v1.13.0 (shared cross-repo workspaces) shipped 2026-09-10, closing the last near-term v1 milestone. The remaining v2.0 work stays long-term ecosystem (memory cloud sync, team/multi-user, first-class skill registry, theming/plugin SDK) — see `releases.md` version targets.
+- **1.14.0 release (next).** The `daemon-hardening-init-completeness` slice is implemented on `develop` (2026-09-11) and awaits the release flow: bump → push → CI → beta tag → **user approves the GitHub deployment** → merge → stable tag → **user approves again** → Homebrew + Scoop → branch sync. It is a **two-breaking-change** release (the daemon record layout and the `.noir/.env` precedence inversion) and its upgrade notes are in `CHANGELOG.md`.
+- **v2.0 ecosystem (long-term).** v1.13.0 (shared cross-repo workspaces) shipped 2026-09-10, closing the last near-term v1 capability milestone. The remaining v2.0 work stays long-term ecosystem (memory cloud sync, team/multi-user, first-class skill registry, theming/plugin SDK) — see `releases.md` version targets.
 
 ## Current technical debt
 

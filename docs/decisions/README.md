@@ -19,3 +19,5 @@ ADRs record *why* a choice was made — not *what* the code does (the skills the
 - [ADR-0007 — C3 generated-artifact standard — type codes, frontmatter, per-type outlines](0007-generated-artifact-standard.md)
 - [ADR-0008 — v2 orchestrator TUI — single-surface consolidation + `noir run` headless host-driving](0008-v2-orchestrator-tui.md)
 - [ADR-0009 — Shared cross-repo workspaces](0009-shared-workspaces.md)
+- [ADR-0010 — Per-project daemon records, a real `daemon.port`, and HTTP-only auth](0010-per-project-daemon-records-and-http-auth.md)
+- [ADR-0011 — `.noir/.env` precedence, provenance, and the configuration doctrine](0011-noir-env-precedence-and-doctrine.md)

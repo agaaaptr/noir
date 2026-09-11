@@ -20,7 +20,7 @@ Noir is a **host-agnostic orchestration layer** — not an LLM runtime. The host
 │  `noir` CLI  (commander + @clack/prompts; thin daemon client)  │  ← user-facing
 └────────────▲───────────────────────────────────────────────────┘
              │  single source of truth
-   .noir/ (project, ProjectId-keyed)        ~/.noir/ (user-global: models, daemon record, workspaces/<name>/)
+   .noir/ (project, ProjectId-keyed)        ~/.noir/ (user-global: models, daemons/<projectId>.*, workspaces/<name>/)
 ```
 
 ## The 11 packages (`@noir-ai/*`)
@@ -51,7 +51,7 @@ The daemon is the **single writer** to the store; if it is down, reads (FTS/kNN/
 
 ## The `.noir/` portable store
 
-`.noir/` is the project's single source of truth, keyed by a **canonical `ProjectId` — never a filesystem path** (paths break across machines). It holds `config.yml`, `.env` (the gitignored `0600` project configuration/secrets file, read in-process and winning for every key it defines — see [configure-env.md](../how-to/configure-env.md)), `.env.example` (its committable, never-loaded documentation twin), `NOIR.md` (the canonical context file the host merely `@import`s), the ProjectId-keyed SQLite DB, and SDD artifacts (`intake/`, `specs/`, `plans/`, `tasks/`, `decisions/`, `audit/`, `CHANGELOG.md`). `~/.noir/` holds user-global concerns (the embedder model cache, the singleton daemon record, and — for shared cross-repo workspaces — `workspaces/<name>/` with a registry + shared store, see ADR-0009). Generated host artifacts are pointers/transforms of `.noir/`, never drifting copies.
+`.noir/` is the project's single source of truth, keyed by a **canonical `ProjectId` — never a filesystem path** (paths break across machines). It holds `config.yml`, `.env` (the gitignored `0600` project configuration/secrets file, read in-process and winning for every key it defines — see [configure-env.md](../how-to/configure-env.md)), `.env.example` (its committable, never-loaded documentation twin), `NOIR.md` (the canonical context file the host merely `@import`s), the ProjectId-keyed SQLite DB, and SDD artifacts (`intake/`, `specs/`, `plans/`, `tasks/`, `decisions/`, `audit/`, `CHANGELOG.md`). `~/.noir/` holds user-global concerns (the embedder model cache, the per-project daemon records at `daemons/<projectId>.json` + their `0600` bearer tokens (ADR-0010), and — for shared cross-repo workspaces — `workspaces/<name>/` with a registry + shared store, see ADR-0009). Generated host artifacts are pointers/transforms of `.noir/`, never drifting copies.
 
 ## Workspaces (cross-repo sharing)
 

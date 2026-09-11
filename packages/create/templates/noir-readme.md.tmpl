@@ -47,9 +47,11 @@ committed.
   what a re-emit would change.
 - **Environment variables** — put project-scoped values (and secrets) in
   `.noir/.env`; `.noir/.env.example` documents the full set and is the file to
-  commit. A real environment variable is only a fallback for keys `.noir/.env`
-  leaves unset. One-shot overrides: `VAR=value noir ...`; `noir run --profile
-  <name>` selects a run profile; `noir env` shows which source wins per key.
+  commit. The file **wins for every key it defines** — a real environment
+  variable is only the fallback for keys it leaves unset. There is no
+  `VAR=value noir ...` prefix level; for a genuine per-invocation value add a
+  `run.profiles.<name>.env` entry and select it with `noir run --profile <name>`.
+  `noir env` shows which source wins per key.
 - **The workflow** — `noir task new` starts the spec → plan → implement →
   verify → document lifecycle, `noir status` shows where every task stands, and
   `noir skills list` lists the on-demand skills your host can load.

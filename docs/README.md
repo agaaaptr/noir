@@ -1,7 +1,7 @@
 # Documentation
 
 > Auto-generated documentation index.
-> Last updated: 2026-09-11T09:05:12.496Z
+> Last updated: 2026-09-11T09:38:52.672Z
 
 ## Getting Started
 
@@ -52,6 +52,8 @@
 - [**ADR-0007: C3 generated-artifact standard — type codes, frontmatter, per-type outlines**](decisions/0007-generated-artifact-standard.md) — 
 - [**ADR-0008: v2 orchestrator TUI — single-surface consolidation + `noir run` headless host-driving**](decisions/0008-v2-orchestrator-tui.md) — 
 - [**ADR-0009 — Shared cross-repo workspaces**](decisions/0009-shared-workspaces.md) — 
+- [**ADR-0010 — Per-project daemon records, a real `daemon.port`, and HTTP-only auth**](decisions/0010-per-project-daemon-records-and-http-auth.md) — 
+- [**ADR-0011 — `.noir/.env` precedence, provenance, and the configuration doctrine**](decisions/0011-noir-env-precedence-and-doctrine.md) — 
 - [**Architecture Decision Records**](decisions/README.md) — 
 
 ## Roadmap

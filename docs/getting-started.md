@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.13.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.13.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-11T09:05:10.957Z*
+*Last auto-generated: 2026-09-11T09:38:51.090Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -119,13 +119,14 @@ The daemon is a **long-lived** Noir server that multiple clients can share — t
    # foreground mode; Ctrl+C to stop. Use --detach for background
    ```
 
-3. Open the project in Claude Code. Noir's CLI commands auto-discover the daemon port from `~/.noir/daemon.json`; the `.mcp.json` URL must be filled in from the port the daemon reports (the daemon binds an ephemeral port — `daemon.port` in config is not yet wired).
+3. Open the project in Claude Code. Noir's CLI commands auto-discover the daemon from this project's own record at `~/.noir/daemons/<projectId>.json`, and connect to the recorded port first — the daemon is spawned only if the connection is refused. Set `daemon.port` in `.noir/config.yml` if you want a stable port (it is a **preference**: if the port is taken the daemon falls back to an ephemeral one and warns, and the record always names the port actually bound). The `.mcp.json` URL must be filled in from the port the daemon reports.
 
 **Caveats:**
 
 - Killing the daemon while the host is connected **breaks the connection** — there is **no auto-fallback to stdio**. Your data stays durable on disk, and reads have a degraded read-only fallback, but the live host link is severed until you restart the daemon.
 - The daemon is **foreground by default**; pass `--detach` to fork a detached child that persists after the parent exits (`noir daemon start --detach` reports the child's PID and port). Auto-restart daemons are not yet available.
-- A single global `~/.noir/daemon.json` records the running daemon; running Noir concurrently in two projects on the same machine will clobber that record (per-project records are not yet available).
+- Each project has its own daemon record (`~/.noir/daemons/<projectId>.json`), so running Noir concurrently in two projects no longer clobbers anything — both daemons coexist and neither is stopped by the other's activity.
+- The HTTP transport requires a bearer token, minted fresh on every daemon start and written at mode `0600` to `~/.noir/daemons/<projectId>.token`. `noir daemon token` prints it; a host that supports `headersHelper` should store the command rather than the secret. `/health` stays token-free, and the stdio transport is unaffected (no network surface).
 
 Pick the daemon **only** if you need a persistent shared server across host sessions. Active terminal commands start a daemon when needed; otherwise, stdio is the simplest host transport. See [transports](explanation/sdd-workflow.md#transports) for the full comparison.
 

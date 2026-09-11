@@ -11,7 +11,7 @@
 **Current beta:** `1.13.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.13.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-11T09:05:12.046Z*
+*Last auto-generated: 2026-09-11T09:38:52.155Z*
 <!-- /noir:doc:status -->
 
 ---
@@ -112,6 +112,12 @@ git push origin v1.4.0
 ```
 
 > **The `pnpm release:tag` script does NOT modify package.json.** It reads the base version from source, verifies clean tree + upstream sync, checks the version isn't already on npm, and creates the annotated tag. For stable releases on main, the tag is `vX.Y.Z` (matching the source).
+
+### Breaking changes need an upgrade note
+
+The GitHub Release body is **auto-generated**, so the upgrade steps cannot live there — `CHANGELOG.md` is the vehicle. Every release with a breaking change carries, in its `CHANGELOG.md` section, an explicit **### Upgrade steps** block naming the manual actions a user must take. `docs/roadmap/releases.md` and `docs/roadmap/STATUS.md` record the same release as breaking.
+
+**1.14.0 is the worked example** and has two independent breaking changes: the daemon record layout (per-project records replace the global `~/.noir/daemon.json`, and a workspace host `.mcp.json` carries a stale port + token) and the `.noir/.env` precedence inversion (a key set in both the file and the environment now resolves to the **file**). Its upgrade steps are `noir init --upgrade`, a `noir env` check for shadowed keys, `noir workspace leave` + `noir daemon join <name>` for workspace members, and nothing at all for a running daemon (it is retired automatically). ADR-0010 + ADR-0011 are the decisions of record.
 
 ### What CI does next (`.github/workflows/release.yml`)
 

@@ -64,7 +64,7 @@ Noir's MCP server runs in one of two modes. Independent of the SDD mode above.
 | | **stdio** (default) | **daemon** (persistent HTTP) |
 |---|---|---|
 | **Lifecycle** | Host spawns per session | Long-lived, survives sessions |
-| **Setup** | Zero — `noir init` writes `.mcp.json` | `noir daemon start` on an ephemeral port (reported by the daemon; `daemon.port` is not yet wired) |
+| **Setup** | Zero — `noir init` writes `.mcp.json` | `noir daemon start`; set `daemon.port` for a stable port (a preference — an ephemeral port is used if it is taken), reported in the project's record at `~/.noir/daemons/<projectId>.json` |
 | **CLI access** | Store-touching commands auto-start daemon | Host + CLI share one server |
 | **Use case** | Almost everyone | Persistent server, multi-session |
 
