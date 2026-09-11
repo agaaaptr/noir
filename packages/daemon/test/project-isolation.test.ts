@@ -27,7 +27,6 @@ const rootA = mkdtempSync(join(tmpdir(), 'noir-isolation-a-'));
 const rootB = mkdtempSync(join(tmpdir(), 'noir-isolation-b-'));
 const config = { host: 'claude', mode: 'full', daemon: { idleTimeoutSec: 900 } } as const;
 
-const projA: ProjectInfo = { id: 'proj-a', name: 'proj-a', root: rootA, config };
 const projB: ProjectInfo = { id: 'proj-b', name: 'proj-b', root: rootB, config };
 
 afterAll(() => {

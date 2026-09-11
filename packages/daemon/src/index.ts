@@ -23,12 +23,12 @@ export {
   writeIntegrationAudit,
 } from './integration-seam.js';
 export { pidAlive } from './lifecycle.js';
-export { retireLegacyDaemonRecord } from './migrate-legacy-record.js';
 export {
   buildMemoryEngine,
   resolveConsolidationCapability,
   resolveMemoryConsolidation,
 } from './memory-seam.js';
+export { retireLegacyDaemonRecord } from './migrate-legacy-record.js';
 export {
   clearProjectDaemonRecord,
   listProjectDaemonRecords,

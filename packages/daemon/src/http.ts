@@ -11,12 +11,12 @@ import { resolveModelConfig } from '@noir-ai/model';
 import { buildContextEngine } from './context-seam.js';
 import { buildIntegrationService } from './integration-seam.js';
 import { DAEMON_MODE_ENV } from './lifecycle.js';
+import { buildMemoryEngine, resolveConsolidationCapability } from './memory-seam.js';
 import {
   clearProjectDaemonRecord,
   readProjectDaemonRecord,
   writeProjectDaemonRecord,
 } from './project-record.js';
-import { buildMemoryEngine, resolveConsolidationCapability } from './memory-seam.js';
 import { createNoirServer } from './server.js';
 import { openStoreForDaemon } from './store-seam.js';
 import { buildWorkflowEngine, resolveGateConfig } from './workflow-seam.js';
