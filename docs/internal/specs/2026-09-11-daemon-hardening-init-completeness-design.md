@@ -477,9 +477,13 @@ the second one degrades to ephemeral and says so.
 
 ### 6.3 Workspace daemon
 
-`startWorkspaceHttpServer` (`workspace-http.ts`) gets the same treatment with its token at
-`~/.noir/workspaces/<name>/daemon.token`, mirroring the record layout. Its `/health` keeps
-returning `workspace` for `probeWorkspaceDaemon`.
+`startWorkspaceHttpServer` (`workspace-http.ts`) gets the same treatment, using the workspace
+NAME as the token scope key — the token lives at `~/.noir/daemons/<name>.token` alongside the
+project records. (A workspace named identically to a 36-char projectId would collide, but project
+ids are UUIDs and workspace names are deliberate user choices — accepted as a documented
+limitation rather than forking a second token path.) Its `/health` keeps returning `workspace`
+for `probeWorkspaceDaemon`. Retrieval of a *workspace* token is via the file path named in the
+401 body; `noir daemon token` is project-scoped (§6.1).
 
 ---
 
