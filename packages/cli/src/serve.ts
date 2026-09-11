@@ -17,9 +17,11 @@ export async function serve(opts: { stdio: boolean }): Promise<void> {
     const { url } = await ensureDaemonRunning({
       project,
       idleTimeoutSec: project.config.daemon.idleTimeoutSec,
+      ...(project.config.daemon.port !== undefined ? { port: project.config.daemon.port } : {}),
     });
     process.stderr.write(
-      `Noir daemon available at ${url}. (For HTTP clients, use this URL in .mcp.json.)\n`,
+      `Noir daemon available at ${url}. (For HTTP clients, use this URL in .mcp.json.) ` +
+        `Add the daemon's bearer token via the host MCP headersHelper (run \`noir daemon token\`).\n`,
     );
   } catch (err) {
     process.stderr.write(
