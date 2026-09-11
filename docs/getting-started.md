@@ -213,6 +213,14 @@ A raw stream-json transcript is always persisted to `.noir/transcripts/`.
 - If the host fails (e.g. not logged in), `noir run` exits non-zero with an
   actionable message — `claude /login` in a terminal (interactive-only), or
   `--command` / a profile for another binary.
+- On an **authentication** failure the message also names every credential or
+  gateway variable in effect (`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`,
+  `ANTHROPIC_BASE_URL`) and where each came from — `.noir/.env` or the
+  environment — so "unset it" points at the file that actually supplies it.
+  No variable *value* is ever printed.
+- `noir run` works **outside an initialized project**, but with no `.noir/.env`
+  there are no project credentials; it says so once on stderr and points at
+  `noir init`. Informational only — never a failure, and absent under `--json`.
 - **Multiple host setups?** Define **run profiles** in `.noir/config.yml`
   (`run.profiles.<name>.binary` + optional `env`/`args`, and `run.defaultProfile`)
   — see [Run profiles](how-to/host-profiles.md). Shell **aliases do not work**

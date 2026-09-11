@@ -14,10 +14,10 @@
 // summary + transcript path go to stderr. A transcript of the raw stream-json is
 // always persisted to `.noir/transcripts/`.
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type HostId, SUPPORTED_HOSTS } from '@noir-ai/adapters';
-import { parseConfig } from '@noir-ai/core';
+import { loadNoirEnv, NOIR_DIR, parseConfig } from '@noir-ai/core';
 import {
   type NoirEvent,
   type RunHostResult,
@@ -26,6 +26,50 @@ import {
 } from '../orchestrator.js';
 import { type CliOptions, EXIT, fail, json, log, success } from '../output.js';
 import { loadRunConfig, resolveRunProfile } from '../run-profiles.js';
+
+/**
+ * Anthropic credential / gateway variables that change how a headless (`-p`)
+ * host run authenticates. A custom gateway sets `ANTHROPIC_AUTH_TOKEN` +
+ * `ANTHROPIC_BASE_URL` and fails exactly like a stale API key, so the auth
+ * advice must cover every recognised shape — not just `ANTHROPIC_API_KEY`.
+ */
+const CREDENTIAL_ENV_VARS = [
+  'ANTHROPIC_API_KEY',
+  'ANTHROPIC_AUTH_TOKEN',
+  'ANTHROPIC_BASE_URL',
+] as const;
+
+/**
+ * The auth addendum that names each credential variable in effect AND the
+ * source that won for it (`.noir/.env` vs the environment), so the "unset it"
+ * advice stays actionable: after consolidation `applyNoirEnv` re-injects a
+ * file-scoped key on every invocation, so shell-level unsetting does nothing —
+ * the message must point at the file (spec 13.2).
+ *
+ * NAMES AND SOURCES ONLY (spec G4): the message is loggable and shareable, so
+ * no branch here may ever print a variable's value. Returns `''` when no
+ * recognised credential variable is set.
+ */
+function credentialNote(
+  env: Record<string, string | undefined>,
+  sources: Record<string, 'file' | 'env'>,
+): string {
+  const named = CREDENTIAL_ENV_VARS.filter((name) => {
+    const value = env[name];
+    return value !== undefined && value.length > 0;
+  }).map(
+    (name) => `${name} (from ${sources[name] === 'file' ? `${NOIR_DIR}/.env` : 'the environment'})`,
+  );
+  if (named.length === 0) return '';
+  const one = named.length === 1;
+  const subject = one ? `${named[0]} is set` : `${named.join(', ')} are set`;
+  const pronoun = one ? 'it' : 'them';
+  const verb = one ? 'overrides' : 'override';
+  return (
+    ` Note: ${subject} — ${pronoun} ${verb} the logged-in account in \`-p\` mode; ` +
+    `unset ${pronoun} in the named source (or fix the value) if you meant to use your subscription.`
+  );
+}
 
 /** Options accepted by `noir run` (globals + host/command/profile knobs). */
 export interface RunOptions extends CliOptions {
@@ -75,10 +119,17 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
     fail(EXIT.USAGE, `a prompt is required: \`${usage}\``, opts);
   }
 
+  const root = process.cwd();
+  // Credential provenance for the failure advice: `sources` records, per key,
+  // whether `.noir/.env` or the ambient environment won (spec 12.4). Names
+  // only — never a value. Read from `process.env`, which the bin's preAction
+  // has already overlaid with `.noir/.env` (spec 12.1: the file wins).
+  const envSources = loadNoirEnv(root).sources;
+
   // Run-profile resolution: --profile > NOIR_PROFILE > run.defaultProfile >
   // built-in default. Config load is best-effort — `noir run` keeps working
   // outside an initialized project (no profiles, built-in host behavior).
-  const config = loadRunConfig(process.cwd()) ?? parseConfig({});
+  const config = loadRunConfig(root) ?? parseConfig({});
   const resolved = resolveRunProfile(opts.profile, config, process.env);
   if (!resolved.ok) fail(EXIT.USAGE, resolved.message, opts);
   const profile = resolved.profile;
@@ -87,6 +138,20 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
   const customBinary = opts.command ?? profile.binary;
   const extraArgs = profile.args;
   const env = profile.env ? mergeEnv(process.env, profile.env) : undefined;
+
+  // Spec 13.3: running outside an initialized project stays supported, but the
+  // gap deserves a word — with no `.noir/.env` there are no project
+  // credentials, so an auth failure would read as "noir is broken" instead of
+  // "this project has none". One informational stderr line, BEFORE the spawn:
+  // never a failure, never a prompt, and silenced by `log()` under
+  // --json/--quiet so a machine consumer's output stays pristine.
+  if (!existsSync(join(root, NOIR_DIR, '.env'))) {
+    log(
+      `This project has no ${NOIR_DIR}/.env — that is where Noir reads project credentials and ` +
+        `run config from. Run \`noir init\` to scaffold one (\`noir run\` works without it).`,
+      opts,
+    );
+  }
 
   const transcriptLines: string[] = [];
 
@@ -137,9 +202,7 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
     let message = `host '${binary}' failed (exit ${result.exitCode}): ${reason}`;
     if (isAuth) {
       message += ` Open a terminal and run \`${binary} /login\` (interactive-only — it cannot run inside \`noir run\`), then retry.`;
-      if (process.env.ANTHROPIC_API_KEY) {
-        message += ` Note: ANTHROPIC_API_KEY is set in your environment — it overrides the logged-in account in \`-p\` mode; unset it (or fix the key) if you meant to use your subscription.`;
-      }
+      message += credentialNote(process.env, envSources);
     }
     message += ` If you use another profile, pass \`--command <binary>\` or define a run profile under run.profiles. transcript: ${transcript}`;
     fail(EXIT.ERROR, message, opts);
