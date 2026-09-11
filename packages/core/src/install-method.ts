@@ -188,7 +188,7 @@ export function readInstallRecord(): InstallRecord | null {
  * Remove the install record file. Uses a direct `rmSync` (NOT a temp-then-
  * rename) intentionally: this is a DELETE, not a write — there is no
  * half-written intermediate state to guard against, and the same pattern is
- * used by `clearDaemonRecord` in the daemon. An atomic rename can't express
+ * used by `clearProjectDaemonRecord` in the daemon. An atomic rename can't express
  * "this file no longer exists". */
 export function clearInstallRecord(): void {
   const p = installJsonPath();
