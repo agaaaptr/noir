@@ -202,7 +202,7 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
     let message = `host '${binary}' failed (exit ${result.exitCode}): ${reason}`;
     if (isAuth) {
       message += ` Open a terminal and run \`${binary} /login\` (interactive-only — it cannot run inside \`noir run\`), then retry.`;
-      message += credentialNote(process.env, envSources);
+      message += credentialNote(env ?? process.env, envSources);
     }
     message += ` If you use another profile, pass \`--command <binary>\` or define a run profile under run.profiles. transcript: ${transcript}`;
     fail(EXIT.ERROR, message, opts);

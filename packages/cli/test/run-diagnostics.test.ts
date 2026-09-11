@@ -147,6 +147,26 @@ describe('noir run — credential diagnostics', () => {
     expect(stderrText()).toContain('ANTHROPIC_API_KEY (from the environment)');
   });
 
+  it('a profile that deletes the credential → the note does not claim it is set', async () => {
+    // The credential is in the ambient environment, but a run profile nulls it
+    // out of the CHILD env. credentialNote must read the effective child env,
+    // not process.env — otherwise it would claim ANTHROPIC_API_KEY "is set …
+    // unset it" for a value the child never sees.
+    process.env.ANTHROPIC_API_KEY = 'sk-env-secret';
+    mkdirSync(join(tmp, '.noir'), { recursive: true });
+    writeFileSync(join(tmp, '.noir', 'project.id'), 'diag-project\n', 'utf8');
+    writeFileSync(
+      join(tmp, '.noir', 'config.yml'),
+      'run:\n  profiles:\n    clean:\n      binary: claude\n      env:\n        ANTHROPIC_API_KEY: null\n',
+      'utf8',
+    );
+    expect(await runExpectingFailure(['run', '--profile', 'clean', 'hi'])).toBe(1);
+    const err = stderrText();
+    expect(err).toContain('claude /login');
+    expect(err).not.toMatch(/ANTHROPIC_(API_KEY|AUTH_TOKEN|BASE_URL)/);
+    expect(err).not.toContain('sk-env-secret');
+  });
+
   it('never prints a credential value — from the environment or from .noir/.env', async () => {
     process.env.ANTHROPIC_API_KEY = 'sk-env-secret';
     expect(await runExpectingFailure()).toBe(1);
