@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.13.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.13.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-11T09:38:51.090Z*
+*Last auto-generated: 2026-09-11T10:49:55.956Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
