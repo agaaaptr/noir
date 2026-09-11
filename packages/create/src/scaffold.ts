@@ -630,8 +630,19 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   }
 
   // 6. Stamp scaffold-version on init/create (NOT sync). Written last so a
-  //    crash leaves the previous stamp. Upgrade rewrites it to current.
-  if ((opts.mode === 'init' || opts.mode === 'create') && !opts.dryRun) {
+  //    crash leaves the previous stamp. Upgrade rewrites it to current — but
+  //    ONLY when every migration actually applied. A non-empty
+  //    `migrationConflicts` means a transformation did NOT land, so stamping
+  //    "current" would make that failure permanent and invisible: the migration
+  //    would never retry (the window closes) and `noir doctor` would stop
+  //    reporting drift. Leaving the OLD stamp keeps both honest — the retry and
+  //    the drift report. The conflicts themselves are already reported to the
+  //    caller via `ScaffoldResult.migrationConflicts` (`--json` included).
+  if (
+    (opts.mode === 'init' || opts.mode === 'create') &&
+    !opts.dryRun &&
+    migrationConflicts.length === 0
+  ) {
     writeScaffoldVersion(opts.root, CURRENT_SCAFFOLD_VERSION);
   }
 

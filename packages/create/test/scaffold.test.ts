@@ -585,6 +585,29 @@ describe('scaffold — migrations skip on fresh project (M4)', () => {
   });
 });
 
+describe('scaffold — a failed migration must not stamp current', () => {
+  it('leaves the OLD stamp (and reports the conflicts) when a migration conflicts', async () => {
+    // The synthetic `NOIR_TEST_FORCE_CONFLICT=1` seam makes the 1.0.0→1.0.0
+    // smoke-test migration write conflict markers into `.noir/scaffold-version`
+    // and report a conflict. The orchestrator must then NOT restamp to current:
+    // the transformation did not apply, so the old stamp keeps `noir doctor`
+    // reporting drift and the next `--upgrade` retrying it.
+    await init(root);
+    writeScaffoldVersion(root, BEHIND_VERSION); // a project inside the window
+    process.env.NOIR_TEST_FORCE_CONFLICT = '1';
+    try {
+      const res = await scaffold({ root, mode: 'init', upgrade: true });
+      expect(res.migrationConflicts.length).toBeGreaterThan(0);
+      expect(res.migrationConflicts).toContain('.noir/scaffold-version');
+      // The stamp is NOT advanced to current…
+      expect(readScaffoldVersion(root)).toBe(BEHIND_VERSION);
+      expect(readScaffoldVersion(root)).not.toBe(CURRENT_SCAFFOLD_VERSION);
+    } finally {
+      delete process.env.NOIR_TEST_FORCE_CONFLICT;
+    }
+  });
+});
+
 // ---------------------------------------------------------------------------
 // S10 — host-parametric scaffold. The default (claude) is BYTE-IDENTICAL to
 // v1.1 (REMOVED the additive root AGENTS.md — claude's CLAUDE.md
