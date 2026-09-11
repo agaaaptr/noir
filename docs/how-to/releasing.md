@@ -11,7 +11,7 @@
 **Current beta:** `1.14.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.14.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-11T11:58:20.083Z*
+*Last auto-generated: 2026-09-11T12:06:45.538Z*
 <!-- /noir:doc:status -->
 
 ---
@@ -213,7 +213,7 @@ git push origin v1.5.0-beta.1
 After the `release.yml` job goes green:
 
 ```bash
-npm view @noir-ai/cli dist-tags.beta   # → 1.5.0-beta.1 (current beta pointer)
+npm view @noir-ai/cli dist-tags.beta   # → 1.14.0-beta.1 (the current beta pointer)
 npx @noir-ai/cli@beta init             # smoke test the published beta
 pnpm release:history                   # view the updated release registry
 ```

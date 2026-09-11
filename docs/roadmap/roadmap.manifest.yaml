@@ -35,7 +35,7 @@ roadmap:
     title: Runtime Infrastructure & Local Daemon
     status: shipped
     priority: medium
-    note: "Core shipped: single-writer embedded store (SQLite + FTS5 + sqlite-vec), stdio + Streamable HTTP transports, read-only FS fallback, 17+ MCP tools. 2026-09-11 (1.14.0 — the current release, in the beta→stable flow): per-project daemon records at ~/.noir/daemons/<projectId>.json (the global ~/.noir/daemon.json is retired once by a self-deleting migration), daemon.port honoured as a preference with an ephemeral fallback, a 0600 HTTP bearer token minted fresh per start and enforced on /mcp, and connect-first daemon activation on the project path (workspace path stays probe-only). ADR-0010. Remaining gap: socket activation, background workers, event bus (see capability-05 + backlog)."
+    note: "Core shipped: single-writer embedded store (SQLite + FTS5 + sqlite-vec), stdio + Streamable HTTP transports, read-only FS fallback, 17+ MCP tools. 2026-09-11 (1.14.0 — published on latest + beta): per-project daemon records at ~/.noir/daemons/<projectId>.json (the global ~/.noir/daemon.json is retired once by a self-deleting migration), daemon.port honoured as a preference with an ephemeral fallback, a 0600 HTTP bearer token minted fresh per start and enforced on /mcp, and connect-first daemon activation on the project path (workspace path stays probe-only). ADR-0010. Remaining gap: socket activation, background workers, event bus (see capability-05 + backlog)."
 
   - id: C5.5
     title: Host Abstraction Layer
