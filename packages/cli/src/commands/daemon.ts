@@ -520,10 +520,11 @@ export async function daemonToken(opts: DaemonOptions): Promise<void> {
       opts,
     );
   }
-  // A record whose process is gone is stale: the pid-reuse guard proves liveness
-  // only, but the record is already scoped to THIS project, so an alive pid is
-  // the strongest ownership this read-only command can assert without a probe.
-  if (!pidAlive(rec.pid)) {
+  // A record whose process is gone is stale, and liveness alone is not enough:
+  // an unrelated process can recycle the recorded pid. /health must answer with
+  // THIS pid (and project) — the same ownership proof `daemon status` demands —
+  // so a recycled pid cannot mint a token for a daemon that is not there.
+  if (!pidAlive(rec.pid) || !(await isHealthy(rec.port, rec.pid, callerProject))) {
     fail(
       EXIT.DAEMON_DOWN,
       'Noir daemon is not running (stale record — start it with `noir daemon start`).',

@@ -13,6 +13,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { paths } from '@noir-ai/core';
@@ -31,17 +32,47 @@ const TOKEN = 'seeded-test-token-not-a-credential';
 
 let root: string;
 let origCwd: string;
+let healthServer: Server | null = null;
 
-beforeEach(() => {
+/**
+ * A live `/health` on the fixed record port answering for THIS project with THIS
+ * pid — the shape a real daemon leaves. `noir daemon token` must now PROVE the
+ * daemon is healthy, so the success paths need a genuine /health endpoint.
+ */
+function startHealthServer(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    healthServer = createServer((req, res) => {
+      if (req.url === '/health') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, pid: process.pid, projectId: PROJECT_ID }));
+      } else {
+        res.writeHead(404).end();
+      }
+    });
+    healthServer.once('error', reject);
+    healthServer.listen(51234, '127.0.0.1', () => resolve());
+  });
+}
+
+function stopHealthServer(): Promise<void> {
+  if (!healthServer) return Promise.resolve();
+  const s = healthServer;
+  healthServer = null;
+  return new Promise((resolve) => s.close(() => resolve()));
+}
+
+beforeEach(async () => {
   root = mkdtempSync(join(tmpdir(), 'noir-daemon-token-root-'));
   origCwd = process.cwd();
   mkdirSync(paths.noirDir(root), { recursive: true });
   writeFileSync(paths.projectId(root), `${PROJECT_ID}\n`, 'utf8');
   writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
   process.chdir(root);
+  await startHealthServer();
 });
 
-afterEach(() => {
+afterEach(async () => {
+  await stopHealthServer();
   process.chdir(origCwd);
   rmSync(root, { recursive: true, force: true });
   for (const f of readdirSync(tmpRoot)) rmSync(join(tmpRoot, f), { force: true });
@@ -143,7 +174,7 @@ describe('noir daemon token', () => {
     expect(envelope.error.message).toMatch(/not running/);
   });
 
-  it('a stale record (pid dead) → exit 4 without printing a token', async () => {
+  it('a record with a dead pid → exit 4 without printing a token', async () => {
     writeProjectDaemonRecord(PROJECT_ID, {
       pid: deadPid(),
       port: 51234,
@@ -155,6 +186,57 @@ describe('noir daemon token', () => {
     expect(inferExitCode(r.err)).toBe(EXIT.DAEMON_DOWN);
     expect(r.stdout).toBe('');
     expect(r.stderr).toMatch(/stale/);
+  });
+
+  it('a RECYCLED pid (alive, but /health answers for a foreign process) → exit 4, no token', async () => {
+    // The hazard the liveness-only check missed: the recorded pid is alive
+    // because an unrelated process recycled it. `/health` here answers with a
+    // DIFFERENT pid, so the record must be refused — printing its token would
+    // authenticate nothing while looking like success.
+    const foreign: Server = createServer((req, res) => {
+      if (req.url === '/health') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, pid: process.pid + 1, projectId: PROJECT_ID }));
+      } else {
+        res.writeHead(404).end();
+      }
+    });
+    const port: number = await new Promise((resolve) => {
+      foreign.listen(0, '127.0.0.1', () => {
+        const addr = foreign.address();
+        resolve(typeof addr === 'object' && addr ? addr.port : 0);
+      });
+    });
+    try {
+      writeProjectDaemonRecord(PROJECT_ID, {
+        pid: process.pid, // alive — the liveness-only check would have passed
+        port,
+        startedAt: Date.now(),
+        projectId: PROJECT_ID,
+      });
+      writeDaemonToken(PROJECT_ID, TOKEN);
+      const r = await run(() => daemonToken({}));
+      expect(inferExitCode(r.err)).toBe(EXIT.DAEMON_DOWN);
+      expect(r.stdout).toBe('');
+      expect(r.stdout).not.toContain(TOKEN);
+    } finally {
+      await new Promise<void>((resolve) => foreign.close(() => resolve()));
+    }
+  });
+
+  it('a live pid whose /health is unreachable (nothing listening) → exit 4, no token', async () => {
+    // pidAlive() is true but no daemon answers: the token is for a daemon that
+    // is not there. Port 1 is closed/privileged — nothing to connect to.
+    writeProjectDaemonRecord(PROJECT_ID, {
+      pid: process.pid,
+      port: 1,
+      startedAt: Date.now(),
+      projectId: PROJECT_ID,
+    });
+    writeDaemonToken(PROJECT_ID, TOKEN);
+    const r = await run(() => daemonToken({}));
+    expect(inferExitCode(r.err)).toBe(EXIT.DAEMON_DOWN);
+    expect(r.stdout).toBe('');
   });
 
   it('a record with no token beside it → exit 4 (nothing to authenticate with)', async () => {
