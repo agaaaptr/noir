@@ -31,6 +31,7 @@ Hybrid retrieval for large codebases — index once, query many times. The host 
 - The index is a cache, not a replacement for reading files. Snippets show WHERE; reading shows CONTEXT.
 - `noir context index --force` rebuilds from scratch (good after large changes).
 - Zero API key required for local embeddings; remote/Ollama embedders are opt-in.
+- **Embedder configuration.** `context.embedder.kind` / `provider` / `baseURL` are `.noir/config.yml` keys; the remote embedder KEYS (`OPENAI_API_KEY`, `VOYAGE_API_KEY`, `COHERE_API_KEY` — required only for `kind: remote`) and the `OLLAMA_BASE_URL` fallback for `kind: ollama` belong in `.noir/.env`: project-scoped, gitignored, created by `noir init` at mode 0600, and it WINS over the environment for the keys it defines (a machine-global export cannot shadow it). See `docs/how-to/configure-env.md`; `noir env` shows which source won.
 
 ## When done → next skill
 

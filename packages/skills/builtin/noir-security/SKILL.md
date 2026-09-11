@@ -25,7 +25,7 @@ Review changes for vulnerabilities — not a pen-test, but the baseline every fe
 1. **Check surface area.** What data enters? What exits? Who can call it? What's authenticated?
 2. **Check injection.** SQL, shell, template injection paths — review every dynamic string used in a command or query.
 3. **Check auth.** Is every endpoint gated? Is the auth check before any data access? No "if admin → show data" then "else → also show data because we forgot a return."
-4. **Check secrets.** Any hard-coded keys, tokens, or passwords? (Check committed files, not env vars).
+4. **Check secrets.** Any hard-coded keys, tokens, or passwords in committed files? Then check the project env file: `.noir/.env` is the intended home for a token — a project-scoped file, gitignored by the managed block and mode 0600 — so verify it is NOT tracked by git (Noir refuses to load a tracked one, because a cloned repo could redirect credentials through it) and that its mode is `0600`. A committed `.env`, a token in `.noir/config.yml`, or a plain-text secret anywhere in the diff is the finding; the gitignored 0600 project file is not.
 5. **Check dependencies.** Any new packages? Known vulnerabilities? Pinned versions that are stale?
 6. **Report findings.** Severity (critical/high/medium/low) + location + fix. One finding per entry.
 

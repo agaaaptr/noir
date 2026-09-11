@@ -40,7 +40,7 @@ API → ValidationError (400, field)
 - **Auth on every data-touching endpoint** — the gate is before the data access, with no "forgot the return."
 - **Validate at the boundary** — reject malformed input before it reaches service logic.
 - **Rate-limit write endpoints** — public creates/updates get a limit + 429 backoff.
-- **Secrets** — tokens via env/config, never committed. Credentials never logged.
+- **Secrets** — tokens via `.noir/.env` (project-scoped, gitignored, mode 0600, and it wins over the real environment for the keys it defines) or env/config, never committed. Credentials never logged.
 
 ## Resilience
 
