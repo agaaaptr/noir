@@ -36,9 +36,21 @@ export function writeDaemonToken(scopeKey: string, token: string): void {
 }
 
 export function readDaemonToken(scopeKey: string): string | null {
+  const path = tokenPath(scopeKey);
   try {
-    return readFileSync(tokenPath(scopeKey), 'utf8').trim() || null;
-  } catch {
+    return readFileSync(path, 'utf8').trim() || null;
+  } catch (err) {
+    // ENOENT means the file is genuinely absent — the common "no token yet"
+    // case (a stdio-only daemon, or one that never minted a token) and a
+    // completely normal null. Any OTHER error (EACCES, EIO, EISDIR…) means the
+    // file is there but unreadable: surface it once, naming the file and the
+    // error CODE only (never the token value), so a permissions problem does
+    // not masquerade as "no token" and send the user after the wrong remedy.
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    process.stderr.write(
+      `noir: warning: cannot read the daemon token file at ${path} ` +
+        `(${(err as NodeJS.ErrnoException).code ?? 'UNKNOWN'}) — proceeding without a token\n`,
+    );
     return null;
   }
 }

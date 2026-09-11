@@ -4,6 +4,7 @@
 import {
   chmodSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -97,6 +98,45 @@ describe('daemon token', () => {
     expect(readDaemonToken('proj-empty')).toBeNull();
     writeFileSync(tokenPath('proj-blank'), '  \n', 'utf8');
     expect(readDaemonToken('proj-blank')).toBeNull();
+  });
+
+  it('warns on stderr (names the file + error code, never the value) for a non-ENOENT read error', () => {
+    // A directory at the token path makes readFileSync throw EISDIR — a REAL
+    // read error (the file exists, it just cannot be read) vs an absent file.
+    // The fix (Fix B) must distinguish these: ENOENT → silent null, anything
+    // else → one warning naming the file and the error CODE, then null.
+    const dir = tokenPath('proj-eisdir');
+    mkdirSync(dir);
+    const chunks: string[] = [];
+    const orig = process.stderr.write.bind(process.stderr);
+    process.stderr.write = ((chunk: unknown) => {
+      chunks.push(typeof chunk === 'string' ? chunk : String(chunk));
+      return true;
+    }) as typeof process.stderr.write;
+    try {
+      expect(readDaemonToken('proj-eisdir')).toBeNull();
+    } finally {
+      process.stderr.write = orig;
+    }
+    const warning = chunks.join('');
+    expect(warning).toContain(dir); // the FILE is named…
+    expect(warning).toContain('EISDIR'); // …and the error code,…
+    expect(warning).not.toMatch(/abc123|secret|Bearer \S+/); // …never a token value.
+  });
+
+  it('stays silent for the genuine ENOENT case (no token yet)', () => {
+    const chunks: string[] = [];
+    const orig = process.stderr.write.bind(process.stderr);
+    process.stderr.write = ((chunk: unknown) => {
+      chunks.push(typeof chunk === 'string' ? chunk : String(chunk));
+      return true;
+    }) as typeof process.stderr.write;
+    try {
+      expect(readDaemonToken('never-written-again')).toBeNull();
+    } finally {
+      process.stderr.write = orig;
+    }
+    expect(chunks.join('')).toBe('');
   });
 
   it('clearDaemonToken removes the file and is idempotent', () => {
