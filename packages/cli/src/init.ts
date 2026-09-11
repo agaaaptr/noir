@@ -37,9 +37,10 @@ export interface InitOptions {
   transport: 'stdio' | 'streamable-http';
   url?: string;
   /** `noir init --upgrade`: run scaffold migrations from the on-disk
-   *  scaffold-version to current, then re-emit ONLY the runtime subset
-   *  (regenerate + managedBlock). skipIfExists seeds are left alone so user
-   *  edits survive. */
+   *  scaffold-version to current, then emit the FULL manifest — including
+   *  `skipIfExists`, which creates only when the file is absent. That backfills
+   *  seeds added to the manifest after this project was initialized without
+   *  ever touching a user-owned file. */
   upgrade?: boolean;
   /** S10 target host. Defaults to `'claude'` (the regression anchor). Drives
    *  both scaffold emission (the manifest's host-specific half) and skills
