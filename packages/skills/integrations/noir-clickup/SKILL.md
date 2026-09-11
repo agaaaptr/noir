@@ -50,7 +50,7 @@ You need a ClickUp personal token (`pk_...`). Placement follows Noir's standard 
 # .noir/.env   (gitignored — never commit)
 CLICKUP_API_TOKEN=pk_your_token_here
 ```
-This works no matter how the process was launched (terminal, GUI MCP client, launchd, CI) — and because the file wins, a machine-global export **cannot shadow it**. Two conditions block the file, and both are reported by `noir doctor`: if git TRACKS `.noir/.env` Noir refuses to load it (none of its keys apply) — `git rm --cached .noir/.env`; if its mode is group/world readable the tokens are exposed — `chmod 600 .noir/.env`.
+This works no matter how the process was launched (terminal, GUI MCP client, launchd, CI) — and because the file wins, a machine-global export **cannot shadow it**. Two conditions are reported by `noir doctor`: if git TRACKS `.noir/.env` Noir **refuses to load it** (none of its keys apply) — `git rm --cached .noir/.env`; if its mode is group/world readable the tokens are exposed (an advisory only — the file still loads) — `chmod 600 .noir/.env`.
 
 **2. CI / one-shot — the real environment, or a per-command prefix:**
 ```bash

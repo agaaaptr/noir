@@ -14,7 +14,7 @@ compatibility: claude · agents-md · gemini · cursor · opencode
 ## When to use
 - When the user triggers this skill.
 
-Check what's wrong. Run `noir doctor` and read every row — it prints one row per named check (install, runtime, config, store, daemon, embedder, provider, noir-env, scaffold version, rules budget, host artifacts, nested `.noir`, publish) with a pass/warn/fail status. Advisory, not mandatory — even a red check doesn't block.
+Check what's wrong. Run `noir doctor` and read every row — it prints one row per named check with a pass/warn/fail status. Checks are added over time, so `noir doctor`'s own output is the authoritative roster (never work from a list memorized elsewhere); the rows worth reading first for configuration are in the Notes below. Advisory, not mandatory — even a red check doesn't block.
 
 ## Procedure
 
