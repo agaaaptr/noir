@@ -56,6 +56,8 @@ const MANAGED_KEYS: readonly string[] = [...CURATED_AMBIENT_KEYS, CONFIG_KEY, UN
 /** The value strings used by the tests — asserted absent from every stream. */
 const FILE_SECRET = 'pk_secret_value_abcdefghij';
 const AMBIENT_SECRET = 'sk-ambient-value-abcdefghij';
+/** A SHORT value (3 chars) where a 3-char prefix would be the whole value. */
+const SHORT_VALUE = 'dev';
 
 /** Find a row by key, failing loudly (with a type-narrowing guard) when absent. */
 function rowOf(vars: readonly EnvVarRow[], key: string): EnvVarRow {
@@ -63,6 +65,17 @@ function rowOf(vars: readonly EnvVarRow[], key: string): EnvVarRow {
   expect(row, `row '${key}' should be present`).toBeDefined();
   if (!row) throw new Error(`row '${key}' not found in the env payload`);
   return row;
+}
+
+/**
+ * The rendered TABLE line for `key` — the row, isolated from the rest of stderr
+ * (banner/advisory noise, and a tmp path that could coincidentally contain the
+ * short value under test). Asserts the row exists so a missing key fails loudly.
+ */
+function tableRow(stderr: string, key: string): string {
+  const row = stderr.split('\n').find((line) => line.includes(key));
+  expect(row, `table row for '${key}' should be present`).toBeDefined();
+  return row ?? '';
 }
 
 /** The `doctor` check row with this name. */
@@ -252,6 +265,30 @@ describe('noir env', () => {
     expect(err).toContain('.noir/.env');
     expect(err).toContain(`pk_…(${FILE_SECRET.length})`); // shape, not the value
     expect(err).not.toContain(FILE_SECRET);
+  });
+
+  it('shows a SHORT value as its length only — the 3-char prefix would BE the value', async () => {
+    // 3 chars: `${value.slice(0, 3)}…` would print the whole thing.
+    process.env.NOIR_PROFILE = SHORT_VALUE;
+
+    const code = await runCli(['env']);
+
+    expect(code).toBe(0);
+    const row = tableRow(stderrText(), 'NOIR_PROFILE');
+    expect(row).toContain(`…(${SHORT_VALUE.length})`);
+    expect(row).not.toContain(SHORT_VALUE); // no prefix — not even 3 chars of it
+  });
+
+  it('shows a short FILE value as its length only too', async () => {
+    writeFileSync(envPath, `OLLAMA_BASE_URL=${SHORT_VALUE}\n`, 'utf8');
+
+    const code = await runCli(['env']);
+
+    expect(code).toBe(0);
+    const row = tableRow(stderrText(), 'OLLAMA_BASE_URL');
+    expect(row).toContain('.noir/.env');
+    expect(row).toContain(`…(${SHORT_VALUE.length})`);
+    expect(row).not.toContain(SHORT_VALUE);
   });
 
   it.skipIf(!gitAvailable)(

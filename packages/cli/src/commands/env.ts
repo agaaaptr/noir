@@ -65,7 +65,13 @@ export const CURATED_AMBIENT_KEYS: readonly string[] = [
  * file's own values are indistinguishable from an inherited export for exactly
  * the keys where the question matters — so "is my shell value being overridden?"
  * (the `shadowed` column) can only be answered from a pre-overlay snapshot.
- * Names + presence only; nothing is ever written back or persisted.
+ *
+ * A SHALLOW COPY of the environment, values included: the shadow comparison
+ * needs the ambient VALUE to tell an override apart from an agreeing export.
+ * The copy is in-memory and process-local for the lifetime of one invocation —
+ * it is never persisted, never written back to `process.env`, and a value from
+ * it reaches the user only as a redacted shape or a length (see
+ * {@link redactShape} / {@link EnvVarRow.valueLength}).
  */
 let ambientBaseline: Record<string, string | undefined> | undefined;
 
@@ -115,8 +121,18 @@ interface ResolvedEnv {
  * a provider dashboard shows for a masked key — and never enough to use one.
  * The length is deliberate: it is what makes "the file's value is in effect, not
  * the one I exported" visible without printing either.
+ *
+ * SHORT VALUES ARE SHOWN AS LENGTH ONLY. For a value of `SHORT_VALUE_MAX` chars
+ * or fewer the prefix would BE the whole value (`dev…(3)` for `NOIR_PROFILE=dev`
+ * prints a complete value — and a short one is exactly the kind a user might
+ * have picked, or a legacy token might be). The floor is 8 rather than the 3
+ * the prefix needs, so a short-but-real value like a hostname or a base URL
+ * cannot be reconstructed by guessing the last few characters.
  */
+const SHORT_VALUE_MAX = 8;
+
 function redactShape(value: string): string {
+  if (value.length <= SHORT_VALUE_MAX) return `…(${value.length})`;
   return `${value.slice(0, 3)}…(${value.length})`;
 }
 
@@ -236,8 +252,12 @@ export async function env(opts: CliOptions = {}): Promise<void> {
   }
 
   if (report.vars.length === 0) {
+    // "no keys IN EFFECT", not "no keys": a file can define keys that resolve to
+    // nothing — a git-tracked file is refused outright (spec 12.2), and a
+    // process-injection key (NODE_OPTIONS, npm_*) is skipped by the loader. Both
+    // are reported by the loader's own stderr warnings above this line.
     info(
-      'nothing to report — .noir/.env defines no keys and no Noir-relevant environment variable is set',
+      'nothing to report — .noir/.env defines no keys in effect and no Noir-relevant environment variable is set',
       opts,
     );
     return;
