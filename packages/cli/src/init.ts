@@ -138,6 +138,8 @@ export async function init(root: string, opts: InitOptions): Promise<ScaffoldRes
  * written, `skipped` = skipIfExists files already present (left alone),
  * `identical` = files whose bytes would match the template (no rewrite).
  * `conflicts` is always empty under dryRun (no writes → no conflicts).
+ * `fileModes` carries the planned permission for entries that would CREATE at a
+ * non-default mode — annotated onto the planned line (`… (mode 600)`).
  *
  * Emitted via the `log()` stderr helper — a HUMAN diagnostic, so under `--json`
  * the bin emits the planned list as the structured `{ok, data}` envelope on
@@ -149,7 +151,13 @@ export function reportPlannedWrites(res: ScaffoldResult): void {
   log('Dry run — no files were written.');
   if (res.written.length > 0) {
     log('Planned writes:');
-    for (const p of res.written) log(`  ${p}`);
+    for (const p of res.written) {
+      // Slice E (§8.1): a planned creation at a non-default mode is reported
+      // here so `noir init --dry-run` shows the 0600 `.noir/.env` seed without
+      // writing it. `fileModes` is absent/empty for every other entry.
+      const mode = res.fileModes?.[p];
+      log(mode === undefined ? `  ${p}` : `  ${p} (mode ${mode.toString(8).padStart(3, '0')})`);
+    }
   }
   if (res.skipped.length > 0) {
     log('Would leave as-is (already present):');

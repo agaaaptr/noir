@@ -10,7 +10,7 @@ import {
 } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import type { ManagedBlock } from '@noir-ai/core';
-import { stripManagedBlock, writeManagedRegion } from '@noir-ai/core';
+import { atomicWriteFile, stripManagedBlock, writeManagedRegion } from '@noir-ai/core';
 
 /**
  * The three-mode writer — generalizes keystone-K's `writeManagedRegion` into
@@ -225,12 +225,26 @@ export function predictManagedBlocks(
 }
 
 /** Write `content` to `absPath` only if no file exists there. Returns whether
- *  bytes were written. Parent dirs are NOT created (orchestrator's job). */
-export function skipIfExists(absPath: string, content: string): WriteOutcome {
+ *  bytes were written. Parent dirs are created by {@link atomicWriteFile}.
+ *
+ *  `fileMode` (slice E, §8.1) is the permission for the NEWLY created file —
+ *  `0o600` for the `.noir/.env` credential seed. It is applied to the temp file
+ *  BEFORE the rename (see `AtomicWriteOptions.mode`), so the file never exists
+ *  at its final path with a laxer mode. It is deliberately ignored when the
+ *  target already exists: this writer's whole contract is "never touch an
+ *  existing file", and that includes its permissions. POSIX-only — Windows
+ *  permissions are ACL-based and the mode is dropped there.
+ *
+ *  The write goes through `atomicWriteFile` (tmp + rename) rather than a bare
+ *  `writeFileSync`: a requested mode must land on the temp, and an interrupted
+ *  seed write should not leave a half-written `.noir/.env` behind. Byte output
+ *  is unchanged for every existing caller (same content, umask default 0o644
+ *  when no mode is requested). */
+export function skipIfExists(absPath: string, content: string, fileMode?: number): WriteOutcome {
   if (existsSync(absPath)) {
     return { path: absPath, mode: 'skipIfExists', written: false };
   }
-  writeFileSync(absPath, content, 'utf8');
+  atomicWriteFile(absPath, content, fileMode !== undefined ? { mode: fileMode } : {});
   return { path: absPath, mode: 'skipIfExists', written: true };
 }
 

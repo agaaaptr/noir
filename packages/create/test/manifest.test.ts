@@ -35,6 +35,9 @@ describe('buildManifest', () => {
       { path: '.noir/project.id', mode: 'skipIfExists', host: null, hasBlock: false },
       { path: '.noir/config.yml', mode: 'skipIfExists', host: null, hasBlock: false },
       { path: '.noir/.env.example', mode: 'skipIfExists', host: null, hasBlock: false },
+      // Slice E (§8.1): init creates the REAL env file too — additive entry,
+      // all-comment body, created at 0600 via `fileMode`.
+      { path: '.noir/.env', mode: 'skipIfExists', host: null, hasBlock: false },
       { path: '.noir/NOIR.md', mode: 'managedBlock', host: null, hasBlock: true },
       { path: '.noir/rules/RULES.md', mode: 'skipIfExists', host: null, hasBlock: false },
       // --- host-agnostic ignores (still host:null) ---
@@ -56,6 +59,19 @@ describe('buildManifest', () => {
       },
       { path: '.noir/router.md', mode: 'managedBlock', host: 'claude', hasBlock: true },
     ]);
+  });
+
+  it('the .noir/.env seed declares fileMode 0600; no other entry declares one', () => {
+    // Slice E plumbing contract: the permission rides on the manifest entry
+    // (ManifestEntry has no other permission field) and only the credential
+    // seed asks for one.
+    const envEntry = m.find((e) => e.path === '.noir/.env');
+    expect(envEntry?.mode).toBe('skipIfExists');
+    expect(envEntry?.fileMode).toBe(0o600);
+    expect(envEntry?.template).toBe('config.env.tmpl');
+    // Both files coexist: the example stays the committable documentation.
+    expect(m.find((e) => e.path === '.noir/.env.example')?.template).toBe('env.example.tmpl');
+    expect(m.filter((e) => e.fileMode !== undefined).map((e) => e.path)).toEqual(['.noir/.env']);
   });
 
   it('every path is repo-relative POSIX (no leading "/", no drive, no "..")', () => {

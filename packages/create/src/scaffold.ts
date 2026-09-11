@@ -141,6 +141,15 @@ export interface ScaffoldResult {
    *  grepping stderr. Empty when no conflicts occurred (also on first-run +
    *  no-op). */
   conflicts: ConflictRecord[];
+  /** Permission planned for each file this run CREATED at a non-default mode
+   *  (repo-relative path → mode), i.e. the {@link ManifestEntry.fileMode} of a
+   *  `skipIfExists` entry that had no file on disk. A real run reports the mode
+   *  it applied; a `dryRun` reports the mode it WOULD apply (the predictor's
+   *  job — the caller can preview `.noir/.env` at 0600 without writing it).
+   *  Paths the entry skipped (already present) are absent: an existing file's
+   *  mode is never changed. Optional so existing external constructors of this
+   *  type (test stubs) stay valid; `scaffold()` always populates it. */
+  fileModes?: Record<string, number>;
 }
 
 /** One entry in {@link ScaffoldResult.conflicts}. */
@@ -328,6 +337,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
       skipped: [],
       identical: [],
       conflicts: [],
+      fileModes: {},
       noop: true,
       migrationsRan: [],
       migrationConflicts: [],
@@ -380,6 +390,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   const written: string[] = [];
   const skipped: string[] = [];
   const identical: string[] = [];
+  const fileModes: Record<string, number> = {};
   // Per-run conflict memory + structured report. Memory is keyed by
   // artifact CLASS for `regenerate` (one decision shared across the run, so a
   // `noir init --upgrade` over N pointers → 1 prompt) and by per-file path for
@@ -481,8 +492,18 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     if (!opts.dryRun) mkdirSync(dirname(abs), { recursive: true });
     for (const entry of entries) {
       if (opts.dryRun) {
-        if (entry.mode === 'skipIfExists' && existsSync(abs)) skipped.push(entry.path);
-        else written.push(entry.path);
+        if (entry.mode === 'skipIfExists') {
+          if (existsSync(abs)) {
+            skipped.push(entry.path);
+          } else {
+            written.push(entry.path);
+            // Dry-run predictor: report the mode a real run WOULD apply,
+            // without writing (`.noir/.env` → 0600).
+            if (entry.fileMode !== undefined) fileModes[entry.path] = entry.fileMode;
+          }
+        } else {
+          written.push(entry.path);
+        }
         continue;
       }
       const body = renderEntry(entry, vars);
@@ -563,9 +584,15 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
         if (out.written) written.push(entry.path);
         else identical.push(entry.path);
       } else {
-        const out = skipIfExists(abs, body);
-        if (out.written) written.push(entry.path);
-        else skipped.push(entry.path);
+        // `entry.fileMode` (slice E) rides along so a created `.noir/.env` is
+        // 0600 from the moment it exists — see `skipIfExists`.
+        const out = skipIfExists(abs, body, entry.fileMode);
+        if (out.written) {
+          written.push(entry.path);
+          if (entry.fileMode !== undefined) fileModes[entry.path] = entry.fileMode;
+        } else {
+          skipped.push(entry.path);
+        }
       }
     }
   }
@@ -590,6 +617,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     skipped,
     identical,
     conflicts: conflictRecords,
+    fileModes,
     noop: false,
     migrationsRan,
     migrationConflicts,

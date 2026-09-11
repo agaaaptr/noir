@@ -68,6 +68,14 @@ export interface ManifestEntry {
   template?: string;
   /** One-line human description for `noir doctor` + logs. */
   description?: string;
+  /** Permission for a NEWLY created file (e.g. `0o600` for a credential seed).
+   *  Applied only on creation; an existing file's mode is never changed — the
+   *  `skipIfExists` contract means an existing file is not even opened. The
+   *  orchestrator forwards this to the writer and reports it on the result as
+   *  {@link ScaffoldResult.fileModes}. Ignored by every other write mode, whose
+   *  targets are regenerated rather than seeded.
+   *  NOTE: POSIX-only. Windows permissions are ACL-based and ignore it. */
+  fileMode?: number;
   /** Required for `mergeJson` mode: the JSON patch object (or a template that
    *  renders to one). Merged into the existing file, preserving user keys. */
   patch?: Record<string, unknown>;
@@ -118,6 +126,7 @@ const P = {
   projectId: `${NOIR_DIR}/project.id`,
   config: `${NOIR_DIR}/config.yml`,
   envExample: `${NOIR_DIR}/.env.example`,
+  env: `${NOIR_DIR}/.env`,
   noirMd: `${NOIR_DIR}/NOIR.md`,
   rulesMd: `${NOIR_DIR}/rules/RULES.md`,
 } as const;
@@ -181,7 +190,20 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
       path: P.envExample,
       mode: 'skipIfExists',
       template: 'env.example.tmpl',
-      description: '.noir/.env placeholder (gitignored; copy + fill real tokens)',
+      description: '.noir/.env.example committable documentation (never loaded)',
+    },
+    {
+      // §8.1: init creates the REAL env file, not just the example. The body is
+      // all-comment, so the file parses to an EMPTY overlay and creating it
+      // changes no behaviour — it exists so the user never has to copy the
+      // example by hand. `fileMode: 0o600` because the file holds tokens the
+      // moment the user edits it (set on creation only — skipIfExists never
+      // touches an existing file, so a user's own chmod stands).
+      path: P.env,
+      mode: 'skipIfExists',
+      template: 'config.env.tmpl',
+      fileMode: 0o600,
+      description: 'project-scoped env file (gitignored, 0600)',
     },
     {
       path: P.noirMd,
