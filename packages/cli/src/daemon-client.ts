@@ -231,19 +231,39 @@ export async function probeDaemon(opts: DaemonClientOptions = {}): Promise<Daemo
 }
 
 /**
- * Ensure a healthy daemon is running and return its MCP URL + a tear-down
- * callback. Maps any start / record error onto exit 4.
+ * Resolve a CONNECTED daemon client for the caller's project, plus the
+ * tear-down for any daemon this call started. Maps any start / connect error
+ * onto exit 4.
+ *
+ * Ordering is CONNECT-FIRST (spec 7.1). When `daemon.port` gives a stable
+ * address we attempt the MCP session against it BEFORE spawning anything, so a
+ * daemon starts because a connection was genuinely attempted rather than as a
+ * side effect of running a command. Only when that attempt fails — a refused
+ * connection is the common case — do we fall through to
+ * {@link ensureDaemonRunning} (still the single spawn primitive; only the
+ * DECISION POINT moved) and connect to whatever it returns. Without a
+ * configured `daemon.port` there is no address to probe, so the previous
+ * ensure-first ordering is retained verbatim (spec 7.1: D depends on B).
+ *
+ * The failure path is BOUNDED — at most one direct attempt, one ensure, and one
+ * retry connect; never a loop. A permanently dead port therefore ends in the S9
+ * exit-4 DAEMON_DOWN envelope via {@link failDaemonDown}, not a hang.
+ *
+ * Every client created here is closed before a throw, so a caller never
+ * inherits a half-open connection.
  */
 async function resolveDaemon(
   opts: DaemonClientOptions,
-): Promise<{ url: string; stop: () => Promise<void> }> {
+): Promise<{ client: Client; stop: () => Promise<void> }> {
   // Lazy default: when the caller didn't inject a project (the common case from
   // command modules, which only forward --json/--verbose), resolve one here.
   // An uninitialized project (`loadProjectInfo` throws "Run `noir init` first")
   // is a USAGE error (exit 1), not a daemon-down (exit 4) — so route it through
   // fail() BEFORE the ensureDaemonRunning try, which maps errors to exit 4. This
   // keeps exit-1 semantics AND emits the canonical {ok:false,error} envelope on
-  // stdout under --json (a plain Error would leave stdout EMPTY).
+  // stdout under --json (a plain Error would leave stdout EMPTY). It also runs
+  // BEFORE any connect attempt: a project id is the daemon scope key, so there
+  // is nothing to address (and no token to present) without one.
   let project: ProjectInfo;
   try {
     project = opts.project ?? loadProjectInfo(process.cwd());
@@ -251,16 +271,67 @@ async function resolveDaemon(
     fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
   }
   const idleTimeoutSec = opts.idleTimeoutSec ?? project.config.daemon.idleTimeoutSec;
+  const preferred = project.config.daemon.port;
+
+  // Connect-first when a stable address exists. `0` is a configured PREFERENCE
+  // for an ephemeral port, i.e. explicitly NOT a stable address — it takes the
+  // ensure-first path below, which still forwards the preference to the spawn.
+  if (preferred !== undefined && preferred !== 0) {
+    const direct = `http://127.0.0.1:${preferred}/mcp`;
+    const probe = newClient();
+    try {
+      // Raw connect, NOT connectClient: a failure here is the SIGNAL TO SPAWN,
+      // not a command-fatal error, so it must never be mapped onto exit 4.
+      await probe.connect(httpTransport(direct, project.id));
+      // A daemon was already answering at the configured address. Nothing was
+      // started, so tear-down is a no-op — `stop` must stay inert (there is no
+      // ensure result to defer to, and stopping a daemon we did not start would
+      // kill the user's).
+      return { client: probe, stop: async () => {} };
+    } catch (err) {
+      // Refused connection (nothing listening), a stale token from a before-
+      // restart daemon, or a foreign process holding the port — each means "no
+      // USABLE daemon at this address". Discard the probe and fall through to
+      // ensure + one retry; the token is re-read at retry connect time, so a
+      // stale-token case self-heals against the same (still healthy) daemon.
+      if (opts.verbose) {
+        process.stderr.write(
+          `noir: no daemon at the configured port ${preferred} (${describeCause(err)})\n`,
+        );
+      }
+      await probe.close().catch(() => {
+        /* the probe connection is already unusable; never mask the spawn path */
+      });
+    }
+  }
+
+  let url: string;
+  let stop: () => Promise<void>;
   try {
     const ensured = await ensureDaemonRunning({
       project,
       idleTimeoutSec,
-      ...(project.config.daemon.port !== undefined ? { port: project.config.daemon.port } : {}),
+      ...(preferred !== undefined ? { port: preferred } : {}),
     });
-    return { url: ensured.url, stop: ensured.stop };
+    url = ensured.url;
+    stop = ensured.stop;
   } catch (err) {
     failDaemonDown(opts, err);
   }
+
+  // The retry (or the direct path when no port is configured). A failure HERE
+  // is genuinely fatal — ensure already succeeded, so there is no further
+  // recovery and the S9 exit-4 mapping applies (unlike the probe above).
+  const client = newClient();
+  try {
+    await connectClient(client, url, opts, project.id);
+  } catch (err) {
+    await client.close().catch(() => {
+      /* ditto: never mask the connect failure with a close failure */
+    });
+    throw err;
+  }
+  return { client, stop };
 }
 
 /**
@@ -294,6 +365,18 @@ function callerScopeKey(opts: DaemonClientOptions): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Build an unconnected MCP client for the CLI. One client per connection: the
+ * SDK's `connect` binds a transport to the client, so a client is never reused
+ * across two daemons (the connect-first probe discards its own on failure).
+ */
+function newClient(): Client {
+  return new Client(
+    { name: 'noir-cli', version: NOIR_VERSION },
+    { versionNegotiation: { mode: 'auto' } },
+  );
 }
 
 /** Connect a Client over Streamable HTTP; map transport failure to exit 4. */
@@ -345,17 +428,6 @@ async function callToolParse<T>(
 }
 
 /**
- * Connect to the daemon and run `fn` against a {@link DaemonToolCaller} that
- * shares one MCP connection across any number of tool calls. The client is
- * closed and any daemon this call started is torn down in `finally`, even when
- * `fn` throws — so a one-shot CLI command never strands a server or leaks a
- * connection, while a reused (already-running) daemon is left untouched
- * (`ensureDaemonRunning`'s `stop` is a no-op in that case).
- *
- * `fn`'s own errors propagate untouched (the command module owns their exit
- * code); only transport / connection / tool-parse failures map to exit 4 here.
- */
-/**
  * Build a {@link DaemonToolCaller} over an already-connected {@link Client}.
  * Shared by {@link withDaemon} (active commands — failures map to exit 4) and
  * {@link withRunningDaemon} (status — connect failures degrade to null, caught
@@ -385,29 +457,32 @@ function buildCaller(client: Client, opts: DaemonClientOptions): DaemonToolCalle
   };
 }
 
+/**
+ * Connect to the daemon and run `fn` against a {@link DaemonToolCaller} that
+ * shares one MCP connection across any number of tool calls.
+ *
+ * {@link resolveDaemon} owns the CONNECT-FIRST ordering (spec 7.1) and returns
+ * a connection it has already established, so this body only has to run `fn`
+ * and tear down. The client is closed and any daemon this call started is torn
+ * down in `finally`, even when `fn` throws — so a one-shot CLI command never
+ * strands a server or leaks a connection, while a reused (already-running)
+ * daemon is left untouched (both `ensureDaemonRunning`'s `stop` for a reused
+ * daemon and the connect-first path's `stop` are no-ops in that case).
+ *
+ * `fn`'s own errors propagate untouched (the command module owns their exit
+ * code); only transport / connection / tool-parse failures map to exit 4 here.
+ */
 export async function withDaemon<T>(
   opts: DaemonClientOptions,
   fn: (caller: DaemonToolCaller) => Promise<T>,
 ): Promise<T> {
-  const { url, stop } = await resolveDaemon(opts);
-  let client: Client | undefined;
+  const { client, stop } = await resolveDaemon(opts);
   try {
-    client = new Client(
-      { name: 'noir-cli', version: NOIR_VERSION },
-      { versionNegotiation: { mode: 'auto' } },
-    );
-    // Capture the now-definitely-assigned client BEFORE any `await` so buildCaller
-    // sees `Client` (not `Client | undefined`) without relying on how TS narrows a
-    // `let` across an await.
-    const connected: Client = client;
-    await connectClient(connected, url, opts, callerScopeKey(opts));
-    return await fn(buildCaller(connected, opts));
+    return await fn(buildCaller(client, opts));
   } finally {
-    if (client) {
-      await client.close().catch(() => {
-        /* a close error must not mask the real failure / swallowed result */
-      });
-    }
+    await client.close().catch(() => {
+      /* a close error must not mask the real failure / swallowed result */
+    });
     await stop().catch(() => {
       /* ditto: tear-down failures never override the command's outcome */
     });
@@ -441,10 +516,7 @@ export async function withRunningDaemon<T>(
   const url = `http://127.0.0.1:${p.port}/mcp`;
   let client: Client | undefined;
   try {
-    client = new Client(
-      { name: 'noir-cli', version: NOIR_VERSION },
-      { versionNegotiation: { mode: 'auto' } },
-    );
+    client = newClient();
     const connected: Client = client;
     // Connect directly to the probed port — NO ensureDaemonRunning. If the daemon
     // died between probe and connect (a race), this throws and we degrade to null
@@ -648,10 +720,7 @@ export async function withWorkspaceDaemon<T>(
   const url = `http://127.0.0.1:${probe.port}/mcp?p=${routing.projectId}`;
   let client: Client | undefined;
   try {
-    client = new Client(
-      { name: 'noir-cli', version: NOIR_VERSION },
-      { versionNegotiation: { mode: 'auto' } },
-    );
+    client = newClient();
     const connected: Client = client;
     // The workspace daemon's token scope key is the workspace NAME — its own
     // secret, resolved from disk at connect time like every other token. In
