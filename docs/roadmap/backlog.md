@@ -19,7 +19,7 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 
 ## Daemon hardening + `noir init` completeness + `.noir/.env` precedence (2026-09-11 → 1.14.0)
 
-> **Implemented on `develop` 2026-09-11; not yet published** (the 1.14.0 release flow is pending). Spec `2026-09-11-daemon-hardening-init-completeness-design.md`; ADR-0010 (records + HTTP auth) + ADR-0011 (`.noir/.env` precedence + doctrine). Full gate green.
+> **Implemented 2026-09-11; the 1.14.0 release flow is in flight (beta → approval → stable) — not yet published.** Spec `2026-09-11-daemon-hardening-init-completeness-design.md`; ADR-0010 (records + HTTP auth) + ADR-0011 (`.noir/.env` precedence + doctrine). Full gate green (1955 tests).
 
 - ✅ **Per-project daemon records** — RESOLVED: `~/.noir/daemons/<projectId>.json` replaces the single global `~/.noir/daemon.json`; the `wrongProject` guards are deleted because foreign-record access is impossible by construction. The legacy file is read exactly once by a self-deleting migration. `NOIR_DAEMON_DIR` is the isolation override.
 - ✅ **Configured daemon port** — RESOLVED: `daemon.port` is threaded to the HTTP listener as a *preference*; `EADDRINUSE` degrades to ephemeral with a warning, and the record always names the port actually bound.

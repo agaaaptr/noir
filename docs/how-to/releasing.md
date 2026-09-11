@@ -9,9 +9,9 @@
 > <!-- noir:doc:status -->
 **Latest stable:** `1.13.0` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
 **Current beta:** `1.13.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
-**Source version:** `1.13.0` (clean SemVer in `packages/*/package.json`)
+**Source version:** `1.14.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-11T11:13:56.306Z*
+*Last auto-generated: 2026-09-11T11:24:52.441Z*
 <!-- /noir:doc:status -->
 
 ---
