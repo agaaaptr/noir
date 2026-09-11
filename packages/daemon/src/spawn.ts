@@ -5,13 +5,14 @@
 // `{pid, port}` so the parent can report the backgrounded daemon and exit.
 //
 // The child is the SINGLE writer of the daemon record (its in-process
-// `ensureDaemonRunning` → `startHttpServer` writes `~/.noir/daemon.json` with
-// the child's own pid), so the parent discovers the port by polling the record
-// for `rec.pid === child.pid` — never by racing a write of its own.
+// `ensureDaemonRunning` → `startHttpServer` writes THIS project's record with
+// the child's own pid), so the parent discovers the port by polling that
+// scoped record for `rec.pid === child.pid` — never by racing a write of its own.
 
 import { spawn } from 'node:child_process';
 import type { ProjectInfo } from '@noir-ai/core';
-import { DAEMON_MODE_ENV, readDaemonRecord } from './lifecycle.js';
+import { DAEMON_MODE_ENV } from './lifecycle.js';
+import { readProjectDaemonRecord } from './project-record.js';
 
 /**
  * Polling knobs. Production uses the 5s defaults; tests shrink them so a
@@ -108,15 +109,15 @@ export async function spawnDetachedDaemon(
     throw new Error('failed to spawn detached daemon child (no pid)');
   }
 
-  // The child writes the daemon record itself (with ITS pid) when its
-  // in-process server binds — poll until that record appears.
+  // The child writes this project's daemon record itself (with ITS pid) when
+  // its in-process server binds — poll until that record appears.
   await waitFor(
     `daemon record for pid ${pid}`,
     recordTimeoutMs,
     pollIntervalMs,
-    () => readDaemonRecord()?.pid === pid,
+    () => readProjectDaemonRecord(opts.project.id)?.pid === pid,
   );
-  const rec = readDaemonRecord();
+  const rec = readProjectDaemonRecord(opts.project.id);
   if (!rec || rec.pid !== pid) {
     throw new Error(
       `timed out waiting for daemon record for pid ${pid} (after ${recordTimeoutMs}ms)`,

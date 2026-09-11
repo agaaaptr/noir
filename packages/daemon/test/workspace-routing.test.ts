@@ -4,12 +4,13 @@ import { join } from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { ensureWorkspaceRegistry, parseConfig, paths, upsertWorkspaceMember } from '@noir-ai/core';
 import { afterAll, describe, expect, it } from 'vitest';
-import { clearDaemonRecord } from '../src/lifecycle.js';
 import { startWorkspaceHttpServer } from '../src/workspace-http.js';
 
 const home = mkdtempSync(join(tmpdir(), 'noir-wsrout-home-'));
 process.env.NOIR_WORKSPACES_DIR = join(home, 'workspaces');
-process.env.NOIR_DAEMON_JSON = join(home, 'daemon.json');
+// Workspace daemons never touch the per-project daemon record, but keep the
+// record dir off the real `~/.noir/daemons` in case a member boot does.
+process.env.NOIR_DAEMON_DIR = join(home, 'daemons');
 const repoA = mkdtempSync(join(tmpdir(), 'noir-wsrout-a-'));
 const repoB = mkdtempSync(join(tmpdir(), 'noir-wsrout-b-'));
 const CONFIG = 'host: claude\nmode: full\ncontext:\n  embedder:\n    kind: none\n';
@@ -22,7 +23,6 @@ for (const [root, id] of [
   writeFileSync(paths.config(root), CONFIG, 'utf8');
 }
 afterAll(() => {
-  clearDaemonRecord();
   for (const d of [home, repoA, repoB]) rmSync(d, { recursive: true, force: true });
 });
 
@@ -121,7 +121,6 @@ describe('workspace http routing', () => {
       await Promise.all([a.close(), b.close()]);
     } finally {
       await stop();
-      clearDaemonRecord();
     }
   }, 30000);
 
@@ -160,7 +159,6 @@ describe('workspace http routing', () => {
       expect(body.ok).toBe(false);
     } finally {
       await stop();
-      clearDaemonRecord();
     }
   }, 30000);
 
@@ -209,7 +207,6 @@ describe('workspace http routing', () => {
       expect((await fetch(`http://127.0.0.1:${port}/health`)).status).toBe(200);
     } finally {
       await stop();
-      clearDaemonRecord();
       rmSync(repoC, { recursive: true, force: true });
     }
   }, 30000);

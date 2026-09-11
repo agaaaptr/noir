@@ -10,13 +10,12 @@ import { resolveMemoryConfig } from '@noir-ai/memory';
 import { resolveModelConfig } from '@noir-ai/model';
 import { buildContextEngine } from './context-seam.js';
 import { buildIntegrationService } from './integration-seam.js';
+import { DAEMON_MODE_ENV } from './lifecycle.js';
 import {
-  clearDaemonRecord,
-  DAEMON_MODE_ENV,
-  type DaemonRecord,
-  readDaemonRecord,
-  writeDaemonRecord,
-} from './lifecycle.js';
+  clearProjectDaemonRecord,
+  readProjectDaemonRecord,
+  writeProjectDaemonRecord,
+} from './project-record.js';
 import { buildMemoryEngine, resolveConsolidationCapability } from './memory-seam.js';
 import { createNoirServer } from './server.js';
 import { openStoreForDaemon } from './store-seam.js';
@@ -176,19 +175,15 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     });
   });
 
-  const rec: DaemonRecord = {
+  writeProjectDaemonRecord(opts.project.id, {
     pid,
     port,
     startedAt,
     // The detached child sets NOIR_DAEMON_MODE=detached so `daemon status`
     // reports honest ownership (foreground vs backgrounded). Default foreground.
     mode: process.env[DAEMON_MODE_ENV] === 'detached' ? 'detached' : 'foreground',
-    // Project isolation: the store is baked in for THIS project, so the record
-    // (and /health) carry the projectId so a caller for another project refuses
-    // to reuse it.
     projectId: opts.project.id,
-  };
-  writeDaemonRecord(rec);
+  });
 
   async function shutdown(): Promise<void> {
     if (idleTimer) {
@@ -197,11 +192,10 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     }
     await new Promise<void>((r) => httpServer.close(() => r()));
     await daemonStore?.store.close().catch(() => undefined);
-    // Only clear the record if it is OURS (the pid matches) — an old daemon
-    // that was slow to die after `noir daemon stop` (or a daemon another
-    // process is mid-restarting) must not have its record wiped by this one.
-    const rec = readDaemonRecord();
-    if (rec && rec.pid === pid) clearDaemonRecord();
+    // Only clear OUR record (pid match) — a slow-dying predecessor or a
+    // restarting daemon must not have its record wiped by this one.
+    const rec = readProjectDaemonRecord(opts.project.id);
+    if (rec && rec.pid === pid) clearProjectDaemonRecord(opts.project.id);
   }
 
   for (const sig of ['SIGTERM', 'SIGINT'] as const) {

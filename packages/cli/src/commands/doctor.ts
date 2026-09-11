@@ -46,7 +46,7 @@ import {
   readUpdateCache,
 } from '@noir-ai/core';
 import { CURRENT_SCAFFOLD_VERSION, readScaffoldVersion } from '@noir-ai/create';
-import { pidAlive, readDaemonRecord } from '@noir-ai/daemon';
+import { pidAlive, readProjectDaemonRecord } from '@noir-ai/daemon';
 import { resolveModelConfig } from '@noir-ai/model';
 import { PROBE_TIMEOUT_MS } from '../daemon-client.js';
 import {
@@ -206,8 +206,19 @@ function checkConfig(root: string): { project: ProjectInfo | undefined; result: 
   }
 }
 
-async function checkDaemon(checks: CheckResult[]): Promise<void> {
-  const rec = readDaemonRecord();
+async function checkDaemon(checks: CheckResult[], project: ProjectInfo | undefined): Promise<void> {
+  // The record is per-project; without a project id there is no record to look
+  // up, so report honestly rather than reading (and implicitly claiming) a
+  // daemon that belongs to some unknown project.
+  if (project === undefined) {
+    checks.push({
+      name: 'daemon',
+      status: 'warn',
+      detail: 'skipped — project not initialized',
+    });
+    return;
+  }
+  const rec = readProjectDaemonRecord(project.id);
   if (!rec) {
     checks.push({
       name: 'daemon',
@@ -1060,7 +1071,7 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   await checkRuntime(checks);
   const { project, result: configResult } = checkConfig(root);
   checks.push(configResult);
-  await checkDaemon(checks);
+  await checkDaemon(checks, project);
   const { vecOk } = await checkNativeDeps(checks);
   await checkStore(checks, project, root);
   checkEmbedder(checks, project, vecOk);

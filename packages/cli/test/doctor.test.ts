@@ -6,21 +6,20 @@
 // native binary is unavailable (the store simply cannot open there → exit 1,
 // which is exactly what doctor should report).
 //
-// The daemon record is isolated per worker via NOIR_DAEMON_JSON so the daemon
-// check is deterministic (no record → warn, never fail).
+// The per-project daemon record dir is isolated per worker via NOIR_DAEMON_DIR
+// so the daemon check is deterministic (no record → warn, never fail).
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { paths } from '@noir-ai/core';
 import { CURRENT_SCAFFOLD_VERSION, scaffoldVersionPath } from '@noir-ai/create';
-import { clearDaemonRecord } from '@noir-ai/daemon';
 import { openStore, vecAvailability } from '@noir-ai/store';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { type CheckResult, checkPublish, doctor } from '../src/commands/doctor.js';
 import { EXIT, inferExitCode } from '../src/output.js';
 
 const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-doctor-test-'));
-process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'daemon.json');
+process.env.NOIR_DAEMON_DIR = tmpRoot;
 
 /** Capture stdout/stderr around `fn`, returning the streams + any thrown value. */
 async function run(
@@ -59,12 +58,10 @@ beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'noir-doctor-cwd-'));
   origCwd = process.cwd();
   process.chdir(root);
-  clearDaemonRecord();
   delete process.env[PROV_KEY_ENV];
 });
 afterEach(() => {
   process.chdir(origCwd);
-  clearDaemonRecord();
   delete process.env[PROV_KEY_ENV];
   rmSync(root, { recursive: true, force: true });
 });

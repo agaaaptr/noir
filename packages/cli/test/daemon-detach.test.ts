@@ -3,9 +3,9 @@
 //   - `spawnDetachedDaemon` + `ensureDaemonRunning` (from @noir-ai/daemon) are
 //     mocked at the module boundary so neither a child process nor an in-process
 //     HTTP server is ever spun up;
-//   - the record helpers (`readDaemonRecord`/`pidAlive`/`writeDaemonRecord`) stay
-//     REAL so the parent path's double-spawn guard is exercised honestly against
-//     a live `/health` on an ephemeral port.
+//   - the record helpers (`readProjectDaemonRecord`/`pidAlive`/
+//     `writeProjectDaemonRecord`) stay REAL so the parent path's double-spawn
+//     guard is exercised honestly against a live `/health` on an ephemeral port.
 //
 // Covered here:
 //   - `--detach` → parent path: calls `spawnDetachedDaemon`, emits the
@@ -18,9 +18,9 @@
 //     `--json`; when the child discovers an already-running daemon
 //     (`started:false`) it reports reused and returns (the redundant child exits).
 //
-// The daemon record is isolated per vitest worker via NOIR_DAEMON_JSON (the same
-// override the daemon module reads), so file-parallel runs never race on the
-// global ~/.noir/daemon.json.
+// The per-project daemon record is isolated per vitest worker via NOIR_DAEMON_DIR
+// (the same override the daemon module reads), so file-parallel runs never race
+// on the real ~/.noir/daemons directory.
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
@@ -42,11 +42,15 @@ vi.mock('@noir-ai/daemon', async (importOriginal) => {
   };
 });
 
-import { ensureDaemonRunning, spawnDetachedDaemon, writeDaemonRecord } from '@noir-ai/daemon';
+import {
+  ensureDaemonRunning,
+  spawnDetachedDaemon,
+  writeProjectDaemonRecord,
+} from '@noir-ai/daemon';
 import { daemonStart } from '../src/commands/daemon.js';
 
 const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-daemon-detach-test-'));
-process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'daemon.json');
+process.env.NOIR_DAEMON_DIR = tmpRoot;
 
 /** Capture stdout/stderr around `fn`, returning the streams + any thrown value. */
 async function run(
@@ -142,7 +146,12 @@ describe('noir daemon start --detach (parent path)', () => {
       });
     });
     try {
-      writeDaemonRecord({ pid: process.pid, port, startedAt: Date.now() });
+      writeProjectDaemonRecord('daemon-detach-test-project', {
+        pid: process.pid,
+        port,
+        startedAt: Date.now(),
+        projectId: 'daemon-detach-test-project',
+      });
       const r = await run(() => daemonStart({ detach: true, json: true }));
       expect(r.err).toBeUndefined();
       expect(spawnDetachedDaemon).not.toHaveBeenCalled();

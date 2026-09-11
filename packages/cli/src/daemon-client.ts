@@ -7,10 +7,11 @@
 // the CLI to that daemon — every command module calls {@link callDaemonTool} (or
 // the multi-call {@link withDaemon}) instead of importing the store directly.
 //
-// Flow: {@link ensureDaemonRunning} (from @noir-ai/daemon) reads the daemon
-// record at `~/.noir/daemon.json` (NOIR_DAEMON_JSON override for tests) and
-// STARTS a foreground daemon if no healthy one is present, returning its URL +
-// a `stop()` tear-down. We connect a @modelcontextprotocol/client `Client` over
+// Flow: {@link ensureDaemonRunning} (from @noir-ai/daemon) reads THIS project's
+// daemon record (`~/.noir/daemons/<projectId>.json`, NOIR_DAEMON_DIR override
+// for tests) and STARTS a foreground daemon if no healthy one is present,
+// returning its URL + a `stop()` tear-down. We connect a
+// @modelcontextprotocol/client `Client` over
 // Streamable HTTP to that URL (127.0.0.1 only — daemon §4), initialize, and
 // `callTool(name, args)`; the daemon's tools always return a single text content
 // block whose `text` is `JSON.stringify(payload)` (see `textResult` in
@@ -40,7 +41,7 @@ import {
 import {
   ensureDaemonRunning,
   pidAlive,
-  readDaemonRecord,
+  readProjectDaemonRecord,
   readWorkspaceDaemonRecord,
   resolveGateConfig,
 } from '@noir-ai/daemon';
@@ -141,14 +142,31 @@ export interface DaemonProbe {
 
 /**
  * Probe whether a healthy daemon is currently running, WITHOUT starting one.
- * Reads the daemon record (`~/.noir/daemon.json` via {@link readDaemonRecord}),
- * checks {@link pidAlive}, and GETs `http://127.0.0.1:<port>/health`. Any miss
- * (no record, stale pid, non-200, unreachable, malformed body) → `{running:false}`
- * — this function NEVER throws and NEVER starts a daemon. Under `--verbose` the
- * reason for a miss is logged to stderr (NF5: honest degradation).
+ * Resolves the CALLER's project id first (that id IS the record lookup key),
+ * reads the per-project record via {@link readProjectDaemonRecord}, checks
+ * {@link pidAlive}, and GETs `http://127.0.0.1:<port>/health`. Any miss (no
+ * project, no record, stale pid, non-200, unreachable, malformed body) →
+ * `{running:false}` — this function NEVER throws and NEVER starts a daemon.
+ * Under `--verbose` the reason for a miss is logged to stderr (NF5: honest
+ * degradation).
  */
 export async function probeDaemon(opts: DaemonClientOptions = {}): Promise<DaemonProbe> {
-  const rec = readDaemonRecord();
+  // Resolve the project FIRST — with per-project records the ProjectId IS the
+  // lookup key, so the record cannot be read before it is known.
+  const expectedProject =
+    opts.project?.id ??
+    (() => {
+      try {
+        return loadProjectInfo(process.cwd()).id;
+      } catch {
+        return undefined; // uninitialized — no caller project to look up
+      }
+    })();
+  if (expectedProject === undefined) {
+    if (opts.verbose) process.stderr.write('noir: daemon probe: no project (uninitialized)\n');
+    return { running: false };
+  }
+  const rec = readProjectDaemonRecord(expectedProject);
   if (!rec) {
     if (opts.verbose) process.stderr.write('noir: daemon probe: no daemon record\n');
     return { running: false };
@@ -172,40 +190,20 @@ export async function probeDaemon(opts: DaemonClientOptions = {}): Promise<Daemo
     const body = (await res.json().catch(() => null)) as {
       ok?: boolean;
       pid?: number;
-      projectId?: string;
       uptimeSec?: number;
     } | null;
     // PID-reuse guard (same invariant as @noir-ai/daemon ensure.ts isHealthy +
-    // commands/daemon.ts isHealthy): the responding /health must
-    // carry OUR recorded pid — a missing or mismatched pid means a foreign
-    // process holds the port; report NOT running.
+    // commands/daemon.ts isHealthy): the responding /health must carry OUR
+    // recorded pid — a missing or mismatched pid means a foreign process holds
+    // the port; report NOT running. (The record is already scoped to the caller's
+    // project, so there is no cross-project body check left to perform.)
     const pidOk = typeof body?.pid === 'number' && body.pid === rec.pid;
-    // CROSS-PROJECT isolation: the daemon serves the store baked in at its
-    // start time. When the caller knows its project, a daemon whose /health
-    // projectId differs (or is absent — a pre-1.12 daemon) must NOT be treated
-    // as serving this project; report NOT running so the caller falls back to
-    // its in-process read (never silently reading/writing another project's
-    // store). The wrong-project daemon's record is left intact for its owner.
-    const expectedProject =
-      opts.project?.id ??
-      (() => {
-        try {
-          return loadProjectInfo(process.cwd()).id;
-        } catch {
-          return undefined; // uninitialized — no caller project to protect
-        }
-      })();
-    const projectOk =
-      expectedProject === undefined ||
-      (body?.projectId !== undefined && body.projectId === expectedProject);
-    if (body?.ok !== true || !pidOk || !projectOk) {
+    if (body?.ok !== true || !pidOk) {
       if (opts.verbose)
         process.stderr.write(
           !pidOk
             ? 'noir: daemon probe: pid missing/mismatched (foreign process on recorded port)\n'
-            : !projectOk
-              ? `noir: daemon probe: daemon serves a different project (${body?.projectId ?? 'unknown'}); using in-process fallback\n`
-              : 'noir: daemon probe: /health body not ok\n',
+            : 'noir: daemon probe: /health body not ok\n',
         );
       return { running: false };
     }

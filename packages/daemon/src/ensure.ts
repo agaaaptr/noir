@@ -1,6 +1,8 @@
 import type { ProjectInfo } from '@noir-ai/core';
 import { startHttpServer } from './http.js';
-import { clearDaemonRecord, pidAlive, readDaemonRecord } from './lifecycle.js';
+import { pidAlive } from './lifecycle.js';
+import { retireLegacyDaemonRecord } from './migrate-legacy-record.js';
+import { clearProjectDaemonRecord, readProjectDaemonRecord } from './project-record.js';
 
 export interface EnsureResult {
   port: number;
@@ -8,11 +10,11 @@ export interface EnsureResult {
   started: boolean;
   /**
    * Stops the daemon THIS call started. When `started` is true this closes the
-   * in-process http server, clears `daemon.json`, and clears the idle timer.
-   * When `started` is false (a healthy daemon was reused) this is a no-op: the
-   * reused daemon is owned by whichever process started it (in tests that pid is
-   * `process.pid`, so killing it would be fatal) and must not be torn down by a
-   * mere consumer.
+   * in-process http server, clears this project's record, and clears the idle
+   * timer. When `started` is false (a healthy daemon was reused) this is a
+   * no-op: the reused daemon is owned by whichever process started it (in tests
+   * that pid is `process.pid`, so killing it would be fatal) and must not be
+   * torn down by a mere consumer.
    */
   stop: () => Promise<void>;
 }
@@ -38,9 +40,10 @@ async function isHealthy(
     // that recycled the pid and serves HTTP 200 must not be treated as OUR daemon.
     const body = (await res.json()) as { ok?: boolean; pid?: number; projectId?: string };
     if (body.ok !== true || body.pid !== expectedPid) return false;
-    // CROSS-PROJECT isolation: the daemon's store is baked in for its start-time
-    // project. Reuse only when the /health projectId matches the expected one
-    // (and an absent projectId — a pre-1.12 daemon — is never trusted).
+    // Defence in depth: the record is already scoped to this project, but the
+    // RESPONDING daemon's own /health projectId must match too. A daemon whose
+    // store was baked for another project (or a hand-written record file that
+    // predates the `projectId` field) is never reused.
     if (expectedProjectId !== undefined && body.projectId !== expectedProjectId) return false;
     return true;
   } catch {
@@ -51,38 +54,34 @@ async function isHealthy(
 export async function ensureDaemonRunning(opts: {
   project: ProjectInfo;
   idleTimeoutSec: number;
+  port?: number;
 }): Promise<EnsureResult> {
   const { project } = opts;
-  const rec = readDaemonRecord();
-  if (rec) {
-    // Cross-project isolation: a daemon serves the store baked in at its start
-    // time. A record for ANOTHER project (a 1.12+ record with a mismatched
-    // projectId) is cleared so we start a fresh daemon for THIS project — two
-    // daemons serve DIFFERENT DBs, so no single-writer violation.
-    //
-    // A PRE-1.12 record (no projectId) is REUSED on a pid+port match: we cannot
-    // project-verify it, and reusing it is safer than clearing it + starting a
-    // SECOND writer on the same .noir/store/<projectId>.db (the old daemon would
-    // still be running and holding that DB open — a single-writer violation).
-    const wrongProject = rec.projectId !== undefined && rec.projectId !== project.id;
-    if (!wrongProject) {
-      const expectProject = rec.projectId === undefined ? undefined : project.id;
-      if (pidAlive(rec.pid) && (await isHealthy(rec.port, rec.pid, expectProject))) {
-        return {
-          port: rec.port,
-          url: `http://127.0.0.1:${rec.port}/mcp`,
-          started: false,
-          stop: async () => {
-            /* no-op: reused daemon is owned elsewhere */
-          },
-        };
-      }
-    }
-    clearDaemonRecord(); // stale — pid dead or /health failed, or a wrong-project record
+  // Retire the pre-1.14 single global record first: a daemon from the previous
+  // version still holds a write handle on this project's store, and the two
+  // would fight over the single writer (spec 4.5). A no-op once retired.
+  await retireLegacyDaemonRecord();
+
+  // Scoped read: this can only ever return THIS project's record, so there is
+  // no foreign record to detect, clear, or refuse. The three `wrongProject`
+  // guards are gone because the condition they guarded is unrepresentable.
+  const rec = readProjectDaemonRecord(project.id);
+  if (rec && pidAlive(rec.pid) && (await isHealthy(rec.port, rec.pid, project.id))) {
+    return {
+      port: rec.port,
+      url: `http://127.0.0.1:${rec.port}/mcp`,
+      started: false,
+      stop: async () => {
+        /* no-op: reused daemon is owned elsewhere */
+      },
+    };
   }
+  if (rec) clearProjectDaemonRecord(project.id); // stale — pid dead or /health failed
+
   const running = await startHttpServer({
     project: opts.project,
     idleTimeoutSec: opts.idleTimeoutSec,
+    ...(opts.port !== undefined ? { port: opts.port } : {}),
   });
   return {
     port: running.port,

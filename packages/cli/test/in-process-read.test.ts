@@ -47,16 +47,17 @@ vi.mock('../src/daemon-client.js', async (importOriginal) => {
 // daemon's ensure to reject → daemon-client maps it to exit 4. No real daemon
 // is ever started (NF4).
 //
-// `readDaemonRecord`/`pidAlive` are also exported: some importers resolve the
-// REAL daemon-client module (the `importOriginal` partial mock above can yield
-// a second instance for other importers), whose `probeDaemon` reads the record.
-// A no-record/no-alive probe degrades to `{running:false}` cleanly — matching
-// the mocked probe and keeping every read on the fallback path offline.
+// `readProjectDaemonRecord`/`pidAlive` are also exported: some importers resolve
+// the REAL daemon-client module (the `importOriginal` partial mock above can
+// yield a second instance for other importers), whose `probeDaemon` reads this
+// project's record. A no-record/no-alive probe degrades to `{running:false}`
+// cleanly — matching the mocked probe and keeping every read on the fallback
+// path offline.
 vi.mock('@noir-ai/daemon', () => ({
   ensureDaemonRunning: vi.fn(async () => {
     throw new Error('daemon down (test)');
   }),
-  readDaemonRecord: () => null,
+  readProjectDaemonRecord: () => null,
   pidAlive: () => false,
   // resolveGateConfig is imported by the in-process read fallback to plumb the
   // user's prd.mandatoryFor override (c4-surface-wiring S5). Return undefined so

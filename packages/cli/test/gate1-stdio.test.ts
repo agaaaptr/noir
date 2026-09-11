@@ -6,13 +6,15 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL, URL } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import { clearDaemonRecord } from '@noir-ai/daemon';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-// Isolate the global daemon.json per vitest worker (file-parallelism safe).
-// The CLI subprocess inherits process.env, so it writes the same temp path;
-// its clearDaemonRecord() calls then target this isolated file too.
+// Isolate the per-project daemon record dir per vitest worker (file-parallelism
+// safe). The CLI subprocess inherits process.env, so any record it writes lands
+// here. NOIR_DAEMON_JSON is kept at a temp path too so the legacy retirer
+// (ensure's first step) stays off the real ~/.noir/daemon.json if a subprocess
+// ever boots a daemon during this suite.
 const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-test-gate1-'));
+process.env.NOIR_DAEMON_DIR = tmpRoot;
 process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'daemon.json');
 
 const BIN = fileURLToPath(new URL('../src/bin.ts', import.meta.url));
@@ -35,7 +37,6 @@ describe('Gate 1 — stdio round-trip', () => {
   }, 20000);
 
   afterAll(() => {
-    clearDaemonRecord();
     rmSync(cwd, { recursive: true, force: true });
     rmSync(tmpRoot, { recursive: true, force: true });
   });
@@ -67,7 +68,6 @@ describe('Gate 1 — stdio round-trip', () => {
   it('stdio still works when no daemon is running (FS-fallback)', async () => {
     // Prove the stdio path is independent of the shared daemon: with no daemon
     // record present, `mcp serve --stdio` still serves host_status over stdio.
-    clearDaemonRecord();
     const client = new Client(
       { name: 'noir-test', version: '0.0.0' },
       { versionNegotiation: { mode: 'auto' } },

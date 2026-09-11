@@ -4,12 +4,13 @@ import { join } from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { ensureWorkspaceRegistry, parseConfig, paths, upsertWorkspaceMember } from '@noir-ai/core';
 import { afterAll, describe, expect, it } from 'vitest';
-import { clearDaemonRecord } from '../src/lifecycle.js';
 import { startWorkspaceHttpServer } from '../src/workspace-http.js';
 
 const home = mkdtempSync(join(tmpdir(), 'noir-wsconc-home-'));
 process.env.NOIR_WORKSPACES_DIR = join(home, 'workspaces');
-process.env.NOIR_DAEMON_JSON = join(home, 'daemon.json');
+// Workspace daemons never touch the per-project daemon record, but keep the
+// record dir off the real `~/.noir/daemons` in case a member boot does.
+process.env.NOIR_DAEMON_DIR = join(home, 'daemons');
 const rootA = mkdtempSync(join(tmpdir(), 'noir-wsconc-a-'));
 mkdirSync(paths.noirDir(rootA), { recursive: true });
 writeFileSync(paths.projectId(rootA), 'conc-a\n', 'utf8');
@@ -19,7 +20,6 @@ writeFileSync(
   'utf8',
 );
 afterAll(() => {
-  clearDaemonRecord();
   rmSync(home, { recursive: true, force: true });
   rmSync(rootA, { recursive: true, force: true });
 });
@@ -108,7 +108,6 @@ describe('two concurrent clients on one workspace daemon', () => {
       await Promise.all([c1.close(), c2.close()]);
     } finally {
       await stop();
-      clearDaemonRecord();
     }
   }, 30000);
 });

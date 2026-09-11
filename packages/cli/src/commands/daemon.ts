@@ -28,10 +28,10 @@
 
 import { loadProjectInfo, type ProjectInfo } from '@noir-ai/core';
 import {
-  clearDaemonRecord,
+  clearProjectDaemonRecord,
   ensureDaemonRunning,
   pidAlive,
-  readDaemonRecord,
+  readProjectDaemonRecord,
   spawnDetachedDaemon,
 } from '@noir-ai/daemon';
 import { PROBE_TIMEOUT_MS } from '../daemon-client.js';
@@ -72,8 +72,9 @@ function formatUptime(sec: number): string {
   return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
 }
 
-/** Resolve the CALLER's project id (for cross-project isolation gates), or
- *  `undefined` when uninitialized (no project to protect). */
+/** Resolve the CALLER's project id — the lookup key for this project's daemon
+ *  record (the record is per-project). `undefined` when uninitialized: there is
+ *  no project whose daemon we could legitimately report or stop. */
 function resolveCallerProjectId(): string | undefined {
   try {
     return loadProjectInfo(process.cwd()).id;
@@ -198,7 +199,9 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
   if (opts.detach === true) {
     // Double-spawn guard: only spawn a child if no daemon is already healthy
     // (the child would merely reuse it and exit — a wasted detached process).
-    const existing = readDaemonRecord();
+    // Scoped read: THIS project's record, so a daemon serving another project
+    // is neither adopted nor counted as ours.
+    const existing = readProjectDaemonRecord(project.id);
     if (
       existing &&
       pidAlive(existing.pid) &&
@@ -301,7 +304,24 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
  * `{ok:true, data:{running, stopped, pid?}}` to stdout.
  */
 export async function daemonStop(opts: DaemonOptions): Promise<void> {
-  const rec = readDaemonRecord();
+  // The record is keyed by ProjectId, so the caller's project IS the scope: a
+  // daemon serving another project is simply not visible here (no
+  // cross-project guard needed — the foreign record is a different file). When
+  // the caller has no project there is no record to name, and guessing would
+  // mean either stopping nothing or signalling a stranger's daemon.
+  const callerProject = resolveCallerProjectId();
+  if (callerProject === undefined) {
+    if (opts.json === true) {
+      process.stdout.write(
+        `${JSON.stringify({ ok: true, data: { running: false, stopped: false } })}\n`,
+      );
+      return;
+    }
+    info('No Noir daemon is running for this directory (not a Noir project).', opts);
+    return;
+  }
+
+  const rec = readProjectDaemonRecord(callerProject);
   if (!rec) {
     if (opts.json === true) {
       process.stdout.write(
@@ -316,21 +336,12 @@ export async function daemonStop(opts: DaemonOptions): Promise<void> {
   const ds = spinner(`Stopping daemon (pid ${rec.pid})...`, opts).start();
   let signalled = false;
   let errMsg: string | undefined;
-  // Cross-project isolation: only SIGTERM a daemon that serves THIS project. A
-  // daemon for ANOTHER project is left running (its record intact) — `noir
-  // daemon stop` must not kill another project's daemon (cross-project DoS).
-  const callerProject = resolveCallerProjectId();
-  const wrongProject =
-    rec.projectId !== undefined && callerProject !== undefined && rec.projectId !== callerProject;
   // Guard PID reuse: only SIGTERM the recorded pid if it still answers as OUR
   // daemon on the recorded port. If the daemon crashed and the pid was recycled
   // by an unrelated process, a blind `process.kill(pid)` would signal an
   // innocent process — so probe `/health` first and clear the stale record if it
   // does not answer.
-  const healthy =
-    !wrongProject &&
-    pidAlive(rec.pid) &&
-    (await isHealthy(rec.port, rec.pid, rec.projectId === undefined ? undefined : callerProject));
+  const healthy = pidAlive(rec.pid) && (await isHealthy(rec.port, rec.pid, callerProject));
   if (healthy) {
     try {
       process.kill(rec.pid, 'SIGTERM');
@@ -340,8 +351,8 @@ export async function daemonStop(opts: DaemonOptions): Promise<void> {
       errMsg = err instanceof Error ? err.message : String(err);
     }
   }
-  // Only clear OUR record; a wrong-project record is left for its owner.
-  if (!wrongProject) clearDaemonRecord();
+  // Our own record only — unconditionally, now that it is unambiguously ours.
+  clearProjectDaemonRecord(callerProject);
 
   if (opts.json === true) {
     process.stdout.write(
@@ -360,12 +371,10 @@ export async function daemonStop(opts: DaemonOptions): Promise<void> {
   if (signalled) {
     ds.succeed(`Stopped Noir daemon (pid ${rec.pid})`);
   } else {
-    // Distinguish the three non-signalled cases: (a) another project's daemon
-    // (left running), (b) a healthy probe whose signal failed (errMsg set),
-    // (c) the pid no longer answers as our daemon.
-    const reason = wrongProject
-      ? 'the daemon belongs to another project (left running)'
-      : errMsg !== undefined
+    // Two non-signalled cases: a healthy probe whose signal failed (errMsg set),
+    // or a pid that no longer answers as our daemon.
+    const reason =
+      errMsg !== undefined
         ? errMsg
         : 'the recorded pid did not answer as our daemon (stale record cleared)';
     ds.warn(`Daemon (pid ${rec.pid}) could not be signalled: ${reason}`);
@@ -386,29 +395,21 @@ export async function daemonStop(opts: DaemonOptions): Promise<void> {
  * stdout under `--json`, plain message on stderr otherwise) with exit 4.
  */
 export async function daemonStatus(opts: DaemonOptions): Promise<void> {
-  const rec = readDaemonRecord();
+  // The record is keyed by ProjectId, so the caller's project IS the scope: a
+  // daemon serving another project is a different file, invisible here (no
+  // cross-project exit-4 block left to perform).
+  const callerProject = resolveCallerProjectId();
+  if (callerProject === undefined) {
+    fail(EXIT.DAEMON_DOWN, 'Noir daemon is not running (not a Noir project).', opts);
+  }
+  const rec = readProjectDaemonRecord(callerProject);
   if (!rec) {
     fail(EXIT.DAEMON_DOWN, 'Noir daemon is not running (start with `noir daemon start`).', opts);
   }
-  // `fail` returns `never` → TS narrows `rec` to DaemonRecord below.
-
-  // Cross-project isolation: `daemon status` reports a daemon ONLY if it serves
-  // THIS project (a daemon for another project is "not running for me").
-  const callerProject = resolveCallerProjectId();
-  if (
-    rec.projectId !== undefined &&
-    callerProject !== undefined &&
-    rec.projectId !== callerProject
-  ) {
-    fail(
-      EXIT.DAEMON_DOWN,
-      'Noir daemon is not running for this project (a daemon for another project is running).',
-      opts,
-    );
-  }
+  // `fail` returns `never` → TS narrows `rec` to ProjectDaemonRecord below.
 
   if (!pidAlive(rec.pid)) {
-    clearDaemonRecord();
+    clearProjectDaemonRecord(callerProject);
     fail(EXIT.DAEMON_DOWN, 'Noir daemon is not running (stale record removed).', opts);
   }
 
@@ -438,7 +439,7 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
   const pidOk = typeof health?.pid === 'number' && health.pid === rec.pid;
   if (health?.ok !== true || !pidOk) {
     hs.fail('Daemon not responding');
-    clearDaemonRecord();
+    clearProjectDaemonRecord(callerProject);
     fail(
       EXIT.DAEMON_DOWN,
       health !== null && !pidOk
@@ -462,7 +463,8 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
     startedAt: rec.startedAt,
     uptimeSec,
     // Honest ownership: the detached child writes `mode:'detached'`; anything
-    // else (legacy record, foreground start) reports 'foreground'.
+    // else (a record written before the field existed, foreground start)
+    // reports 'foreground'.
     mode: rec.mode ?? MODE,
   };
 

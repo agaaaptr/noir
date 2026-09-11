@@ -4,11 +4,15 @@ import { join } from 'node:path';
 import type { ProjectInfo } from '@noir-ai/core';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { ensureDaemonRunning } from '../src/ensure.js';
-import { clearDaemonRecord, writeDaemonRecord } from '../src/lifecycle.js';
+import { clearProjectDaemonRecord, writeProjectDaemonRecord } from '../src/project-record.js';
 
-// Isolate the global daemon.json per vitest worker (file-parallelism safe).
+// Per-project records live in a tmp directory (NOIR_DAEMON_DIR isolates them
+// per vitest worker). NOIR_DAEMON_JSON is still pointed at a tmp path so the
+// legacy retirer (ensure's first step) never reads or signals the real
+// `~/.noir/daemon.json` during the offline suite.
 const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-test-ensure-'));
-process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'daemon.json');
+process.env.NOIR_DAEMON_DIR = tmpRoot;
+process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'legacy-daemon.json');
 
 // Isolated project root so ensureDaemonRunning's store open doesn't leak a DB
 // under a shared path like /tmp/ensure.
@@ -24,13 +28,13 @@ const project: ProjectInfo = {
 };
 
 afterAll(() => {
-  clearDaemonRecord();
+  clearProjectDaemonRecord(project.id);
   rmSync(tmpRoot, { recursive: true, force: true });
   rmSync(projectRoot, { recursive: true, force: true });
 });
 
 afterEach(() => {
-  clearDaemonRecord();
+  clearProjectDaemonRecord(project.id);
 });
 
 describe('ensureDaemonRunning', () => {
@@ -41,7 +45,8 @@ describe('ensureDaemonRunning', () => {
       const res = await fetch(`${url.replace(/\/mcp$/, '')}/health`);
       expect(res.status).toBe(200);
     } finally {
-      // Closes the in-process http server, clears daemon.json, clears the idle timer.
+      // Closes the in-process http server, clears this project's record, clears
+      // the idle timer.
       await stop();
     }
   }, 20000);
@@ -64,7 +69,12 @@ describe('ensureDaemonRunning', () => {
 
   it('reclaims a stale record (pid dead) and starts fresh', async () => {
     // Bogus record pointing at a dead pid + unreachable port.
-    writeDaemonRecord({ pid: 2_000_000, port: 1, startedAt: 1 });
+    writeProjectDaemonRecord('ensure', {
+      pid: 2_000_000,
+      port: 1,
+      startedAt: 1,
+      projectId: 'ensure',
+    });
     const { started, stop } = await ensureDaemonRunning({ project, idleTimeoutSec: 900 });
     try {
       expect(started).toBe(true);

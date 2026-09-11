@@ -9,17 +9,19 @@
 //     → exit 4; a live `/health` → exit 0 + pid/uptime/mode
 //   - `stop` best-effort exit 0 (no record / un-signallable)
 //
-// The daemon record is isolated per vitest worker via NOIR_DAEMON_JSON (the same
-// override the daemon module reads), so file-parallel runs never race on the
-// global ~/.noir/daemon.json.
+// The per-project daemon record is isolated per vitest worker via NOIR_DAEMON_DIR
+// (the same override the daemon module reads), so file-parallel runs never race
+// on the real ~/.noir/daemons directory. status/stop resolve the caller's
+// project from process.cwd(), so each describe seeds its own initialized
+// project (a distinct ProjectId per describe) and chdirs into it.
 
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { paths } from '@noir-ai/core';
-import { clearDaemonRecord, writeDaemonRecord } from '@noir-ai/daemon';
+import { writeProjectDaemonRecord } from '@noir-ai/daemon';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock ONLY ensureDaemonRunning + spawnDetachedDaemon (so start's foreground,
@@ -40,7 +42,25 @@ import { daemonStart, daemonStatus, daemonStop } from '../src/commands/daemon.js
 import { EXIT, inferExitCode } from '../src/output.js';
 
 const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-daemon-test-'));
-process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'daemon.json');
+process.env.NOIR_DAEMON_DIR = tmpRoot;
+
+/** Remove every record file under NOIR_DAEMON_DIR (per-test isolation). */
+function clearRecords(): void {
+  for (const f of readdirSync(tmpRoot)) {
+    if (f.endsWith('.json')) rmSync(join(tmpRoot, f), { force: true });
+  }
+}
+
+/** Seed a minimal initialized project in a fresh root and chdir into it. */
+function seedProject(id: string): { root: string; origCwd: string } {
+  const root = mkdtempSync(join(tmpdir(), `noir-daemon-${id}-`));
+  const origCwd = process.cwd();
+  mkdirSync(paths.noirDir(root), { recursive: true });
+  writeFileSync(paths.projectId(root), `${id}\n`, 'utf8');
+  writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
+  process.chdir(root);
+  return { root, origCwd };
+}
 
 /** Capture stdout/stderr around `fn`, returning the streams + any thrown value. */
 async function run(
@@ -79,16 +99,16 @@ function deadPid(): number {
 beforeEach(() => {
   vi.mocked(ensureDaemonRunning).mockReset();
   vi.mocked(spawnDetachedDaemon).mockReset();
-  clearDaemonRecord();
+  clearRecords();
 });
 
 afterEach(() => {
-  clearDaemonRecord();
+  clearRecords();
 });
 
 afterAll(() => {
   // Remove the temp dir ONCE after all tests (per-test removal would break the
-  // next test's writeDaemonRecord, which writes into tmpRoot/daemon.json).
+  // next test's writeProjectDaemonRecord, which writes into tmpRoot/<id>.json).
   rmSync(tmpRoot, { recursive: true, force: true });
 });
 
@@ -141,7 +161,12 @@ describe('noir daemon start', () => {
       });
     });
     try {
-      writeDaemonRecord({ pid: process.pid, port, startedAt: Date.now() });
+      writeProjectDaemonRecord('daemon-test-project', {
+        pid: process.pid,
+        port,
+        startedAt: Date.now(),
+        projectId: 'daemon-test-project',
+      });
       const r = await run(() => daemonStart({ detach: true }));
       expect(r.err).toBeUndefined();
       expect(spawnDetachedDaemon).not.toHaveBeenCalled();
@@ -221,15 +246,26 @@ describe('noir daemon start', () => {
 });
 
 describe('noir daemon status — exit-code contract', () => {
+  // daemonStatus resolves the caller's project id from process.cwd() — seed a
+  // distinct project so this describe's record reads don't collide with start's.
+  const PROJECT_ID = 'daemon-status-project';
+  let root: string;
+  let origCwd: string;
+  beforeEach(() => {
+    ({ root, origCwd } = seedProject(PROJECT_ID));
+  });
+  afterEach(() => {
+    process.chdir(origCwd);
+    rmSync(root, { recursive: true, force: true });
+  });
+
   it('no record → exit 4 (DAEMON_DOWN)', async () => {
-    clearDaemonRecord();
     const r = await run(() => daemonStatus({}));
     expect(inferExitCode(r.err)).toBe(EXIT.DAEMON_DOWN);
     expect(r.stderr).toMatch(/not running/);
   });
 
   it('no record under --json → structured daemon-down envelope (exit 4)', async () => {
-    clearDaemonRecord();
     const r = await run(() => daemonStatus({ json: true }));
     expect(inferExitCode(r.err)).toBe(EXIT.DAEMON_DOWN);
     const envelope = JSON.parse(r.stdout);
@@ -238,7 +274,12 @@ describe('noir daemon status — exit-code contract', () => {
   });
 
   it('stale record (pid dead) → clears the record + exit 4', async () => {
-    writeDaemonRecord({ pid: deadPid(), port: 1, startedAt: Date.now() });
+    writeProjectDaemonRecord(PROJECT_ID, {
+      pid: deadPid(),
+      port: 1,
+      startedAt: Date.now(),
+      projectId: PROJECT_ID,
+    });
     const r = await run(() => daemonStatus({}));
     expect(inferExitCode(r.err)).toBe(EXIT.DAEMON_DOWN);
     expect(r.stderr).toMatch(/stale record removed/);
@@ -246,7 +287,12 @@ describe('noir daemon status — exit-code contract', () => {
 
   it('live pid but /health unreachable → clears the record + exit 4', async () => {
     // Current pid is alive, but nothing listens on a closed port → /health fails.
-    writeDaemonRecord({ pid: process.pid, port: 1, startedAt: Date.now() });
+    writeProjectDaemonRecord(PROJECT_ID, {
+      pid: process.pid,
+      port: 1,
+      startedAt: Date.now(),
+      projectId: PROJECT_ID,
+    });
     const r = await run(() => daemonStatus({}));
     expect(inferExitCode(r.err)).toBe(EXIT.DAEMON_DOWN);
     expect(r.stderr).toMatch(/stale record removed/);
@@ -268,7 +314,12 @@ describe('noir daemon status — exit-code contract', () => {
       });
     });
     try {
-      writeDaemonRecord({ pid: process.pid, port, startedAt: Date.now() });
+      writeProjectDaemonRecord(PROJECT_ID, {
+        pid: process.pid,
+        port,
+        startedAt: Date.now(),
+        projectId: PROJECT_ID,
+      });
       const r = await run(() => daemonStatus({ json: true }));
       expect(r.err).toBeUndefined();
       const envelope = JSON.parse(r.stdout);
@@ -289,21 +340,29 @@ describe('noir daemon status — exit-code contract', () => {
       expect(human.stderr).toMatch(/foreground/);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
-      clearDaemonRecord();
     }
   });
 });
 
 describe('noir daemon stop — best-effort exit 0', () => {
+  const PROJECT_ID = 'daemon-stop-project';
+  let root: string;
+  let origCwd: string;
+  beforeEach(() => {
+    ({ root, origCwd } = seedProject(PROJECT_ID));
+  });
+  afterEach(() => {
+    process.chdir(origCwd);
+    rmSync(root, { recursive: true, force: true });
+  });
+
   it('no record → exit 0 "not running"', async () => {
-    clearDaemonRecord();
     const r = await run(() => daemonStop({}));
     expect(r.err).toBeUndefined();
     expect(r.stderr).toMatch(/No Noir daemon is running/);
   });
 
   it('no record under --json → envelope {running:false, stopped:false}', async () => {
-    clearDaemonRecord();
     const r = await run(() => daemonStop({ json: true }));
     expect(r.err).toBeUndefined();
     const envelope = JSON.parse(r.stdout);
@@ -312,7 +371,12 @@ describe('noir daemon stop — best-effort exit 0', () => {
 
   it('stale record (dead pid) → clears + exit 0 with the could-not-signal note', async () => {
     const pid = deadPid();
-    writeDaemonRecord({ pid, port: 9, startedAt: Date.now() });
+    writeProjectDaemonRecord(PROJECT_ID, {
+      pid,
+      port: 9,
+      startedAt: Date.now(),
+      projectId: PROJECT_ID,
+    });
     const r = await run(() => daemonStop({}));
     expect(r.err).toBeUndefined();
     expect(r.stderr).toMatch(/could not be signalled/);

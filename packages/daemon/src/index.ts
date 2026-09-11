@@ -22,15 +22,8 @@ export {
   shortNameOf,
   writeIntegrationAudit,
 } from './integration-seam.js';
-export {
-  clearDaemonRecord,
-  type DaemonRecord,
-  daemonJsonPath,
-  noirHome,
-  pidAlive,
-  readDaemonRecord,
-  writeDaemonRecord,
-} from './lifecycle.js';
+export { pidAlive } from './lifecycle.js';
+export { retireLegacyDaemonRecord } from './migrate-legacy-record.js';
 export {
   buildMemoryEngine,
   resolveConsolidationCapability,

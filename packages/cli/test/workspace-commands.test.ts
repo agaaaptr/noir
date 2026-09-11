@@ -70,7 +70,7 @@ let origCwd: string;
 beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), 'noir-wscli-home-'));
   process.env.NOIR_WORKSPACES_DIR = join(home, 'workspaces');
-  process.env.NOIR_DAEMON_JSON = join(home, 'daemon.json');
+  process.env.NOIR_DAEMON_DIR = join(home, 'daemons');
   root = mkdtempSync(join(tmpdir(), 'noir-wscli-repo-'));
   origCwd = process.cwd();
   mkdirSync(paths.noirDir(root), { recursive: true });

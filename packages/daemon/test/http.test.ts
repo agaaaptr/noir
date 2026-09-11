@@ -5,18 +5,19 @@ import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/cli
 import type { ProjectInfo } from '@noir-ai/core';
 import { afterAll, describe, expect, it } from 'vitest';
 import { startHttpServer } from '../src/http.js';
-import { clearDaemonRecord } from '../src/lifecycle.js';
+import { clearProjectDaemonRecord } from '../src/project-record.js';
 
-// Isolate the global daemon.json per vitest worker (file-parallelism safe).
+// Isolate the per-project daemon records per vitest worker (file-parallelism
+// safe). `startHttpServer` writes this project's record under this dir.
 const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-test-http-'));
-process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'daemon.json');
+process.env.NOIR_DAEMON_DIR = tmpRoot;
 
 // Isolated project root so startHttpServer's store open doesn't leak a DB
 // under a shared path like /tmp/http-demo.
 const projectRoot = mkdtempSync(join(tmpdir(), 'noir-test-http-root-'));
 
 afterAll(() => {
-  clearDaemonRecord();
+  clearProjectDaemonRecord(project.id);
   rmSync(tmpRoot, { recursive: true, force: true });
   rmSync(projectRoot, { recursive: true, force: true });
 });
@@ -30,7 +31,7 @@ const project: ProjectInfo = {
 
 describe('startHttpServer', () => {
   it('serves /health 200 and host_status over Streamable HTTP', async () => {
-    clearDaemonRecord();
+    clearProjectDaemonRecord(project.id);
     const { port, stop } = await startHttpServer({ project, idleTimeoutSec: 900 });
     try {
       const health = await fetch(`http://127.0.0.1:${port}/health`);
@@ -54,7 +55,7 @@ describe('startHttpServer', () => {
       await client.close();
     } finally {
       await stop();
-      clearDaemonRecord();
+      clearProjectDaemonRecord(project.id);
     }
   }, 20000);
 });

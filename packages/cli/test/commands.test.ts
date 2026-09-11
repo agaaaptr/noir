@@ -76,9 +76,10 @@ vi.mock('@noir-ai/store', () => ({
 }));
 
 // No daemon record ⇒ checkDaemon warns "not running" WITHOUT pinging /health,
-// so `fetch` is never reached from the daemon check either.
+// so `fetch` is never reached from the daemon check either. (`readProjectDaemonRecord`
+// is the per-project record reader doctor consults; `pidAlive` guards it.)
 vi.mock('@noir-ai/daemon', () => ({
-  readDaemonRecord: () => null,
+  readProjectDaemonRecord: () => null,
   pidAlive: () => false,
 }));
 

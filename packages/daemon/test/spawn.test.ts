@@ -10,9 +10,9 @@
 //     record is present);
 //   - a timeout (record never appears / health never answers) rejects.
 //
-// The daemon record is isolated per vitest worker via NOIR_DAEMON_JSON (the same
-// override the lifecycle module reads), so file-parallel runs never race on the
-// global ~/.noir/daemon.json.
+// The per-project daemon record is isolated per vitest worker via NOIR_DAEMON_DIR
+// (the same override the project-record module reads), so file-parallel runs
+// never race on the real ~/.noir/daemons directory.
 
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -21,7 +21,7 @@ import type { ProjectInfo } from '@noir-ai/core';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tmpRoot = mkdtempSync(join(tmpdir(), 'noir-test-spawn-'));
-process.env.NOIR_DAEMON_JSON = join(tmpRoot, 'daemon.json');
+process.env.NOIR_DAEMON_DIR = tmpRoot;
 
 // Stub the child process at the module boundary — no real detached process is
 // ever spawned, and the fake child records the spawn args for assertions.
@@ -30,7 +30,7 @@ vi.mock('node:child_process', () => ({
   spawn: spawnMock,
 }));
 
-import { clearDaemonRecord, writeDaemonRecord } from '../src/lifecycle.js';
+import { clearProjectDaemonRecord, writeProjectDaemonRecord } from '../src/project-record.js';
 import { spawnDetachedDaemon } from '../src/spawn.js';
 
 // Isolated project root so nothing touches a shared path.
@@ -49,12 +49,12 @@ function fakeChild(pid: number) {
 
 beforeEach(() => {
   spawnMock.mockReset();
-  clearDaemonRecord();
+  clearProjectDaemonRecord(project.id);
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-  clearDaemonRecord();
+  clearProjectDaemonRecord(project.id);
 });
 
 afterAll(() => {
@@ -69,7 +69,12 @@ describe('spawnDetachedDaemon', () => {
     // writes the daemon record) — the parent then discovers the port.
     const port = 54321;
     spawnMock.mockImplementation((_exec: string, _argv: string[], _opts: unknown) => {
-      writeDaemonRecord({ pid: 4321, port, startedAt: Date.now() });
+      writeProjectDaemonRecord('spawn', {
+        pid: 4321,
+        port,
+        startedAt: Date.now(),
+        projectId: 'spawn',
+      });
       return fakeChild(4321);
     });
     // /health answers ok once the record (and thus the port) exists.
@@ -123,7 +128,12 @@ describe('spawnDetachedDaemon', () => {
 
   it('throws a timeout error when the record exists but /health never answers', async () => {
     spawnMock.mockImplementation((_exec: string, _argv: string[], _opts: unknown) => {
-      writeDaemonRecord({ pid: 6666, port: 1, startedAt: Date.now() });
+      writeProjectDaemonRecord('spawn', {
+        pid: 6666,
+        port: 1,
+        startedAt: Date.now(),
+        projectId: 'spawn',
+      });
       return fakeChild(6666);
     });
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
