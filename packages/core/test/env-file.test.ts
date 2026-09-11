@@ -158,7 +158,12 @@ describe('loadNoirEnv — precedence + missing file', () => {
     expect(stderr).toContain('SHADOWED_ONE');
     expect(stderr).toContain('SHADOWED_TWO');
     expect(stderr).not.toContain('SAME_VALUE');
-    expect(written.length).toBe(2);
+    // POSIX-only: on win32 `chmod` is a no-op (permissions are ACL-based and the
+    // mode is dropped), so the 0o600 above never takes effect and the loader's
+    // group/world-readable advisory adds a third line. The shadowing count right
+    // below is asserted identically on every platform.
+    if (process.platform !== 'win32') expect(written.length).toBe(2);
+    expect(written.filter((l) => l.includes('overrides the environment value'))).toHaveLength(2);
     // The invariant: a warning names the key only — no value from either side.
     for (const value of ['env_one', 'env_two', 'file_one', 'file_two']) {
       expect(stderr).not.toContain(value);

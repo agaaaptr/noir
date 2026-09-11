@@ -312,8 +312,11 @@ export function createProgram(): Command {
     }
     // Load project-local .noir/.env AFTER the --cwd chdir so the .env root
     // matches the effective project (a `--cwd /other` run must never inherit the
-    // launch dir's tokens into the host subprocess). Idempotent — real env wins,
-    // the file fills only unset keys.
+    // launch dir's tokens into the host subprocess). Idempotent — and spec 12.1
+    // inverts the usual dotenv rule: a key the file DEFINES wins, and the real
+    // environment is the fallback for keys the file omits. The overlay is
+    // confined to this process tree (see applyNoirEnv), so a sibling shell and
+    // the user's own manual `claude` invocations are untouched.
     applyNoirEnv(process.cwd());
     // SP-G: propagate --json / --no-input to the deep conflict resolver via env
     // so a regenerate conflict never prompts under those flags (the @clack
