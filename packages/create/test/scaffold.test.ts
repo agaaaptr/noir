@@ -204,10 +204,15 @@ describe('scaffold create — greenfield', () => {
 });
 
 describe('scaffold upgrade — migrations', () => {
-  it('runs migrations and reports them; emits runtime subset only (skipIfExists left alone)', async () => {
+  it('runs migrations and reports them; backfills absent skipIfExists seeds', async () => {
     await init(root);
-    // Mutate a skipIfExists file so we can prove upgrade did NOT rewrite it.
+    // An ABSENT seed is backfilled by the upgrade (spec §11.1 — the §1.6 fix):
+    // `--upgrade` now emits the full manifest, so `.noir/config.yml` is
+    // re-seeded rather than left permanently missing.
     rmSync(paths.config(root), { force: true });
+    // …while a PRESENT seed the user owns is never opened (skipIfExists).
+    const rules = '# my own working rules\n';
+    writeFileSync(paths.rulesMd(root), rules, 'utf8');
 
     const res = await scaffold({ root, mode: 'init', upgrade: true });
     expect(res.migrationsRan).toContain('1.0.0→1.0.0');
@@ -215,8 +220,12 @@ describe('scaffold upgrade — migrations', () => {
     // dedup'd to `identical` (no disk write).
     expect(res.identical).toContain('.mcp.json');
     expect(res.identical).toContain('.noir/NOIR.md');
-    // config.yml was deleted and upgrade did NOT re-seed it.
-    expect(existsSync(paths.config(root))).toBe(false);
+    // config.yml was deleted and upgrade re-seeded it (create-only-if-absent).
+    expect(existsSync(paths.config(root))).toBe(true);
+    expect(res.written).toContain('.noir/config.yml');
+    // The user's RULES.md bytes stand — the entry was skipped, not rewritten.
+    expect(readFileSync(paths.rulesMd(root), 'utf8')).toBe(rules);
+    expect(res.skipped).toContain('.noir/rules/RULES.md');
   });
 });
 

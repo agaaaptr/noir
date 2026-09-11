@@ -72,9 +72,10 @@ export interface ScaffoldOptions {
   /** Explicit project id; bypasses generate/read. Mainly for tests + `create`
    *  flows that want deterministic ids. */
   projectId?: string;
-  /** `noir init --upgrade`: run migrations before re-emitting, and emit only
-   *    regenerate + managedBlock (skipIfExists left alone). Only meaningful
-   *    with mode `'init'`. */
+  /** `noir init --upgrade`: run migrations, then emit the FULL manifest.
+   *  `skipIfExists` keeps its create-only-if-absent semantics, so an upgrade
+   *  backfills seeds added since initialization without ever touching a file
+   *  the user owns. Only meaningful with mode `'init'`. */
   upgrade?: boolean;
   /** SP-A: re-scaffold even when the target is already initialized (bypasses
    *    the already-initialized no-op guard). Does NOT bypass `assertSafeRoot`
@@ -217,11 +218,16 @@ export type ConflictResolverReturn =
 
 const WRITER_BY_MODE: Record<WriteMode, 'all' | 'runtime'> = {
   // 'runtime' subset = regenerate + managedBlock (the always-safe-to-rewrite
-  // entries). sync + init --upgrade emit only this subset; skipIfExists is
-  // reserved for first-run init/create so user edits survive.
+  // entries). `sync` emits only this subset; `skipIfExists` is excluded there
+  // because sync is not a scaffold event — it refreshes the host pointers, it
+  // does not (re)create a project's seeds.
+  // `init --upgrade` deliberately emits EVERY mode (see `emitRuntimeOnly`
+  // below): `skipIfExists` is created-only-if-absent, so running it on an
+  // upgrade backfills a seed added to the manifest after initialization while
+  // remaining unable to touch a file the user owns (spec §11.1).
   // 'mergeJson' (C3 SessionStart hook) is 'all' — the settings entry is
-  // written once at init/create; sync re-emits only the script + router
-  // contract (regenerate + managedBlock), never the user-owned entry.
+  // written once at init/create; a runtime-only emit (sync) never re-adds the
+  // user-owned entry.
   regenerate: 'runtime',
   managedBlock: 'runtime',
   skipIfExists: 'all',
@@ -377,7 +383,14 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     command,
     stack,
   });
-  const emitRuntimeOnly = opts.mode === 'sync' || (opts.mode === 'init' && opts.upgrade === true);
+  // `sync` alone emits the runtime subset (regenerate + managedBlock).
+  // `init --upgrade` emits the FULL manifest on purpose: `skipIfExists` keeps
+  // its create-only-if-absent semantics there, which is exactly what backfills a
+  // seed added to the manifest after a project was initialized — the §1.6
+  // regression, where `.noir/.env.example` was reachable by no command at all
+  // (spec §11.1). The writer never opens an existing file, so a user's own
+  // seed, and its mode, cannot be touched by this.
+  const emitRuntimeOnly = opts.mode === 'sync';
   const vars: BuildManifestContext = {
     root: opts.root,
     projectId,
