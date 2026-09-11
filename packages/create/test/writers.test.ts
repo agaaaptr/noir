@@ -186,12 +186,13 @@ describe('skipIfExists', () => {
     expect(readFileSync(f, 'utf8')).toBe('USER-EDITED');
   });
 
-  it('does not throw when the target dir is missing (caller owns mkdir)', () => {
-    // skipIfExists uses writeFileSync which DOES create the file but errors on
-    // a missing parent dir. The orchestrator mkdirs first; here we just assert
-    // the writer itself doesn't add surprising mkdir semantics by checking the
-    // happy path is stable.
-    const f = join(dir, 'ok.md');
+  it('creates missing parent dirs itself (writes through atomicWriteFile)', () => {
+    // slice E: skipIfExists now routes through @noir-ai/core's atomicWriteFile
+    // (tmp + rename), which mkdirs recursively before writing — a requested
+    // `fileMode` must land on the temp file, so the plain writeFileSync path is
+    // gone. The orchestrator still mkdirs first; this asserts the writer is
+    // self-sufficient and the happy path stays stable.
+    const f = join(dir, 'nested', 'ok.md');
     expect(() => skipIfExists(f, 'OK')).not.toThrow();
     expect(existsSync(f)).toBe(true);
   });

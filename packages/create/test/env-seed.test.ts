@@ -75,11 +75,17 @@ describe('noir init — .noir/.env seed (slice E, §8.1)', () => {
 
   it('parses to an empty overlay — no active value was written', async () => {
     await scaffold({ root, mode: 'init', host: 'claude' });
-    const parsed = loadNoirEnv(root);
-    expect(parsed.overlay).toEqual({});
-    // No malformed line was skipped silently either (a rejected key or an
-    // unterminated quote would surface here as a warning).
-    expect(parsed.warnings).toEqual([]);
+    expect(loadNoirEnv(root).overlay).toEqual({});
+  });
+
+  posixIt('emits no loader warning — no malformed line, no permission advisory', async () => {
+    // POSIX-only: `loadNoirEnv` pushes a group/world-readable advisory whenever
+    // `mode & 0o077 !== 0`, and Windows drops the requested mode (ACL-based
+    // permissions), so the advisory would fire there for a file that is in fact
+    // private. Exact equality, so BOTH a silently-skipped malformed line (a
+    // rejected key, an unterminated quote) and a lax permission fail this.
+    await scaffold({ root, mode: 'init', host: 'claude' });
+    expect(loadNoirEnv(root).warnings).toEqual([]);
   });
 
   it('is all-comment — not one line is an active assignment', async () => {
