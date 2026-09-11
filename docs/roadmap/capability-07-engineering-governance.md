@@ -8,8 +8,8 @@ The governance ruleset that makes Noir a "project operating system": an ADR seri
 
 ## Shipped today
 
-- **ADR series established** — ADR-0001..0004 plus an index `docs/decisions/README.md` with an append-only convention: superseded ADRs are marked, never deleted.
-- **Spec-driven process dogfooded** — 16 dated design specs under `docs/internal/specs/` and 17 dated implementation plans + acceptance checklists under `docs/internal/plans/`.
+- **ADR series established** — ADR-0001..0011 plus an index `docs/decisions/README.md` with an append-only convention: superseded ADRs are marked, never deleted.
+- **Spec-driven process dogfooded** — 32 dated design specs under `docs/internal/specs/` and 25 dated implementation plans + acceptance checklists under `docs/internal/plans/`.
 - **CI quality gates on every push/PR** — `.github/workflows/ci.yml` runs Biome lint, build, typecheck, Vitest tests, and `docs:validate` on ubuntu + macos with Node 22.
 - **Release governance shipped and used** — `.github/workflows/release.yml`: unified versioning, version-string channels, SLSA provenance, idempotent publish.
 - **Docs governance** — `docs:validate` broken-link/stale-version checks; `docs:generate` auto-writes reference docs and managed blocks (package.json scripts).
@@ -44,6 +44,13 @@ The governance ruleset that makes Noir a "project operating system": an ADR seri
 - `docs/decisions/0002-native-skills-only-plugin-removed.md`
 - `docs/decisions/0003-v1x-capabilities.md`
 - `docs/decisions/0004-multi-host-adapters.md`
+- `docs/decisions/0005-native-installer-managed-node.md`
+- `docs/decisions/0006-c2-tui-and-daemon-detach.md`
+- `docs/decisions/0007-generated-artifact-standard.md`
+- `docs/decisions/0008-v2-orchestrator-tui.md`
+- `docs/decisions/0009-shared-workspaces.md`
+- `docs/decisions/0010-per-project-daemon-records-and-http-auth.md`
+- `docs/decisions/0011-noir-env-precedence-and-doctrine.md`
 - `AGENTS.md`
 - `.github/workflows/ci.yml`
 - `.github/workflows/release.yml`

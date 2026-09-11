@@ -11,7 +11,7 @@
 **Current beta:** `1.13.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.13.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-11T10:49:57.001Z*
+*Last auto-generated: 2026-09-11T11:13:56.306Z*
 <!-- /noir:doc:status -->
 
 ---
@@ -50,7 +50,7 @@ These are done once, by the npm org owner, before the first release. v1 uses **P
 
 1. **Make the repo public** (`agaaaptr/noir`) — provenance requires a public source repo. If you keep it private, drop `--provenance` and accept weaker attestations.
 2. **Add the `NPM_TOKEN` secret** (Repo settings → **Secrets and variables** → **Actions** → **New repository secret**): name `NPM_TOKEN`, value = the token from §1a step 3. The publish job reads it via `${{ secrets.NPM_TOKEN }}`.
-3. **Create the `release` environment** (Repo settings → **Environments** → **New environment** → `release`). Optionally add a **Required reviewer** so a tag push waits for human approval in the GitHub Actions UI before `npm publish` runs. For tighter blast-radius control, put the `NPM_TOKEN` secret on the `release` **environment** (instead of the repo) so it is only available after that approval — recommended.
+3. **Create the `release` environment** (Repo settings → **Environments** → **New environment** → `release`) **with a required reviewer** (currently `agaaaptr`). This gate is **required**, not optional: every tag push pauses the `publish` job until that reviewer approves it in the GitHub Actions UI — nothing reaches `npm publish` without human approval. For tighter blast-radius control, put the `NPM_TOKEN` secret on the `release` **environment** (instead of the repo) so it is only available after that approval — recommended.
 
 ### 1c. Local machine
 
@@ -389,7 +389,7 @@ The very first release (`1.0.0`) has extra gating. Do not cut it until every box
 - [ ] Granular automation token `noir-release` created on npm: scoped to `@noir-ai/*`, Read + Write, 2FA bypass.
 - [ ] `NPM_TOKEN` GitHub secret = the token (repo-level, or on the `release` environment for tighter gating).
 - [ ] Repo `agaaaptr/noir` is **public** (provenance requires it).
-- [ ] `release` environment created on GitHub (optional required-reviewer added).
+- [ ] `release` environment created on GitHub **with a required reviewer** (`agaaaptr`) — the tag → `npm publish` approval gate.
 
 **Readiness (§2 / §4)**
 - [ ] `pnpm lint && pnpm build && pnpm typecheck && pnpm test` all green on `main` (target the same Node 22 the CI uses).

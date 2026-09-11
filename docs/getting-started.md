@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.13.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.13.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-11T10:49:55.956Z*
+*Last auto-generated: 2026-09-11T11:13:55.311Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -64,6 +64,7 @@ noir init
 | `.noir/.env` | The project's configuration/secrets file, created at mode `0600` and gitignored. Every line starts commented out, so creating it changes nothing until you edit it. See [configure-env.md](how-to/configure-env.md). |
 | `.noir/.env.example` | The committable counterpart — the same variable set with commented-out fake placeholders. Documentation only; it is never loaded. |
 | `.noir/NOIR.md` | The canonical context file. The host merely `@import`s it. |
+| `.noir/README.md` | The co-owned `.noir/` runtime map — a self-documenting map of what lives in `.noir/` and what appears later. Noir keeps the managed block current; your own notes outside it survive. |
 | `.noir/rules/RULES.md` | The Noir-curated rules seed; wired into the host context file via a managed `RULES_BLOCK`. |
 | `.noir/scaffold-version` | The scaffold-engine version stamp; `noir doctor` reports drift, `noir init --upgrade` runs migrations. |
 | `.mcp.json` | The MCP server entry Claude Code reads. |

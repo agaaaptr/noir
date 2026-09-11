@@ -375,7 +375,7 @@ function genConfigSchema() {
     '  are parsed + validated but have no live consumer yet — declaring them now avoids',
     '  schema churn when their feature ships. Do not rely on them.',
     "- `rules.lengthBudgetKb` IS read: `noir doctor`'s RULES.md budget check.",
-    '- `run.*` is new in 1.13.0 (host profiles; first surfaced on `beta` as 1.12.0-beta.1). All other blocks predate it.',
+    '- `run.*` (host profiles; first surfaced on `beta` as 1.12.0-beta.1) and `workspace.*` (shared cross-repo workspaces, ADR-0009) are new in 1.13.0. All other blocks predate 1.13.0.',
   );
   lines.push('');
   return lines.join('\n');

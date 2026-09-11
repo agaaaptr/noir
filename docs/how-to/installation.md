@@ -18,7 +18,7 @@
 **Current beta:** `1.13.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.13.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-11T10:49:56.460Z*
+*Last auto-generated: 2026-09-11T11:13:55.850Z*
 <!-- /noir:doc:status -->
 >
 > Pin a version with `NOIR_VERSION=<VERSION>` (POSIX) or `$env:NOIR_VERSION='<VERSION>'` (PowerShell).
@@ -166,10 +166,16 @@ If you started from a non-native install, a **one-time migration banner** is sho
 
 ### Version-assert (never a silent downgrade)
 
-`noir install`/`migrate` refuses to downgrade unless you pin the version explicitly. If the target spec resolves to an **older** version than what's recorded, the command fails with a clear message (under `--no-input`) or prompts an interactive confirm. To pin a specific older version on purpose:
+`noir install`/`migrate` refuses to downgrade **unconditionally** — there is no interactive confirm and no escape hatch. If the target spec resolves to a **concrete older version** than the one on record, the command fails with a clear message and **exit code 2**:
+
+```
+refusing downgrade to <target> (installed <current>)
+```
+
+The same hard guard refuses a target below the configured `minVersion` floor. It runs on every path — interactive, `--json`, and `--no-input` alike — so a positional version pin is only accepted when it is **equal to or newer than** the installed version:
 
 ```bash
-noir install <VERSION>       # explicit positional pin
+noir install <VERSION>       # explicit positional pin — an older version is refused, not confirmed
 ```
 
 ---
@@ -333,7 +339,7 @@ noir --version       # prints the installed version
 noir doctor          # config / store / embedder / native-deps / provider / install status
 ```
 
-`noir doctor` is the right next step on a fresh install. It checks the config schema, the SQLite store, the local embedder, the native dependencies, the (optional) model provider config, and an **install row** that reports the detected install method (`method=native` / `npm` / `pnpm` / …), the installed version, the latest-known version from the update cache, and a non-blocking advisory when the install isn't on the recommended native path. The install row is **advisory only** (`ok`/`warn`, never `fail`) and makes **no live network call** — it reads `~/.noir/install.json` and the update cache. None of these checks makes a network call. If anything is off, it says so plainly.
+`noir doctor` is the right next step on a fresh install. It checks the config schema, the SQLite store, the local embedder, the native dependencies, the (optional) model provider config, and an **install row** that reports the detected install method (`method=native` / `npm` / `pnpm` / …), the installed version, the latest-known version from the update cache, and a non-blocking advisory when the install isn't on the recommended native path. The install row is **advisory only** (`ok`/`warn`, never `fail`) and makes **no live network call** — it reads `~/.noir/install.json` and the update cache. No check makes an **external** network call (the daemon row probes the local `/health` endpoint on `127.0.0.1`). If anything is off, it says so plainly.
 
 Then, from the project you want Noir to manage:
 

@@ -8,7 +8,7 @@ The `noir` command-line surface: a Commander command tree with global flags, str
 
 ## Shipped today
 
-- Commander command tree (`packages/cli/src/bin.ts`): `init`, `create [dir]`, `sync`, `mcp serve`, `daemon start|stop|status|restart`, `doctor`, `status`, `context search|index|status`, `memory recall|save|sessions|forget|consolidate`, `skills list|sync|lint|registry`, `task new|status|advance|next|decompose|verify|research|research-record|resume|block|abandon`, `install`/`migrate` (C1), `update` (C1), `handoff`/`wrap`, `release`, `run` (v2), `tui`, `palette`.
+- Commander command tree (`packages/cli/src/bin.ts`): `init`, `create [dir]`, `sync`, `mcp serve`, `env`, `daemon start|stop|status|restart|token|join`, `doctor`, `status`, `workspace list|status|leave|stop`, `context search|index|status`, `memory recall|save|capture|sessions|forget|consolidate`, `skills list|sync|lint|registry`, `task new|status|advance|next|decompose|verify|research|research-record|resume|block|abandon`, `install`/`migrate` (C1), `update` (C1), `handoff`/`wrap`, `release`, `run` (v2), `tui`, `palette`.
 - Global flags on every subcommand: `--json`, `--no-input`, `--quiet`, `--verbose`, `--cwd`, `--tui`/`--no-tui` (advisory), `--no-tips`, `-v`/`--version`.
 - S9 exit-code + stream discipline: data → stdout, diagnostics → stderr; color auto-stripped under `--json`/`--quiet`/CI/`NO_COLOR`/non-TTY.
 - Bare `noir` home menu (`@clack/prompts` select, `packages/cli/src/commands/home.ts`) when TTY; routes to `status`/`status --json` when non-interactive (probe-only — never auto-starts the daemon).
@@ -21,7 +21,7 @@ The `noir` command-line surface: a Commander command tree with global flags, str
 - In-process **read-only fallback** when the daemon is down (`withInProcessRead`): `context search`, `memory recall`/`sessions`, `task status` keep working (reads only — writes stay daemon-gated, single-writer preserved).
 - Scaffold engine (`packages/create/src/scaffold.ts`): `init`/`create`/`sync` modes, idempotent, scaffold-version stamp + `init --upgrade` migrations, three-mode writer.
 - Conflict UX (`packages/cli/src/conflict.ts`, `@clack` resolver), write-path semantic dedup (`packages/cli/src/dedup-write.ts`), ignore management (`packages/core/src/ignore-manager.ts` syncIgnores managed blocks).
-- `doctor`: 13 checks including scaffold-version drift, RULES.md budget, host artifacts, publish-readiness, and a C1 **install row** (advisory `ok`/`warn`, never `fail`, no network call — reports detected install method + version + latest-known from the update cache) (`packages/cli/src/commands/doctor.ts`).
+- `doctor`: 14 checks (plus per-key `noir-env` rows) including scaffold-version drift, RULES.md budget, host artifacts, publish-readiness, and a C1 **install row** (advisory `ok`/`warn`, never `fail`, no external network call — reports detected install method + version + latest-known from the update cache) (`packages/cli/src/commands/doctor.ts`).
 - Scriptability: `--json` envelope, `--no-input` never blocks, stable exit codes (0/1/2/3/4/5).
 
 ## Gap / roadmap delta
