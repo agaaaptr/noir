@@ -54,6 +54,7 @@ import {
   readProjectDaemonRecord,
   readWorkspaceDaemonRecord,
   resolveGateConfig,
+  tokenPath,
 } from '@noir-ai/daemon';
 import { createMemoryEngine, type MemoryEngine } from '@noir-ai/memory';
 import { openStore, type Store } from '@noir-ai/store';
@@ -418,6 +419,15 @@ function newClient(): Client {
   );
 }
 
+/** Connect a Client over Streamable HTTP, rethrowing the RAW transport error so
+ *  the caller owns the failure mapping. Used by {@link withWorkspaceDaemon},
+ *  which can read more out of a connect failure than "the daemon is down" (a
+ *  401 means it is up and reachable but rejected our credential). Everything
+ *  else goes through {@link connectClient}, which maps onto exit 4. */
+async function connectRaw(client: Client, url: string, scopeKey: string | null): Promise<void> {
+  await client.connect(httpTransport(url, scopeKey));
+}
+
 /** Connect a Client over Streamable HTTP; map transport failure to exit 4. */
 async function connectClient(
   client: Client,
@@ -426,10 +436,41 @@ async function connectClient(
   scopeKey: string | null,
 ): Promise<void> {
   try {
-    await client.connect(httpTransport(url, scopeKey));
+    await connectRaw(client, url, scopeKey);
   } catch (err) {
     failDaemonDown(opts, err);
   }
+}
+
+/**
+ * Map a WORKSPACE connect failure onto exit 4 with an accurate message.
+ *
+ * A 401 is not "the daemon is down": the daemon answered, so it IS reachable —
+ * it rejected our bearer token (a stale token file, or one we cannot read). The
+ * generic {@link DAEMON_DOWN_HINT} sends the user to `noir daemon start`, which
+ * fixes nothing. Name the token file (the workspace scope key is the workspace
+ * NAME) and the remedy instead. Conservative by construction: only the MESSAGE
+ * differs for the recognizable-401 case — the exit code and every non-401
+ * failure keep the exact previous behaviour.
+ */
+function failWorkspaceConnect(
+  opts: DaemonClientOptions,
+  routing: WorkspaceRouting,
+  cause: unknown,
+): never {
+  const text = String(cause).toLowerCase();
+  if (text.includes('401') || text.includes('unauthorized')) {
+    if (opts.verbose) {
+      process.stderr.write(`noir: daemon transport detail: ${describeCause(cause)}\n`);
+    }
+    // Names only, never a value: the token file's path, never its contents.
+    fail(
+      EXIT.DAEMON_DOWN,
+      `workspace ${JSON.stringify(routing.name)} daemon is running but rejected this client's token (HTTP 401) — its token file is ${tokenPath(routing.name)}; make sure it is readable, or restart the workspace daemon with \`noir daemon start --workspace ${routing.name}\` to mint a fresh one.`,
+      opts,
+    );
+  }
+  failDaemonDown(opts, cause);
 }
 
 /**
@@ -771,7 +812,12 @@ export async function withWorkspaceDaemon<T>(
     // particular the CALLER's project token is never handed to a workspace
     // server: the two scope keys are different identities, so a repo can only
     // ever present the credential of the daemon it is actually addressing.
-    await connectClient(connected, url, opts, routing.name);
+    // `connectRaw` (not `connectClient`) so a 401 rejection reaches
+    // `failWorkspaceConnect` with its cause intact, instead of being flattened
+    // into the generic "daemon not reachable" hint.
+    await connectRaw(connected, url, routing.name).catch((err: unknown) =>
+      failWorkspaceConnect(opts, routing, err),
+    );
     return await fn(buildCaller(connected, opts));
   } finally {
     if (client) {

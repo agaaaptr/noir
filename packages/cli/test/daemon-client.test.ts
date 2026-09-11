@@ -13,14 +13,16 @@ vi.mock('@modelcontextprotocol/client', () => ({
 }));
 
 vi.mock('@noir-ai/daemon', () => ({
-  // daemon-client.ts imports `ensureDaemonRunning` (the ensure/start seam) and
-  // `readDaemonToken` (the HTTP bearer token, spec 6.1); the record readers live
-  // behind those, so no other export needs mocking here. The workspace path
+  // daemon-client.ts imports `ensureDaemonRunning` (the ensure/start seam),
+  // `readDaemonToken` (the HTTP bearer token, spec 6.1) and `tokenPath` (the
+  // token file's path, named in the workspace 401 message); the record readers
+  // live behind those, so no other export needs mocking here. The workspace path
   // (`probeWorkspaceDaemon`) additionally reads the workspace record + pid.
   ensureDaemonRunning: vi.fn(),
   readDaemonToken: vi.fn(),
   readWorkspaceDaemonRecord: vi.fn(),
   pidAlive: vi.fn(),
+  tokenPath: vi.fn(),
 }));
 
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
@@ -29,6 +31,7 @@ import {
   pidAlive,
   readDaemonToken,
   readWorkspaceDaemonRecord,
+  tokenPath,
 } from '@noir-ai/daemon';
 import { EXIT, NoirCliError } from '../src/bin.js';
 import {
@@ -264,6 +267,77 @@ describe('connectClient — bearer token (spec 6.1)', () => {
     expect(readDaemonToken).toHaveBeenCalledWith('ws-demo');
     expect(readDaemonToken).not.toHaveBeenCalledWith(project.id);
     expect(transportOptions().requestInit?.headers?.Authorization).toBe('Bearer ws-tok-456');
+  });
+});
+
+describe('withWorkspaceDaemon — connect 401 (token mismatch)', () => {
+  it('names the token file instead of the generic "daemon not reachable" hint', async () => {
+    // A 401 means the workspace daemon IS running and reachable — it rejected
+    // our bearer token (a stale or unreadable token file). The message must
+    // name the token file + remedy, NOT the generic start hint (which would be
+    // wrong: the daemon is already started).
+    const routing = { name: 'ws-demo', projectId: project.id };
+    vi.mocked(readWorkspaceDaemonRecord).mockReturnValue({
+      pid: process.pid,
+      port: 65432,
+      startedAt: Date.now(),
+      workspace: 'ws-demo',
+    });
+    vi.mocked(pidAlive).mockReturnValue(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ ok: true, pid: process.pid, workspace: 'ws-demo' }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+      ),
+    );
+    installFakeClient({
+      connect: async () => Promise.reject(new Error('HTTP 401 Unauthorized')),
+    });
+    vi.mocked(tokenPath).mockReturnValue('/tmp/noir-daemons/ws-demo.token');
+
+    const err = (await withWorkspaceDaemon(baseOpts, routing, (caller) =>
+      caller.callTool('memory_recall'),
+    ).catch((e) => e as NoirCliError)) as NoirCliError;
+
+    expect(err.exitCode).toBe(EXIT.DAEMON_DOWN); // exit code unchanged
+    expect(err.message).toMatch(/401/);
+    expect(err.message).toContain('/tmp/noir-daemons/ws-demo.token'); // the token file
+    expect(err.message).toContain('ws-demo'); // the workspace scope key
+    expect(err.message).not.toMatch(/daemon not reachable/); // NOT the generic hint
+  });
+
+  it('keeps the generic hint for a non-401 connect failure (conservative)', async () => {
+    const routing = { name: 'ws-demo', projectId: project.id };
+    vi.mocked(readWorkspaceDaemonRecord).mockReturnValue({
+      pid: process.pid,
+      port: 65432,
+      startedAt: Date.now(),
+      workspace: 'ws-demo',
+    });
+    vi.mocked(pidAlive).mockReturnValue(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ ok: true, pid: process.pid, workspace: 'ws-demo' }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+      ),
+    );
+    installFakeClient({ connect: async () => Promise.reject(new Error('ECONNREFUSED')) });
+
+    const err = (await withWorkspaceDaemon(baseOpts, routing, (caller) =>
+      caller.callTool('memory_recall'),
+    ).catch((e) => e as NoirCliError)) as NoirCliError;
+
+    expect(err.exitCode).toBe(EXIT.DAEMON_DOWN);
+    expect(err.message).toBe(DAEMON_DOWN_HINT);
+    expect(err.message).not.toContain('token');
   });
 });
 

@@ -23,12 +23,14 @@ vi.mock('@modelcontextprotocol/client', () => ({
 
 vi.mock('@noir-ai/daemon', () => ({
   // daemon-client.ts imports `ensureDaemonRunning` (the spawn seam),
-  // `readDaemonToken` (the HTTP bearer token, spec 6.1) and — for the workspace
-  // probe — the workspace record reader + pid check.
+  // `readDaemonToken` (the HTTP bearer token, spec 6.1), `tokenPath` (named in
+  // the workspace 401 message) and — for the workspace probe — the workspace
+  // record reader + pid check.
   ensureDaemonRunning: vi.fn(),
   readDaemonToken: vi.fn(),
   readWorkspaceDaemonRecord: vi.fn(),
   pidAlive: vi.fn(),
+  tokenPath: vi.fn(),
 }));
 
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
