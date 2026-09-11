@@ -43,6 +43,13 @@ export async function retireLegacyDaemonRecord(
   try {
     raw = readFileSync(path, 'utf8');
   } catch (err) {
+    // ENOENT is a BENIGN race: `existsSync` said the file was there, and another
+    // process (a concurrent `noir` invocation retiring the same legacy record)
+    // removed it in between. There is nothing left to retire — a no-op, not a
+    // refusal. Without this the race surfaces as "cannot read the legacy daemon
+    // record", which tells the user to fix the readability of a file that no
+    // longer exists.
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return;
     const code = (err as NodeJS.ErrnoException).code ?? 'UNKNOWN';
     throw new Error(
       `cannot read the legacy daemon record (${code}) — fix the file's ` +
