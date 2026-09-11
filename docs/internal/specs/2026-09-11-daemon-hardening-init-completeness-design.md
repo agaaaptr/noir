@@ -887,9 +887,13 @@ Every message added here names variables and files, never values. Consistent wit
   from ADR-0009 is untouched.
 - **No new network surface.** The daemon still binds `127.0.0.1` only; the token narrows access
   to it, it does not expose anything new.
-- **Migration never signals a foreign process.** The legacy record's pid is validated with
-  `pidAlive` and the SIGTERM is bounded; on timeout the file is removed anyway and the stranded
-  daemon exits via its own idle timeout.
+- **Migration never signals a foreign process.** `pidAlive` proves liveness, not identity — after a
+  reboot, pids are reallocated from a low counter, so a record left by a force-reboot can name an
+  unrelated process that is alive now. The migration therefore treats a record whose `startedAt`
+  predates the current boot (`rec.startedAt < Date.now() - uptime*1000`) as stale: it deletes the
+  record without signalling. A read failure (root-owned file, EMFILE) is likewise refused, not
+  collapsed into "no pid" and deleted — only a record whose bytes were read but do not parse is
+  deleted. On SIGTERM timeout the start is refused and the file is left in place (§4.5, A5).
 
 ---
 
