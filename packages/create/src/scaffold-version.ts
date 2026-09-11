@@ -16,7 +16,7 @@ import { regenerate } from './writers.js';
 
 /** The scaffold version this build of @noir-ai/create ships. Bumped atomically
  *  whenever a manifest entry, template, or migration changes shape. */
-export const CURRENT_SCAFFOLD_VERSION = '1.0.0';
+export const CURRENT_SCAFFOLD_VERSION = '1.1.0';
 
 const PREFIX = 'noir-scaffold=';
 

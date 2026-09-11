@@ -313,6 +313,28 @@ describe('noir doctor — scaffold-version drift (slice S-T2)', () => {
     expect(row.detail).toMatch(/noir init --upgrade/);
   });
 
+  it('reports drift=true (warn) for a project stamped 1.0.0 — the 1.1.0 bump', async () => {
+    // Task 11 / spec §11.2: bumping CURRENT_SCAFFOLD_VERSION is the mechanism
+    // that tells every EXISTING project to run `noir init --upgrade`. This
+    // pins the real 1.0.0 → current pair — the '0.9.0' case above would keep
+    // passing even if the bump were reverted.
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-scaffold-1-0-0\n', 'utf8');
+    writeFileSync(scaffoldVersionPath(root), 'noir-scaffold=1.0.0\n', 'utf8');
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    expect(env.data.scaffold).toEqual({
+      onDisk: '1.0.0',
+      current: CURRENT_SCAFFOLD_VERSION,
+      drift: true,
+    });
+    const row = findCheck(env.data.checks, 'scaffold version');
+    expect(row.status).toBe('warn'); // advisory: a stale scaffold still works
+    expect(row.detail).toMatch(/on-disk 1\.0\.0 .* current/);
+    expect(row.detail).toMatch(/noir init --upgrade/);
+  });
+
   it('human mode renders the scaffold-version row', async () => {
     mkdirSync(paths.noirDir(root), { recursive: true });
     writeFileSync(paths.projectId(root), 'doctor-scaffold-human\n', 'utf8');

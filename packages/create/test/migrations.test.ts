@@ -19,12 +19,26 @@ afterEach(() => {
 });
 
 describe('migrations registry', () => {
-  it('MIGRATIONS is non-empty (the synthetic 1.0.0→1.0.0 entry ships at v1)', () => {
-    expect(MIGRATIONS.length).toBeGreaterThan(0);
-    const last = MIGRATIONS[MIGRATIONS.length - 1];
-    expect(last).toBeDefined();
-    expect(last?.from).toBe('1.0.0');
-    expect(last?.to).toBe('1.0.0');
+  it('MIGRATIONS ships the synthetic 1.0.0→1.0.0 runner-proof entry', () => {
+    // Located by its window, not by position: real migrations are appended
+    // after it, so an index-based assertion would break on every bump.
+    const synthetic = MIGRATIONS.find((m) => m.from === '1.0.0' && m.to === '1.0.0');
+    expect(synthetic).toBeDefined();
+    expect(synthetic?.description).toMatch(/synthetic/);
+  });
+
+  it('every entry declares a window that moves forward-or-nowhere (from <= to)', () => {
+    // The runner's window filter assumes a linear, non-inverted history.
+    const cmp = (a: string, b: string): number => {
+      const A = a.split('.').map(Number);
+      const B = b.split('.').map(Number);
+      for (let i = 0; i < 3; i++) {
+        const diff = (A[i] ?? 0) - (B[i] ?? 0);
+        if (diff !== 0) return diff;
+      }
+      return 0;
+    };
+    for (const m of MIGRATIONS) expect(cmp(m.from, m.to)).toBeLessThanOrEqual(0);
   });
 
   it('every migration has a runnable `run` and non-empty description', () => {

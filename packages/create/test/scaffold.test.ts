@@ -13,11 +13,22 @@ import { claudeAdapter, emitAgentsMd } from '@noir-ai/adapters';
 import { CONTEXT_BLOCK, paths, RULES_BLOCK, readManagedBlock, syncIgnores } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { BRIEF_BLOCK } from '../src/manifest.js';
+import { MIGRATIONS } from '../src/migrations/index.js';
 import { scaffold } from '../src/scaffold.js';
-import { CURRENT_SCAFFOLD_VERSION, readScaffoldVersion } from '../src/scaffold-version.js';
+import {
+  CURRENT_SCAFFOLD_VERSION,
+  readScaffoldVersion,
+  writeScaffoldVersion,
+} from '../src/scaffold-version.js';
 import { render } from '../src/template.js';
 import { loadTemplate } from '../src/template-loader.js';
 import { buildRegion } from '../src/writers.js';
+
+/** The version an `--upgrade` fixture is stamped with: the oldest version that
+ *  still has REAL migration work ahead of it. Derived from the live registry —
+ *  never a hardcoded pair — so a scaffold-version bump (which is what retires
+ *  the previous chain) keeps these tests asserting something that exists. */
+const BEHIND_VERSION = MIGRATIONS.find((m) => m.from !== m.to)?.from ?? CURRENT_SCAFFOLD_VERSION;
 
 let root: string;
 beforeEach(() => {
@@ -206,6 +217,10 @@ describe('scaffold create — greenfield', () => {
 describe('scaffold upgrade — migrations', () => {
   it('runs migrations and reports them; backfills absent skipIfExists seeds', async () => {
     await init(root);
+    // Rewind the stamp: `init` stamps CURRENT, whose migration window is EMPTY
+    // (there is nothing pending at the version you were just scaffolded at).
+    // A project genuinely BEHIND current is the shape `--upgrade` exists for.
+    writeScaffoldVersion(root, BEHIND_VERSION);
     // An ABSENT seed is backfilled by the upgrade (spec §11.1 — the §1.6 fix):
     // `--upgrade` now emits the full manifest, so `.noir/config.yml` is
     // re-seeded rather than left permanently missing.
@@ -215,7 +230,8 @@ describe('scaffold upgrade — migrations', () => {
     writeFileSync(paths.rulesMd(root), rules, 'utf8');
 
     const res = await scaffold({ root, mode: 'init', upgrade: true });
-    expect(res.migrationsRan).toContain('1.0.0→1.0.0');
+    expect(res.fromVersion).toBe(BEHIND_VERSION);
+    expect(res.migrationsRan).toContain(`${BEHIND_VERSION}→${CURRENT_SCAFFOLD_VERSION}`);
     // On an unchanged tree the re-emitted runtime subset is content-hash
     // dedup'd to `identical` (no disk write).
     expect(res.identical).toContain('.mcp.json');
@@ -561,10 +577,11 @@ describe('scaffold — migrations skip on fresh project (M4)', () => {
   });
 
   it('upgrade on an already-initialized project still runs migrations', async () => {
-    await init(root); // stamps fromVersion = CURRENT
+    await init(root);
+    writeScaffoldVersion(root, BEHIND_VERSION); // a project that is behind
     const res = await scaffold({ root, mode: 'init', upgrade: true });
-    expect(res.fromVersion).not.toBeNull();
-    expect(res.migrationsRan).toContain('1.0.0→1.0.0');
+    expect(res.fromVersion).toBe(BEHIND_VERSION);
+    expect(res.migrationsRan).toContain(`${BEHIND_VERSION}→${CURRENT_SCAFFOLD_VERSION}`);
   });
 });
 

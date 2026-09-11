@@ -12,10 +12,10 @@
  *    `result.conflicts` so the caller (doctor/CI) can fail loudly with a
  *    reviewable artifact rather than hang on a prompt.
  *
- * The registry ({@link MIGRATIONS}) is the deliverable at v1.0.0 — there are no
- * real version-to-version migrations yet. The synthetic `1.0.0 → 1.0.0`
- * migration exists to exercise the runner end-to-end and to give a template
- * for the first real migration.
+ * The registry ({@link MIGRATIONS}) carries two entries: the synthetic
+ * `1.0.0 → 1.0.0` smoke test that exercises the runner end-to-end, and the
+ * first real version-to-version migration, `1.0.0 → 1.1.0`. The synthetic one
+ * is the copy-pasteable template for the next contributor.
  */
 
 export interface MigrationContext {

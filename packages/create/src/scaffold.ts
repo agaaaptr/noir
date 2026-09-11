@@ -369,8 +369,8 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
 
   // 4. Migrations (only when explicitly upgrading). M4: a fresh project
   //    (`fromVersion === null`) has NO prior stamp → nothing to migrate. Skip
-  //    entirely so `noir init --upgrade` on a never-initialized tree doesn't
-  //    report a synthetic no-op `1.0.0→1.0.0` step.
+  //    entirely so `noir init --upgrade` on a never-initialized tree reports
+  //    no migration steps at all.
   const migrationsRan: string[] = [];
   const migrationConflicts: string[] = [];
   if (opts.mode === 'init' && opts.upgrade === true && fromVersion !== null) {

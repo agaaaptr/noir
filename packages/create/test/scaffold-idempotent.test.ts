@@ -144,8 +144,8 @@ describe('pre-1.3.0 legacy project (project.id present, no scaffold-version) no-
 
     const res = await scaffold({ root, mode: 'init', transport: 'stdio', upgrade: true });
     expect(res.noop).toBe(false);
-    // M4: fromVersion is null (no stamp) → migrations are skipped (no synthetic
-    // 1.0.0→1.0.0 step), but the runtime subset is still re-emitted.
+    // M4: fromVersion is null (no stamp) → migrations are skipped entirely (no
+    // chain to run from), but the runtime subset is still re-emitted.
     expect(res.fromVersion).toBeNull();
     expect(res.migrationsRan).toEqual([]);
   });

@@ -11,7 +11,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { paths } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { MIGRATIONS } from '../src/migrations/index.js';
 import { assertSafeRoot, scaffold } from '../src/scaffold.js';
+import { CURRENT_SCAFFOLD_VERSION, writeScaffoldVersion } from '../src/scaffold-version.js';
+
+/** The oldest version that still has REAL migration work ahead of it — the
+ *  fixture stamp for "this project is behind". Derived from the registry so a
+ *  scaffold-version bump cannot leave this file asserting a step that no longer
+ *  exists on the path. */
+const BEHIND_VERSION = MIGRATIONS.find((m) => m.from !== m.to)?.from ?? CURRENT_SCAFFOLD_VERSION;
 
 let tmp: string;
 beforeEach(() => {
@@ -120,11 +128,15 @@ describe('scaffold — already-initialized guard (SP-A)', () => {
   it('upgrade: true is NOT blocked by the already-initialized guard', async () => {
     const root = join(tmp, 'proj');
     await scaffold({ root, mode: 'init', transport: 'stdio' });
+    // A project that is genuinely BEHIND current — `init` stamps CURRENT, whose
+    // migration window is empty, so an un-rewound fixture would pass this test
+    // vacuously.
+    writeScaffoldVersion(root, BEHIND_VERSION);
     const up = await scaffold({ root, mode: 'init', transport: 'stdio', upgrade: true });
-    // Upgrade ran (migrationsRan non-empty) and was NOT blocked by the
-    // already-init guard (noop === false). The re-emitted runtime subset is
-    // dedup'd to `identical` on an unchanged tree.
+    // Upgrade ran migrations and was NOT blocked by the already-init guard
+    // (noop === false). The re-emitted runtime subset is dedup'd to `identical`
+    // on an unchanged tree.
     expect(up.noop).toBe(false);
-    expect(up.migrationsRan.length).toBeGreaterThan(0);
+    expect(up.migrationsRan).toContain(`${BEHIND_VERSION}→${CURRENT_SCAFFOLD_VERSION}`);
   });
 });
