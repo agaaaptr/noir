@@ -55,7 +55,10 @@ export function StatusBar({ payload, loading, run }: StatusBarProps): ReactEleme
     // The run screen's whole state is the run, so the snapshot cells are
     // replaced by it: `run · model · elapsed · tokens`, with the tool count
     // appended once the host has started working.
-    const tools = run.tools !== undefined && run.tools > 0 ? ` · ${run.tools} tools` : '';
+    const tools =
+      run.tools !== undefined && run.tools > 0
+        ? ` · ${run.tools} tool${run.tools === 1 ? '' : 's'}`
+        : '';
     return (
       <Text>
         <Cell label="run" value={`${run.model} · ${run.elapsed} · ${run.tokens}${tools}`} accent />

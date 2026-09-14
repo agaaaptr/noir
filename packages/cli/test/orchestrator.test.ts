@@ -210,6 +210,40 @@ describe('normalizeStreamEvent — partial-message frames', () => {
     });
   });
 
+  it('carries the tool calls of a message that also said something', () => {
+    // A host that streams no partial messages has nothing else to report a tool
+    // with, so a message of "some text, then a call" must not lose the call.
+    const e = normalizeStreamEvent({
+      type: 'assistant',
+      message: {
+        id: 'm-mixed',
+        content: [
+          { type: 'text', text: 'Reading the parser.' },
+          { type: 'tool_use', id: 'toolu_1', name: 'Read', input: { file: 'parser.ts' } },
+        ],
+        usage: { input_tokens: 300, output_tokens: 20 },
+      },
+    });
+    expect(e).toEqual({
+      kind: 'assistant',
+      messageId: 'm-mixed',
+      text: 'Reading the parser.',
+      tools: ['Read'],
+      usage: { inputTokens: 300, outputTokens: 20 },
+    });
+  });
+
+  it('leaves the text-only assistant event exactly as it was', () => {
+    // The shape every other consumer switches on: no tool field when the
+    // message made no calls.
+    expect(
+      normalizeStreamEvent({
+        type: 'assistant',
+        message: { id: 'm1', content: [{ type: 'text', text: 'hi' }] },
+      }),
+    ).toEqual({ kind: 'assistant', messageId: 'm1', text: 'hi', usage: undefined });
+  });
+
   it('keeps the usage of a tool-only message in the run total', () => {
     // The one way this change could quietly corrupt the cost bar: a tool-only
     // message is often the ONLY carrier of its own message id, so its usage

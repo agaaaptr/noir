@@ -85,6 +85,13 @@ export type NoirEvent =
       readonly kind: 'assistant';
       readonly messageId?: string;
       readonly text?: string;
+      /**
+       * The tool calls the message made alongside its text, in the order it
+       * made them. A consumer that renders tools must show these: a host that
+       * streams no partial messages has no other way to say that a message
+       * which said something also called something.
+       */
+      readonly tools?: readonly string[];
       readonly usage?: TokenUsage;
       /** Set when the host flags the assistant message as an API error
        *  (`is_api_error_message:true` or an `error` category string) — its text
@@ -230,9 +237,19 @@ export function normalizeStreamEvent(raw: unknown): NoirEvent | null {
     // A message with text reports text; one whose whole content is a tool call
     // reports the call, with the message's usage riding along so the turn is
     // still counted (a tool-only message is often the only carrier of its own
-    // message id).
+    // message id). A message that does both reports both: the text is the
+    // answer and the call is what the host went on to do, and dropping the call
+    // here would leave a host with no partial feed showing a turn that looks
+    // like it only talked.
     if (content.text !== undefined) {
-      return { kind: 'assistant', messageId, text: content.text, usage, ...error };
+      return {
+        kind: 'assistant',
+        messageId,
+        text: content.text,
+        usage,
+        ...(content.tools === undefined ? {} : { tools: content.tools }),
+        ...error,
+      };
     }
     if (content.tools !== undefined) {
       // One announcement per message, naming its first tool call. The host

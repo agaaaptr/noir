@@ -199,23 +199,32 @@ describe('run screen — live render', () => {
     m.instance.unmount();
   });
 
-  it('shows tool activity and counts it on the status line', async () => {
+  it('shows tool activity, deduped, and counts it on the status line', async () => {
     const m = mountRun();
     await flush();
 
+    // The real sequence for one agentic turn on a host asked for partial
+    // messages: the call is announced as its block opens, then reported again
+    // inside the message that finished it — and the message can carry text the
+    // announced call came after.
     m.host.emitAll([
       { kind: 'init', sessionId: 'sess-1', model: 'claude-sonnet-4' },
+      { kind: 'delta', text: 'Let me read the parser' },
       { kind: 'tool', name: 'Read' },
+      { kind: 'assistant', messageId: 'msg_1', text: 'Let me read the parser.', tools: ['Read'] },
       { kind: 'tool', name: 'Bash' },
+      { kind: 'assistant', messageId: 'msg_2', tools: ['Bash'] },
     ]);
     await flush();
 
     const frame = m.instance.lastFrame() ?? '';
-    expect(frame).toContain('● Read');
-    expect(frame).toContain('● Bash');
+    expect(frame.match(/● Read/g)?.length).toBe(1);
+    expect(frame.match(/● Bash/g)?.length).toBe(1);
     expect(frame).toContain('run:');
     expect(frame).toContain('claude-sonnet-4');
-    expect(frame).toContain('2 tools');
+    expect(frame).toContain('· 2 tools');
+    // The message's text stays above the call it introduced.
+    expect(frame.indexOf('Let me read the parser.')).toBeLessThan(frame.indexOf('● Read'));
     m.instance.unmount();
   });
 
