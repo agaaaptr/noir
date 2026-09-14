@@ -1,12 +1,19 @@
-// Slice E / Task 8 — `noir init` seeds a REAL `.noir/.env` (0600, all-comment)
-// and `.noir/.env.example` carries the doctrine + the full documented variable
-// set. Offline/free: no network, no API key, no embedder.
+// `noir init` seeds two `.noir/.env` files, and this suite pins the contract
+// between them.
 //
-// Why both files exist (§8.1): the example is the committable documentation of
-// the format; `.env` is the working file, created so the user never has to copy
-// the example by hand. `.env` is all-comment, so it parses to an EMPTY overlay
-// and creating it changes no behaviour — asserted via the real loader
-// (`loadNoirEnv`), not by eyeballing the template.
+// `.noir/.env` is the working configuration-and-secrets file: created at 0600,
+// gitignored, and all-comment so it parses to an EMPTY overlay — creating it
+// changes no behaviour (asserted through the real `loadNoirEnv`, not by
+// eyeballing the template). `.noir/.env.example` is the committable reference:
+// it explains what `.env` is for, the precedence order, what to commit, and
+// every variable — but never carries a real (or fake) secret.
+//
+// The two files are deliberately DIFFERENT. `.env` is a short, copy-paste-ready
+// starter the user uncomments; `.env.example` is the long-form documentation
+// that stays in git. They must not share a verbatim block, and neither may
+// smuggle in an active value or a fake `sk-`-shaped key.
+//
+// Offline/free: no network, no API key, no embedder.
 import {
   chmodSync,
   existsSync,
@@ -58,13 +65,20 @@ function activeLines(text: string): string[] {
     );
 }
 
-describe('noir init — .noir/.env seed (slice E, §8.1)', () => {
+describe('noir init — .noir/.env seed', () => {
   it('creates .noir/.env and reports it as written', async () => {
     const res = await scaffold({ root, mode: 'init', host: 'claude' });
     expect(res.written).toContain('.noir/.env');
     expect(existsSync(envPath())).toBe(true);
-    // Not a zero-byte stub — it carries the doctrine + the commented set.
-    expect(readFileSync(envPath(), 'utf8').length).toBeGreaterThan(200);
+  });
+
+  it('is a short starter: at most 60 lines and more than 200 bytes', async () => {
+    await scaffold({ root, mode: 'init', host: 'claude' });
+    const text = readFileSync(envPath(), 'utf8');
+    // Trim the trailing newline before counting so a file that ends in `\n`
+    // is counted by its content lines, not the empty split element.
+    expect(text.trimEnd().split('\n').length).toBeLessThanOrEqual(60);
+    expect(Buffer.byteLength(text, 'utf8')).toBeGreaterThan(200);
   });
 
   posixIt('creates .noir/.env at 0600', async () => {
@@ -88,22 +102,13 @@ describe('noir init — .noir/.env seed (slice E, §8.1)', () => {
     expect(loadNoirEnv(root).warnings).toEqual([]);
   });
 
-  it('is all-comment — not one line is an active assignment', async () => {
+  it('is all-comment with no active assignment and no fake key shape', async () => {
     await scaffold({ root, mode: 'init', host: 'claude' });
     const text = readFileSync(envPath(), 'utf8');
     expect(activeLines(text)).toEqual([]);
     expect(text).not.toMatch(/^[A-Za-z_][A-Za-z0-9_]*=/m);
-    // Specifically: the model key is shown as a NAME, never as a live value.
-    expect(text).not.toMatch(/^ANTHROPIC_API_KEY=/m);
-  });
-
-  it('documents the precedence doctrine (spec §12.1) in .noir/.env', async () => {
-    await scaffold({ root, mode: 'init', host: 'claude' });
-    const t = readFileSync(envPath(), 'utf8');
-    expect(t).toMatch(/recommended home for project-scoped/);
-    expect(t).toMatch(/A real environment variable is a FALLBACK/);
-    expect(t).toMatch(/never commit it\./i);
-    expect(t).toMatch(/docs\/reference\/environment\.md/);
+    // Placeholders must read as instructions, never as a plausible secret.
+    expect(text).not.toMatch(/sk-/);
   });
 
   it('never overwrites an existing .noir/.env (or its mode) — skipIfExists', async () => {
@@ -130,19 +135,26 @@ describe('noir init — .noir/.env seed (slice E, §8.1)', () => {
   });
 });
 
-describe('noir init — .noir/.env.example doctrine + full variable set (spec §8)', () => {
-  it('documents the doctrine and the full variable set', async () => {
+describe('noir init — .noir/.env.example reference', () => {
+  it('is all-comment with no active assignment and no fake key shape', async () => {
     await scaffold({ root, mode: 'init', host: 'claude' });
     const t = readFileSync(examplePath(), 'utf8');
-    expect(t).toMatch(/recommended home for project-scoped/);
-    expect(t).toMatch(/CLICKUP_API_TOKEN/);
-    expect(t).toMatch(/OPENAI_API_KEY/);
-    expect(t).toMatch(/NOIR_PROFILE/);
-    expect(t).toMatch(/apiKeyEnv/); // the NAME-not-interpolation note
-    expect(t).not.toMatch(/^ANTHROPIC_API_KEY=/m); // never an active value
+    expect(activeLines(t)).toEqual([]);
+    expect(t).not.toMatch(/^[A-Za-z_][A-Za-z0-9_]*=/m);
+    expect(t).not.toMatch(/sk-/);
   });
 
-  it('covers every documented variable group, all commented out', async () => {
+  it('opens with the purpose header and the precedence ladder, and links the full reference', async () => {
+    await scaffold({ root, mode: 'init', host: 'claude' });
+    const t = readFileSync(examplePath(), 'utf8');
+    expect(t).toMatch(/What \.noir\/\.env is for/);
+    expect(t).toMatch(/Precedence \(highest wins\)/);
+    expect(t).toMatch(/run\.profiles\.<n>\.env/);
+    expect(t).toMatch(/never commit the real file/i);
+    expect(t).toMatch(/docs\/reference\/environment\.md/);
+  });
+
+  it('names all nine documented variables', async () => {
     await scaffold({ root, mode: 'init', host: 'claude' });
     const t = readFileSync(examplePath(), 'utf8');
     for (const name of [
@@ -158,35 +170,27 @@ describe('noir init — .noir/.env.example doctrine + full variable set (spec §
     ]) {
       expect(t, name).toContain(name);
     }
-    // The ClickUp non-variable is called out as a config.yml key, not an env var.
-    expect(t).toMatch(/CLICKUP_TEAM_ID is NOT an env var/);
-    // `apiKeyEnv` is a NAME, not `${...}` interpolation — state it, never write
-    // an interpolated form that would silently resolve to undefined.
-    expect(t).toMatch(/`apiKeyEnv` is a NAME, not an interpolation/);
-    expect(t).not.toMatch(/apiKeyEnv:\s*\$\{/);
-    // Provider-explicit: no provider ⇒ templates, never a silent paid call.
-    expect(t).toMatch(/never makes a silent/);
-    // Closing pointer to the single complete reference.
-    expect(t).toMatch(/docs\/reference\/environment\.md/);
-    // Still documentation-only: not one active assignment.
-    expect(activeLines(t)).toEqual([]);
   });
 
-  it('carries the same doctrine as the real env file (one body, two files)', async () => {
+  it('documents the host-gateway trio: base URL, auth token, and a default model', async () => {
     await scaffold({ root, mode: 'init', host: 'claude' });
-    const example = readFileSync(examplePath(), 'utf8');
-    const real = readFileSync(envPath(), 'utf8');
-    // The doctrine block is shared verbatim.
-    const doctrine = [
-      '# This file is the recommended home for project-scoped configuration and',
-      '# secrets. Precedence:',
-      '#   1. run profile env     run.profiles.<n>.env      (per-invocation; merges OVER)',
-      '#   2. .noir/.env          <- recommended home for project-scoped configuration',
-      '#   3. real environment    CI / container / launchd / shell rc',
-      '#   4. built-in default',
-    ].join('\n');
-    expect(real).toContain(doctrine);
-    expect(example).toContain(doctrine);
+    const t = readFileSync(examplePath(), 'utf8');
+    expect(t).toContain('ANTHROPIC_BASE_URL');
+    expect(t).toContain('ANTHROPIC_AUTH_TOKEN');
+    expect(t).toMatch(/ANTHROPIC_DEFAULT_(HAIKU|SONNET|OPUS)_MODEL/);
+    // The auth-token header semantics: AUTH_TOKEN -> Authorization: Bearer,
+    // while ANTHROPIC_API_KEY -> x-api-key; setting both is a conflict.
+    expect(t).toMatch(/Authorization: Bearer/);
+    expect(t).toMatch(/Do not set BOTH/);
+  });
+
+  it('states the apiKeyEnv rule: a NAME, never an interpolation', async () => {
+    await scaffold({ root, mode: 'init', host: 'claude' });
+    const t = readFileSync(examplePath(), 'utf8');
+    expect(t).toMatch(/`apiKeyEnv` is a NAME, not an interpolation/);
+    expect(t).not.toMatch(/apiKeyEnv:\s*\$\{/);
+    // The ClickUp non-variable is called out as a config.yml key, not an env var.
+    expect(t).toMatch(/CLICKUP_TEAM_ID is NOT an env var/);
   });
 
   it('never overwrites an existing .env.example — skipIfExists', async () => {
