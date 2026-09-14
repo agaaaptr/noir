@@ -131,9 +131,10 @@ OLLAMA_BASE_URL                           environment                        htt
 
 The report is curated, not a dump: it lists every key the file defines, plus
 the Noir-relevant ambient names (`CLICKUP_API_TOKEN`, the `*_API_KEY` provider /
-embedder keys, `OLLAMA_BASE_URL`, `NOIR_PROFILE`), plus any name the project's
-own `model.providers.<name>.apiKeyEnv` asks for. Your whole shell environment
-is neither listed nor an answer to the question.
+embedder keys, the host gateway variables `ANTHROPIC_BASE_URL` /
+`ANTHROPIC_AUTH_TOKEN` / `API_TIMEOUT_MS`, `OLLAMA_BASE_URL`, `NOIR_PROFILE`),
+plus any name the project's own `model.providers.<name>.apiKeyEnv` asks for.
+Your whole shell environment is neither listed nor an answer to the question.
 
 `--json` emits the structured form — `{ok:true, data:{vars, warnings}}` with
 `{key, source, shadowed?, valueLength}` rows — carrying even less than the
@@ -270,7 +271,8 @@ still wins.
   (`NOIR_DAEMON_DIR`, `NOIR_RUNTIME_DIR`, `NOIR_MCP_COMMAND`, …) are ignored
   with a one-line warning. Noir spawns Node children (the daemon, the host), so
   a file that arrived inside a cloned repository must not be able to inject
-  into them.
+  into them. The full list is in
+  [environment.md](../reference/environment.md).
 - **Never commit it, and never pass a token as a CLI argument** — arguments are
   visible in process lists.
 - **Noir never prints a value.** `noir env` prints the name, the winning

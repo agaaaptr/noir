@@ -15,6 +15,7 @@
 
 - [**Using the ClickUp integration (noir-clickup)**](how-to/clickup.md) — 
 - [**Configuring a project with `.noir/.env`**](how-to/configure-env.md) — 
+- [**Connecting through a gateway**](how-to/gateways.md) — 
 - [**Running with multiple host profiles**](how-to/host-profiles.md) — 
 - [**Installing Noir**](how-to/installation.md) — 
 - [**Adding a package**](how-to/packaging.md) — 

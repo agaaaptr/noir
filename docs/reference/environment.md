@@ -61,6 +61,30 @@ single reference — feature pages link here instead of restating defaults.
 |---|---|---|---|
 | `NOIR_PROFILE` | — | no | Selects a `run.profiles` entry for `noir run`. Precedence: `--profile` flag > `NOIR_PROFILE` > `run.defaultProfile` > built-in host default. |
 
+## Host gateway (`noir run`)
+
+`noir run` spawns the host and passes its own environment — with `.noir/.env`
+applied — through by inheritance, so a gateway configured in the file (or in
+the real environment) reaches the host process, which is what actually reads
+these values. When a run fails to log in, Noir's advice **names** the three
+credential variables in effect together with the source that won;
+`API_TIMEOUT_MS` is passed through and never read. These variables configure
+the **host** path; Noir's own model layer is configured in `config.yml` instead
+— see [Connecting through a gateway](../how-to/gateways.md) and
+[Configuration](config.md).
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `ANTHROPIC_BASE_URL` | — | no | Base URL of an Anthropic-shaped gateway. Host-only: give the origin without the message path — the host appends it. Read by the host, never by Noir. |
+| `ANTHROPIC_AUTH_TOKEN` | — | no | The gateway credential, sent as `Authorization: Bearer`. Do not set it together with `ANTHROPIC_API_KEY` (sent as `x-api-key`) — the host treats both set at once as an auth conflict. |
+| `API_TIMEOUT_MS` | host default (Claude Code: `600000`) | no | Per-request timeout in milliseconds. A host variable passed through by inheritance — Noir never reads it. |
+
+## Shell bridge (`noir run --command`)
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `SHELL` | — (unset) | no | The user's interactive shell, read by the `noir run --command <name>` fallback when the named binary cannot be spawned directly. Only `zsh`, `bash`, and `fish` are eligible: the fallback resolves the name through that shell, so command aliases and functions — invisible to a plain spawn — still work. Disabled entirely on Windows. |
+
 ## Model provider + embedder keys
 
 Provider keys are **named** in config (`model.providers.<name>.apiKeyEnv`), and
@@ -111,7 +135,7 @@ unset means "baseURL required"):
 | `COLUMNS` | 80 (floored at 20) | no | Terminal-width override used by responsive tables and the TUI width budget. |
 | `NOIR_NO_BANNER` | — | no | Non-empty suppresses the startup banner even in an interactive terminal. |
 | `NOIR_ACCESSIBLE` | — | no | Non-empty swaps the banner gradient for a solid accent (accessibility). |
-| `NOIR_NON_INTERACTIVE` | set by `--json` / `--no-input` | no | Propagates the "no prompts" decision into engines that never read `process.env` themselves. Can also be exported directly. |
+| `NOIR_NON_INTERACTIVE` | set by `--json` / `--no-input` | no | Propagates the "no prompts" decision into engines that never read `process.env` themselves. It is an output, not an input: the CLI deletes any ambient value it finds for an invocation that is not `--json` / `--no-input`, so exporting it by hand has no effect. |
 | `NOIR_DISABLE_TUI_HISTORY` | — | no | Non-empty makes palette recents in-memory only (no `~/.noir/<projectId>/tui-history.json`). |
 
 ## Advanced / test-only seams
@@ -146,12 +170,21 @@ defines them:
   refused — none of its keys are in effect. Remedy: add `.noir/.env` to
   `.gitignore` (Noir's managed block already does) and
   `git rm --cached .noir/.env`.
-- **The process-injection deny-list.** `NODE_OPTIONS`, `NODE_PATH`,
-  `LD_PRELOAD`, `DYLD_INSERT_LIBRARIES`, `npm_config_*`, `COREPACK_*`, and
-  Noir's own plumbing names (`NOIR_DAEMON_DIR`, `NOIR_RUNTIME_DIR`,
-  `NOIR_MCP_COMMAND`, …) are ignored with a one-line warning. Noir spawns Node
-  children (the daemon, the host), so a file that arrived inside a cloned
-  repository must not be able to inject into them.
+- **The process-injection deny-list.** Every name below is ignored with a
+  one-line warning naming the key:
+
+  | Group | Names |
+  |---|---|
+  | Node runtime | `NODE_OPTIONS`, `NODE_PATH`, `NODE_ICU_DATA`, `NODE_EXTRA_CA_CERTS`, `NODE_TLS_REJECT_UNAUTHORIZED` |
+  | Loader injection | `LD_PRELOAD`, `LD_LIBRARY_PATH`, `DYLD_INSERT_LIBRARIES`, `ELECTRON_RUN_AS_NODE` |
+  | Package manager | `npm`, `COREPACK` — each also covers its descendants, so every `npm_*` and `COREPACK_*` name is refused too |
+  | Noir plumbing | `NOIR_NODE_DIST_URL`, `NOIR_UPDATE_CACHE_JSON`, `NOIR_RUNTIME_DIR`, `NOIR_DAEMON_JSON`, `NOIR_DAEMON_DIR`, `NOIR_INSTALL_JSON`, `NOIR_MCP_COMMAND`, `NOIR_SYSTEM_NODE_BIN`, `NOIR_TEMPLATES_DIR`, `NOIR_WORKSPACES_DIR` |
+
+  Noir spawns Node children (the daemon, the host), so a file that arrived
+  inside a cloned repository must not be able to inject into them. The
+  package-manager prefix is also why `npm_config_user_agent` — read by
+  `noir init`'s stack detection to tell npm from pnpm / yarn / bun — can only
+  arrive from the package manager that launched Noir, never from this file.
 
 `noir doctor`'s `noir-env` check reports the file's permissions and warns when
 it is tracked by git; `noir env` lists only the keys that actually won. Full
