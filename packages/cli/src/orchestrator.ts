@@ -39,10 +39,17 @@ const HOST_BINARY: Record<HostId, string | null> = {
 /**
  * Headless flags per host. `claude` is the regression anchor (fully specified);
  * the others use the same `-p --output-format stream-json` contract where the
- * host supports it, and remain overridable via the custom-binary path (D2a).
+ * host supports it, and remain overridable via the custom-binary path.
+ *
+ * `--include-partial-messages` is what turns the stream from "one frame per
+ * content block" into "one frame per token": the host then emits `stream_event`
+ * frames carrying each tool call as it starts and each stretch of assistant text
+ * as it is written. A caller that renders live (the TUI's run screen, the
+ * terminal status line) needs those frames to show progress while the answer is
+ * still being produced, rather than only once a whole block has landed.
  */
 const HOST_FLAGS: Record<HostId, readonly string[]> = {
-  claude: ['-p', '--output-format', 'stream-json', '--verbose'],
+  claude: ['-p', '--output-format', 'stream-json', '--verbose', '--include-partial-messages'],
   gemini: ['-p', '--output-format', 'stream-json'],
   opencode: ['run'],
   cursor: ['-p'],
@@ -95,7 +102,29 @@ export type NoirEvent =
       readonly totalCostUsd?: number;
       readonly usage?: TokenUsage;
     }
-  | { readonly kind: 'other' };
+  /**
+   * A tool call the host started. Carries no result text: it exists so a live
+   * render can show WHAT the host is doing while it does it, which is the only
+   * progress signal available between two stretches of assistant text.
+   * `messageId`/`usage` are present when the tool call was read out of a
+   * completed assistant message (a host that reports no partial stream), so
+   * that message's tokens are still accounted for.
+   */
+  | {
+      readonly kind: 'tool';
+      readonly name: string;
+      readonly messageId?: string;
+      readonly usage?: TokenUsage;
+    }
+  /**
+   * A stretch of assistant text as it is written. Provisional by construction:
+   * the host re-reports the same words in the completed `assistant` message
+   * that closes the block, so a consumer that renders both must reconcile them
+   * rather than concatenating.
+   */
+  | { readonly kind: 'delta'; readonly text: string }
+  /** A frame the normalizer does not model. `subtype` names what was dropped. */
+  | { readonly kind: 'other'; readonly subtype?: string };
 
 function asObj(v: unknown): Record<string, unknown> | null {
   return typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null;
@@ -125,21 +154,39 @@ function usageFrom(v: unknown): TokenUsage | undefined {
   return { inputTokens: input, outputTokens: output, cacheReadTokens: cache };
 }
 
-/** Extract the text delta from an assistant message's content (best-effort). */
-function messageText(message: Record<string, unknown> | null): string | undefined {
-  if (!message) return undefined;
+/** What an assistant message's content carries, split by kind. */
+interface MessageContent {
+  /** The concatenated text blocks, when the message has any. */
+  readonly text?: string;
+  /** The names of the tool calls the message made, in order. */
+  readonly tools?: readonly string[];
+}
+
+/**
+ * Split an assistant message's content into its text and its tool calls.
+ *
+ * A message can be either, and a tool-only message carries no text at all —
+ * which is why an empty text result must not be read as "nothing happened": a
+ * turn whose whole content is a tool call is the common case in an agentic run,
+ * and the caller needs the tool's name to show what the host is doing.
+ */
+function messageContent(message: Record<string, unknown> | null): MessageContent {
+  if (!message) return {};
   const content = message.content;
-  if (typeof content === 'string') return content;
-  if (Array.isArray(content)) {
-    const parts = content
-      .map((block) => {
-        const b = asObj(block);
-        return b && typeof b.text === 'string' ? (b.text as string) : null;
-      })
-      .filter((t): t is string => t !== null);
-    if (parts.length > 0) return parts.join('');
+  if (typeof content === 'string') return { text: content };
+  if (!Array.isArray(content)) return {};
+  const parts: string[] = [];
+  const tools: string[] = [];
+  for (const block of content) {
+    const b = asObj(block);
+    if (!b) continue;
+    if (typeof b.text === 'string') parts.push(b.text);
+    else if (b.type === 'tool_use' && typeof b.name === 'string') tools.push(b.name);
   }
-  return undefined;
+  return {
+    ...(parts.length > 0 ? { text: parts.join('') } : {}),
+    ...(tools.length > 0 ? { tools } : {}),
+  };
 }
 
 /** Parse a raw stream-json line to a JSON value, or `null` for blank/invalid. */
@@ -162,15 +209,14 @@ export function normalizeStreamEvent(raw: unknown): NoirEvent | null {
     if (r.subtype === 'init') {
       return { kind: 'init', sessionId: str(r.session_id), model: str(r.model) };
     }
-    return { kind: 'other' };
+    return { kind: 'other', subtype: str(r.subtype) ?? 'system' };
   }
   if (type === 'assistant') {
     const message = asObj(r.message);
-    return {
-      kind: 'assistant',
-      messageId: message ? str(message.id) : undefined,
-      text: messageText(message),
-      usage: message ? usageFrom(message.usage) : undefined,
+    const content = messageContent(message);
+    const messageId = message ? str(message.id) : undefined;
+    const usage = message ? usageFrom(message.usage) : undefined;
+    const error = {
       // An API error message is a diagnostic, not the answer — flag it so the
       // caller never streams it as assistant text (optional-when-true keeps
       // exact-shape consumers of the existing union intact).
@@ -181,6 +227,21 @@ export function normalizeStreamEvent(raw: unknown): NoirEvent | null {
           }
         : {}),
     };
+    // A message with text reports text; one whose whole content is a tool call
+    // reports the call, with the message's usage riding along so the turn is
+    // still counted (a tool-only message is often the only carrier of its own
+    // message id).
+    if (content.text !== undefined) {
+      return { kind: 'assistant', messageId, text: content.text, usage, ...error };
+    }
+    if (content.tools !== undefined) {
+      // One announcement per message, naming its first tool call. The host
+      // writes one content block per line, so this is the whole message; a host
+      // that packs several calls into one message still reports each of them
+      // separately on the incremental feed.
+      return { kind: 'tool', name: content.tools[0] as string, messageId, usage };
+    }
+    return { kind: 'assistant', messageId, usage, ...error };
   }
   if (type === 'result') {
     return {
@@ -192,7 +253,36 @@ export function normalizeStreamEvent(raw: unknown): NoirEvent | null {
       usage: usageFrom(r.usage),
     };
   }
-  return { kind: 'other' };
+  if (type === 'stream_event') {
+    return normalizeStreamEventInner(asObj(r.event));
+  }
+  return { kind: 'other', ...(typeof type === 'string' ? { subtype: type } : {}) };
+}
+
+/**
+ * Normalize one frame of a `stream_event` (the incremental feed a host emits
+ * when it is asked for partial messages). Only the two frames that carry live
+ * progress are modelled — a tool call as it starts, and a stretch of assistant
+ * text as it is written; the boundary frames around them are noise.
+ */
+function normalizeStreamEventInner(inner: Record<string, unknown> | null): NoirEvent {
+  if (!inner) return { kind: 'other', subtype: 'stream_event' };
+  const innerType = str(inner.type);
+  if (innerType === 'content_block_start') {
+    const block = asObj(inner.content_block);
+    const name = block ? str(block.name) : undefined;
+    if (block && str(block.type) === 'tool_use' && name !== undefined) {
+      return { kind: 'tool', name };
+    }
+  }
+  if (innerType === 'content_block_delta') {
+    const delta = asObj(inner.delta);
+    const text = delta ? str(delta.text) : undefined;
+    if (delta && delta.type === 'text_delta' && text !== undefined) {
+      return { kind: 'delta', text };
+    }
+  }
+  return { kind: 'other', subtype: innerType ?? 'stream_event' };
 }
 
 // ---------------------------------------------------------------------------
@@ -223,28 +313,34 @@ export class UsageReducer {
 
   /** Feed one normalized event into the reducer. */
   add(event: NoirEvent): void {
-    if (event.kind === 'assistant' && event.messageId && event.usage) {
-      const key = event.messageId;
-      const input = event.usage.inputTokens ?? 0;
-      const output = event.usage.outputTokens ?? 0;
-      const prev = this.maxByMessage.get(key);
-      if (!prev) {
-        this.maxByMessage.set(key, { input, output });
-        this.input += input;
-        this.output += output;
-      } else {
-        // Cumulative snapshot — only the growth over the last-seen max counts.
-        this.input += Math.max(0, input - prev.input);
-        this.output += Math.max(0, output - prev.output);
-        this.maxByMessage.set(key, {
-          input: Math.max(prev.input, input),
-          output: Math.max(prev.output, output),
-        });
-      }
-    } else if (event.kind === 'result') {
+    if (event.kind === 'result') {
       if (event.totalCostUsd !== undefined) this.costUsd = event.totalCostUsd;
       if (event.numTurns !== undefined) this.turns = event.numTurns;
+      return;
     }
+    // A tool announcement carries the usage of the message it came out of, and
+    // for a tool-only message it is the only carrier — so it folds through the
+    // same per-message rule rather than being dropped. The rule itself is
+    // unchanged: one entry per message id, taking the max.
+    const usage = event.kind === 'assistant' || event.kind === 'tool' ? event.usage : undefined;
+    const key = event.kind === 'assistant' || event.kind === 'tool' ? event.messageId : undefined;
+    if (!key || !usage) return;
+    const input = usage.inputTokens ?? 0;
+    const output = usage.outputTokens ?? 0;
+    const prev = this.maxByMessage.get(key);
+    if (!prev) {
+      this.maxByMessage.set(key, { input, output });
+      this.input += input;
+      this.output += output;
+      return;
+    }
+    // Cumulative snapshot — only the growth over the last-seen max counts.
+    this.input += Math.max(0, input - prev.input);
+    this.output += Math.max(0, output - prev.output);
+    this.maxByMessage.set(key, {
+      input: Math.max(prev.input, input),
+      output: Math.max(prev.output, output),
+    });
   }
 
   /** The current accumulator snapshot. */
@@ -274,6 +370,15 @@ export interface RunHostOptions {
   onLine?: (line: string) => void;
   /** Normalized event (for streaming render). */
   onEvent?: (event: NoirEvent) => void;
+  /**
+   * Cancel the run: aborting this sends the host child a `SIGTERM`. A signal
+   * that is already aborted kills the child as soon as it spawns, so a caller
+   * that raced its own cancellation does not leak a process. Escalation (a
+   * SIGKILL for a host that ignores the polite signal) is the caller's, not
+   * this function's — the run still resolves through the ordinary close path
+   * with the kill folded into its result.
+   */
+  signal?: AbortSignal;
 }
 
 export interface RunHostResult {
@@ -342,8 +447,23 @@ function spawnAndConsume(
     // shell fallback (or the rejection) owns the resolution, never a -2 result.
     let spawnError: unknown = null;
 
+    // Cancellation. The listener is dropped the moment the child is gone, so a
+    // controller reused across runs does not accumulate dead children.
+    const { signal } = opts;
+    const onAbort = (): void => {
+      child.kill('SIGTERM');
+    };
+    if (signal) {
+      if (signal.aborted) onAbort();
+      else signal.addEventListener('abort', onAbort, { once: true });
+    }
+    const detachAbort = (): void => {
+      signal?.removeEventListener('abort', onAbort);
+    };
+
     child.on('error', (err) => {
       spawnError = err;
+      detachAbort();
       if (!shellRun && (err as NodeJS.ErrnoException).code === 'ENOENT') {
         void shellFallback(binary, args, opts, resolve, reject, err);
         return;
@@ -376,6 +496,7 @@ function spawnAndConsume(
     });
 
     child.on('close', (code, signal) => {
+      detachAbort();
       if (spawnError !== null) return; // the error/fallback path owns this spawn
       // A host terminated by a signal (crash/SIGKILL/OOM) yields code === null
       // with no result event — without this it would be reported as exit 0

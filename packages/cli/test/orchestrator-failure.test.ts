@@ -124,3 +124,44 @@ describe('runHost — shell-bridge ENOENT fallback (zsh alias)', () => {
     ).rejects.toMatchObject({ code: 'ENOENT' });
   });
 });
+
+describe('runHost — cancellation', () => {
+  it('kills the host on abort and resolves through the ordinary close path', async () => {
+    const controller = new AbortController();
+    // Abort as soon as the host has announced itself: the run is provably
+    // running, and the child would otherwise sleep far past the test.
+    const r = await runHost({
+      host: 'claude',
+      prompt: 'x',
+      customBinary: fix('host-slow.sh'),
+      onLine: () => controller.abort(),
+      signal: controller.signal,
+    });
+    // Cancelled is not "clean": the result says the host did not finish, so no
+    // caller can mistake a cancelled run for a completed one.
+    expect(r.isError).toBe(true);
+    expect(r.exitCode).not.toBe(0);
+    expect(r.errorText).toContain('terminated by signal');
+  });
+
+  it('kills an already-aborted run instead of leaking the child', async () => {
+    // The race a caller can always lose: the user escapes before the spawn has
+    // even happened. The child must not survive the decision.
+    const controller = new AbortController();
+    controller.abort();
+    const r = await runHost({
+      host: 'claude',
+      prompt: 'x',
+      customBinary: fix('host-slow.sh'),
+      signal: controller.signal,
+    });
+    expect(r.isError).toBe(true);
+    expect(r.exitCode).not.toBe(0);
+  });
+
+  it('leaves a run with no signal alone', async () => {
+    const r = await runHost({ host: 'claude', prompt: 'x', customBinary: fix('host-ok.sh') });
+    expect(r.exitCode).toBe(0);
+    expect(r.isError).toBe(false);
+  });
+});

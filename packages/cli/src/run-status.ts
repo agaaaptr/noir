@@ -134,9 +134,15 @@ export class RunStatusLine {
     }
     if (e.kind === 'init') {
       if (e.model !== undefined) this.model = e.model;
-    } else if (e.kind === 'assistant') {
+    } else if (e.kind === 'assistant' || e.kind === 'tool') {
+      // A tool call is output: the host is working, so the line stops saying it
+      // is still waiting — and a tool-only message carries that message's
+      // tokens, which the shared accumulator folds in by the same rule.
       this.streaming = true;
       this.usage.add(e);
+    } else if (e.kind === 'delta') {
+      // The first slice of the answer: there is text on screen from here on.
+      this.streaming = true;
     } else {
       return; // 'other' carries nothing this line can show
     }
