@@ -344,11 +344,19 @@ export function RunMode({
   useInput((input, key) => {
     // Ctrl+C while the host is live is the same request as Esc: stop it and say
     // so, rather than tearing the frame down and leaving the transcript path
-    // unsaid. With nothing running there is nothing to stop, so it leaves the
-    // dashboard — what it does in every other mode.
+    // unsaid. A second keystroke while that stop is already in flight forces the
+    // host now, rather than holding the screen for the grace. With nothing
+    // running there is nothing to stop, so it leaves the dashboard — what it does
+    // in every other mode.
     if (key.ctrl && input === 'c') {
       if (phase.kind === 'running') {
-        interruptRef.current?.terminate();
+        const interrupt = interruptRef.current;
+        if (interrupt === null) return;
+        if (interrupt.signal.aborted) {
+          interrupt.forceNow();
+          return;
+        }
+        interrupt.terminate();
         setStatusHint(RUN_CANCEL_HINT);
         return;
       }

@@ -172,6 +172,20 @@ describe('noir run — the interrupt contract', () => {
     expect(envelope.error.message).toContain('interrupted · transcript: ');
   });
 
+  it('reports the interrupt under --quiet — the verdict carries signal', async () => {
+    const done = runCli(['run', 'why is the build slow', '--quiet']);
+    await flush();
+
+    process.emit('SIGINT');
+    const code = await done;
+
+    expect(code).toBe(130);
+    // --quiet silences progress and the summary, not a terminal verdict: the run
+    // was stopped on purpose and the record of it must still be named.
+    expect(stderrText()).toContain('interrupted · transcript: ');
+    expect(stdoutText()).toBe('');
+  });
+
   it('reports the stop, not a failure, when the spawn fails while stopping', async () => {
     // The host never got going (its binary is gone), and the stop landed anyway.
     // The user asked for the run to end; blaming the host for that would be wrong.

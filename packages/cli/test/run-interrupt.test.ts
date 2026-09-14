@@ -157,6 +157,31 @@ describe('RunInterrupt — the kill ladder', () => {
     expect(interrupt.escalated).toBe(false);
   });
 
+  it('forces at once when the stop is already in flight', () => {
+    vi.useFakeTimers();
+    const interrupt = newInterrupt();
+    const child = new FakeChild();
+    interrupt.track(child);
+
+    interrupt.terminate();
+    expect(interrupt.forceNow()).toBe(true);
+    expect(child.signals).toEqual(['SIGTERM', 'SIGKILL']);
+    expect(interrupt.escalated).toBe(true);
+
+    // The grace is disarmed: no late force after an explicit one.
+    vi.advanceTimersByTime(INTERRUPT_GRACE_MS * 2);
+    expect(child.signals).toEqual(['SIGTERM', 'SIGKILL']);
+  });
+
+  it('does not force when no stop is in flight', () => {
+    const interrupt = newInterrupt();
+    const child = new FakeChild();
+    interrupt.track(child);
+
+    expect(interrupt.forceNow()).toBe(false);
+    expect(child.signals).toEqual([]);
+  });
+
   it('aborts the cancel signal too, so a spawn that has not happened yet is covered', () => {
     const interrupt = newInterrupt();
     expect(interrupt.signal.aborted).toBe(false);
@@ -206,6 +231,28 @@ describe('RunInterrupt — terminal signals', () => {
     // want to wait the grace out.
     expect(exitNow).toHaveBeenCalledWith(143);
     expect(child.signals).toEqual(['SIGTERM']);
+  });
+
+  it('kills an ignoring child before it leaves on a second signal', () => {
+    vi.useFakeTimers();
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    try {
+      const interrupt = newInterrupt(); // the default exit path
+      const child = new FakeChild();
+      const kill = vi.spyOn(child, 'kill');
+      interrupt.track(child);
+      interrupt.watch();
+
+      process.emit('SIGTERM'); // asks the child to stop; it ignores it
+      process.emit('SIGTERM'); // the user insists: leave now
+
+      // Leaving must not leave the child behind: the untrappable signal goes out
+      // even though Noir does not wait for the reap.
+      expect(kill).toHaveBeenCalledWith('SIGKILL');
+      expect(exit).toHaveBeenCalledWith(143);
+    } finally {
+      exit.mockRestore();
+    }
   });
 
   it('puts the process’s own handling back when the run is over', () => {

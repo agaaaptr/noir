@@ -71,7 +71,16 @@ export class RunInterrupt {
 
   constructor(opts: RunInterruptOptions = {}) {
     this.graceMs = opts.graceMs ?? INTERRUPT_GRACE_MS;
-    this.exitNow = opts.exitNow ?? ((code: number): void => process.exit(code));
+    this.exitNow =
+      opts.exitNow ??
+      ((code: number): void => {
+        // A second interrupt means "leave now". Leaving must not leave the child
+        // behind: SIGKILL is untrappable, so a fire-and-forget kill here ends a
+        // host that was ignoring the polite signal, even though Noir does not
+        // wait for the reap.
+        if (this.child !== undefined) signalChild(this.child, 'SIGKILL');
+        process.exit(code);
+      });
   }
 
   /**
@@ -127,6 +136,21 @@ export class RunInterrupt {
       this.forced = true;
       signalChild(child, 'SIGKILL');
     }, this.graceMs);
+  }
+
+  /**
+   * Skip the grace and force the host now. The "you asked twice" path: the
+   * terminal leaves at once on a second signal, and the run screen forces and
+   * returns to the dashboard rather than holding a keystroke while the grace
+   * runs out. Does nothing when no stop is in flight.
+   */
+  forceNow(): boolean {
+    const child = this.child;
+    if (child === undefined || child.pid === undefined || child !== this.stopping) return false;
+    this.forced = true;
+    this.clearGrace();
+    signalChild(child, 'SIGKILL');
+    return true;
   }
 
   /**

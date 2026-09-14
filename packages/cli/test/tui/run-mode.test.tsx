@@ -415,6 +415,28 @@ describe('run screen — live render', () => {
     m.instance.unmount();
   });
 
+  it('forces on a second Ctrl+C during the grace instead of holding the screen', async () => {
+    const m = mountRun({ graceMs: 5000 });
+    await flush();
+
+    m.instance.stdin.write(CTRL_C);
+    await flush();
+    expect(m.host.child().signals).toEqual(['SIGTERM']);
+
+    // The host is ignoring the polite signal. A second keystroke means "now":
+    // the force goes out without waiting the grace, and the screen leaves as
+    // soon as the host actually stops.
+    m.host.child().onSignal = (signal) => {
+      if (signal === 'SIGKILL') m.host.settle();
+    };
+    m.instance.stdin.write(CTRL_C);
+    await flush(60);
+
+    expect(m.host.child().signals).toEqual(['SIGTERM', 'SIGKILL']);
+    expect(m.exit).toHaveBeenCalledWith(expect.stringContaining('interrupted · transcript:'));
+    m.instance.unmount();
+  });
+
   it('leaves no host behind when the screen is torn down mid-run', async () => {
     const m = mountRun();
     await flush();
