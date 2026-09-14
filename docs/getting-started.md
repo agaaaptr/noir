@@ -235,7 +235,9 @@ A raw stream-json transcript is always persisted to `.noir/transcripts/`.
   (one at the start, one at the end) instead of an animated line.
 - **Reading a failure.** The failure message quotes the last 20 lines of the
   host's own stderr alongside its error, since that is where the host's progress
-  and its deeper error detail are — otherwise the run is unauditable. The full
+  and its deeper error detail are — otherwise the run is unauditable. That tail
+  is a human diagnostic and appears only on screen, never inside the `--json`
+  envelope, whose `error.message` stays a single concise sentence. The full
   output is always in the transcript.
 
 ## Configuration

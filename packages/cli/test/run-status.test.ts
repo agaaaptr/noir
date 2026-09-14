@@ -94,6 +94,19 @@ describe('RunStatusLine — gating', () => {
     expect(h.text()).not.toContain(ESC);
   });
 
+  it('ends with a marker that reads as an end when the host never said anything', () => {
+    const h = harness({ stderrIsTty: false });
+    h.status.begin();
+    h.advance(5_000);
+    h.status.event({ kind: 'result', isError: true });
+    // The host died before its first event: repeating the opening "waiting"
+    // line directly above the failure would claim the run is still waiting.
+    expect(h.writes).toEqual([
+      '▶ claude · waiting for first event…\n',
+      '▶ claude · no output after 5s\n',
+    ]);
+  });
+
   it('redraws in place, one write per event boundary, when stderr is a terminal', () => {
     const h = harness();
     h.status.begin();
@@ -226,6 +239,46 @@ describe('RunStatusLine — the shared cursor', () => {
     h.advance(2_000);
     h.status.event({ kind: 'assistant', messageId: 'm1', usage: { inputTokens: 7 } });
     expect(h.writes.at(-1)).toBe(`\r${ESC}[K● claude · 2s · ↓7↑0 tokens`);
+  });
+
+  it('finishes a half-written answer row on request, so a verdict is not glued to it', () => {
+    const h = harness();
+    h.status.begin();
+    h.status.beforeStdout('let me look at that');
+    const yielded = h.writes.length; // the hand-over newline is already out
+    // A failure message written now would land on the end of the answer and
+    // read as part of it.
+    h.status.finishRow();
+    expect(h.writes).toHaveLength(yielded + 1);
+    expect(h.writes.at(-1)).toBe('\n');
+    // The row is finished: there is no longer a half-written line to close.
+    h.status.finishRow();
+    expect(h.writes).toHaveLength(yielded + 1);
+  });
+
+  it('has no row to finish when stdout is not on this terminal', () => {
+    const h = harness({ stdoutSharesCursor: false });
+    h.status.begin();
+    h.status.beforeStdout('unterminated');
+    h.status.finishRow();
+    expect(h.text()).not.toContain('\n');
+  });
+
+  it('does not write into a piped stream just because stdout is a terminal', () => {
+    const h = harness({ stderrIsTty: false, stdoutSharesCursor: true });
+    h.status.begin();
+    h.status.beforeStdout('unterminated');
+    h.status.finishRow();
+    // The failure message goes to a log, not to a shared row: a bare newline
+    // here would be a stray blank line and nothing else.
+    expect(h.text()).toBe('▶ claude · waiting for first event…\n');
+  });
+
+  it('has no row to finish while the status line still owns it', () => {
+    const h = harness();
+    h.status.begin();
+    h.status.finishRow();
+    expect(h.text()).not.toContain('\n');
   });
 
   it('treats a redirect to a file as no shared cursor at all', () => {

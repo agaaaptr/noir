@@ -192,8 +192,10 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
     });
   } catch (err) {
     // Clear the status line before the failure text so the error is not printed
-    // onto the tail of a half-drawn progress row.
+    // onto the tail of a half-drawn progress row, and finish the row the host's
+    // answer may have left open so the error is not read as part of it.
     status.end();
+    status.finishRow();
     const detail = err instanceof Error ? err.message : String(err);
     const enoent = (err as NodeJS.ErrnoException)?.code === 'ENOENT';
     const guidance = enoent
@@ -214,30 +216,35 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
     // --json, and no misleading "usage" line. The raw stream-json transcript is
     // still persisted (it is the audit record) and referenced in the message.
     status.end();
+    // The answer, if any, stopped mid-line, and a failure printed onto it reads
+    // as the tail of the answer rather than as the run's verdict.
+    status.finishRow();
     // The host's own stderr is where its progress and its deeper error detail
     // live, and it is otherwise withheld entirely — a bounded tail is what makes
-    // the failure diagnosable. It doubles as the reason when the stream carried
-    // no error text of its own.
+    // the failure diagnosable. It is a human diagnostic: under --json the
+    // message stays the one concise sentence a machine consumer reads, and the
+    // transcript path is what points at the rest.
     const stderrTail = hostStderrTail(result.stderr);
     const reason =
       result.errorText && result.errorText.trim().length > 0
         ? result.errorText.trim()
-        : stderrTail || `exit code ${result.exitCode}`;
+        : `exit code ${result.exitCode}`;
     // Auth guidance is keyed off the stream's error CATEGORY (authoritative),
-    // falling back to a text heuristic only when the category is absent. The
-    // login hint names the RESOLVED binary, not a literal 'claude'.
+    // falling back to a text heuristic only when the category is absent. A host
+    // that could not authenticate tends to say so on its stderr rather than in
+    // the stream, so the tail feeds the heuristic too. The login hint names the
+    // RESOLVED binary, not a literal 'claude'.
     const isAuth =
       result.errorCategory === 'authentication_failed' ||
       result.errorCategory === 'oauth_org_not_allowed' ||
-      /not logged|login|authenticate|invalid api key/i.test(reason);
+      /not logged|login|authenticate|invalid api key/i.test(`${reason}\n${stderrTail}`);
     let message = `host '${binary}' failed (exit ${result.exitCode}): ${reason}`;
     if (isAuth) {
       message += ` Open a terminal and run \`${binary} /login\` (interactive-only — it cannot run inside \`noir run\`), then retry.`;
       message += credentialNote(env ?? process.env, envSources);
     }
     message += ` If you use another profile, pass \`--command <binary>\` or define a run profile under run.profiles. transcript: ${transcript}`;
-    // Skipped when the tail already IS the reason line above.
-    if (stderrTail.length > 0 && stderrTail !== reason) {
+    if (opts.json !== true && stderrTail.length > 0) {
       message += `\n${binary} stderr (last ${HOST_STDERR_TAIL_LINES} lines):\n${stderrTail}`;
     }
     fail(EXIT.ERROR, message, opts);

@@ -160,6 +160,19 @@ export class RunStatusLine {
   }
 
   /**
+   * Finish the row the host's answer left open. A failure message printed onto
+   * a half-written answer reads as part of the answer, so a caller about to
+   * report a failure asks for the row to be terminated first. A no-op unless
+   * this line is drawing on a terminal stdout also writes to and the answer
+   * stopped mid-line — the only state where the cursor is inside the answer.
+   */
+  finishRow(): void {
+    if (!this.animated || !this.sharesCursor || this.stdoutAtRowStart) return;
+    this.write('\n');
+    this.stdoutAtRowStart = true;
+  }
+
+  /**
    * Close the line out. On a terminal the line is erased so the run summary
    * takes its place — unless the answer has since moved the cursor off it, in
    * which case the text stays as the record of how long the wait was. On a pipe
@@ -169,7 +182,7 @@ export class RunStatusLine {
     if (!this.enabled || this.ended) return;
     this.ended = true;
     if (!this.animated) {
-      this.write(`${this.render()}\n`);
+      this.write(`${this.render(true)}\n`);
       return;
     }
     if (!this.onRow || !this.cursorFree()) return;
@@ -197,7 +210,12 @@ export class RunStatusLine {
     return !this.sharesCursor || this.stdoutAtRowStart;
   }
 
-  private render(): string {
+  /**
+   * `final` marks the line the run ends on: a run that never got past the spawn
+   * is over, so saying it is still waiting — directly above whatever the run
+   * reported — would be a lie.
+   */
+  private render(final = false): string {
     const parts: string[] = [];
     if (this.streaming) {
       const u = this.usage.snapshot();
@@ -209,9 +227,9 @@ export class RunStatusLine {
       return `● ${parts.join(' · ')}`;
     }
     // Before the first token there is nothing to count yet: name the host, then
-    // the model once the host has announced it, and say plainly that the wait
-    // is still the wait.
+    // the model once the host has announced it.
     if (this.model !== undefined) return `▶ ${[this.host, this.model, this.elapsed()].join(' · ')}`;
+    if (final) return `▶ ${this.host} · no output after ${this.elapsed()}`;
     return `▶ ${this.host} · waiting for first event…`;
   }
 
@@ -225,8 +243,9 @@ export class RunStatusLine {
  * its progress and its errors there and Noir otherwise reads none of it, which
  * leaves a failure reportable only by whatever single sentence the host put in
  * its stream — the run is unauditable without the rest. Bounded so a
- * pathological host cannot flood the terminal. The content is the host's own
- * output (never Noir's environment), so it is surfaced as-is.
+ * pathological host cannot flood the terminal, and surfaced VERBATIM: it is the
+ * host's own output, never Noir's environment, so there is nothing here to
+ * redact and no value of Noir's to leak.
  */
 export function hostStderrTail(stderr: string, maxLines = HOST_STDERR_TAIL_LINES): string {
   const lines = stderr.split('\n').map((line) => line.trimEnd());

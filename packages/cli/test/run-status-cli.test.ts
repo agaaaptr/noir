@@ -191,6 +191,37 @@ describe('noir run — status line wiring', () => {
     expect(textOf('out')).toBe('hello\n');
   });
 
+  it('starts the failure message on a new row when the answer stopped mid-line', async () => {
+    tty('err', true);
+    tty('out', true);
+    runHostMock.mockImplementationOnce(async (o: RunHostOptions) => {
+      o.onEvent?.({ kind: 'init', sessionId: 's1', model: 'claude-sonnet-4' });
+      // The host died mid-sentence, so stdout never emitted the newline that
+      // would have ended the answer's row.
+      o.onEvent?.({ kind: 'assistant', messageId: 'm1', text: 'let me look at that' });
+      return {
+        exitCode: 1,
+        usage: { inputTokens: 5, outputTokens: 2, totalCostUsd: 0, numTurns: 1 },
+        eventCount: 2,
+        stderr: '',
+        isError: true,
+        errorText: 'connection reset',
+      };
+    });
+    expect(await runCli(['run', 'hi'])).toBe(1);
+    expect(textOf('out')).toBe('let me look at that');
+
+    // Without the row break the error reads as the tail of the answer — the
+    // exact shape this guards against: "…look at thathost 'claude' failed".
+    const answer = log.findIndex((w) => w.stream === 'out' && w.chunk === 'let me look at that');
+    const failure = log.findIndex((w) => w.stream === 'err' && w.chunk.includes('failed (exit 1)'));
+    expect(answer).toBeGreaterThanOrEqual(0);
+    expect(failure).toBeGreaterThan(answer);
+    expect(log.slice(answer + 1, failure).some((w) => w.stream === 'err' && w.chunk === '\n')).toBe(
+      true,
+    );
+  });
+
   it('erases the line before the failure message, on both a terminal and a pipe', async () => {
     runHostMock.mockResolvedValueOnce({
       exitCode: 1,

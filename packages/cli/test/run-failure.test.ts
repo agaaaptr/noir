@@ -210,7 +210,7 @@ describe('noir run — host-failure contract', () => {
       expect(err).not.toContain('host log 10\n');
     });
 
-    it('falls back to the tail as the reason, and does not print it twice', async () => {
+    it('names the exit code as the reason when the stream carried no error text', async () => {
       runHostMock.mockResolvedValueOnce({
         exitCode: 1,
         usage: { inputTokens: 0, outputTokens: 0, totalCostUsd: 0, numTurns: 1 },
@@ -221,10 +221,12 @@ describe('noir run — host-failure contract', () => {
       });
       expect(await runCli(['run', 'test'])).toBe(1);
       const err = stderrText();
-      expect(err).toContain('failed (exit 1): ');
+      // The one-sentence reason stays one sentence; the host's noise goes below
+      // it as the labelled tail, not into it.
+      expect(err).toContain('failed (exit 1): exit code 1');
+      expect(err).toContain('claude stderr (last 20 lines):');
       expect(err).toContain('host log 30');
       expect(err).toContain('… (10 earlier lines omitted)');
-      expect(err).not.toContain('claude stderr (last 20 lines):');
       expect(err.match(/host log 30/g)).toHaveLength(1);
     });
 
@@ -239,8 +241,46 @@ describe('noir run — host-failure contract', () => {
       });
       expect(await runCli(['run', 'test'])).toBe(1);
       const err = stderrText();
-      expect(err).toContain('oops: model overloaded');
+      expect(err).toContain('claude stderr (last 20 lines):\nstarting\noops: model overloaded');
       expect(err).not.toContain('earlier lines omitted');
+    });
+
+    it('reads the tail for the auth hint when the stream itself says nothing', async () => {
+      runHostMock.mockResolvedValueOnce({
+        exitCode: 1,
+        usage: { inputTokens: 0, outputTokens: 0, totalCostUsd: 0, numTurns: 1 },
+        eventCount: 0,
+        stderr: 'Invalid API key · please run /login',
+        isError: true,
+        errorText: undefined,
+        errorCategory: undefined,
+      });
+      expect(await runCli(['run', 'test'])).toBe(1);
+      // A host that cannot authenticate tends to say so on stderr rather than
+      // in its stream, so the guidance must not depend on the stream alone.
+      expect(stderrText()).toContain('claude /login');
+    });
+
+    it('keeps host stderr out of the --json error message', async () => {
+      runHostMock.mockResolvedValueOnce({
+        exitCode: 1,
+        usage: { inputTokens: 0, outputTokens: 0, totalCostUsd: 0, numTurns: 1 },
+        eventCount: 0,
+        stderr: chattyStderr(30),
+        isError: true,
+        errorText: 'connection reset',
+      });
+      expect(await runCli(['run', 'test', '--json'])).toBe(1);
+      const out = stdoutText();
+      const parsed = JSON.parse(out) as { ok: boolean; error: { message: string } };
+      expect(parsed.ok).toBe(false);
+      // The tail is a human diagnostic: a machine consumer gets a concise
+      // message and the transcript path, never raw host output.
+      expect(parsed.error.message).toContain('connection reset');
+      expect(parsed.error.message).toContain('transcript:');
+      expect(parsed.error.message).not.toContain('host log');
+      expect(parsed.error.message).not.toContain('stderr (last');
+      expect(parsed.error.message).not.toContain('\n');
     });
 
     it('says nothing extra when the host wrote nothing to stderr', async () => {
