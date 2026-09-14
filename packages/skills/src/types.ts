@@ -105,9 +105,11 @@ export interface EmitSummary {
    *  never claims a skill that is not fully current. */
   emitted: string[];
   references: number; // reference files written (excludes SKILL.md)
-  /** Integration names emitted alongside builtins (subset of `emitted`).
-   *  Additive — callers that ignore it (existing cli) still get the builtins in
-   *  `emitted`. */
+  /** The integrations this run processed, in emission order. Most land in
+   *  `emitted` too, but one whose files were preserved lands in
+   *  {@link preserved} instead — an integration is classified exactly like a
+   *  builtin. Additive — callers that ignore it (existing cli) still get the
+   *  builtins in `emitted`. */
   integrations?: string[];
   /** Skill names still carrying bytes Noir did NOT write, because at least one
    *  of their files differed on disk and the conflict resolved to `preserve`
