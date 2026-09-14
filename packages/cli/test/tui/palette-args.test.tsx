@@ -221,14 +221,45 @@ describe('palette argument collection', () => {
     m.instance.unmount();
   });
 
-  it('ignores Enter while the argument is empty', async () => {
+  it('says why an empty Enter did nothing, and stops saying it once you type', async () => {
     const m = mount();
     await openAndFilter(m, 'search');
     m.instance.stdin.write(ENTER);
     await flush(60);
+    expect(m.instance.lastFrame() ?? '').not.toContain('is required');
+
     m.instance.stdin.write(ENTER);
     await flush(80);
     expect(m.dispatch).not.toHaveBeenCalled();
+    // Still collecting, and now with a reason on screen.
+    expect(m.instance.lastFrame() ?? '').toContain('a query is required');
+
+    m.instance.stdin.write('auth');
+    await flush(60);
+    expect(m.instance.lastFrame() ?? '').not.toContain('is required');
+    m.instance.unmount();
+  });
+
+  it('de-emphasises the list while the argument step has the keyboard', async () => {
+    const m = mount();
+    // Color on, so the assertions below see the real decoration: without this
+    // the frame is plain text and "no highlight" would prove nothing.
+    process.env.CLICOLOR_FORCE = '1';
+    await openAndFilter(m, 'search');
+    const filtering = m.instance.lastFrame() ?? '';
+    // In the filter the selected row carries the marker and reverse video …
+    expect(filtering).toContain('▸ Context: Search');
+    expect(filtering).toContain('[7m');
+
+    m.instance.stdin.write(ENTER);
+    await flush(80);
+    const collecting = m.instance.lastFrame() ?? '';
+    // … and both are gone once Enter moves the cursor to the input line: no row
+    // is highlighted, so the argument step visibly owns the keyboard.
+    expect(collecting).not.toContain('[7m');
+    expect(collecting).not.toContain('▸ Context: Search');
+    expect(collecting).toContain('Context: Search');
+    expect(collecting).toContain('query for context search');
     m.instance.unmount();
   });
 });

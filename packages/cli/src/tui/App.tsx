@@ -145,8 +145,10 @@ export function App({
   const [paletteQuery, setPaletteQuery] = useState('');
   const [paletteActive, setPaletteActive] = useState(0);
   // The argument being typed for the selected command (only meaningful while
-  // the palette is collecting one).
+  // the palette is collecting one), plus the one-line notice shown when the
+  // user submits an empty one.
   const [argBuffer, setArgBuffer] = useState('');
+  const [argNotice, setArgNotice] = useState<string | null>(null);
 
   // ----- load the palette's recent commands once on mount ------------------
   useEffect(() => {
@@ -409,6 +411,7 @@ export function App({
           // The command cannot run bare — collect its argument on the input
           // line before anything dispatches.
           setArgBuffer('');
+          setArgNotice(null);
           setMode({
             kind: 'palette',
             corpus: mode.corpus,
@@ -455,26 +458,36 @@ export function App({
     const corpus = mode.corpus;
     if (key.escape) {
       setArgBuffer('');
+      setArgNotice(null);
       setMode({ kind: 'palette', corpus });
       return;
     }
     if (key.return) {
       const value = argBuffer.trim();
-      // An empty value would dispatch the same bare argv the palette cannot run
-      // — hold the step open instead.
-      if (value.length === 0) return;
+      if (value.length === 0) {
+        // An empty value would dispatch the same bare argv the palette cannot
+        // run — hold the step open and say why, so Enter is never a silent
+        // no-op.
+        setArgNotice(`a ${collecting.label} is required`);
+        return;
+      }
       setArgBuffer('');
+      setArgNotice(null);
       handleRun([...collecting.argv, value], collecting.destructive);
       return;
     }
     if (key.backspace || key.delete) {
       setArgBuffer((b) => b.slice(0, -1));
+      setArgNotice(null);
       return;
     }
     // Tab cycles the corpus in the filter; here it would only add a stray
     // character to the argument.
     if (key.ctrl || key.tab) return;
-    if (input.length > 0) setArgBuffer((b) => b + input);
+    if (input.length > 0) {
+      setArgBuffer((b) => b + input);
+      setArgNotice(null);
+    }
   }
 
   // ----- confirm-mode keybinding handler ----------------------------------
@@ -572,6 +585,7 @@ export function App({
               : {
                   value: argBuffer,
                   placeholder: `${collecting.label} for ${collecting.argv.join(' ')}…`,
+                  hint: argNotice ?? undefined,
                 }
           }
         />

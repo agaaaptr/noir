@@ -68,12 +68,13 @@ function recentDeduped(
 }
 
 /**
- * Argument requirements keyed by command id. The CLI definition supplies one
- * for every command with a required positional; a curated quick action may
- * declare its own for a value the definition leaves optional or passes as a
- * flag. Both sources are read here so a command behaves the same however the
- * user reaches it — browsing the list, fuzzy-searching it, or picking the
- * curated action.
+ * Argument requirements keyed by the argv a row dispatches. The CLI definition
+ * supplies one for every command with a required positional; a curated quick
+ * action may declare its own for a value the definition leaves optional or
+ * passes as a flag. Keying by argv rather than by command id matters for the
+ * flag case: a curated action that carries its value behind a flag (its argv
+ * includes the flag) is the only row that can accept the value, so rows that
+ * dispatch the command without the flag must not ask for one they would drop.
  */
 function argRequirements(
   commands: readonly PaletteCommand[],
@@ -81,13 +82,26 @@ function argRequirements(
 ): Map<string, string> {
   const out = new Map<string, string>();
   for (const cmd of commands) {
-    if (cmd.needsArg !== undefined) out.set(cmd.id, cmd.needsArg);
+    if (cmd.needsArg !== undefined) out.set(cmd.argv.join(' '), cmd.needsArg);
   }
   for (const { action } of flattenHome(homeSections)) {
     const label = action.needsArg?.label;
-    if (label !== undefined) out.set(action.id, label);
+    if (label !== undefined) out.set((action.dispatch ?? [action.id]).join(' '), label);
   }
   return out;
+}
+
+/**
+ * The requirement for one row, looked up by the argv it would dispatch. The
+ * command id is a fallback for a row whose argv the palette overrides without
+ * declaring how the value is passed.
+ */
+function requirementFor(
+  requirements: Map<string, string>,
+  argv: readonly string[],
+  id: string,
+): string | undefined {
+  return requirements.get(argv.join(' ')) ?? requirements.get(id);
 }
 
 /** Build the visible rows for the active corpus + query. */
@@ -168,7 +182,7 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
         argv: cmd.argv,
         destructive: cmd.destructive,
         group: 'recent',
-        needsArg: args.get(cmd.id),
+        needsArg: requirementFor(args, cmd.argv, cmd.id),
       });
     }
     const homeIds = new Set<string>();
@@ -185,7 +199,7 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
         argv,
         destructive: action.destructive ?? false,
         group,
-        needsArg: args.get(action.id),
+        needsArg: requirementFor(args, argv, action.id),
       });
     }
     for (const cmd of commands) {
@@ -199,7 +213,7 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
         argv: cmd.argv,
         destructive: cmd.destructive,
         group: cmd.category,
-        needsArg: args.get(cmd.id),
+        needsArg: requirementFor(args, cmd.argv, cmd.id),
       });
     }
     return rows;
@@ -213,6 +227,6 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
     argv: m.item.argv,
     destructive: m.item.destructive,
     group: null,
-    needsArg: args.get(m.item.id),
+    needsArg: requirementFor(args, m.item.argv, m.item.id),
   }));
 }

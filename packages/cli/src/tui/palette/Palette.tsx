@@ -71,9 +71,14 @@ export interface PaletteProps {
   /**
    * Set while the palette is collecting the selected command's argument: the
    * input line shows `value` (or `placeholder`) instead of the filter, and
-   * Enter dispatches rather than filters.
+   * Enter dispatches rather than filters. `hint` is a one-line notice shown
+   * under the input line (e.g. after Enter with nothing typed).
    */
-  readonly arg?: { readonly value: string; readonly placeholder: string };
+  readonly arg?: {
+    readonly value: string;
+    readonly placeholder: string;
+    readonly hint?: string;
+  };
 }
 
 /**
@@ -117,6 +122,14 @@ export function Palette({ corpus, query, active, rows, arg }: PaletteProps): Rea
     </Box>,
   ];
 
+  if (arg?.hint !== undefined) {
+    elements.push(
+      <Box key="arg-hint" paddingX={1}>
+        <Text>{c.warn(arg.hint)}</Text>
+      </Box>,
+    );
+  }
+
   let lastGroup: string | null = null;
   for (let i = 0; i < visible.length; i++) {
     const row = visible[i];
@@ -139,7 +152,11 @@ export function Palette({ corpus, query, active, rows, arg }: PaletteProps): Rea
       lastGroup = row.group;
     }
     const isActive = i === activeIndex;
-    const prefix = isActive ? '▸ ' : '  ';
+    // While the argument step owns the keyboard no row is highlighted and the
+    // whole list is dimmed: an active row (reverse video, `▸ ` marker) would
+    // read as "Enter still selects this row" when Enter now submits the value.
+    const focused = isActive && arg === undefined;
+    const prefix = focused ? '▸ ' : '  ';
     const label = truncateLabel(row.primary);
     const labelCol = (prefix + label).padEnd(LABEL_WIDTH);
     // Hint (right column): the argv for command rows, prefixed with `/` so it
@@ -150,11 +167,17 @@ export function Palette({ corpus, query, active, rows, arg }: PaletteProps): Rea
     const hintRaw = row.argv ? `/${row.argv.join(' ')}` : row.secondary;
     const hint = hintRaw.length > HINT_WIDTH ? `${hintRaw.slice(0, HINT_WIDTH - 1)}…` : hintRaw;
 
-    if (isActive) {
+    if (focused) {
       // Reverse video highlights the whole row — no inner color needed.
       elements.push(
         <Box key={row.key} paddingX={1}>
           <Text>{c.inverse(`${labelCol}${hint}`)}</Text>
+        </Box>,
+      );
+    } else if (arg !== undefined) {
+      elements.push(
+        <Box key={row.key} paddingX={1}>
+          <Text>{c.dim(`${labelCol}${hint}`)}</Text>
         </Box>,
       );
     } else {

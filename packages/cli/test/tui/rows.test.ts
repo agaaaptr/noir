@@ -152,4 +152,55 @@ describe('buildPaletteRows — argument requirements', () => {
     const filtered = rows({ query: 'prompt', commands, homeSections: [PROMPT_SECTION] });
     expect(filtered[0]?.needsArg).toBe('prompt');
   });
+
+  /**
+   * The curated `memory save` action passes its value behind the `--content`
+   * flag, so it dispatches a DIFFERENT argv than the registry entry for the same
+   * command. Only the row carrying that flag can accept the value — a row that
+   * dispatches `memory save` bare would swallow it (commander ignores the extra
+   * operand and the command re-prompts).
+   */
+  const MEMORY_SAVE_SECTION: HomeSection = {
+    id: 'memory',
+    label: 'Memory',
+    hint: 'save · recall',
+    items: [
+      {
+        id: 'memory save',
+        label: 'Save memory',
+        hint: 'save an observation',
+        destructive: true,
+        dispatch: ['memory', 'save', '--content'],
+        needsArg: { label: 'content', prompt: 'Memory content:', placeholder: 'x' },
+      },
+    ],
+  };
+
+  it('still asks on the curated row that dispatches the value flag', () => {
+    const rowsList = rows({ commands: [cmd('memory save')], homeSections: [MEMORY_SAVE_SECTION] });
+    expect(rowsList.find((r) => r.key === 'home:memory save')?.needsArg).toBe('content');
+  });
+
+  it('never asks a fuzzy row for a value its bare dispatch would drop', () => {
+    const rowsList = rows({
+      query: 'memory',
+      commands: [cmd('memory save')],
+      homeSections: [MEMORY_SAVE_SECTION],
+    });
+    const row = rowsList.find((r) => r.key === 'cmd:memory save');
+    expect(row?.argv).toEqual(['memory', 'save']);
+    expect(row?.needsArg).toBeUndefined();
+  });
+
+  it('never asks a recent row for a value its bare dispatch would drop', () => {
+    const commands = [cmd('memory save')];
+    const rowsList = rows({
+      commands,
+      recent: commands,
+      homeSections: [MEMORY_SAVE_SECTION],
+    });
+    const row = rowsList.find((r) => r.key === 'recent:memory save');
+    expect(row?.argv).toEqual(['memory', 'save']);
+    expect(row?.needsArg).toBeUndefined();
+  });
 });
