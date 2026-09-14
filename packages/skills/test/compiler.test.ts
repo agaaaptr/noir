@@ -597,6 +597,39 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     expect(existsSync(join(target, 'noir-x', 'references', 'notes.md'))).toBe(true);
   });
 
+  // The flat (cursor) layout writes one `<name>.mdc` FILE per skill, and its
+  // prune sweep has its own keep-set check. A `.mdc` whose body the user edited
+  // still carries the canonical cursor frontmatter, so `isUserOwnedMdc` does
+  // NOT spare it — a kept set built from the written half alone would delete
+  // the very file the run just preserved.
+  it('keeps a preserved .mdc out of the flat-layout prune sweep (cursor)', async () => {
+    await writeSkill('noir-x', okSkill('Use when x — draft the spec.'));
+    const target = join(fixture, '_out');
+    const { writeFile } = await import('node:fs/promises');
+    // Emit the canonical cursor shape first, then edit the BODY only, so the
+    // user's copy is indistinguishable from a Noir-managed file except in
+    // content.
+    await emitSkillsToDir(target, { builtinDir: fixture, target: 'cursor' });
+    const mdc = join(target, 'noir-x.mdc');
+    const canonical = await readFile(mdc, 'utf8');
+    await writeFile(mdc, canonical.replace('Overview sentence.', 'USER-EDITED BODY.'), 'utf8');
+
+    const summary = await emitSkillsToDir(target, {
+      builtinDir: fixture,
+      target: 'cursor',
+      interactive: false,
+      conflictPolicy: 'preserve',
+    });
+
+    expect(summary.preserved).toEqual(['noir-x']);
+    expect(summary.emitted).toEqual([]);
+    // The sweep ran on this same call and must not have read the preserved
+    // skill as stale.
+    expect(summary.pruned).toEqual([]);
+    expect(existsSync(mdc)).toBe(true);
+    expect(await readFile(mdc, 'utf8')).toContain('USER-EDITED BODY.');
+  });
+
   it('`preserved` is empty (not absent) when every skill is current', async () => {
     await writeSkill('noir-a', okSkillNamed('noir-a', 'Use when a — do the work.'));
     const target = join(fixture, '_out');
