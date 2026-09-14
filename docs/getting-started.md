@@ -227,6 +227,16 @@ A raw stream-json transcript is always persisted to `.noir/transcripts/`.
   (`run.profiles.<name>.binary` + optional `env`/`args`, and `run.defaultProfile`)
   — see [Run profiles](how-to/host-profiles.md). Shell **aliases do not work**
   as `--command` values; use an executable, a launcher script, or a profile.
+- **Progress while it works.** On a terminal the run keeps a live status line on
+  stderr — host, model once known, elapsed time, and running token totals — so the
+  wait before the first token is never silence. It redraws only when the host
+  reports something, and it stays out of the answer's way. `--json` and `--quiet`
+  emit none of it, and when stderr is not a terminal it becomes two plain markers
+  (one at the start, one at the end) instead of an animated line.
+- **Reading a failure.** The failure message quotes the last 20 lines of the
+  host's own stderr alongside its error, since that is where the host's progress
+  and its deeper error detail are — otherwise the run is unauditable. The full
+  output is always in the transcript.
 
 ## Configuration
 

@@ -184,6 +184,80 @@ describe('noir run — host-failure contract', () => {
     expect(code).toBe(2);
     expect(stderrText()).toContain('--command claude-work');
   });
+
+  describe('host stderr tail', () => {
+    /** A host that narrated `lines` lines of its own progress on stderr. */
+    const chattyStderr = (lines: number): string =>
+      Array.from({ length: lines }, (_, i) => `host log ${i + 1}`).join('\n');
+
+    it('carries the last 20 lines of host stderr when the failure is reported', async () => {
+      runHostMock.mockResolvedValueOnce({
+        exitCode: 1,
+        usage: { inputTokens: 0, outputTokens: 0, totalCostUsd: 0, numTurns: 1 },
+        eventCount: 1,
+        stderr: chattyStderr(30),
+        isError: true,
+        errorText: 'connection reset',
+      });
+      expect(await runCli(['run', 'test'])).toBe(1);
+      const err = stderrText();
+      // The stream's own error sentence still leads the message.
+      expect(err).toContain('connection reset');
+      expect(err).toContain('claude stderr (last 20 lines):');
+      expect(err).toContain('host log 30');
+      expect(err).toContain('host log 11');
+      expect(err).toContain('… (10 earlier lines omitted)');
+      expect(err).not.toContain('host log 10\n');
+    });
+
+    it('falls back to the tail as the reason, and does not print it twice', async () => {
+      runHostMock.mockResolvedValueOnce({
+        exitCode: 1,
+        usage: { inputTokens: 0, outputTokens: 0, totalCostUsd: 0, numTurns: 1 },
+        eventCount: 0,
+        stderr: chattyStderr(30),
+        isError: true,
+        errorText: undefined,
+      });
+      expect(await runCli(['run', 'test'])).toBe(1);
+      const err = stderrText();
+      expect(err).toContain('failed (exit 1): ');
+      expect(err).toContain('host log 30');
+      expect(err).toContain('… (10 earlier lines omitted)');
+      expect(err).not.toContain('claude stderr (last 20 lines):');
+      expect(err.match(/host log 30/g)).toHaveLength(1);
+    });
+
+    it('leaves a short host stderr whole, with no omission note', async () => {
+      runHostMock.mockResolvedValueOnce({
+        exitCode: 1,
+        usage: { inputTokens: 0, outputTokens: 0, totalCostUsd: 0, numTurns: 1 },
+        eventCount: 0,
+        stderr: 'starting\noops: model overloaded\n',
+        isError: true,
+        errorText: undefined,
+      });
+      expect(await runCli(['run', 'test'])).toBe(1);
+      const err = stderrText();
+      expect(err).toContain('oops: model overloaded');
+      expect(err).not.toContain('earlier lines omitted');
+    });
+
+    it('says nothing extra when the host wrote nothing to stderr', async () => {
+      runHostMock.mockResolvedValueOnce({
+        exitCode: 1,
+        usage: { inputTokens: 0, outputTokens: 0, totalCostUsd: 0, numTurns: 1 },
+        eventCount: 0,
+        stderr: '',
+        isError: true,
+        errorText: undefined,
+      });
+      expect(await runCli(['run', 'test'])).toBe(1);
+      const err = stderrText();
+      expect(err).toContain('failed (exit 1): exit code 1');
+      expect(err).not.toContain('claude stderr');
+    });
+  });
 });
 
 describe('mergeEnv — profile env overlay', () => {

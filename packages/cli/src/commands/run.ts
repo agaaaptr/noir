@@ -26,6 +26,7 @@ import {
 } from '../orchestrator.js';
 import { type CliOptions, EXIT, fail, json, log, success } from '../output.js';
 import { loadRunConfig, resolveRunProfile } from '../run-profiles.js';
+import { HOST_STDERR_TAIL_LINES, hostStderrTail, RunStatusLine } from '../run-status.js';
 
 /**
  * Anthropic credential / gateway variables that change how a headless (`-p`)
@@ -90,13 +91,16 @@ function formatUsage(u: UsageSnapshot): string {
 
 /**
  * Stream an assistant text delta to stdout (non-json mode only). The host's
- * answer is data, so it goes to stdout; diagnostics go to stderr.
+ * answer is data, so it goes to stdout; diagnostics go to stderr. The status
+ * line is told first, so it can finish its own row before the answer is written
+ * — the answer must never start glued to the tail of the progress text.
  */
-function streamEvent(event: NoirEvent, opts: RunOptions): void {
+function streamEvent(event: NoirEvent, opts: RunOptions, status: RunStatusLine): void {
   if (opts.json === true) return; // json mode buffers; no streaming writes
   // API-error assistant text (e.g. "Not logged in · Please run /login") is a
   // diagnostic, not the answer — never stream it to the data channel.
   if (event.kind === 'assistant' && event.text && event.text.length > 0 && event.isError !== true) {
+    status.beforeStdout(event.text);
     process.stdout.write(event.text);
   }
 }
@@ -155,6 +159,23 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
 
   const transcriptLines: string[] = [];
 
+  // The binary the user is actually driving — a per-invocation `--command` or
+  // profile override wins over the host default. Named in the status line and
+  // in every failure message, so it is resolved once here.
+  const binary = customBinary && customBinary.length > 0 ? customBinary : host;
+
+  // Live progress on stderr for the wait before the host's first token. Silent
+  // under --json/--quiet; two plain markers instead of an animated line when
+  // stderr is not a terminal.
+  const status = new RunStatusLine({
+    host: binary,
+    json: opts.json,
+    quiet: opts.quiet,
+    stderrIsTty: process.stderr.isTTY === true,
+    stdoutSharesCursor: process.stdout.isTTY === true,
+  });
+  status.begin();
+
   let result: RunHostResult;
   try {
     result = await runHost({
@@ -164,10 +185,15 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
       extraArgs,
       env,
       onLine: (line) => transcriptLines.push(line),
-      onEvent: (event) => streamEvent(event, opts),
+      onEvent: (event) => {
+        status.event(event);
+        streamEvent(event, opts, status);
+      },
     });
   } catch (err) {
-    const binary = customBinary && customBinary.length > 0 ? customBinary : host;
+    // Clear the status line before the failure text so the error is not printed
+    // onto the tail of a half-drawn progress row.
+    status.end();
     const detail = err instanceof Error ? err.message : String(err);
     const enoent = (err as NodeJS.ErrnoException)?.code === 'ENOENT';
     const guidance = enoent
@@ -187,11 +213,16 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
     // A failed host run is an error, not a success: exit 1, {ok:false} under
     // --json, and no misleading "usage" line. The raw stream-json transcript is
     // still persisted (it is the audit record) and referenced in the message.
-    const binary = customBinary && customBinary.length > 0 ? customBinary : host;
+    status.end();
+    // The host's own stderr is where its progress and its deeper error detail
+    // live, and it is otherwise withheld entirely — a bounded tail is what makes
+    // the failure diagnosable. It doubles as the reason when the stream carried
+    // no error text of its own.
+    const stderrTail = hostStderrTail(result.stderr);
     const reason =
       result.errorText && result.errorText.trim().length > 0
         ? result.errorText.trim()
-        : result.stderr.trim() || `exit code ${result.exitCode}`;
+        : stderrTail || `exit code ${result.exitCode}`;
     // Auth guidance is keyed off the stream's error CATEGORY (authoritative),
     // falling back to a text heuristic only when the category is absent. The
     // login hint names the RESOLVED binary, not a literal 'claude'.
@@ -205,6 +236,10 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
       message += credentialNote(env ?? process.env, envSources);
     }
     message += ` If you use another profile, pass \`--command <binary>\` or define a run profile under run.profiles. transcript: ${transcript}`;
+    // Skipped when the tail already IS the reason line above.
+    if (stderrTail.length > 0 && stderrTail !== reason) {
+      message += `\n${binary} stderr (last ${HOST_STDERR_TAIL_LINES} lines):\n${stderrTail}`;
+    }
     fail(EXIT.ERROR, message, opts);
   }
 
@@ -224,7 +259,9 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
     return;
   }
 
-  // Separator so the streamed answer and the summary don't run together.
+  // The answer, if any, left the cursor mid-line; the summary starts on a line
+  // of its own, and the status line (when it still held the row) is erased here.
+  status.end();
   process.stdout.write('\n');
   success(`usage: ${formatUsage(result.usage)} (API-equivalent estimate, not billed)`, opts);
   log(`transcript: ${transcript}`, opts);

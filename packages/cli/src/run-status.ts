@@ -1,0 +1,239 @@
+// A live status line for `noir run`, drawn on STDERR.
+//
+// The stretch between spawning the host and its first token of output is the
+// one part of a run with no feedback at all, and it has no upper bound: a slow
+// gateway, a queued model, or a host quietly retrying all read as a hang. This
+// line names what is happening — which host, which model, how long, how many
+// tokens so far — so that stretch is never silent.
+//
+// Three design constraints shape it:
+//
+//   1. STDERR, because stdout carries the host's answer (or the `--json`
+//      envelope) and must stay clean for pipes, redirection, and machine
+//      consumers. Under `--json` and `--quiet` the line emits nothing at all,
+//      so those byte-for-byte contracts are untouched.
+//   2. EVENT-DRIVEN, never a timer. The host's answer streams to stdout, which
+//      normally shares this terminal; a redraw racing that stream would land
+//      inside the answer. Every render here is caused by a host event.
+//   3. ONE ROW AT A TIME. While the line owns the row the cursor is on, it
+//      rewrites in place. The moment anything else is about to be written to
+//      that row it finishes the row with a newline first, so the answer never
+//      starts glued to the tail of the status text. It then keeps quiet until
+//      stdout leaves the cursor at the start of a row again — which is what
+//      makes a carriage return safe to use, since anything else would drag the
+//      cursor back over what was just written.
+//
+// Where stderr is not a terminal (CI logs, redirection) there is nothing to
+// redraw and no cursor to protect, so the line degrades to two plain markers:
+// one when the run starts, one when it ends.
+
+import { type NoirEvent, UsageReducer } from './orchestrator.js';
+
+/**
+ * How many lines of the host's own stderr a failure message carries. Bounded
+ * because a host may narrate far more than a terminal can usefully show; the
+ * unfiltered stream is still in the transcript.
+ */
+export const HOST_STDERR_TAIL_LINES = 20;
+
+export interface RunStatusOptions {
+  /** Label for the host being driven (`claude`, `claude-work`, …). */
+  readonly host: string;
+  /** Machine-output mode: the status line is suppressed entirely. */
+  readonly json?: boolean;
+  /** The user asked for no diagnostics: the status line is suppressed entirely. */
+  readonly quiet?: boolean;
+  /** Whether the status line's own stream is a terminal (redraw) or a pipe (markers). */
+  readonly stderrIsTty?: boolean;
+  /**
+   * Whether stdout renders on the same terminal as stderr. When it does, the
+   * answer can land on the row the status line is holding, so the line must
+   * yield first. When stdout is redirected or piped it is not on the terminal
+   * at all, and the status line can keep its row for the whole run. Defaults to
+   * true — the conservative answer when the caller does not say.
+   */
+  readonly stdoutSharesCursor?: boolean;
+  /** Where the line is written (defaults to stderr). */
+  readonly write?: (chunk: string) => void;
+  /** Monotonic millisecond clock (defaults to `performance.now`). */
+  readonly now?: () => number;
+}
+
+/**
+ * Humanize a duration the way a person reads it: `8s`, `2m 18s`, `1h 05m`.
+ * Raw seconds stop being readable well before a long tool-heavy run finishes.
+ */
+export function humanizeElapsed(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const seconds = total % 60;
+  const minutes = Math.floor(total / 60) % 60;
+  const hours = Math.floor(total / 3600);
+  if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+  if (minutes > 0) return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+  return `${seconds}s`;
+}
+
+export class RunStatusLine {
+  private readonly host: string;
+  private readonly enabled: boolean;
+  private readonly animated: boolean;
+  private readonly sharesCursor: boolean;
+  private readonly write: (chunk: string) => void;
+  private readonly now: () => number;
+  /**
+   * Running token totals for the live line. This is a SECOND accumulator: the
+   * snapshot the run reports at the end is reduced independently from the full
+   * event stream, and both apply the same `max usage per message id` rule, so
+   * the number on screen and the number in the summary agree.
+   */
+  private readonly usage = new UsageReducer();
+  private startedAt: number;
+  private model: string | undefined;
+  private streaming = false;
+  private begun = false;
+  private ended = false;
+  /** True while the status text is sitting on the row the cursor is currently at. */
+  private onRow = false;
+  /** True when the last stdout write ended a line — the only safe moment to move the cursor. */
+  private stdoutAtRowStart = true;
+  /** The text currently on the row (empty when the row is not ours). */
+  private rendered = '';
+
+  constructor(opts: RunStatusOptions) {
+    this.host = opts.host;
+    this.enabled = opts.json !== true && opts.quiet !== true;
+    this.animated = this.enabled && opts.stderrIsTty === true;
+    this.sharesCursor = opts.stdoutSharesCursor !== false;
+    this.write = opts.write ?? ((chunk: string): void => void process.stderr.write(chunk));
+    this.now = opts.now ?? ((): number => performance.now());
+    this.startedAt = this.now();
+  }
+
+  /**
+   * Claim the row: show the seeded "waiting" state immediately, before the host
+   * has said anything, so the spawn itself is never blank. Calling this twice
+   * is a no-op.
+   */
+  begin(): void {
+    if (!this.enabled || this.begun) return;
+    this.begun = true;
+    this.startedAt = this.now();
+    if (this.animated) {
+      this.draw();
+      return;
+    }
+    this.write(`${this.render()}\n`);
+  }
+
+  /** Feed one normalized host event. Anything unrenderable is ignored. */
+  event(e: NoirEvent): void {
+    if (!this.enabled || this.ended || !this.begun) return;
+    if (e.kind === 'result') {
+      this.end();
+      return;
+    }
+    if (e.kind === 'init') {
+      if (e.model !== undefined) this.model = e.model;
+    } else if (e.kind === 'assistant') {
+      this.streaming = true;
+      this.usage.add(e);
+    } else {
+      return; // 'other' carries nothing this line can show
+    }
+    this.draw();
+  }
+
+  /**
+   * Announce the chunk the caller is about to write to STDOUT — before writing
+   * it. Warning the line first lets it finish its row: the answer would
+   * otherwise start glued to the tail of the status text. It also records
+   * whether that write ended a line, which is the only moment the cursor can be
+   * moved without landing inside the answer.
+   */
+  beforeStdout(chunk: string): void {
+    if (chunk.length === 0) return;
+    if (this.animated && this.sharesCursor && this.onRow) {
+      this.write('\n');
+      this.onRow = false;
+    }
+    this.stdoutAtRowStart = chunk.endsWith('\n');
+  }
+
+  /**
+   * Close the line out. On a terminal the line is erased so the run summary
+   * takes its place — unless the answer has since moved the cursor off it, in
+   * which case the text stays as the record of how long the wait was. On a pipe
+   * it becomes the final marker. Safe to call twice.
+   */
+  end(): void {
+    if (!this.enabled || this.ended) return;
+    this.ended = true;
+    if (!this.animated) {
+      this.write(`${this.render()}\n`);
+      return;
+    }
+    if (!this.onRow || !this.cursorFree()) return;
+    this.write('\r\x1b[K');
+    this.rendered = '';
+    this.onRow = false;
+  }
+
+  /** Rewrite the current row in place, skipping no-op rewrites and unsafe moments. */
+  private draw(): void {
+    if (!this.animated || !this.cursorFree()) return;
+    const text = this.render();
+    if (text === this.rendered) return;
+    this.write(`\r\x1b[K${text}`);
+    this.rendered = text;
+    this.onRow = true;
+  }
+
+  /**
+   * Whether the cursor is at the start of a row nobody else is using. On stdout
+   * that is not this terminal there is no shared cursor to disturb; when it is,
+   * only a write that ended a line leaves one free.
+   */
+  private cursorFree(): boolean {
+    return !this.sharesCursor || this.stdoutAtRowStart;
+  }
+
+  private render(): string {
+    const parts: string[] = [];
+    if (this.streaming) {
+      const u = this.usage.snapshot();
+      parts.push(
+        this.model ?? this.host,
+        this.elapsed(),
+        `↓${u.inputTokens.toLocaleString()}↑${u.outputTokens.toLocaleString()} tokens`,
+      );
+      return `● ${parts.join(' · ')}`;
+    }
+    // Before the first token there is nothing to count yet: name the host, then
+    // the model once the host has announced it, and say plainly that the wait
+    // is still the wait.
+    if (this.model !== undefined) return `▶ ${[this.host, this.model, this.elapsed()].join(' · ')}`;
+    return `▶ ${this.host} · waiting for first event…`;
+  }
+
+  private elapsed(): string {
+    return humanizeElapsed(this.now() - this.startedAt);
+  }
+}
+
+/**
+ * The last `maxLines` lines of the host's own stderr. A failing host narrates
+ * its progress and its errors there and Noir otherwise reads none of it, which
+ * leaves a failure reportable only by whatever single sentence the host put in
+ * its stream — the run is unauditable without the rest. Bounded so a
+ * pathological host cannot flood the terminal. The content is the host's own
+ * output (never Noir's environment), so it is surfaced as-is.
+ */
+export function hostStderrTail(stderr: string, maxLines = HOST_STDERR_TAIL_LINES): string {
+  const lines = stderr.split('\n').map((line) => line.trimEnd());
+  // A trailing newline produces one empty element that is not a line of output.
+  while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+  if (lines.length === 0) return '';
+  if (lines.length <= maxLines) return lines.join('\n');
+  const omitted = lines.length - maxLines;
+  return [`… (${omitted} earlier lines omitted)`, ...lines.slice(-maxLines)].join('\n');
+}
