@@ -51,6 +51,7 @@ function fakeRes(written: string[]): ScaffoldResult {
     written,
     skipped: [],
     identical: [],
+    refreshed: [],
     noop: false,
     migrationsRan: [],
     migrationConflicts: [],

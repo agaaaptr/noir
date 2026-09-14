@@ -123,6 +123,14 @@ export async function init(root: string, opts: InitOptions): Promise<ScaffoldRes
   const dedup = await checkWritePathDedup(root, res, { interactive, project: projectInfo });
   if (dedup.conflicts.length > 0) res.conflicts.push(...dedup.conflicts);
 
+  // Doc-only seeds an upgrade replaced because the user never edited them. Worth
+  // a line of its own: the user's next `git diff` shows these files changing,
+  // and the reason should already be on screen.
+  if (res.refreshed.length > 0) {
+    process.stderr.write(
+      `Refreshed ${res.refreshed.length} unedited doc seed(s): ${res.refreshed.join(', ')}\n`,
+    );
+  }
   process.stderr.write(
     `Noir initialized in ${root} (host: ${host}, transport: ${opts.transport}).\n`,
   );
@@ -134,10 +142,12 @@ export async function init(root: string, opts: InitOptions): Promise<ScaffoldRes
 
 /**
  * F1 — report a dry-run (--dry-run/--preview) scaffold result. After
- * `scaffold({dryRun:true})` the result's `written`/`skipped`/`identical` carry
- * the PLANNED paths (nothing touched disk): `written` = files that WOULD be
- * written, `skipped` = skipIfExists files already present (left alone),
- * `identical` = files whose bytes would match the template (no rewrite).
+ * `scaffold({dryRun:true})` the result's `written`/`skipped`/`identical`/
+ * `refreshed` carry the PLANNED paths (nothing touched disk): `written` = files
+ * that WOULD be written, `skipped` = skipIfExists files already present (left
+ * alone), `identical` = files whose bytes would match the template (no
+ * rewrite), `refreshed` = doc-only seeds an upgrade would replace because they
+ * are still an unedited copy of an older version's text.
  * `conflicts` is always empty under dryRun (no writes → no conflicts).
  * `fileModes` carries the planned permission for entries that would CREATE at a
  * non-default mode — annotated onto the planned line (`… (mode 600)`).
@@ -159,6 +169,14 @@ export function reportPlannedWrites(res: ScaffoldResult): void {
       const mode = res.fileModes?.[p];
       log(mode === undefined ? `  ${p}` : `  ${p} (mode ${mode.toString(8).padStart(3, '0')})`);
     }
+  }
+  if (res.refreshed.length > 0) {
+    // Doc-only seeds still carrying the text an older Noir shipped: an upgrade
+    // replaces them because the user never edited them. Reported apart from the
+    // planned writes so the preview does not read as "Noir will overwrite your
+    // files".
+    log('Would refresh (unedited older copy):');
+    for (const p of res.refreshed) log(`  ${p}`);
   }
   if (res.skipped.length > 0) {
     log('Would leave as-is (already present):');

@@ -34,6 +34,13 @@
  * refresh is a documentation gap; a wrong refresh destroys user work. The
  * asymmetry is intentional and should not be "fixed" into a fuzzy match.
  *
+ * Each entry holds the text of BOTH seeds, so the comparison takes the seed it
+ * is about as an argument and scans only that field. Scanning all of them would
+ * let a `.env.example` match the recorded working-rules text (or the reverse),
+ * and since the caller's response to `true` is an overwrite, a mixed-up pairing
+ * would discard an edit the user is entitled to keep. The caller knows which
+ * file it just read; the argument makes it say so.
+ *
  * RENDERING
  * ---------
  * Seed templates are normally interpolated through `render(template, vars)`
@@ -59,6 +66,14 @@
  * their file as "current" (no refresh) or "unknown" (no refresh). The same
  * reasoning that keeps npm versions immutable applies here.
  */
+
+/**
+ * Which recorded seed a comparison is about. The values mirror the field names
+ * of {@link SeedTemplateHistoryEntry}: every entry carries the text of both
+ * seeds, and a caller must name the one whose bytes it read (see
+ * {@link isStaleSeed} on why the pairing is load-bearing).
+ */
+export type SeedKind = 'envExample' | 'rulesSeed';
 
 /**
  * The seed templates as they shipped at one past scaffold version.
@@ -236,27 +251,33 @@ export const SEED_TEMPLATE_HISTORY: readonly SeedTemplateHistoryEntry[] = [
 ];
 
 /**
- * Does `fileBytes` look like an unedited seed left over from an older scaffold
+ * Does `fileBytes` look like an unedited `seed` left over from an older scaffold
  * version?
  *
- * `true` iff the bytes are an exact match for a recorded history entry AND
- * differ from `currentRender` (what Noir writes for that seed today). Callers
- * pass `currentRender` rather than this module deriving it, because the current
- * template text is the business of the manifest and the template loader — and
- * because the compile-time constant that names the current scaffold version
- * advances independently of the bytes recorded here.
+ * `true` iff the bytes are an exact match for that seed's text in a recorded
+ * history entry AND differ from `currentRender` (what Noir writes for that seed
+ * today). Callers pass `currentRender` rather than this module deriving it,
+ * because the current template text is the business of the manifest and the
+ * template loader — and because the compile-time constant that names the
+ * current scaffold version advances independently of the bytes recorded here.
  *
- * The `currentRender` guard is what keeps a no-op from being reported as a
- * refresh. A project initialized at the current version already holds the
- * current bytes; those bytes also match their own history entry, so without the
- * second condition every up-to-date project would be told to rewrite its seeds.
+ * `seed` names the file the bytes came from. It is a safety argument, not
+ * bookkeeping: because each entry records both seeds, a comparison that scanned
+ * every field would report the recorded working-rules bytes as a stale
+ * `.env.example`, and the caller's response to `true` is to overwrite the file.
+ * Naming the seed keeps the comparison inside its own column, so a mixed-up
+ * pairing cannot silently destroy an edit the user is entitled to keep.
+ *
+ * The `currentRender` guard is checked FIRST: it is what keeps a no-op from
+ * being reported as a refresh. A project initialized at the current version
+ * already holds the current bytes; those bytes also match their own history
+ * entry, so without the second condition every up-to-date project would be told
+ * to rewrite its seeds.
  *
  * Callers own the other half of the decision: a file that does not exist has no
  * bytes to compare and is a plain "create the seed", not a refresh.
  */
-export function isStaleSeed(fileBytes: string, currentRender: string): boolean {
+export function isStaleSeed(seed: SeedKind, fileBytes: string, currentRender: string): boolean {
   if (fileBytes === currentRender) return false;
-  return SEED_TEMPLATE_HISTORY.some(
-    (entry) => entry.envExample === fileBytes || entry.rulesSeed === fileBytes,
-  );
+  return SEED_TEMPLATE_HISTORY.some((entry) => entry[seed] === fileBytes);
 }

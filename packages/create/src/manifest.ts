@@ -18,6 +18,7 @@ import {
   RULES_BLOCK,
 } from '@noir-ai/core';
 import type { StackInfo } from './stack-detect.js';
+import type { SeedKind } from './template-history.js';
 import type { WriteMode } from './writers.js';
 
 /**
@@ -54,6 +55,27 @@ export interface ManifestEntry {
   /** Repo-relative POSIX path (forward slashes). Orchestrator joins with root. */
   path: string;
   mode: WriteMode;
+  /** Opt-in flag for a DOC-ONLY seed — a file whose only job is to be read by a
+   *  human. On an upgrade, a seed still byte-identical to what an older Noir
+   *  shipped is refreshed in place rather than staying frozen at that older
+   *  text forever; one the user edited is never refreshed (it goes to the
+   *  ordinary conflict flow, which keeps the user's bytes by default).
+   *
+   *  Honored on the upgrade emit only. A fresh `init`/`create` either creates
+   *  the file or leaves it alone, and `sync` does not emit seeds at all, so
+   *  neither can observe the flag — the behavior change is confined to the one
+   *  command a user runs to bring an initialized project up to date.
+   *
+   *  DOC-ONLY SEEDS ONLY. A file the user owns the contents of must never carry
+   *  this flag: `.noir/.env`, `.noir/config.yml` and `.noir/project.id` are
+   *  theirs to shape, and an upgrade that rewrote one of them would destroy
+   *  exactly the work this engine exists to protect. Co-owned files (managed
+   *  blocks) must not set it either — they have a three-way merge that
+   *  preserves user edits, which is the better tool for a shared file.
+   *
+   *  Which recorded seed the bytes are compared against is declared separately
+   *  in {@link REFRESHABLE_SEED_KIND}. */
+  refreshIfStale?: true;
   /** Host tag; entry is skipped when opts.host !== entry.host.
    *  Undefined = host-agnostic (every host emits it). */
   host?: HostTag;
@@ -152,6 +174,25 @@ export const MANIFEST_PATH_PARITY: ReadonlyArray<
 ];
 
 /**
+ * Which recorded seed each refreshable entry is compared against, keyed by the
+ * path that emits it — see {@link ManifestEntry.refreshIfStale}.
+ *
+ * The history entries record the text of BOTH seeds, so the comparison has to
+ * be told which one it is looking at. The manifest is what knows which path
+ * holds which seed, and keeping that pairing in a table beside the path
+ * constants means a path change breaks at the same site instead of silently
+ * comparing `.noir/.env.example` against the recorded working-rules text — a
+ * mismatch whose only symptom would be a file the user edited, overwritten.
+ *
+ * `manifest.test.ts` asserts this table and the flagged entries cover each
+ * other, so a refreshable entry cannot be added without naming its seed.
+ */
+export const REFRESHABLE_SEED_KIND: Readonly<Record<string, SeedKind>> = {
+  [P.envExample]: 'envExample',
+  [P.rulesMd]: 'rulesSeed',
+};
+
+/**
  * Build the manifest for a given ctx. Pure (no I/O). The orchestrator calls
  * this once per scaffold run; tests assert the shape is stable.
  *
@@ -198,9 +239,13 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
       description: 'user config seed (host + mode)',
     },
     {
+      // Refreshable: the variable set Noir documents grows between releases,
+      // and this file is pure documentation the user is never asked to edit —
+      // so an upgrade may replace an untouched older copy of it.
       path: P.envExample,
       mode: 'skipIfExists',
       template: 'env.example.tmpl',
+      refreshIfStale: true,
       description: '.noir/.env.example committable documentation (never loaded)',
     },
     {
@@ -224,9 +269,12 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
       description: 'NOIR.md auto-brief (project id pointer)',
     },
     {
+      // Refreshable: shipped as a starting contract the user is INVITED to
+      // rewrite, so only the never-edited copy may be swapped for a newer one.
       path: P.rulesMd,
       mode: 'skipIfExists',
       template: 'rules-seed.md.tmpl',
+      refreshIfStale: true,
       description: 'AI working-rules seed',
     },
     {

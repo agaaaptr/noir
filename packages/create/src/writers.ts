@@ -248,6 +248,25 @@ export function skipIfExists(absPath: string, content: string, fileMode?: number
   return { path: absPath, mode: 'skipIfExists', written: true };
 }
 
+/** Overwrite an existing seed's bytes while keeping the permission bits it
+ *  already has. The `skipIfExists` refresh variant: the file exists (a refresh
+ *  is only ever decided from bytes already on disk), its content is Noir's own
+ *  shipped text, and only that text changes — so, unlike {@link regenerate},
+ *  which writes a fresh temp file at the umask default and renames over the
+ *  target, this leaves the mode alone.
+ *
+ *  `atomicWriteFile` is what makes that safe: it stats the existing target and
+ *  restores that mode after the rename, so a crash mid-write cannot leave a
+ *  half-written seed behind and no permission is silently changed. Parent
+ *  directories are the orchestrator's job, created once for the whole manifest.
+ *
+ *  The staleness decision is NOT made here — the writer is handed bytes that
+ *  the caller has already established are an unedited older copy of the seed. */
+export function refreshSeed(absPath: string, content: string): WriteOutcome {
+  atomicWriteFile(absPath, content);
+  return { path: absPath, mode: 'skipIfExists', written: true };
+}
+
 /**
  * Merge-aware JSON write (C3 SessionStart hook). `settings.local.json` is JSON
  * and CANNOT carry `<!-- noir:* -->` managed markers, so it is neither

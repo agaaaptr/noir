@@ -76,16 +76,16 @@ describe('seed template history — snapshot fidelity', () => {
 
 describe('isStaleSeed — .noir/.env.example', () => {
   it('reports an unedited older seed as stale', () => {
-    expect(isStaleSeed(v1_1_0.envExample, currentEnvExample)).toBe(true);
+    expect(isStaleSeed('envExample', v1_1_0.envExample, currentEnvExample)).toBe(true);
   });
 
   it('does NOT report the current render as stale', () => {
-    expect(isStaleSeed(currentEnvExample, currentEnvExample)).toBe(false);
+    expect(isStaleSeed('envExample', currentEnvExample, currentEnvExample)).toBe(false);
   });
 
   it('does NOT report a user-edited file as stale', () => {
     const edited = `${v1_1_0.envExample}\n# our team's own token\nMY_TOKEN=abc\n`;
-    expect(isStaleSeed(edited, currentEnvExample)).toBe(false);
+    expect(isStaleSeed('envExample', edited, currentEnvExample)).toBe(false);
   });
 
   it('does NOT report an edit that only removes text as stale', () => {
@@ -94,7 +94,7 @@ describe('isStaleSeed — .noir/.env.example', () => {
     const trimmed = v1_1_0.envExample.replace(/^# .*CLICKUP_API_TOKEN.*$/m, '');
     expect(trimmed).not.toBe(v1_1_0.envExample); // the fixture actually deleted a line
     expect(trimmed.length).toBeLessThan(v1_1_0.envExample.length);
-    expect(isStaleSeed(trimmed, currentEnvExample)).toBe(false);
+    expect(isStaleSeed('envExample', trimmed, currentEnvExample)).toBe(false);
   });
 
   it('does NOT report a line-ending conversion as stale (conservative)', () => {
@@ -102,21 +102,21 @@ describe('isStaleSeed — .noir/.env.example', () => {
     // owned" is the safe direction: a skipped refresh is a doc gap, a wrong
     // refresh destroys work.
     const crlf = v1_1_0.envExample.replace(/\n/g, '\r\n');
-    expect(isStaleSeed(crlf, currentEnvExample)).toBe(false);
+    expect(isStaleSeed('envExample', crlf, currentEnvExample)).toBe(false);
   });
 
   it('does NOT report an empty file as stale', () => {
-    expect(isStaleSeed('', currentEnvExample)).toBe(false);
+    expect(isStaleSeed('envExample', '', currentEnvExample)).toBe(false);
   });
 });
 
 describe('isStaleSeed — .noir/rules/RULES.md', () => {
   it('reports an unedited older seed as stale', () => {
-    expect(isStaleSeed(v1_1_0.rulesSeed, currentRulesSeed)).toBe(true);
+    expect(isStaleSeed('rulesSeed', v1_1_0.rulesSeed, currentRulesSeed)).toBe(true);
   });
 
   it('does NOT report the current render as stale', () => {
-    expect(isStaleSeed(currentRulesSeed, currentRulesSeed)).toBe(false);
+    expect(isStaleSeed('rulesSeed', currentRulesSeed, currentRulesSeed)).toBe(false);
   });
 
   it('does NOT report a user-edited file as stale', () => {
@@ -125,31 +125,38 @@ describe('isStaleSeed — .noir/rules/RULES.md', () => {
       '- Commits stay local until explicitly pushed.\n- Never touch the production database.',
     );
     expect(edited).not.toBe(v1_1_0.rulesSeed); // fixture actually changed the text
-    expect(isStaleSeed(edited, currentRulesSeed)).toBe(false);
+    expect(isStaleSeed('rulesSeed', edited, currentRulesSeed)).toBe(false);
   });
 
   it('does NOT report an empty file as stale', () => {
-    expect(isStaleSeed('', currentRulesSeed)).toBe(false);
+    expect(isStaleSeed('rulesSeed', '', currentRulesSeed)).toBe(false);
   });
 });
 
-describe('isStaleSeed — matching is exact and seed-agnostic', () => {
-  it('matches a recorded version regardless of which seed it came from', () => {
-    // The check scans every recorded template, so a caller may pass either
-    // seed's bytes without telling the function which file it read.
-    expect(isStaleSeed(v1_1_0.rulesSeed, currentEnvExample)).toBe(true);
-    expect(isStaleSeed(v1_1_0.envExample, currentRulesSeed)).toBe(true);
+describe('isStaleSeed — a comparison stays inside its own seed', () => {
+  it('does NOT match the OTHER seed’s recorded bytes', () => {
+    // Each history entry records both seeds. The caller overwrites the file
+    // when this returns true, so the working-rules bytes sitting in
+    // `.noir/.env.example` must NOT read as a stale env seed (and the reverse).
+    // The same bytes under their OWN seed name are stale (asserted above).
+    expect(isStaleSeed('envExample', v1_1_0.rulesSeed, currentEnvExample)).toBe(false);
+    expect(isStaleSeed('rulesSeed', v1_1_0.envExample, currentRulesSeed)).toBe(false);
   });
 
-  it('returns false when neither seed matches and neither is current', () => {
-    expect(isStaleSeed('something else entirely\n', currentEnvExample)).toBe(false);
-    expect(isStaleSeed('something else entirely\n', currentRulesSeed)).toBe(false);
+  it('does NOT report the other seed’s CURRENT render as stale either', () => {
+    expect(isStaleSeed('envExample', currentRulesSeed, currentEnvExample)).toBe(false);
+    expect(isStaleSeed('rulesSeed', currentEnvExample, currentRulesSeed)).toBe(false);
+  });
+
+  it('returns false when nothing matches and neither render is current', () => {
+    expect(isStaleSeed('envExample', 'something else entirely\n', currentEnvExample)).toBe(false);
+    expect(isStaleSeed('rulesSeed', 'something else entirely\n', currentRulesSeed)).toBe(false);
   });
 
   it('compares bytes, not trimmed or normalized text', () => {
     // Trailing whitespace is a difference. Being strict here keeps a
     // whitespace-only user edit from being mistaken for an untouched seed.
-    expect(isStaleSeed(` ${v1_1_0.envExample}`, currentEnvExample)).toBe(false);
-    expect(isStaleSeed(v1_1_0.envExample.trimEnd(), currentEnvExample)).toBe(false);
+    expect(isStaleSeed('envExample', ` ${v1_1_0.envExample}`, currentEnvExample)).toBe(false);
+    expect(isStaleSeed('envExample', v1_1_0.envExample.trimEnd(), currentEnvExample)).toBe(false);
   });
 });

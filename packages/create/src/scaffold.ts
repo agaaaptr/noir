@@ -14,6 +14,7 @@ import {
   buildManifest,
   type HostTag,
   type ManifestEntry,
+  REFRESHABLE_SEED_KIND,
 } from './manifest.js';
 import { mergeThreeWay } from './merge.js';
 import { runMigrations } from './migrations/index.js';
@@ -24,6 +25,7 @@ import {
 } from './scaffold-version.js';
 import { detectStack, type StackInfo } from './stack-detect.js';
 import { render } from './template.js';
+import { isStaleSeed, type SeedKind } from './template-history.js';
 import { loadTemplate } from './template-loader.js';
 import {
   buildRegion,
@@ -32,6 +34,7 @@ import {
   mergeJson,
   predictManagedBlock,
   predictManagedBlocks,
+  refreshSeed,
   regenerate,
   skipIfExists,
   type WriteMode,
@@ -122,6 +125,20 @@ export interface ScaffoldResult {
   /** SP-D: repo-relative `regenerate` paths skipped because byte-identical to
    *  the template (content-hash dedup — no rewrite). */
   identical: string[];
+  /** Repo-relative doc-only seed paths REPLACED on the upgrade path because the
+   *  copy on disk was still byte-identical to an older Noir's shipped text —
+   *  i.e. the user never edited it, so a newer seed costs nothing. Reported
+   *  separately from {@link written} because the distinction is the whole point
+   *  of the refresh: a caller (and the user reading the summary) can tell
+   *  "Noir updated documentation you never touched" apart from "Noir created
+   *  something new".
+   *
+   *  A seed the user DID edit is never listed here — it goes through the
+   *  ordinary conflict flow, so it appears in {@link written} only when a
+   *  resolver explicitly chose to replace it (or `--force` did). Empty on every
+   *  other run: a fresh `init`/`create` has nothing to compare against and
+   *  `sync` does not emit seeds. */
+  refreshed: string[];
   /** SP-A: true when the already-initialized guard short-circuited (a bare
    *  `noir init`/`create` on an initialized project). Callers (init.ts/create.ts)
    *  gate skills emission + the "initialized" message on this — a no-op must NOT
@@ -232,9 +249,11 @@ type EmitContext = 'sync' | 'upgrade';
  *    because sync is not a scaffold event: it refreshes the host pointers, it
  *    does not (re)create a project's seeds.
  *  - `upgrade` (`noir init --upgrade`) re-emits the runtime subset PLUS
- *    `skipIfExists`, which creates only when the file is ABSENT — so an upgrade
- *    backfills a seed added to the manifest after a project was initialized
- *    while remaining unable to touch a file the user owns (spec §11.1).
+ *    `skipIfExists`, which normally creates only when the file is ABSENT — so
+ *    an upgrade backfills a seed added to the manifest after a project was
+ *    initialized while remaining unable to touch a file the user owns. The one
+ *    entry that goes further is a doc-only seed flagged `refreshIfStale`, whose
+ *    untouched older copy is replaced (see {@link ManifestEntry}).
  *    `mergeJson` stays OUT: `.claude/settings.local.json` is user-owned and
  *    write-ONCE by its own contract (init/create only), and the merge re-appends
  *    the SessionStart hook whenever the dedup substring is gone — i.e. an
@@ -354,6 +373,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
       written: [],
       skipped: [],
       identical: [],
+      refreshed: [],
       conflicts: [],
       fileModes: {},
       noop: true,
@@ -399,11 +419,15 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   // `init`/`create`, and `--force`). `sync` re-emits the runtime subset;
   // `init --upgrade` additionally re-emits `skipIfExists`, whose
   // create-only-if-absent semantics are exactly what backfills a seed added to
-  // the manifest after a project was initialized — the §1.6 regression, where
-  // `.noir/.env.example` was reachable by no command at all (spec §11.1). The
-  // writer never opens an existing file, so a user's own seed, and its mode,
-  // cannot be touched by this. `--upgrade` still excludes `mergeJson` — see
-  // {@link EMITTED_IN}.
+  // the manifest after a project was initialized — the regression where
+  // `.noir/.env.example` was reachable by no command at all. On top of that,
+  // an upgrade is the only way to reach the doc-seed refresh: an entry flagged
+  // `refreshIfStale` has its existing file READ and compared against the bytes
+  // Noir used to ship, so a copy the user never touched gets the newer text.
+  // Both branches keep the same guarantee for everything else — an unflagged
+  // entry goes through the writer that does not open an existing file at all,
+  // and a flagged seed the user edited only ever reaches the conflict flow.
+  // `--upgrade` still excludes `mergeJson` — see {@link EMITTED_IN}.
   const emitContext: EmitContext | null =
     opts.mode === 'sync'
       ? 'sync'
@@ -422,6 +446,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   const written: string[] = [];
   const skipped: string[] = [];
   const identical: string[] = [];
+  const refreshed: string[] = [];
   const fileModes: Record<string, number> = {};
   // Per-run conflict memory + structured report. Memory is keyed by
   // artifact CLASS for `regenerate` (one decision shared across the run, so a
@@ -524,7 +549,12 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     if (!opts.dryRun) mkdirSync(dirname(abs), { recursive: true });
     for (const entry of entries) {
       if (opts.dryRun) {
-        if (entry.mode === 'skipIfExists') {
+        if (entry.mode !== 'skipIfExists') {
+          written.push(entry.path);
+          continue;
+        }
+        const seedKind = refreshableSeedKind(entry, emitContext);
+        if (seedKind === undefined) {
           if (existsSync(abs)) {
             skipped.push(entry.path);
           } else {
@@ -533,14 +563,28 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
             // without writing (`.noir/.env` → 0600).
             if (entry.fileMode !== undefined) fileModes[entry.path] = entry.fileMode;
           }
-        } else {
+          continue;
+        }
+        // Refreshable seed. The comparison needs the current render, so this is
+        // the one dry-run case that renders a body — a preview that reported a
+        // different outcome from the run it previews would be worse than none.
+        // An edited seed reads as "already present": the interactive conflict
+        // prompt cannot run under a preview, and leaving the user's bytes alone
+        // is what the same run does without a resolver.
+        const plan = planSeedWrite(abs, seedKind, renderEntry(entry, vars));
+        if (plan === 'create') {
           written.push(entry.path);
+          if (entry.fileMode !== undefined) fileModes[entry.path] = entry.fileMode;
+        } else if (plan === 'refresh') {
+          refreshed.push(entry.path);
+        } else {
+          skipped.push(entry.path);
         }
         continue;
       }
       const body = renderEntry(entry, vars);
       if (entry.mode === 'regenerate') {
-        const out = await writeRegenerateWithConflict(abs, entry.path, body, opts, {
+        const out = await writeWithConflict(abs, entry.path, body, opts, {
           memory: conflictMemory,
           record: recordConflict,
         });
@@ -616,14 +660,52 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
         if (out.written) written.push(entry.path);
         else identical.push(entry.path);
       } else {
-        // `entry.fileMode` (slice E) rides along so a created `.noir/.env` is
-        // 0600 from the moment it exists — see `skipIfExists`.
-        const out = skipIfExists(abs, body, entry.fileMode);
-        if (out.written) {
+        // `skipIfExists`: create the seed when it is absent, otherwise leave it
+        // untouched. A refreshable doc seed is the one exception, and only on
+        // an upgrade — see `refreshableSeedKind`.
+        const seedKind = refreshableSeedKind(entry, emitContext);
+        if (seedKind === undefined) {
+          // `entry.fileMode` (slice E) rides along so a created `.noir/.env` is
+          // 0600 from the moment it exists — see `skipIfExists`.
+          const out = skipIfExists(abs, body, entry.fileMode);
+          if (out.written) {
+            written.push(entry.path);
+            if (entry.fileMode !== undefined) fileModes[entry.path] = entry.fileMode;
+          } else {
+            skipped.push(entry.path);
+          }
+          continue;
+        }
+        const plan = planSeedWrite(abs, seedKind, body);
+        if (plan === 'create') {
+          skipIfExists(abs, body, entry.fileMode);
           written.push(entry.path);
           if (entry.fileMode !== undefined) fileModes[entry.path] = entry.fileMode;
-        } else {
+        } else if (plan === 'refresh') {
+          // The bytes on disk are an unedited copy of an older seed, so the
+          // newer text costs the user nothing. The file's mode is left as it is.
+          refreshSeed(abs, body);
+          refreshed.push(entry.path);
+        } else if (plan === 'keep') {
           skipped.push(entry.path);
+        } else {
+          // Edited by the user, so it is theirs: run the same conflict flow the
+          // other write modes use rather than replacing anything silently. The
+          // artifact class is `skipIfExists`, which scopes an "apply to all"
+          // answer to the seeds alone — a decision about these doc files must
+          // not ride along into `.mcp.json`'s pointer-file conflicts.
+          const out = await writeWithConflict(abs, entry.path, body, opts, {
+            memory: conflictMemory,
+            record: recordConflict,
+            artifactClass: 'skipIfExists',
+            // No resolver answered (no TTY, `--no-input`, CI): keep the user's
+            // file. An explicit overwrite policy is an instruction rather than a
+            // missing answer, so `--force` still replaces.
+            defaultResolution: opts.conflictPolicy === 'overwrite' ? 'replace' : 'preserve',
+          });
+          written.push(...out.written);
+          skipped.push(...out.skipped);
+          identical.push(...out.identical);
         }
       }
     }
@@ -659,6 +741,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     written,
     skipped,
     identical,
+    refreshed,
     conflicts: conflictRecords,
     fileModes,
     noop: false,
@@ -811,26 +894,86 @@ function resolveProjectId(
   return createProjectId();
 }
 
+/** What a refreshable seed's write should do, decided from the bytes on disk.
+ *  Split out so the dry-run predictor and the real write path agree by
+ *  construction: they are the same decision, evaluated twice. */
+type SeedPlan = 'create' | 'keep' | 'refresh' | 'conflict';
+
 /**
- * SP-C — write a `regenerate` file, honoring conflict resolution when the
- * target already exists and DIFFERS from the proposed bytes. Identical bytes
- * (or a missing file) write straight through (content-hash dedup is a deferred
- * slice — identical still "writes" today to keep sync/--upgrade byte-stable).
- * Resolution:
- *  - `replace`         — overwrite (the historical default).
- *  - `preserve`/`cancel` — keep the user's file; report skipped.
- *  - `rename`          — move the user's file to `<path>.local`, write template.
- *  - `duplicate`       — write the template to `<path>.noir`, keep the user's.
- * Returns the repo-relative paths to record as written / skipped.
+ * Decide what to do with a refreshable seed, from the file currently on disk:
+ *  - absent                          → `create` — the ordinary seed backfill.
+ *  - an exact copy of a RECORDED     → `refresh` — Noir wrote these bytes and
+ *    older version                      the user never changed them.
+ *  - an exact copy of what Noir      → `keep` — already current, nothing to do.
+ *    writes today
+ *  - anything else                   → `conflict` — these are the user's bytes,
+ *                                       and only the user may replace them.
+ *
+ * The order matters only in that `keep` is checked after the staleness test,
+ * which already excludes the current render; every non-matching byte pattern
+ * falls through to `conflict`, the conservative branch.
  */
-async function writeRegenerateWithConflict(
+function planSeedWrite(abs: string, seed: SeedKind, currentRender: string): SeedPlan {
+  const existing = readOptional(abs);
+  if (existing === undefined) return 'create';
+  if (isStaleSeed(seed, existing, currentRender)) return 'refresh';
+  if (existing === currentRender) return 'keep';
+  return 'conflict';
+}
+
+/** Which recorded seed this entry's bytes may be compared against, or
+ *  `undefined` when the entry is not refreshable in this run.
+ *
+ *  Refresh is an upgrade-only behavior, and that condition lives here rather
+ *  than in the manifest so one place defines "which run may replace a seed": a
+ *  fresh `init`/`create` has no already-written seed to compare against (its
+ *  entry either creates the file or leaves it alone), and `sync` does not emit
+ *  seeds at all.
+ *
+ *  Throws when a flagged entry declares no seed kind. Such an entry could only
+ *  ever be compared against the wrong seed's bytes, and the consequence of that
+ *  comparison is an overwrite — so it fails loudly instead of guessing. */
+function refreshableSeedKind(
+  entry: ManifestEntry,
+  emitContext: EmitContext | null,
+): SeedKind | undefined {
+  if (emitContext !== 'upgrade' || entry.refreshIfStale !== true) return undefined;
+  const kind = REFRESHABLE_SEED_KIND[entry.path];
+  if (kind === undefined) {
+    throw new Error(
+      `manifest entry ${entry.path}: 'refreshIfStale' is set but no recorded seed is declared for that path`,
+    );
+  }
+  return kind;
+}
+
+/**
+ * Write a file whose bytes DIFFER from what is on disk, honoring conflict
+ * resolution when the target already exists. Identical bytes (or a missing
+ * file) write straight through (content-hash dedup is not applied at this
+ * level — identical still "writes" today to keep sync/--upgrade byte-stable).
+ * Resolution:
+ *  - `replace`         — overwrite.
+ *  - `preserve`/`cancel` — keep the user's file; report skipped.
+ *  - `rename`          — move the user's file to `<path>.local`, write the new
+ *                        bytes in place.
+ *  - `duplicate`       — write the new bytes to `<path>.noir`, keep the user's.
+ * Returns the repo-relative paths to record as written / skipped.
+ *
+ * Both callers are user-owned targets that must not be clobbered on a whim: a
+ * `regenerate` pointer file and a refreshable doc seed whose bytes no longer
+ * match Noir's record. The two differ only in their class key and in what "no
+ * answer" means, which is why those are arguments rather than a second copy of
+ * this switch.
+ */
+async function writeWithConflict(
   abs: string,
   relPath: string,
   proposed: string,
   opts: ScaffoldOptions,
   internals: {
-    /** Per-run memory keyed by artifact CLASS (`'regenerate'`) — populated when
-     *  a resolver returns `applyToAll`. */
+    /** Per-run memory keyed by artifact CLASS — populated when a resolver
+     *  returns `applyToAll`. */
     memory: Map<string, ConflictResolution>;
     /** Append a structured record for `ScaffoldResult.conflicts`. */
     record: (
@@ -841,6 +984,16 @@ async function writeRegenerateWithConflict(
       resolution: ConflictResolution,
       similarity?: number,
     ) => void;
+    /** Artifact class this write belongs to. Decides the scope of an
+     *  "apply to all" answer and the label on the conflict record; defaults to
+     *  `'regenerate'` (a pointer file, the historical caller). */
+    artifactClass?: NonNullable<ConflictContext['mode']>;
+    /** Resolution to apply when there is no resolver AND the policy does not
+     *  already say `preserve`. Defaults to `'replace'`: a pointer file is
+     *  Noir-owned and exists to be re-emitted. A caller writing a file the USER
+     *  owns passes `'preserve'`, so an unattended run (no TTY, `--no-input`,
+     *  CI) leaves their bytes alone. */
+    defaultResolution?: ConflictResolution;
   },
 ): Promise<{ written: string[]; skipped: string[]; identical: string[] }> {
   let existing: string | undefined;
@@ -857,9 +1010,9 @@ async function writeRegenerateWithConflict(
     // content-hash dedup: byte-identical → skip the rewrite entirely (no disk IO).
     return { written: [], skipped: [], identical: [relPath] };
   }
-  // Apply-to-all memory: a regenerate file's class shares one decision
-  // across the run (so a `noir init --upgrade` over N pointers → 1 prompt).
-  const MODE: NonNullable<ConflictContext['mode']> = 'regenerate';
+  // Apply-to-all memory: files of one class share a single decision across the
+  // run (so a `noir init --upgrade` over N pointers → 1 prompt).
+  const MODE: NonNullable<ConflictContext['mode']> = internals.artifactClass ?? 'regenerate';
   const sim = similarity(existing, proposed);
   let resolution: ConflictResolution;
   const remembered = internals.memory.get(MODE);
@@ -873,7 +1026,8 @@ async function writeRegenerateWithConflict(
     }
     resolution = unwrapped;
   } else {
-    resolution = opts.conflictPolicy === 'preserve' ? 'preserve' : 'replace';
+    resolution =
+      opts.conflictPolicy === 'preserve' ? 'preserve' : (internals.defaultResolution ?? 'replace');
   }
   // Record the conflict ALWAYS (interactive or not) so `--json`/CI can see
   // exactly which files diverged + how the engine resolved them. The prompt

@@ -9,8 +9,10 @@
 import { existsSync, mkdtempSync, readdirSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { ScaffoldResult } from '@noir-ai/create';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createProgram, EXIT, inferExitCode } from '../src/bin.js';
+import { reportPlannedWrites } from '../src/init.js';
 
 let root: string;
 let origCwd: string;
@@ -107,5 +109,79 @@ describe('noir init --dry-run (F1 dryRun surfacing)', () => {
     expect(envelope.data.written).toContain('.noir/NOIR.md');
     // Still zero writes on disk.
     expect(readdirSync(root)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The dry-run summary reports a planned doc-seed refresh apart from the
+// planned writes: "Noir will re-emit this pointer file" and "Noir will replace
+// a doc seed you never edited" are different news and read differently.
+// ---------------------------------------------------------------------------
+
+describe('reportPlannedWrites — the refresh section', () => {
+  function result(over: Partial<ScaffoldResult>): ScaffoldResult {
+    return {
+      written: [],
+      skipped: [],
+      identical: [],
+      refreshed: [],
+      noop: false,
+      migrationsRan: [],
+      migrationConflicts: [],
+      stack: {
+        languages: ['typescript'],
+        monorepo: false,
+        frameworks: [],
+        packageManager: 'pnpm',
+        pmSource: 'lockfile',
+        ci: null,
+        existingAiFiles: [],
+        pmConflict: false,
+      },
+      projectId: 'p',
+      fromVersion: '1.0.0',
+      toVersion: '1.1.0',
+      host: 'claude',
+      conflicts: [],
+      ...over,
+    };
+  }
+
+  function capture(res: ScaffoldResult): string {
+    const chunks: string[] = [];
+    const orig = process.stderr.write.bind(process.stderr);
+    process.stderr.write = ((c: unknown) => {
+      chunks.push(typeof c === 'string' ? c : String(c));
+      return true;
+    }) as typeof process.stderr.write;
+    try {
+      reportPlannedWrites(res);
+    } finally {
+      process.stderr.write = orig;
+    }
+    return chunks.join('');
+  }
+
+  it('lists each planned refresh under its own heading, with the planned writes', () => {
+    const out = capture(
+      result({
+        written: ['.mcp.json'],
+        refreshed: ['.noir/.env.example', '.noir/rules/RULES.md'],
+      }),
+    );
+
+    expect(out).toContain('Would refresh (unedited older copy):');
+    expect(out).toContain('  .noir/.env.example');
+    expect(out).toContain('  .noir/rules/RULES.md');
+    // A refreshed path is named under the refresh heading only — it is not also
+    // listed as a plain planned write above it.
+    expect(out.indexOf('  .noir/.env.example')).toBeGreaterThan(out.indexOf('Would refresh'));
+  });
+
+  it('omits the heading entirely when nothing is being refreshed', () => {
+    const out = capture(result({ written: ['.mcp.json'] }));
+
+    expect(out).toContain('Planned writes:');
+    expect(out).not.toContain('Would refresh');
   });
 });

@@ -1,7 +1,12 @@
 import { join } from 'node:path';
 import { type HostAdapter, type HostId, resolveAdapter } from '@noir-ai/adapters';
 import { describe, expect, it } from 'vitest';
-import { buildHostArtifacts, buildManifest, MANIFEST_PATH_PARITY } from '../src/manifest.js';
+import {
+  buildHostArtifacts,
+  buildManifest,
+  MANIFEST_PATH_PARITY,
+  REFRESHABLE_SEED_KIND,
+} from '../src/manifest.js';
 import { loadTemplate, templatesDir } from '../src/template-loader.js';
 
 const CTX = {
@@ -287,5 +292,41 @@ describe('buildHostArtifacts — emission contract per adapter (S10)', () => {
       mcpConfigPath: () => '/elsewhere/mcp.json',
     };
     expect(() => buildHostArtifacts(rogue, { root, transport: 'stdio' })).toThrow(/not under root/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Refreshable doc seeds — the flag and the seed-kind table must agree.
+// ---------------------------------------------------------------------------
+
+describe('refreshIfStale', () => {
+  const m = buildManifest(CTX);
+
+  it('is set on exactly the two doc-only seeds', () => {
+    const flagged = m.filter((e) => e.refreshIfStale === true).map((e) => e.path);
+    expect(flagged).toEqual(['.noir/.env.example', '.noir/rules/RULES.md']);
+  });
+
+  it('names the recorded seed for every flagged entry, and only for flagged entries', () => {
+    // The comparison has to know WHICH recorded seed it is looking at (the
+    // history entry holds both texts), so an entry that may be refreshed
+    // without a declared seed kind would be compared against the wrong column.
+    const flagged = new Set(m.filter((e) => e.refreshIfStale === true).map((e) => e.path));
+    const declared = new Set(Object.keys(REFRESHABLE_SEED_KIND));
+    expect(declared).toEqual(flagged);
+  });
+
+  it('is never set on a user-owned seed or a co-owned file', () => {
+    const forbidden = ['.noir/.env', '.noir/config.yml', '.noir/project.id', '.noir/NOIR.md'];
+    for (const path of forbidden) {
+      for (const entry of m.filter((e) => e.path === path)) {
+        expect(entry.refreshIfStale).toBeUndefined();
+      }
+    }
+  });
+
+  it('maps each flagged path to its own seed kind', () => {
+    expect(REFRESHABLE_SEED_KIND['.noir/.env.example']).toBe('envExample');
+    expect(REFRESHABLE_SEED_KIND['.noir/rules/RULES.md']).toBe('rulesSeed');
   });
 });
