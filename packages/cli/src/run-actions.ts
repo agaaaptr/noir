@@ -70,7 +70,9 @@ type Clack = typeof import('@clack/prompts');
  * Offer the actions for a finished run. Returns immediately — before loading
  * the prompt library — when the invocation is not interactive, which is what
  * keeps a scripted or piped run byte-identical to one made before this menu
- * existed. A cancelled or dismissed menu is a no-op, not an error.
+ * existed. A cancelled, dismissed, or undrawable menu is a no-op, not an error:
+ * the run has already succeeded and been reported, so the prompt itself can
+ * never be the thing that fails it.
  */
 export async function offerPostRunActions(input: PostRunActionInput): Promise<void> {
   if (!isInteractive(input.opts)) return;
@@ -120,15 +122,10 @@ export async function offerPostRunActions(input: PostRunActionInput): Promise<vo
   // A menu whose only row is "Dismiss" is not worth a keystroke.
   if (options.length <= 1) return;
 
-  const clack = await import('@clack/prompts');
-  const choice = await clack.select({
-    message: 'The run finished. What next?',
-    initialValue: 'dismiss',
-    options,
-  });
-  if (clack.isCancel(choice)) return;
+  const menu = await openMenu(options);
+  if (menu === undefined) return;
 
-  switch (choice as PostRunAction) {
+  switch (menu.choice) {
     case 'memory':
       await attempt('Saving to memory', input.opts, () => saveToMemory(input));
       return;
@@ -139,13 +136,39 @@ export async function offerPostRunActions(input: PostRunActionInput): Promise<vo
       await attempt('Writing the handoff', input.opts, () => writeHandoff(input));
       return;
     case 'resume':
-      await attempt('Continuing the session', input.opts, () => continueSession(input, clack));
+      await attempt('Continuing the session', input.opts, () => continueSession(input, menu.clack));
       return;
     case 'save':
-      await attempt('Writing the file', input.opts, () => saveAnswerToFile(input, clack));
+      await attempt('Writing the file', input.opts, () => saveAnswerToFile(input, menu.clack));
       return;
     case 'dismiss':
       return;
+  }
+}
+
+/**
+ * Draw the menu and return what was chosen, or `undefined` when the user wants
+ * nothing. Loading the prompt library, rendering the question, and reading the
+ * answer are all one step on purpose: every way this can fail — the library not
+ * loading, the terminal going away between the interactivity gate and the
+ * render, stdin erroring — costs the menu and nothing else. It is an offer on a
+ * run that has already succeeded and been reported, so it must never be the
+ * thing that turns that run into a failure.
+ */
+async function openMenu(
+  options: MenuOption[],
+): Promise<{ clack: Clack; choice: PostRunAction } | undefined> {
+  try {
+    const clack = await import('@clack/prompts');
+    const choice = await clack.select({
+      message: 'The run finished. What next?',
+      initialValue: 'dismiss',
+      options,
+    });
+    if (clack.isCancel(choice)) return undefined;
+    return { clack, choice: choice as PostRunAction };
+  } catch {
+    return undefined;
   }
 }
 

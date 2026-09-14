@@ -207,7 +207,11 @@ describe('noir run — post-run actions', () => {
       expect(textOf('err')).not.toContain('What next?');
     });
 
-    it('offer nothing under --quiet either', async () => {
+    it('keep the answer the only thing on stdout under --quiet', async () => {
+      // `--quiet` silences the stderr diagnostics; it is not an interactivity
+      // switch (the menu is gated on the streams being terminals, plus
+      // --json/--no-input/CI/NO_COLOR). On this run nothing is a terminal, so
+      // no menu is drawn and stdout carries the answer and nothing else.
       hostAnswers();
       expect(await runCli(['run', 'hi', '--quiet'])).toBe(0);
       expect(textOf('out')).toBe('The answer is 42. Done.\n');
@@ -270,6 +274,29 @@ describe('noir run — post-run actions', () => {
       clackMock.select.mockResolvedValueOnce(CANCEL);
       expect(await runCli(['run', 'hi'])).toBe(0);
       expect(calls).toEqual([]);
+    });
+
+    it('still offers the menu under --quiet, which silences diagnostics only', async () => {
+      // Pinned deliberately: --quiet is not an interactivity switch, so a
+      // terminal with prompts allowed still gets the menu. What it silences is
+      // the stderr summary, not the question.
+      hostAnswers();
+      clackMock.select.mockResolvedValueOnce('dismiss');
+      expect(await runCli(['run', 'hi', '--quiet'])).toBe(0);
+      expect(clackMock.select).toHaveBeenCalledTimes(1);
+      expect(textOf('out')).toBe('The answer is 42. Done.\n');
+    });
+
+    it('exits 0 when the menu itself cannot be drawn', async () => {
+      hostAnswers();
+      // The prompt library throwing (or failing to load, or the terminal going
+      // away between the gate and the render) must not rewrite the run's
+      // result: the answer already streamed and the summary already printed.
+      clackMock.select.mockRejectedValueOnce(new Error('EIO on stdin'));
+      expect(await runCli(['run', 'hi'])).toBe(0);
+      expect(textOf('out')).toBe('The answer is 42. Done.\n');
+      expect(calls).toEqual([]);
+      expect(textOf('err')).not.toContain('EIO');
     });
 
     it('drops the answer options when the host produced no answer text', async () => {
