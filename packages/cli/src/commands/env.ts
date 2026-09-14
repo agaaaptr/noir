@@ -43,6 +43,12 @@ import { type CliOptions, info, json, table } from '../output.js';
  * provider keys the docs name, `OLLAMA_BASE_URL` backs a local Ollama embedder,
  * and `NOIR_PROFILE` selects a `run.profiles` entry.
  *
+ * `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL` and `API_TIMEOUT_MS` sit next to
+ * `ANTHROPIC_API_KEY` because together they are the gateway set: a user who
+ * points a run at a non-Anthropic endpoint configures exactly these, and
+ * "which side supplied my gateway value — the file or my shell?" is the
+ * question they came here to answer.
+ *
  * An ambient key NOT in this list is still resolved (and still feeds the
  * precedence decision) — it is simply not reported, because "every variable in
  * your shell" is not an answer to "which value is in effect".
@@ -54,6 +60,9 @@ export const CURATED_AMBIENT_KEYS: readonly string[] = [
   'COHERE_API_KEY',
   'OLLAMA_BASE_URL',
   'ANTHROPIC_API_KEY',
+  'ANTHROPIC_AUTH_TOKEN',
+  'ANTHROPIC_BASE_URL',
+  'API_TIMEOUT_MS',
   'NOIR_PROFILE',
 ];
 

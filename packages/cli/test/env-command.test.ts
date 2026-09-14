@@ -198,6 +198,34 @@ describe('noir env', () => {
     expect(stdoutText() + stderrText()).not.toContain(AMBIENT_SECRET);
   });
 
+  it('reports the gateway variables a project sets, with the file as the winning source', async () => {
+    writeFileSync(
+      envPath,
+      `ANTHROPIC_BASE_URL=https://gateway.example\n` +
+        `ANTHROPIC_AUTH_TOKEN=${AMBIENT_SECRET}\n` +
+        `API_TIMEOUT_MS=300000\n`,
+      'utf8',
+    );
+
+    const code = await runCli(['env', '--json']);
+
+    expect(code).toBe(0);
+    const vars: EnvVarRow[] = JSON.parse(stdoutText()).data.vars;
+    for (const key of ['ANTHROPIC_BASE_URL', 'ANTHROPIC_AUTH_TOKEN', 'API_TIMEOUT_MS']) {
+      expect(rowOf(vars, key).source).toBe('file');
+    }
+    expect(stdoutText() + stderrText()).not.toContain(AMBIENT_SECRET);
+  });
+
+  it('reports an ambient-only gateway variable as coming from the environment', async () => {
+    process.env.ANTHROPIC_BASE_URL = 'https://gateway.example';
+
+    const code = await runCli(['env', '--json']);
+
+    expect(code).toBe(0);
+    expect(rowOf(JSON.parse(stdoutText()).data.vars, 'ANTHROPIC_BASE_URL').source).toBe('env');
+  });
+
   it('marks a file key that overrides a DIFFERENT ambient value as shadowed', async () => {
     writeFileSync(envPath, `CLICKUP_API_TOKEN=${FILE_SECRET}\n`, 'utf8');
     process.env.CLICKUP_API_TOKEN = 'pk_from_shell_value';
