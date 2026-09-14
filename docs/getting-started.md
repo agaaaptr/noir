@@ -233,6 +233,17 @@ A raw stream-json transcript is always persisted to `.noir/transcripts/`.
   reports something, and it stays out of the answer's way. `--json` and `--quiet`
   emit none of it, and when stderr is not a terminal it becomes two plain markers
   (one at the start, one at the end) instead of an animated line.
+- **After the answer.** On a terminal, a successful run asks what to do with the
+  answer: save it to memory, record it as a finding on the active task, write a
+  handoff artifact, write it to a file you name, or continue the session with a
+  follow-up prompt — with **Dismiss** (nothing further) as the default. A pipe, a
+  `--json` run and a `--no-input` run are offered nothing at all, and no choice —
+  including dismissing — changes the run's exit code. **Continue** is a *new*
+  headless invocation carrying `--resume <session-id>`; the session id and the
+  answer as plain text are also in the `--json` envelope
+  (`data.answerText`, `data.sessionId`). The memory and research actions go
+  through the daemon; if it is unreachable they say so and leave everything else
+  alone.
 - **Reading a failure.** The failure message quotes the last 20 lines of the
   host's own stderr alongside its error, since that is where the host's progress
   and its deeper error detail are — otherwise the run is unauditable. That tail

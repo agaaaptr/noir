@@ -25,6 +25,7 @@ import {
   type UsageSnapshot,
 } from '../orchestrator.js';
 import { type CliOptions, EXIT, fail, json, log, success } from '../output.js';
+import { offerPostRunActions } from '../run-actions.js';
 import { loadRunConfig, resolveRunProfile } from '../run-profiles.js';
 import { HOST_STDERR_TAIL_LINES, hostStderrTail, RunStatusLine } from '../run-status.js';
 
@@ -90,6 +91,20 @@ function formatUsage(u: UsageSnapshot): string {
 }
 
 /**
+ * The answer text an event carries, or `undefined` when it carries none.
+ * API-error assistant text (e.g. "Not logged in · Please run /login") is a
+ * diagnostic, not the answer. One predicate for both the live stream and the
+ * accumulator, so what the user reads and what a post-run action can save are
+ * always the same words.
+ */
+function answerText(event: NoirEvent): string | undefined {
+  if (event.kind === 'assistant' && event.text && event.text.length > 0 && event.isError !== true) {
+    return event.text;
+  }
+  return undefined;
+}
+
+/**
  * Stream an assistant text delta to stdout (non-json mode only). The host's
  * answer is data, so it goes to stdout; diagnostics go to stderr. The status
  * line is told first, so it can finish its own row before the answer is written
@@ -97,11 +112,10 @@ function formatUsage(u: UsageSnapshot): string {
  */
 function streamEvent(event: NoirEvent, opts: RunOptions, status: RunStatusLine): void {
   if (opts.json === true) return; // json mode buffers; no streaming writes
-  // API-error assistant text (e.g. "Not logged in · Please run /login") is a
-  // diagnostic, not the answer — never stream it to the data channel.
-  if (event.kind === 'assistant' && event.text && event.text.length > 0 && event.isError !== true) {
-    status.beforeStdout(event.text);
-    process.stdout.write(event.text);
+  const text = answerText(event);
+  if (text !== undefined) {
+    status.beforeStdout(text);
+    process.stdout.write(text);
   }
 }
 
@@ -110,6 +124,23 @@ function streamEvent(event: NoirEvent, opts: RunOptions, status: RunStatusLine):
  * failure (exit 1) rather than an unhandled rejection.
  */
 export async function run(prompt: string, opts: RunOptions): Promise<void> {
+  await runOnce(prompt, opts, undefined);
+}
+
+/**
+ * One host invocation, from validation to summary.
+ *
+ * `resumeSessionId` continues a session an earlier invocation started: the
+ * child is spawned with `--resume <id>` and a prompt collected fresh, and
+ * everything else — the stream, the transcript, the summary — is this same
+ * code path. It stays a single-shot invocation: the host answers and exits,
+ * and Noir holds no session open between turns.
+ */
+async function runOnce(
+  prompt: string,
+  opts: RunOptions,
+  resumeSessionId: string | undefined,
+): Promise<void> {
   const host = (opts.host ?? 'claude') as HostId;
   if (!(SUPPORTED_HOSTS as readonly string[]).includes(host)) {
     fail(EXIT.USAGE, `unknown host '${host}' (supported: ${SUPPORTED_HOSTS.join(', ')})`, opts);
@@ -140,7 +171,12 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
   // An explicit `--command` (per-invocation override) wins over a profile's
   // binary; the profile's binary is the fallback when --command is absent.
   const customBinary = opts.command ?? profile.binary;
-  const extraArgs = profile.args;
+  // A continuation appends `--resume <id>` after the profile's own args, so a
+  // profile's flags stay in effect on the resumed turn too.
+  const extraArgs =
+    resumeSessionId === undefined
+      ? profile.args
+      : [...(profile.args ?? []), '--resume', resumeSessionId];
   const env = profile.env ? mergeEnv(process.env, profile.env) : undefined;
 
   // Spec 13.3: running outside an initialized project stays supported, but the
@@ -158,6 +194,14 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
   }
 
   const transcriptLines: string[] = [];
+  // The answer as plain text, accumulated as it streams. The transcript is raw
+  // stream-json, so it cannot feed a post-run action; this can. Accumulating
+  // does not touch what is written to stdout — the same text still goes out
+  // live, byte for byte.
+  const answer: string[] = [];
+  // The host's own id for this session, when it reports one — the handle a
+  // continuation needs.
+  let sessionId: string | undefined;
 
   // The binary the user is actually driving — a per-invocation `--command` or
   // profile override wins over the host default. Named in the status line and
@@ -186,8 +230,11 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
       env,
       onLine: (line) => transcriptLines.push(line),
       onEvent: (event) => {
+        if (event.kind === 'init' && sessionId === undefined) sessionId = event.sessionId;
         status.event(event);
         streamEvent(event, opts, status);
+        const text = answerText(event);
+        if (text !== undefined) answer.push(text);
       },
     });
   } catch (err) {
@@ -261,6 +308,10 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
         numTurns: result.usage.numTurns,
         events: result.eventCount,
         transcript,
+        // The answer as plain words, so a consumer does not have to reassemble
+        // it from the stream-json transcript.
+        answerText: answer.join(''),
+        ...(sessionId === undefined ? {} : { sessionId }),
       },
     });
     return;
@@ -272,6 +323,22 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
   process.stdout.write('\n');
   success(`usage: ${formatUsage(result.usage)} (API-equivalent estimate, not billed)`, opts);
   log(`transcript: ${transcript}`, opts);
+
+  // Everything past this point is an offer, not part of the run. The menu
+  // returns immediately unless this is a terminal that allows prompts, so a
+  // piped or scripted run keeps the output it has always had.
+  await offerPostRunActions({
+    answer: answer.join(''),
+    transcript,
+    sessionId,
+    host: binary,
+    opts,
+    // Only the first run of a session can be continued: a resumed run is
+    // itself the continuation, so the menu never nests more than one deep.
+    ...(resumeSessionId === undefined && sessionId !== undefined
+      ? { resume: (nextPrompt: string, id: string) => runOnce(nextPrompt, opts, id) }
+      : {}),
+  });
 }
 
 /**
