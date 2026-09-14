@@ -400,6 +400,54 @@ describe('upgrade — user-owned seeds are never opened', () => {
   });
 });
 
+describe('upgrade — an unreadable seed is left alone, never an abort', () => {
+  // Deciding whether to replace a seed requires reading it. The seed writers
+  // this behavior sits on top of only ever asked "does it exist?", so they
+  // survived anything unreadable; asking for the bytes instead must not turn a
+  // file permission into a half-finished upgrade. Letting the read error escape
+  // would abort the emit loop mid-flight — after some entries were already
+  // written, and before the version stamp — which is strictly worse than
+  // leaving one doc file alone.
+
+  posixIt('completes the upgrade, preserves the seed and reports it as skipped', async () => {
+    // (Skipped on Windows — no POSIX modes — and vacuous when run as root.)
+    seedInitializedProject({ envExample: recorded.envExample });
+    const seed = envExample();
+    chmodSync(seed, 0o000);
+
+    try {
+      const res = await upgrade();
+
+      // Not a crash, and not a refresh: the bytes could not be compared, so
+      // they cannot be shown to be Noir's own.
+      expect(res.refreshed).toEqual([]);
+      expect(res.written).not.toContain('.noir/.env.example');
+      expect(res.skipped).toContain('.noir/.env.example');
+      // The run finished its other work rather than stopping at this file.
+      expect(res.written).toContain('.noir/NOIR.md');
+      expect(res.conflicts).toEqual([]);
+    } finally {
+      chmodSync(seed, 0o600);
+    }
+    // The bytes are the ones that were there before, touched by nothing.
+    expect(readFileSync(seed, 'utf8')).toBe(recorded.envExample);
+  });
+
+  posixIt('a dry run over an unreadable seed reports it as surviving too', async () => {
+    seedInitializedProject({ envExample: recorded.envExample });
+    const seed = envExample();
+    chmodSync(seed, 0o000);
+
+    try {
+      const res = await upgrade({ dryRun: true });
+      expect(res.refreshed).toEqual([]);
+      expect(res.skipped).toContain('.noir/.env.example');
+    } finally {
+      chmodSync(seed, 0o600);
+    }
+  });
+});
+
 describe('upgrade — the refresh is reported on the result, not inferred', () => {
   it('a run with nothing to refresh reports an empty refreshed list', async () => {
     seedInitializedProject();

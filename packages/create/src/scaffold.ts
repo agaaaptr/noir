@@ -665,8 +665,8 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
         // an upgrade — see `refreshableSeedKind`.
         const seedKind = refreshableSeedKind(entry, emitContext);
         if (seedKind === undefined) {
-          // `entry.fileMode` (slice E) rides along so a created `.noir/.env` is
-          // 0600 from the moment it exists — see `skipIfExists`.
+          // `entry.fileMode` rides along so a created `.noir/.env` is 0600 from
+          // the moment it exists — see `skipIfExists`.
           const out = skipIfExists(abs, body, entry.fileMode);
           if (out.written) {
             written.push(entry.path);
@@ -906,15 +906,35 @@ type SeedPlan = 'create' | 'keep' | 'refresh' | 'conflict';
  *    older version                      the user never changed them.
  *  - an exact copy of what Noir      → `keep` — already current, nothing to do.
  *    writes today
+ *  - present but unreadable          → `keep` — the bytes cannot be compared,
+ *                                       so they cannot be shown to be Noir's.
  *  - anything else                   → `conflict` — these are the user's bytes,
  *                                       and only the user may replace them.
  *
  * The order matters only in that `keep` is checked after the staleness test,
  * which already excludes the current render; every non-matching byte pattern
  * falls through to `conflict`, the conservative branch.
+ *
+ * A read that fails for any reason other than "no file there" resolves to
+ * `keep` rather than propagating. Deciding whether to replace a file requires
+ * reading it, and writing one whose bytes could not be read is the one outcome
+ * this whole path exists to prevent — so an unreadable seed (permissions, a
+ * symlink loop, a directory in the way) is left exactly as it is and reported
+ * as skipped, the same as any other file the run declines to touch. Letting the
+ * error escape would instead abort the emit loop part-way through, leaving the
+ * project half-upgraded and its version stamp unwritten.
+ *
+ * `conflict` is NOT the fallback for this case even though the conflict flow
+ * defaults to preserving: that path reads the file itself and treats a failed
+ * read as "no file", which would write the new seed over the unreadable one.
  */
 function planSeedWrite(abs: string, seed: SeedKind, currentRender: string): SeedPlan {
-  const existing = readOptional(abs);
+  let existing: string | undefined;
+  try {
+    existing = readOptional(abs);
+  } catch {
+    return 'keep';
+  }
   if (existing === undefined) return 'create';
   if (isStaleSeed(seed, existing, currentRender)) return 'refresh';
   if (existing === currentRender) return 'keep';
