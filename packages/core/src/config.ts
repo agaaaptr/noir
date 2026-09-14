@@ -141,7 +141,9 @@ export const NoirConfigSchema = z.object({
               baseURL: z
                 .string()
                 .optional()
-                .describe('OpenAI-compatible base URL (Ollama/LM Studio/vLLM)'),
+                .describe(
+                  'Base URL for a custom endpoint — Anthropic-shaped gateways and OpenAI-compatible local providers (Ollama/LM Studio/vLLM)',
+                ),
               apiKeyEnv: z
                 .string()
                 .optional()

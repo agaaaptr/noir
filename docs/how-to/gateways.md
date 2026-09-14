@@ -17,8 +17,9 @@ reads only its config. Setting one does not set the other.
 ## The host path — `noir run` and `.noir/.env`
 
 `noir run` spawns the host as a child process and passes its environment
-through by inheritance. Every value in `.noir/.env` is therefore in the host's
-environment, and the gateway variables below are what the host reads:
+through by inheritance. Every value the file is allowed to define is therefore
+in the host's environment, and the gateway variables below are what the host
+reads:
 
 | Variable | What it does |
 |---|---|
@@ -30,8 +31,8 @@ environment, and the gateway variables below are what the host reads:
 
 `.noir/.env` is applied to Noir's own environment and the processes it spawns —
 it is never exported to your shell, so a `claude` you launch by hand does not
-see it. Drive the host with `noir run` (or through the daemon) for the gateway
-to apply; remove the lines when you want your normal account back.
+see it. Drive the host with `noir run` for the gateway to apply; remove the
+lines when you want your normal account back.
 
 ### Do not set both credentials
 
@@ -108,15 +109,29 @@ model:
       authTokenEnv: ZAI_AUTH_TOKEN     # a NAME, never the value
       timeoutMs: 300000                # milliseconds, minimum 1000
       model: glm-5.3
+  # The tiers below accept only draft / title / summarize / consolidate, each a
+  # bare provider key (an unrecognised key is dropped silently). Consolidation
+  # reads `tiers.consolidate`:
   tiers:
-    default:
-      provider: gateway
+    consolidate: gateway
+  # Fallback for tiers you leave unassigned — optional:
+  defaultProvider: gateway
+
+# Consolidation is the one place Noir's model layer calls out, and it is
+# opt-in: without this switch the gateway above is never used.
+memory:
+  consolidation:
+    enabled: true
 ```
 
 ```bash
 # .noir/.env
 ZAI_AUTH_TOKEN=replace-with-your-zai-token
 ```
+
+Consolidation runs inside the daemon, and the daemon's environment is a
+snapshot taken when it spawned — after adding the token to `.noir/.env`, run
+`noir daemon restart`, or the change takes effect only on its next start.
 
 `authTokenEnv` is the Bearer variant; `apiKeyEnv` is the `x-api-key` variant.
 Both store the variable's **name** — `authTokenEnv: ZAI_AUTH_TOKEN` reads

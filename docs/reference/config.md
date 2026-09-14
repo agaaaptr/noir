@@ -65,7 +65,7 @@ vars, never config keys — see
 | `model.providers` | `record` | no | — | Configured model providers, keyed by name |
 | `model.providers.<name>` | `record value` | yes | — | A named provider block |
 | `model.providers.<name>.model` | `string` | yes | — | Model id for this provider |
-| `model.providers.<name>.baseURL` | `string` | no | — | OpenAI-compatible base URL (Ollama/LM Studio/vLLM) |
+| `model.providers.<name>.baseURL` | `string` | no | — | Base URL for a custom endpoint — Anthropic-shaped gateways and OpenAI-compatible local providers (Ollama/LM Studio/vLLM) |
 | `model.providers.<name>.apiKeyEnv` | `string` | no | — | Env-var NAME holding the API key (never the value) |
 | `model.providers.<name>.authTokenEnv` | `string` | no | — | Env-var NAME holding the bearer token (never the value); sent as Authorization: Bearer for Anthropic-shaped endpoints |
 | `model.providers.<name>.timeoutMs` | `number` | no | — | Per-request timeout in milliseconds (min 1000) |
