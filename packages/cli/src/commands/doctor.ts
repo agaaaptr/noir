@@ -471,15 +471,21 @@ function checkProvider(
     // `.noir/.env`, say so — "key present" alone leaves the user staring at an
     // empty shell export wondering where the key came from. The NAME only; the
     // value is never read here, let alone printed.
-    const fromFile = p.apiKeyEnv !== undefined && sources[p.apiKeyEnv] === 'file';
+    const fromFile =
+      (p.apiKeyEnv !== undefined && sources[p.apiKeyEnv] === 'file') ||
+      (p.authTokenEnv !== undefined && sources[p.authTokenEnv] === 'file');
+    // A keyed provider names its credential via `apiKeyEnv` and/or
+    // `authTokenEnv`; name whichever is present so a token-only provider is not
+    // mislabeled "anonymous" when its token is missing.
+    const credentialName = p.apiKeyEnv ?? p.authTokenEnv;
     const key = p.hasKey
       ? fromFile
         ? 'key present (from .noir/.env)'
         : 'key present'
-      : p.apiKeyEnv
-        ? `missing ${p.apiKeyEnv}`
+      : credentialName
+        ? `missing ${credentialName}`
         : 'anonymous';
-    if (!p.hasKey && p.apiKeyEnv) missing = true;
+    if (!p.hasKey && credentialName) missing = true;
     parts.push(`${name}/${p.model ?? '?'} (${key})`);
   }
   // Provider readiness is never CRITICAL — the model layer degrades to `null`
