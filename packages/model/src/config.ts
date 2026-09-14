@@ -19,6 +19,8 @@
 // to print); `apiKey` is the VALUE resolved here from `process.env[apiKeyEnv]`,
 // materialized so doctor / direct consumers can branch without each re-reading
 // env. The value never touches disk via Noir and is never logged with usage.
+// `authTokenEnv` travels through as a NAME only — the value is read at call
+// time in `complete()`, alongside the key it already resolves there.
 
 /**
  * User-facing model config shape — mirrors `NoirConfig['model']` (the zod block
@@ -57,6 +59,10 @@ export interface ModelProviderEntry {
   baseURL?: string;
   /** Env-var NAME holding the API key; omit for anonymous local providers. */
   apiKeyEnv?: string;
+  /** Env-var NAME holding a bearer token (Authorization: Bearer); NAME only. */
+  authTokenEnv?: string;
+  /** Per-request timeout in milliseconds; omit for the adapter default. */
+  timeoutMs?: number;
 }
 
 /**
@@ -73,6 +79,10 @@ export interface ResolvedProviderConfig {
   baseURL?: string;
   /** Env-var NAME passthrough — doctor prints this, NEVER the value. */
   apiKeyEnv?: string;
+  /** Env-var NAME passthrough for the bearer token (same rule as apiKeyEnv). */
+  authTokenEnv?: string;
+  /** Per-request timeout passthrough (milliseconds). */
+  timeoutMs?: number;
   /** VALUE resolved from `process.env[apiKeyEnv]`; `undefined` if anonymous or unset. */
   apiKey?: string;
   /**
@@ -145,6 +155,8 @@ export function resolveModelConfig(raw?: ModelUserConfig): ResolvedModelConfig {
       if (entry.model !== undefined) resolved.model = entry.model;
       if (entry.baseURL !== undefined) resolved.baseURL = entry.baseURL;
       if (apiKeyEnv !== undefined) resolved.apiKeyEnv = apiKeyEnv;
+      if (entry.authTokenEnv !== undefined) resolved.authTokenEnv = entry.authTokenEnv;
+      if (entry.timeoutMs !== undefined) resolved.timeoutMs = entry.timeoutMs;
       if (apiKey !== undefined) resolved.apiKey = apiKey;
       providers[name] = resolved;
     }

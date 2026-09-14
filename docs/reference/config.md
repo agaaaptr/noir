@@ -64,6 +64,11 @@ vars, never config keys — see
 | `model.tiers` | `object` | no | — | Per-tier provider overrides |
 | `model.providers` | `record` | no | — | Configured model providers, keyed by name |
 | `model.providers.<name>` | `record value` | yes | — | A named provider block |
+| `model.providers.<name>.model` | `string` | yes | — | Model id for this provider |
+| `model.providers.<name>.baseURL` | `string` | no | — | OpenAI-compatible base URL (Ollama/LM Studio/vLLM) |
+| `model.providers.<name>.apiKeyEnv` | `string` | no | — | Env-var NAME holding the API key (never the value) |
+| `model.providers.<name>.authTokenEnv` | `string` | no | — | Env-var NAME holding the bearer token (never the value); sent as Authorization: Bearer for Anthropic-shaped endpoints |
+| `model.providers.<name>.timeoutMs` | `number` | no | — | Per-request timeout in milliseconds (min 1000) |
 
 ### memory
 
@@ -100,6 +105,11 @@ vars, never config keys — see
 |---|---|---|---|---|
 | `integrations` | `record` | no | {} | Opt-in integration overlays, keyed by integration name |
 | `integrations.<name>` | `record value` | yes | — | A per-integration config overlay |
+| `integrations.<name>.auth` | `object` | no | {} | Auth overrides |
+| `integrations.<name>.runtime` | `enum` | no | "none" | Runtime tier (none = read-only; downgrade to disable writes) |
+| `integrations.<name>.teamId` | `string` | no | — | ClickUp team id (custom task IDs) |
+| `integrations.<name>.listId` | `string` | no | — | ClickUp list id (create/batch flows) |
+| `integrations.<name>.spaceId` | `string` | no | — | ClickUp space id |
 
 ### update
 
@@ -120,6 +130,9 @@ vars, never config keys — see
 | `run.defaultProfile` | `string` | no | — | Fallback profile name when no --profile flag / NOIR_PROFILE is set |
 | `run.profiles` | `record` | no | {} | Named run profiles, keyed by name |
 | `run.profiles.<name>` | `record value` | yes | — | A named host-binary bundle |
+| `run.profiles.<name>.binary` | `string` | yes | — | Executable to spawn (absolute path or PATH name) |
+| `run.profiles.<name>.env` | `record` | no | — | Env overlay (null deletes; $VAR expands from the process env) |
+| `run.profiles.<name>.args` | `array` | no | — | Extra args after the host headless flags |
 
 ### workspace
 
@@ -145,6 +158,7 @@ vars, never config keys — see
 `.noir/config.yml` is **committable project state** — never paste a token value into it.
 `apiKeyEnv` stores a variable **NAME**, never an interpolation — write
 `apiKeyEnv: ANTHROPIC_API_KEY`, never `apiKeyEnv: ${ANTHROPIC_API_KEY}`. The
+same rule covers `authTokenEnv`: a NAME, never the bearer-token value. The
 model layer reads `process.env[<that name>]`, so the dollar-brace form resolves to
 `undefined` and silently disables the provider. Only `run.profiles.<name>.env`
 interpolates a dollar-brace reference. Put the **value** in `.noir/.env` — the

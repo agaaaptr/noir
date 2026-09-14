@@ -129,6 +129,9 @@ export const NoirConfigSchema = z.object({
       // Configured provider blocks, keyed by name. `model` is required (a provider
       // without a model id is meaningless); `apiKeyEnv` is omitted for anonymous
       // local providers (Ollama / LM Studio) which then send no auth header.
+      // `authTokenEnv` names a bearer token instead of an API key — for gateways
+      // that authenticate with `Authorization: Bearer`; like `apiKeyEnv` it stores
+      // the NAME, never the value. `timeoutMs` bounds a single request.
       providers: z
         .record(
           z.string(),
@@ -143,6 +146,18 @@ export const NoirConfigSchema = z.object({
                 .string()
                 .optional()
                 .describe('Env-var NAME holding the API key (never the value)'),
+              authTokenEnv: z
+                .string()
+                .optional()
+                .describe(
+                  'Env-var NAME holding the bearer token (never the value); sent as Authorization: Bearer for Anthropic-shaped endpoints',
+                ),
+              timeoutMs: z
+                .number()
+                .int()
+                .min(1000)
+                .optional()
+                .describe('Per-request timeout in milliseconds (min 1000)'),
             })
             .describe('A named provider block'),
         )

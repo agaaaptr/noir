@@ -140,6 +140,70 @@ describe('parseConfig', () => {
     ).toThrow();
   });
 
+  // Provider transport fields: `authTokenEnv` follows the same NAME-indirection
+  // rule as `apiKeyEnv` (the config never holds the token value), and
+  // `timeoutMs` is a millisecond bound — an int, and never so small that a call
+  // is guaranteed to fail. Both are optional: a block that omits them keeps
+  // today's behavior exactly.
+  it('accepts authTokenEnv + timeoutMs on a provider block and round-trips them', () => {
+    const cfg = parseConfig({
+      host: 'claude',
+      model: {
+        providers: {
+          anthropic: {
+            model: 'claude-haiku',
+            baseURL: 'https://gateway.internal/anthropic',
+            authTokenEnv: 'ANTHROPIC_AUTH_TOKEN',
+            timeoutMs: 30_000,
+          },
+        },
+      },
+    });
+    expect(cfg.model.providers?.anthropic).toEqual({
+      model: 'claude-haiku',
+      baseURL: 'https://gateway.internal/anthropic',
+      authTokenEnv: 'ANTHROPIC_AUTH_TOKEN',
+      timeoutMs: 30_000,
+    });
+  });
+
+  it('accepts the minimum timeout (1000 ms) and rejects anything below it', () => {
+    const withTimeout = (timeoutMs: unknown) =>
+      parseConfig({
+        host: 'claude',
+        model: { providers: { anthropic: { model: 'claude-haiku', timeoutMs } } },
+      });
+    expect(withTimeout(1000).model.providers?.anthropic?.timeoutMs).toBe(1000);
+    expect(() => withTimeout(999)).toThrow();
+    expect(() => withTimeout(0)).toThrow();
+    expect(() => withTimeout(-1)).toThrow();
+  });
+
+  it('rejects a fractional or non-numeric timeoutMs', () => {
+    const withTimeout = (timeoutMs: unknown) =>
+      parseConfig({
+        host: 'claude',
+        model: { providers: { anthropic: { model: 'claude-haiku', timeoutMs } } },
+      });
+    expect(() => withTimeout(1500.5)).toThrow();
+    expect(() => withTimeout('30000')).toThrow();
+    expect(() => withTimeout(Number.NaN)).toThrow();
+  });
+
+  it('rejects a non-string authTokenEnv', () => {
+    const withAuthTokenEnv = (authTokenEnv: unknown) =>
+      parseConfig({
+        host: 'claude',
+        model: { providers: { anthropic: { model: 'claude-haiku', authTokenEnv } } },
+      });
+    expect(withAuthTokenEnv('ANTHROPIC_AUTH_TOKEN').model.providers?.anthropic?.authTokenEnv).toBe(
+      'ANTHROPIC_AUTH_TOKEN',
+    );
+    expect(() => withAuthTokenEnv(123)).toThrow();
+    expect(() => withAuthTokenEnv({ name: 'ANTHROPIC_AUTH_TOKEN' })).toThrow();
+    expect(() => withAuthTokenEnv(null)).toThrow();
+  });
+
   // The `memory:` block (blueprint D6): a config with NO memory
   // block parses to consolidation-disabled (capture/store/retrieve are always
   // local + free; consolidation is the ONLY LLM touch and it is opt-in +

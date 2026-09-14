@@ -265,17 +265,40 @@ function genConfigSchema() {
           // Zod v4 records expose the per-key value schema as _def.valueType
           // (not valueSchema, which is the v3 name). The valueType carries the
           // record's element schema + its .describe(), so run.profiles.<name>,
-          // integrations.<name>, and model.providers.<name> each get a row. A
-          // record has no object shape (so the walk below skips it) but may be
-          // nested one level deep (run.profiles), so this runs at every depth.
+          // integrations.<name>, and model.providers.<name> each get a row, and
+          // an object-valued record also exposes its own fields (see below).
+          // This runs at every depth, so a record nested inside a record value
+          // is still reflected.
           const recSchema = inner?._def?.valueType;
           if (recSchema) {
-            result[key + '.<name>'] = {
-              type: 'record value',
-              required: true,
-              description: recSchema?._def?.description || recSchema?.description || '',
-              default: '—',
-            };
+            const recShape = recSchema?._def?.shape;
+            const recDesc = recSchema?._def?.description || recSchema?.description || '';
+            // Emit the '<name>' row only for records whose value is a real
+            // named block (an object shape, or at least a description). A
+            // scalar-valued record (run.profiles.<name>.env maps strings to
+            // strings) has no per-key identity to document, so a '<name>' row
+            // there would be pure noise.
+            if ((recShape && typeof recShape === 'object') || recDesc) {
+              result[key + '.<name>'] = {
+                type: 'record value',
+                required: true,
+                description: recDesc,
+                default: '—',
+              };
+            }
+            // A record whose VALUE is an object (model.providers, run.profiles,
+            // integrations) otherwise hides every real setting behind the single
+            // '<name>' row. Reflect the value's own fields one level deep — the
+            // same depth budget a plain object gets — so a provider block's
+            // authTokenEnv / timeoutMs (and its siblings) reach the table
+            // straight from their .describe(), with no hand-maintained list to
+            // drift. Nested objects INSIDE the value stay one row (e.g.
+            // integrations.<name>.auth), matching context.embedder.
+            if (recShape && typeof recShape === 'object') {
+              for (const [childKey, childField] of Object.entries(recShape)) {
+                describeField(key + '.<name>.' + childKey, childField, 1);
+              }
+            }
           }
           if (depth < 1) {
             const objShape = inner?._def?.shape;
@@ -358,6 +381,7 @@ function genConfigSchema() {
     '`.noir/config.yml` is **committable project state** — never paste a token value into it.',
     '`apiKeyEnv` stores a variable **NAME**, never an interpolation — write',
     `\`apiKeyEnv: ANTHROPIC_API_KEY\`, never \`apiKeyEnv: ${brace}ANTHROPIC_API_KEY}\`. The`,
+    'same rule covers `authTokenEnv`: a NAME, never the bearer-token value. The',
     'model layer reads `process.env[<that name>]`, so the dollar-brace form resolves to',
     '`undefined` and silently disables the provider. Only `run.profiles.<name>.env`',
     'interpolates a dollar-brace reference. Put the **value** in `.noir/.env` — the',

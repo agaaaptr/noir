@@ -74,6 +74,23 @@ export interface CompleteRequest {
    * is optional and ignored by the `anthropic` / `openai` (hosted) adapters.
    */
   baseURL?: string;
+  /**
+   * Bearer token forwarded to an Anthropic-shaped endpoint as
+   * `Authorization: Bearer`, for gateways that authenticate with a token rather
+   * than an API key. NOT caller-set: `complete()` reads the value from the env
+   * var named by the provider block's `authTokenEnv` and forwards it here — the
+   * same env-at-call-time rule as the API key, and the same reason: the config
+   * file and this request carry names and resolved values, never secrets on
+   * disk. Optional; an adapter that authenticates with a key ignores it.
+   */
+  authToken?: string;
+  /**
+   * Per-request timeout in milliseconds. NOT caller-set: `complete()` forwards
+   * it from the resolved provider block (`cfg.providers[name].timeoutMs`) so
+   * every adapter bounds its call the same way. Optional — omit to keep the
+   * adapter's own default.
+   */
+  timeoutMs?: number;
   /** Optional abort signal to bound the call (single shot, no streaming). */
   signal?: AbortSignal;
 }
@@ -136,6 +153,14 @@ export interface ProviderConfig {
   baseURL?: string;
   /** Env-var NAME holding the API key; omit for anonymous local providers. */
   apiKeyEnv?: string;
+  /**
+   * Env-var NAME holding a bearer token for gateways that authenticate with
+   * `Authorization: Bearer` instead of an API key. NAME only, never the value —
+   * same rule as `apiKeyEnv`.
+   */
+  authTokenEnv?: string;
+  /** Per-request timeout in milliseconds; omit to keep the adapter default. */
+  timeoutMs?: number;
 }
 
 /**

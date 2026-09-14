@@ -45,6 +45,29 @@ describe('resolveModelConfig — degradation + passthrough', () => {
     const r = resolveModelConfig({ defaultProvider: 'x' });
     expect(r.tiers).toEqual({});
   });
+
+  it('passes authTokenEnv + timeoutMs through as config (NAME only, never the value)', async () => {
+    // `authTokenEnv` is threaded as the env-var NAME, exactly like `apiKeyEnv`;
+    // the token VALUE is read at call time by `complete()`, never materialized
+    // by this mapper (which resolves only the apiKey value). `timeoutMs` is a
+    // plain passthrough. Setting the env var must NOT leak the value into the
+    // resolved config.
+    await withEnv('ANTHROPIC_AUTH_TOKEN', 'tk-secret-bearer', async () => {
+      const r = resolveModelConfig({
+        providers: {
+          anthropic: {
+            model: 'claude-haiku',
+            authTokenEnv: 'ANTHROPIC_AUTH_TOKEN',
+            timeoutMs: 30_000,
+          },
+        },
+      });
+      const p = r.providers.anthropic;
+      expect(p?.authTokenEnv).toBe('ANTHROPIC_AUTH_TOKEN');
+      expect(p?.timeoutMs).toBe(30_000);
+      expect(Object.keys(p ?? {})).not.toContain('authToken'); // value stays in env
+    });
+  });
 });
 
 describe('resolveModelConfig — key resolution from env', () => {
@@ -143,12 +166,23 @@ describe('resolveModelConfig — structural compatibility with complete()', () =
     await withEnv('NOIR_TEST_COMPAT', 'sk-y', async () => {
       const resolved: ResolvedModelConfig = resolveModelConfig({
         defaultProvider: 'anthropic',
-        providers: { anthropic: { model: 'claude-haiku', apiKeyEnv: 'NOIR_TEST_COMPAT' } },
+        providers: {
+          anthropic: {
+            model: 'claude-haiku',
+            apiKeyEnv: 'NOIR_TEST_COMPAT',
+            authTokenEnv: 'NOIR_TEST_AUTH_TOKEN',
+            timeoutMs: 20_000,
+          },
+        },
       });
       // This assignment is the contract: complete(req, cfg: ModelConfig) accepts it.
       const asModelConfig: ModelConfig = resolved;
       expect(asModelConfig.defaultProvider).toBe('anthropic');
       expect(asModelConfig.providers?.anthropic?.apiKeyEnv).toBe('NOIR_TEST_COMPAT');
+      // The transport fields survive the assignment too — an adapter reading
+      // them off `ProviderConfig` sees what the user configured.
+      expect(asModelConfig.providers?.anthropic?.authTokenEnv).toBe('NOIR_TEST_AUTH_TOKEN');
+      expect(asModelConfig.providers?.anthropic?.timeoutMs).toBe(20_000);
     });
   });
 });
