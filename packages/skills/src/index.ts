@@ -54,6 +54,7 @@ export type {
   EmittedFile,
   IntegrationDeclaration,
   IntegrationSkill,
+  SkillConflict,
   SkillFrontmatter,
   ValidationResult,
 } from './types.js';

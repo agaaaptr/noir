@@ -29,7 +29,12 @@ import { existsSync } from 'node:fs';
 import { type HostId, resolveAdapter } from '@noir-ai/adapters';
 import { loadProjectInfo, type ProjectInfo, paths } from '@noir-ai/core';
 import { type ScaffoldResult, scaffold } from '@noir-ai/create';
-import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
+import {
+  type CompileTarget,
+  type EmitSummary,
+  emitSkillsToDir,
+  type SkillConflict,
+} from '@noir-ai/skills';
 import { buildConflictOpts, type ScaffoldConflictOpts } from './conflict.js';
 import { checkWritePathDedup } from './dedup-write.js';
 import { log, resolveInteractive } from './output.js';
@@ -67,12 +72,32 @@ export interface InitOptions {
 }
 
 /**
- * Initialize Noir in `root`. Returns the {@link ScaffoldResult} (with
- * structured `conflicts[]` + any dedup records appended) so `--json`
- * callers can surface conflict detail. `undefined` when the already-initialized
- * guard short-circuited (a no-op).
+ * The {@link ScaffoldResult} plus the skill pack's own report. The scaffold's
+ * `conflicts[]` covers the files the manifest owns; skills are emitted outside
+ * the manifest, so their conflicts and their stale leftovers would otherwise
+ * be invisible to a `--json` consumer.
  */
-export async function init(root: string, opts: InitOptions): Promise<ScaffoldResult | undefined> {
+export interface InitResult extends ScaffoldResult {
+  /** One record per skill file that existed AND differed from the compiled
+   *  bytes, with the resolution that was applied — including the files a
+   *  non-interactive run left alone. Always an array once skills emission has
+   *  run; absent on the `--dry-run` and already-initialized paths, which stop
+   *  before emission. */
+  skillConflicts?: SkillConflict[];
+  /** Names of the skills left with the user's own bytes because a differing
+   *  file was preserved. Empty when every skill is current — the `--json`
+   *  counterpart of the stderr line that warns about stale skills. */
+  preservedSkills?: string[];
+}
+
+/**
+ * Initialize Noir in `root`. Returns the {@link InitResult} (the
+ * {@link ScaffoldResult} with structured `conflicts[]`, any dedup records, and
+ * the skill pack's conflicts/stale names) so `--json` callers can surface
+ * conflict detail. `undefined` when the already-initialized guard
+ * short-circuited (a no-op).
+ */
+export async function init(root: string, opts: InitOptions): Promise<InitResult | undefined> {
   assertTransportUrl(opts);
 
   const host: HostId = resolveInitHost(root, opts);
@@ -85,7 +110,7 @@ export async function init(root: string, opts: InitOptions): Promise<ScaffoldRes
   // skipped too (they would touch disk / load the embedder).
   const dryRun = opts.dryRun === true || opts.preview === true;
 
-  const res = await scaffold({
+  const res: InitResult = await scaffold({
     root,
     mode: 'init',
     host,
@@ -114,7 +139,13 @@ export async function init(root: string, opts: InitOptions): Promise<ScaffoldRes
   // skills-emit conflict flow is LIVE in interactive mode (the producer
   // accepts conflict opts; this closes the wiring gap). The safe-default
   // `assertNotUserOwned` runs unconditionally inside the producer.
-  await emitHostSkills(root, host, conflictOpts, interactive);
+  const skillSummary = await emitHostSkills(root, host, conflictOpts, interactive);
+  // Skills live outside the manifest, so their report is folded onto the
+  // scaffold result by hand. Both keys are always present once emission has
+  // run (empty arrays when nothing conflicted) so a machine consumer can read
+  // them without an existence check.
+  res.skillConflicts = skillSummary?.conflicts ?? [];
+  res.preservedSkills = skillSummary?.preserved ?? [];
 
   // Write-path semantic dedup. Non-blocking; degrades to a
   // stderr warn-skip when the embedder is unavailable. Records near-dups on
@@ -235,20 +266,23 @@ export function reportPlannedWrites(res: ScaffoldResult): void {
  * The `CompileTarget` matches the host id (S10 foundation widened the enum to
  * the same union) so cursor skills compile to the `.mdc` rule shape via
  * `compileSkill(_, 'cursor')`; the others keep the verbatim SKILL.md format.
+ *
+ * Returns the emit summary for the caller to carry into `--json`, or
+ * `undefined` when the host has no skill emitter to report on.
  */
 async function emitHostSkills(
   root: string,
   host: HostId,
   conflictOpts: ScaffoldConflictOpts,
   interactive: boolean,
-): Promise<void> {
+): Promise<EmitSummary | undefined> {
   const adapter = resolveAdapter(host);
   const skillsDir = adapter.skillsDir?.({ root });
   if (skillsDir === undefined) {
     // N1: standardized wording — same phrase across init/sync/create so logs
     // grep uniformly. (Pre-N1 each command phrased this differently.)
     process.stderr.write(`host '${host}' has no skill emitter; skipping skills\n`);
-    return;
+    return undefined;
   }
   const target: CompileTarget = host;
   // Forward conflictPolicy + onConflict + interactive so an
@@ -272,6 +306,16 @@ async function emitHostSkills(
   process.stderr.write(
     `Emitted ${summary.emitted.length} Noir skills to ${relDir}/ (target: ${target}).\n`,
   );
+  // The count above is skills that are fully current. Anything left behind is
+  // named on its own line: a run that kept stale files and reported only a
+  // success count is how a CI upgrade silently stops refreshing skills.
+  const preserved = summary.preserved ?? [];
+  if (preserved.length > 0) {
+    process.stderr.write(
+      `${preserved.length} skill(s) preserved as stale (interactive TTY required to refresh): ${preserved.join(', ')}\n`,
+    );
+  }
+  return summary;
 }
 
 /**

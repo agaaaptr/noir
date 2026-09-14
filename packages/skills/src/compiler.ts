@@ -262,6 +262,12 @@ export async function emitSkillsToDir(
   await mkdir(targetDir, { recursive: true });
   let references = 0;
   const emitted: string[] = [];
+  const preserved: string[] = [];
+  // Every skill this run is responsible for, whether or not its bytes landed.
+  // The prune step below keeps these: a preserved skill's files are the user's
+  // own, and deleting the directory they live in is the one outcome pruning
+  // must never produce.
+  const kept: string[] = [];
   const integrationNames: string[] = [];
   const conflicts: SkillConflict[] = [];
   // Apply-to-all memory keyed by artifact CLASS. Skill emission shares one
@@ -279,13 +285,17 @@ export async function emitSkillsToDir(
 
   /** Write a compiled skill file through the SAME conflict seam as
    *  `regenerate`: read existing; if differs, consult the resolver (when
-   *  interactive + wired); record the conflict for the structured report. */
+   *  interactive + wired); record the conflict for the structured report.
+   *
+   *  Returns whether the compiled bytes actually reached a Noir-owned path.
+   *  `'preserved'` means the differing copy on disk stands and nothing was
+   *  written for it — the caller may not count that file as refreshed. */
   const writeWithConflict = async (
     absDest: string,
     relDest: string,
     content: string,
     isReference: boolean,
-  ): Promise<void> => {
+  ): Promise<'written' | 'preserved'> => {
     let existing: string | undefined;
     try {
       existing = await readFile(absDest, 'utf8');
@@ -327,20 +337,23 @@ export async function emitSkillsToDir(
       }
       if (resolution === 'preserve') {
         // Skip this file; the user's bytes stand. Do not count as a reference.
-        return;
+        return 'preserved';
       }
       if (resolution === 'rename') {
         // Move the user's file aside (unique suffix), then write the compiled bytes.
         await renameAside(absDest, '.local');
       } else if (resolution === 'duplicate') {
         // Write the compiled bytes to <absDest>.noir; keep the user's file.
+        // The compiled version is on disk (just not at the canonical path), so
+        // this counts as written — the user explicitly asked to keep theirs.
         await writeFile(await uniqueAside(absDest, '.noir'), content, 'utf8');
-        return;
+        return 'written';
       }
       // 'replace' → fall through and overwrite.
     }
     await writeFile(absDest, content, 'utf8');
     if (isReference) references++;
+    return 'written';
   };
 
   // Cursor skills land FLAT under targetDir (`.cursor/rules/<name>.mdc`) —
@@ -348,29 +361,42 @@ export async function emitSkillsToDir(
   // per-name subdirs. The verbatim branch (claude/agents-md/gemini/opencode)
   // keeps the canonical nested layout (`<name>/SKILL.md` + `<name>/references/`).
   const flat = target === 'cursor';
+  // Partition by outcome, not by attempt: a skill lands in `emitted` only when
+  // every one of its files is now Noir's bytes, and in `preserved` when at
+  // least one file was left as the user had it. A skill is never in both, and
+  // a half-refreshed skill is reported as preserved — under-reporting stale
+  // bytes is the failure this split exists to prevent.
   for (const s of builtins) {
     const compiled = compileSkill(s, target);
+    let sawPreserved = false;
     for (const f of compiled.files) {
       const dest = flat ? join(targetDir, ...f.path) : join(targetDir, s.name, ...f.path);
       await mkdir(dirname(dest), { recursive: true });
       const rel = flat ? f.path.join('/') : [s.name, ...f.path].join('/');
-      await writeWithConflict(dest, rel, f.content, f.path[0] !== 'SKILL.md');
+      const outcome = await writeWithConflict(dest, rel, f.content, f.path[0] !== 'SKILL.md');
+      if (outcome === 'preserved') sawPreserved = true;
     }
-    emitted.push(s.name);
+    kept.push(s.name);
+    if (sawPreserved) preserved.push(s.name);
+    else emitted.push(s.name);
   }
   if (emitIntegrations) {
     for (const i of integrations) {
       const compiled = compileIntegration(i, target);
+      let sawPreserved = false;
       for (const f of compiled.files) {
         const dest = flat ? join(targetDir, ...f.path) : join(targetDir, i.name, ...f.path);
         await mkdir(dirname(dest), { recursive: true });
         const rel = flat ? f.path.join('/') : [i.name, ...f.path].join('/');
-        await writeWithConflict(dest, rel, f.content, f.path[0] !== 'SKILL.md');
+        const outcome = await writeWithConflict(dest, rel, f.content, f.path[0] !== 'SKILL.md');
+        if (outcome === 'preserved') sawPreserved = true;
       }
       // `hostMcp` is NOT written per-skill — it is surfaced to the host adapter
       // (via discoverAll/compileIntegration) to merge into the host's single
       // MCP config (e.g. `.mcp.json`). Wiring lives in cli/daemon.
-      emitted.push(i.name);
+      kept.push(i.name);
+      if (sawPreserved) preserved.push(i.name);
+      else emitted.push(i.name);
       integrationNames.push(i.name);
     }
   }
@@ -379,9 +405,11 @@ export async function emitSkillsToDir(
   // Idempotent hygiene: a previous Noir version may have shipped a builtin that
   // was since renamed/removed (e.g. `noir-old-thing`). Each `noir sync`
   // re-writes the CURRENT pack but a stale entry would otherwise linger forever.
-  // After emit, scan `targetDir` for `noir-`-prefixed entries NOT in the emitted
-  // set and remove them. ONLY the `noir-` namespace — user skills without the
-  // prefix are NEVER touched (they are not Noir's to manage).
+  // After emit, scan `targetDir` for `noir-`-prefixed entries this run did not
+  // account for and remove them. ONLY the `noir-` namespace — user skills
+  // without the prefix are NEVER touched (they are not Noir's to manage).
+  // "Accounted for" spans the whole pack, not just the written half: a skill
+  // whose files were preserved still owns its directory.
   //
   // `assertNotUserOwned` guard: a `noir-*` entry whose content does NOT
   // match the canonical Noir-emitted shape (SKILL.md with `name: noir-…`
@@ -394,7 +422,7 @@ export async function emitSkillsToDir(
   // layout writes one `noir-<name>.mdc` FILE per skill → prune stale .mdc FILES.
   // Cursor ALSO clears legacy `noir-<name>/` dirs (nesting residue) so an
   // upgrade from nested→flat does not leave orphans under `.cursor/rules/`.
-  const keep = new Set(emitted);
+  const keep = new Set(kept);
   const pruned: string[] = [];
   const preservedUserOwned: string[] = [];
   let dirEntries: import('node:fs').Dirent[] = [];
@@ -460,6 +488,7 @@ export async function emitSkillsToDir(
     emitted,
     references,
     integrations: integrationNames,
+    preserved,
     pruned,
     ...(preservedUserOwned.length > 0 ? { preservedUserOwned } : {}),
     ...(conflicts.length > 0 ? { conflicts } : {}),

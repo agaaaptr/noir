@@ -97,12 +97,31 @@ export interface CompiledIntegration extends CompiledSkill {
 
 export interface EmitSummary {
   dir: string;
-  emitted: string[]; // skill names written (builtins + integrations)
+  /** Skill names whose bytes on disk are now the compiled pack's — every file
+   *  was written (a fresh create, an identical rewrite, or a resolution that
+   *  wrote the template: `replace`, `rename`, `duplicate`). Builtins +
+   *  integrations. Disjoint from {@link preserved}: a skill with even one
+   *  file left as the user had it is reported there instead, so `emitted`
+   *  never claims a skill that is not fully current. */
+  emitted: string[];
   references: number; // reference files written (excludes SKILL.md)
   /** Integration names emitted alongside builtins (subset of `emitted`).
    *  Additive — callers that ignore it (existing cli) still get the builtins in
    *  `emitted`. */
   integrations?: string[];
+  /** Skill names still carrying bytes Noir did NOT write, because at least one
+   *  of their files differed on disk and the conflict resolved to `preserve`
+   *  (the non-interactive default: CI, `--json`, piped runs). These skills are
+   *  present in `dir` but their content is older than the pack, so a caller
+   *  reporting on the run must name them separately rather than counting them
+   *  as refreshed. A skill here may have had OTHER files written — a
+   *  half-refreshed skill is still partly stale, and that is the honest
+   *  direction to report it.
+   *
+   *  Always populated by `emitSkillsToDir` (empty when nothing was preserved);
+   *  optional so callers that build the shape themselves stay valid, same as
+   *  {@link pruned}. */
+  preserved?: string[];
   /** Stale `noir-*` directories removed from `dir` after emit (cleanup).
    *  Names a previous Noir version shipped but the current build no longer
    *  does (builtin renamed/removed). Only the `noir-` managed namespace is

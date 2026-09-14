@@ -536,4 +536,72 @@ describe('compiler: compileSkill + emitSkillsToDir', () => {
     expect(summary.conflicts?.[0]?.existingSha).toMatch(/^[0-9a-f]{12}$/);
     expect(await readFile(join(target, 'noir-x', 'SKILL.md'), 'utf8')).toContain('# USER');
   });
+
+  // `emitted` reports what landed, not what was attempted. A skill the
+  // conflict flow preserved is present in the target dir but is NOT current —
+  // counting it as emitted is how a non-interactive upgrade reports success
+  // while the pack on disk stays stale.
+  it('reports a preserved skill under `preserved`, never under `emitted`', async () => {
+    await writeSkill('noir-x', okSkill('Use when x — draft the spec.'));
+    const target = join(fixture, '_out');
+    const { mkdir, writeFile } = await import('node:fs/promises');
+    await mkdir(join(target, 'noir-x'), { recursive: true });
+    await writeFile(
+      join(target, 'noir-x', 'SKILL.md'),
+      okSkill('Use when x — draft the spec.').replace('Overview sentence.', 'USER-EDITED BODY.'),
+      'utf8',
+    );
+
+    const summary = await emitSkillsToDir(target, {
+      builtinDir: fixture,
+      interactive: false,
+      conflictPolicy: 'preserve',
+    });
+
+    expect(summary.preserved).toEqual(['noir-x']);
+    expect(summary.emitted).toEqual([]);
+    // The skill was not deleted by the prune step either — its dir is still
+    // the one Noir is responsible for.
+    expect(await readFile(join(target, 'noir-x', 'SKILL.md'), 'utf8')).toContain(
+      'USER-EDITED BODY.',
+    );
+  });
+
+  // Half-refreshed is still partly stale: a skill whose SKILL.md was preserved
+  // while a reference WAS written counts as preserved. Reporting it as emitted
+  // would hide the stale SKILL.md behind a "success" count.
+  it('counts a partially written skill as preserved (staleness is never hidden)', async () => {
+    await writeSkill('noir-x', okSkill('Use when x — draft the spec.'), { 'notes.md': 'ref body' });
+    const target = join(fixture, '_out');
+    const { mkdir, writeFile } = await import('node:fs/promises');
+    // Only SKILL.md exists on disk, edited; the reference is absent entirely,
+    // so emitting it writes a file (no conflict) for a preserved skill.
+    await mkdir(join(target, 'noir-x'), { recursive: true });
+    await writeFile(
+      join(target, 'noir-x', 'SKILL.md'),
+      okSkill('Use when x — draft the spec.').replace('Overview sentence.', 'USER-EDITED BODY.'),
+      'utf8',
+    );
+
+    const summary = await emitSkillsToDir(target, {
+      builtinDir: fixture,
+      interactive: false,
+      conflictPolicy: 'preserve',
+    });
+
+    expect(summary.preserved).toEqual(['noir-x']);
+    expect(summary.emitted).toEqual([]);
+    // The reference really was written — the classification is about the
+    // skill, not about whether any I/O happened.
+    expect(summary.references).toBe(1);
+    expect(existsSync(join(target, 'noir-x', 'references', 'notes.md'))).toBe(true);
+  });
+
+  it('`preserved` is empty (not absent) when every skill is current', async () => {
+    await writeSkill('noir-a', okSkillNamed('noir-a', 'Use when a — do the work.'));
+    const target = join(fixture, '_out');
+    const summary = await emitSkillsToDir(target, { builtinDir: fixture });
+    expect(summary.preserved).toEqual([]);
+    expect(summary.emitted).toEqual(['noir-a']);
+  });
 });
