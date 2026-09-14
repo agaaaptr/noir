@@ -180,7 +180,7 @@ You don't need to memorize every subcommand:
 
 - **Bare `noir`** (no arguments) opens a **grouped home menu** — a section picker (Status &amp; context / Memory / Workflow / Setup &amp; maintenance / Dashboard (full-screen)) then per-section action lists with hints and destructive-action confirmation. Use `↑/↓` to move and `Enter` to select; `Esc` steps back / cancels.
 - **`noir tui`** opens the **Ink dashboard** — live status, `/command` input, and one command surface (the palette): `Ctrl+K` all commands, `h` quick actions, `?` keybindings, `Ctrl+F` find-in-output, `Tab` to switch the palette view.
-- **`noir palette`** opens the fuzzy command palette directly (type to filter, `↑/↓` to choose, `Enter` to run).
+- **`noir palette`** opens the fuzzy command palette directly (type to filter, `↑/↓` to choose, `Enter` to run). A command that cannot run without a value (`context search`, `daemon join`, `run`, …) asks for it on the same input line — type it and press `Enter`, or `Esc` to go back to the filter.
 
 From the home menu, select **Dashboard** to launch the TUI, or **All commands** to open the fuzzy palette. The curated quick actions live inside the palette (`h`) rather than a separate home screen.
 

@@ -9,6 +9,7 @@
 
 import { Command } from 'commander';
 import { describe, expect, it } from 'vitest';
+import { createProgram } from '../../src/bin.js';
 import { buildPaletteCommands } from '../../src/tui/commands/registry.js';
 import type { PaletteCommand } from '../../src/tui/palette/types.js';
 
@@ -142,5 +143,66 @@ describe('buildPaletteCommands', () => {
     // The group's children ARE surfaced as leaves.
     expect(ids).toContain('task new');
     expect(ids).toContain('task status');
+  });
+});
+
+/** A program covering each argument-declaration shape the CLI uses. */
+function argProgram(): Command {
+  const program = new Command();
+  program
+    .command('query')
+    .argument('<query>', 'a required value')
+    .action(() => {});
+  program
+    .command('forget')
+    .argument('<ids...>', 'one or more required values')
+    .action(() => {});
+  program
+    .command('advance')
+    .argument('[id]', 'an optional value')
+    .action(() => {});
+  program.command('status').action(() => {});
+  return program;
+}
+
+describe('buildPaletteCommands — argument requirements', () => {
+  it('marks a required argument and leaves optional/argless commands unset', () => {
+    const byId = new Map(buildPaletteCommands(argProgram()).map((c) => [c.id, c]));
+
+    // `<query>` must be supplied — the label is the argument name, without the
+    // angle brackets.
+    expect((byId.get('query') as PaletteCommand).needsArg).toBe('query');
+    // A variadic `<ids...>` still needs at least one value, and its label drops
+    // the ellipsis.
+    expect((byId.get('forget') as PaletteCommand).needsArg).toBe('ids');
+    // An optional `[id]` may be omitted, so the command runs bare.
+    expect((byId.get('advance') as PaletteCommand).needsArg).toBeUndefined();
+    expect((byId.get('status') as PaletteCommand).needsArg).toBeUndefined();
+  });
+
+  it('covers exactly the real noir commands that cannot run bare', () => {
+    const commands = buildPaletteCommands(createProgram());
+    const required = commands
+      .filter((c) => c.needsArg !== undefined)
+      .map((c) => `${c.id}=${c.needsArg}`)
+      .sort();
+
+    // Every leaf whose argument is declared `<...>` in the CLI. Selected commands
+    // that fail without a value but declare it as optional in commander (e.g.
+    // `run`, which also takes flag-only invocations) are out of reach here — the
+    // curated quick actions declare those instead.
+    expect(required).toEqual([
+      'context search=query',
+      'daemon join=name',
+      'memory forget=ids',
+      'memory recall=query',
+      'task block=reason',
+      'task decompose=capability',
+    ]);
+
+    // Pinned deliberately: the prompt stays an optional `[prompt...]` so
+    // `noir run --list-profiles` keeps working without one, which is why the
+    // palette learns about the prompt from the curated quick actions.
+    expect(commands.find((c) => c.id === 'run')?.needsArg).toBeUndefined();
   });
 });

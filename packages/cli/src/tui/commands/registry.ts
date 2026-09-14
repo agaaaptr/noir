@@ -75,6 +75,18 @@ function hasAction(cmd: Command): boolean {
 }
 
 /**
+ * The label of the value `cmd` cannot run without, or undefined when it runs
+ * bare. Commander already tracks this: an argument declared as `<name>` is
+ * required, `[name]` is optional, and a variadic `<name...>` still needs at
+ * least one value. Reading that flag keeps the palette aligned with the CLI
+ * definition instead of a second, hand-maintained list of commands.
+ */
+function requiredArgLabel(cmd: Command): string | undefined {
+  const required = cmd.registeredArguments.find((arg) => arg.required);
+  return required?.name();
+}
+
+/**
  * Walk `cmd`'s subtree depth-first, appending one {@link PaletteCommand} per
  * leaf (has an action handler AND no child commands). `path` accumulates the
  * argv tokens excluding the program root name; the caller seeds it as `[]` so
@@ -96,6 +108,7 @@ function collectLeaves(cmd: Command, path: string[], out: PaletteCommand[]): voi
       category: argv[0] ?? '',
       keywords: argv,
       destructive: isDestructive(argv),
+      needsArg: requiredArgLabel(cmd),
     });
     return;
   }

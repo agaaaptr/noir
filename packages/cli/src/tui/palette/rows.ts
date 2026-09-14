@@ -29,6 +29,13 @@ export interface PaletteRow {
   argv: readonly string[] | null;
   destructive: boolean;
   group: string | null;
+  /**
+   * The command's required value ('query', 'name', 'prompt') — the palette
+   * collects it inline before dispatching, so `argv` alone would run the
+   * command without its argument. Undefined for rows that dispatch bare (and
+   * for non-dispatchable rows).
+   */
+  needsArg?: string;
 }
 
 /** Inputs to {@link buildPaletteRows}. */
@@ -58,6 +65,29 @@ function recentDeduped(
 ): PaletteCommand[] {
   const known = new Set(commands.map((cmd) => cmd.id));
   return recent.filter((cmd) => known.has(cmd.id));
+}
+
+/**
+ * Argument requirements keyed by command id. The CLI definition supplies one
+ * for every command with a required positional; a curated quick action may
+ * declare its own for a value the definition leaves optional or passes as a
+ * flag. Both sources are read here so a command behaves the same however the
+ * user reaches it — browsing the list, fuzzy-searching it, or picking the
+ * curated action.
+ */
+function argRequirements(
+  commands: readonly PaletteCommand[],
+  homeSections: readonly HomeSection[],
+): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const cmd of commands) {
+    if (cmd.needsArg !== undefined) out.set(cmd.id, cmd.needsArg);
+  }
+  for (const { action } of flattenHome(homeSections)) {
+    const label = action.needsArg?.label;
+    if (label !== undefined) out.set(action.id, label);
+  }
+  return out;
 }
 
 /** Build the visible rows for the active corpus + query. */
@@ -125,6 +155,7 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
   }
 
   // commands corpus.
+  const args = argRequirements(commands, homeSections);
   if (query.length === 0) {
     const rows: PaletteRow[] = [];
     const recents = recentDeduped(recent, commands);
@@ -137,6 +168,7 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
         argv: cmd.argv,
         destructive: cmd.destructive,
         group: 'recent',
+        needsArg: args.get(cmd.id),
       });
     }
     const homeIds = new Set<string>();
@@ -153,6 +185,7 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
         argv,
         destructive: action.destructive ?? false,
         group,
+        needsArg: args.get(action.id),
       });
     }
     for (const cmd of commands) {
@@ -166,6 +199,7 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
         argv: cmd.argv,
         destructive: cmd.destructive,
         group: cmd.category,
+        needsArg: args.get(cmd.id),
       });
     }
     return rows;
@@ -179,5 +213,6 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
     argv: m.item.argv,
     destructive: m.item.destructive,
     group: null,
+    needsArg: args.get(m.item.id),
   }));
 }

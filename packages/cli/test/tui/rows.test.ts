@@ -6,7 +6,7 @@ import { handRolledMatcher } from '../../src/tui/palette/matcher.js';
 import { buildPaletteRows } from '../../src/tui/palette/rows.js';
 import type { PaletteCommand } from '../../src/tui/palette/types.js';
 
-function cmd(id: string, category = 'x'): PaletteCommand {
+function cmd(id: string, category = 'x', needsArg?: string): PaletteCommand {
   return {
     id,
     label: id,
@@ -15,6 +15,7 @@ function cmd(id: string, category = 'x'): PaletteCommand {
     keywords: id.split(' '),
     description: id,
     destructive: false,
+    needsArg,
   };
 }
 
@@ -85,5 +86,70 @@ describe('buildPaletteRows — dedup', () => {
     expect(keys).toContain('home:status');
     expect(keys).not.toContain('cmd:status');
     expect(keys).toContain('cmd:doctor');
+  });
+});
+
+describe('buildPaletteRows — argument requirements', () => {
+  /** A curated action for `prompt`, declaring a value the CLI leaves optional. */
+  const PROMPT_SECTION: HomeSection = {
+    id: 'workflow',
+    label: 'Workflow',
+    hint: 'run',
+    items: [
+      {
+        id: 'prompt',
+        label: 'Ask the host',
+        hint: 'ask the host',
+        needsArg: { label: 'prompt', prompt: 'Prompt:', placeholder: 'x' },
+      },
+    ],
+  };
+
+  function rows(input: {
+    query?: string;
+    commands: readonly PaletteCommand[];
+    recent?: readonly PaletteCommand[];
+    homeSections?: readonly HomeSection[];
+  }) {
+    return buildPaletteRows({
+      corpus: 'commands',
+      query: input.query ?? '',
+      commands: input.commands,
+      matcher: handRolledMatcher,
+      recent: input.recent ?? [],
+      homeSections: input.homeSections ?? [],
+      outputLines: [],
+    });
+  }
+
+  it('carries the command-declared requirement onto full-list rows', () => {
+    const rowsList = rows({ commands: [cmd('context search', 'context', 'query'), cmd('status')] });
+    expect(rowsList.find((r) => r.key === 'cmd:context search')?.needsArg).toBe('query');
+    expect(rowsList.find((r) => r.key === 'cmd:status')?.needsArg).toBeUndefined();
+  });
+
+  it('carries it onto fuzzy-filtered rows too', () => {
+    const rowsList = rows({
+      query: 'sea',
+      commands: [cmd('context search', 'context', 'query'), cmd('status')],
+    });
+    expect(rowsList[0]?.key).toBe('cmd:context search');
+    expect(rowsList[0]?.needsArg).toBe('query');
+  });
+
+  it('carries it onto recent rows', () => {
+    const commands = [cmd('context search', 'context', 'query')];
+    const rowsList = rows({ commands, recent: commands });
+    expect(rowsList.find((r) => r.key === 'recent:context search')?.needsArg).toBe('query');
+  });
+
+  it('takes the curated label for an action the CLI declares no requirement for', () => {
+    const commands = [cmd('prompt'), cmd('status')];
+    const rowsList = rows({ commands, homeSections: [PROMPT_SECTION] });
+    // The curated row itself …
+    expect(rowsList.find((r) => r.key === 'home:prompt')?.needsArg).toBe('prompt');
+    // … and the same command reached by fuzzy search behaves identically.
+    const filtered = rows({ query: 'prompt', commands, homeSections: [PROMPT_SECTION] });
+    expect(filtered[0]?.needsArg).toBe('prompt');
   });
 });

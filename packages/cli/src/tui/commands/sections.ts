@@ -36,10 +36,17 @@ export interface HomeAction {
   readonly destructive?: boolean;
   /**
    * When set, the action collects this argument inline (via clack.text in the
-   * menu, or a small text prompt in the TUI home) before dispatch. Mirrors the
-   * existing recall-query pattern in home.ts.
+   * menu, or the palette's inline input) before dispatch. Mirrors the existing
+   * recall-query pattern in home.ts.
    */
   readonly needsArg?: {
+    /**
+     * Short name of the collected value ('query', 'content'), shown as the
+     * palette's input placeholder. Set it when the value is not a plain
+     * positional argument — a flag-carried value, or a prompt the CLI accepts
+     * but does not require — so the palette still knows to ask for it.
+     */
+    readonly label?: string;
     readonly prompt: string;
     readonly placeholder: string;
   };
@@ -119,7 +126,15 @@ export const HOME_SECTIONS: readonly HomeSection[] = [
         label: 'Save memory',
         hint: 'save an observation · ⚠ destructive',
         destructive: true,
-        needsArg: { prompt: 'Memory content:', placeholder: 'what you want to remember' },
+        // The value travels as `--content <text>` (memory save declares no
+        // positional), so the flag rides in the dispatch prefix and the
+        // collected value is appended after it.
+        dispatch: ['memory', 'save', '--content'],
+        needsArg: {
+          label: 'content',
+          prompt: 'Memory content:',
+          placeholder: 'what you want to remember',
+        },
       },
       {
         id: 'memory sessions',
@@ -143,8 +158,21 @@ export const HOME_SECTIONS: readonly HomeSection[] = [
   {
     id: 'workflow',
     label: 'Workflow',
-    hint: 'next · status · advance · handoff · wrap',
+    hint: 'run · next · status · advance · handoff · wrap',
     items: [
+      {
+        id: 'run',
+        label: 'Ask the host',
+        hint: 'ask the host agent a question · ⚠ destructive',
+        destructive: true,
+        // The prompt is not a required argument (the command also takes flags
+        // like --list-profiles), so the palette only learns to ask for it here.
+        needsArg: {
+          label: 'prompt',
+          prompt: 'Prompt for the host:',
+          placeholder: 'e.g. summarise the auth flow',
+        },
+      },
       {
         id: 'task next',
         label: 'Next task',

@@ -90,13 +90,24 @@ export interface AppProps {
  * time; the App keys its render + keybinding handler off `mode.kind`.
  * - `dashboard` — the default screen: live snapshot, command input, output pane.
  * - `palette` — the single command surface, with a `corpus` selecting what the
- *   query filters (commands / output / help).
+ *   query filters (commands / output / help). `collecting` is set while the
+ *   selected command's argument is being typed.
  * - `confirm` — an in-TUI confirmation prompt for a destructive dispatch.
  */
 export type Mode =
   | { kind: 'dashboard' }
-  | { kind: 'palette'; corpus: Corpus }
+  | { kind: 'palette'; corpus: Corpus; collecting?: ArgCollection }
   | { kind: 'confirm'; argv: string[] };
+
+/**
+ * A command waiting for its argument: the argv to dispatch once one is typed,
+ * the label naming that value, and whether the dispatch then needs confirming.
+ */
+interface ArgCollection {
+  readonly argv: string[];
+  readonly label: string;
+  readonly destructive: boolean;
+}
 
 interface DispatchedOutput {
   title: string;
@@ -133,6 +144,9 @@ export function App({
   // `useInput` routes palette keys and can resolve the active row on Enter).
   const [paletteQuery, setPaletteQuery] = useState('');
   const [paletteActive, setPaletteActive] = useState(0);
+  // The argument being typed for the selected command (only meaningful while
+  // the palette is collecting one).
+  const [argBuffer, setArgBuffer] = useState('');
 
   // ----- load the palette's recent commands once on mount ------------------
   useEffect(() => {
@@ -366,6 +380,10 @@ export function App({
 
   function handlePaletteInput(input: string, key: Key): void {
     if (mode.kind !== 'palette') return;
+    if (mode.collecting !== undefined) {
+      handleArgInput(input, key, mode.collecting);
+      return;
+    }
     if (key.escape) {
       setPaletteQuery('');
       setPaletteActive(0);
@@ -386,7 +404,23 @@ export function App({
     if (key.return) {
       if (mode.corpus === 'commands') {
         const row = paletteRows[paletteActive];
-        if (row?.argv) handleRun(row.argv, row.destructive);
+        if (!row?.argv) return;
+        if (row.needsArg !== undefined) {
+          // The command cannot run bare — collect its argument on the input
+          // line before anything dispatches.
+          setArgBuffer('');
+          setMode({
+            kind: 'palette',
+            corpus: mode.corpus,
+            collecting: {
+              argv: [...row.argv],
+              label: row.needsArg,
+              destructive: row.destructive,
+            },
+          });
+          return;
+        }
+        handleRun(row.argv, row.destructive);
       } else {
         moveActive(1); // output corpus: next match
       }
@@ -410,6 +444,37 @@ export function App({
       setPaletteQuery((q) => q + input);
       setPaletteActive(0);
     }
+  }
+
+  // ----- argument-collection keybinding handler ---------------------------
+  // The input line now carries the command's argument: Enter dispatches the
+  // command with it appended (through the same confirm gate as any other
+  // selection), and Esc drops back to the filter with the query untouched.
+  function handleArgInput(input: string, key: Key, collecting: ArgCollection): void {
+    if (mode.kind !== 'palette') return;
+    const corpus = mode.corpus;
+    if (key.escape) {
+      setArgBuffer('');
+      setMode({ kind: 'palette', corpus });
+      return;
+    }
+    if (key.return) {
+      const value = argBuffer.trim();
+      // An empty value would dispatch the same bare argv the palette cannot run
+      // — hold the step open instead.
+      if (value.length === 0) return;
+      setArgBuffer('');
+      handleRun([...collecting.argv, value], collecting.destructive);
+      return;
+    }
+    if (key.backspace || key.delete) {
+      setArgBuffer((b) => b.slice(0, -1));
+      return;
+    }
+    // Tab cycles the corpus in the filter; here it would only add a stray
+    // character to the argument.
+    if (key.ctrl || key.tab) return;
+    if (input.length > 0) setArgBuffer((b) => b + input);
   }
 
   // ----- confirm-mode keybinding handler ----------------------------------
@@ -492,6 +557,7 @@ export function App({
 
   // ----- render -----------------------------------------------------------
   if (mode.kind === 'palette') {
+    const collecting = mode.collecting;
     return (
       <Box flexDirection="column">
         <Header tagline={`palette · ${mode.corpus}`} />
@@ -500,6 +566,14 @@ export function App({
           query={paletteQuery}
           active={paletteActive}
           rows={paletteRows}
+          arg={
+            collecting === undefined
+              ? undefined
+              : {
+                  value: argBuffer,
+                  placeholder: `${collecting.label} for ${collecting.argv.join(' ')}…`,
+                }
+          }
         />
         <Footer running={false} />
       </Box>

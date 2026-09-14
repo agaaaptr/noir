@@ -38,4 +38,11 @@ export interface PaletteCommand {
    * uses this to require confirmation before dispatch.
    */
   readonly destructive: boolean;
+  /**
+   * The command cannot run without a value on the command line — this is the
+   * short label of that value ('query', 'name', 'prompt'), used as the
+   * placeholder while the palette collects it inline. Undefined for commands
+   * that run bare.
+   */
+  readonly needsArg?: string;
 }

@@ -68,13 +68,19 @@ export interface PaletteProps {
   readonly query: string;
   readonly active: number;
   readonly rows: readonly PaletteRow[];
+  /**
+   * Set while the palette is collecting the selected command's argument: the
+   * input line shows `value` (or `placeholder`) instead of the filter, and
+   * Enter dispatches rather than filters.
+   */
+  readonly arg?: { readonly value: string; readonly placeholder: string };
 }
 
 /**
  * Render the palette overlay: an input row + the corpus list. Presentational —
  * the App owns query/active/input and passes the rows in.
  */
-export function Palette({ corpus, query, active, rows }: PaletteProps): ReactElement {
+export function Palette({ corpus, query, active, rows, arg }: PaletteProps): ReactElement {
   const total = rows.length;
   // Sliding window: the cursor spans the FULL row list; slide a VISIBLE_ROWS
   // window so the active row is always on screen (sticking to the bottom once
@@ -83,6 +89,17 @@ export function Palette({ corpus, query, active, rows }: PaletteProps): ReactEle
   const scroll = Math.max(0, Math.min(active - (VISIBLE_ROWS - 1), total - VISIBLE_ROWS));
   const visible = rows.slice(scroll, scroll + VISIBLE_ROWS);
   const activeIndex = Math.min(Math.max(active - scroll, 0), Math.max(0, visible.length - 1));
+
+  // The input row doubles as the argument step. An accent marker distinguishes
+  // "this text becomes the command's argument" from the filter, where Enter
+  // selects a row instead of submitting the text.
+  const input =
+    arg === undefined
+      ? { marker: c.dim('> '), body: query.length > 0 ? query : c.dim(placeholder(corpus)) }
+      : {
+          marker: c.accent('▸ '),
+          body: arg.value.length > 0 ? arg.value : c.dim(arg.placeholder),
+        };
 
   const elements: ReactElement[] = [
     <Box key="header" paddingX={1}>
@@ -93,8 +110,8 @@ export function Palette({ corpus, query, active, rows }: PaletteProps): ReactEle
     </Box>,
     <Box key="query" paddingX={1}>
       <Text>
-        {c.dim('> ')}
-        {query.length > 0 ? query : c.dim(placeholder(corpus))}
+        {input.marker}
+        {input.body}
         <Text>{c.dim('▌')}</Text>
       </Text>
     </Box>,
