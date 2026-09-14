@@ -53,7 +53,7 @@ describe('upgrade — a stamp-less legacy project runs the full migration chain'
 
     // The runner treats the absent stamp as `0.0.0`, so the whole chain ran.
     expect(res.fromVersion).toBeNull();
-    expect(res.migrationsRan).toEqual(['1.0.0→1.0.0', '1.0.0→1.1.0']);
+    expect(res.migrationsRan).toEqual(['1.0.0→1.0.0', '1.0.0→1.1.0', '1.1.0→1.2.0']);
     expect(res.migrationConflicts).toEqual([]);
 
     // The real migration appended the pointer; user content is preserved.

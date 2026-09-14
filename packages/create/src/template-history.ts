@@ -192,6 +192,115 @@ const ENV_EXAMPLE_1_1_0 = `# .noir/.env.example — committable documentation of
 `;
 
 /**
+ * `.noir/.env.example` as shipped by scaffold version 1.2.0 — the env-template
+ * redesign (gateway section first, a full purpose/precedence/commit guide, and
+ * placeholder values that are clearly placeholders rather than fake keys).
+ * Captured verbatim from the packaged template so the bytes are byte-identical
+ * to what landed in users' repositories.
+ */
+const ENV_EXAMPLE_1_2_0 = `# .noir/.env.example — the committable reference for .noir/.env.
+#
+# What .noir/.env is for
+# ----------------------
+# .noir/.env is this project's configuration-and-secrets file. \`noir init\`
+# creates it at mode 0600 and gitignores it, and Noir loads it on every
+# command. For every key it defines, it WINS over your shell environment, so it
+# is the recommended home for project-scoped values and secrets.
+#
+# Precedence (highest wins):
+#   1. run profile env     run.profiles.<n>.env      (per-invocation; merges over)
+#   2. .noir/.env          the project-scoped file this example documents
+#   3. real environment    CI / container / launchd / shell rc
+#   4. built-in default
+#
+# A real environment variable is only a FALLBACK for keys .noir/.env leaves
+# unset. For a one-off value that must not be committed, add a
+# \`run.profiles.<name>.env\` entry. \`noir env\` reports the winning source for
+# each key.
+#
+# What to commit
+# --------------
+# Keep .noir/.env OUT of git: it holds real secrets, Noir's managed .gitignore
+# block excludes it, and Noir refuses to load a copy that IS tracked (a cloned
+# repo could redirect credentials). chmod 600 .noir/.env to keep it private.
+# Never commit the real file — commit THIS example, so the keys stay
+# discoverable and documented.
+#
+# Every line below is documentation. Copy a key to .noir/.env and set a real
+# value to enable it.
+#
+# Full reference: docs/reference/environment.md
+
+# --- Host gateway (Claude Code via Z.AI / LiteLLM / OpenRouter / Kimi ...) ---
+# Point the host at an Anthropic-shaped endpoint instead of api.anthropic.com.
+#
+# ANTHROPIC_BASE_URL — the gateway's base URL. Host ONLY: give the origin (for
+#   example https://gateway.example) and NOT the /v1/messages path — the host
+#   appends that itself.
+# ANTHROPIC_AUTH_TOKEN — sent as \`Authorization: Bearer <token>\`. It is the
+#   HEADER variant of a credential: AUTH_TOKEN becomes Bearer, while
+#   ANTHROPIC_API_KEY becomes x-api-key. Do not set BOTH — that is an auth
+#   conflict.
+# ANTHROPIC_DEFAULT_HAIKU_MODEL / _SONNET_MODEL / _OPUS_MODEL — remap the
+#   haiku / sonnet / opus aliases to the model ids your gateway serves.
+# API_TIMEOUT_MS — per-request timeout in milliseconds (Claude Code default is
+#   600000).
+# CLAUDE_CODE_AUTO_COMPACT_WINDOW — auto-compact window (100000 to 1000000).
+#
+# ANTHROPIC_BASE_URL=https://gateway.example
+# ANTHROPIC_AUTH_TOKEN=replace-with-your-gateway-token
+# ANTHROPIC_DEFAULT_HAIKU_MODEL=replace-with-your-gateway-haiku-model
+# ANTHROPIC_DEFAULT_SONNET_MODEL=replace-with-your-gateway-sonnet-model
+# ANTHROPIC_DEFAULT_OPUS_MODEL=replace-with-your-gateway-opus-model
+# API_TIMEOUT_MS=600000
+# CLAUDE_CODE_AUTO_COMPACT_WINDOW=1000000
+
+# --- Integrations ---
+# CLICKUP_API_TOKEN — the token for the noir-clickup integration; set it only
+#   when that integration is enabled.
+# CLICKUP_TEAM_ID is NOT an env var. Noir never reads it — workspace binding
+#   (team / list / space ids) belongs in .noir/config.yml under
+#   integrations.clickup.
+# CLICKUP_API_TOKEN=replace-with-your-clickup-token
+
+# --- Remote embedders (context.embedder.kind: remote) ---
+# The default local embedder (kind: local) needs no key. These apply only when
+# config.yml selects a remote embedder.
+# OPENAI_API_KEY=replace-with-your-openai-key
+# VOYAGE_API_KEY=replace-with-your-voyage-key
+# COHERE_API_KEY=replace-with-your-cohere-key
+# OLLAMA_BASE_URL=http://localhost:11434
+
+# --- Model provider key (read via apiKeyEnv in .noir/config.yml) ---
+# There is no fixed "model key" variable, and setting a key is not enough on
+# its own. \`apiKeyEnv\` is a NAME, not an interpolation: config.yml stores the
+# variable NAME, and Noir reads process.env[<that name>] at call time. Write
+# the bare name — never \`\${...}\` — in .noir/config.yml:
+#
+#   model:
+#     providers:
+#       anthropic:
+#         apiKeyEnv: ANTHROPIC_API_KEY   # -> reads $ANTHROPIC_API_KEY
+#
+# Only \`run.profiles.<name>.env\` interpolates \`\${VAR}\`. With no provider
+# configured the model layer degrades to templates — Noir never makes a silent
+# paid call. \`ANTHROPIC_API_KEY\` is the conventional example, not a variable
+# Noir looks up on its own.
+# ANTHROPIC_API_KEY=replace-with-your-anthropic-key
+
+# --- Run profile selection (noir run) ---
+# Selects a \`run.profiles.<name>\` entry for \`noir run\`.
+# Precedence: --profile flag > NOIR_PROFILE > run.defaultProfile > host default.
+# NOIR_PROFILE=work
+
+# --- Update kill-switches ---
+# NOIR_DISABLE_UPDATE_CHECK=1   # suppress the background startup check only
+# NOIR_DISABLE_UPDATES=1        # make \`noir update\` refuse (exit 2)
+
+# See docs/reference/environment.md for every variable Noir reads.
+`;
+
+/**
  * `.noir/rules/RULES.md` as shipped by scaffold version 1.1.0.
  *
  * Copy this text verbatim when recording a new version's seed: the whole value
@@ -246,6 +355,11 @@ export const SEED_TEMPLATE_HISTORY: readonly SeedTemplateHistoryEntry[] = [
   {
     scaffoldVersion: '1.1.0',
     envExample: ENV_EXAMPLE_1_1_0,
+    rulesSeed: RULES_SEED_1_1_0,
+  },
+  {
+    scaffoldVersion: '1.2.0',
+    envExample: ENV_EXAMPLE_1_2_0,
     rulesSeed: RULES_SEED_1_1_0,
   },
 ];

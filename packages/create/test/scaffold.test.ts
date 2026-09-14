@@ -30,6 +30,16 @@ import { buildRegion } from '../src/writers.js';
  *  the previous chain) keeps these tests asserting something that exists. */
 const BEHIND_VERSION = MIGRATIONS.find((m) => m.from !== m.to)?.from ?? CURRENT_SCAFFOLD_VERSION;
 
+/** The migration step that lands at CURRENT — the last link of the upgrade
+ *  chain. Asserting it (rather than a `BEHIND_VERSION → CURRENT` pair, which no
+ *  longer names a single step once the chain has more than one real migration)
+ *  proves the upgrade migrated all the way forward, and stays correct as the
+ *  chain grows. */
+const FINAL_STEP = (() => {
+  const step = MIGRATIONS.find((m) => m.to === CURRENT_SCAFFOLD_VERSION);
+  return step ? `${step.from}→${step.to}` : '';
+})();
+
 let root: string;
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'noir-scaffold-'));
@@ -231,7 +241,7 @@ describe('scaffold upgrade — migrations', () => {
 
     const res = await scaffold({ root, mode: 'init', upgrade: true });
     expect(res.fromVersion).toBe(BEHIND_VERSION);
-    expect(res.migrationsRan).toContain(`${BEHIND_VERSION}→${CURRENT_SCAFFOLD_VERSION}`);
+    expect(res.migrationsRan).toContain(FINAL_STEP);
     // On an unchanged tree the re-emitted runtime subset is content-hash
     // dedup'd to `identical` (no disk write).
     expect(res.identical).toContain('.mcp.json');
@@ -581,7 +591,7 @@ describe('scaffold — migrations skip on fresh project (M4)', () => {
     writeScaffoldVersion(root, BEHIND_VERSION); // a project that is behind
     const res = await scaffold({ root, mode: 'init', upgrade: true });
     expect(res.fromVersion).toBe(BEHIND_VERSION);
-    expect(res.migrationsRan).toContain(`${BEHIND_VERSION}→${CURRENT_SCAFFOLD_VERSION}`);
+    expect(res.migrationsRan).toContain(FINAL_STEP);
   });
 });
 

@@ -140,7 +140,7 @@ describe('reportPlannedWrites — the refresh section', () => {
       },
       projectId: 'p',
       fromVersion: '1.0.0',
-      toVersion: '1.1.0',
+      toVersion: '1.2.0',
       host: 'claude',
       conflicts: [],
       ...over,

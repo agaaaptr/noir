@@ -148,7 +148,7 @@ describe('pre-1.3.0 legacy project (project.id present, no scaffold-version) no-
     // runner treats `null` as `0.0.0`, so the full registered chain runs and the
     // runtime subset is re-emitted in the same pass.
     expect(res.fromVersion).toBeNull();
-    expect(res.migrationsRan).toEqual(['1.0.0→1.0.0', '1.0.0→1.1.0']);
+    expect(res.migrationsRan).toEqual(['1.0.0→1.0.0', '1.0.0→1.1.0', '1.1.0→1.2.0']);
     // The upgrade restamps current, so doctor stops reporting this project.
     expect(readScaffoldVersion(root)).toBe(CURRENT_SCAFFOLD_VERSION);
   });

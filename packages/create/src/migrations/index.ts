@@ -1,5 +1,9 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { render } from '../template.js';
+import { isStaleSeed, type SeedKind } from '../template-history.js';
+import { loadTemplate } from '../template-loader.js';
+import { refreshSeed } from '../writers.js';
 import type { MigrationResult, MigrationScript } from './types.js';
 
 export { runMigrations } from './runner.js';
@@ -8,10 +12,12 @@ export type { MigrationContext, MigrationResult, MigrationScript } from './types
 /**
  * Migration registry — the linear history of scaffold-version upgrades.
  *
- * `CURRENT_SCAFFOLD_VERSION` is `1.1.0`; a project stamped at an older version
- * migrates through every entry whose window covers it. Two entries ship today:
- * the synthetic `1.0.0 → 1.0.0` runner-proof, and the first REAL migration,
- * `1.0.0 → 1.1.0`, which performs the transformation `skipIfExists` cannot.
+ * `CURRENT_SCAFFOLD_VERSION` is `1.2.0`; a project stamped at an older version
+ * migrates through every entry whose window covers it. Three entries ship today:
+ * the synthetic `1.0.0 → 1.0.0` runner-proof, the first REAL migration
+ * `1.0.0 → 1.1.0` (which performs the transformation `skipIfExists` cannot),
+ * and `1.1.0 → 1.2.0`, which refreshes the two doc-only seeds whose shipped
+ * text changed.
  *
  * Convention:
  *  - `from`/`to` are bare `x.y.z` (no `v` prefix, no pre-release); the runner
@@ -151,9 +157,83 @@ const envPointer: MigrationScript = {
   },
 };
 
+// --- 1.1.0 → 1.2.0: refresh the doc-only seeds ------------------------------
+
+/** The doc-only seeds this migration refreshes. Each maps a repo-relative path
+ *  to the seed kind it is recorded under and the template that renders its
+ *  current bytes. Only these two are tracked: they are written once at init,
+ *  never opened again by the manifest, and their shipped text changed in this
+ *  release, so an unedited older copy must be brought forward. */
+const DOC_SEEDS: ReadonlyArray<{ rel: string; kind: SeedKind; template: string }> = [
+  { rel: '.noir/.env.example', kind: 'envExample', template: 'env.example.tmpl' },
+  { rel: '.noir/rules/RULES.md', kind: 'rulesSeed', template: 'rules-seed.md.tmpl' },
+];
+
+/** `1.1.0 → 1.2.0`: bring unedited doc seeds up to the text this build ships.
+ *
+ *  The decision is delegated to {@link isStaleSeed}, the same evidence the
+ *  manifest uses: a file is refreshed only when its bytes are an exact match for
+ *  a recorded past seed AND differ from the current render. A user-edited file
+ *  (or one already current) is left alone. The write goes through
+ *  {@link refreshSeed}, which overwrites the bytes while keeping the permission
+ *  bits the file already has. */
+const envTemplates: MigrationScript = {
+  from: '1.1.0',
+  to: '1.2.0',
+  description: 'refresh the .env.example and RULES.md doc seeds to the new text',
+  run: (ctx) => {
+    const result: MigrationResult = { changed: [], conflicts: [], notes: [] };
+    for (const seed of DOC_SEEDS) {
+      const abs = join(ctx.root, seed.rel);
+
+      // Absent: nothing to refresh, and creating it is NOT this migration's
+      // job — the upgrade's `skipIfExists` emit phase seeds it from the
+      // template, which already carries the current text.
+      if (!existsSync(abs)) {
+        result.notes.push(`${seed.rel}: absent — nothing to refresh`);
+        continue;
+      }
+
+      let prev: string;
+      try {
+        prev = readFileSync(abs, 'utf8');
+      } catch (err) {
+        // Unreadable (a directory, a permission wall). Non-throwing is the
+        // registry-wide contract: record and let the caller decide.
+        result.conflicts.push(seed.rel);
+        result.notes.push(`${seed.rel}: unreadable (${errorMessage(err)}) — left untouched`);
+        continue;
+      }
+
+      const current = render(loadTemplate(seed.template), {});
+      if (!isStaleSeed(seed.kind, prev, current)) {
+        result.notes.push(`${seed.rel}: user-owned or already current — left untouched`);
+        continue;
+      }
+
+      if (ctx.dryRun) {
+        result.changed.push(seed.rel);
+        result.notes.push(`${seed.rel}: would refresh to the current seed`);
+        continue;
+      }
+
+      try {
+        refreshSeed(abs, current);
+      } catch (err) {
+        result.conflicts.push(seed.rel);
+        result.notes.push(`${seed.rel}: refresh failed (${errorMessage(err)}) — left untouched`);
+        continue;
+      }
+      result.changed.push(seed.rel);
+      result.notes.push(`${seed.rel}: refreshed to the current seed`);
+    }
+    return result;
+  },
+};
+
 /** The registry. The runner sorts the selected window by `to`, so declaration
  *  order is documentation only — oldest step first. */
-export const MIGRATIONS: readonly MigrationScript[] = [synthetic, envPointer];
+export const MIGRATIONS: readonly MigrationScript[] = [synthetic, envPointer, envTemplates];
 
 /** `Error.message` for anything thrown, without assuming an Error. */
 function errorMessage(err: unknown): string {

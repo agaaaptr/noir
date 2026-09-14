@@ -62,7 +62,7 @@ noir init
 | `.noir/project.id` | A UUID — the project's canonical `ProjectId` (Noir keys everything on this, never on a filesystem path). |
 | `.noir/config.yml` | Project config. Starts as `host: claude` + `mode: full`. See [configuration](reference/config.md). |
 | `.noir/.env` | The project's configuration/secrets file, created at mode `0600` and gitignored. Every line starts commented out, so creating it changes nothing until you edit it. See [configure-env.md](how-to/configure-env.md). |
-| `.noir/.env.example` | The committable counterpart — the same variable set with commented-out fake placeholders. Documentation only; it is never loaded. |
+| `.noir/.env.example` | The committable reference — a detailed, commented guide to the variables, their precedence, and what to commit. Documentation only; it is never loaded. |
 | `.noir/NOIR.md` | The canonical context file. The host merely `@import`s it. |
 | `.noir/README.md` | The co-owned `.noir/` runtime map — a self-documenting map of what lives in `.noir/` and what appears later. Noir keeps the managed block current; your own notes outside it survive. |
 | `.noir/rules/RULES.md` | The Noir-curated rules seed; wired into the host context file via a managed `RULES_BLOCK`. |

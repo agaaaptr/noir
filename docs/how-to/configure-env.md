@@ -36,9 +36,10 @@ what is actually in effect, recipes, and how it is kept safe.
   committable project state. `.noir/.env` carries *values*, `config.yml`
   carries *shape*.
 
-**The committable counterpart** is `.noir/.env.example`: the same variable set
-with commented-out fake placeholders. It is documentation for the team and is
-never loaded — keep it in git, keep the real file out.
+**The committable counterpart** is `.noir/.env.example`: a detailed, commented
+guide to each variable, the precedence order, and what to commit. It is
+documentation for the team and is never loaded — keep it in git, keep the real
+file out.
 
 ## 2. Creating it
 

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { render } from '../src/template.js';
 import { isStaleSeed, SEED_TEMPLATE_HISTORY } from '../src/template-history.js';
+import { loadTemplate } from '../src/template-loader.js';
 
 /**
  * Digest of the bytes recorded for scaffold version 1.1.0, taken from the
@@ -26,6 +27,9 @@ const digest = (text: string): string =>
 const v1_1_0 = SEED_TEMPLATE_HISTORY.find((e) => e.scaffoldVersion === '1.1.0');
 if (!v1_1_0) throw new Error('history is missing the 1.1.0 entry');
 
+const v1_2_0 = SEED_TEMPLATE_HISTORY.find((e) => e.scaffoldVersion === '1.2.0');
+if (!v1_2_0) throw new Error('history is missing the 1.2.0 entry');
+
 /** A plausible post-upgrade render of the same seed: what Noir writes today,
  *  which differs from every recorded version by an added documentation line. */
 const currentEnvExample = `${v1_1_0.envExample}\n# NEW_VAR=1\n`;
@@ -46,6 +50,15 @@ describe('seed template history — snapshot fidelity', () => {
   it('records the 1.1.0 seeds byte-for-byte', () => {
     expect(digest(v1_1_0.envExample)).toBe(DIGEST_1_1_0.envExample);
     expect(digest(v1_1_0.rulesSeed)).toBe(DIGEST_1_1_0.rulesSeed);
+  });
+
+  it('records the 1.2.0 seeds byte-for-byte against the packaged templates', () => {
+    // Unlike 1.1.0 (whose bytes exist only as an embedded literal), the 1.2.0
+    // entry must equal what the templates render to today — otherwise the
+    // migration would refresh an already-current file into stale text. This is
+    // the tripwire against transcription drift in the new entry.
+    expect(v1_2_0.envExample).toBe(loadTemplate('env.example.tmpl'));
+    expect(v1_2_0.rulesSeed).toBe(loadTemplate('rules-seed.md.tmpl'));
   });
 
   it('contains no `{{` token in any recorded template', () => {
@@ -70,7 +83,8 @@ describe('seed template history — snapshot fidelity', () => {
     // Guards the fixtures below: if the two templates ever collapsed to the
     // same text, every case would pass for the wrong reason.
     expect(v1_1_0.envExample).not.toBe(v1_1_0.rulesSeed);
-    expect(SEED_TEMPLATE_HISTORY).toHaveLength(1);
+    expect(v1_2_0.envExample).not.toBe(v1_2_0.rulesSeed);
+    expect(SEED_TEMPLATE_HISTORY).toHaveLength(2);
   });
 });
 
