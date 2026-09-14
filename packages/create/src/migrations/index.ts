@@ -16,8 +16,8 @@ export type { MigrationContext, MigrationResult, MigrationScript } from './types
  * migrates through every entry whose window covers it. Three entries ship today:
  * the synthetic `1.0.0 → 1.0.0` runner-proof, the first REAL migration
  * `1.0.0 → 1.1.0` (which performs the transformation `skipIfExists` cannot),
- * and `1.1.0 → 1.2.0`, which refreshes the two doc-only seeds whose shipped
- * text changed.
+ * and `1.1.0 → 1.2.0`, which refreshes the doc-only seed whose text changed in
+ * this release and carries the unchanged RULES.md seed forward for parity.
  *
  * Convention:
  *  - `from`/`to` are bare `x.y.z` (no `v` prefix, no pre-release); the runner
@@ -159,11 +159,14 @@ const envPointer: MigrationScript = {
 
 // --- 1.1.0 → 1.2.0: refresh the doc-only seeds ------------------------------
 
-/** The doc-only seeds this migration refreshes. Each maps a repo-relative path
- *  to the seed kind it is recorded under and the template that renders its
- *  current bytes. Only these two are tracked: they are written once at init,
- *  never opened again by the manifest, and their shipped text changed in this
- *  release, so an unedited older copy must be brought forward. */
+/** The doc-only seeds this migration walks. Each maps a repo-relative path to
+ *  the seed kind it is recorded under and the template that renders its current
+ *  bytes. Only these two are tracked: they are written once at init and never
+ *  opened again by the manifest. `.env.example` changed in this release, so an
+ *  unedited older copy must be brought forward. RULES.md is carried in the same
+ *  loop although its text did NOT change here — its current render equals the
+ *  recorded bytes, so the refresh decision leaves it alone today, and a future
+ *  release that does change it is already handled. */
 const DOC_SEEDS: ReadonlyArray<{ rel: string; kind: SeedKind; template: string }> = [
   { rel: '.noir/.env.example', kind: 'envExample', template: 'env.example.tmpl' },
   { rel: '.noir/rules/RULES.md', kind: 'rulesSeed', template: 'rules-seed.md.tmpl' },
@@ -180,7 +183,7 @@ const DOC_SEEDS: ReadonlyArray<{ rel: string; kind: SeedKind; template: string }
 const envTemplates: MigrationScript = {
   from: '1.1.0',
   to: '1.2.0',
-  description: 'refresh the .env.example and RULES.md doc seeds to the new text',
+  description: 'refresh the .env.example doc seed and keep RULES.md in step',
   run: (ctx) => {
     const result: MigrationResult = { changed: [], conflicts: [], notes: [] };
     for (const seed of DOC_SEEDS) {

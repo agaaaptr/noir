@@ -193,6 +193,20 @@ describe('noir init — .noir/.env.example reference', () => {
     expect(t).toMatch(/CLICKUP_TEAM_ID is NOT an env var/);
   });
 
+  it('keeps secrets out of config.yml and scopes each embedder key to its own kind', async () => {
+    await scaffold({ root, mode: 'init', host: 'claude' });
+    const t = readFileSync(examplePath(), 'utf8');
+    // A run profile lives in config.yml, which is committable project state —
+    // so guidance must not present it as the home for a value that cannot be
+    // committed; the literal value belongs in .noir/.env or the real env.
+    expect(t).toMatch(/values that must not be committed belong in `\.noir\/\.env`/);
+    expect(t).not.toMatch(/one-off value that must not be committed/);
+    // OLLAMA_BASE_URL is the `kind: ollama` fallback, not a remote-embedder key,
+    // so the remote banner must not claim it.
+    expect(t).toMatch(/Ollama \(kind: ollama\)/);
+    expect(t).toMatch(/context\.embedder\.baseURL/);
+  });
+
   it('never overwrites an existing .env.example — skipIfExists', async () => {
     await scaffold({ root, mode: 'init', host: 'claude' });
     const edited = '# my own notes\n';

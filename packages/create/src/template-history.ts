@@ -214,9 +214,11 @@ const ENV_EXAMPLE_1_2_0 = `# .noir/.env.example — the committable reference fo
 #   4. built-in default
 #
 # A real environment variable is only a FALLBACK for keys .noir/.env leaves
-# unset. For a one-off value that must not be committed, add a
-# \`run.profiles.<name>.env\` entry. \`noir env\` reports the winning source for
-# each key.
+# unset. For a value scoped to one invocation, add a \`run.profiles.<name>.env\`
+# entry and reference it there as \`\${VAR}\`, so the literal value stays out of
+# config.yml; values that must not be committed belong in \`.noir/.env\`
+# (gitignored) or the real environment. \`noir env\` reports the winning source
+# for each key.
 #
 # What to commit
 # --------------
@@ -264,11 +266,14 @@ const ENV_EXAMPLE_1_2_0 = `# .noir/.env.example — the committable reference fo
 # CLICKUP_API_TOKEN=replace-with-your-clickup-token
 
 # --- Remote embedders (context.embedder.kind: remote) ---
-# The default local embedder (kind: local) needs no key. These apply only when
-# config.yml selects a remote embedder.
+# The default local embedder (kind: local) needs no key. The three API-key
+# variables below apply only when config.yml selects a remote embedder.
 # OPENAI_API_KEY=replace-with-your-openai-key
 # VOYAGE_API_KEY=replace-with-your-voyage-key
 # COHERE_API_KEY=replace-with-your-cohere-key
+#
+# Ollama (kind: ollama) reads its base URL from config.yml
+# (context.embedder.baseURL); this variable is the fallback:
 # OLLAMA_BASE_URL=http://localhost:11434
 
 # --- Model provider key (read via apiKeyEnv in .noir/config.yml) ---
