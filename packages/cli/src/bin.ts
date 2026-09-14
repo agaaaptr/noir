@@ -355,13 +355,15 @@ export function createProgram(): Command {
     .option('--dry-run', 'report planned writes without writing anything')
     .option('--preview', 'alias for --dry-run')
     .addOption(
-      // S10: target host. Defaults to `'claude'` (the regression anchor). The
-      // chosen host is forwarded to scaffold() + skills emission via
-      // resolveAdapter. The choice list mirrors `SUPPORTED_HOSTS` so a new host
-      // lands here automatically; commander rejects anything else as usage=2.
+      // Target host. When the flag is absent the host is read from an existing
+      // `.noir/config.yml`, falling back to `'claude'` (so a fresh project is
+      // unaffected). The chosen host is forwarded to scaffold() + skills
+      // emission via resolveAdapter. The choice list mirrors `SUPPORTED_HOSTS`
+      // so a new host lands here automatically; commander rejects anything else
+      // as usage=2.
       new Option(
         '--host <id>',
-        'target agentic CLI (default: claude) — drives host-side emission',
+        'target agentic CLI (default: the host in .noir/config.yml, else claude)',
       ).choices(SUPPORTED_HOSTS),
     )
     .action(

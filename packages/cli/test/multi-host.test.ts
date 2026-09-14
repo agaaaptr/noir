@@ -14,7 +14,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { paths } from '@noir-ai/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 import { create } from '../src/commands/create.js';
 import { init } from '../src/init.js';
 import { sync } from '../src/sync.js';
@@ -27,6 +27,22 @@ beforeEach(() => {
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
+
+/** Run `fn` with stderr captured, returning the text it wrote. `init` closes
+ *  with the host it resolved, which is the user-visible signal for the
+ *  resolution order under test; what that host then emits is asserted against
+ *  the files on disk by the individual cases. */
+async function captureStderr(fn: () => Promise<unknown>): Promise<string> {
+  const stderr: MockInstance<typeof process.stderr.write> = vi
+    .spyOn(process.stderr, 'write')
+    .mockImplementation(() => true);
+  try {
+    await fn();
+    return stderr.mock.calls.map((c) => String(c[0])).join('');
+  } finally {
+    stderr.mockRestore();
+  }
+}
 
 describe('noir init --host <id> — per-host artifact matrix', () => {
   it('claude (default): CLAUDE.md + .mcp.json + .claude/skills (SKILL.md); NO AGENTS.md (I1)', async () => {
@@ -176,6 +192,76 @@ describe('noir sync — host round-trips from .noir/config.yml', () => {
     // Cursor's rules ride AGENTS.md's @-import (no separate host-rules .mdc).
     expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
     expect(existsSync(join(root, '.cursor', 'mcp.json'))).toBe(true);
+  });
+});
+
+describe('noir init — the re-emit host round-trips from .noir/config.yml', () => {
+  it('bare --upgrade on a cursor project re-emits cursor artifacts and writes no claude surface', async () => {
+    await init(root, { transport: 'stdio', host: 'cursor' });
+    // Delete the cursor surfaces so their reappearance is proof the upgrade ran
+    // under cursor and not under the default host.
+    rmSync(join(root, 'AGENTS.md'));
+    rmSync(join(root, '.cursor'), { recursive: true, force: true });
+
+    await init(root, { transport: 'stdio', upgrade: true }); // no --host
+
+    // Cursor artifacts refreshed: its context file + MCP pointer + the flat
+    // `.mdc` skills.
+    expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
+    const agents = readFileSync(join(root, 'AGENTS.md'), 'utf8');
+    expect(agents).toContain('@.noir/NOIR.md');
+    expect(agents).toContain('@.noir/rules/RULES.md');
+    expect(existsSync(join(root, '.cursor', 'mcp.json'))).toBe(true);
+    expect(existsSync(join(root, '.cursor', 'rules', 'noir-brainstorming.mdc'))).toBe(true);
+    // No claude-only surface was written: CLAUDE.md and the root `.mcp.json`
+    // are claude's alone, and `.claude/skills/` is where a bare claude run would
+    // have put the skills instead of `.cursor/rules/`.
+    expect(existsSync(join(root, 'CLAUDE.md'))).toBe(false);
+    expect(existsSync(join(root, '.mcp.json'))).toBe(false);
+    expect(existsSync(join(root, '.claude'))).toBe(false);
+  });
+
+  it('--host still overrides the configured host', async () => {
+    await init(root, { transport: 'stdio', host: 'cursor' });
+
+    await init(root, { transport: 'stdio', upgrade: true, host: 'claude' });
+
+    expect(existsSync(join(root, 'CLAUDE.md'))).toBe(true);
+    expect(existsSync(join(root, '.mcp.json'))).toBe(true);
+    expect(existsSync(join(root, '.claude', 'skills'))).toBe(true);
+  });
+
+  it('a project with no config yet resolves to claude (the fresh-init anchor)', async () => {
+    const text = await captureStderr(() => init(root, { transport: 'stdio' }));
+
+    expect(text).toContain('(host: claude,');
+    expect(existsSync(join(root, 'CLAUDE.md'))).toBe(true);
+    expect(existsSync(join(root, 'AGENTS.md'))).toBe(false);
+  });
+
+  it('a config that omits host: resolves to claude instead of failing', async () => {
+    await init(root, { transport: 'stdio', host: 'cursor' });
+    writeFileSync(
+      paths.config(root),
+      readFileSync(paths.config(root), 'utf8').replace(/^host:.*$/m, ''),
+      'utf8',
+    );
+
+    const text = await captureStderr(() => init(root, { transport: 'stdio', upgrade: true }));
+
+    expect(text).toContain('(host: claude,');
+  });
+
+  it('an unreadable config does not fail the run — it degrades to claude and says so', async () => {
+    await init(root, { transport: 'stdio', host: 'cursor' });
+    writeFileSync(paths.config(root), 'host: [unterminated\n', 'utf8');
+
+    const text = await captureStderr(() => init(root, { transport: 'stdio', upgrade: true }));
+
+    expect(text).toContain('Could not read the configured host');
+    expect(text).toContain('(host: claude,');
+    // The upgrade itself still ran (the project's own id is untouched).
+    expect(existsSync(paths.projectId(root))).toBe(true);
   });
 });
 

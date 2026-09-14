@@ -25,8 +25,9 @@
 //     user notes outside the markers survive re-runs.
 //   - `.noir/scaffold-version` is now stamped on init/create (engine-owned).
 
+import { existsSync } from 'node:fs';
 import { type HostId, resolveAdapter } from '@noir-ai/adapters';
-import { loadProjectInfo, type ProjectInfo } from '@noir-ai/core';
+import { loadProjectInfo, type ProjectInfo, paths } from '@noir-ai/core';
 import { type ScaffoldResult, scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 import { buildConflictOpts, type ScaffoldConflictOpts } from './conflict.js';
@@ -42,9 +43,16 @@ export interface InitOptions {
    *  absent. That backfills seeds added to the manifest after this project was
    *  initialized without ever touching a user-owned file. */
   upgrade?: boolean;
-  /** S10 target host. Defaults to `'claude'` (the regression anchor). Drives
-   *  both scaffold emission (the manifest's host-specific half) and skills
-   *  emission (skipped for hosts with no `skillsDir`). */
+  /** Target host. Resolution order: this explicit `--host <id>` value > the
+   *  `host:` field of an existing `.noir/config.yml` > `'claude'` (the default,
+   *  and the regression anchor for a project that has no config yet). Reading
+   *  the configured host matters for `--upgrade`/`--force`, which re-emit into
+   *  a project that already chose a host: emitting under the default instead
+   *  would write a spurious claude surface and refresh none of the artifacts
+   *  the project actually uses. An absent or unreadable config degrades to the
+   *  default rather than failing the run.
+   *  Drives both scaffold emission (the manifest's host-specific half) and
+   *  skills emission (skipped for hosts with no `skillsDir`). */
   host?: HostId;
   /** SP-A: re-scaffold even if already initialized (bypasses the
    *  already-initialized no-op guard in scaffold()). */
@@ -67,7 +75,7 @@ export interface InitOptions {
 export async function init(root: string, opts: InitOptions): Promise<ScaffoldResult | undefined> {
   assertTransportUrl(opts);
 
-  const host: HostId = opts.host ?? 'claude';
+  const host: HostId = resolveInitHost(root, opts);
   // The engine reads ScaffoldOptions.interactive (hermetic — never
   // process.env). The CLI derives it once from the bridge + TTY/CI/NO_COLOR gate.
   const interactive = resolveInteractive();
@@ -138,6 +146,37 @@ export async function init(root: string, opts: InitOptions): Promise<ScaffoldRes
     'Next: run `noir` to open the home menu (or `noir status` for a snapshot).\n',
   );
   return res;
+}
+
+/**
+ * Resolve which host this run emits for: an explicit `--host <id>` > the
+ * `host:` field of an existing `.noir/config.yml` > `'claude'`.
+ *
+ * A fresh project has no config, so the default is what a bare `noir init` has
+ * always produced. A project that already chose a host must keep it when
+ * re-emitting (`--upgrade`/`--force`); emitting under the default instead would
+ * write artifacts for the wrong host and leave the ones the project actually
+ * uses stale.
+ *
+ * The config read is best-effort — an absent, unreadable, or invalid config
+ * must not fail the run, so each degrades to the default. Only the unreadable
+ * case is reported, because that is the one where a host the user configured
+ * cannot be determined. A config that parses but omits `host:` is not an error:
+ * the schema supplies the default.
+ */
+function resolveInitHost(root: string, opts: InitOptions): HostId {
+  if (opts.host !== undefined) return opts.host;
+  if (!existsSync(paths.config(root))) return 'claude';
+  try {
+    return loadProjectInfo(root).config.host;
+  } catch {
+    // Also reached when the config is readable but the project id is missing or
+    // invalid — either way the configured host is unknowable from here.
+    process.stderr.write(
+      `Could not read the configured host from ${paths.config(root)}; using 'claude'.\n`,
+    );
+    return 'claude';
+  }
 }
 
 /**
