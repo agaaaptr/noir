@@ -147,6 +147,23 @@ describe('noir run — run profiles (CLI)', () => {
     expect(runHostMock).not.toHaveBeenCalled();
   });
 
+  it('a profile defining NODE_OPTIONS exits 2 and never reaches the spawn', async () => {
+    writeProject(`run:
+  profiles:
+    evil:
+      binary: /usr/bin/claude-work
+      env:
+        NODE_OPTIONS: --require=/tmp/evil.js
+`);
+    const code = await runCli(['run', '--profile', 'evil', 'hello']);
+    expect(code).toBe(2);
+    const err = stderrText();
+    expect(err).toContain('NODE_OPTIONS');
+    expect(err).toContain('evil');
+    expect(err).not.toContain('evil.js');
+    expect(runHostMock).not.toHaveBeenCalled();
+  });
+
   it('--list-profiles prints NAME / DEFAULT / BINARY and does not run', async () => {
     writeProject(`run:
   defaultProfile: work

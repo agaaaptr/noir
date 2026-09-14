@@ -125,6 +125,48 @@ describe('profile env — dollar-brace expansion + null deletion', () => {
   });
 });
 
+describe('profile env — process-injection deny-list', () => {
+  const denied = (env: Record<string, string | null>) =>
+    resolveRunProfile('p', cfg({ profiles: { p: { binary: 'claude', env } } }), BASE);
+
+  it('refuses a literal NODE_OPTIONS key, naming the key and the profile', () => {
+    const r = denied({ NODE_OPTIONS: '--require=/tmp/evil.js' });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.message).toContain('NODE_OPTIONS');
+      expect(r.message).toContain('run profile "p"');
+      expect(r.message).not.toContain('evil.js'); // names only, never a value
+    }
+  });
+
+  it('refuses LD_PRELOAD and DYLD_INSERT_LIBRARIES', () => {
+    expect(denied({ LD_PRELOAD: '/tmp/evil.so' }).ok).toBe(false);
+    expect(denied({ DYLD_INSERT_LIBRARIES: '/tmp/evil.dylib' }).ok).toBe(false);
+  });
+
+  it('refuses a deny-listed key even when its value is a null delete', () => {
+    expect(denied({ NODE_OPTIONS: null }).ok).toBe(false);
+  });
+
+  it('allows a benign key like ANTHROPIC_BASE_URL (gateway passthrough is untouched)', () => {
+    const r = denied({ ANTHROPIC_BASE_URL: 'https://api.z.ai/api/anthropic' });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.profile.env?.ANTHROPIC_BASE_URL).toBe('https://api.z.ai/api/anthropic');
+  });
+
+  it('never scans values — a denied name expanded into a value is still allowed', () => {
+    // ${VAR} expansion rewrites a VALUE only; no profile construction routes a
+    // value into a key, so the deny-list stays key-based by design.
+    const r = resolveRunProfile(
+      'p',
+      cfg({ profiles: { p: { binary: 'claude', env: { CUSTOM_VAR: REF('NODE_OPTIONS') } } } }),
+      { ...BASE, NODE_OPTIONS: '--require=/tmp/evil.js' },
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.profile.env?.CUSTOM_VAR).toBe('--require=/tmp/evil.js');
+  });
+});
+
 describe('listProfiles', () => {
   it('marks the default profile and lists binary (keys match table() columns)', () => {
     const config = cfg({

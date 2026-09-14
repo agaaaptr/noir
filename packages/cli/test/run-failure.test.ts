@@ -198,4 +198,24 @@ describe('mergeEnv — profile env overlay', () => {
   it('an undefined profile value deletes the key (null → delete)', () => {
     expect(mergeEnv({ A: 'base', B: 'keep' }, { A: undefined })).toEqual({ B: 'keep' });
   });
+
+  it('refuses a process-injection key in the overlay (defense-in-depth guard)', () => {
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    try {
+      expect(() => mergeEnv({ A: '1' }, { NODE_OPTIONS: '--require=/tmp/evil.js' })).toThrow(
+        /NODE_OPTIONS/,
+      );
+      expect(stderrSpy.mock.calls.map((c) => String(c[0])).join('')).toContain('NODE_OPTIONS');
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
+
+  it('leaves ambient process-injection keys in the base untouched (only the overlay is scanned)', () => {
+    expect(mergeEnv({ NODE_OPTIONS: '--existing', A: '1' }, { B: '2' })).toEqual({
+      NODE_OPTIONS: '--existing',
+      A: '1',
+      B: '2',
+    });
+  });
 });

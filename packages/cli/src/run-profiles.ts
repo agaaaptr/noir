@@ -10,7 +10,7 @@
 // is committable project state, so literal secrets must never be stored there.
 
 import type { NoirConfig } from '@noir-ai/core';
-import { loadProjectInfo } from '@noir-ai/core';
+import { isDeniedEnvKey, loadProjectInfo } from '@noir-ai/core';
 
 export interface ProfileResolution {
   readonly binary?: string;
@@ -69,6 +69,22 @@ export function resolveRunProfile(
   if (profile.env) {
     for (const [k, v] of Object.entries(profile.env)) {
       envExpanded[k] = v === null ? undefined : expandEnvVars(v, env);
+    }
+  }
+  // The same process-injection names `.noir/.env` refuses are refused here too:
+  // a profile `env` block lives in the committable `.noir/config.yml`, so a
+  // deny-listed key it sets would be inherited by the spawned host process.
+  // Refuse by KEY (never scan values — expansion can only rewrite a value, it
+  // never routes one into a key).
+  for (const key of Object.keys(envExpanded)) {
+    if (isDeniedEnvKey(key)) {
+      return {
+        ok: false,
+        message:
+          `run profile "${name}" refuses process-injection key "${key}" — a profile env block ` +
+          `in .noir/config.yml must not set ${key} (it can inject into the spawned host process). ` +
+          `Remove "${key}" from the profile.`,
+      };
     }
   }
   return {

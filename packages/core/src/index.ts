@@ -25,6 +25,7 @@ export {
 export {
   applyNoirEnv,
   type EnvFileParseResult,
+  isDeniedEnvKey,
   type LoadedEnv,
   loadNoirEnv,
   parseEnvFile,

@@ -17,7 +17,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type HostId, SUPPORTED_HOSTS } from '@noir-ai/adapters';
-import { loadNoirEnv, NOIR_DIR, parseConfig } from '@noir-ai/core';
+import { isDeniedEnvKey, loadNoirEnv, NOIR_DIR, parseConfig } from '@noir-ai/core';
 import {
   type NoirEvent,
   type RunHostResult,
@@ -230,11 +230,27 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
   log(`transcript: ${transcript}`, opts);
 }
 
-/** Merge a profile's env overlay over the base env; `undefined` values delete the key. */
+/**
+ * Merge a profile's env overlay over the base env; `undefined` values delete
+ * the key. This is the single place a profile env becomes a child environment,
+ * so it also refuses a process-injection key — a second net behind profile
+ * resolution, in case some future path builds a child env without resolving the
+ * profile first. The overlay keys are scanned (never the base, whose
+ * `NODE_OPTIONS`/`LD_LIBRARY_PATH` etc. are the user's own ambient environment).
+ */
 export function mergeEnv(
   base: Record<string, string | undefined>,
   overlay: Record<string, string | undefined>,
 ): Record<string, string | undefined> {
+  for (const key of Object.keys(overlay)) {
+    if (isDeniedEnvKey(key)) {
+      fail(
+        EXIT.ERROR,
+        `refusing to run the host: the profile env defines process-injection key "${key}" ` +
+          `(it can inject into the spawned host process)`,
+      );
+    }
+  }
   const merged = { ...base, ...overlay };
   return Object.fromEntries(Object.entries(merged).filter(([, v]) => v !== undefined));
 }

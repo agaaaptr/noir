@@ -68,6 +68,19 @@ const ENV_FILE_REL_PATH = '.noir/.env';
 const PROCESS_INJECTION_ENV_RE =
   /^(NODE_OPTIONS|NODE_PATH|NODE_ICU_DATA|NODE_EXTRA_CA_CERTS|NODE_TLS_REJECT_UNAUTHORIZED|LD_PRELOAD|LD_LIBRARY_PATH|DYLD_INSERT_LIBRARIES|ELECTRON_RUN_AS_NODE|NOIR_NODE_DIST_URL|NOIR_UPDATE_CACHE_JSON|NOIR_RUNTIME_DIR|NOIR_DAEMON_JSON|NOIR_DAEMON_DIR|NOIR_INSTALL_JSON|NOIR_MCP_COMMAND|NOIR_SYSTEM_NODE_BIN|NOIR_TEMPLATES_DIR|NOIR_WORKSPACES_DIR|npm|COREPACK)(?:$|_)/;
 
+/**
+ * Whether `key` is a process-injection vector Noir must refuse to put into a
+ * child environment. The names a `.noir/.env` file may never define are equally
+ * dangerous when they arrive from a run profile's `env` block: both files are
+ * committable project state, so a key either of them sets is inherited by the
+ * node/npm child `noir run` spawns — turning a cloned repository into arbitrary
+ * code execution on the user's machine. Callers must refuse (never silently
+ * drop) a matching key and tell the user why.
+ */
+export function isDeniedEnvKey(key: string): boolean {
+  return PROCESS_INJECTION_ENV_RE.test(key);
+}
+
 export interface EnvFileParseResult {
   readonly vars: Record<string, string>;
   /** `file:line: reason` diagnostics for skipped lines. */
