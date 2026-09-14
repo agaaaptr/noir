@@ -375,6 +375,35 @@ export class UsageReducer {
 // Spawn integration
 // ---------------------------------------------------------------------------
 
+/**
+ * A host child a caller can stop, as the cancel path sees it: what `spawn`
+ * returns, narrowed to the three things a kill ladder needs. A caller that has
+ * this handle can stop THAT process, rather than hoping a signal reaches it.
+ */
+export interface HostChild {
+  readonly pid?: number;
+  /** Send it a signal. False when it is already gone. */
+  kill(signal?: NodeJS.Signals): boolean;
+  /** Fires when it is reaped, which is when the handle stops being useful. */
+  once(event: 'exit', listener: () => void): unknown;
+}
+
+/**
+ * Signal a child — the one and only safe way to do it.
+ *
+ * A spawn that failed (ENOENT, a bad interpreter) produces a handle with no
+ * pid, and signalling that is NOT a harmless no-op: Node hands pid 0 to
+ * `kill(2)`, which means "every process in my own process group". So an
+ * unguarded `child.kill()` while a bad command is failing would take out Noir,
+ * whatever shares its job (a pipeline peer, a wrapper script) and the terminal
+ * job around them — the opposite of stopping one host. Callers that skip the
+ * pid check are the bug; this is the check.
+ */
+export function signalChild(child: HostChild, signal: NodeJS.Signals): void {
+  if (child.pid === undefined) return;
+  child.kill(signal);
+}
+
 export interface RunHostOptions {
   readonly host: HostId;
   readonly prompt: string;
@@ -387,6 +416,13 @@ export interface RunHostOptions {
   onLine?: (line: string) => void;
   /** Normalized event (for streaming render). */
   onEvent?: (event: NoirEvent) => void;
+  /**
+   * The child, as soon as it exists — and again for every later spawn of the
+   * same run, because a command resolved through the shell bridge is a second
+   * child. Handing it over is what lets a caller kill the process itself: a
+   * signal that reached Noir is not otherwise addressed to the host it spawned.
+   */
+  onChild?: (child: HostChild) => void;
   /**
    * Cancel the run: aborting this sends the host child a `SIGTERM`. A signal
    * that is already aborted kills the child as soon as it spawns, so a caller
@@ -453,6 +489,7 @@ function spawnAndConsume(
       stdio: ['ignore', 'pipe', 'pipe'],
       ...(opts.env ? { env: opts.env as NodeJS.ProcessEnv } : {}),
     });
+    opts.onChild?.(child);
     const reducer = new UsageReducer();
     let eventCount = 0;
     let stderrBuf = '';
@@ -468,7 +505,7 @@ function spawnAndConsume(
     // controller reused across runs does not accumulate dead children.
     const { signal } = opts;
     const onAbort = (): void => {
-      child.kill('SIGTERM');
+      signalChild(child, 'SIGTERM');
     };
     if (signal) {
       if (signal.aborted) onAbort();

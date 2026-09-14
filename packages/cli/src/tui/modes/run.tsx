@@ -12,14 +12,19 @@
 // state, the clock, and the phase. The phase is a small machine — a host is
 // either running, asking what to do with an answer, waiting for the value an
 // action needs, working on it, or finished. Esc means "get me out of here" at
-// every step: it asks the host to stop, backs out of a value, and closes the
-// screen once there is nothing left to wait for. A cancelled run does not wait
-// for a second keystroke — it leaves as soon as the host has actually stopped.
+// every step: it stops the host (asking first, forcing only if the host will
+// not listen), backs out of a value, and closes the screen once there is
+// nothing left to wait for. Ctrl+C means the same while a host is live — the
+// dashboard turns Ink's own Ctrl+C exit off so this screen can stop the child
+// and name the transcript, instead of vanishing mid-run and leaving a host
+// behind. A cancelled run does not wait for a second keystroke — it leaves as
+// soon as the host has actually stopped.
 
 import { Box, Text, useInput } from 'ink';
 import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { NoirEvent, RunHostResult } from '../../orchestrator.js';
+import type { HostChild, NoirEvent, RunHostResult } from '../../orchestrator.js';
 import type { PostRunAction, PostRunMenuOption, PostRunOutcome } from '../../run-actions.js';
+import { INTERRUPT_GRACE_MS, interruptedNotice, RunInterrupt } from '../../run-interrupt.js';
 import { humanizeElapsed } from '../../run-status.js';
 import { c, divider } from '../../theme.js';
 import { captureProcessOutput } from '../capture.js';
@@ -40,6 +45,12 @@ export interface RunStartHandlers {
   readonly onLine: (line: string) => void;
   /** Aborting this asks the host to stop; the run still resolves normally. */
   readonly signal: AbortSignal;
+  /**
+   * The host child, as soon as it exists — and again for every later spawn of
+   * the same run. What a cancel kills: a signal aimed at Noir is not addressed
+   * to the child, and one the host ignores needs a forceful follow-up.
+   */
+  readonly onChild?: (child: HostChild) => void;
 }
 
 /** A run in progress: the binary being driven, and how it ends. */
@@ -90,12 +101,23 @@ export interface RunModeProps {
   readonly deps: RunDeps;
   /** Leave the run screen. `notice` is reported on the dashboard's notice line. */
   readonly onExit: (notice?: string) => void;
+  /**
+   * Leave the dashboard entirely. What Ctrl+C means here when there is no live
+   * host to stop; injected rather than reached for so a test can watch it.
+   */
+  readonly onQuit?: () => void;
   /** Visible pane height. */
   readonly height?: number;
   /** Elapsed-time redraw interval in ms. */
   readonly tickMs?: number;
   /** Wall clock, injected so elapsed time is assertable in a test. */
   readonly now?: () => number;
+  /**
+   * How long a host gets to honour the cancel before it is forced. The same
+   * knob the terminal run answers to; injectable so a test can watch the
+   * forcing happen without waiting the real grace out.
+   */
+  readonly graceMs?: number;
 }
 
 /** The screen's state machine. */
@@ -124,9 +146,11 @@ export function RunMode({
   prompt,
   deps,
   onExit,
+  onQuit = onExit,
   height = 14,
   tickMs = 1000,
   now = Date.now,
+  graceMs = INTERRUPT_GRACE_MS,
 }: RunModeProps): ReactElement {
   const [stream, setStream] = useState<RunStreamSnapshot>(EMPTY_STREAM);
   const [binary, setBinary] = useState('host');
@@ -139,7 +163,7 @@ export function RunMode({
   const [valueNotice, setValueNotice] = useState<string | null>(null);
   const [postRun, setPostRun] = useState<RunActionRequest | null>(null);
   const [statusHint, setStatusHint] = useState<string | null>(null);
-  const controllerRef = useRef<AbortController | null>(null);
+  const interruptRef = useRef<RunInterrupt | null>(null);
   const rawLinesRef = useRef<string[]>([]);
   const startedAtRef = useRef(now());
   // Leaving the screen is read through a ref: the parent re-renders on every
@@ -150,12 +174,14 @@ export function RunMode({
     exitRef.current = onExit;
   }, [onExit]);
 
-  // One turn, from spawn to settlement. The cleanup aborts: leaving the screen
-  // (or starting a follow-up) must not leave a host running in the background.
+  // One turn, from spawn to settlement. The cleanup stops the host the same way
+  // Esc does — signal first, force after a grace — because leaving the screen
+  // (or starting a follow-up) must not leave a host running in the background,
+  // and a host that ignores the signal must not outlive Noir either.
   useEffect(() => {
     const streamState = new RunStream();
-    const controller = new AbortController();
-    controllerRef.current = controller;
+    const interrupt = new RunInterrupt({ graceMs });
+    interruptRef.current = interrupt;
     rawLinesRef.current = [];
     startedAtRef.current = now();
     let live = true;
@@ -181,7 +207,8 @@ export function RunMode({
           onLine: (line) => {
             rawLinesRef.current.push(line);
           },
-          signal: controller.signal,
+          signal: interrupt.signal,
+          onChild: (child) => interrupt.track(child),
         },
         turn.sessionId,
       );
@@ -204,7 +231,7 @@ export function RunMode({
       .then(async (result) => {
         streamState.finalize();
         const snapshot = streamState.snapshot();
-        const cancelled = controller.signal.aborted;
+        const cancelled = interrupt.signal.aborted;
         // Persist before reporting: the transcript path is offered to the
         // post-run actions, and a run that is not on disk cannot be reopened
         // from the transcript picker.
@@ -213,10 +240,10 @@ export function RunMode({
         if (!live) return;
         setStream(snapshot);
         if (cancelled) {
-          // Esc asked the host to stop, and it has: leave now rather than
-          // holding a second keystroke. The transcript above is already on
+          // Esc (or Ctrl+C) asked the host to stop, and it has: leave now rather
+          // than holding a second keystroke. The transcript above is already on
           // disk, which is where the partial answer can still be read back.
-          exitRef.current(`${session.binary} stopped — the run is in the transcript picker`);
+          exitRef.current(interruptedNotice(transcript));
           return;
         }
         if (result.isError || result.exitCode !== 0) {
@@ -246,9 +273,9 @@ export function RunMode({
     return () => {
       live = false;
       clearInterval(tick);
-      controller.abort();
+      interrupt.terminate();
     };
-  }, [turn, deps, now, tickMs]);
+  }, [turn, deps, now, tickMs, graceMs]);
 
   const options = useMemo(() => (postRun === null ? [] : deps.actions(postRun)), [postRun, deps]);
 
@@ -315,9 +342,22 @@ export function RunMode({
   );
 
   useInput((input, key) => {
+    // Ctrl+C while the host is live is the same request as Esc: stop it and say
+    // so, rather than tearing the frame down and leaving the transcript path
+    // unsaid. With nothing running there is nothing to stop, so it leaves the
+    // dashboard — what it does in every other mode.
+    if (key.ctrl && input === 'c') {
+      if (phase.kind === 'running') {
+        interruptRef.current?.terminate();
+        setStatusHint(RUN_CANCEL_HINT);
+        return;
+      }
+      onQuit();
+      return;
+    }
     if (phase.kind === 'running') {
       if (key.escape) {
-        controllerRef.current?.abort();
+        interruptRef.current?.terminate();
         setStatusHint(RUN_CANCEL_HINT);
       }
       return;

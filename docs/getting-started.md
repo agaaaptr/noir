@@ -233,6 +233,18 @@ A raw stream-json transcript is always persisted to `.noir/transcripts/`.
   reports something, and it stays out of the answer's way. `--json` and `--quiet`
   emit none of it, and when stderr is not a terminal it becomes two plain markers
   (one at the start, one at the end) instead of an animated line.
+- **Stopping a run.** `Ctrl+C` (`SIGINT`), or a `SIGTERM` from whatever started
+  Noir, stops the **host** — politely first, forcefully after five seconds if it
+  has not exited — and then Noir leaves with the conventional `128 + signal` code
+  (`130` for `SIGINT`, `143` for `SIGTERM`). The host is never detached from Noir,
+  so it is reaped before the command returns and nothing is left running behind.
+  What it had already produced is written to the transcript first, and the message
+  says where: `interrupted · transcript: .noir/transcripts/<file>.jsonl`, or
+  `interrupted · transcript: (not persisted)` if the file could not be written.
+  An interrupted run is **not** a failure — no `failed` line and no token/cost
+  summary, since the host did as it was told. A **second** `Ctrl+C` leaves
+  immediately rather than waiting the grace out. Under `--json` the interrupt is
+  one `{ok:false,error:{code,message}}` envelope on stdout, like any other error.
 - **After the answer.** On an interactive terminal — both stdin and stdout a TTY,
   and not `--json`, `--no-input`, CI, or `NO_COLOR` — a successful run asks what
   to do with the answer: save it to memory, record it as a finding on the active
@@ -256,7 +268,9 @@ A raw stream-json transcript is always persisted to `.noir/transcripts/`.
   rather than a headless one: the answer streams into the pane as the host
   writes it, every tool call it starts is listed, and the status bar tracks the
   model, the elapsed time and the running token totals. `Esc` asks the host to
-  stop (`SIGTERM`) and the screen returns to the dashboard once it has — a
+  stop — `SIGTERM`, forced after five seconds if the host does not exit — and the
+  screen returns to the dashboard once it has, with
+  `interrupted · transcript: <path>` on the notice line. A
   `run` carrying flags (`--json`, `--profile`, `--command`) still dispatches as a
   normal captured command. A successful run offers the same post-run actions as
   an overlay; a failed or cancelled one offers nothing. `Ctrl+T` lists the

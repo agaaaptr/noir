@@ -13,10 +13,11 @@
 // an ordinary dispatched command is still captured, and the writer the process
 // had is still the writer the run screen sees while it is live.
 
+import { EventEmitter } from 'node:events';
 import { render } from 'ink-testing-library';
 import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import type { NoirEvent, RunHostResult } from '../../src/orchestrator.js';
+import type { HostChild, NoirEvent, RunHostResult } from '../../src/orchestrator.js';
 import {
   type PostRunAction,
   type PostRunMenuOption,
@@ -36,6 +37,8 @@ import type { TranscriptStore } from '../../src/tui/transcripts.js';
 
 const ESC = '';
 const ENTER = '\r';
+/** Ctrl+C, as the terminal sends it. */
+const CTRL_C = '';
 const DOWN = '[B';
 
 /** A settled run that did what was asked of it. */
@@ -47,11 +50,32 @@ const OK_RESULT: RunHostResult = {
   isError: false,
 };
 
+/**
+ * The host child, as the run screen's cancel path sees it. It records what it
+ * was sent and dies only when the test says so — which is how a host that
+ * ignores the polite signal is reproduced.
+ */
+class FakeChild extends EventEmitter implements HostChild {
+  readonly signals: NodeJS.Signals[] = [];
+  readonly pid = 4242;
+  onSignal?: (signal: NodeJS.Signals) => void;
+  kill(signal: NodeJS.Signals = 'SIGTERM'): boolean {
+    this.signals.push(signal);
+    this.onSignal?.(signal);
+    return true;
+  }
+  gone(): void {
+    this.emit('exit');
+  }
+}
+
 /** One fake host: emits events on demand and settles when the test says so. */
 interface FakeHost {
   readonly start: RunStarter;
   readonly prompts: readonly string[];
   readonly resumes: readonly (string | undefined)[];
+  /** The child the screen was handed for the most recent turn. */
+  readonly child: () => FakeChild;
   /** The writer the process had during the most recent emitted event. */
   readonly writerSeen: () => typeof process.stdout.write;
   emit(event: NoirEvent): void;
@@ -67,12 +91,17 @@ function fakeHost(): FakeHost {
   let resolveDone: ((result: RunHostResult) => void) | null = null;
   const prompts: string[] = [];
   const resumes: (string | undefined)[] = [];
+  let child = new FakeChild();
   let writerSeen = process.stdout.write;
 
   const start: RunStarter = (prompt, given, resumeSessionId) => {
     handlers = given;
     prompts.push(prompt);
     resumes.push(resumeSessionId);
+    // A fresh child per turn, handed to the screen exactly as a real spawn
+    // hands one over: this is what the screen's cancel has to work with.
+    child = new FakeChild();
+    given.onChild?.(child);
     return {
       binary: 'claude',
       done: new Promise<RunHostResult>((resolve) => {
@@ -90,6 +119,7 @@ function fakeHost(): FakeHost {
     start,
     prompts,
     resumes,
+    child: () => child,
     writerSeen: () => writerSeen,
     emit: (event) => {
       const live = need();
@@ -134,11 +164,12 @@ interface Mounted {
   readonly perform: ReturnType<typeof vi.fn>;
   readonly options: readonly PostRunMenuOption[];
   readonly exit: ReturnType<typeof vi.fn>;
+  readonly quit: ReturnType<typeof vi.fn>;
 }
 
 /** Render the run screen over a fake host, with the real action set. */
 function mountRun(
-  props: Partial<{ prompt: string; now: () => number; tickMs: number }> = {},
+  props: Partial<{ prompt: string; now: () => number; tickMs: number; graceMs: number }> = {},
 ): Mounted {
   const host = fakeHost();
   const transcripts = memoryTranscripts();
@@ -163,16 +194,19 @@ function mountRun(
     transcripts,
   };
   const exit = vi.fn();
+  const quit = vi.fn();
   const element = (
     <RunMode
       prompt={props.prompt ?? 'fix the bug'}
       deps={deps}
       onExit={exit}
+      onQuit={quit}
       now={props.now ?? (() => 0)}
       tickMs={props.tickMs ?? 100000}
+      {...(props.graceMs === undefined ? {} : { graceMs: props.graceMs })}
     />
   ) as unknown as ReactElement;
-  return { instance: render(element), host, perform, options, exit };
+  return { instance: render(element), host, perform, options, exit, quit };
 }
 
 /** Resolve after a short macrotask so React's state flush lands. */
@@ -301,13 +335,95 @@ describe('run screen — live render', () => {
     expect(m.instance.lastFrame() ?? '').toContain('cancelling');
 
     // The host still settles (a signalled child closes like any other): the
-    // screen leaves on its own, saying why, and never offers the menu.
+    // screen leaves on its own, saying what happened and where the record of it
+    // is, and never offers the menu.
     m.host.settle();
     await flush(60);
-    expect(m.exit).toHaveBeenCalledWith(expect.stringContaining('stopped'));
+    expect(m.exit).toHaveBeenCalledWith(
+      expect.stringContaining('interrupted · transcript: /tmp/fake-transcripts/'),
+    );
     const frame = m.instance.lastFrame() ?? '';
     expect(frame).not.toContain('run finished');
     m.instance.unmount();
+  });
+
+  it('sends the host itself the signal, not just the abort', async () => {
+    const m = mountRun();
+    await flush();
+
+    m.instance.stdin.write(ESC);
+    await flush();
+
+    // The keystroke reaches the process: an abort alone would depend on the
+    // spawn listening for it, and the screen would have no handle to escalate.
+    expect(m.host.child().signals).toEqual(['SIGTERM']);
+    m.host.settle();
+    await flush(60);
+    m.instance.unmount();
+  });
+
+  it('forces a host that ignores the cancel instead of holding the screen', async () => {
+    const m = mountRun({ graceMs: 30 });
+    await flush();
+
+    m.instance.stdin.write(ESC);
+    await flush();
+    expect(m.host.child().signals).toEqual(['SIGTERM']);
+
+    // The host is ignoring the polite signal. Past the grace it is forced, and
+    // only then does it settle — which is what lets the screen leave.
+    m.host.child().onSignal = (signal) => {
+      if (signal === 'SIGKILL') m.host.settle();
+    };
+    await flush(80);
+    expect(m.host.child().signals).toEqual(['SIGTERM', 'SIGKILL']);
+    expect(m.exit).toHaveBeenCalledWith(expect.stringContaining('interrupted'));
+    m.instance.unmount();
+  });
+
+  it('stops the host on Ctrl+C, exactly as Esc does, instead of vanishing', async () => {
+    const m = mountRun();
+    await flush();
+
+    m.instance.stdin.write(CTRL_C);
+    await flush();
+
+    // The same request as Esc, and the screen stays up to report it: exiting the
+    // dashboard here would drop the host it started and never say where the
+    // partial transcript went.
+    expect(m.host.child().signals).toEqual(['SIGTERM']);
+    expect(m.instance.lastFrame() ?? '').toContain('cancelling');
+
+    m.host.settle();
+    await flush(60);
+    expect(m.exit).toHaveBeenCalledWith(expect.stringContaining('interrupted · transcript:'));
+    m.instance.unmount();
+  });
+
+  it('leaves the dashboard on Ctrl+C when there is no host to stop', async () => {
+    const m = mountRun();
+    await flush();
+    m.host.settle();
+    await flush(60);
+
+    m.instance.stdin.write(CTRL_C);
+    await flush();
+
+    // Nothing to interrupt, so it means what it means everywhere else.
+    expect(m.quit).toHaveBeenCalledTimes(1);
+    expect(m.host.child().signals).toEqual([]);
+    m.instance.unmount();
+  });
+
+  it('leaves no host behind when the screen is torn down mid-run', async () => {
+    const m = mountRun();
+    await flush();
+
+    // How the screen is closed by anything other than Esc: a quit, a Ctrl+C, a
+    // crash in a parent. The host it started must not outlive it.
+    m.instance.unmount();
+
+    expect(m.host.child().signals).toEqual(['SIGTERM']);
   });
 
   it('keeps the cancelled run’s raw stream for the transcript picker', async () => {
@@ -582,6 +698,56 @@ describe('the stdout writer', () => {
     await flush(60);
     expect(host.writerSeen()).toBe(before);
     expect(process.stdout.write).toBe(before);
+    m.instance.unmount();
+  });
+});
+
+describe('the dashboard’s Ctrl+C', () => {
+  /** An exited app stops rendering: nothing typed after it can change a frame. */
+  async function rendersNothingMore(m: MountedApp): Promise<boolean> {
+    const settled = m.instance.lastFrame() ?? '';
+    m.instance.stdin.write('x');
+    await flush(60);
+    return (m.instance.lastFrame() ?? '') === settled;
+  }
+
+  it('leaves the dashboard, as it always has, when no host is running', async () => {
+    const m = mountApp(runDepsOver(fakeHost()));
+    await flush(60);
+    // A keystroke is drawn, so "nothing changed" below means the app is gone.
+    m.instance.stdin.write('x');
+    await flush(60);
+    expect(await rendersNothingMore(m)).toBe(false);
+
+    m.instance.stdin.write(CTRL_C);
+    await flush(80);
+
+    expect(await rendersNothingMore(m)).toBe(true);
+  });
+
+  it('does not tear the frame down under a live run — it stops the host', async () => {
+    const host = fakeHost();
+    const m = mountApp(runDepsOver(host));
+    await flush(60);
+    m.instance.stdin.write('/run fix the bug');
+    await flush(60);
+    m.instance.stdin.write(ENTER);
+    await flush(60);
+    m.instance.stdin.write('y');
+    await flush(80);
+
+    m.instance.stdin.write(CTRL_C);
+    await flush(80);
+
+    // The host got the stop, and the screen is still drawing it.
+    expect(host.child().signals).toEqual(['SIGTERM']);
+    expect(m.instance.lastFrame() ?? '').toContain('cancelling');
+
+    // Still the same app, driving the same path Esc does: the host settles and
+    // the notice lands back on the dashboard.
+    host.settle();
+    await flush(80);
+    expect(m.instance.lastFrame() ?? '').toContain('interrupted · transcript:');
     m.instance.unmount();
   });
 });

@@ -8,7 +8,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { normalizeStreamEvent, runHost } from '../src/orchestrator.js';
+import { type HostChild, normalizeStreamEvent, runHost } from '../src/orchestrator.js';
+import { RunInterrupt } from '../src/run-interrupt.js';
 
 const fix = (name: string): string => fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
 
@@ -163,5 +164,105 @@ describe('runHost — cancellation', () => {
     const r = await runHost({ host: 'claude', prompt: 'x', customBinary: fix('host-ok.sh') });
     expect(r.exitCode).toBe(0);
     expect(r.isError).toBe(false);
+  });
+
+  it.skipIf(!hasZsh)('cancels a host that was reached through the shell bridge', async () => {
+    // The name that was spawned never existed; the child actually driving the
+    // run is the shell running the alias. Cancelling has to reach THAT one, or
+    // a user who cancels a bridged run watches it keep working.
+    const bridgeDir = mkdtempSync(join(tmpdir(), 'noir-bridge-cancel-'));
+    writeFileSync(join(bridgeDir, '.zshrc'), `alias slowbridge="exec '${fix('host-slow.sh')}'"\n`, {
+      mode: 0o644,
+    });
+    const controller = new AbortController();
+    const spawns: HostChild[] = [];
+    let atBridge!: () => void;
+    const bridgeUp = new Promise<void>((resolve) => {
+      atBridge = resolve;
+    });
+    const done = runHost({
+      host: 'claude',
+      prompt: 'x',
+      customBinary: 'slowbridge',
+      env: { ...process.env, SHELL: '/bin/zsh', ZDOTDIR: bridgeDir, HOME: bridgeDir },
+      signal: controller.signal,
+      onChild: (child) => {
+        spawns.push(child);
+        if (spawns.length === 2) atBridge();
+      },
+    });
+
+    await bridgeUp;
+    expect(spawns.length).toBe(2); // the name, then the bridge
+    controller.abort();
+    const r = await done;
+    rmSync(bridgeDir, { recursive: true, force: true });
+
+    expect(r.isError).toBe(true);
+    expect(r.exitCode).toBe(143); // 128 + SIGTERM
+  });
+
+  it.skipIf(!hasZsh)(
+    'cancels a bridged host when the stop lands before the bridge exists',
+    async () => {
+      // The window a run cannot close by listening: the stop arrives while the
+      // command is still being resolved, so there is no child to signal yet. The
+      // bridge that appears afterwards has to be stopped on the way in.
+      const bridgeDir = mkdtempSync(join(tmpdir(), 'noir-bridge-early-'));
+      writeFileSync(
+        join(bridgeDir, '.zshrc'),
+        `alias slowbridge="exec '${fix('host-slow.sh')}'"\n`,
+        { mode: 0o644 },
+      );
+      const controller = new AbortController();
+      controller.abort();
+      const r = await runHost({
+        host: 'claude',
+        prompt: 'x',
+        customBinary: 'slowbridge',
+        env: { ...process.env, SHELL: '/bin/zsh', ZDOTDIR: bridgeDir, HOME: bridgeDir },
+        signal: controller.signal,
+      });
+      rmSync(bridgeDir, { recursive: true, force: true });
+
+      expect(r.isError).toBe(true);
+      expect(r.exitCode).not.toBe(0);
+    },
+  );
+
+  it('forces a host that ignores the polite signal, and leaves nothing running', async () => {
+    // The whole point of the ladder: a host that will not listen to SIGTERM
+    // must not hold the terminal — and must not outlive Noir either.
+    const interrupt = new RunInterrupt({ graceMs: 200 });
+    let child: HostChild | undefined;
+    let atRunning!: () => void;
+    // The fixture installs its refusal before it says anything, so the first
+    // line is what proves the host is actually up and ignoring signals — a
+    // signal sent before that would land on a process that never refused.
+    const running = new Promise<void>((resolve) => {
+      atRunning = resolve;
+    });
+    const done = runHost({
+      host: 'claude',
+      prompt: 'x',
+      customBinary: fix('host-ignores-term.sh'),
+      onLine: () => atRunning(),
+      onChild: (spawnedChild) => {
+        child = spawnedChild;
+        interrupt.track(spawnedChild);
+      },
+    });
+
+    await running;
+    const pid = child?.pid;
+    expect(pid).toBeDefined();
+    interrupt.terminate();
+    const r = await done;
+
+    // 128 + SIGKILL: the run ended because the forceful signal landed, and the
+    // run does not resolve until it has — so the child is reaped, not orphaned.
+    expect(r.exitCode).toBe(137);
+    expect(interrupt.escalated).toBe(true);
+    expect(() => process.kill(pid as number, 0)).toThrow();
   });
 });

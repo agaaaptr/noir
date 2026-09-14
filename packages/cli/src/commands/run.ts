@@ -26,6 +26,7 @@ import {
 } from '../orchestrator.js';
 import { type CliOptions, EXIT, fail, json, log, success } from '../output.js';
 import { offerPostRunActions } from '../run-actions.js';
+import { exitCodeForSignal, interruptedNotice, RunInterrupt } from '../run-interrupt.js';
 import { loadRunConfig, resolveRunProfile } from '../run-profiles.js';
 import { HOST_STDERR_TAIL_LINES, hostStderrTail, RunStatusLine } from '../run-status.js';
 
@@ -220,6 +221,13 @@ async function runOnce(
   });
   status.begin();
 
+  // The interrupt contract for this run, installed for exactly as long as a
+  // host child is live. A Ctrl+C in the terminal — or a SIGTERM from whatever
+  // started Noir — stops the HOST and then reports it, rather than killing Noir
+  // and leaving the host running behind it.
+  const interrupt = new RunInterrupt();
+  interrupt.watch();
+
   let result: RunHostResult;
   try {
     result = await runHost({
@@ -236,6 +244,8 @@ async function runOnce(
         const text = answerText(event);
         if (text !== undefined) answer.push(text);
       },
+      signal: interrupt.signal,
+      onChild: (child) => interrupt.track(child),
     });
   } catch (err) {
     // Clear the status line before the failure text so the error is not printed
@@ -243,6 +253,12 @@ async function runOnce(
     // answer may have left open so the error is not read as part of it.
     status.end();
     status.finishRow();
+    // A stop that landed while the spawn was still failing is still a stop. The
+    // run was asked to end, and why the host never got going is beside the point
+    // — reporting it as a failure would blame the host for doing as it was told.
+    if (interrupt.interruptedBy !== undefined) {
+      failInterrupted(interrupt.interruptedBy, host, transcriptLines, opts);
+    }
     const detail = err instanceof Error ? err.message : String(err);
     const enoent = (err as NodeJS.ErrnoException)?.code === 'ENOENT';
     const guidance = enoent
@@ -253,9 +269,26 @@ async function runOnce(
         ? `custom command '${customBinary}'`
         : `host '${host}'`;
     fail(EXIT.ERROR, `failed to run ${subject}: ${detail}.${guidance}`, opts);
+  } finally {
+    // Whatever happened, the process's own signal handling comes back: a later
+    // command must not inherit an interrupt contract with nothing to interrupt.
+    interrupt.unwatch();
   }
 
-  const transcript = writeTranscript(host, transcriptLines);
+  // An interrupt is not a host failure. The run was stopped on purpose, so the
+  // verdict is the stop itself plus the record of what the host had produced —
+  // never a "failed" line about a host that was doing as it was told. The child
+  // is already reaped (the kill ladder above waits it out), so this is the last
+  // thing the run does.
+  if (interrupt.interruptedBy !== undefined) {
+    // Leave the answer's line, and the status row, closed before the verdict is
+    // written: it is read as the run's last word, not as more of the stream.
+    status.end();
+    status.finishRow();
+    failInterrupted(interrupt.interruptedBy, host, transcriptLines, opts);
+  }
+
+  const transcript = safeTranscript(host, transcriptLines);
   const failed = result.exitCode !== 0 || result.isError;
 
   if (failed) {
@@ -364,6 +397,36 @@ export function mergeEnv(
   }
   const merged = { ...base, ...overlay };
   return Object.fromEntries(Object.entries(merged).filter(([, v]) => v !== undefined));
+}
+
+/**
+ * The verdict of a run that was stopped on purpose: the conventional exit code
+ * for the signal that stopped it, where the part of the run that happened is,
+ * and nothing about failure. One function so every path that ends a run this way
+ * says the same thing in the same shape.
+ */
+function failInterrupted(
+  signal: NodeJS.Signals,
+  host: string,
+  lines: readonly string[],
+  opts: RunOptions,
+): never {
+  return fail(exitCodeForSignal(signal), interruptedNotice(safeTranscript(host, lines)), opts);
+}
+
+/**
+ * {@link writeTranscript} with its failure folded in rather than raised. The
+ * interrupt path writes a transcript while the run is on its way out, so a
+ * throw there would replace the verdict (and, in a signal handler, the exit)
+ * with a stack trace about a file. `(not persisted)` is already the writer's
+ * own answer for "it did not land"; this just makes it the only answer.
+ */
+function safeTranscript(host: string, lines: readonly string[]): string {
+  try {
+    return writeTranscript(host, lines);
+  } catch {
+    return '(not persisted)';
+  }
 }
 
 /**

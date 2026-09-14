@@ -541,6 +541,15 @@ export function App({
 
   // ----- keybinding dispatcher (single `useInput` for the whole App) ------
   useInput((input, key) => {
+    // Ctrl+C leaves the dashboard, as it always has — except while a host is
+    // live, where the run screen takes it as "stop the host" (the same thing Esc
+    // means there). Ink's own Ctrl+C exit is turned off at the entry point so
+    // this is the one place that decides: a keystroke can never tear the frame
+    // down from under a screen that still has a child process to stop.
+    if (key.ctrl && input === 'c') {
+      if (mode.kind !== 'run') exit();
+      return;
+    }
     switch (mode.kind) {
       case 'dashboard':
         handleDashboardInput(input, key);
@@ -646,6 +655,7 @@ export function App({
       <RunMode
         prompt={mode.prompt}
         deps={deps.run}
+        onQuit={exit}
         onExit={(notice) => {
           if (notice !== undefined) setNotice(notice);
           setMode({ kind: 'dashboard' });

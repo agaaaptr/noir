@@ -10,6 +10,10 @@
 // stdin + ANSI render to stdout). On `q` / Esc / Ctrl+C, Ink restores the
 // terminal before unmounting. Dispatched commands write through the captured
 // stream shim, so the host terminal only ever sees Ink's frames.
+//
+// Ctrl+C is handled by the App rather than by Ink: with a host run in flight the
+// keystroke has to stop that child and name the transcript it left behind, and
+// Ink's own handling would unmount the frame from under it.
 
 import { type HostId, SUPPORTED_HOSTS } from '@noir-ai/adapters';
 import { loadProjectInfo, parseConfig } from '@noir-ai/core';
@@ -90,6 +94,7 @@ function startHostRun(
       onLine: handlers.onLine,
       onEvent: handlers.onEvent,
       signal: handlers.signal,
+      ...(handlers.onChild === undefined ? {} : { onChild: handlers.onChild }),
     }),
   };
 }
@@ -145,7 +150,7 @@ function defaultRunDeps(opts: CliOptions): RunDeps {
 export async function runTui(opts: CliOptions, dispatch: TuiDeps['dispatch']): Promise<void> {
   process.stdout.write('\x1b[2J\x1b[H');
   const deps = await buildTuiDeps(opts, dispatch);
-  const instance = render(<App deps={deps} />);
+  const instance = render(<App deps={deps} />, { exitOnCtrlC: false });
   await instance.waitUntilExit();
 }
 
@@ -163,6 +168,9 @@ export async function runPalette(opts: CliOptions, dispatch: TuiDeps['dispatch']
   const deps = await buildTuiDeps(opts, dispatch);
   const instance = render(
     <App deps={deps} initialMode={{ kind: 'palette', corpus: 'commands' }} />,
+    {
+      exitOnCtrlC: false,
+    },
   );
   await instance.waitUntilExit();
 }
