@@ -53,7 +53,7 @@ export function clearProviderAdapters(): void {
   adapters.clear();
 }
 
-// --- Key resolution ---------------------------------------------------------
+// --- Credential resolution --------------------------------------------------
 //
 // Secrets live in env vars; config holds only the env-var NAME. A
 // provider block with no `apiKeyEnv` is an ANONYMOUS local provider (Ollama,
@@ -61,6 +61,15 @@ export function clearProviderAdapters(): void {
 function resolveKey(providerCfg: ProviderConfig): string | undefined {
   if (!providerCfg.apiKeyEnv) return undefined; // anonymous local provider
   return process.env[providerCfg.apiKeyEnv];
+}
+
+// Bearer tokens follow the exact same name-indirection rule as the API key: the
+// config names the env var, the value is read from the overlaid `process.env`
+// at call time only. A provider that names a token but no key authenticates
+// with `Authorization: Bearer` instead of an API key.
+function resolveAuthToken(providerCfg: ProviderConfig): string | undefined {
+  if (!providerCfg.authTokenEnv) return undefined;
+  return process.env[providerCfg.authTokenEnv];
 }
 
 // --- Per-tier output caps (FR-10) -------------------------------------------
@@ -109,13 +118,17 @@ function resolveAdapterName(providerName: string, providerCfg: ProviderConfig): 
  *  1. provider name — `req.provider || cfg.defaultProvider`. Empty ⇒ `null`.
  *  2. provider block — `cfg.providers[name]`. Absent ⇒ `null` (NOT configured,
  *     so NO consent to spend; env presence is never consulted).
- *  3. key — `process.env[apiKeyEnv]`; `undefined` (anonymous) if no `apiKeyEnv`.
- *     A keyed provider whose env var is unset ⇒ `null` (the miss is observable
- *     via the `null` return; a structured usage/miss sink is planned).
+ *  3. credentials — `process.env[apiKeyEnv]` and/or `process.env[authTokenEnv]`;
+ *     `undefined` for an anonymous local provider that names neither. A provider
+ *     that names EITHER env var is keyed, and if NEITHER resolves to a value the
+ *     call degrades to `null` (the miss is observable via the `null` return; a
+ *     structured usage/miss sink is planned) — decided before any client exists,
+ *     so nothing can fill the credential in from the ambient environment.
  *  4. adapter — the provider NAME is mapped to an adapter (direct match, else a
  *     `baseURL` block routes to `openai-compatible`); unresolvable ⇒
- *     `{ ok: false, reason }`. The per-tier `maxTokens` default (FR-10) and the
- *     provider-block `baseURL` are folded onto the dispatched request here.
+ *     `{ ok: false, reason }`. The per-tier `maxTokens` default, the
+ *     provider-block `baseURL`, the resolved bearer token, and `timeoutMs` are
+ *     folded onto the dispatched request here.
  *  5. dispatch — one call (or two via the structured repair retry when `schema`
  *     is set); a throw becomes `{ ok: false, reason }` (never escapes).
  *
@@ -135,9 +148,15 @@ export async function complete(
   const providerCfg = cfg.providers?.[providerName];
   if (!providerCfg) return null;
 
-  // 3. Key resolution — env-var NAME → value; anonymous local providers OK.
+  // 3. Credential resolution — env-var NAME → value; anonymous local providers
+  //    OK. A provider that names EITHER `apiKeyEnv` OR `authTokenEnv` is keyed:
+  //    if NEITHER resolves to a value, degrade to `null` before any client is
+  //    built (the ambient env can never fill in for a credential the config did
+  //    not ask for — that would be a silent paid call).
   const key = resolveKey(providerCfg);
-  if (providerCfg.apiKeyEnv && !key) return null;
+  const authToken = resolveAuthToken(providerCfg);
+  const isKeyed = Boolean(providerCfg.apiKeyEnv || providerCfg.authTokenEnv);
+  if (isKeyed && !key && !authToken) return null;
 
   // 4. Adapter resolution — map the configured provider NAME to an adapter. The
   //    hosted built-ins (`anthropic`, `openai`) match directly; a free-form local
@@ -156,16 +175,21 @@ export async function complete(
 
   // Forward provider-block config + the per-tier output cap onto the request so
   // the adapter stays uniform (ProviderAdapter.complete(req, key)):
-  //   • baseURL — only `openai-compatible` consumes it (Ollama / LM Studio /
-  //     vLLM endpoint); the hosted adapters simply ignore it.
-  //   • maxTokens — apply the FR-10 per-tier default ONLY when the caller omitted
-  //     it AND a tier is signalled. An explicit maxTokens always wins; absent both
+  //   • baseURL — the endpoint host (required by `openai-compatible`, honored by
+  //     the hosted adapters).
+  //   • authToken — the bearer-token VALUE resolved from `process.env[authTokenEnv]`
+  //     above; the config carries the name, the request carries the resolved value.
+  //   • timeoutMs — per-request timeout in milliseconds, forwarded verbatim.
+  //   • maxTokens — apply the per-tier default ONLY when the caller omitted it AND
+  //     a tier is signalled. An explicit maxTokens always wins; absent both
   //     ⇒ `undefined`, and the adapter applies its own last-resort bound.
   const tierMax = req.tier ? TIER_MAX_TOKENS[req.tier] : undefined;
   const maxTokens = req.maxTokens ?? tierMax;
   const dispatchReq: CompleteRequest = {
     ...req,
     ...(providerCfg.baseURL ? { baseURL: providerCfg.baseURL } : {}),
+    ...(authToken !== undefined ? { authToken } : {}),
+    ...(providerCfg.timeoutMs !== undefined ? { timeoutMs: providerCfg.timeoutMs } : {}),
     ...(maxTokens !== undefined ? { maxTokens } : {}),
   };
 

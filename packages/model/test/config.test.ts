@@ -113,6 +113,52 @@ describe('resolveModelConfig — key resolution from env', () => {
     expect(p?.baseURL).toBe('http://localhost:11434/v1');
   });
 
+  it('reports hasKey=true for a token-only provider when its token env var is set', async () => {
+    await withEnv('NOIR_TEST_TOKEN', 'tk-bearer', async () => {
+      const r = resolveModelConfig({
+        providers: { anthropic: { model: 'claude-haiku', authTokenEnv: 'NOIR_TEST_TOKEN' } },
+      });
+      const p = r.providers.anthropic;
+      expect(p?.hasKey).toBe(true);
+      expect(p?.apiKey).toBeUndefined(); // no apiKeyEnv ⇒ no key resolved
+      expect(p?.authTokenEnv).toBe('NOIR_TEST_TOKEN'); // NAME only, never the value
+      expect(Object.keys(p ?? {})).not.toContain('authToken'); // value stays in env
+    });
+  });
+
+  it('reports hasKey=false for a token-only provider whose token env var is unset', async () => {
+    await withEnv('NOIR_TEST_MISSING_TOKEN', undefined, async () => {
+      const r = resolveModelConfig({
+        providers: {
+          anthropic: { model: 'claude-haiku', authTokenEnv: 'NOIR_TEST_MISSING_TOKEN' },
+        },
+      });
+      const p = r.providers.anthropic;
+      // A token-only provider with its env var unset is NOT ready — the model
+      // layer would degrade to null, so doctor must surface the miss.
+      expect(p?.hasKey).toBe(false);
+      expect(p?.authTokenEnv).toBe('NOIR_TEST_MISSING_TOKEN');
+    });
+  });
+
+  it('reports hasKey=true when at least one of two named credentials resolves', async () => {
+    await withEnv('NOIR_TEST_MISSING_KEY', undefined, async () => {
+      await withEnv('NOIR_TEST_TOKEN', 'tk-only', async () => {
+        const r = resolveModelConfig({
+          providers: {
+            anthropic: {
+              model: 'claude-haiku',
+              apiKeyEnv: 'NOIR_TEST_MISSING_KEY',
+              authTokenEnv: 'NOIR_TEST_TOKEN',
+            },
+          },
+        });
+        expect(r.providers.anthropic?.hasKey).toBe(true);
+        expect(r.providers.anthropic?.apiKey).toBeUndefined();
+      });
+    });
+  });
+
   it('never mutates the input or process.env', async () => {
     const raw = {
       providers: { openai: { model: 'gpt-4o-mini', apiKeyEnv: 'NOIR_TEST_IMMUT' } },

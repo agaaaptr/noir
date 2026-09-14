@@ -204,6 +204,107 @@ describe('complete() — provider-explicit resolution + dispatch', () => {
   });
 });
 
+describe('complete() — credentials: apiKey and/or bearer token', () => {
+  it('resolves a token-only provider (authTokenEnv) and dispatches with it — no key', async () => {
+    const a = fakeAdapter('anthropic', () => ({ ok: true, text: 'via-gateway' }));
+    registerProviderAdapter('anthropic', a);
+    await withEnv('NOIR_TEST_TOKEN', 'tk-bearer-value', async () => {
+      const r = await complete(
+        { provider: 'anthropic', model: 'claude-haiku', prompt: 'hi' },
+        { providers: { anthropic: { model: 'claude-haiku', authTokenEnv: 'NOIR_TEST_TOKEN' } } },
+      );
+      expect(r).toEqual({ ok: true, text: 'via-gateway' });
+      // No apiKeyEnv ⇒ no key; the resolved token rides on the request.
+      expect(a.calls[0]?.key).toBeUndefined();
+      expect(a.calls[0]?.req.authToken).toBe('tk-bearer-value');
+    });
+  });
+
+  it('degrades to null for a token-only provider whose token env var is unset', async () => {
+    const a = fakeAdapter('anthropic', () => ({ ok: true, text: 'nope' }));
+    registerProviderAdapter('anthropic', a);
+    await withEnv('NOIR_TEST_TOKEN', undefined, async () => {
+      const r = await complete(
+        { provider: 'anthropic', model: 'claude-haiku', prompt: 'hi' },
+        { providers: { anthropic: { model: 'claude-haiku', authTokenEnv: 'NOIR_TEST_TOKEN' } } },
+      );
+      expect(r).toBeNull();
+      expect(a.calls).toHaveLength(0); // no credential ⇒ no adapter call.
+    });
+  });
+
+  it('proceeds when one of two named credentials resolves', async () => {
+    const a = fakeAdapter('anthropic', () => ({ ok: true, text: 'ok' }));
+    registerProviderAdapter('anthropic', a);
+    await withEnv('NOIR_TEST_MISSING_KEY', undefined, async () => {
+      await withEnv('NOIR_TEST_TOKEN', 'tk-only', async () => {
+        const r = await complete(
+          { provider: 'anthropic', model: 'claude-haiku', prompt: 'hi' },
+          {
+            providers: {
+              anthropic: {
+                model: 'claude-haiku',
+                apiKeyEnv: 'NOIR_TEST_MISSING_KEY',
+                authTokenEnv: 'NOIR_TEST_TOKEN',
+              },
+            },
+          },
+        );
+        expect(r).toEqual({ ok: true, text: 'ok' });
+        expect(a.calls[0]?.key).toBeUndefined();
+        expect(a.calls[0]?.req.authToken).toBe('tk-only');
+      });
+    });
+  });
+
+  it('degrades to null when a provider names credentials but NEITHER resolves', async () => {
+    const a = fakeAdapter('anthropic', () => ({ ok: true, text: 'nope' }));
+    registerProviderAdapter('anthropic', a);
+    await withEnv('NOIR_TEST_MISSING_KEY', undefined, async () => {
+      await withEnv('NOIR_TEST_MISSING_TOKEN', undefined, async () => {
+        const r = await complete(
+          { provider: 'anthropic', model: 'claude-haiku', prompt: 'hi' },
+          {
+            providers: {
+              anthropic: {
+                model: 'claude-haiku',
+                apiKeyEnv: 'NOIR_TEST_MISSING_KEY',
+                authTokenEnv: 'NOIR_TEST_MISSING_TOKEN',
+              },
+            },
+          },
+        );
+        expect(r).toBeNull();
+        expect(a.calls).toHaveLength(0);
+      });
+    });
+  });
+
+  it('forwards the provider block’s baseURL / authToken / timeoutMs onto the request', async () => {
+    const a = fakeAdapter('anthropic', () => ({ ok: true, text: 'ok' }));
+    registerProviderAdapter('anthropic', a);
+    await withEnv('NOIR_TEST_TOKEN', 'tk-forwarded', async () => {
+      await complete(
+        { provider: 'anthropic', model: 'claude-haiku', prompt: 'hi' },
+        {
+          providers: {
+            anthropic: {
+              model: 'claude-haiku',
+              baseURL: 'https://gateway.example',
+              authTokenEnv: 'NOIR_TEST_TOKEN',
+              timeoutMs: 30_000,
+            },
+          },
+        },
+      );
+      // The adapter receives resolved VALUES, never env-var NAMES.
+      expect(a.calls[0]?.req.baseURL).toBe('https://gateway.example');
+      expect(a.calls[0]?.req.authToken).toBe('tk-forwarded');
+      expect(a.calls[0]?.req.timeoutMs).toBe(30_000);
+    });
+  });
+});
+
 describe('complete() — adapter resolution: free-form local name → openai-compatible', () => {
   // A provider block named `ollama` (or any free-form name) with a `baseURL` is
   // an OpenAI-shaped LOCAL endpoint. Only 3 adapters exist (anthropic / openai /

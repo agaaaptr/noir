@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { complete } from '../src/complete.js';
 import { anthropicAdapter } from '../src/providers/anthropic.js';
 import type { CompleteRequest } from '../src/types.js';
 
@@ -40,6 +41,23 @@ function message(text: string, usage = { input_tokens: 7, output_tokens: 3 }) {
     stop_reason: 'end_turn',
     usage,
   };
+}
+
+// Set/clear a batch of env vars for one test, restoring each to its prior
+// value afterwards (mirrors the helper in complete.test.ts; kept local so this
+// file stays self-contained).
+function withEnv(vars: Record<string, string | undefined>, fn: () => Promise<void>): Promise<void> {
+  const before = new Map(Object.keys(vars).map((k) => [k, process.env[k]]));
+  for (const [k, v] of Object.entries(vars)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+  return fn().finally(() => {
+    for (const [k, v] of before) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  });
 }
 
 describe('anthropicAdapter — request shape (blueprint D5: single-shot, no tools/stream)', () => {
@@ -91,6 +109,45 @@ describe('anthropicAdapter — request shape (blueprint D5: single-shot, no tool
     expect(mocks.ctorOpts[0]?.apiKey).toBe('sk-secret-value');
     // Never silently retry (bounded cost).
     expect(mocks.ctorOpts[0]?.maxRetries).toBe(0);
+    // The bearer-token slot is pinned to `null` (not `undefined`) so the SDK
+    // does not fall back to ANTHROPIC_AUTH_TOKEN in the ambient env.
+    expect(mocks.ctorOpts[0]?.authToken).toBeNull();
+  });
+
+  it('honors a forwarded baseURL (no longer dropped)', async () => {
+    // complete() forwards baseURL onto the request for a gateway host; the
+    // anthropic adapter must pass it to the SDK client, not ignore it.
+    mocks.createMock.mockResolvedValue(message('ok'));
+    await anthropicAdapter.complete(baseReq({ baseURL: 'http://localhost:11434/v1' }), 'sk-test');
+    expect(mocks.ctorOpts[0]?.baseURL).toBe('http://localhost:11434/v1');
+    const params = mocks.createMock.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(params).not.toHaveProperty('baseURL');
+  });
+
+  it('pins the hosted default baseURL when none is forwarded (ambient ANTHROPIC_BASE_URL is inert)', async () => {
+    // An absent baseURL must NOT mean "read ANTHROPIC_BASE_URL from env": the
+    // client is built with the real hosted default so ambient env cannot reroute.
+    mocks.createMock.mockResolvedValue(message('ok'));
+    await anthropicAdapter.complete(baseReq(), 'sk-test');
+    expect(mocks.ctorOpts[0]?.baseURL).toBe('https://api.anthropic.com');
+  });
+
+  it('forwards authToken + timeoutMs onto the client options', async () => {
+    mocks.createMock.mockResolvedValue(message('ok'));
+    await anthropicAdapter.complete(
+      baseReq({ authToken: 'tk-bearer-value', timeoutMs: 20_000 }),
+      undefined,
+    );
+    expect(mocks.ctorOpts[0]?.authToken).toBe('tk-bearer-value');
+    expect(mocks.ctorOpts[0]?.timeout).toBe(20_000);
+    // Token-only: the apiKey slot is pinned to null (no env fallback).
+    expect(mocks.ctorOpts[0]?.apiKey).toBeNull();
+  });
+
+  it('omits the timeout option when timeoutMs is unset', async () => {
+    mocks.createMock.mockResolvedValue(message('ok'));
+    await anthropicAdapter.complete(baseReq(), 'sk-test');
+    expect(mocks.ctorOpts[0]).not.toHaveProperty('timeout');
   });
 
   it('passes maxRetries: 0 + an AbortSignal in the per-request options', async () => {
@@ -110,14 +167,14 @@ describe('anthropicAdapter — request shape (blueprint D5: single-shot, no tool
     expect(options).not.toHaveProperty('signal');
   });
 
-  it('ignores a forwarded baseURL (hosted Anthropic has no baseURL knob)', async () => {
-    // complete() forwards baseURL onto the request for the openai-compatible
-    // adapter; the anthropic adapter must not be confused by its presence.
+  it('ignores a forwarded baseURL in the Messages request body', async () => {
+    // baseURL belongs on the client (constructor), never in the request body.
     mocks.createMock.mockResolvedValue(message('ok'));
     await anthropicAdapter.complete(baseReq({ baseURL: 'http://localhost:11434/v1' }), 'sk-test');
-    expect(mocks.ctorOpts[0]).not.toHaveProperty('baseURL');
     const params = mocks.createMock.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(params).not.toHaveProperty('baseURL');
+    expect(params).not.toHaveProperty('authToken');
+    expect(params).not.toHaveProperty('timeoutMs');
   });
 });
 
@@ -175,18 +232,83 @@ describe('anthropicAdapter — failure handling (never throws, never silent paid
     if (r && r.ok === false) expect(r.reason).toContain('boom-string');
   });
 
-  it('returns { ok: false } when key is absent — does NOT let the SDK fall back to ANTHROPIC_API_KEY', async () => {
-    // A missing key here means the provider block was wired without apiKeyEnv.
-    // The adapter MUST refuse rather than read env silently (silent paid call).
-    // No create call should be made at all.
+  it('returns { ok: false } when neither key nor authToken is present — no env fallback, no client', async () => {
+    // A missing key AND missing token means the provider block was wired
+    // without a credential env var. The adapter MUST refuse rather than read
+    // ambient env (silent paid call). No client may be constructed at all.
     const r = await anthropicAdapter.complete(baseReq(), undefined);
     expect(r?.ok).toBe(false);
-    if (r && r.ok === false) expect(r.reason).toContain('missing API key');
+    if (r && r.ok === false) expect(r.reason).toContain('missing credentials');
     expect(mocks.createMock).not.toHaveBeenCalled();
     expect(mocks.ctorOpts).toHaveLength(0); // never constructed the SDK client.
   });
 
+  it('proceeds with authToken alone (no key) — constructing the client with a pinned null apiKey', async () => {
+    // A token-only provider reaches the adapter with `key === undefined` and a
+    // resolved bearer token; the token is sufficient and the apiKey slot stays
+    // null (never an ambient ANTHROPIC_API_KEY).
+    mocks.createMock.mockResolvedValue(message('ok'));
+    const r = await anthropicAdapter.complete(baseReq({ authToken: 'tk-bearer' }), undefined);
+    expect(r?.ok).toBe(true);
+    expect(mocks.ctorOpts[0]?.apiKey).toBeNull();
+    expect(mocks.ctorOpts[0]?.authToken).toBe('tk-bearer');
+  });
+
   it('registers under the provider name "anthropic"', () => {
     expect(anthropicAdapter.name).toBe('anthropic');
+  });
+});
+
+describe('anthropic — ambient env is inert end-to-end (provider-explicit only)', () => {
+  it('complete() returns null with no model config even when every ANTHROPIC_* var is set', async () => {
+    // ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN / ANTHROPIC_BASE_URL may all be
+    // set in the host env for another tool. With no model config there is no
+    // explicit consent, so complete() must degrade to null and never build a
+    // client (no silent paid call to the ambient host).
+    await withEnv(
+      {
+        ANTHROPIC_BASE_URL: 'https://ambient-gateway.example',
+        ANTHROPIC_AUTH_TOKEN: 'tk-ambient',
+        ANTHROPIC_API_KEY: 'sk-ambient',
+      },
+      async () => {
+        const r = await complete(
+          { provider: 'anthropic', model: 'claude-haiku', prompt: 'hi' },
+          {}, // no providers configured — the ambient env must not be consulted.
+        );
+        expect(r).toBeNull();
+        expect(mocks.ctorOpts).toHaveLength(0);
+        expect(mocks.createMock).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  it('a configured provider sends only the values its config names — ambient vars stay out', async () => {
+    mocks.createMock.mockResolvedValue(message('ok'));
+    await withEnv(
+      {
+        ANTHROPIC_BASE_URL: 'https://ambient-gateway.example',
+        ANTHROPIC_AUTH_TOKEN: 'tk-ambient',
+        ANTHROPIC_API_KEY: 'sk-ambient',
+        NOIR_TEST_KEY: 'sk-configured',
+      },
+      async () => {
+        const r = await complete(
+          { provider: 'anthropic', model: 'claude-haiku', prompt: 'hi' },
+          {
+            providers: {
+              anthropic: { model: 'claude-haiku', apiKeyEnv: 'NOIR_TEST_KEY' },
+            },
+          },
+        );
+        expect(r).toMatchObject({ ok: true });
+        const opts = mocks.ctorOpts[0];
+        // The configured key wins; the ambient key/token are pinned out.
+        expect(opts?.apiKey).toBe('sk-configured');
+        expect(opts?.authToken).toBeNull();
+        // The hosted default host wins; the ambient gateway URL is never used.
+        expect(opts?.baseURL).toBe('https://api.anthropic.com');
+      },
+    );
   });
 });

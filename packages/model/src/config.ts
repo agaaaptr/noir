@@ -19,7 +19,8 @@
 // to print); `apiKey` is the VALUE resolved here from `process.env[apiKeyEnv]`,
 // materialized so doctor / direct consumers can branch without each re-reading
 // env. The value never touches disk via Noir and is never logged with usage.
-// `authTokenEnv` travels through as a NAME only — the value is read at call
+// `authTokenEnv` travels through as a NAME only — whether it is set feeds
+// `hasKey` (a boolean, never the value); the value itself is read at call
 // time in `complete()`, alongside the key it already resolves there.
 
 /**
@@ -86,10 +87,10 @@ export interface ResolvedProviderConfig {
   /** VALUE resolved from `process.env[apiKeyEnv]`; `undefined` if anonymous or unset. */
   apiKey?: string;
   /**
-   * Readiness signal for `noir doctor` (OQ-5): for a keyed provider, whether the
-   * env var named by `apiKeyEnv` is set; for an ANONYMOUS provider (no
-   * `apiKeyEnv`), `true` — no key is required, so nothing is missing. Carries a
-   * boolean ONLY, never the key value (NFR-4).
+   * Readiness signal for `noir doctor`: whether a keyed provider has at least
+   * one of its named credential env vars set (`apiKeyEnv` and/or `authTokenEnv`);
+   * an ANONYMOUS provider (neither named) is always `true` — no credential is
+   * required, so nothing is missing. Carries a boolean ONLY, never the value.
    */
   hasKey: boolean;
 }
@@ -127,11 +128,13 @@ export interface ResolvedModelConfig {
  * - `undefined` / missing block ⇒ `{ tiers: {}, providers: {} }` (full
  *   degradation — `complete()` will then return `null` for every call, the
  *   always-available offline path; blueprint D5).
- * - Each provider's key is materialized from `process.env[apiKeyEnv]` into
- *   `apiKey`; a keyed provider whose env var is unset gets `apiKey: undefined`
- *   + `hasKey: false` (doctor surfaces this; `complete()` returns `null`).
- * - Anonymous providers (no `apiKeyEnv`) keep `apiKey: undefined` but report
- *   `hasKey: true` (ready — no key needed, e.g. local Ollama).
+ * - Each provider's API key is materialized from `process.env[apiKeyEnv]` into
+ *   `apiKey`; `hasKey` is `true` when a keyed provider has at least one of its
+ *   named credential env vars set (doctor surfaces a miss; `complete()` returns
+ *   `null`).
+ * - Anonymous providers (neither `apiKeyEnv` nor `authTokenEnv`) keep
+ *   `apiKey: undefined` but report `hasKey: true` (ready — no key needed, e.g.
+ *   local Ollama).
  *
  * This mapper NEVER infers a provider from env-var presence and NEVER
  * mutates `raw` or `process.env` — it only READS env to resolve keys. It never
@@ -147,9 +150,15 @@ export function resolveModelConfig(raw?: ModelUserConfig): ResolvedModelConfig {
   if (rawProviders) {
     for (const [name, entry] of Object.entries(rawProviders)) {
       const apiKeyEnv = entry.apiKeyEnv;
-      // Anonymous provider (no apiKeyEnv) ⇒ no key to resolve; ready by default.
+      const authTokenEnv = entry.authTokenEnv;
+      // A keyed provider names at least one credential env var. It is ready
+      // when AT LEAST ONE of those vars holds a value — the model layer sends
+      // whichever resolved. Anonymous providers (neither named) need no
+      // credential, so they are ready by default.
       const apiKey = apiKeyEnv ? process.env[apiKeyEnv] : undefined;
-      const hasKey = apiKeyEnv ? apiKey !== undefined : true;
+      const authToken = authTokenEnv ? process.env[authTokenEnv] : undefined;
+      const keyed = Boolean(apiKeyEnv) || Boolean(authTokenEnv);
+      const hasKey = !keyed || apiKey !== undefined || authToken !== undefined;
 
       const resolved: ResolvedProviderConfig = { hasKey };
       if (entry.model !== undefined) resolved.model = entry.model;

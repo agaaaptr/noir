@@ -67,11 +67,13 @@ export interface CompleteRequest {
    */
   tier?: Tier;
   /**
-   * Base URL for an OpenAI-compatible endpoint (Ollama / LM Studio / vLLM),
-   * e.g. `http://localhost:11434/v1`. NOT caller-set: `complete()` forwards it
-   * from the resolved provider block (`cfg.providers[name].baseURL`) so the
-   * `openai-compatible` adapter — the only consumer — receives its endpoint. It
-   * is optional and ignored by the `anthropic` / `openai` (hosted) adapters.
+   * Base URL for the provider endpoint — a local OpenAI-compatible server
+   * (Ollama / LM Studio / vLLM, e.g. `http://localhost:11434/v1`) or a gateway
+   * host. NOT caller-set: `complete()` forwards it from the resolved provider
+   * block (`cfg.providers[name].baseURL`). The `openai-compatible` adapter
+   * requires it; the `anthropic` and `openai` adapters honor it when present
+   * (the `anthropic` adapter pins an explicit default host when absent so an
+   * ambient `ANTHROPIC_BASE_URL` can never leak in).
    */
   baseURL?: string;
   /**
