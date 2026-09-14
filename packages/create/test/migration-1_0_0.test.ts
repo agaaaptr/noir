@@ -41,9 +41,8 @@ const configPath = (): string => join(root, '.noir', 'config.yml');
 const configBody = (): string => readFileSync(configPath(), 'utf8');
 
 /** The maintainer's real shape: a project last scaffolded by 1.0.0-era Noir.
- *  The stamp is what puts the project INSIDE the migration window —
- *  `scaffold()` skips migrations entirely when `fromVersion === null` (M4), so
- *  a fixture without a stamp would exercise nothing. */
+ *  The stamp puts the project INSIDE the migration window at a known `from`
+ *  version. */
 function seedStaleProject(config = 'host: claude\nmode: full\n'): void {
   mkdirSync(join(root, '.noir'), { recursive: true });
   writeFileSync(configPath(), config, 'utf8');

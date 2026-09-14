@@ -348,9 +348,9 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   // `.noir/scaffold-version` stamp (1.3.0+) OR a `.noir/project.id` (pre-1.3.0
   // legacy). Previously a legacy project (id present, no stamp) re-scaffolded
   // on every bare init; now it no-ops too. `--upgrade` stays the explicit
-  // migration entry (M4 skips synthetic migrations when fromVersion === null);
-  // `--force` re-scaffolds without migrating. Both bypass this guard. sync is
-  // unaffected (it requires a valid project.id and emits the runtime subset).
+  // migration entry (a stamp-less legacy project runs the full chain from
+  // `0.0.0`); `--force` re-scaffolds without migrating. Both bypass this guard.
+  // sync is unaffected (it requires a valid project.id and emits the runtime subset).
   // dryRun returns the no-op shape silently so `noir doctor`/CI previews stay
   // clean.
   const hasIdentity = fromVersion !== null || idFile.state === 'valid';
@@ -387,13 +387,19 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     };
   }
 
-  // 4. Migrations (only when explicitly upgrading). M4: a fresh project
-  //    (`fromVersion === null`) has NO prior stamp → nothing to migrate. Skip
-  //    entirely so `noir init --upgrade` on a never-initialized tree reports
-  //    no migration steps at all.
+  // 4. Migrations (only when explicitly upgrading). A project with NO identity
+  //    at all — no scaffold-version stamp AND no valid project.id — is a fresh,
+  //    never-initialized tree: nothing to migrate, so skip entirely and report
+  //    no steps. A stamped project runs from its recorded version. A legacy
+  //    project (a valid project.id but no stamp) passes `null` through; the
+  //    runner treats `null` as `0.0.0`, so the full registered chain runs.
   const migrationsRan: string[] = [];
   const migrationConflicts: string[] = [];
-  if (opts.mode === 'init' && opts.upgrade === true && fromVersion !== null) {
+  if (
+    opts.mode === 'init' &&
+    opts.upgrade === true &&
+    (fromVersion !== null || idFile.state === 'valid')
+  ) {
     const m = runMigrations(opts.root, fromVersion, CURRENT_SCAFFOLD_VERSION, {
       dryRun: opts.dryRun === true,
     });

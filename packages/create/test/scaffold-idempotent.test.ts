@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { paths } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { scaffold } from '../src/scaffold.js';
-import { CURRENT_SCAFFOLD_VERSION } from '../src/scaffold-version.js';
+import { CURRENT_SCAFFOLD_VERSION, readScaffoldVersion } from '../src/scaffold-version.js';
 
 let root: string;
 beforeEach(() => {
@@ -144,10 +144,13 @@ describe('pre-1.3.0 legacy project (project.id present, no scaffold-version) no-
 
     const res = await scaffold({ root, mode: 'init', transport: 'stdio', upgrade: true });
     expect(res.noop).toBe(false);
-    // M4: fromVersion is null (no stamp) → migrations are skipped entirely (no
-    // chain to run from), but the runtime subset is still re-emitted.
+    // fromVersion is null (no stamp), but a valid project.id is identity: the
+    // runner treats `null` as `0.0.0`, so the full registered chain runs and the
+    // runtime subset is re-emitted in the same pass.
     expect(res.fromVersion).toBeNull();
-    expect(res.migrationsRan).toEqual([]);
+    expect(res.migrationsRan).toEqual(['1.0.0→1.0.0', '1.0.0→1.1.0']);
+    // The upgrade restamps current, so doctor stops reporting this project.
+    expect(readScaffoldVersion(root)).toBe(CURRENT_SCAFFOLD_VERSION);
   });
 
   it('a project with NO identity (no project.id AND no scaffold-version) still initializes', async () => {

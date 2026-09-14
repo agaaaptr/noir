@@ -47,7 +47,13 @@ import {
   readInstallRecord,
   readUpdateCache,
 } from '@noir-ai/core';
-import { CURRENT_SCAFFOLD_VERSION, readScaffoldVersion } from '@noir-ai/create';
+import {
+  CURRENT_SCAFFOLD_VERSION,
+  isStaleSeed,
+  loadTemplate,
+  readScaffoldVersion,
+  render,
+} from '@noir-ai/create';
 import { pidAlive, readProjectDaemonRecord } from '@noir-ai/daemon';
 import { resolveModelConfig } from '@noir-ai/model';
 import { PROBE_TIMEOUT_MS } from '../daemon-client.js';
@@ -549,6 +555,36 @@ function checkScaffoldVersion(
         : `${onDisk} (up to date)`;
   checks.push({ name: 'scaffold version', status, detail });
   return { onDisk, current, drift };
+}
+
+/**
+ * Doc-seed drift. `.noir/.env.example` is a committable documentation seed the
+ * scaffold writes once; a later release may change the text it ships. When the
+ * bytes on disk are still an exact copy of a seed an OLDER Noir recorded (the
+ * user never edited the file), doctor surfaces it the same way it surfaces a
+ * stale scaffold stamp: a `warn` row naming the file and the command that
+ * refreshes it. Absent, current, or user-edited files produce no row — the
+ * comparison is exact, so even a whitespace change is treated as the user's.
+ */
+function checkSeedDrift(checks: CheckResult[], root: string): void {
+  const seedPath = join(root, '.noir', '.env.example');
+  let bytes: string;
+  try {
+    bytes = readFileSync(seedPath, 'utf8');
+  } catch {
+    return; // absent — nothing to compare
+  }
+  // Render the current template exactly as the scaffold would. The env.example
+  // seed carries no `{{...}}` placeholder, so the rendered text is the raw
+  // template bytes and the empty context is byte-identical to a real render.
+  const currentRender = render(loadTemplate('env.example.tmpl'), {});
+  if (isStaleSeed('envExample', bytes, currentRender)) {
+    checks.push({
+      name: 'doc seed',
+      status: 'warn',
+      detail: `.noir/.env.example is an unedited copy of an older Noir — run \`noir init --upgrade\` to refresh it`,
+    });
+  }
 }
 
 /**
@@ -1136,6 +1172,7 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   checkProvider(checks, project, noirEnv.sources);
   checkNoirEnv(checks, root, noirEnv);
   const scaffold = checkScaffoldVersion(checks, root);
+  checkSeedDrift(checks, root);
   const rules = checkRulesMdBudget(checks, root, project);
   const host = checkHostArtifacts(checks, root, project);
   checkNestedNoir(checks, root);
