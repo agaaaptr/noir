@@ -7,6 +7,9 @@
  *  - {@link regenerate} / {@link managedBlock} / {@link skipIfExists} — the
  *    three-mode writer (low-level; the orchestrator is the usual entry point).
  *  - {@link render} — `{{var}}` template interpolation.
+ *  - {@link isStaleSeed} / {@link SEED_TEMPLATE_HISTORY} — shipped seed bytes
+ *    per past scaffold version, for deciding whether an upgrade may refresh a
+ *    seed the user never edited.
  *  - {@link detectStack} — read-only stack detection.
  *  - {@link readScaffoldVersion} / {@link writeScaffoldVersion} /
  *    {@link CURRENT_SCAFFOLD_VERSION} — scaffold-version stamp.
@@ -64,6 +67,11 @@ export {
 } from './scaffold-version.js';
 export { detectStack, type StackInfo } from './stack-detect.js';
 export { render } from './template.js';
+export {
+  isStaleSeed,
+  SEED_TEMPLATE_HISTORY,
+  type SeedTemplateHistoryEntry,
+} from './template-history.js';
 export { loadTemplate, templatesDir } from './template-loader.js';
 export {
   buildRegion,
