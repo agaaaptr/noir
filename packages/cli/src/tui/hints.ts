@@ -8,13 +8,25 @@
 
 /** The dashboard's idle footer hint (the App's keybinding manifest as text). */
 export const FOOTER_HINT =
-  '?/h/Ctrl+K palette · Ctrl+F find · ↑/↓ scroll · Enter run · q/Esc quit · Ctrl+C exit';
+  '?/h/Ctrl+K palette · Ctrl+F find · Ctrl+T transcripts · ↑/↓ scroll · Enter run · q/Esc quit · Ctrl+C exit';
 
 /** The hint shown while a dispatched command is in flight. */
 export const RUNNING_HINT = 'running… (Ctrl+C to force exit)';
 
 /** The palette/home list footer hint (navigate · run · close). */
 export const LIST_NAV_HINT = '↑/↓ navigate · Enter run · Esc close · Tab view';
+
+/** The run screen's hint while the host is streaming. */
+export const RUN_HINT = 'streaming — Esc cancels the host';
+
+/** The run screen's hint once Esc has asked the host to stop. */
+export const RUN_CANCEL_HINT = 'cancelling…';
+
+/** The transcript picker's list footer hint. */
+export const TRANSCRIPT_LIST_HINT = '↑/↓ choose · Enter open · Esc back';
+
+/** The transcript picker's reader footer hint. */
+export const TRANSCRIPT_READ_HINT = '↑/↓ scroll · Esc back to list · read-only';
 
 /** A single keybinding row for the `help` corpus. */
 export interface HelpEntry {
@@ -37,7 +49,9 @@ export const HELP_ENTRIES: readonly HelpEntry[] = [
   { keys: 'h', desc: 'palette — commands (quick actions + all commands)' },
   { keys: 'Ctrl+K', desc: 'palette — all commands (fuzzy search)' },
   { keys: 'Ctrl+F', desc: 'palette — find in the dispatched output' },
+  { keys: 'Ctrl+T', desc: 'transcripts — reopen a past run, read-only' },
   { keys: 'Tab', desc: 'switch between commands, output, and help' },
   { keys: 'y / n', desc: 'approve / decline a destructive command prompt' },
+  { keys: 'Esc (in a run)', desc: 'cancel the host and return to the dashboard' },
   { keys: 'Ctrl+C', desc: 'force exit' },
 ];

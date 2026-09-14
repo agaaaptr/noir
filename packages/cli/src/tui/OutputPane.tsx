@@ -18,6 +18,12 @@ interface OutputPaneProps {
   height?: number;
   /** Optional title for the pane (shown as a dim header line). */
   title?: string;
+  /**
+   * Show the NEWEST lines rather than the oldest — for output still arriving,
+   * where the interesting end is the one still being written. `scrollOffset` is
+   * ignored while this is set.
+   */
+  followTail?: boolean;
 }
 
 interface Row {
@@ -50,6 +56,7 @@ export function OutputPane({
   scrollOffset,
   height = 12,
   title,
+  followTail = false,
 }: OutputPaneProps): ReactElement {
   // Content width already accounts for the parent panel's border + padding
   // (see contentWidth()). Truncating to this (not the full terminal width)
@@ -61,9 +68,11 @@ export function OutputPane({
   }
 
   // Clamp the offset into range so a stale value (e.g. after the content
-  // shrinks) never produces a blank pane.
+  // shrinks) never produces a blank pane. A live pane pins to the bottom
+  // instead: the newest line is the one being written, and it is what the user
+  // is watching for.
   const maxOffset = Math.max(0, lines.length - height);
-  const offset = Math.min(Math.max(0, scrollOffset), maxOffset);
+  const offset = followTail ? maxOffset : Math.min(Math.max(0, scrollOffset), maxOffset);
   const rows = toRows(lines.slice(offset, offset + height));
 
   return (

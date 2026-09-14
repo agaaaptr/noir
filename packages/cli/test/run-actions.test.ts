@@ -66,6 +66,7 @@ vi.mock('../src/daemon-client.js', async (importOriginal) => {
 
 import { createProgram } from '../src/bin.js';
 import { handleError } from '../src/output.js';
+import { postRunActions } from '../src/run-actions.js';
 
 /** Force a stream's TTY answer, returning the undo. */
 function setTty(stream: NodeJS.WriteStream, value: boolean): () => void {
@@ -458,5 +459,36 @@ describe('noir run — post-run actions', () => {
       expect(textOf('err').split('failed (exit 1)').length - 1).toBe(1);
       expect(textOf('err')).toContain('did not complete');
     });
+  });
+});
+
+// The action set is one definition with two surfaces. The terminal prompt
+// collects a follow-up prompt itself, so it can continue whenever the host
+// reported a session id. A surface that continues in place — the dashboard's
+// run screen starts another turn on the same screen — has no seam to hand over,
+// and says so with `canContinue` instead.
+describe('the shared action set', () => {
+  const base = { answer: ANSWER, transcript: '/tmp/t.jsonl', host: 'claude', opts: {} };
+
+  it('offers a continuation when the surface continues it itself', () => {
+    const values = postRunActions({ ...base, sessionId: 's1', canContinue: true }).map(
+      (o) => o.value,
+    );
+    expect(values).toContain('resume');
+  });
+
+  it('drops the continuation when the surface says there is none', () => {
+    const values = postRunActions({
+      ...base,
+      sessionId: 's1',
+      canContinue: false,
+      resume: async () => {},
+    }).map((o) => o.value);
+    expect(values).not.toContain('resume');
+  });
+
+  it('offers nothing to save for a run that produced no answer', () => {
+    const values = postRunActions({ ...base, answer: '   ' }).map((o) => o.value);
+    expect(values).toEqual(['handoff', 'dismiss']);
   });
 });

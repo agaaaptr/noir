@@ -179,7 +179,7 @@ That's the whole loop. You don't drive the gates by hand — you talk to the hos
 You don't need to memorize every subcommand:
 
 - **Bare `noir`** (no arguments) opens a **grouped home menu** — a section picker (Status &amp; context / Memory / Workflow / Setup &amp; maintenance / Dashboard (full-screen)) then per-section action lists with hints and destructive-action confirmation. Use `↑/↓` to move and `Enter` to select; `Esc` steps back / cancels.
-- **`noir tui`** opens the **Ink dashboard** — live status, `/command` input, and one command surface (the palette): `Ctrl+K` all commands, `h` quick actions, `?` keybindings, `Ctrl+F` find-in-output, `Tab` to switch the palette view.
+- **`noir tui`** opens the **Ink dashboard** — live status, `/command` input, and one command surface (the palette): `Ctrl+K` all commands, `h` quick actions, `?` keybindings, `Ctrl+F` find-in-output, `Ctrl+T` recent transcripts, `Tab` to switch the palette view. A `/run <prompt>` runs the host **live in the pane** instead of headless (see below).
 - **`noir palette`** opens the fuzzy command palette directly (type to filter, `↑/↓` to choose, `Enter` to run). A command that cannot run without a value (`context search`, `daemon join`, `run`, …) asks for it on the same input line — type it and press `Enter`, or `Esc` to go back to the filter.
 
 From the home menu, select **Dashboard** to launch the TUI, or **All commands** to open the fuzzy palette. The curated quick actions live inside the palette (`h`) rather than a separate home screen.
@@ -252,6 +252,15 @@ A raw stream-json transcript is always persisted to `.noir/transcripts/`.
   is a human diagnostic and appears only on screen, never inside the `--json`
   envelope, whose `error.message` stays a single concise sentence. The full
   output is always in the transcript.
+- **In the dashboard.** `noir tui`'s `/run <prompt>` opens a **live run screen**
+  rather than a headless one: the answer streams into the pane as the host
+  writes it, every tool call it starts is listed, and the status bar tracks the
+  model, the elapsed time and the running token totals. `Esc` asks the host to
+  stop (`SIGTERM`) and the screen returns to the dashboard once it has — a
+  `run` carrying flags (`--json`, `--profile`, `--command`) still dispatches as a
+  normal captured command. A successful run offers the same post-run actions as
+  an overlay; a failed or cancelled one offers nothing. `Ctrl+T` lists the
+  recent `.noir/transcripts/` entries and reopens one read-only.
 
 ## Configuration
 

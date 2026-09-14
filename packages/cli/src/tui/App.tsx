@@ -10,10 +10,12 @@
 //
 // Screens (the {@link Mode} union): `dashboard` (default), `palette` (the single
 // command surface — corpus `commands` | `output` | `help`, opened by Ctrl+K /
-// Ctrl+F / h / ? and cycled with Tab), and `confirm` (the `y/N` gate before a
+// Ctrl+F / h / ? and cycled with Tab), `confirm` (the `y/N` gate before a
 // destructive dispatch — now covering EVERY dispatch path, typed /command
-// included). Every selection funnels through {@link handleRun}, so destructive
-// commands always pause at the confirm overlay.
+// included), `run` (the live host-run screen) and `transcripts` (the read-only
+// transcript picker). Every selection funnels through {@link handleRun}, so
+// destructive commands always pause at the confirm overlay — and the two
+// self-contained screens own their own keyboards rather than routing keys here.
 
 import { Box, type Key, Text, useApp, useInput } from 'ink';
 import { type ReactElement, useEffect, useMemo, useState } from 'react';
@@ -21,12 +23,14 @@ import type { StatusPayload } from '../commands/status.js';
 import { c, divider } from '../theme.js';
 import { CommandInput } from './CommandInput.js';
 import { captureProcessOutput } from './capture.js';
-import { isDestructive } from './commands/registry.js';
+import { isDestructive, runPromptFrom } from './commands/registry.js';
 import { type HomeSection, resolveSections } from './commands/sections.js';
 import { Footer } from './Footer.js';
 import { formatStatusPayload } from './format.js';
 import { Header } from './Header.js';
 import { useInputBuffer } from './hooks/useInputBuffer.js';
+import { type RunDeps, RunMode } from './modes/run.js';
+import { TranscriptPicker } from './modes/transcripts.js';
 import { OutputPane } from './OutputPane.js';
 import { ConfirmOverlay } from './overlays/ConfirmOverlay.js';
 import { Panel } from './Panel.js';
@@ -69,6 +73,13 @@ export interface TuiDeps {
    * section. Optional — when absent, defaults to the on-disk history loader.
    */
   loadRecent?: () => Promise<readonly PaletteCommand[]>;
+  /**
+   * The host-run seams (spawn, post-run actions, transcripts). Optional: with
+   * it absent a `run` command dispatches like any other and its output is
+   * captured into the pane, which is what every other caller and every older
+   * test expects.
+   */
+  run?: RunDeps;
 }
 
 /** Optional initial state for tests (the live entry leaves these at defaults). */
@@ -97,7 +108,9 @@ export interface AppProps {
 export type Mode =
   | { kind: 'dashboard' }
   | { kind: 'palette'; corpus: Corpus; collecting?: ArgCollection }
-  | { kind: 'confirm'; argv: string[] };
+  | { kind: 'confirm'; argv: string[] }
+  | { kind: 'run'; prompt: string }
+  | { kind: 'transcripts' };
 
 /**
  * A command waiting for its argument: the argv to dispatch once one is typed,
@@ -261,6 +274,21 @@ export function App({
       setMode({ kind: 'confirm', argv: [...argv] });
       return;
     }
+    enterRunOrDispatch(argv);
+  }
+
+  /**
+   * The `run <prompt>` command has two homes. When the run seams are wired, it
+   * opens the live run screen (the host streams into the pane). Otherwise — and
+   * for every other command, and for a `run` that carries flags — it is an
+   * ordinary dispatch whose output is captured into the pane.
+   */
+  function enterRunOrDispatch(argv: readonly string[]): void {
+    const prompt = deps.run === undefined ? null : runPromptFrom(argv);
+    if (prompt !== null) {
+      setMode({ kind: 'run', prompt });
+      return;
+    }
     dispatchCmd([...argv]);
     void recordRuns([...argv]);
     pushHistory(`/${argv.join(' ')}`);
@@ -344,6 +372,10 @@ export function App({
       }
       if (input === 'f' && output !== null) {
         openOutputSearch();
+        return;
+      }
+      if (input === 't' && deps.run?.transcripts !== undefined) {
+        setMode({ kind: 'transcripts' });
         return;
       }
       return;
@@ -501,10 +533,9 @@ export function App({
     }
     if (input === 'y' || input === 'Y') {
       if (mode.kind !== 'confirm') return;
-      dispatchCmd([...mode.argv]);
-      void recordRuns([...mode.argv]);
-      pushHistory(`/${mode.argv.join(' ')}`);
-      setMode({ kind: 'dashboard' });
+      // The confirmed argv goes through the same run-or-dispatch split as an
+      // unconfirmed one: `y` approves the run, it does not choose how it runs.
+      enterRunOrDispatch(mode.argv);
     }
   }
 
@@ -519,6 +550,12 @@ export function App({
         return;
       case 'confirm':
         handleConfirmInput(input, key);
+        return;
+      case 'run':
+      case 'transcripts':
+        // These screens own their keyboard: the run screen takes Esc to cancel
+        // a host, the picker takes arrows to browse. Routing their keys here as
+        // well would give one keystroke two meanings.
         return;
     }
   });
@@ -601,6 +638,26 @@ export function App({
         <ConfirmOverlay argv={mode.argv} />
         <Footer running={false} />
       </Box>
+    );
+  }
+
+  if (mode.kind === 'run' && deps.run !== undefined) {
+    return (
+      <RunMode
+        prompt={mode.prompt}
+        deps={deps.run}
+        onExit={(notice) => {
+          if (notice !== undefined) setNotice(notice);
+          setMode({ kind: 'dashboard' });
+        }}
+      />
+    );
+  }
+
+  const transcripts = deps.run?.transcripts;
+  if (mode.kind === 'transcripts' && transcripts !== undefined) {
+    return (
+      <TranscriptPicker transcripts={transcripts} onExit={() => setMode({ kind: 'dashboard' })} />
     );
   }
 

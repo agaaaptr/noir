@@ -366,8 +366,14 @@ export function mergeEnv(
   return Object.fromEntries(Object.entries(merged).filter(([, v]) => v !== undefined));
 }
 
-/** Persist the raw stream-json lines to `.noir/transcripts/<host>-<ts>.jsonl`. */
-function writeTranscript(host: string, lines: readonly string[]): string {
+/**
+ * Persist the raw stream-json lines to `.noir/transcripts/<host>-<ts>.jsonl`.
+ * Exported because the TUI's run screen persists a run the same way, and the
+ * directory mode / file mode / best-effort rules below are the whole contract
+ * for a transcript on disk — a second implementation would be a second answer
+ * to "who can read this file".
+ */
+export function writeTranscript(host: string, lines: readonly string[]): string {
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
   const dir = join(process.cwd(), '.noir', 'transcripts');
   const file = join(dir, `${host}-${ts}.jsonl`);

@@ -56,6 +56,21 @@ export function isDestructive(argv: readonly string[]): boolean {
   });
 }
 
+/**
+ * The prompt an argv carries, when it is a plain `run <prompt>` the run screen
+ * can take over, or `null` when it is not. A run with a flag (`--profile`,
+ * `--json`, `--list-profiles`) stays on the ordinary dispatch path: those are
+ * one-shot invocations with their own output discipline, not the live screen.
+ */
+export function runPromptFrom(argv: readonly string[]): string | null {
+  if (argv[0] !== 'run') return null;
+  const rest = argv.slice(1);
+  if (rest.length === 0) return null; // bare `run` is a usage error, reported by the CLI
+  if (rest.some((token) => token.startsWith('-'))) return null;
+  const prompt = rest.join(' ').trim();
+  return prompt.length > 0 ? prompt : null;
+}
+
 /** Capitalize the first character of `s`, leaving the rest untouched. */
 function capitalizeFirst(s: string): string {
   if (s.length === 0) return s;
