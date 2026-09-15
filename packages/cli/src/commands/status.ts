@@ -1,18 +1,18 @@
-// S9 t4 — `noir status [--json]`.
+// `noir status [--json]`.
 //
 // Aggregates a project + daemon + store + context + workflow + memory snapshot.
 // Project info (id/name/host/version) is assembled IN-PROCESS from
 // `loadProjectInfo` + `NOIR_VERSION` — no daemon round-trip just to name the
 // project. Daemon state comes from a read-only {@link probeDaemon} (liveness
 // probe of `~/.noir/daemon.json` + pid + GET /health) that NEVER starts a daemon
-// (spec F2 amendment: `status` is probe-only and works daemon-down — a down
+// (deliberate: `status` is probe-only and works daemon-down — a down
 // daemon is reported honestly + exit 0, never auto-started). When the probe finds
 // a running daemon, the optional count tools are fetched over one connection via
 // {@link withRunningDaemon} (which reuses the running daemon and also never
 // starts one); if the daemon is down, those sections are simply `null` and the
 // snapshot still renders.
 //
-// Graceful degradation (spec F2 / "some engines optional"): every count tool —
+// Graceful degradation (every engine is optional): every count tool —
 // `host_status` (enriches `daemon.transport`), `store_status`, `context_status`,
 // `workflow_status`, `memory_sessions` — is wrapped in {@link tryTool} and
 // contributes `null` when absent or when its engine is not wired. One missing
@@ -28,7 +28,7 @@
 // `status` is probe-only — in-process read fallback for the active commands is
 // deferred to v1.x.
 //
-// Stream discipline (S9): `--json` emits the versioned `{ok,data}` envelope
+// Stream discipline: `--json` emits the versioned `{ok,data}` envelope
 // to STDOUT (the only stdout write); the human table + banner go to STDERR via
 // the centralized `table()` / `log()` helpers (auto-stripped under NO_COLOR /
 // non-TTY / --json).
@@ -309,7 +309,7 @@ function renderHuman(p: StatusPayload, opts: CliOptions): void {
     ],
     opts,
   );
-  // Resume hint (c4-surface-wiring S2): when a resumable (non-terminal) task is
+  // Resume hint: when a resumable (non-terminal) task is
   // present, surface the resume command git-status-style. `--no-tips`/`--json`
   // silence it (renderHuman is only called when !json; tip() honors --no-tips).
   if (p.workflow && p.workflow.state !== 'done' && p.workflow.state !== 'abandoned') {
@@ -401,7 +401,7 @@ export async function status(opts: StatusOptions): Promise<void> {
 
   const payload = await gatherStatusPayload(opts);
   if (opts.json === true) {
-    // Single stdout write — the versioned S9 F11 success envelope.
+    // Single stdout write — the versioned success envelope.
     process.stdout.write(`${JSON.stringify({ ok: true, data: payload })}\n`);
     return;
   }

@@ -1,6 +1,6 @@
-// S9 t2 — centralized output + exit-code infrastructure for `@noir-ai/cli`.
+// Centralized output + exit-code infrastructure for `@noir-ai/cli`.
 //
-// Stream discipline (S9): machine-readable data → stdout; every other
+// Stream discipline: machine-readable data → stdout; every other
 // diagnostic (progress, warnings, errors, tables, help) → stderr. Under `--json`
 // the decorated stderr helpers are silenced so stdout stays pristine JSON, and
 // `fail()` emits a structured `{ok:false,error}` envelope to stdout instead.
@@ -9,7 +9,7 @@
 // `--quiet`, `CI`, `NO_COLOR`, or a non-TTY, so the same code path is safe in an
 // interactive shell, a pipe, and CI.
 //
-// Exit codes (S9): 0 ok · 1 error · 2 usage · 3 not-found · 4 daemon-down ·
+// Exit codes: 0 ok · 1 error · 2 usage · 3 not-found · 4 daemon-down ·
 // 5 cancelled. These constants live HERE (the single source of truth); bin.ts
 // re-exports them so existing imports from `./bin.js` keep working.
 
@@ -33,7 +33,7 @@ export const EXIT = {
 export type ExitCode = (typeof EXIT)[keyof typeof EXIT];
 
 /**
- * Application-level CLI error carrying an S9 exit code. Thrown directly by
+ * Application-level CLI error carrying a contracted exit code. Thrown directly by
  * bin.ts for legacy usage paths; `fail()` is the ergonomic throw helper.
  * `inferExitCode` / `handleError` map it onto `process.exitCode`.
  */
@@ -50,7 +50,7 @@ export class NoirCliError extends Error {
  * The `code` stamped onto every CommanderError our own `fail()` throws, so
  * `inferExitCode` can tell "we threw this on purpose with an authoritative
  * exitCode" apart from "commander threw this for help/usage/unknown-command"
- * (which must be remapped onto the S9 contract by `commanderExitCode`).
+ * (which must be remapped onto the CLI exit-code contract by `commanderExitCode`).
  */
 const NOIR_ERROR_CODE = 'noir.error';
 
@@ -417,7 +417,7 @@ export function spinner(text = '', opts: CliOptions = {}): Spinner {
 // ---------------------------------------------------------------------------
 
 /**
- * Write a diagnostic and throw a `CommanderError` carrying the S9 exit code,
+ * Write a diagnostic and throw a `CommanderError` carrying the given exit code,
  * so bin.ts's `exitOverride` + `handleError` surface it as `process.exitCode`
  * without any mid-action `process.exit`. Under `--json` the message becomes a
  * structured `{ok:false,error}` envelope on STDOUT; otherwise plain text on
@@ -433,7 +433,7 @@ export function fail(exitCode: number, message: string, opts: CliOptions = {}): 
 }
 
 /**
- * Guard for commands that would otherwise block on a prompt. Honors the S9
+ * Guard for commands that would otherwise block on a prompt. Honors the
  * hard rule: "no blocking prompts when !isTTY or --no-input — error exit 2
  * naming the missing flag instead". `hint` describes the operation so the
  * message points the user at the flag-based alternative.
@@ -448,7 +448,7 @@ export function requireInteractive(opts: CliOptions, hint: string): void {
   }
 }
 
-// Remap commander's own exit codes onto the S9 contract:
+// Remap commander's own exit codes onto the CLI exit-code contract:
 //   help/version → 0 · unknown command → 3 · every other usage error → 2
 function commanderExitCode(err: CommanderError): number {
   switch (err.code) {
@@ -463,7 +463,7 @@ function commanderExitCode(err: CommanderError): number {
   }
 }
 
-/** Map any thrown value onto the S9 exit-code contract. */
+/** Map any thrown value onto the CLI exit-code contract. */
 export function inferExitCode(err: unknown): number {
   if (err instanceof NoirCliError) return err.exitCode;
   if (err instanceof CommanderError) {

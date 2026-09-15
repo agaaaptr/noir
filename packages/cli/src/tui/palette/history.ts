@@ -1,4 +1,4 @@
-// C3 — palette command-history persistence.
+// Palette command-history persistence.
 //
 // The palette shows the user's recently-run commands above the full list on an
 // empty query. That recency data lives on disk so it survives sessions. The file

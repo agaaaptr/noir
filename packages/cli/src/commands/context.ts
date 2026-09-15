@@ -1,8 +1,8 @@
-// S9 — `noir context {search,index,status}`.
+// `noir context {search,index,status}`.
 //
-// Thin MCP-client commands over the running daemon's S6 context engine. Every
+// Thin MCP-client commands over the running daemon's context engine. Every
 // read/write here is a single `callDaemonTool` round-trip; the daemon is the
-// sole writer (blueprint §2), so the CLI never opens the store in-process. If
+// sole writer of the store, so the CLI never opens the store in-process. If
 // the daemon can't be reached, `callDaemonTool` maps the failure onto exit 4
 // (DAEMON_DOWN) with the stable remediation hint — see daemon-client.ts.
 //
@@ -12,7 +12,7 @@
 // cleanly, so this module surfaces it honestly as exit 1 (ERROR) with the
 // daemon's message, rather than re-packaging it as daemon-down.
 //
-// Stream discipline (S9): `--json` emits the versioned `{ok:true,data}`
+// Stream discipline: `--json` emits the versioned `{ok:true,data}`
 // envelope to STDOUT (the only stdout write); human tables / snippets go to
 // STDERR via the centralized `table()` / `log()` helpers (auto-stripped under
 // NO_COLOR / non-TTY / --json). `--limit` is coerced here; an invalid value is a
@@ -160,12 +160,12 @@ export interface ContextSearchOptions extends ContextOptions {
 
 /**
  * Run `context_search` against the daemon when it is up, or fall back to the
- * IN-PROCESS read-only engine when the daemon probe reports it down (S9 DS-5).
+ * IN-PROCESS read-only engine when the daemon probe reports it down.
  *
  * A daemon-down probe is a READ degradation, not a write failure: the read-only
  * store keeps working, so instead of exit 4 the search runs against a fresh
  * in-process {@link withInProcessRead} ContextEngine over the same project
- * store (BM25-only when the embedder is unavailable — F8). Writes (`context
+ * store (BM25-only when the embedder is unavailable). Writes (`context
  * index`) keep the daemon-required exit-4 path. When the daemon IS up, the
  * probe result is ignored and the normal daemon round-trip proceeds unchanged
  * (the probe only ever short-circuits on a CONFIRMED down).
@@ -264,7 +264,7 @@ export interface ContextIndexOptions extends ContextOptions {
 
 export async function contextIndex(opts: ContextIndexOptions): Promise<void> {
   // force:true → the daemon drops every indexed chunk + vector and re-indexes
-  // the registered roots from scratch (spec F1); otherwise the content-hash
+  // the registered roots from scratch; otherwise the content-hash
   // incremental walk. Omit the key entirely when not forced so the incremental
   // contract (and any daemon defaulting) stays unambiguous on the wire.
   const args: Record<string, unknown> =

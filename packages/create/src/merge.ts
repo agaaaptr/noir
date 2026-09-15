@@ -1,4 +1,4 @@
-// SP-D follow-up — three-way merge for managed-block regions.
+// Three-way merge for managed-block regions.
 //
 // When a user hand-edits the INSIDE of a `<!-- noir:* -->` managed region and a
 // later `noir init`/`sync` updates the template, this merges (base/ours/theirs)

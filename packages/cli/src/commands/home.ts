@@ -1,6 +1,6 @@
-// S9 t4 + home-consolidation — `noir` (bare) home menu.
+// `noir` (bare) home menu.
 //
-// The interactive entry point. Dispatch rules (spec F1 / AC1 / task t4):
+// The interactive entry point. Dispatch rules:
 //   • interactive (TTY && !CI && !NO_COLOR && !--json && !--no-input) → the
 //     @clack/prompts grouped home menu (intro + sections + quick actions),
 //     dispatching the chosen action through the SAME commander program the bin
@@ -12,7 +12,7 @@
 //     even when the daemon is down, so bare `noir` in CI / a pipe is a useful
 //     no-op snapshot instead of a noisy failure or a help dump.
 //
-// Home-consolidation (S2): the interactive arm is a two-level grouped menu —
+// The interactive arm is a two-level grouped menu —
 // a section picker (select, arrow-navigable) then per-section action lists
 // (select with per-option hints). Navigation is smooth: Esc / backspace /
 // ← return to the section picker, → jumps to the next section, ← to the

@@ -1,4 +1,4 @@
-// Workspace daemon HTTP server — the cross-repo multiplexer (spec §6).
+// Workspace daemon HTTP server — the cross-repo multiplexer.
 //
 // Unlike `startHttpServer` (one project, one store), a workspace daemon serves
 // MANY projects over one Streamable HTTP endpoint. It opens:
@@ -10,7 +10,7 @@
 // single writer per DB: the workspace store is opened once here, and each member
 // store is opened once per member (no second process holds a write handle).
 //
-// Transport auth (spec 6.1, §6.3) mirrors the project daemon: one bearer token
+// Transport auth mirrors the project daemon: one bearer token
 // per serve lifecycle, regenerated on every start, scoped to the WORKSPACE NAME
 // (the identity keying this daemon's record — a projectId is meaningless here,
 // since a workspace spans projects). `/mcp` requires it and answers 401 without
@@ -150,7 +150,7 @@ export async function startWorkspaceHttpServer(
   const { name } = opts;
   const startedAt = Date.now();
   const pid = process.pid;
-  // One token per serve lifecycle (spec 6.1): a fresh secret per start, so a
+  // One token per serve lifecycle: a fresh secret per start, so a
   // token can never outlive the process that issued it (a restarted daemon
   // invalidates every previously handed-out token). Generated before the server
   // accepts a request; written to disk after listen, below. The scope key is the
@@ -246,7 +246,7 @@ export async function startWorkspaceHttpServer(
       return;
     }
     if (req.url === '/mcp' || req.url?.startsWith('/mcp?')) {
-      // Auth on the HTTP transport only (spec 6.1, §6.3) and AHEAD of the
+      // Auth on the HTTP transport only and AHEAD of the
       // membership check: an unauthenticated caller must not learn whether a
       // given projectId is a member of this workspace (401 before 403).
       // `/health` stays token-free — `probeWorkspaceDaemon` depends on it — but

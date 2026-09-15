@@ -1,18 +1,18 @@
-// S9 — `noir memory {recall,save,sessions,forget,consolidate}`.
+// `noir memory {recall,save,sessions,forget,consolidate}`.
 //
 // Thin MCP-client commands over the running daemon's memory engine. Each is
 // a `callDaemonTool` round-trip (or `withDaemon` when capability discovery is
 // needed); the daemon owns the sole store handle, so the CLI never opens it
 // in-process. Daemon-unreachable ⇒ exit 4 (DAEMON_DOWN) from daemon-client.
 //
-// Scriptability (S9 hard rule): `memory save --content` may be supplied by
+// Scriptability (hard rule): `memory save --content` may be supplied by
 // flag; only when it's missing AND the session is interactive do we prompt via
 // @clack (lazy-imported so non-interactive paths never load it). Missing
 // content under non-interactive / --no-input / --json / CI / NO_COLOR ⇒ exit 2
 // (USAGE) naming the missing flag — NO blocking prompt on a pipe. A cancel at
 // the prompt ⇒ exit 5 (CANCELLED).
 //
-// `memory consolidate` is opt-in + provider-explicit (blueprint D5/D6): the
+// `memory consolidate` is opt-in + provider-explicit: the
 // daemon registers the `memory_consolidate` tool ONLY when the user set
 // `memory.consolidation.enabled: true` AND a provider+model resolved. Calling a
 // tool the daemon doesn't register would mis-map onto exit 4 (daemon-down), so
@@ -56,7 +56,7 @@ export interface MemoryOptions extends CliOptions, DaemonClientOptions {}
 /**
  * Resolve this repo's workspace membership (marker → routing + project), or
  * `null` when it is not joined. Memory commands route to the WORKSPACE daemon
- * when joined (spec §6); context/workflow/task stay per-project.
+ * when joined; context/workflow/task stay per-project.
  */
 function resolveWorkspace(): {
   routing: WorkspaceRouting;
@@ -233,8 +233,9 @@ export interface MemoryRecallOptions extends MemoryOptions {
 /**
  * Run `memory_recall` against the daemon when it is up, or fall back to the
  * IN-PROCESS read-only memory engine when the daemon probe reports it down
- * (S9 DS-5). Reads degrade to the read-only store (never exit 4); writes
- * (`memory save` / `forget` / `consolidate`) keep the daemon-required path.
+ * (the daemon-down read fallback). Reads degrade to the read-only store
+ * (never exit 4); writes (`memory save` / `forget` / `consolidate`) keep the
+ * daemon-required path.
  * The probe is conservative (mirrors contextSearch): only a CONFIRMED
  * `{running:false}` engages the fallback; an unavailable probe defaults to the
  * daemon path.
@@ -412,7 +413,7 @@ function renderObservation(obs: Record<string, unknown>, opts: CliOptions): void
 }
 
 // ---------------------------------------------------------------------------
-// `noir memory capture [file]` — manual transcript/notes distill (S9)
+// `noir memory capture [file]` — manual transcript/notes distill
 // ---------------------------------------------------------------------------
 export interface MemoryCaptureOptions extends MemoryOptions {
   /** A transcript/notes file to distill (or pipe stdin). */

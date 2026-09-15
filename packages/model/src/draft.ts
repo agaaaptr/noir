@@ -1,9 +1,9 @@
-// draft.ts — bounded PRD drafting helper (debt-batch A, slice P).
+// draft.ts — bounded PRD drafting helper.
 //
 // The PRD is the pre-SDD product artifact (`.noir/prd/PRD-<NNNN>-<taskId>-<slug>.md`) the
 // spec later `@import`s. This helper drafts it from the intake + clarification
-// Q&A + retrieved memory via ONE bounded `complete()` call (blueprint D5 —
-// single-shot, no tools/stream, provider-EXPLICIT). It mirrors the structure
+// Q&A + retrieved memory via ONE bounded `complete()` call (single-shot, no
+// tools/stream, provider-EXPLICIT). It mirrors the structure
 // the `noir-prd` skill documents (Problem · Evidence · Audience · Success
 // Criteria · Appetite/Mode · Proposed Direction · No-gos · Rabbit holes · Open
 // Questions) so a model-drafted PRD drops cleanly into the artifact the skill
@@ -20,7 +20,7 @@
 // sink can distinguish them).
 //
 // `draftSpec` (the sibling this mirrors) does NOT exist yet in @noir-ai/model —
-// slice P ships `draftPrd` first because the PRD is the new artifact kind; the
+// the PRD draft helper ships first because the PRD is the new artifact kind; the
 // spec draft helper lands later and will follow the SAME shape (single bounded
 // `complete()` call, `string | null`, section template constant).
 
@@ -42,8 +42,8 @@ export interface DraftPrdInput {
 }
 
 /**
- * Options for a PRD draft call. `provider` + `model` are EXPLICIT (blueprint D5
- * — the provider is never inferred from env-var presence). `signal`
+ * Options for a PRD draft call. `provider` + `model` are EXPLICIT — the
+ * provider is never inferred from env-var presence. `signal`
  * bounds wall-clock further; there is never a stream to cancel.
  */
 export interface DraftPrdOptions {
@@ -159,7 +159,7 @@ const PRD_SYSTEM_PROMPT =
  *  - the drafted PRD text on success (`{ ok: true }` from `complete()`);
  *  - `null` when no provider/key is configured OR an attempted call failed —
  *    callers substitute {@link PRD_FALLBACK_TEMPLATE} in both cases (the offline
- *    path is first-class; blueprint D5).
+ *    path is first-class).
  *
  * Never throws — `complete()`'s adapter try/catch surfaces failures as
  * `{ ok: false, reason }`, which this helper collapses to `null` (a missed

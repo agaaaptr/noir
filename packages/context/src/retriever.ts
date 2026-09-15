@@ -1,6 +1,6 @@
-// Hybrid retriever for @noir-ai/context (slice S6, task t7).
+// Hybrid retriever for @noir-ai/context.
 //
-// Pipeline (spec F6, §8 "Query → BM25+vec → RRF → budget → snippets"):
+// Pipeline (query → BM25 + vector kNN → RRF → token budget → snippets):
 //   search(query)
 //     │
 //     ├─ store.searchFt(query, {limit, source})        → FtsHit[]  (BM25, with
@@ -14,12 +14,12 @@
 //     │                                                  BM25+cosine scores)
 //     │
 //     ├─ enrich each fused id:
-//     │    • BM25 hit      → reuse FtsHit.snippet VERBATIM (F7 — never truncate);
+//     │    • BM25 hit      → reuse FtsHit.snippet VERBATIM (never truncate);
 //     │                       path/parentDocId backfilled from docs.meta (ChunkMeta)
 //     │    • kNN-only hit   → window-extract a snippet from `readDoc(id)` (the
 //     │                       chunk's content) — vec0 carries no meta column, so
 //     │                       without a hydrator the hit degrades to an empty
-//     │                       snippet but KEEPS ITS RANK (F8 spirit: never crash,
+//     │                       snippet but KEEPS ITS RANK (never crash,
 //     │                       never drop a ranked semantic hit on a missing window)
 //     │
 //     ├─ collapse duplicate parentDocId (keep the top-scoring chunk per parent —
@@ -32,7 +32,7 @@
 //          zero results for one large hit). truncated:true iff the budget cut
 //          exhausted before the budget.
 //
-// Degradation (F8): when the embedder is unavailable — `kind:'none'`, a native
+// Degradation: when the embedder is unavailable — `kind:'none'`, a native
 // load failure, a provider error, OR `knn()` itself threw — `search` falls back
 // to BM25-only and the payload carries `degraded:true, mode:'bm25-only'`. The
 // embedder signals unavailability by throwing from `embed()` (the `'none'`
@@ -49,7 +49,7 @@
 // hybrid snippet quality. `'hybrid'` is reserved for the case where both legs
 // ran AND every hit got a real windowed snippet.
 //
-// Hard rules honored (see the slice brief):
+// Hard rules honored:
 //   • Reuses the existing Store API only — no getDoc added, no schema migration.
 //   • RRF k=60 RANK-BASED (no score normalization; raw scores never summed).
 //   • BM25 snippets reused verbatim (never truncated); kNN windows are prefix
@@ -83,7 +83,7 @@ import type {
  */
 export const DEFAULT_SEARCH_LIMIT = 10;
 
-/** Default token budget for the greedy packer (spec §6 / config `budgetTokens`). */
+/** Default token budget for the greedy packer (config `budgetTokens`). */
 export const DEFAULT_BUDGET_TOKENS = 4096;
 
 /**
@@ -126,7 +126,7 @@ export interface RetrieverOptions {
    * hit cannot be windowed. When provided and it hits, the chunk's content is
    * prefix-windowed with `<<query-term>>` highlights (mirroring FTS5). When
    * omitted or it misses, the hit is emitted with an empty snippet — degraded
-   * but ranked (F8) — AND the search result's `mode` becomes `'knn'` so the
+   * but ranked — AND the search result's `mode` becomes `'knn'` so the
    * caller can tell the snippet quality is degraded. The engine
    * wires this from the indexer's `readChunkContent` when a content source
    * exists.
@@ -148,7 +148,7 @@ export interface SearchOptions {
 export interface RetrieverDeps {
   /** The store handle (the daemon's single-writer handle, or a read-only one). */
   store: Store;
-  /** Query/chunk embedder. A throw on `embed(query)` ⇒ BM25-only fallback (F8). */
+  /** Query/chunk embedder. A throw on `embed(query)` ⇒ BM25-only fallback. */
   embed: EmbedFn;
   /** Tunables + the optional kNN-only hydrator. */
   opts?: RetrieverOptions;
@@ -326,7 +326,7 @@ function packBudget(hits: ReadonlyArray<RetrieverHit>, budgetTokens: number): Pa
  *
  * The retriever owns no state beyond its configured tunables; every `search`
  * call is independent and side-effect-free (read-only against the store). It is
- * the ONLY read path for context — `context_search` (t9) delegates here. Write
+ * the ONLY read path for context — `context_search` delegates here. Write
  * (`indexDoc`/`upsertVec`) stays with the indexer/engine; the retriever never
  * mutates the store.
  */
@@ -359,7 +359,7 @@ export function createRetriever(deps: RetrieverDeps): Retriever {
         ftsFailed = true;
       }
 
-      // --- kNN leg (attempted; any failure ⇒ BM25-only degradation, F8) ---
+      // --- kNN leg (attempted; any failure ⇒ BM25-only degradation) ---
       let knnHits: VecHit[] = [];
       let knnFailed = false;
       try {
@@ -371,7 +371,7 @@ export function createRetriever(deps: RetrieverDeps): Retriever {
           knnFailed = true;
         }
       } catch {
-        // embed() threw: the embedder is unavailable. BM25-only (F8).
+        // embed() threw: the embedder is unavailable. BM25-only.
         knnFailed = true;
       }
 
@@ -395,7 +395,7 @@ export function createRetriever(deps: RetrieverDeps): Retriever {
       const enriched: RetrieverHit[] = fused.map((row) => {
         const fts = ftsById.get(row.id);
         if (fts) {
-          // BM25 path: reuse the FTS5 windowed snippet VERBATIM (F7).
+          // BM25 path: reuse the FTS5 windowed snippet VERBATIM.
           const meta = asChunkMeta(fts.meta);
           return {
             id: row.id,

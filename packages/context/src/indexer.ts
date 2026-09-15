@@ -2,8 +2,8 @@
 //
 // SHA-256 content-hash incremental indexer over the existing Store. The daemon
 // is the single writer; the indexer never opens a second connection — it walks
-// the given paths through the INJECTED store handle only (blueprint D6:
-// in-process, no sidecar, canonical ProjectId).
+// the given paths through the INJECTED store handle only (in-process, no
+// sidecar, canonical ProjectId).
 //
 // Per file the indexer:
 //   1. chunks it (chunker.ts: markdown-heading | line/token windows);
@@ -29,7 +29,7 @@
 //   ctx:file:<key>      → FileRecord           per-file {sha256, chunkIds, language}
 //   ctx:embedder        → EmbedderInfo         recorded once; model swap ⇒ warn (never silent)
 //
-// Degraded path (spec F8, mirrored for indexing): when the embedder is
+// Degraded path (mirrored for indexing): when the embedder is
 // `kind:'none'` or `embed()` throws (native load failed / misconfigured remote),
 // the indexer disables embedding for the rest of the run, still indexes the
 // `docs` rows, and reports `degraded:true` — it never crashes on a bad embedder.
@@ -77,10 +77,10 @@ export function ctxFileKey(pathKey: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Directory names never descended into during a walk (spec F1). Covers the
+ * Directory names never descended into during a walk. Covers the
  * common `.gitignore` entries without needing a gitignore parser — full
  * `.gitignore` intersection (and `git diff --name-only` for incremental scope)
- * is deferred v0 debt (grounds §10 indexing trigger).
+ * is deferred.
  */
 export const SKIP_DIRS = new Set([
   '.git',
@@ -279,7 +279,7 @@ function posix(p: string): string {
 export interface IndexerOptions {
   /** The daemon's store handle — the ONLY storage surface used (single writer). */
   store: Store;
-  /** The resolved embedder. Failures here degrade the run (F8-style), never crash. */
+  /** The resolved embedder. Failures here degrade the run, never crash. */
   embed: EmbedFn;
   /** Active embedder description; recorded in KV for model-swap detection. */
   info: EmbedderInfo;
@@ -318,7 +318,7 @@ export interface Indexer {
   /**
    * Walk + incrementally index `paths` (files or directories). Removed files
    * under a re-scanned root are reconciled (deleted). Returns chunk/file counts
-   * + the `degraded` flag (spec F1/F3/F4, AC-1).
+   * + the `degraded` flag.
    */
   indexPaths(paths: string[], opts?: IndexPathOptions): Promise<IndexResult>;
   /** Remove `paths` (files or dirs) from the index; deletes their chunks + vectors. */
@@ -479,7 +479,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
   /**
    * Record the active embedder in KV. On a model swap (kind/model/dim change),
    * warn loudly — vectors may now be incompatible — but NEVER auto-reindex; the
-   * caller decides via `reindex()` (spec §7: "warn + offer reindex, not silent").
+   * caller decides via `reindex()` ("warn + offer reindex, not silent").
    */
   function recordEmbedder(): void {
     const prev = store.getState<EmbedderInfo>(CTX_EMBEDDER_KEY);
@@ -578,7 +578,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
     // `kind:'none'` ⇒ no vectors from the start; a thrown embed() flips this mid-run.
     let embedDisabled = info.kind === 'none';
     // A successful embed whose vector write FAILED (vec native layer absent /
-    // incompatible width) also degrades the run to BM25-only — same F8 policy,
+    // incompatible width) also degrades the run to BM25-only — same policy,
     // just from the store side instead of the embed side.
     let vecStoreUnavailable = false;
     const tombstones: string[] = [];
@@ -589,7 +589,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
         return await embed(content);
       } catch {
         // First failure (native load / config / network) ⇒ disable for the rest
-        // of the run. Docs still get indexed; their vectors are skipped (F8).
+        // of the run. Docs still get indexed; their vectors are skipped.
         embedDisabled = true;
         return null;
       }
@@ -640,7 +640,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
       const fileHash = sha256Hex(content);
       const prev = records.get(key);
       if (prev !== undefined && prev.sha256 === fileHash) {
-        // Content-hash hit: skip wholesale (AC-1). Roll the chunk count into `skipped`.
+        // Content-hash hit: skip wholesale. Roll the chunk count into `skipped`.
         skipped += prev.chunkIds.length;
         continue;
       }

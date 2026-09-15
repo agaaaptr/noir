@@ -3,19 +3,19 @@
 //
 // The command exists to answer the one question the maintainer hit live: "I
 // edited `.noir/.env` and nothing changed — so which value is actually in
-// effect, and who supplied it?". The resolution rule itself (spec 12.1) is that
+// effect, and who supplied it?". The resolution rule itself is that
 // a key `.noir/.env` DEFINES wins and the real environment is the fallback for
 // the keys the file omits; this command renders that decision per key instead of
 // leaving the user to infer it.
 //
-// HARD RULE (spec 12.4): NAMES AND SHAPES ONLY, NEVER A VALUE. Each row carries
+// HARD RULE: NAMES AND SHAPES ONLY, NEVER A VALUE. Each row carries
 // the key, the side that won, and a REDACTED shape (`pk_…(42)` = the first three
 // characters + the length) so two tokens can be told apart without a secret ever
 // being printed. `--json` carries even less — `valueLength` only; the shape
 // belongs to the human table and never reaches stdout (see `env`, whose payload
 // is an EXPLICIT projection of the resolved rows).
 //
-// CURATION, NOT A DUMP (spec 12.3). `loadNoirEnv().sources` records every key
+// CURATION, NOT A DUMP. `loadNoirEnv().sources` records every key
 // that resolves to something, including every ambient one as `'env'` — under the
 // default argument that is the whole of `process.env` (PATH, npm_config_*, …).
 // Rendering that inventory would bury the answer this command exists to give, so
@@ -172,9 +172,9 @@ function configApiKeyEnvNames(root: string): string[] {
 }
 
 /**
- * Resolve the reported keys: provenance from `loadNoirEnv` (spec 12.1's single
- * decision point — this command never re-implements the precedence), filtered
- * down to the curated report described at the top of this file.
+ * Resolve the reported keys: provenance from `loadNoirEnv` (the loader is the
+ * single decision point — this command never re-implements the precedence),
+ * filtered down to the curated report described at the top of this file.
  *
  * The resolved VALUE is used only for its length and its redacted shape, inside
  * the loop body below — it is never stored on a row, so it cannot leak into the
@@ -189,7 +189,7 @@ function resolveEnv(root: string, ambientEnv: Record<string, string | undefined>
   // the curated names that are SET in the ambient environment. The second half
   // exists because `sources` is empty whenever the loader takes one of its two
   // no-op paths — no `.noir/.env` at all, or a git-tracked file refused outright
-  // (spec 12.2) — and neither means "nothing is in effect": with no file
+  // — and neither means "nothing is in effect": with no file
   // contributing, an exported `CLICKUP_API_TOKEN` IS the value in effect, and
   // reporting "nothing to report" while it sits in the user's shell would be a
   // lie. It cannot contradict the loader: those are exactly the keys the loader
@@ -209,7 +209,7 @@ function resolveEnv(root: string, ambientEnv: Record<string, string | undefined>
     // enumerating the environment.
     if (source === 'env' && !curated.has(key)) continue;
     // The value in effect: the file's overlay when the file defined the key
-    // (spec 12.1 — the file WINS), else the fallback the file fell through to.
+    // (the file WINS), else the fallback the file fell through to.
     const value = source === 'file' ? (overlay[key] ?? '') : (ambientEnv[key] ?? '');
     // Shadowing is the same condition the loader warns on: the file defines a
     // key the ambient environment ALSO defines, with a different value. Equal
@@ -262,7 +262,7 @@ export async function env(opts: CliOptions = {}): Promise<void> {
 
   if (report.vars.length === 0) {
     // "no keys IN EFFECT", not "no keys": a file can define keys that resolve to
-    // nothing — a git-tracked file is refused outright (spec 12.2), and a
+    // nothing — a git-tracked file is refused outright, and a
     // process-injection key (NODE_OPTIONS, npm_*) is skipped by the loader. Both
     // are reported by the loader's own stderr warnings above this line.
     info(

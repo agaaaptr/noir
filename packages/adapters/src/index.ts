@@ -45,7 +45,7 @@ export const SUPPORTED_HOSTS: readonly HostId[] = Object.freeze([
  * indirection instead of importing adapters directly so adding a host needs NO
  * CLI edits beyond the `--host` flag's enum.
  *
- * S10-Adapters: all five hosts are now wired —
+ * All five hosts are wired —
  *   - `claude`     — CLAUDE.md + `.claude/skills/` + `.mcp.json` (regression anchor).
  *   - `agents-md`  — universal AGENTS.md (the 32-platform baseline).
  *   - `gemini`     — GEMINI.md + AGENTS.md + `.gemini/mcp.json`.

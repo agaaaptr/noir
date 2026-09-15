@@ -44,7 +44,7 @@ export interface RunningDaemon {
 export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDaemon> {
   const startedAt = Date.now();
   const pid = process.pid;
-  // One token per serve lifecycle (spec 6.1): a fresh secret per start, so a
+  // One token per serve lifecycle: a fresh secret per start, so a
   // token can never outlive the process that issued it (a restarted daemon
   // invalidates every previously handed-out token). Generated before the
   // server accepts a request; written to disk after listen, below.
@@ -66,7 +66,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
   );
   // One engine per lifecycle, built from the shared store handle — reused
   // across every request, exactly like the store. The gate-config bridge
-  // (c4-surface-wiring S5) resolves the user's `prd.mandatoryFor` override so
+  // resolves the user's `prd.mandatoryFor` override so
   // it reaches the engine (no surprise default when the user customized it).
   const engine = daemonStore
     ? buildWorkflowEngine(
@@ -98,10 +98,11 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
       )
     : undefined;
   // One memory engine per lifecycle, built from the same shared store handle +
-  // the SAME `EmbedFn` already materialized for S6 (the daemon owns one
-  // embedder; memory takes `{store, embed, ...}` — no embedder duplication).
-  // Consolidation is OPT-IN + provider-explicit (D5/D6 — NEVER a silent
-  // paid call, the Agent-Memory anti-pattern §9). The master switch is the
+  // the SAME `EmbedFn` already materialized for the context engine (the daemon
+  // owns one embedder; memory takes `{store, embed, ...}` — no embedder
+  // duplication).
+  // Consolidation is OPT-IN + provider-explicit (NEVER a silent
+  // paid call, the Agent-Memory anti-pattern). The master switch is the
   // user's `memory.consolidation.enabled`; only when it is true does the
   // model-derived provider+model even get considered. `resolveMemoryConfig` is
   // the pure core→memory bridge; resolved once and passed to buildMemoryEngine
@@ -153,7 +154,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
       return;
     }
     if (req.url === '/mcp') {
-      // Auth on the HTTP transport only (spec 6.1). The guard shares its exact
+      // Auth on the HTTP transport only. The guard shares its exact
       // predicate with the route below, so no request can reach the MCP handler
       // without passing it. /health stays token-free — the liveness probe
       // depends on it and its body carries no secret — but it remains

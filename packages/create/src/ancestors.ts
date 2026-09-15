@@ -1,4 +1,4 @@
-// Ancestor store for three-way managed-region merge (SP-D, widened).
+// Ancestor store for three-way managed-region merge.
 //
 // Persists the last-emitted managed-region text per (file, block) so a later
 // `noir init`/`sync` can three-way merge (base/ours/theirs) instead of

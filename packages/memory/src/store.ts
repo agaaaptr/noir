@@ -11,7 +11,7 @@
 //
 // KV layout (namespaced `memory:` — disjoint from `ctx:` / `workflow:*`):
 //   memory:obs:<id>            → Observation        (authoritative full row)
-//   memory:sessions            → SessionInfo[]      (per-project rollup, A3)
+//   memory:sessions            → SessionInfo[]      (per-project rollup)
 //   memory:index               → string[]           (all obs ids; status count +
 //                                                    consolidate candidate source)
 //   memory:consolidation:miss  → ConsolidationMiss[] (refusal audit log)
@@ -21,10 +21,10 @@
 // search payload written alongside it. Recall hydrates the FULL `Observation`
 // from KV (never the truncated FTS snippet). `forget` clears the KV row
 // (tombstone, mirroring the context indexer) AND purges the doc/vec indexes
-// best-effort (A2's acceptable v1 behavior).
+// best-effort (and its absence never fails the forget).
 //
 // These helpers use ONLY the Store interface (no second connection, no schema
-// change — blueprint D6: in-process only, canonical ProjectId). The RMW
+// change — in-process only, canonical ProjectId). The RMW
 // helpers (`bumpSession`, `decrementSession`, `appendConsolidationMiss`) MUST
 // be called from within the engine's single-flight / synchronous KV block so
 // two concurrent writers cannot clobber the list — see engine.ts.
@@ -156,7 +156,7 @@ export function decrementSession(store: Store, sessionId: string): void {
 /**
  * One recorded consolidation refusal. `reason` is the documented
  * {@link ConsolidationResult} refusal cause; `provider` is recorded when a
- * provider WAS configured but the run still refused (e.g. the S8 layer was
+ * provider WAS configured but the run still refused (e.g. the model layer was
  * unavailable), so the user can see exactly why nothing happened.
  */
 export interface ConsolidationMiss {

@@ -1,4 +1,4 @@
-// Offline behavioral-eval harness for the skill pack — C3.
+// Offline behavioral-eval harness for the skill pack.
 //
 // Skills are declared as `evals/**/evals.json` per the agentskills.io format
 // (`{skill_name, evals:[{id, prompt, expected_output, assertions?}]}`). The
@@ -9,7 +9,7 @@
 //
 // The evals are deliberately simple: they assert that a skill's PROMPT → a
 // simulated agent answer satisfies structural expectations. They are NOT
-// LLM-judge evals (deferred to a future slice, ADR'd); they are the CI-safe
+// LLM-judge evals (not implemented yet); they are the CI-safe
 // baseline that catches regressions in the skill's core directives.
 
 import { readdirSync, readFileSync } from 'node:fs';

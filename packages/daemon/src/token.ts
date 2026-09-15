@@ -1,10 +1,10 @@
 // Shared secret between a daemon and its clients. Regenerated on every daemon
 // start, so a token never outlives the process that issued it. 0600 because the
-// file is a credential the moment it exists (spec 6.1).
+// file is a credential the moment it exists.
 //
 // Scope key: one token file per daemon identity, next to that identity's record
-// in `projectRecordDir()` — a project daemon's key is its projectId (Task 6
-// mirrors this for a workspace daemon, whose key is the workspace name). The
+// in `projectRecordDir()` — a project daemon's key is its projectId, and a
+// workspace daemon's key is the workspace name. The
 // stdio transport never reads or writes a token: it has no network surface, and
 // the host header-forwarding bugs make a header-delivered token unsafe there.
 import { randomBytes } from 'node:crypto';

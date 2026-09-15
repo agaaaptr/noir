@@ -32,7 +32,8 @@ export interface QuickOpts {
  *
  * The task must already be started (`engine.startTask(..., 'quick')`); this
  * function reads the slug from the persisted TaskState. Skipped gates are
- * RECORDED (Noir §9.1 observable-checkpoint invariant), never silently dropped
+ * RECORDED (the observable-checkpoint invariant: every gate decision is
+ * recorded), never silently dropped
  * — the audit KV and `history` both carry the `skipped` entries.
  */
 export async function runQuick(
@@ -76,7 +77,7 @@ const TERMINAL_STATES: ReadonlySet<WorkflowState> = new Set<WorkflowState>(['don
  * Reconstruct the in-flight TaskState across a session break.
  *
  * Reads `workflow:active` from the store KV → the most-recently-started
- * taskId (T4 semantics; v1 is one-task-per-project) → the persisted
+ * taskId (v1 is one-task-per-project) → the persisted
  * `workflow:<taskId>` TaskState. Returns `null` when there is no active task,
  * the task record is missing, or the active task is terminal (`done` /
  * `abandoned` — nothing to resume). A `blocked` task IS resumable.

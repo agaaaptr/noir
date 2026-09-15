@@ -21,13 +21,14 @@ import {
 /**
  * Store KV layout. The TaskState lives at `workflow:<taskId>`; the gate audit
  * lives at `audit:<taskId>` and is the AUTHORITATIVE record for every gate
- * outcome (spec §11 OQ-5). `task.history` on the TaskState is a DERIVED view
- * the engine regenerates from the audit KV (debt-batch A collapse) so
+ * outcome (the audit KV is the single source of truth). `task.history` on the
+ * TaskState is a DERIVED view
+ * the engine regenerates from the audit KV so
  * there is a single write, single timestamp, single read-back — no drift.
  */
 const ACTIVE_KEY = 'workflow:active';
 const GATE_PHASES = ['spec', 'plan', 'verify'] as const satisfies ReadonlyArray<Phase>;
-/** c4-research-grounding: cap on a single research entry's text (token budget). */
+/** Cap on a single research entry's text (token budget). */
 const RESEARCH_TEXT_CAP = 220;
 
 /**
@@ -38,11 +39,11 @@ const RESEARCH_TEXT_CAP = 220;
  */
 const DEFAULT_GATE_CONFIG: WorkflowGateConfig = {
   prd: { mandatoryFor: ['feature', 'epic'] },
-  // c4-verify-gate-recovery: verify gate is OFF by default — a task with no
+  // The verify gate is OFF by default — a task with no
   // verify config behaves exactly as v1.9.4 (records approved/forced/skipped,
   // no evidence, no blocking). Opt-in via gateConfig.verify or NoirConfig.
   verify: { required: false, retryBudget: 2 },
-  // c4-research-grounding: research is a SOFT grounding recommendation for
+  // Research is a SOFT grounding recommendation for
   // feature/epic (mirrors the PRD gate) — never a hard block.
   research: { recommendFor: ['feature', 'epic'], requireSource: true },
 };
@@ -54,7 +55,7 @@ export interface AdvanceOpts {
    * (validated here, in the engine — `recordGate` is policy-free). The landing
    * gate, if any, is recorded with `decision: 'forced'`. Mutually exclusive
    * with {@link skip}. This is ALSO the explicit-override path for the soft
-   * PRD recommendation (debt-batch A): supplying `--force <reason>` at the
+   * PRD recommendation: supplying `--force <reason>` at the
    * spec gate of a mandatoryFor task with no PRD records `forced` with the
    * user's reason instead of the recommendation note.
    */
@@ -71,12 +72,13 @@ export interface AdvanceOpts {
   /**
    * Quick-mode: record the landing gate (if any) as `decision: 'skipped'`
    * instead of `approved`. The gate is still RECORDED — never silently dropped
-   * (Noir §9.1 observable-checkpoint invariant) — only the decision changes.
+   * (the observable-checkpoint invariant: every gate decision is recorded) —
+   * only the decision changes.
    * Mutually exclusive with {@link force}.
    */
   skip?: true;
   /**
-   * c4-verify-gate-recovery: validation evidence for the verify gate. When the
+   * Validation evidence for the verify gate. When the
    * verify gate is required for the task's class, advance into `done` evaluates
    * this evidence: all HARD checks exit 0 ⇒ `approved`; any HARD check non-zero
    * ⇒ `failed` (no transition); absent/stale evidence ⇒ pending (no transition,
@@ -100,7 +102,7 @@ function gatePhaseForState(state: WorkflowState): Phase | null {
 }
 
 /**
- * c4-verify-gate-recovery: thrown when the verify gate cannot admit `done`.
+ * Thrown when the verify gate cannot admit `done`.
  * `kind: 'evidence-required'` = no fresh evidence was supplied (pending); the
  * advance did not transition and recorded NO gate. `kind: 'evidence-failed'` =
  * a HARD check failed; the advance recorded a `failed` decision WITH evidence
@@ -148,8 +150,9 @@ export class VerifyGateError extends Error {
  *   • `opts.to` jumps past FSM edges and is recorded via `jumpEntry`,
  *   • the soft PRD recommendation at the spec gate for mandatoryFor tasks.
  *
- * Modes (Full/Quick) and cross-session resume are T5; MCP tools are T6 — the
- * engine stays mode-agnostic here and only stores `mode` on the TaskState.
+ * Modes (Full/Quick) and cross-session resume are not implemented yet, and the
+ * engine exposes no MCP tools — it stays mode-agnostic here and only stores
+ * `mode` on the TaskState.
  */
 export class WorkflowEngine {
   private readonly gateConfig: WorkflowGateConfig;
@@ -165,7 +168,7 @@ export class WorkflowEngine {
     readonly root: string,
     private readonly projectId: ProjectId,
     /**
-     * Gate-config slice (debt-batch A). Optional — the legacy 3-arg call
+     * Gate-config block. Optional — the legacy 3-arg call
      * shape (every existing consumer) resolves to {@link DEFAULT_GATE_CONFIG}
      * (PRD recommendation fires for feature/epic). The daemon / CLI bridge
      * passes the resolved `prd.mandatoryFor` from NoirConfig so user overrides
@@ -191,7 +194,7 @@ export class WorkflowEngine {
    * at it. Re-starting an existing taskId overwrites it (intentional — the KV is
    * the source of truth, not a journal).
    *
-   * `taskClass` (debt-batch A) is optional and additive — legacy callers
+   * `taskClass` is optional and additive — legacy callers
    * (and existing tests) omit it; the soft PRD gate then never fires for the
    * task (consistent with the "additive, no-op when absent" rule). New callers
    * that want the recommendation pass `'feature'` / `'epic'` / etc.
@@ -259,7 +262,7 @@ export class WorkflowEngine {
       throw new Error('--force requires a reason');
     }
 
-    // c4-research-grounding: the clarify→spec exit criterion. Open questions
+    // The clarify→spec exit criterion. Open questions
     // raised during clarify block the transition to `specified` (the spec gate)
     // unless the advance carries --force/--skip (the escapable-observable
     // invariant). Jumps bypass this (a jump is an explicit out-of-order move).
@@ -349,7 +352,7 @@ export class WorkflowEngine {
     if (gatePhase !== null && !backwardJump) {
       const forced = opts?.force !== undefined;
       const skipped = opts?.skip === true;
-      // c4-verify-gate-recovery: the verify gate is evidence-backed when the
+      // The verify gate is evidence-backed when the
       // task's class is configured `verify.required`. `force`/`skip` override
       // the evaluation (the explicit escapes), exactly like the other gates.
       // Default OFF — a task with no verify config takes the legacy path
@@ -417,7 +420,7 @@ export class WorkflowEngine {
         // the task is mandatoryFor-eligible, no PRD artifact exists, and the user
         // did NOT supply --force, fold a recommendation note into the recorded
         // gate's `reason`. The advance STILL PROCEEDS — this is the "quiet
-        // observable nudge" doctrine (§9.1): never a hard block, never silently
+        // observable nudge" doctrine: never a hard block, never silently
         // dropped. Quick-mode + unlisted taskClasses skip the check entirely;
         // --force records `forced` with the user's reason (the explicit override).
         const prdHint = this.prdRecommendation(task, gatePhase, opts);
@@ -472,7 +475,7 @@ export class WorkflowEngine {
    * downstream consumer (CLI status, workflow_status MCP tool) can surface it.
    */
   /**
-   * c4-verify-gate-recovery: resolve whether the verify gate is evidence-backed
+   * Resolve whether the verify gate is evidence-backed
    * for this task. `required` may be a boolean (all tasks) or a per-class map.
    * A task with no `taskClass` follows the boolean default (false ⇒ off).
    */
@@ -495,7 +498,7 @@ export class WorkflowEngine {
   }
 
   /**
-   * c4-research-grounding: a SOFT research-grounding recommendation at the spec
+   * A SOFT research-grounding recommendation at the spec
    * gate (mirrors {@link prdRecommendation}). Fires when the task's class is in
    * `research.recommendFor` AND `research:<taskId>` has no source-backed findings
    * (only absent or assumption-only entries without sources). Never a hard block
@@ -545,13 +548,13 @@ export class WorkflowEngine {
 
   /**
    * Re-flush the current state to KV + flush the gate audit export to
-   * `.noir/audit/<taskId>.json` (debt-batch A): the prior implementation
+   * `.noir/audit/<taskId>.json`: the prior implementation
    * only bumped `updatedAt`, which every advance already does — vestigial.
    * Cross-session resume (`resumeTask`) reads `workflow:<id>` straight from the
    * KV and consumes nothing from this method; the ledger noted the write was
    * dead. The fix is to WIRE the checkpoint to a real cross-tool artifact
-   * flush: the audit JSON on disk (the spec §11 OQ-5 "export to
-   * `.noir/audit/<taskId>.json`" that {@link writeAuditExport} already
+   * flush: the audit JSON on disk (the
+   * `.noir/audit/<taskId>.json` export that {@link writeAuditExport} already
    * implemented but nothing called). The MCP `checkpoint { action:'save' }`
    * tool stays the public surface; its save now leaves a human-inspectable
    * audit JSON alongside the KV.
@@ -609,7 +612,7 @@ export class WorkflowEngine {
   }
 
   /**
-   * c4-research-grounding: append a research-finding record to `research:<taskId>`
+   * Append a research-finding record to `research:<taskId>`
    * (append-only, mirrors the gate audit). `source` is required for non-
    * `grounding-fact` entries when `gateConfig.research.requireSource` is on
    * (defeats the "faux context" failure mode); `text` is length-capped.
@@ -643,7 +646,7 @@ export class WorkflowEngine {
   }
 
   /**
-   * c4-research-grounding: set the task's open questions (raised during
+   * Set the task's open questions (raised during
    * clarify). When non-empty, the clarify→spec transition is gated unless the
    * advance carries `force`/`skip` (the observable+escapable invariant).
    */

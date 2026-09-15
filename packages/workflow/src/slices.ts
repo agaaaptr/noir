@@ -1,4 +1,4 @@
-// c4-decomposition — SlicePlan + Slice types and deterministic validation.
+// SlicePlan + Slice types and deterministic validation.
 // The capability→slice roadmap pass lives ABOVE the spec FSM (each slice then
 // re-enters the existing clarify→spec→plan lifecycle). Fixed schema + optional
 // LLM content + deterministic validation (schema, dependency-cycle detection).

@@ -1,16 +1,15 @@
-// Anthropic provider adapter — single-shot Messages call via `@anthropic-ai/sdk`
-// (slice S8 / t2, blueprint D5).
+// Anthropic provider adapter — single-shot Messages call via `@anthropic-ai/sdk`.
 //
 // HARD RULES enforced here, by construction:
 //
-// - SINGLE-SHOT (D5 / FR-8): the request to `messages.create` carries ONLY
+// - SINGLE-SHOT: the request to `messages.create` carries ONLY
 //   `model`, `max_tokens`, `messages`, and (optionally) `system`. There is no
 //   `tools`, `tool_choice`, or `stream` key — so this adapter cannot express an
 //   agent/tool loop even if a caller tried. One bounded call, then return.
-// - SDK retries DISABLED (`maxRetries: 0` / NFR-3): the hosted SDK
+// - SDK retries DISABLED (`maxRetries: 0`): the hosted SDK
 //   defaults to retrying transient failures; we opt out so one call can never
-//   silently multi-charge. The only retry lives in the structured path (t4).
-// - IMPORT-ISOLATED (NFR-2): the `@anthropic-ai/sdk` is imported DYNAMICALLY
+//   silently multi-charge. The only retry lives in the structured path.
+// - IMPORT-ISOLATED: the `@anthropic-ai/sdk` is imported DYNAMICALLY
 //   inside `complete()`. A bundle whose configured provider never resolves to
 //   this adapter pays zero SDK bytes — the SDK is only pulled in at call time.
 // - SECRETS stay in env: `key` is the resolved VALUE that `complete()`
@@ -34,7 +33,7 @@
 // missing key) is decided one layer up in `complete()`, BEFORE this runs.
 //
 // Structured output is the CALLER's concern: if `req.schema` is present, the
-// t4 structured path instructs the model to emit JSON, parses the returned
+// structured path instructs the model to emit JSON, parses the returned
 // `text`, and validates it. This adapter ignores `schema` and returns raw text,
 // so it stays a single, provider-agnostic completion primitive.
 
@@ -84,7 +83,7 @@ type AnthropicSDK = new (opts: {
 }) => AnthropicClient;
 
 // Anthropic's Messages API REQUIRES `max_tokens` (unlike OpenAI, where it is
-// optional). Per-tier caps (FR-10: draft 2048 / title 64 / summarize 512 /
+// optional). The per-tier caps (draft 2048 / title 64 / summarize 512 /
 // consolidate 2048) are the caller's job, resolved before this adapter runs;
 // this is the adapter's last-resort bound so the required field is always set.
 const DEFAULT_MAX_TOKENS = 2048;
@@ -93,7 +92,7 @@ const DEFAULT_MAX_TOKENS = 2048;
  * Anthropic provider adapter. Registered under the name `anthropic` and
  * dispatched by `complete()` when a configured provider block's name is
  * `anthropic` (the hosted Messages endpoint). Returns raw text only — the
- * structured-output path (t4) wraps this adapter when a `schema` is present.
+ * structured-output path wraps this adapter when a `schema` is present.
  */
 export const anthropicAdapter: ProviderAdapter = {
   name: 'anthropic',
@@ -133,7 +132,7 @@ export const anthropicAdapter: ProviderAdapter = {
       });
 
       // Single bounded Messages call. The body carries ONLY bounded fields — no
-      // `tools`, no `stream` (FR-8). `system` is a top-level Anthropic param
+      // `tools`, no `stream`. `system` is a top-level Anthropic param
       // (not folded into messages, as OpenAI does); `max_tokens` is REQUIRED by
       // the Messages API, so a default is applied when the request omits it.
       const res = await client.messages.create(
@@ -178,5 +177,5 @@ export const anthropicAdapter: ProviderAdapter = {
 // Self-register on import: a consumer that imports `@noir-ai/model` (whose
 // index side-effect-imports this module) gets the adapter wired automatically;
 // `complete()` then dispatches by provider name `anthropic`. The SDK itself is
-// NOT loaded by this registration — only inside `complete()` above (NFR-2).
+// NOT loaded by this registration — only inside `complete()` above.
 registerProviderAdapter('anthropic', anthropicAdapter);

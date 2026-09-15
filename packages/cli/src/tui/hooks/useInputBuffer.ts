@@ -1,4 +1,4 @@
-// B1 — the dashboard input-buffer hook. Extracted from `App.tsx` so the
+// The dashboard input-buffer hook. Extracted from `App.tsx` so the
 // command-history + recall-cursor state can live with the keybindings that use
 // it instead of dangling inside the App's single `useInput` closure. Owns:
 //   - `buffer` — the current text being composed at the prompt.

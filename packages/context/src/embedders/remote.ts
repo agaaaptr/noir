@@ -3,11 +3,12 @@
 // DESIGN:
 //   - Provider-explicit and NEVER the default. The caller selects `kind:'remote'`
 //     with a concrete `provider` in config; there is no inference from env vars,
-//     so source text is never silently sent to a cloud endpoint (D6 hard rule).
+//     so source text is never silently sent to a cloud endpoint (no inference
+//     from env-var presence — the config alone decides).
 //   - `apiKey` absence does NOT throw at construction — the embedder builds
 //     cleanly so `context_status` can report `kind:'remote'`, and `embed()`
 //     throws a clear "not configured" error so the engine degrades to BM25-only
-//     (F8) rather than crashing. This makes a misconfigured key observable
+//     rather than crashing. This makes a misconfigured key observable
 //     instead of fatal.
 //   - Vectors are Matryoshka-truncated client-side to `dim` (default 384) and
 //     re-normalized via the shared `l2normalize` (truncation shrinks the norm).
@@ -15,7 +16,7 @@
 //
 // This is a deliberately thin stub: it fetches the provider's embeddings
 // endpoint directly with the global `fetch`. Full provider SDKs (streaming,
-// retries, batching, structured usage) are post-v0 (plan §7).
+// retries, batching, structured usage) are not implemented yet.
 
 import type { EmbedFn } from '../types.js';
 import { EMBED_DIM, l2normalize } from './normalize.js';

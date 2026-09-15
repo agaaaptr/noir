@@ -1,15 +1,14 @@
-// Structured output — prompt-based JSON + validate + at most ONE repair retry
-// (slice S8 / t4, blueprint D5).
+// Structured output — prompt-based JSON + validate + at most ONE repair retry.
 //
 // This module is the ONLY retry site in the model layer (SDK retries are
 // 0; bounded wall-clock + cost). It does NOT call a provider directly — it is
 // given a resolved {@link ProviderAdapter} by `complete()` and orchestrates the
 // JSON round-trip on top of the adapter's single-shot `complete()`. Because the
-// adapter surface has no `tools` / `stream` (FR-8), this path cannot mutate into
+// adapter surface has no `tools` / `stream`, this path cannot mutate into
 // an agent loop either: it makes at most TWO adapter calls (initial + one
 // repair), parses + validates each, and returns.
 //
-// Strategy (FR-3, v1 — provider-native strict modes deferred):
+// Strategy:
 //   1. Inject a "respond with ONLY JSON matching the schema" system addendum.
 //   2. Call the adapter once (single shot).
 //   3. Extract JSON from the text (tolerant: direct, markdown-fence, span).
@@ -17,7 +16,7 @@
 //   5. On parse/validate failure, retry ONCE with the error fed back.
 //   6. Still bad ⇒ `{ ok: false, reason: "schema-validation-failed: …" }`.
 //
-// NO zod is imported at runtime here (NFR-2 / the types.ts contract): validation
+// NO zod is imported at runtime here (the types.ts contract): validation
 // calls `.parse` ON the caller-supplied schema object, so the built library has
 // no value-level zod dependency. A best-effort `.description` (if the ZodType
 // carries one) is the only schema introspection — we never serialize the shape,
@@ -140,7 +139,7 @@ function extractJSON(text: string): ParseOutcome {
   }
 
   // No extraction worked — surface a short, safe excerpt (never the whole prompt
-  // body, which could be large; NFR-4 keeps usage/logs free of raw content).
+  // body, which could be large; raw content never reaches logs or usage).
   const excerpt = truncate(trimmed.replace(/\s+/g, ' '), 120);
   return { ok: false, error: `response was not valid JSON: ${JSON.stringify(excerpt)}` };
 }
@@ -189,7 +188,7 @@ function parseAndValidate(text: string, schema: CompleteSchema): ParseOutcome {
  * or `null`) is propagated immediately — the retry budget is for JSON repair,
  * NOT for transient network errors (those stay bounded at one call).
  *
- * On success the validated object is returned as `value` (FR-1), with `text`
+ * On success the validated object is returned as `value`, with `text`
  * kept as the raw model output of the successful call and `usage` from that
  * call. `req.schema` is required; `complete()` only routes here when it is set.
  */

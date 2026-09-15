@@ -1,4 +1,4 @@
-// A1 — derive {@link PaletteCommand} entries from a commander program.
+// Derive {@link PaletteCommand} entries from a commander program.
 //
 // The TUI command palette needs a flat, searchable list of the `noir`
 // subcommands a user can dispatch. Rather than maintain a second hand-curated

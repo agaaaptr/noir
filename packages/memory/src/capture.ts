@@ -6,12 +6,12 @@
 // module's pure {@link toSaveInput} mapper projects it into a {@link SaveInput}
 // that flows through the SAME `MemoryEngine.save` path as a deliberate save.
 //
-// Capture is ALWAYS local + free (blueprint D6): {@link toSaveInput} is
+// Capture is ALWAYS local + free: {@link toSaveInput} is
 // a PURE function — no I/O, no network, no LLM, no store. It builds the input;
 // the engine's `save` performs the write. There is deliberately NO source field
 // on {@link SaveInput} (it is set at save time), so an event routed through
 // `memory_save` lands with `source:'explicit'`; {@link captureSource} is exported
-// for a dedicated `noir memory capture` command (S9) that tags provenance as
+// for a dedicated `noir memory capture` command that tags provenance as
 // `'auto:<hook>'` without going through the MCP `memory_save` envelope.
 //
 // This module does NOT install anything. Auto-capture is OPT-IN: the user wires
@@ -19,7 +19,7 @@
 // `noir sync` NEVER install hooks (no surprise captures, no privacy
 // surface the user did not ask for).
 //
-// Canonical ProjectId (D6): {@link CaptureEvent.project} is the canonical id the
+// Canonical ProjectId: {@link CaptureEvent.project} is the canonical id the
 // capture command resolved from cwd — NEVER a filesystem path. The mapper copies
 // it through unchanged (it is recorded on the observation at save time).
 
@@ -31,7 +31,7 @@ import type { MemorySource, MemoryType, ProjectId, SaveInput } from './types.js'
 
 /**
  * Known host hook events Noir can capture (the four Claude Code hooks the v1
- * template targets, spec §5). The list is intentionally NOT closed:
+ * template targets). The list is intentionally NOT closed:
  * {@link CaptureEventType} also accepts any unknown string so a future host's
  * hook names round-trip through the mapper without a code change (mirrors the
  * open-enum taxonomy in types.ts).
@@ -42,7 +42,7 @@ export const CAPTURE_HOOKS = ['PreToolUse', 'PostToolUse', 'UserPromptSubmit', '
 export type CaptureEventType = (typeof CAPTURE_HOOKS)[number] | (string & {});
 
 // ---------------------------------------------------------------------------
-// Defaults — the opinionated capture policy (spec §5)
+// Defaults — the opinionated capture policy
 // ---------------------------------------------------------------------------
 
 /**
@@ -90,8 +90,8 @@ export interface CapturePayload {
  * tied to Claude Code's stdin schema (a future host adapter translates its own
  * payload into this).
  *
- * `project` is the CANONICAL project id (NEVER a filesystem path — blueprint
- * D6); the capture command resolves it from `cwd` before constructing the event.
+ * `project` is the CANONICAL project id (NEVER a filesystem path);
+ * the capture command resolves it from `cwd` before constructing the event.
  */
 export interface CaptureEvent {
   /** Hook event name (open enum — {@link CaptureEventType}). */
@@ -100,7 +100,7 @@ export interface CaptureEvent {
   ts: number;
   /** Host session id if known, else null (recorded on the observation). */
   sessionId: string | null;
-  /** Canonical project identifier (NEVER a filesystem path — D6). */
+  /** Canonical project identifier (NEVER a filesystem path). */
   project: ProjectId;
   /** The event-specific fields (see {@link CapturePayload}). */
   payload: CapturePayload;
@@ -114,7 +114,7 @@ export interface CaptureEvent {
  * An opinionated capture policy. Controls WHICH hook events are persisted when
  * {@link toSaveInput} is called. Defaults to {@link DEFAULT_CAPTURE_POLICY}
  * (session summaries + submitted prompts only). The user owns this — it is the
- * one knob that keeps auto-capture from flooding memory (R3).
+ * one knob that keeps auto-capture from flooding memory.
  */
 export interface CapturePolicy {
   /**
@@ -137,7 +137,7 @@ export interface CapturePolicy {
  *
  * The mapper is PURE: it reads no environment, holds no secrets, performs NO I/O
  * and NO LLM call (capture is always local + free). It applies the
- * opinionated defaults from spec §5:
+ * opinionated defaults:
  *   • only the policy's `hooks` are captured (default: Stop + UserPromptSubmit);
  *   • content is built from the event's payload fields (summary / prompt / a
  *     compact tool-call description);
@@ -165,7 +165,7 @@ export function toSaveInput(
 
   const content = buildContent(event);
   // No usable text ⇒ nothing worth persisting. Trim so a whitespace-only
-  // summary/prompt is treated as empty (R3: keep memory signal-rich).
+  // summary/prompt is treated as empty (keeps memory signal-rich).
   if (content === null || content.trim().length === 0) return null;
 
   const input: SaveInput = {
@@ -271,7 +271,7 @@ export function extractFiles(payload: CapturePayload): string[] {
 /**
  * The memory `source` provenance for a captured event: `'auto:<hook>'` (e.g.
  * `'auto:stop'`, `'auto:posttooluse'`), lowercased so the bucket name is a
- * stable identifier. Exported for a dedicated `noir memory capture` CLI (S9)
+ * stable identifier. Exported for a dedicated `noir memory capture` CLI
  * that persists an event OUTSIDE the `memory_save` envelope and wants to tag
  * provenance — the MCP `memory_save` path itself records `source:'explicit'`
  * (SaveInput carries no source field by design).

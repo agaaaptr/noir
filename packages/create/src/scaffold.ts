@@ -41,7 +41,7 @@ import {
 } from './writers.js';
 
 /**
- * Scaffold orchestrator. One function the cli (S-T2) calls for `noir init`,
+ * Scaffold orchestrator. One function the cli calls for `noir init`,
  * `noir create`, and `noir sync`; mode selects the manifest subset + how
  * project identity is resolved.
  *
@@ -82,19 +82,19 @@ export interface ScaffoldOptions {
    *  initialization without ever touching a file the user owns. Only meaningful
    *  with mode `'init'`. */
   upgrade?: boolean;
-  /** SP-A: re-scaffold even when the target is already initialized (bypasses
+  /** Re-scaffold even when the target is already initialized (bypasses
    *    the already-initialized no-op guard). Does NOT bypass `assertSafeRoot`
    *    — root-safety is hard, never bypassable. */
   force?: boolean;
   /** Preview: compute the same written/skipped/migrated lists without touching
    *    disk. `noir doctor`/CI use this to report drift. */
   dryRun?: boolean;
-  /** SP-C: policy for a `regenerate` file that exists and DIFFERS from the
+  /** Policy for a `regenerate` file that exists and DIFFERS from the
    *    template, when no {@link onConflict} callback is provided. Default
    *    `'overwrite'` is byte-backward-compatible. `'preserve'` keeps the user's
    *    file (the non-TTY / CI default in the cli). */
   conflictPolicy?: 'overwrite' | 'preserve';
-  /** SP-C: per-file conflict resolver — the UI seam (the engine stays UI-free;
+  /** Per-file conflict resolver — the UI seam (the engine stays UI-free;
    *    the cli injects a @clack-based resolver). Called when a `regenerate`
    *    file exists and differs from the template. The return type widens to
    *    accept a rich shape carrying `applyToAll` — the engine then reuses the
@@ -107,7 +107,8 @@ export interface ScaffoldOptions {
    *  run always has a base. Set to `false` (CLI `--no-merge-regions`) to
    *  restore strip-replace. Supports BOTH single-region (NOIR.md, ignores) AND
    *  multi-region (CLAUDE.md CONTEXT+RULES) managed files — the multi-region
-   *  path shipped with SP-H (`managedBlocks` + `mergeManagedRegion` per block). */
+   *  path merges managed regions per block (`managedBlocks` +
+   *  `mergeManagedRegion`). */
   mergeManagedRegions?: boolean;
   /** Explicit interactivity signal. The engine reads THIS (not
    *  `process.env`), so a direct API/embedded caller in a TTY that does NOT
@@ -122,7 +123,7 @@ export interface ScaffoldResult {
   written: string[];
   /** Repo-relative paths skipIfExists'd (already present). */
   skipped: string[];
-  /** SP-D: repo-relative `regenerate` paths skipped because byte-identical to
+  /** Repo-relative `regenerate` paths skipped because byte-identical to
    *  the template (content-hash dedup — no rewrite). */
   identical: string[];
   /** Repo-relative doc-only seed paths REPLACED on the upgrade path because the
@@ -139,7 +140,7 @@ export interface ScaffoldResult {
    *  other run: a fresh `init`/`create` has nothing to compare against and
    *  `sync` does not emit seeds. */
   refreshed: string[];
-  /** SP-A: true when the already-initialized guard short-circuited (a bare
+  /** True when the already-initialized guard short-circuited (a bare
    *  `noir init`/`create` on an initialized project). Callers (init.ts/create.ts)
    *  gate skills emission + the "initialized" message on this — a no-op must NOT
    *  re-emit skills or claim it initialized. */
@@ -188,7 +189,7 @@ export interface ConflictRecord {
   resolution: ConflictResolution;
 }
 
-/** SP-C — context passed to {@link ScaffoldOptions.onConflict} when a
+/** Context passed to {@link ScaffoldOptions.onConflict} when a
  *  `regenerate` file exists and differs from the template. */
 export interface ConflictContext {
   /** Repo-relative path of the conflicting file. */
@@ -199,7 +200,7 @@ export interface ConflictContext {
   proposed: string;
   /** Artifact class — drives apply-to-all memory scope (`regenerate` shares
    *  one decision across a run; `managedBlock`/`managedBlocks` stay per-file).
-   *  Defaults to `'regenerate'` for backward compatibility with SP-C resolvers
+   *  Defaults to `'regenerate'` for backward compatibility with older resolvers
    *  that pre-date the field (the engine always sets it). */
   mode?:
     | 'regenerate'
@@ -217,7 +218,7 @@ export interface ConflictContext {
   mergedWithMarkers?: string;
 }
 
-/** SP-C — how to resolve a `regenerate` conflict. */
+/** How to resolve a `regenerate` conflict. */
 export type ConflictResolution =
   | 'replace'
   | 'preserve'
@@ -267,7 +268,7 @@ const EMITTED_IN: Record<WriteMode, { sync: boolean; upgrade: boolean }> = {
 
 /**
  * Refuse to scaffold when `root` is — or is inside — a `.noir/` directory.
- * (SP-A) Running `noir init`/`create`/`sync` while cwd = `.noir/` would
+ * Running `noir init`/`create`/`sync` while cwd = `.noir/` would
  * otherwise mint a FRESH project id (because `<root>/.noir/project.id` is
  * absent) and build a NESTED second project (`.noir/.noir/`, `.noir/CLAUDE.md`,
  * `.noir/.claude/skills/`, …) — the duplicate-`.noir` bug. The walk ascends the
@@ -296,7 +297,7 @@ export function assertSafeRoot(root: string): void {
 }
 
 export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
-  // Root-safety (SP-A): refuse to scaffold at/inside a .noir/ directory BEFORE
+  // Root-safety: refuse to scaffold at/inside a .noir/ directory BEFORE
   // any write (incl. `create`'s target mkdir). Prevents the nested .noir/.noir/
   // re-init bug. Hard guard; not bypassable.
   assertSafeRoot(opts.root);
@@ -517,7 +518,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
       // Managed-region conflict (per-file; never apply-to-all). Hand the
       // resolver the merged-with-markers bytes (the 6th "merge" option's
       // payload). Default behavior when no resolver is wired (or non-interactive):
-      // write the merged-with-markers bytes + the SP-D stderr note (unchanged).
+      // write the merged-with-markers bytes + the stderr note (unchanged).
       if (hadMergeConflict) {
         const ctxMode: NonNullable<ConflictContext['mode']> = 'managedBlocks';
         const resolution = await resolveManagedConflict(relPath, ctxMode, opts);
@@ -602,12 +603,13 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
         if (!block) {
           throw new Error(`manifest entry ${entry.path}: managedBlock mode missing 'block'`);
         }
-        // A legacy (pre-Slice-S) .noir/NOIR.md is a whole-file auto-brief
-        // with NO managed markers. The normal path would treat the old brief
-        // as user content and append a SECOND managed brief → two "Project
+        // A legacy .noir/NOIR.md (written before the artifact table shipped) is
+        // a whole-file auto-brief with NO managed markers. The normal path
+        // would treat the old brief as user content and append a SECOND managed
+        // brief → two "Project
         // id:" lines. Self-heal: when the existing file has NO noir managed
         // marker at all, wipe it first so the managed write emits a clean
-        // single brief. (Pre-Slice-S NOIR.md was 100% auto-generated, so
+        // single brief. (That legacy NOIR.md was 100% auto-generated, so
         // there is no user content to preserve in that legacy shape.)
         if (isNoirMdPath(entry.path)) healLegacyNoirMd(abs);
         const theirs = buildRegion(block, body);
@@ -620,7 +622,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
         // Managed-region conflict (per-file; never apply-to-all). Hand the
         // resolver the merged-with-markers bytes (the 6th "merge" option's
         // payload). Default behavior when no resolver is wired (or
-        // non-interactive): write the merged-with-markers bytes + the SP-D
+        // non-interactive): write the merged-with-markers bytes + the
         // stderr note (unchanged from v1.2).
         if (merged.conflict) {
           const ctxMode: NonNullable<ConflictContext['mode']> = 'managedBlock';
@@ -657,7 +659,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
           written.push(entry.path);
         }
       } else if (entry.mode === 'mergeJson') {
-        // C3 SessionStart hook: merge-aware JSON write (preserves the user's
+        // SessionStart hook: merge-aware JSON write (preserves the user's
         // permissions/env/enabledPlugins, appends the hook entry once, deduped
         // by command substring). `body` is the rendered JSON patch; the dedup
         // marker comes from the entry.
@@ -791,7 +793,7 @@ function similarity(a: string, b: string): number {
 
 // --- helpers -----------------------------------------------------------------
 
-/** SP-D — three-way merge a managed region against the persisted ancestor
+/** Three-way merge a managed region against the persisted ancestor
  *  (`base`). `theirs` is the freshly-rendered template region (with markers);
  *  `ours` is the region currently on disk. With no ancestor / no existing
  *  region this is a no-op (returns `theirs`). On conflict, returns the merged
@@ -827,8 +829,8 @@ function mergeManagedRegion(
  *  conflict (single-block path). Per-file (never apply-to-all — user edits
  *  inside a `<!-- noir:* -->` region need individual review). When no resolver
  *  is wired OR the engine is non-interactive, returns `undefined` so the caller
- *  falls through to the v1.2 behavior (write the merged-with-markers bytes +
- *  the SP-D stderr note). Returns the resolver's bare resolution choice. */
+ *  falls through to the earlier behavior (write the merged-with-markers bytes +
+ *  the stderr note). Returns the resolver's bare resolution choice. */
 async function resolveManagedConflictCtx(
   ctx: ConflictContext,
   opts: ScaffoldOptions,
@@ -1076,7 +1078,8 @@ async function writeWithConflict(
       // Preserve the user's file aside at a UNIQUE path. Review fix: a bare
       // `renameSync(abs, abs.local)` would silently clobber a pre-existing
       // `.local` (POSIX rename replaces) or throw EEXIST mid-scaffold (win32) —
-      // the very data-loss SP-C exists to prevent. uniqueAside picks a fresh
+      // the very data-loss the conflict flow exists to prevent. uniqueAside
+      // picks a fresh
       // `.local` (then `.local.1`, …) so the move is always safe.
       const aside = uniqueAside(abs, relPath, '.local');
       renameSync(abs, aside.abs);
@@ -1148,7 +1151,7 @@ function isNoirMdPath(relPath: string): boolean {
   return relPath === '.noir/NOIR.md';
 }
 
-/** Self-heal: wipe a legacy (pre-Slice-S) NOIR.md before the managed write.
+/** Self-heal: wipe a legacy whole-file NOIR.md before the managed write.
  *  Legacy shape = file exists but contains NO `<!-- noir:<name> begin -->`
  *  managed marker (the whole file was the auto-brief). Files that already have
  *  markers, or are absent, are left untouched (normal managed-block path or

@@ -1,6 +1,6 @@
 // `noir init` — first-run + `--upgrade`.
 //
-// Slice S-T2 refactor: the ad-hoc writers (syncIgnores, writeManagedRegion,
+// Refactor: the ad-hoc writers (syncIgnores, writeManagedRegion,
 // writeFileSync for .mcp.json/project.id/config.yml/NOIR.md/RULES.md) are
 // replaced by a single call into `@noir-ai/create`'s `scaffold({mode:'init'})`.
 // The manifest + three-mode writer are the source of truth for what init
@@ -9,14 +9,14 @@
 //     error strings are locked by url-validation.test.ts), and
 //   - skills emission (out-of-manifest by design — composed after scaffold()).
 //
-// S10 multi-host: the 8 direct `claudeAdapter` imports across init/sync/create
+// Multi-host: the 8 direct `claudeAdapter` imports across init/sync/create
 // collapsed to `resolveAdapter(host)` where `host` comes from `--host <id>`
 // (default `'claude'`). The adapter drives (a) the manifest via
 // `scaffold({host})` and (b) skills emission — claude/cursor have a skill dir;
 // gemini/agents-md/opencode have no skill concept and the call is skipped.
 //
-// Deliberate behavior changes vs the predecessor (spec-aligned latent-bug
-// fixes; see S-T1 contract notes + CHANGELOG):
+// Deliberate behavior changes vs the predecessor (latent-bug fixes; see the
+// CHANGELOG):
 //   - `.noir/project.id` → skipIfExists (predecessor overwrote on every init,
 //     orphaning the store DB named after the id). Re-init now preserves it.
 //   - `.noir/config.yml` → skipIfExists (predecessor overwrote).
@@ -59,14 +59,14 @@ export interface InitOptions {
    *  Drives both scaffold emission (the manifest's host-specific half) and
    *  skills emission (skipped for hosts with no `skillsDir`). */
   host?: HostId;
-  /** SP-A: re-scaffold even if already initialized (bypasses the
+  /** Re-scaffold even if already initialized (bypasses the
    *  already-initialized no-op guard in scaffold()). */
   force?: boolean;
-  /** F1: `--dry-run`/`--preview` — report the planned writes to stderr
+  /** `--dry-run`/`--preview` — report the planned writes to stderr
    *  (via {@link reportPlannedWrites}) without touching disk. The scaffold
    *  engine already supports this; the CLI just surfaces it. */
   dryRun?: boolean;
-  /** F1: alias for `--dry-run`. Kept on the options bag so direct callers can
+  /** Alias for `--dry-run`. Kept on the options bag so direct callers can
    *  pass either spelling; the bin collapses both flags before dispatch. */
   preview?: boolean;
 }
@@ -105,7 +105,7 @@ export async function init(root: string, opts: InitOptions): Promise<InitResult 
   // process.env). The CLI derives it once from the bridge + TTY/CI/NO_COLOR gate.
   const interactive = resolveInteractive();
   const conflictOpts = buildConflictOpts({ force: opts.force, interactive });
-  // F1: --dry-run/--preview collapse to a single dryRun boolean. The engine
+  // --dry-run/--preview collapse to a single dryRun boolean. The engine
   // skips every write and returns the PLANNED lists; skills emission + dedup are
   // skipped too (they would touch disk / load the embedder).
   const dryRun = opts.dryRun === true || opts.preview === true;
@@ -122,7 +122,7 @@ export async function init(root: string, opts: InitOptions): Promise<InitResult 
     ...(dryRun ? { dryRun: true } : {}),
     ...conflictOpts,
   });
-  // F1: dry-run reports the planned writes (result's written/skipped/identical)
+  // dry-run reports the planned writes (result's written/skipped/identical)
   // and stops BEFORE skills emission + the "initialized" message — nothing was
   // written, so the host skill dir must stay untouched and we must not claim
   // init. Under --json the bin emits the planned list as the `{ok, data}`
@@ -131,7 +131,7 @@ export async function init(root: string, opts: InitOptions): Promise<InitResult 
     reportPlannedWrites(res);
     return res;
   }
-  // SP-A: if the already-initialized guard no-op'd scaffold, stop — don't re-emit
+  // If the already-initialized guard no-op'd scaffold, stop — don't re-emit
   // skills or print "initialized" (scaffold already printed the no-op message).
   if (res.noop) return res;
 
@@ -211,7 +211,7 @@ function resolveInitHost(root: string, opts: InitOptions): HostId {
 }
 
 /**
- * F1 — report a dry-run (--dry-run/--preview) scaffold result. After
+ * Report a dry-run (--dry-run/--preview) scaffold result. After
  * `scaffold({dryRun:true})` the result's `written`/`skipped`/`identical`/
  * `refreshed` carry the PLANNED paths (nothing touched disk): `written` = files
  * that WOULD be written, `skipped` = skipIfExists files already present (left
@@ -224,7 +224,7 @@ function resolveInitHost(root: string, opts: InitOptions): HostId {
  *
  * Emitted via the `log()` stderr helper — a HUMAN diagnostic, so under `--json`
  * the bin emits the planned list as the structured `{ok, data}` envelope on
- * stdout (the data channel) instead, matching the S9 stream discipline used by
+ * stdout (the data channel) instead, matching the CLI stream discipline used by
  * the other init/create/sync diagnostics. Shared by init/create/sync (the same
  * dryRun surface on all three scaffold modes).
  */
@@ -233,7 +233,7 @@ export function reportPlannedWrites(res: ScaffoldResult): void {
   if (res.written.length > 0) {
     log('Planned writes:');
     for (const p of res.written) {
-      // Slice E (§8.1): a planned creation at a non-default mode is reported
+      // A planned creation at a non-default mode is reported
       // here so `noir init --dry-run` shows the 0600 `.noir/.env` seed without
       // writing it. `fileModes` is absent/empty for every other entry.
       const mode = res.fileModes?.[p];
@@ -263,8 +263,8 @@ export function reportPlannedWrites(res: ScaffoldResult): void {
  * `.claude/skills/`; cursor → `.cursor/rules/` compiled as `.mdc`; the other
  * three hosts have no skill concept and are skipped with a stderr note).
  *
- * The `CompileTarget` matches the host id (S10 foundation widened the enum to
- * the same union) so cursor skills compile to the `.mdc` rule shape via
+ * The `CompileTarget` matches the host id (a later foundation widening made the
+ * enum the same union) so cursor skills compile to the `.mdc` rule shape via
  * `compileSkill(_, 'cursor')`; the others keep the verbatim SKILL.md format.
  *
  * Returns the emit summary for the caller to carry into `--json`, or
@@ -279,8 +279,8 @@ async function emitHostSkills(
   const adapter = resolveAdapter(host);
   const skillsDir = adapter.skillsDir?.({ root });
   if (skillsDir === undefined) {
-    // N1: standardized wording — same phrase across init/sync/create so logs
-    // grep uniformly. (Pre-N1 each command phrased this differently.)
+    // Standardized wording — same phrase across init/sync/create so logs
+    // grep uniformly. (Each command used to phrase this differently.)
     process.stderr.write(`host '${host}' has no skill emitter; skipping skills\n`);
     return undefined;
   }

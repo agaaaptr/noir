@@ -1,4 +1,4 @@
-// Home-consolidation (S1) — the shared, React-free curated-section module.
+// The shared, React-free curated-section module.
 //
 // The bare `noir` home menu (packages/cli/src/commands/home.ts) and the Ink TUI
 // palette's `commands` corpus (App.tsx → palette/rows.ts) both render a curated

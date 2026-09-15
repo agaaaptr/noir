@@ -5,17 +5,18 @@
 // Lives HERE, in memory, so @noir-ai/core never imports @noir-ai/memory
 // (no core→memory cycle): core owns the user-facing schema, memory owns the
 // engine type + this mapper (mirrors @noir-ai/context's `resolveEmbedderConfig`
-// and @noir-ai/model's `resolveModelConfig` — blueprint / hard rule). The fully-
+// and @noir-ai/model's `resolveModelConfig` — the same per-package bridge shape
+// every layer uses). The fully-
 // resolved zod output is structurally assignable to the permissive
 // {@link MemoryUserConfig} mirror below, so the mapper accepts a
 // `NoirConfig['memory']` directly — callers pass `resolveMemoryConfig(cfg.memory)`.
 //
-// Provider-EXPLICIT, never silent paid (blueprint D5/D6): this mapper is a
+// Provider-EXPLICIT, never silent paid: this mapper is a
 // PURE projection of what the user wrote — it NEVER infers a provider from
 // env-var presence. No explicit `consolidation.provider` ⇒ a disabled runtime
 // config ⇒ `runConsolidation` refuses with `'no-provider'` + writes a miss audit
-// and makes NO S8 `complete()` call. This is the line between free (store/embed)
-// and paid (LLM) — NEVER a silent paid call (the Agent-Memory anti-pattern, §9).
+// and makes NO `complete()` call. This is the line between free (store/embed)
+// and paid (LLM) — NEVER a silent paid call (the Agent-Memory anti-pattern).
 // The mapper reads NO environment, holds NO secrets, and never throws — an
 // unusable config stays a clean disabled default.
 
@@ -52,7 +53,7 @@ export interface MemoryUserConfig {
  * - `undefined` / missing block ⇒ `{ consolidation: { enabled: false } }`
  *   (consolidation disabled — the safe default; capture/store/retrieve stay
  *   local + free. `runConsolidation` then refuses with `'no-provider'` + logs,
- *   making NO paid call, blueprint D6).
+ *   making NO paid call).
  * - A block whose `consolidation.enabled` is absent or `false` ⇒ the same
  *   disabled default, regardless of any `provider`/`model` written alongside it
  *   (the master switch is the first gate `runConsolidation` checks).
@@ -68,7 +69,7 @@ export interface MemoryUserConfig {
  * This mapper is a PURE projection — it copies fields through unchanged, NEVER
  * infers a provider from env-var presence, reads NO environment, holds NO
  * secrets, and never throws. Whether a configured provider is actually USABLE is
- * decided at call time inside `complete()` (S8, which re-reads env idempotently),
+ * decided at call time inside `complete()` (which re-reads env idempotently),
  * NOT here.
  */
 export function resolveMemoryConfig(raw?: MemoryUserConfig): MemoryConfig {

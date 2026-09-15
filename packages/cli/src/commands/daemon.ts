@@ -1,18 +1,18 @@
-// S9 — `noir daemon {start,stop,status,restart}` (+ `token`, spec 6.1).
+// `noir daemon {start,stop,status,restart}` (+ `token`).
 //
-// Honest daemon UX (S9 / spec §8). `noir daemon start` runs the daemon either
+// Honest daemon UX. `noir daemon start` runs the daemon either
 // FOREGROUND or DETACHED, depending on flags:
 //   - default (foreground): `ensureDaemonRunning` (from @noir-ai/daemon) starts
 //     a fresh in-process HTTP server — whose listen handle + idle timer +
 //     SIGINT/SIGTERM handlers (installed inside `startHttpServer`) keep this CLI
 //     process alive until idle-stop or a signal — or reuses an already-healthy
 //     one and exits.
-//   - `--detach` (parent path, D1): `spawnDetachedDaemon` forks a detached child
+//   - `--detach` (parent path): `spawnDetachedDaemon` forks a detached child
 //     `noir daemon start --_detached-child` (unref'd + silent stdio), waits for
 //     the child's daemon record + `/health` to confirm it is serving, reports
 //     `{mode:'detached', pid, port}`, and the PARENT exits — the child keeps the
 //     daemon alive in the background.
-//   - `--_detached-child` (child path, D2; hidden, set by the parent's spawn):
+//   - `--_detached-child` (child path; hidden, set by the parent's spawn):
 //     we ARE the detached child — run `ensureDaemonRunning` in-process (the HTTP
 //     server keeps THIS process alive) and emit `{mode:'detached'}`. The child
 //     is the SINGLE writer of the daemon record (its own pid), so the parent
@@ -20,9 +20,9 @@
 //   Both detached paths guard double-spawn: an already-healthy daemon is reported
 //   `{mode:'detached', reused:true}` and never spawned twice.
 //
-// Stream discipline (S9): `--json` emits the versioned `{ok,data}` envelope
+// Stream discipline: `--json` emits the versioned `{ok,data}` envelope
 // to stdout (the only stdout write); every human diagnostic goes to stderr via
-// the centralized helpers. Exit codes follow the S9 contract: a missing/stale
+// the centralized helpers. Exit codes follow the CLI contract: a missing/stale
 // daemon record on `status` → exit 4 (DAEMON_DOWN); an uninitialized project
 // (`loadProjectInfo` throws) → exit 1 with the hint.
 
@@ -42,8 +42,8 @@ import { daemonStartWorkspace } from './workspace.js';
 /** Options accepted by `daemon` sub-commands (the global flags only). */
 export interface DaemonOptions extends CliOptions {}
 
-/** `daemon start` adds the real `--detach` flag (D1) plus the hidden
- *  `--_detached-child` marker (D2) the detached child carries. */
+/** `daemon start` adds the real `--detach` flag plus the hidden
+ *  `--_detached-child` marker the detached child carries. */
 export interface DaemonStartOptions extends DaemonOptions {
   /** `--detach`: parent path — fork a detached child and exit. */
   detach?: boolean;
@@ -121,7 +121,7 @@ async function isHealthy(
  * already-healthy daemon is reported `{mode:'detached', reused:true}` / the
  * foreground `reused:true` envelope and never started twice):
  *
- * 1. `--_detached-child` (D2; hidden, only ever set by `spawnDetachedDaemon`'s
+ * 1. `--_detached-child` (hidden, only ever set by `spawnDetachedDaemon`'s
  *    child argv): we ARE the detached daemon. Run `ensureDaemonRunning`
  *    in-process — the started HTTP server + idle timer + signal handlers keep
  *    THIS process alive as the background daemon — emit `{mode:'detached'}`
@@ -130,7 +130,7 @@ async function isHealthy(
  *    writer of the daemon record (its own pid), which is how the parent learns
  *    the port. We deliberately do NOT call `ensured.stop()` — that would undo
  *    the daemon we just started (or tear down a reused one owned elsewhere).
- * 2. `--detach` (D1; parent path): `spawnDetachedDaemon` forks the detached
+ * 2. `--detach` (parent path): `spawnDetachedDaemon` forks the detached
  *    child, waits until the child's record + `/health` confirm it is serving,
  *    emits `{mode:'detached', pid, port}`, and the PARENT returns (and thus
  *    exits — it never blocks). Guard first: if a daemon is ALREADY healthy,
@@ -156,7 +156,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
   }
   // A throw from loadProjectInfo on an uninitialized project must route through
   // fail() — otherwise under --json stdout stays EMPTY (the raw error only
-  // reaches stderr), violating the S9 `{ok:false}` envelope contract.
+  // reaches stderr), violating the `{ok:false}` envelope contract.
   let project: ProjectInfo;
   try {
     project = loadProjectInfo(process.cwd());
@@ -164,7 +164,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
     fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
   }
 
-  // D2 — detached CHILD path. The parent forked us via `--_detached-child`;
+  // Detached CHILD path. The parent forked us via `--_detached-child`;
   // run the daemon in-process (the HTTP server keeps THIS process alive).
   if (opts.detachChild === true) {
     const child = await ensureDaemonRunning({
@@ -196,7 +196,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
     return;
   }
 
-  // D1 — `--detach` PARENT path. Fork a detached child and let it own the
+  // `--detach` PARENT path. Fork a detached child and let it own the
   // daemon; the parent reports the backgrounded daemon and exits.
   if (opts.detach === true) {
     // Double-spawn guard: only spawn a child if no daemon is already healthy
@@ -485,12 +485,12 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
 // `noir daemon token`
 // ---------------------------------------------------------------------------
 /**
- * Print this project's daemon bearer token (spec 6.1) — the command a host's
+ * Print this project's daemon bearer token — the command a host's
  * MCP `headersHelper` runs at connect time so no secret lives in a config file.
  *
  * stdout carries the token and NOTHING else: no banner, no decoration, no
  * second line — the command's whole purpose is to be consumed by a program.
- * `--json` emits the S9 `{ok:true,data:{token}}` envelope instead (the same data
+ * `--json` emits the `{ok:true,data:{token}}` envelope instead (the same data
  * channel, self-describing). Every diagnostic goes to stderr.
  *
  * Every "no usable token" outcome is exit 4 (DAEMON_DOWN), like `daemon status`:

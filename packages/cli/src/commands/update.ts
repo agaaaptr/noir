@@ -33,10 +33,10 @@ export interface UpdateTarget {
   latestKnown: string | null;
   isUpgrade: boolean;
   /**
-   * I2 — `update.minVersion` floor (config.ts:238). True when the latest-known
-   * version the registry returned is below the configured floor (e.g. a
-   * beta/prerelease channel lag, or a yanked dist-tag). Enforced in
-   * {@link update} with the same warn/refuse pattern as the downgrade guard.
+   * True when the latest-known version the registry returned is below the
+   * configured `update.minVersion` floor (e.g. a beta/prerelease channel lag,
+   * or a yanked dist-tag). Enforced in {@link update} with the same
+   * warn/refuse pattern as the downgrade guard.
    */
   belowMinVersion: boolean;
 }
@@ -49,29 +49,29 @@ export function buildUpdateTarget(opts: {
   latestKnown: string | null;
   /**
    * The `update.minVersion` floor from config (default `'1.6.0'`). When
-   * omitted, the config default applies. See I2.
+   * omitted, the config default applies. See the floor check in {@link update}.
    */
   minVersion?: string;
 }): UpdateTarget {
   const targetSpec = opts.spec ?? opts.channel;
   // The guard target: a concrete `--spec` (an exact version) WINS over the
-  // fetched registry version — the T6/I2 guards must evaluate what we will
-  // ACTUALLY install, not what the registry happens to offer. A pinned
-  // `--spec 1.9.0` against a 1.12.0 registry is a DOWNGRADE, and a pinned
-  // `--spec 1.5.0` can trip the minVersion floor — both were previously missed
-  // because the guards only ever looked at `latestKnown`.
+  // fetched registry version, because the downgrade and minVersion guards must
+  // evaluate what we will ACTUALLY install — not what the registry happens to
+  // offer. A pinned `--spec 1.9.0` against a 1.12.0 registry is a DOWNGRADE,
+  // and a pinned `--spec 1.5.0` can trip the minVersion floor; both were
+  // previously missed because the guards only ever looked at `latestKnown`.
   const concrete =
     opts.spec != null && opts.spec !== 'latest' && opts.spec !== 'beta'
       ? opts.spec
       : opts.latestKnown;
-  // Semver downgrade guard (T6 hardening): only treat the target as an upgrade
+  // Semver downgrade guard (hardening): only treat the target as an upgrade
   // when it is STRICTLY NEWER than the current one. The prior inequality check
   // (`latestKnown !== currentVersion`) would treat a registry that returned an
   // OLDER version (e.g. beta/prerelease channel lag) as an "upgrade" and
   // silently downgrade the install.
   const isUpgrade =
     concrete != null && opts.currentVersion != null && semverGt(concrete, opts.currentVersion);
-  // I2 — minVersion floor: refuse a target version below the floor. null
+  // minVersion floor: refuse a target version below the floor. null
   // latestKnown is handled separately (registry-unreachable branch).
   const floor = opts.minVersion ?? '1.6.0';
   const belowMinVersion = concrete != null && semverLt(concrete, floor);
@@ -107,7 +107,7 @@ function semverGt(a: string, b: string): boolean {
 }
 
 /**
- * Per-segment numeric semver `<` (I2 — minVersion floor). Same comparison
+ * Per-segment numeric semver `<` (the minVersion floor comparison). Same comparison
  * discipline as {@link semverGt} / install.ts's downgrade guard: numeric per
  * segment, non-numeric → 0. Returns true when `a` is strictly less than `b`.
  */
@@ -173,7 +173,7 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
     fail(EXIT.ERROR, 'Could not reach the registry.', opts);
   }
   fetchSpin.succeed(`Latest: ${latest}`);
-  // I2 — read the `update.minVersion` floor from the project config (falls
+  // Read the `update.minVersion` floor from the project config (falls
   // back to the config default '1.6.0' when the project isn't initialized or
   // the block is absent). Same try/catch pattern as home.ts's update-config read.
   let minVersion = DEFAULT_UPDATE_CONFIG.minVersion;
@@ -191,7 +191,7 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
     minVersion,
   });
 
-  // I2 — refuse to install a registry-offered version below the configured
+  // Refuse to install a registry-offered version below the configured
   // minVersion floor (same warn/refuse pattern as install.ts's downgrade guard).
   // Checked before the isUpgrade branch: a below-floor offer is unsafe even if
   // it happens to be newer than the (very old) current install.

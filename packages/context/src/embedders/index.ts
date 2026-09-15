@@ -10,7 +10,7 @@
 //   local    — @huggingface/transformers + all-MiniLM-L6-v2 (DEFAULT; lazy load)
 //   remote   — OpenAI / Voyage / Cohere (OPT-IN, provider-explicit, paid)
 //   ollama   — local Ollama server (OPT-IN, provider-explicit)
-//   none     — disable vectors; search degrades to BM25-only (F8)
+//   none     — disable vectors; search degrades to BM25-only
 
 import type { EmbedderConfig, EmbedderInfo, EmbedFn } from '../types.js';
 import { localEmbedder } from './local.js';
@@ -30,7 +30,7 @@ export interface ResolvedEmbedder {
  * Build an `{ embed, info }` pair from a config. Construction never touches the
  * network or the native runtime — even `local` defers its dynamic import to the
  * first `embed()` call. `kind:'none'` (and any load failure the caller lets
- * propagate) yields BM25-only retrieval downstream (F8).
+ * propagate) yields BM25-only retrieval downstream.
  */
 export function createEmbedFn(cfg: EmbedderConfig): ResolvedEmbedder {
   switch (cfg.kind) {
@@ -70,7 +70,7 @@ export function createEmbedFn(cfg: EmbedderConfig): ResolvedEmbedder {
 // local copy.
 export type { LocalEmbedder, LocalEmbedderOptions } from './local.js';
 export { DEFAULT_LOCAL_MODEL, localEmbedder, MODELS_DIR } from './local.js';
-// Re-export the building blocks so the engine, tests, and t10's
+// Re-export the building blocks so the engine, tests, and the
 // `resolveEmbedderConfig` mapper can import everything from one path.
 export { EMBED_DIM, l2normalize } from './normalize.js';
 export type { OllamaEmbedderOptions } from './ollama.js';

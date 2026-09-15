@@ -22,7 +22,7 @@ import {
  * throws `"store is read-only (daemon down)"` — the tool handler catches that and
  * surfaces a clear JSON error instead of crashing the daemon.
  *
- * Gate-config bridge (c4-surface-wiring S5): the optional `gateConfig` resolves
+ * Gate-config bridge: the optional `gateConfig` resolves
  * the user's `NoirConfig.prd.mandatoryFor` override into the engine. When omitted,
  * the engine falls back to its own default (feature/epic). The daemon construction
  * sites pass {@link resolveGateConfig}; the CLI's in-process read path passes the
@@ -42,19 +42,19 @@ export function buildWorkflowEngine(
  * {@link WorkflowGateConfig}. The two `TaskClass` enums are duplicated literals
  * (core's `z.enum` and workflow's `TASK_CLASSES`) kept in sync by a literal-sync
  * test; this resolver is the single bridge so user overrides actually reach the
- * engine. Resolves the `prd.mandatoryFor` override (c4-surface-wiring S5) and
- * the `workflow.gate.verify` evidence-gate config (c4-verify-gate-recovery S4).
+ * engine. Resolves the `prd.mandatoryFor` override
+ * and the `workflow.gate.verify` evidence-gate config.
  * Returns `undefined` only when BOTH blocks are at their defaults — otherwise the
  * engine always receives an explicit shape (no surprise default merge).
  */
 export function resolveGateConfig(config?: NoirConfig): WorkflowGateConfig | undefined {
   const valid = new Set<string>(TASK_CLASSES);
-  // PRD slice.
+  // `prd.mandatoryFor` block.
   const mandatoryForRaw = config?.prd?.mandatoryFor;
   const mandatoryFor = (mandatoryForRaw ?? [])
     .filter((c) => valid.has(c))
     .map((c) => c as TaskClass);
-  // Verify slice — pass through the user's shape (the engine applies it).
+  // Verify-gate block — pass through the user's shape (the engine applies it).
   const verifyCfg = config?.workflow?.gate?.verify;
   const hasVerify = verifyCfg !== undefined;
   // An EXPLICIT `prd.mandatoryFor` (including `[]` — "recommend a PRD for no
@@ -67,7 +67,7 @@ export function resolveGateConfig(config?: NoirConfig): WorkflowGateConfig | und
       mandatoryFor.includes('feature') &&
       mandatoryFor.includes('epic'));
   const verifyAtDefault = !hasVerify || verifyCfg.required === false;
-  // Research slice (c4-research-grounding).
+  // Research gate config.
   const researchCfg = config?.workflow?.gate?.research;
   const hasResearch = researchCfg !== undefined;
   const researchAtDefault =

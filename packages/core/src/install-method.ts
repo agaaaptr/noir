@@ -27,7 +27,7 @@ export interface InstallRecord {
   channel: string;
   installedAt: string;
   managedRuntimeVersion?: string;
-  /** Per-version dismissals of the migration banner (C1 hardening). When the
+  /** Per-version dismissals of the migration banner. When the
    *  current CLI version is in this list, `shouldShowMigrationBanner` returns
    *  false — one nudge per version per non-native install. Absent ⇒ show. */
   dismissedVersions?: string[];

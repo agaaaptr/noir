@@ -1,23 +1,23 @@
 // MemoryEngine for @noir-ai/memory.
 //
-// The single object that ties the store layer + the shared S6 embedder + the
-// optional S8 model layer together, and that the daemon injects as `ctx.memory`
+// The single object that ties the store layer + the shared context embedder + the
+// optional model layer together, and that the daemon injects as `ctx.memory`
 // — the new optional ServerContext service, mirroring `ctx.store` /
 // `ctx.engine` / `ctx.context`. It is constructed ONCE per serve lifecycle from
-// the daemon's already-open Store handle (the single writer — blueprint D6:
-// in-process, no sidecar, canonical ProjectId) + the SAME `EmbedFn` the daemon
-// already resolved for S6 (the daemon owns one embedder; memory takes
-// `{store, embed, ...}`, no embedder duplication — plan §Architecture).
+// the daemon's already-open Store handle (the single writer — the engine never
+// opens its own connection: in-process, no sidecar, canonical ProjectId) + the
+// SAME `EmbedFn` the daemon already resolved for the context engine (the daemon
+// owns one embedder; memory takes `{store, embed, ...}`, no embedder duplication).
 //
 // Public surface (the {@link MemoryEngine} contract in types.ts):
 //   • save(input)     → indexDoc + upsertVec + KV(memory:obs:*) + sessions rollup
 //   • recall(query)   → BM25 ∪ kNN fused by RRF (k=60) scoped to source:'memory',
 //                       + cheap regex entity-boost, hydrated from KV.
-//                       Implemented in recall.ts (t3); degrades to BM25-only when
-//                       the embedder is unavailable (F8).
+//                       Implemented in recall.ts; degrades to BM25-only when
+//                       the embedder is unavailable.
 //   • search(query)   → store.searchFt BM25-only (the instant path)
 //   • sessions()      → KV(memory:sessions) rollup
-//   • forget(ids)     → delete KV + best-effort doc/vec purge (A2)
+//   • forget(ids)     → delete KV + best-effort doc/vec purge
 //   • consolidate()   → explicit, provider-gated job; appends type:'lesson'
 //                       with provenance; originals never mutated
 //   • status()        → snapshot mirroring ContextStatus / StoreStatus
@@ -41,7 +41,7 @@
 //     and `save` always mints a fresh unique id that cannot collide with a
 //     forgotten one.)
 //
-// Blueprint D6 hard rules enforced here:
+// The store layer's hard rules, enforced here:
 //   • in-process only — NO sidecar / external server;
 //   • canonical ProjectId — NEVER a filesystem path;
 //   • capture / store / retrieve ALWAYS local + free — no field here triggers a
@@ -49,7 +49,7 @@
 //   • ANY LLM touch (consolidation) is OPT-IN + provider-explicit — `consolidate`
 //     refuses + logs (`memory:consolidation:miss`) when no provider is
 //     configured, and NEVER makes a paid call without one (the Agent-Memory
-//     anti-pattern, §9);
+//     anti-pattern);
 //   • never truncate — `recall`/`search` hydrate the FULL `content` from the KV
 //     row; the FTS snippet is only a preview window.
 
@@ -101,20 +101,21 @@ const DEFAULT_SEARCH_LIMIT = 10;
 const DEFAULT_TYPE: Observation['type'] = 'fact';
 
 // ---------------------------------------------------------------------------
-// S8 model injection (the ONLY LLM entry point — provider-gated, D5)
+// Model injection (the ONLY LLM entry point — provider-gated, single-shot)
 // ---------------------------------------------------------------------------
 
 /**
  * Per-call request shape passed to {@link MemoryModel.complete}. A structural
- * subset of S8's `CompleteRequest` (provider-EXPLICIT; no `tools`/`stream` —
- * single-shot only, blueprint D5). Defined locally so the memory package has no
+ * subset of the model layer's `CompleteRequest` (provider-EXPLICIT; no
+ * `tools`/`stream` — single-shot only, an agent loop is impossible by
+ * construction). Defined locally so the memory package has no
  * value-level dependency on `@noir-ai/model`; the daemon seam binds
  * `complete(req, cfg)` into this shape, and tests inject a fake.
  */
 export interface MemoryCompleteRequest {
   system?: string;
   prompt: string;
-  /** Provider block name — explicit, NEVER env-inferred (D5). */
+  /** Provider block name — explicit, NEVER inferred from env-var presence. */
   provider: string;
   /** Model id for this call. */
   model: string;
@@ -124,9 +125,9 @@ export interface MemoryCompleteRequest {
 }
 
 /**
- * The subset of S8's `CompleteResult` that consolidation consumes. `null` is
- * first-class degradation (no provider resolvable at call time — the always-
- * available offline path, D5); `{ok:false}` is an attempted-call failure.
+ * The subset of the model layer's `CompleteResult` that consolidation consumes.
+ * `null` is first-class degradation (no provider resolvable at call time — the
+ * always-available offline path); `{ok:false}` is an attempted-call failure.
  */
 export type MemoryCompleteResult =
   | { ok: true; text: string }
@@ -134,9 +135,9 @@ export type MemoryCompleteResult =
   | null;
 
 /**
- * The optional S8 model injection. Its absence is the runtime signal that the
+ * The optional model injection. Its absence is the runtime signal that the
  * bounded model layer is not wired (consolidation then refuses
- * `'model-unavailable'` — the documented stub, OQ-3/OQ-8). When present,
+ * `'model-unavailable'` — the documented stub). When present,
  * `complete` is the SOLE LLM entry point and is reached ONLY after the provider
  * gate passes (never a silent paid call).
  */
@@ -157,16 +158,16 @@ export interface MemoryEngineOptions {
    * path normalization; v1 stores {@link Observation.files} repo-relative as-is.
    */
   root: string;
-  /** Canonical project identifier (NEVER a filesystem path — blueprint D6). */
+  /** Canonical project identifier (NEVER a filesystem path). */
   projectId: ProjectId;
   /**
-   * The shared S6 embedder (the daemon resolves it once and passes the SAME
+   * The shared context embedder (the daemon resolves it once and passes the SAME
    * `EmbedFn` to context + memory). A throw on `embed()` ⇒ the vec index is
-   * skipped for that observation (F8-style degradation — the row is still
-   * BM25-searchable via FTS5 + the authoritative KV row).
+   * skipped for that observation (the row is still BM25-searchable via FTS5 +
+   * the authoritative KV row).
    */
   embed: EmbedFn;
-  /** Optional S8 model injection for consolidation (absent ⇒ consolidation refuses). */
+  /** Optional model injection for consolidation (absent ⇒ consolidation refuses). */
   model?: MemoryModel;
   /** Runtime memory config (the consolidation gate). Defaults to `{}` (offline). */
   config?: MemoryConfig;
@@ -183,21 +184,21 @@ export interface MemoryEngineOptions {
 /**
  * Noir's cross-session memory engine — the `ctx.memory` service. Constructed
  * once per serve lifecycle (mirror `ContextEngine` / `WorkflowEngine`) from the
- * daemon's store handle + the shared S6 `EmbedFn` + an optional S8 model.
+ * daemon's store handle + the shared context `EmbedFn` + an optional model.
  * Implements the {@link MemoryEngine} contract; {@link get} is an extra public
  * method (beyond the interface) for recall hydration + tests.
  *
  * `consolidate` is ALWAYS present on the class and self-gates on the configured
  * provider; the daemon decides whether to register the `memory_consolidate` MCP
- * tool from `config.memory.consolidation.enabled` (OQ-5). Its refusal paths are
- * the documented stub behavior (spec §7) — never a crash, never a silent call.
+ * tool from `config.memory.consolidation.enabled`. Its refusal paths are
+ * the documented stub behavior — never a crash, never a silent call.
  */
 export class MemoryEngineImpl implements MemoryEngine {
   /** The daemon's single-writer store handle (possibly read-only). */
   readonly store: Store;
   /** Project root (stored for symmetry / future path normalization). */
   readonly root: string;
-  /** Canonical project identifier (NEVER a filesystem path — D6). */
+  /** Canonical project identifier (NEVER a filesystem path). */
   readonly projectId: ProjectId;
   /**
    * Persistent degradation flag (read-only store). Mutating ops throw a clear
@@ -281,7 +282,8 @@ export class MemoryEngineImpl implements MemoryEngine {
   /**
    * Write one observation to ALL three indexes in a single synchronous block:
    * FTS5 (`indexDoc`, content searchable) + sqlite-vec (`upsertVec`, best-effort
-   * — skipped if the embedder or vec0 is unavailable, F8-style) + the
+   * — skipped if the embedder or vec0 is unavailable, the same graceful
+   * degradation as the BM25-only read path) + the
    * authoritative KV row (`memory:obs:<id>`) + the id index + the sessions
    * rollup. The `docs.meta` payload is the denormalized search projection
    * (Observation minus content); the KV row is the source of truth.
@@ -349,7 +351,7 @@ export class MemoryEngineImpl implements MemoryEngine {
   }
 
   // -------------------------------------------------------------------------
-  // recall (t3: hybrid BM25 ∪ kNN + RRF + entity-boost — see recall.ts)
+  // recall (hybrid BM25 ∪ kNN + RRF + entity-boost — see recall.ts)
   // -------------------------------------------------------------------------
 
   /** @inheritDoc MemoryEngine.recall */
@@ -363,10 +365,10 @@ export class MemoryEngineImpl implements MemoryEngine {
     query: string,
     opts?: RecallOptions,
   ): Promise<{ hits: MemoryHit[]; degraded: boolean; mode: 'hybrid' | 'bm25-only' }> {
-    // Hybrid (t3): BM25 ∪ kNN fused by RRF (k=60, weights [0.5,0.5]) scoped to
+    // Hybrid: BM25 ∪ kNN fused by RRF (k=60, weights [0.5,0.5]) scoped to
     // source:'memory', + cheap regex entity-boost, hydrated to FULL content from
     // the authoritative KV row. Degrades to BM25-only when the
-    // embedder is unavailable (F8) — `recallMemory` carries the `degraded` /
+    // embedder is unavailable — `recallMemory` carries the `degraded` /
     // `mode` signal. Read-only against the injected store; not serialized
     // (concurrent recalls are safe — they never mutate state).
     return recallMemory({ store: this.store, embed: this.embed }, query, opts);
@@ -437,7 +439,7 @@ export class MemoryEngineImpl implements MemoryEngine {
     for (const id of ids) {
       const obs = getObservation(this.store, id);
       if (obs === null) continue;
-      // Best-effort doc/vec purge (A2) + authoritative KV row clear. deleteDoc /
+      // Best-effort doc/vec purge + authoritative KV row clear. deleteDoc /
       // deleteVec are idempotent in the store, so a missing row is harmless.
       this.store.deleteDoc(id);
       try {
@@ -481,7 +483,7 @@ export class MemoryEngineImpl implements MemoryEngine {
     // throw mid-way). Mirrors the save/forget guards.
     this.assertNotDegraded('consolidate');
     // Delegate to the standalone consolidation module. The engine
-    // supplies the single-writer store handle, the optional S8 model injection,
+    // supplies the single-writer store handle, the optional model injection,
     // the provider-explicit config, the canonical projectId, and an
     // `indexDerived` callback that embeds the lesson best-effort then writes it
     // through the SAME shared `indexObservation` path as a user `save` — so a
@@ -525,7 +527,8 @@ export class MemoryEngineImpl implements MemoryEngine {
    * Best-effort embedding: returns the vec, or `null` if the embedder is
    * unavailable (`kind:'none'`, native load failure, provider error). A `null`
    * vec skips `upsertVec` so the save still succeeds — the row is BM25-searchable
-   * + hydrated from KV (F8-style degradation).
+   * + hydrated from KV (the same degradation the read path reports as
+   * bm25-only).
    */
   private async embedBestEffort(content: string): Promise<Float32Array | null> {
     try {
@@ -564,11 +567,12 @@ export class MemoryEngineImpl implements MemoryEngine {
 
 /**
  * Build a {@link MemoryEngineImpl} bound to a single store handle + the shared
- * S6 embedder + an optional S8 model. Constructed once per serve lifecycle
+ * context embedder + an optional model. Constructed once per serve lifecycle
  * alongside the context + workflow engines. The daemon passes the SAME `embed`
- * it resolved for S6 (no embedder duplication) and resolves the model via S8's
- * `resolveModelConfig` only when `config.memory.consolidation.enabled` is set
- * (provider-explicit — never a silent paid call, D6).
+ * it resolved for the context engine (no embedder duplication) and resolves the
+ * model via the model layer's `resolveModelConfig` only when
+ * `config.memory.consolidation.enabled` is set (provider-explicit — never a
+ * silent paid call).
  */
 export function createMemoryEngine(opts: MemoryEngineOptions): MemoryEngineImpl {
   return new MemoryEngineImpl(opts);

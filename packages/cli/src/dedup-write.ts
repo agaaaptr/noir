@@ -32,7 +32,7 @@
 // near-dup with its cosine `similarity` without a prompt.
 //
 // Stream discipline: every hint / warn-skip → STDERR; the CLI's `json()` is the
-// sole stdout writer. Colors via the A2 theme (`c.warn`/`c.dim`) so NO_COLOR /
+// sole stdout writer. Colors via the shared theme (`c.warn`/`c.dim`) so NO_COLOR /
 // non-TTY strip cleanly.
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';

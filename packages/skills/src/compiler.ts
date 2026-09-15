@@ -70,11 +70,11 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
   else if (!looksLikeWhenDescription(description)) {
     errors.push('description must state WHEN to trigger (e.g. "Use when…"), not WHAT it does');
   } else if (!isWhatWhenDescription(description)) {
-    // C3: the description must ALSO carry a WHAT clause — the trigger phrase
+    // The description must ALSO carry a WHAT clause — the trigger phrase
     // alone (WHEN-only) fails. Errors, not warnings: it's part of the contract.
     errors.push('description must be WHAT+WHEN — a WHAT clause after the trigger phrase');
   }
-  // C3 structural gate: metadata, required sections, line budget, one-level refs.
+  // Structural gate: metadata, required sections, line budget, one-level refs.
   if (!metadata?.category?.trim()) errors.push('missing `metadata.category`');
   if (!metadata?.version?.trim()) errors.push('missing `metadata.version`');
   const body = bodyOf(skill.skillMd);
@@ -90,7 +90,7 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
     if (!/^[a-z0-9-]+\.md$/i.test(r.name)) errors.push(`reference "${r.name}" must be <kebab>.md`);
     if (!r.content.trim()) errors.push(`reference "${r.name}" is empty`);
   }
-  // C3 generated-artifact standard: no `.noir/` output-path drift in the body
+  // Generated-artifact standard: no `.noir/` output-path drift in the body
   // or references (unknown dir, or a filename missing its type-code prefix).
   for (const d of artifactPathDrift(skill)) errors.push(d);
   // Soft warnings (lint-level) — advisory, non-failing.
@@ -99,7 +99,7 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
 }
 
 /**
- * `lintSkill` — the C3 soft quality gate. Errors = `validateSkill` errors (a
+ * `lintSkill` — the soft quality gate. Errors = `validateSkill` errors (a
  * skill that fails validation is broken); warnings = `quality.ts` style rules
  * (thin body, no examples, first-person narration, …). A skill can validate
  * clean yet still carry lint warnings the author should resolve.
@@ -127,7 +127,7 @@ export function lintSkill(skill: BuiltinSkill): {
  *    and `alwaysApply: false` (the agent decides whether to pull the rule via
  *    the description; never auto-applied). The body is the SKILL.md BODY
  *    (frontmatter stripped). Cursor's rule format has no references concept,
- *    so references are dropped (documented in the S10 spec risks — the body is
+ *    so references are dropped (documented as a known limitation — the body is
  *    the surface).
  *
  * The `target` defaults to `'claude'` for backward compatibility with every
@@ -151,7 +151,7 @@ export function compileSkill(skill: BuiltinSkill, target: CompileTarget = 'claud
 /**
  * Cursor `.mdc` rule transform — frontmatter `{description, globs, alwaysApply:
  * false}` + the SKILL.md body. The description drives Cursor's agent-decided
- * rule selection (per the S10 spec open-decision default: `alwaysApply: false`).
+ * rule selection (the default: `alwaysApply: false`).
  * Cursor's rule format has no references/ concept, so the body alone is the
  * surface; references are dropped (documented risk in the spec).
  *
@@ -217,7 +217,7 @@ export async function emitSkillsToDir(
     builtinDir?: string;
     integrationsDir?: string;
     includeIntegrations?: boolean;
-    /** S10 CompileTarget — selects the per-skill transform. Defaults to
+    /** CompileTarget — selects the per-skill transform. Defaults to
      *  `'claude'` (the v1.1 verbatim SKILL.md shape) so every existing caller
      *  stays byte-identical. `'cursor'` compiles each skill to a `.mdc` rule
      *  file (frontmatter `description`/`globs`/`alwaysApply:false` + the

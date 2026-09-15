@@ -2,25 +2,25 @@
 //
 // The explicit, append-only, provider-gated consolidation job. Extracted
 // from the engine into its own module so the algorithm — gate → gather
-// candidates → synthesize ONE lesson via the S8 bounded model → append the
+// candidates → synthesize ONE lesson via the bounded model layer → append the
 // derived row — is unit-testable in isolation (no sqlite-vec, no embedder: the
 // engine passes an `indexDerived` callback that performs the actual write). The
 // engine delegates here; the engine still owns the store handle, the embedder,
 // and the FTS5+vec+KV write path (`indexObservation`, shared with `save`).
 //
-// Blueprint D6 / §9 hard rules enforced here (non-negotiable):
+// Non-negotiable rules enforced here:
 //   • Provider-EXPLICIT — the provider is resolved ONLY from
 //     `config.consolidation.provider`; it is NEVER inferred from env-var
 //     presence. No explicit, enabled provider ⇒ refuse + log (`no-provider`)
-//     and NO S8 call is made. This is the line between free (store) and paid
-//     (LLM) — NEVER a silent paid call (the Agent-Memory anti-pattern, §9).
+//     and NO model call is made. This is the line between free (store) and paid
+//     (LLM) — NEVER a silent paid call (the Agent-Memory anti-pattern).
 //   • Append-only — on success a DERIVED `type:'lesson'` row is appended with
 //     `provenance:[candidate ids]`; the original observations are NEVER mutated
 //     or deleted (reversible + auditable).
-//   • Single-shot (D5) — one `complete()` call, free-text → lesson body. There
+//   • Single-shot — one `complete()` call, free-text → lesson body. There
 //     is no `tools` / `stream` parameter on the request and no loop here.
 //   • Canonical ProjectId — the lesson's `project` is the engine's canonical
-//     id (NEVER a filesystem path — D6).
+//     id (NEVER a filesystem path).
 //
 // A refusal is NEVER a crash and NEVER silent: every miss is recorded in the
 // `memory:consolidation:miss` KV audit log (`logged:true`) so the user can see
@@ -47,7 +47,7 @@ import {
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Default cap on consolidation candidates (spec §7.4 — deterministic selection). */
+/** Default cap on consolidation candidates (deterministic selection). */
 export const DEFAULT_CONSOLIDATE_LIMIT = 50;
 
 /** Hard ceiling on consolidation candidates — a caller passing an unbounded
@@ -56,7 +56,7 @@ export const DEFAULT_CONSOLIDATE_LIMIT = 50;
 const MAX_CONSOLIDATE_LIMIT = 200;
 
 /**
- * Single-shot consolidation instruction (D5: no tools, no loop). The lesson is
+ * Single-shot consolidation instruction (no tools, no loop). The lesson is
  * free-text PROSE (not JSON): a lesson is a synthesized insight, and free-text
  * avoids a JSON-parse/repair round on what is naturally unstructured output.
  */
@@ -80,13 +80,13 @@ export const CONSOLIDATION_SYSTEM_PROMPT = [
  * embedder or the write path directly — it builds the lesson row + hands it off.
  */
 export interface ConsolidationDeps {
-  /** The daemon's single-writer store handle (possibly read-only — D6). */
+  /** The daemon's single-writer store handle (possibly read-only). */
   store: Store;
-  /** Optional S8 model injection; absent ⇒ `'model-unavailable'` refusal. */
+  /** Optional model injection; absent ⇒ `'model-unavailable'` refusal. */
   model: MemoryModel | undefined;
   /** Runtime memory config (the provider-explicit consolidation gate). */
   config: MemoryConfig;
-  /** Canonical project identifier (NEVER a filesystem path — D6). */
+  /** Canonical project identifier (NEVER a filesystem path). */
   projectId: ProjectId;
   /**
    * Write a derived lesson observation to all indexes. The engine implements
@@ -107,10 +107,10 @@ export interface ConsolidationDeps {
  * Gate order (each refusal logs to `memory:consolidation:miss` and returns
  * `logged:true`; NONE makes a paid call before its gate passes):
  *  1. `no-provider` — consolidation not enabled OR no explicit `provider`
- *     configured. The provider is NEVER inferred from env-var presence (D5/D6).
- *  2. `model-unavailable` — enabled + provider set, but the S8 model injection
- *     is absent OR no explicit `model` id is configured (the documented stub,
- *     OQ-3/OQ-8). Also the refusal when `complete()` returns `null` (provider
+ *     configured. The provider is NEVER inferred from env-var presence.
+ *  2. `model-unavailable` — enabled + provider set, but the model injection
+ *     is absent OR no explicit `model` id is configured (the documented stub).
+ *     Also the refusal when `complete()` returns `null` (provider
  *     not resolvable at call time — e.g. key missing) OR `{ok:false}` (an
  *     attempted call failed): both are wrapped as `'model-unavailable'`.
  *  3. `no-candidates` — nothing matches the (optional) type filter / lookback,
@@ -128,16 +128,16 @@ export async function runConsolidation(
   const cons = config.consolidation;
   const provider = cons?.provider;
 
-  // GATE 1 — provider-explicit (D5/D6). The provider is NEVER inferred
+  // GATE 1 — provider-explicit. The provider is NEVER inferred
   // from env-var presence; no explicit, enabled provider ⇒ refuse + log, and
-  // NO S8 call is made. This is the line between free (store) and paid (LLM).
+  // NO model call is made. This is the line between free (store) and paid (LLM).
   if (!cons?.enabled || !provider) {
     appendConsolidationMiss(store, { ts: Date.now(), reason: 'no-provider' });
     return { ok: false, reason: 'no-provider', logged: true };
   }
 
-  // GATE 2 — the S8 bounded model layer must be injected AND an explicit model
-  // id configured. Its absence is the documented stub (OQ-3/OQ-8): refuse +
+  // GATE 2 — the bounded model layer must be injected AND an explicit model
+  // id configured. Its absence is the documented stub: refuse +
   // log, never crash, never a call.
   if (model === undefined || !cons.model) {
     appendConsolidationMiss(store, {
@@ -169,7 +169,7 @@ export async function runConsolidation(
     return { ok: false, reason: 'no-candidates', logged: true };
   }
 
-  // Single-shot synthesis (D5: no `tools`, no loop). Free-text → lesson body.
+  // Single-shot synthesis (no `tools`, no loop). Free-text → lesson body.
   const result = await model.complete({
     system: CONSOLIDATION_SYSTEM_PROMPT,
     prompt: serializeCandidates(candidates),
@@ -231,7 +231,7 @@ export async function runConsolidation(
 /**
  * Gather consolidation candidates: observations with `type != 'lesson'`,
  * newest-first, optionally restricted to `types`, capped at `limit`. Pure read
- * off the id index + KV — no LLM, no clustering (spec §7.4). Exported so the
+ * off the id index + KV — no LLM, no clustering (deliberately deterministic). Exported so the
  * deterministic selection is testable without a model.
  */
 export function gatherCandidates(

@@ -1,4 +1,4 @@
-// A1 — the palette command shape.
+// The palette command shape.
 //
 // A {@link PaletteCommand} is a PRESENTATION-layer projection of a leaf
 // `noir` subcommand: enough for the TUI command palette to filter, rank, and

@@ -3,7 +3,7 @@
 // contract uniformly and so the host adapter knows whether to widen emission
 // (host MCP config) or stay skill-only.
 //
-// Doctrine (slice-x spec §architecture + v1x §4.4): skill-only by default;
+// Doctrine: skill-only by default;
 // `gated-write-proxy` for stateless writes routed through a Noir MCP tool
 // `mcp-stdio` for a Noir-spawned stateful runtime (deferred, gated on
 // keychain); `external-mcp` for a config-only pointer at a first-party/community
@@ -16,7 +16,7 @@
 
 import * as z from 'zod';
 
-/** Auth shape. Locked: `env-var` only until keychain lands (Q4b — refuse OAuth,
+/** Auth shape. Locked: `env-var` only until keychain lands (refuse OAuth,
  *  never silently lower the security bar). `fallback:'manual-paste'` keeps the
  *  no-token path honest (the playbook tells the user to paste a value); `'none'`
  *  is for integrations that genuinely do not need a token (read-only public
@@ -28,9 +28,9 @@ export const IntegrationAuthSchema = z.object({
 });
 
 /** SDD two-way binding. `intakeFrom` declares the external artifact kind the
- *  `noir-brainstorming` skill pulls from (absorbed noir-intake in C3);
+ *  `noir-brainstorming` skill pulls from (which absorbed noir-intake);
  *  `writeBack` enumerates the fields `noir-wrap` pushes back at session end
- *  (absorbed noir-document in C3). Strings (not enums) for `writeBack` so a
+ *  (which absorbed noir-document). Strings (not enums) for `writeBack` so a
  *  per-integration vocabulary stays expressible without
  *  churning the schema. */
 export const IntegrationSddSchema = z

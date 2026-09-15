@@ -1,12 +1,13 @@
 // Workspace change feed — a monotonic cursor + a bounded ring of change entries,
 // stored in the workspace store's KV, plus in-process long-poll waiters.
 //
-// The cursor is the workspace's single ordering authority (spec §7.2): every
+// The cursor is the workspace's single ordering authority: every
 // mutation (save / supersede / forget) bumps it, and each feed entry carries the
 // cursor it was assigned. Because the workspace daemon is ONE process, `await_changes`
 // long-polling needs no cross-process signalling — waiters are registered here
 // and woken synchronously after a write (`wakeFeedWaiters`). This is the
-// cross-host-reliable "notification" (content push is an anti-pattern — spec §2).
+// cross-host-reliable "notification" (pushing content into the agent's context
+// is an anti-pattern — the agent reads on demand instead).
 import type { Store } from '@noir-ai/store';
 
 const WORKSPACE_CURSOR_KEY = 'workspace:cursor';

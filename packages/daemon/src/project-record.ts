@@ -2,7 +2,8 @@
 // `~/.noir/daemon.json`. Mirrors `workspace-record.ts`: one file per identity,
 // so no code path can read, adopt, or clear another project's record.
 // That is what removes the `wrongProject` guards in ensure.ts / commands/daemon.ts
-// (spec §4.3) — the bug is structural, so the fix is structural.
+// (which is why the `wrongProject` guards in ensure.ts / commands/daemon.ts are
+// gone) — the bug was structural, so the fix is structural.
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { atomicWriteFile, noirHome } from '@noir-ai/core';

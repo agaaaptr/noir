@@ -1,8 +1,8 @@
 // `noir sync` — re-emit the runtime subset of the scaffold manifest.
 //
-// Slice S-T2 refactor: delegates to `@noir-ai/create`'s `scaffold({mode:'sync'})`,
+// Refactor: delegates to `@noir-ai/create`'s `scaffold({mode:'sync'})`,
 // which emits ONLY the regenerate + managedBlock entries (the always-safe-to-
-// rewrite subset). Per the S-T2 contract notes, this ADOPTS THE ENGINE'S
+// rewrite subset). This ADOPTS THE ENGINE'S
 // SEMANTICS and retires the predecessor's ad-hoc behavior:
 //
 //   - The engine re-emits `.mcp.json` (regenerate) + NOIR.md brief
@@ -12,10 +12,10 @@
 //     here, so a transport/url change is now picked up by `noir sync`.
 //   - The engine does NOT seed `.noir/rules/RULES.md` on sync (RULES.md is
 //     skipIfExists, owned by init/create). The predecessor seeded it when
-//     missing; init now owns all seeds. (Spec-aligned: "sync re-emits
+//     missing; init now owns all seeds. (By design: "sync re-emits
 //     generated/managed content; init owns seeds.")
 //
-// S10 multi-host: sync resolves the host from `.noir/config.yml` (persisted by
+// Multi-host: sync resolves the host from `.noir/config.yml` (persisted by
 // `noir init --host <id>` via the config seed's `host: {{host}}` literal) OR
 // from an explicit `--host <id>` override. The resolved adapter drives the
 // manifest + skills emission. Skills emission stays a core sync feature for
@@ -35,15 +35,15 @@ import { reportPlannedWrites } from './init.js';
 import { resolveInteractive } from './output.js';
 
 export interface SyncOptions {
-  /** S10 `--host <id>` override. When set, takes precedence over the
+  /** `--host <id>` override. When set, takes precedence over the
    *  `.noir/config.yml` `host:` field. Useful for re-emitting under a
    *  different host without re-init (advanced — the canonical host stays
    *  whatever init wrote). */
   host?: HostId;
-  /** SP-C: overwrite differing regenerated files without prompting (bypasses
+  /** Overwrite differing regenerated files without prompting (bypasses
    *  the conflict menu). */
   force?: boolean;
-  /** SP-D: three-way merge managed regions (preserve hand-edits inside
+  /** Three-way merge managed regions (preserve hand-edits inside
    *  `<!-- noir:* -->` markers across a template update). DEFAULT TRUE;
    *  `--merge` is now a no-op (kept for backward compatibility). */
   merge?: boolean;
@@ -51,11 +51,11 @@ export interface SyncOptions {
    *  the bin as `--no-merge-regions`. When explicitly `false`, hand-edits
    *  inside `<!-- noir:* -->` markers are discarded on a template upgrade. */
   mergeManagedRegions?: boolean;
-  /** F1: `--dry-run`/`--preview` — report the planned writes to stderr
+  /** `--dry-run`/`--preview` — report the planned writes to stderr
    *  without touching disk. sync still requires a valid `.noir/project.id`
    *  (the engine's "not initialized" gate fires regardless). */
   dryRun?: boolean;
-  /** F1: alias for `--dry-run`. Kept on the options bag so direct callers can
+  /** Alias for `--dry-run`. Kept on the options bag so direct callers can
    *  pass either spelling; the bin collapses both flags before dispatch. */
   preview?: boolean;
 }
@@ -77,7 +77,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
     projectInfo = undefined;
   }
 
-  // F1: --dry-run/--preview collapse to a single dryRun boolean.
+  // --dry-run/--preview collapse to a single dryRun boolean.
   const dryRun = opts.dryRun === true || opts.preview === true;
 
   const res = await scaffold({
@@ -91,7 +91,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
     ...(opts.mergeManagedRegions === false ? { mergeManagedRegions: false } : {}),
   });
 
-  // F1: dry-run reports the planned writes and stops BEFORE skills emission +
+  // dry-run reports the planned writes and stops BEFORE skills emission +
   // dedup (both would touch disk / load the embedder). The engine still throws
   // its "not initialized" gate when `.noir/project.id` is missing, so a dry-run
   // sync on an uninitialized project is a clean error (not a misleading no-op).
@@ -110,8 +110,8 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
   const adapter = resolveAdapter(host);
   const skillsDir = adapter.skillsDir?.({ root });
   if (skillsDir === undefined) {
-    // N1: standardized wording — same phrase across init/sync/create so logs
-    // grep uniformly. (Pre-N1 sync phrased this as "nothing to sync".)
+    // Standardized wording — same phrase across init/sync/create so logs
+    // grep uniformly. (sync used to phrase this as "nothing to sync".)
     process.stderr.write(`host '${host}' has no skill emitter; skipping skills\n`);
   } else {
     const target: CompileTarget = host;
@@ -155,7 +155,8 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
 
 /** Resolve the sync host: explicit `--host` override > `.noir/config.yml`
  *  `host:` field > `'claude'` (default — preserves the v1.1 regression anchor
- *  for projects initialized before S10). The config read is best-effort: if
+ *  for projects initialized before the multi-host layer). The config read is
+ *  best-effort: if
  *  `.noir/config.yml` is absent OR fails to parse, scaffold's own
  *  "not initialized" gate (no `.noir/project.id`) fires below with the locked
  *  error string. */

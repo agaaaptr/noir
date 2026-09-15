@@ -1,4 +1,4 @@
-// SP-B — Noir banner.
+// Noir banner.
 //
 // Pre-rendered "noir" ASCII wordmark (figlet "ANSI Shadow", generated offline
 // and VERIFIED letter-by-letter to read N-O-I-R — an earlier hand-rolled

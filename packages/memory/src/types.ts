@@ -3,17 +3,18 @@
 // The observation data model + the MemoryEngine contract. These are the
 // package's OWN interfaces — the storage surface (`Store`, `ProjectId`) is
 // re-exported from @noir-ai/core / @noir-ai/store, and the embedder seam
-// (`EmbedFn`, `EmbedderConfig`) is re-exported from @noir-ai/context (S6). The
+// (`EmbedFn`, `EmbedderConfig`) is re-exported from @noir-ai/context. The
 // engine is built once per serve lifecycle from the daemon's already-open Store
 // handle (the single writer) + the SAME `EmbedFn` the daemon already resolved
-// for S6 — memory takes `{store, embed, ...}`, no embedder duplication.
+// for the context engine — memory takes `{store, embed, ...}`, no embedder
+// duplication.
 //
 // There is deliberately NO zod here: core owns the user-facing schema
 // (`NoirConfigSchema.memory`) and memory owns this engine/type
 // surface, which keeps the dependency graph acyclic (core never imports memory
 // — mirrors @noir-ai/context types.ts).
 //
-// Blueprint D6 hard rules enforced by this model:
+// Hard rules this model enforces:
 //   • canonical ProjectId (NEVER a filesystem path) — `Observation.project`;
 //   • capture/store/retrieve always local + free — no field implies a network
 //     or LLM call;
@@ -82,7 +83,7 @@ export type ObservationStatus = 'active' | 'superseded' | 'forgotten';
 // ---------------------------------------------------------------------------
 
 /**
- * Default observation salience (spec §4.1). Applied by `MemoryEngine.save` when
+ * Default observation salience. Applied by `MemoryEngine.save` when
  * {@link SaveInput.importance} is omitted, and by consolidation when appending a
  * derived `type:'lesson'` row. Shared via types.ts so save + consolidation agree
  * on the baseline without a cross-module value import.
@@ -108,7 +109,7 @@ export interface Observation {
   type: MemoryType;
   /** Full text — never truncated. Indexed into FTS5 + embedded into vec0. */
   content: string;
-  /** Canonical project id (NEVER a filesystem path — blueprint D6). */
+  /** Canonical project id (NEVER a filesystem path). */
   project: ProjectId;
   /** Host session id if known, else null. */
   sessionId: string | null;
@@ -176,7 +177,7 @@ export interface SaveInput {
 // ---------------------------------------------------------------------------
 
 /**
- * Options for {@link MemoryEngine.recall} (the hybrid path). Mirrors the S6
+ * Options for {@link MemoryEngine.recall} (the hybrid path). Mirrors the context
  * retriever's source-scoped search plus memory-side filters.
  */
 export interface RecallOptions {
@@ -231,12 +232,12 @@ export interface MemoryHit {
 
 /**
  * Per-session rollup, listed by {@link MemoryEngine.sessions}. Stored in KV
- * `memory:sessions` as a per-project list (solo user v1 — A3).
+ * `memory:sessions` as a per-project list (a v1 rollup: one row per project).
  */
 export interface SessionInfo {
   /** Host session id. */
   id: string;
-  /** Canonical project id (NEVER a filesystem path — D6). */
+  /** Canonical project id (NEVER a filesystem path). */
   project: ProjectId;
   /** Number of observations in this session. */
   count: number;
@@ -249,7 +250,7 @@ export interface SessionInfo {
 // ---------------------------------------------------------------------------
 
 /**
- * Consolidation config block. Provider-EXPLICIT (blueprint D5/D6): the
+ * Consolidation config block. Provider-EXPLICIT: the
  * provider is NEVER inferred from env-var presence — no explicit `provider`
  * ⇒ {@link MemoryEngine.consolidate} refuses + logs
  * (`{ok:false, reason:'no-provider'}`) and writes a `memory:consolidation:miss`
@@ -283,7 +284,8 @@ export interface MemoryConfig {
 
 /**
  * Result of {@link MemoryEngine.forget}: the KV row removed + best-effort
- * doc/vec purge (deleteDoc + deleteVec — A2's acceptable v1 behavior).
+ * doc/vec purge (deleteDoc + deleteVec — best-effort, and its absence never
+ * fails the forget).
  */
 export interface ForgetResult {
   /** Number of observations actually removed. */
@@ -322,7 +324,7 @@ export type ConsolidationResult =
  */
 export interface MemoryStatus {
   ok: boolean;
-  /** Canonical project id (never a filesystem path — D6). */
+  /** Canonical project id (never a filesystem path). */
   projectId: string;
   /** Number of observations (rows indexed with `source:'memory'`). */
   observations: number;
@@ -336,20 +338,19 @@ export interface MemoryStatus {
 
 /**
  * The memory engine — the `ctx.memory` service (the contract the daemon seam
- * in task t4 types against, and tests mock). Constructed once per serve
- * lifecycle from the daemon's store handle + the shared S6 `EmbedFn` (mirrors
+ * types against, and tests mock). Constructed once per serve
+ * lifecycle from the daemon's store handle + the shared context `EmbedFn` (mirrors
  * `ContextEngine` / `WorkflowEngine`). The daemon owns the single embedder and
  * passes the SAME `EmbedFn` to both the context and memory engines — no
- * embedder duplication (plan §Architecture).
+ * embedder duplication.
  *
  * `consolidate` is OPTIONAL: registered only when consolidation is enabled AND
- * a provider is configured (OQ-5). Its absence is the static signal
- * that no LLM surface is wired (D5).
+ * a provider is configured. Its absence is the static signal
+ * that no LLM surface is wired (the model layer has no tools and no loop).
  *
  * Single-writer discipline: the engine — like the context indexer — is the
  * ONLY thing that writes `source:'memory'` rows through the injected handle; it
- * never opens a second store connection (blueprint D6: in-process only, no
- * sidecar).
+ * never opens a second store connection (in-process only, no sidecar).
  */
 export interface MemoryEngine {
   /** Persist an observation (FTS5 + vec0 + KV `memory:obs:<id>`); returns the row. */
@@ -398,10 +399,11 @@ export interface MemoryEngine {
 // ---------------------------------------------------------------------------
 
 // The embedder seam reuses: recall embeds the query via the SAME `EmbedFn`
-// the daemon already resolved for S6. Re-exported from @noir-ai/context so the
-// memory package has a single import surface for both the seam + its config.
+// the daemon already resolved for the context engine. Re-exported from
+// @noir-ai/context so the memory package has a single import surface for both
+// the seam + its config.
 export type { EmbedderConfig, EmbedFn } from '@noir-ai/context';
-// Canonical project identifier (NEVER a filesystem path — blueprint D6).
+// Canonical project identifier (NEVER a filesystem path).
 // Re-exported so memory modules import it from `../types.js` rather than
 // reaching into @noir-ai/core directly.
 export type { ProjectId } from '@noir-ai/core';

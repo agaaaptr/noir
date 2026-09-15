@@ -2,7 +2,8 @@
 //
 // All embedder implementations (local / remote / ollama / fake) funnel their
 // final vector through `l2normalize` so that:
-//   - the existing S1 `vec0` table (created with the DEFAULT distance metric)
+//   - the store's existing `vec0` table (created with the DEFAULT distance
+//     metric)
 //     yields cosine-equivalent ranking when vectors are unit-norm,
 //   - remote/ollama vectors that were Matryoshka-truncated to `EMBED_DIM` are
 //     re-normalized client-side (truncation shrinks the norm),
@@ -11,10 +12,10 @@
 // `EMBED_DIM` is the fixed width of the vec0 table (384). It is the single
 // source of truth for the target dimensionality and matches the MiniLM-L6-v2
 // default model — changing it would require a store schema migration, which
-// S6 explicitly does NOT do.
+// the context layer explicitly does NOT do.
 
 /**
- * Fixed embedding width. Matches the S1 `vec0(float[384])` virtual table and
+ * Fixed embedding width. Matches the `vec0(float[384])` virtual table and
  * the default `all-MiniLM-L6-v2` model. Remote/ollama vectors are truncated or
  * required to be >= this width (see `remote.ts` / `ollama.ts`).
  */

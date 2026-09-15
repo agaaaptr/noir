@@ -1,6 +1,6 @@
-// SP-C (deferred slice) — semantic duplicate detection.
+// Semantic duplicate detection (not wired into the engine yet).
 //
-// Embeds file contents via an injected EmbedFn (the S6 local embedder in
+// Embeds file contents via an injected EmbedFn (the local embedder in
 // production; a deterministic fake in tests) and finds near-duplicate pairs by
 // cosine similarity. This is the ONLY mechanism that catches cross-file
 // SEMANTIC overlap (e.g. a hand-mirrored CLAUDE.md ≈ AGENTS.md) — exact

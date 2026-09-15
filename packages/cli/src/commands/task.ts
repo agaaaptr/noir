@@ -1,4 +1,4 @@
-// S9 — `noir task {new,status,advance,next}`.
+// `noir task {new,status,advance,next}`.
 //
 // Thin MCP-client commands over the daemon's workflow surface. The daemon
 // registers four workflow tools (packages/daemon/src/server.ts): `workflow_status`
@@ -106,7 +106,7 @@ interface WorkflowResumeResult {
 // the next gate's skill in the handoff artifact — single source.
 // ---------------------------------------------------------------------------
 export const PHASE_SKILL: Readonly<Record<string, string>> = {
-  // C3 curation (2026-08-10): intake+clarify merged into brainstorming;
+  // Skill curation: intake+clarify merged into brainstorming;
   // execute → executing-plans; verify → verifying; document → wrap.
   intake: 'noir-brainstorming',
   clarify: 'noir-brainstorming',
@@ -125,7 +125,7 @@ export function skillFor(phase: string | null | undefined): string | null {
 }
 
 /**
- * c4-verify-gate-recovery S8 — write the document-phase artifacts when a task
+ * Write the document-phase artifacts when a task
  * lands at `done`: a changelog entry + a pending decision-record stub. Uses the
  * artifact conflict seam with `preserve` policy (never clobber a user's edit).
  * The decision-record number is the next after the highest existing ADR.
@@ -225,7 +225,7 @@ function nextGateAfter(phase: string): Phase | null {
 /**
  * Run `task status` against the daemon when it is up, or fall back to the
  * IN-PROCESS read-only workflow engine when the daemon probe reports it down
- * (S9 DS-5). A status read on a read-only store is a pure KV read, so instead
+ * (the daemon-down read fallback). A status read on a read-only store is a pure KV read, so instead
  * of exit 4 it resolves against the in-process engine (still exit 3 NOT_FOUND
  * for an unknown / absent task). Writes (`task new` / `advance`) keep the
  * daemon-required exit-4 path.
@@ -331,7 +331,7 @@ export async function taskNew(opts: TaskNewOptions): Promise<void> {
     }
     mode = opts.mode;
   }
-  // Validate taskClass client-side (exit 2 on a typo) — c4-surface-wiring S1.
+  // Validate taskClass client-side (exit 2 on a typo).
   let taskClass: TaskClass | undefined;
   if (opts.taskClass !== undefined) {
     if (!TASK_CLASSES.includes(opts.taskClass as TaskClass)) {
@@ -407,7 +407,7 @@ export async function taskAdvance(opts: TaskAdvanceOptions): Promise<void> {
       typeof res.error === 'string' && res.error.length > 0 ? res.error : 'advance failed';
     fail(EXIT.ERROR, `task advance: ${detail}`, opts);
   }
-  // c4-verify-gate-recovery S8 — document-phase artifact wiring: when the task
+  // Document-phase artifact wiring: when the task
   // lands at `done`, write a changelog entry + a pending decision-record stub
   // via the artifact conflict seam (preserve on conflict). `--no-artifacts`
   // skips; the memory consolidation hook is provider-gated and fires via the
@@ -431,7 +431,7 @@ export async function taskAdvance(opts: TaskAdvanceOptions): Promise<void> {
 
 // ---------------------------------------------------------------------------
 // `noir task resume [<id>] [--prompt '<continue instruction>']`
-//   → workflow_resume (c4-surface-wiring S2)
+//   → workflow_resume
 // ---------------------------------------------------------------------------
 export interface TaskResumeOptions extends TaskOptions {
   id?: string;
@@ -493,7 +493,7 @@ export async function taskResume(opts: TaskResumeOptions): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// `noir task block <reason> [--task <id>]`  → workflow_block (S4)
+// `noir task block <reason> [--task <id>]`  → workflow_block
 // ---------------------------------------------------------------------------
 export interface TaskBlockOptions extends TaskOptions {
   reason: string;
@@ -524,7 +524,7 @@ export async function taskBlock(opts: TaskBlockOptions): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// `noir task abandon [--task <id>]`  → workflow_abandon (S4, destructive confirm)
+// `noir task abandon [--task <id>]`  → workflow_abandon (destructive confirm)
 // ---------------------------------------------------------------------------
 export interface TaskAbandonOptions extends TaskOptions {
   task?: string;
@@ -568,7 +568,7 @@ export async function taskAbandon(opts: TaskAbandonOptions): Promise<void> {
 
 // ---------------------------------------------------------------------------
 // `noir task verify [--check <name> ...]`  → runs checks + submits evidence
-//   to workflow_advance (c4-verify-gate-recovery S3).
+//   to workflow_advance.
 // ---------------------------------------------------------------------------
 export interface TaskVerifyOptions extends TaskOptions {
   /** Restrict to a named subset of checks; defaults to all configured checks. */
@@ -594,7 +594,7 @@ interface WorkflowAdvanceResult {
   updatedAt?: number;
   degraded?: boolean;
   error?: string;
-  /** c4-verify-gate-recovery: present when the verify gate did not admit `done`. */
+  /** Present when the verify gate did not admit `done`. */
   pendingGate?: { gate: string; reason: string };
   recovery?: string[];
 }
@@ -627,7 +627,7 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
   // No checks resolvable → exit 2 (USAGE) rather than inventing commands.
   // A throw from loadProjectInfo on an uninitialized project must route through
   // fail() — otherwise under --json stdout stays EMPTY (the raw error only
-  // reaches stderr), violating the S9 `{ok:false}` envelope contract.
+  // reaches stderr), violating the `{ok:false}` envelope contract.
   let project: ProjectInfo;
   try {
     project = loadProjectInfo(process.cwd());
@@ -684,7 +684,7 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
   const res = await callDaemonTool<WorkflowAdvanceResult>(opts, 'workflow_advance', { evidence });
   if (res.ok === true) {
     if (opts.json === true) {
-      // S9 `{ok:true, data}` — evidence nests INSIDE the payload (no ad-hoc
+      // `{ok:true, data}` — evidence nests INSIDE the payload (no ad-hoc
       // top-level sibling keys), matching every other command's envelope shape.
       process.stdout.write(`${JSON.stringify({ ok: true, data: { ...res, evidence } })}\n`);
       return;
@@ -714,7 +714,7 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
       `${JSON.stringify({
         ok: false,
         error: { code: EXIT.ERROR, message: `task verify: ${detail}` },
-        // S9 `{ok:false, error}` + a payload — recovery context + evidence nest
+        // `{ok:false, error}` + a payload — recovery context + evidence nest
         // under `data`, not as top-level siblings (same envelope shape as the
         // success path; consumers read `data` for the full picture).
         data: {
@@ -751,7 +751,7 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// `noir task research [<id>]` — list research findings (c4-research-grounding)
+// `noir task research [<id>]` — list research findings
 // `noir task research record --type <t> --text "..." [--source <ref>] [--task <id>]`
 //   → workflow_research_record
 // ---------------------------------------------------------------------------
@@ -813,7 +813,7 @@ export async function taskResearchRecord(opts: TaskResearchRecordOptions): Promi
   );
 }
 // ---------------------------------------------------------------------------
-// `noir task decompose <capability-id>`  → draft a SlicePlan (c4-decomposition)
+// `noir task decompose <capability-id>`  → draft a SlicePlan
 // ---------------------------------------------------------------------------
 export interface TaskDecomposeOptions extends TaskOptions {
   capability: string;
@@ -824,7 +824,7 @@ export async function taskDecompose(opts: TaskDecomposeOptions): Promise<void> {
   const cap = opts.capability.trim();
   if (cap.length === 0) fail(EXIT.USAGE, 'task decompose: <capability-id> is required', opts);
 
-  // Template SlicePlan (offline — mirrors draftPrd P3: single-shot, no provider
+  // Template SlicePlan (offline — mirrors draftPrd: single-shot, no provider
   // needed for a template, null/empty on no-provider). A provider-backed drafting
   // pass would fill richer fields; the offline template gives a valid skeleton.
   const plan = {

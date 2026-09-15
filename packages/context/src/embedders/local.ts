@@ -5,14 +5,14 @@
 //     `import()` on the FIRST `embed()` call, never at module top level. This
 //     keeps CLI startup and every non-context code path offline and fast, and
 //     means a missing/broken `onnxruntime-node` native binary degrades to
-//     BM25-only at runtime instead of crashing import (F8).
+//     BM25-only at runtime instead of crashing import.
 //   - The ONNX pipeline is created once and memoized for the process lifetime
 //     (the daemon owns a single ContextEngine → one pipeline per serve cycle).
 //     A failed load resets the memo so the next call can retry (e.g. after a
 //     transient first-run download failure).
 //   - Model weights cache is pinned to `~/.noir/models/` (HOME-relative — keeps
-//     the project `.noir/` dir portable across machines; spec OQ-7 resolved),
-//     centralized as `modelsDir()` in @noir-ai/core (task t10). The local
+//     the project `.noir/` dir portable across machines),
+//     centralized as `modelsDir()` in @noir-ai/core. The local
 //     `MODELS_DIR` const re-exports that value so this module's existing
 //     imports keep resolving to the identical path.
 //   - Output is mean-pooled then L2-normalized through the shared `l2normalize`
@@ -127,7 +127,7 @@ export interface LocalEmbedder {
  * touches the network or the native runtime — the dynamic `import()` happens
  * inside `embed()`, so `localEmbedder()` is safe to call at startup. Load
  * failures surface as rejections from `embed()`; callers (retriever/engine)
- * catch them and degrade to BM25-only (F8).
+ * catch them and degrade to BM25-only.
  */
 export function localEmbedder(opts: LocalEmbedderOptions = {}): LocalEmbedder {
   const model = opts.model ?? DEFAULT_LOCAL_MODEL;

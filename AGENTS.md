@@ -29,9 +29,9 @@ node scripts/new-package.mjs <name>   # e.g. telemetry → @noir-ai/telemetry
 pnpm install && pnpm build && pnpm test
 ```
 
-The new package is **automatically** included in workspace detection, the root build/test, unified versioning (`scripts/bump-version.mjs`), and the `release.yml` publish — nothing to wire. Still manual: adding deps beyond the default `@noir-ai/core`, honoring the blueprint/privacy rules below, and (only if you migrate to OIDC later) registering the new package's Trusted Publisher on npm.
+The new package is **automatically** included in workspace detection, the root build/test, unified versioning (`scripts/bump-version.mjs`), and the `release.yml` publish — nothing to wire. Still manual: adding deps beyond the default `@noir-ai/core`, honoring the architecture and privacy rules below, and (only if you migrate to OIDC later) registering the new package's Trusted Publisher on npm.
 
-**Add a package only for a genuinely new subsystem/domain.** Host adapters go **inside `@noir-ai/adapters`** (the S10 path), not in a new package; a feature in an existing domain extends the existing package. Full guide (what's automatic vs manual, when to add vs extend): [`docs/how-to/packaging.md`](docs/how-to/packaging.md).
+**Add a package only for a genuinely new subsystem/domain.** Host adapters go **inside `@noir-ai/adapters`** (one registry for every host), not in a new package; a feature in an existing domain extends the existing package. Full guide (what's automatic vs manual, when to add vs extend): [`docs/how-to/packaging.md`](docs/how-to/packaging.md).
 
 ## Dogfood SDD — how work is specified here
 
@@ -39,9 +39,20 @@ This repo dogfoods Noir's own Spec-Driven Development flow: **brainstorm → spe
 
 - **Per-slice design specs** → `docs/internal/specs/YYYY-MM-DD-sN-<topic>-design.md`.
 - **Per-slice implementation plans** (+ acceptance) → `docs/internal/plans/YYYY-MM-DD-sN-<topic>.md`.
-- The single top-level **design blueprint** lives at `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (dated, status: implemented — see `docs/internal/specs/` for the full set of capability design specs).
+- The single top-level **design document** lives at `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (dated, status: implemented — see `docs/internal/specs/` for the full set of capability design specs).
 - **Architecture Decision Records** → `docs/decisions/NNNN-<slug>.md` (append-only — supersede, never rewrite).
 - `.superpowers/` is gitignored local session scratch; never commit it.
+
+## No internal jargon in comments or docs
+
+Comments, documentation, and especially user-facing docs must never use shorthand that only resolves against an internal planning document. That means no slice/task codes (something like `X9`), no roadmap codenames or phase markers, and no bare section citations into a spec, plan, or decision record.
+
+Why: those tokens are noise to anyone who does not have the planning docs open. A rationale written in plain words keeps the code and the docs relevant to a reader — including a future contributor who has none of that context.
+
+What IS allowed:
+
+- Decision rationale explained in self-contained plain language.
+- A pointer to a named document **alongside** that rationale — an ADR reference is fine when the decision itself is restated next to it. It is never the sole explanation.
 
 ## Native skills — the only skill mechanism
 
@@ -51,12 +62,12 @@ There is **no plugin and no marketplace**. Skills are native `noir-` builtins, a
 - **Frontmatter:** `{ name, description, references?, metadata?, license?, compatibility? }`. Validation rules (enforced in `packages/skills/src/compiler.ts`):
   - `name` must match `/^noir-[a-z0-9]+(?:-[a-z0-9]+)*$/`, and the directory name must equal `name`.
   - `description` is **WHAT+WHEN** — it must lead with a trigger cue (`Use`/`Using`/`When`/`Before`/`After`/`Upon`/…) AND contain a WHAT clause. A WHAT-summary or WHEN-only description is rejected. ≤ 1024 chars.
-  - `metadata.{category,version}` is required (C3 structural gate).
+  - `metadata.{category,version}` is required (structural gate).
   - Body carries required sections: `## When to use`, `## Procedure` (or `## Steps`), and one of `## Verification`/`## Notes`/`## Fallbacks`.
   - Body ≤ 500 lines; references one-level deep only (`<kebab>.md`, no chained references).
   - Quality gate: `noir skills lint` reports errors + warnings; `noir skills registry --json` queries the runtime-derived registry.
-- **Compile target is Claude Code only** in v1 (canonical format copied verbatim). Multi-host transform is S10.
-- **Forbidden-residue guard** (`packages/skills/src/residue.ts`, `FORBIDDEN_RESIDUE`, checked by the hygiene tests): a native skill must not contain predecessor-plugin internals or Superpowers rhetoric — e.g. `workflow/<task`, `noir-workflow.mode`, `noir-workflow`, `plugins/noir-workflow`, `@uiigateway`, `<EXTREMELY-IMPORTANT`, `SUBAGENT-STOP`. If you are porting an old playbook, scrub these before committing. (Note: `ClickUp`/`clickup` were forbidden during the predecessor-port era but are **allowed again** — Slice X reintroduced ClickUp as a first-class Noir integration under `packages/skills/integrations/noir-clickup/`. The residue list is the source of truth; check it before assuming a token is banned.)
+- **Compile target is Claude Code only** in v1 (canonical format copied verbatim). The multi-host transform that emits one host's own shape is not implemented yet.
+- **Forbidden-residue guard** (`packages/skills/src/residue.ts`, `FORBIDDEN_RESIDUE`, checked by the hygiene tests): a native skill must not contain predecessor-plugin internals or Superpowers rhetoric — e.g. `workflow/<task`, `noir-workflow.mode`, `noir-workflow`, `plugins/noir-workflow`, `@uiigateway`, `<EXTREMELY-IMPORTANT`, `SUBAGENT-STOP`. If you are porting an old playbook, scrub these before committing. (Note: `ClickUp`/`clickup` were forbidden during the predecessor-port era but are **allowed again** — ClickUp is now a first-class Noir integration under `packages/skills/integrations/noir-clickup/`. The residue list is the source of truth; check it before assuming a token is banned.)
 
 ## Privacy + provider-explicit rules (honor in any change)
 
@@ -77,4 +88,4 @@ There is **no plugin and no marketplace**. Skills are native `noir-` builtins, a
 - Don't commit `.superpowers/` (local session scratch; gitignored).
 - Don't commit secrets (API keys, npm tokens, etc.).
 - Don't push to `main` without the user's explicit go-ahead.
-- Don't reintroduce a plugin / marketplace / `noir-workflow` surface — it was removed deliberately (see ADR-0002).
+- Don't reintroduce a plugin / marketplace / `noir-workflow` surface — it was removed on purpose, because Noir ships only native `noir-` builtin skills and never an installed plugin/marketplace (see ADR-0002).

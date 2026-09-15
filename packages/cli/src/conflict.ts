@@ -1,6 +1,6 @@
-// SP-C — conflict-resolution UX seam. The engine (@noir-ai/create) is UI-free;
+// Conflict-resolution UX seam. The engine (@noir-ai/create) is UI-free;
 // this module builds the scaffold conflict options (policy + a lazy @clack
-// resolver) per the S9 interactivity contract:
+// resolver) per the CLI interactivity contract:
 //   - TTY + interactive → @clack select menu (Replace/Rename/Duplicate/Keep/Cancel,
 //     plus a 6th "merge (with conflict markers)" when `mergedWithMarkers` is set)
 //   - non-TTY / CI / NO_COLOR → preserve (never silently clobber in a pipe)
@@ -10,8 +10,8 @@
 // engine's regenerate path consults `onConflict` (apply-to-all keyed by artifact
 // CLASS so an N-pointer `noir init --upgrade` → 1 prompt); managedBlock conflicts
 // stay PER-FILE. A unified line-diff preview (LCS-based, from
-// @noir-ai/create's `lineDiff`) renders to STDERR before the prompt (via the
-// A2 theme — `+` green / `-` red / context dim), so `--json`/piped stdout stays
+// @noir-ai/create's `lineDiff`) renders to STDERR before the prompt (through the
+// shared theme — `+` green / `-` red / context dim), so `--json`/piped stdout stays
 // pristine. The 6th "merge" option writes the engine-provided zdiff3-marked
 // bytes when a 3-way merge hit an overlap.
 import {
@@ -26,7 +26,7 @@ import { c } from './theme.js';
 export interface ConflictOptsInput {
   /** `--force`: explicit re-scaffold — overwrite differing files, no prompt. */
   force?: boolean;
-  /** B1: explicit interactivity signal. When set, wins over the env/TTY
+  /** Explicit interactivity signal. When set, wins over the env/TTY
    *  heuristic. `false` ⇒ preserve (never prompt); `true` ⇒ allow the @clack
    *  resolver. The CLI derives this from the `NOIR_NON_INTERACTIVE` bridge
    *  bin.ts owns + the `isInteractive()` TTY/CI/NO_COLOR gate. */
@@ -44,12 +44,12 @@ export type ScaffoldConflictOpts = {
  * template, so passing this on every init/create/sync is harmless on a first
  * run (no existing files → no conflict).
  *
- * B1 + SP-G: the `interactive` flag (explicit > env bridge > TTY/CI/NO_COLOR
+ * The `interactive` flag (explicit > env bridge > TTY/CI/NO_COLOR
  * gate) drives the prompt decision so the engine never reads `process.env` for
  * interactivity. The `NOIR_NON_INTERACTIVE` bridge (--json/--no-input) and the
  * `isInteractive()` gate both reduce to `preserve` (never prompt).
  *
- * B2 apply-to-all: when the resolver returns `{resolution, applyToAll: true}`
+ * Apply-to-all: when the resolver returns `{resolution, applyToAll: true}`
  * the engine stores the choice in its per-run memory keyed by artifact CLASS
  * (regenerate shares one decision; managedBlock/managedBlocks stay per-file).
  */
@@ -80,9 +80,9 @@ export function buildConflictOpts(input: ConflictOptsInput = {}): ScaffoldConfli
 }
 
 /**
- * B2 — render a colored unified line-diff of `{existing, proposed}` to STDERR
+ * Render a colored unified line-diff of `{existing, proposed}` to STDERR
  * before the @clack prompt. Stderr (not stdout) so `--json` / piped stdout
- * stays pristine. The A2 theme colors `+` lines green (`c.ok`), `-` lines red
+ * stays pristine. The shared theme colors `+` lines green (`c.ok`), `-` lines red
  * (`c.error`), and dims context lines (`c.dim`); all color is gated through
  * `useColor()` so NO_COLOR / non-TTY / CLICOLOR_FORCE behave consistently.
  * Honored by `theme.test.ts`'s NO_COLOR gate.
@@ -107,7 +107,7 @@ function renderDiffPreview(ctx: ConflictContext): void {
 }
 
 /**
- * SP-C + B2 — @clack-based conflict resolver. Renders a unified diff to stderr
+ * @clack-based conflict resolver. Renders a unified diff to stderr
  * (via {@link renderDiffPreview}) BEFORE the select prompt, then offers the
  * usual Replace/Rename/Duplicate/Keep/Cancel set PLUS a 6th "merge (with
  * conflict markers)" option when `ctx.mergedWithMarkers` is set (a 3-way merge

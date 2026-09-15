@@ -1,8 +1,8 @@
-// c4-release-phase — `noir release [<version>] [--channel beta|stable]`.
+// `noir release [<version>] [--channel beta|stable]`.
 // A guided orchestrator over the existing patch-release flow (CLAUDE.md).
 // Walks the checklist; hands off at human-approval gates. The FSM release
-// phase (optional, done→released) is documented in the design spec but not
-// yet wired — this CLI is the release tool the roadmap delta called for.
+// phase (optional, done→released) is designed but not
+// yet wired — this CLI is the release tool that work called for.
 // Build-once / idempotent: bump-version.mjs is idempotent; release:tag
 // refuses dirty/unpushed; tags are immutable (never reuse — deprecate+patch).
 

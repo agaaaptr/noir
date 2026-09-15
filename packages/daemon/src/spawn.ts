@@ -1,4 +1,4 @@
-// D1/D2 — real `noir daemon start --detach`. `spawnDetachedDaemon` detaches a
+// Real `noir daemon start --detach`. `spawnDetachedDaemon` detaches a
 // child `noir daemon start --_detached-child` process (detached + unref'd +
 // silent stdio, so the parent can exit and the child outlives it) and waits
 // until that child's daemon record + `/health` confirm it is serving. Returns

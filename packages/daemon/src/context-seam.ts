@@ -13,7 +13,7 @@ import type { Store } from '@noir-ai/store';
  * model loads at most once per lifecycle) and then owns the indexer (the only
  * context writer) + the retriever (the only context reader) over the SAME
  * injected handle — it never opens a second connection, so the daemon's
- * single-writer discipline is preserved (blueprint D6: in-process, no sidecar,
+ * single-writer discipline is preserved (in-process, no sidecar,
  * canonical `ProjectId`).
  *
  * Degraded story (mirrors the store + the engine's own contract): pass the

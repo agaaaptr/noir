@@ -48,7 +48,7 @@ export function readScaffoldVersion(root: string): string | null {
  *  LAST so a crash mid-scaffold leaves an old/absent stamp rather than a
  *  misleading fresh one.
  *
- *  N2: routed through the package's atomic `regenerate()` writer (tmp+rename in
+ *  Routed through the package's atomic `regenerate()` writer (tmp+rename in
  *  the same dir) for consistency with the rest of the engine's durable writes —
  *  a half-written stamp would mislead `noir doctor`/`init --upgrade`, so the
  *  stamp deserves the same crash-atomicity as `.mcp.json` and the NOIR.md brief. */

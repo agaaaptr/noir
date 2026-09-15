@@ -93,7 +93,7 @@ export function discoverIntegrations(
 
 /**
  * Discover the full shipped pack — builtins + integrations — in one call. Used
- * by `emitSkillsToDir` so `noir init`/`sync` emit BOTH (slice X goal). The
+ * by `emitSkillsToDir` so `noir init`/`sync` emit BOTH. The
  * `integrationsDir` defaults to the sibling of `builtinDir` so a test fixture
  * that overrides only `builtinDir` cleanly resolves integrations to a
  * non-existent path (returns `[]`) instead of accidentally picking up the

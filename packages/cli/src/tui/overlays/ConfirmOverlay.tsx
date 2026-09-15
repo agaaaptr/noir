@@ -1,4 +1,4 @@
-// C1 — in-TUI confirmation prompt for a destructive palette dispatch.
+// In-TUI confirmation prompt for a destructive palette dispatch.
 //
 // Presentational only: it renders the `y/N` prompt for the argv the App wants
 // to approve. The App owns the input routing (its single `useInput` handles `y`

@@ -57,15 +57,15 @@ export interface TuiDeps {
   /**
    * The palette source — one {@link PaletteCommand} per leaf `noir` subcommand,
    * derived from the commander tree at `noir tui` launch (NOT re-walked per
-   * keystroke). Optional for backward-compat (B1 tests omit it); when absent the
-   * palette falls back to an empty command list.
+   * keystroke). Optional for backward-compat (the unit tests omit it); when
+   * absent the palette falls back to an empty command list.
    */
   readonly commands?: readonly PaletteCommand[];
   /** The fuzzy matcher. Optional — defaults to {@link handRolledMatcher}. */
   readonly matcher?: FuzzyMatcher;
   /**
-   * Record a dispatched command into the persisted recent-commands list
-   * (C3). Optional for backward-compat — when absent, recents are not recorded.
+   * Record a dispatched command into the persisted recent-commands list.
+   * Optional for backward-compat — when absent, recents are not recorded.
    */
   record?: (argv: readonly string[]) => Promise<void>;
   /**

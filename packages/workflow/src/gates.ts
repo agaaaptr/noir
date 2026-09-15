@@ -2,7 +2,7 @@ import type { Store } from '@noir-ai/store';
 import type { GateResult, GateResultInput, Phase, WorkflowState } from './types.js';
 
 /**
- * The workflow state a phase's gate guards entry into (Noir §9.1 observable
+ * The workflow state a phase's gate guards entry into (an observable
  * checkpoint). A gate fires when its phase completes:
  *   spec-gate   → entering `specified`
  *   plan-gate   → entering `planned`
@@ -30,11 +30,11 @@ export function gateFor(phase: Phase): WorkflowState | null {
  * Append a gate decision to the task's audit log in the store KV.
  *
  * The audit lives at `audit:<taskId>` as a `GateResult[]` and is the
- * AUTHORITATIVE record for every gate outcome (spec §5 / §11 OQ-5 — "audit
- * in store KV as source of truth + export to `.noir/audit/<taskId>.json`").
+ * AUTHORITATIVE record for every gate outcome (audit in store KV as source of
+ * truth + export to `.noir/audit/<taskId>.json`).
  * The {@link TaskState.history} field is a DERIVED view, regenerated from this
  * KV by the engine — never edited directly. This collapses the dual source
- * of truth (debt-batch A): one write, one timestamp, one read-back.
+ * of truth: one write, one timestamp, one read-back.
  *
  * This is the "quiet observable checkpoint": an `approved`, `forced`, or
  * `skipped` decision is always recorded — never silently dropped — and `forced`

@@ -133,7 +133,7 @@ export function writeIntake(
 
 /**
  * Write spec artifact to `.noir/specs/SP-<NNNN>-<taskId>-<slug>.md`.
- * Creates markdown with the C3 frontmatter and the body.
+ * Creates markdown with the generated-artifact frontmatter and the body.
  */
 export function writeSpec(
   root: string,

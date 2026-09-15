@@ -1,6 +1,7 @@
 // Minimal daemon lifecycle helpers that survive the per-project-record
 // migration. The legacy global record (`~/.noir/daemon.json`) and its
-// read/write/clear helpers were removed with spec 4.3 — the daemon record is
+// read/write/clear helpers were removed when the record moved to per-project
+// storage — the daemon record is
 // now keyed by ProjectId in `project-record.ts`, and only
 // `migrate-legacy-record.ts` still knows the old path (its `legacyPath()`
 // deliberately duplicates it).

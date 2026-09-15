@@ -1,4 +1,4 @@
-// Chunker for @noir-ai/context (slice S6, task t4).
+// Chunker for @noir-ai/context.
 //
 // Splits a file's content into embeddable/indexable `Chunk`s:
 //   • Markdown (`.md`/`.mdx`) → one chunk per ATX-heading-delimited section
@@ -13,14 +13,14 @@
 // `id = \`${sha256(path)}#chunk-${n}\`` and `meta.parentDocId = sha256(path)`
 // are stable across re-indexing — same path + content always yields the same
 // chunk ids, which is what makes the indexer's content-hash skip/delete exact
-// (spec §7).
+// (ids depend only on path + content, never on index state or time).
 //
 // `explodeIdentifiers` is exported here and used to derive
 // `meta.sha256` (post-identifier-explosion, per the ChunkMeta contract): the
 // indexer appends the same explosion stream to chunk content before
 // `indexDoc`/`upsertVec` so camelCase/snake_case identifier queries get a BM25
 // signal under the existing `porter unicode61` tokenizer — with NO schema
-// migration (trigram is deferred, OQ-6). `withIdentifierExplosion` is the
+// migration (trigram tokenization is deferred). `withIdentifierExplosion` is the
 // single canonical form of that append, so the chunker's hash and the
 // indexer's stored content stay byte-identical.
 
@@ -28,7 +28,7 @@ import { sha256Hex } from './hash.js';
 import type { Chunk, SourceKind } from './types.js';
 
 // ---------------------------------------------------------------------------
-// Tunable defaults (mirror the `context.chunk` config block, task t10)
+// Tunable defaults (mirror the `context.chunk` config block)
 // ---------------------------------------------------------------------------
 
 /** Default maximum estimated tokens per non-markdown chunk. */
@@ -51,7 +51,7 @@ export const TOKEN_ESTIMATE_FACTOR = 1.3;
 /**
  * Input to {@link chunkFile}. `path` + `content` are required; everything else
  * has a sensible default. `maxTokens`/`overlap` flow from the resolved
- * `context.chunk` config (task t10); `language`/`source` are inferred from the
+ * `context.chunk` config; `language`/`source` are inferred from the
  * path when omitted so a bare `chunkFile({path, content})` call just works.
  */
 export interface ChunkOptions {
@@ -124,7 +124,7 @@ export function explodeIdentifiers(text: string): string {
  * match the `ChunkMeta.sha256` contract ("post-identifier-explosion").
  *
  * `chunk.content` itself stays CLEAN (no explosion) so FTS5 window-extracted
- * snippets read naturally — explosion is index-time-only (spec §7).
+ * snippets read naturally — explosion is index-time-only.
  */
 export function withIdentifierExplosion(content: string): string {
   const exploded = explodeIdentifiers(content);

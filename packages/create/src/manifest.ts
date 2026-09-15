@@ -27,12 +27,13 @@ import type { WriteMode } from './writers.js';
  * write {@link WriteMode} so the orchestrator can dispatch without knowing
  * what's inside.
  *
- * FAITHFULNESS CONTRACT (S-T1 → S-T2 → S10): this table is a strict superset of
- * the artifacts `packages/cli/src/{init,sync}.ts` wrote pre-Slice-S. The cli
- * refactor (S-T2) replaced those ad-hoc writers with a call into `scaffold()`;
- * the byte-for-byte output MUST stay equivalent for first-run init. S10 makes
- * the manifest HOST-PARAMETRIC: {@link buildManifest} now returns host-agnostic
- * entries + a {@link buildHostArtifacts} call that materializes per-host files
+ * FAITHFULNESS CONTRACT: this table is a strict superset of
+ * the artifacts `packages/cli/src/{init,sync}.ts` wrote before the manifest
+ * refactor. The cli refactor replaced those ad-hoc writers with a call into
+ * `scaffold()`; the byte-for-byte output MUST stay equivalent for first-run
+ * init. The manifest is HOST-PARAMETRIC: {@link buildManifest} returns
+ * host-agnostic entries + a {@link buildHostArtifacts} call that materializes
+ * per-host files
  * (CLAUDE.md/GEMINI.md for claude/gemini; AGENTS.md + .cursor/.../opencode.json
  * for agents-md/cursor/opencode) via the resolved adapter. The claude default
  * `noir init` stays BYTE-IDENTICAL to v1.1 — REMOVED the additive
@@ -45,10 +46,10 @@ import type { WriteMode } from './writers.js';
  * about, so a layout rename is caught here instead of silently drifting.
  */
 
-/** S10: `HostTag` is now the SAME `HostId` enum the adapter registry uses
- *  (re-exported so existing imports keep working). Pre-S10 this was the
- *  literal `'claude'`; widening to `HostId` lets one manifest serve every host
- *  via the orchestrator's host filter + {@link buildHostArtifacts}. */
+/** `HostTag` is the SAME `HostId` enum the adapter registry uses
+ *  (re-exported so existing imports keep working); it used to be the
+ *  literal `'claude'`. Widening it to `HostId` lets one manifest serve every
+ *  host via the orchestrator's host filter + {@link buildHostArtifacts}. */
 export type HostTag = HostId;
 
 export interface ManifestEntry {
@@ -107,7 +108,7 @@ export interface ManifestEntry {
 }
 
 export type BuildManifestContext = {
-  /** Absolute repo root. Added in S10 so {@link buildHostArtifacts} can resolve
+  /** Absolute repo root. Needed so {@link buildHostArtifacts} can resolve
    *  absolute adapter paths (`adapter.mcpConfigPath({root})`, etc.) to the
    *  manifest's repo-relative POSIX shape. */
   root: string;
@@ -134,15 +135,15 @@ export type BuildManifestContext = {
 // --- named managed blocks ----------------------------------------------------
 
 /** Co-owned NOIR.md auto-brief region. Defined locally (not exported from
- *  core) because core's keystone-K named instances cover only the three
+ *  core) because core's own named block instances cover only the three
  *  regions core itself writes (context/rules/ignore); the brief is the
  *  scaffold engine's own. Uses the SAME `managedBlock()` factory so marker
  *  shape stays consistent with the rest of the family. */
 export const BRIEF_BLOCK: ManagedBlock = managedBlock('brief', 'html');
 
-/** Co-owned `.noir/README.md` runtime map (slice E, spec §9). Defined locally
- *  for the same reason as {@link BRIEF_BLOCK}: core's keystone-K named
- *  instances cover only the regions core itself writes. The map describes
+/** Co-owned `.noir/README.md` runtime map. Defined locally
+ *  for the same reason as {@link BRIEF_BLOCK}: the named
+ *  instances in core cover only the regions core itself writes. The map describes
  *  paths that appear LATER in the project's life, so it must be re-emitted —
  *  `regenerate` would clobber a user's annotations and `skipIfExists` would
  *  freeze it at init time; a managed block keeps both sides honest. */
@@ -196,14 +197,14 @@ export const REFRESHABLE_SEED_KIND: Readonly<Record<string, SeedKind>> = {
  * Build the manifest for a given ctx. Pure (no I/O). The orchestrator calls
  * this once per scaffold run; tests assert the shape is stable.
  *
- * S10 structure: the manifest is now `[...hostAgnosticEntries(ctx), ...hostSpecificEntries(ctx)]`
+ * The manifest is `[...hostAgnosticEntries(ctx), ...hostSpecificEntries(ctx)]`
  * where the host-specific half comes from {@link buildHostArtifacts} (driven by
  * `resolveAdapter(ctx.host)`). The host-agnostic half is unchanged from v1.1
  * (canonical `.noir/` store + ignore files). {@link buildHostArtifacts}
  * emits AGENTS.md ONLY for agents-md/cursor/opencode (claude/gemini use their
  * own CLAUDE.md/GEMINI.md — emitting AGENTS.md too would double-import .noir/).
  *
- * Mode-tagging rationale per artifact (see S-T1 report for the full table):
+ * Mode-tagging rationale per artifact:
  *  - `project.id`  → skipIfExists. First init writes a fresh id; re-init MUST
  *    NOT overwrite — that would orphan the indexed store DB named after it.
  *  - `config.yml`  → skipIfExists. User-owned; the seed is written once.
@@ -249,7 +250,7 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
       description: '.noir/.env.example committable documentation (never loaded)',
     },
     {
-      // §8.1: init creates the REAL env file, not just the example. The body is
+      // init creates the REAL env file, not just the example. The body is
       // all-comment, so the file parses to an EMPTY overlay and creating it
       // changes no behaviour — it exists so the user never has to copy the
       // example by hand. `fileMode: 0o600` because the file holds tokens the
@@ -278,7 +279,7 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
       description: 'AI working-rules seed',
     },
     {
-      // Slice E (spec §9): the `.noir/` runtime map — what init just wrote,
+      // The `.noir/` runtime map — what init just wrote,
       // what appears later (and which command creates it), and where to go
       // next. Host-agnostic: it describes the canonical store, which every
       // host shares. Co-owned (README_BLOCK) so user notes survive while the
@@ -320,7 +321,7 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
       description: '.prettierignore noir managed block',
     },
   ];
-  // Stack-aware ignore emission (SP-D validation fix). Only emit the ignore
+  // Stack-aware ignore emission. Only emit the ignore
   // files relevant to the detected stack. An unknown/empty stack (no language
   // markers, no package manager — e.g. a blank dir or undetectable project) ⇒
   // emit all four (backward-compatible with the pre-fix behavior).
@@ -342,7 +343,7 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
 }
 
 // ---------------------------------------------------------------------------
-// S10 — host-specific artifact generation. One entry point: `buildHostArtifacts`.
+// Host-specific artifact generation. One entry point: `buildHostArtifacts`.
 // ---------------------------------------------------------------------------
 
 /** Context shape passed to {@link buildHostArtifacts}. A strict subset of
@@ -513,7 +514,7 @@ export function buildHostArtifacts(
     });
   }
 
-  // 4. C3 SessionStart hook bootstrap (claude only). Three artifacts, three
+  // 4. SessionStart hook bootstrap (claude only). Three artifacts, three
   //    ownerships (research-validated "both + split" design):
   //      a. `.claude/settings.local.json` SessionStart entry — user-owned,
   //         written ONCE via mergeJson (init/create only, deduped by command
@@ -568,7 +569,7 @@ export function buildHostArtifacts(
   return entries;
 }
 
-/** The C3 SessionStart hook runner. Reads `.noir/router.md` (the co-owned
+/** The SessionStart hook runner. Reads `.noir/router.md` (the co-owned
  *  router contract) and emits it as `hookSpecificOutput.additionalContext` so
  *  Claude Code wraps it in a system reminder at the start of every session —
  *  deterministic, NOT in the skill-listing 1% budget. Kept small (<10k chars)

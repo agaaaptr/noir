@@ -4,7 +4,7 @@
 // that the daemon injects as `ctx.context` — the new optional ServerContext
 // service, mirroring `ctx.store` / `ctx.engine`. It is constructed ONCE per
 // serve lifecycle from the daemon's already-open Store handle (the single
-// writer — blueprint D6: in-process, no sidecar, canonical ProjectId) and a
+// writer — in-process, no sidecar, canonical ProjectId) and a
 // resolved EmbedderConfig, exactly as `buildWorkflowEngine` is built once from
 // the same handle.
 //
@@ -13,7 +13,7 @@
 //     indexer (writes vectors) and the retriever (embeds the query), so a lazy
 //     local model loads at most once per lifecycle;
 //   • own the indexer + retriever, delegating `indexPaths` / `search` to them;
-//   • surface a `status()` snapshot (spec F11) that mirrors `buildStoreStatus`
+//   • surface a `status()` snapshot that mirrors `buildStoreStatus`
 //     and adds the embedder description + the indexed-file count.
 //
 // Single-writer discipline: the engine — through its indexer — is the ONLY
@@ -21,7 +21,7 @@
 // read-only. Both reuse the injected handle; the engine never opens a second
 // store connection.
 //
-// Degradation (mirrors the store's degraded story, spec F8/F12):
+// Degradation (mirrors the store's degraded story):
 //   • engine-level `degraded` = the store handle is read-only (the daemon-down
 //     fallback) OR the embedder is disabled (`kind:'none'`). It is a PERSISTENT
 //     flag reported by `status()`.
@@ -59,13 +59,13 @@ import type {
 // ---------------------------------------------------------------------------
 
 /**
- * JSON returned by the `context_status` MCP tool (spec F11). Mirrors
+ * JSON returned by the `context_status` MCP tool. Mirrors
  * `StoreStatus` and adds the active embedder description + the indexed-file
  * count (the size of the `ctx:registry` KV list the indexer maintains).
  */
 export interface ContextStatus {
   ok: boolean;
-  /** Canonical project id (never a filesystem path — blueprint D6). */
+  /** Canonical project id (never a filesystem path). */
   projectId: string;
   /** Rows in `docs` (live read off the single writer handle — no cache). */
   docCount: number;
@@ -128,7 +128,7 @@ export interface ContextEngineOptions {
  * embedder, then owns the indexer (the only context writer) and the retriever
  * (the only context reader). Public surface: {@link indexPaths}, {@link reindex},
  * {@link search}, {@link status} — the operations the `context_index`,
- * `context_search`, and `context_status` MCP tools (task t9) delegate to.
+ * `context_search`, and `context_status` MCP tools delegate to.
  */
 export class ContextEngine {
   /** The daemon's single-writer store handle (possibly read-only). */
@@ -161,7 +161,7 @@ export class ContextEngine {
 
     // Persistent degradation: read-only store OR vectors explicitly disabled.
     // (A misconfigured remote/ollama embedder is NOT degraded here — it builds
-    // cleanly and surfaces its failure per-call via SearchResult.degraded, F8.)
+    // cleanly and surfaces its failure per-call via SearchResult.degraded.)
     this.degraded = opts.storeDegraded === true || info.kind === 'none';
 
     // Both reuse the SAME injected handle — the engine never opens a second
@@ -181,7 +181,7 @@ export class ContextEngine {
 
   /**
    * Incrementally index `paths` (files or directories) into the store. Delegates
-   * to the indexer (spec F1/F3/F4). The engine — through the indexer — is the
+   * to the indexer. The engine — through the indexer — is the
    * ONLY context writer; the daemon stays the single writer via this handle.
    */
   indexPaths(paths: string[], opts?: IndexPathOptions): Promise<IndexResult> {
@@ -190,7 +190,7 @@ export class ContextEngine {
 
   /**
    * Drop every indexed chunk + vector, then re-index the registered roots from
-   * scratch (spec F1 "warn + offer reindex, not silent" — the daemon's
+   * scratch ("warn + offer reindex, not silent" — the daemon's
    * `context_index --force` delegates here). Delegates to the indexer; the
    * engine stays the only context writer.
    */
@@ -200,8 +200,8 @@ export class ContextEngine {
 
   /**
    * Hybrid search: BM25 ∪ cosine-kNN fused by RRF (k=60), collapsed by
-   * parent-doc, packed to a token budget with window-extracted snippets (spec
-   * F6/F7). Delegates to the retriever. The per-call `degraded`/`mode` on the
+   * parent-doc, packed to a token budget with window-extracted snippets.
+   * Delegates to the retriever. The per-call `degraded`/`mode` on the
    * returned {@link SearchResult} reflect THIS query's outcome (independent of
    * the engine's persistent {@link degraded}).
    */
@@ -210,7 +210,7 @@ export class ContextEngine {
   }
 
   /**
-   * Snapshot the engine's state (spec F11; mirrors `buildStoreStatus`).
+   * Snapshot the engine's state (mirrors `buildStoreStatus`).
    *
    * `docCount`/`vecCount` are live reads off the single writer handle (no
    * cache); `indexedFiles` is the size of the `ctx:registry` KV list maintained

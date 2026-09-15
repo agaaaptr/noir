@@ -4,7 +4,7 @@ export interface SkillFrontmatter {
   name: string;
   description: string;
   references?: string[];
-  /** C3 enhancement — canonical agentskills.io optional fields. `metadata` is a
+  /** Canonical agentskills.io optional fields. `metadata` is a
    *  string→string map convention; we type the two keys the registry reads. */
   metadata?: { category?: string; version?: string };
   license?: string;
@@ -60,7 +60,7 @@ export interface IntegrationSkill extends BuiltinSkill {
 export interface ValidationResult {
   ok: boolean;
   errors: string[];
-  /** C3 soft-quality warnings (lint-level): thin body, no example, first-person
+  /** Soft-quality warnings (lint-level): thin body, no example, first-person
    *  narration, voodoo constants, time-sensitive pins. Present only when >0. */
   warnings?: string[];
 }
@@ -204,10 +204,9 @@ export type SkillConflictResolver = (
 
 /**
  * The set of host-shaped compile targets the compiler knows how to emit. Was
- * `'claude'` only through v1.1; widened in S10 to the multi-host enum (mirrors
+ * `'claude'` only through v1.1; widened to the full multi-host enum (mirrors
  * `@noir-ai/adapters`' `HostId` literally — duplicated here so skills does NOT
- * add an adapters dependency; the values are an S10-locked contract). See
- * `2026-07-25-s10-multihost-design.md` (A1 + the per-adapter emission table).
+ * add an adapters dependency; the values are a locked contract).
  *
  *  - `claude` | `agents-md` | `gemini` | `opencode` → verbatim SKILL.md + refs
  *    (the canonical format; emitted to the host's skill-equivalent dir).

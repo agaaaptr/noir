@@ -1,10 +1,10 @@
-// S9 — `noir doctor`.
+// `noir doctor`.
 //
 // Environment + project health. Runs a fixed set of checks and renders a
 // results table (human, stderr) or the versioned `{ok,data}` envelope (--json,
 // stdout). Exit 1 if any CRITICAL (fail) check is unhealthy, else 0.
 //
-// Severity model (S9 spec F8):
+// Severity model:
 //   - ok   — healthy.
 //   - warn — degraded but usable (daemon down, onnx missing, provider key
 //            missing, project not initialized). NEVER triggers exit 1.
@@ -13,17 +13,17 @@
 //            and `store` (open fails) can fail. Exit 1 if any fail.
 //
 // Honesty rules: provider status uses `resolveModelConfig` — a PURE projection
-// of the user's config + env-var NAME presence; it makes NO live call (blueprint
-// D5). Native-dep probes are best-effort try/catch (the store's native
+// of the user's config + env-var NAME presence; it makes NO live call.
+// Native-dep probes are best-effort try/catch (the store's native
 // binaries are probed via `vecAvailability`, the single cross-package surface;
 // onnxruntime-node is the context engine's own dep and is probed separately).
 //
-// Cold-start (NF6): the @noir-ai/store import (which loads better-sqlite3) is
+// Cold-start: the @noir-ai/store import (which loads better-sqlite3) is
 // DYNAMIC, inside the action, so merely running `noir status` / `noir --help`
 // never pays the native-bindings cost. @noir-ai/model is imported eagerly — its
 // provider self-registration is light (SDKs load lazily inside `complete()`).
 //
-// Stream discipline (S9): `--json` writes `{ok:true, data:{checks,summary}}`
+// Stream discipline: `--json` writes `{ok:true, data:{checks,summary}}`
 // to stdout (the only stdout write). Doctor always emits `ok:true` because the
 // COMMAND succeeded in producing a diagnosis; the system-health pass/fail is
 // signaled by the EXIT CODE (0 healthy / 1 critical failure) — the same shape
@@ -90,8 +90,9 @@ export interface DoctorPayload {
   noir: string;
   checks: CheckResult[];
   summary: { ok: number; warn: number; fail: number };
-  /** Scaffold-version drift (slice S). `onDisk` is null when the stamp is
-   *  absent (uninitialized or pre-Slice-S project); `drift` is true only when
+  /** Scaffold-version drift. `onDisk` is null when the stamp is
+   *  absent (uninitialized project, or one created before the stamp existed);
+   *  `drift` is true only when
    *  a stamp is present AND differs from the engine's current version. */
   scaffold: { onDisk: string | null; current: string; drift: boolean };
   /** RULES.md budget measurement. `null` when the project isn't
@@ -103,7 +104,7 @@ export interface DoctorPayload {
     budget: { kb: number; maxLines: number };
     over: boolean;
   } | null;
-  /** S10 host report. `null` when the project isn't initialized (no resolved
+  /** Host report. `null` when the project isn't initialized (no resolved
    *  host); otherwise carries the active `host` + the list of repo-relative
    *  primary artifact paths the doctor verified (AGENTS.md for agents-md/
    *  cursor/opencode; the host's native context file when distinct from
@@ -112,7 +113,7 @@ export interface DoctorPayload {
    *  all present, `warn` (NEVER `fail`) when any are missing — re-running
    *  `noir sync` restores them. */
   host: { active: HostId; expected: string[]; missing: string[] } | null;
-  /** S11 publish-readiness report (repo-developer-facing, advisory). `null`
+  /** Publish-readiness report (repo-developer-facing, advisory). `null`
    *  when doctor is NOT running from a monorepo checkout (a global install has
    *  no workspace package.json set to validate → the row reports `ok`
    *  "skipped"). Otherwise carries the count of workspace `package.json` files
@@ -121,7 +122,7 @@ export interface DoctorPayload {
    *  are present, `ok` otherwise — NEVER `fail` (a missing field does not break
    *  the local install). */
   publish: { checked: number; issues: string[] } | null;
-  /** C1 install-method report. `method` from ~/.noir/install.json (fallback
+  /** Install-method report. `method` from ~/.noir/install.json (fallback
    *  unknown); `latestKnown` from the update cache (never a live call). */
   install: {
     method: InstallMethod;
@@ -344,7 +345,7 @@ async function checkStore(
 }
 
 /**
- * The tracked-file refusal line emitted by `loadNoirEnv` (spec 12.2). Matched by
+ * The tracked-file refusal line emitted by `loadNoirEnv`. Matched by
  * its stable PREFIX: @noir-ai/core owns the wording, and this warning is the one
  * signal the loader returns that a `.noir/.env` was refused outright rather than
  * loaded (a refused file yields `overlay: {}` + `sources: {}` + this one line).
@@ -356,7 +357,7 @@ const ENV_REFUSAL_PREFIX = '.noir/.env: refusing to load';
  *
  * Three concerns, in the order the user should read them:
  *
- *   1. REFUSAL (spec 12.2) — a git-tracked file contributes NOTHING. Reporting
+ *   1. REFUSAL — a git-tracked file contributes NOTHING. Reporting
  *      only its permissions here would tell the user everything is fine while
  *      every key in it is being ignored, which is precisely the "I edited
  *      `.noir/.env` and nothing changed" confusion this check exists to kill.
@@ -467,7 +468,7 @@ function checkProvider(
   for (const name of names) {
     const p = resolved.providers[name];
     if (!p) continue;
-    // Provenance (spec 12.3): when the winning source for the key is
+    // Provenance: when the winning source for the key is
     // `.noir/.env`, say so — "key present" alone leaves the user staring at an
     // empty shell export wondering where the key came from. The NAME only; the
     // value is never read here, let alone printed.
@@ -498,7 +499,7 @@ function checkProvider(
 }
 
 // ---------------------------------------------------------------------------
-// C1 — doctor install row (advisory; ok/warn only, never fail, cache-only).
+// Doctor install row (advisory; ok/warn only, never fail, cache-only).
 // ---------------------------------------------------------------------------
 
 export interface InstallCheckOutcome {
@@ -683,19 +684,19 @@ function summarize(checks: CheckResult[]): DoctorPayload['summary'] {
 }
 
 /**
- * S10 — host-artifacts presence check. Reports the ACTIVE host (read from
+ * Host-artifacts presence check. Reports the ACTIVE host (read from
  * `project.config.host`) + verifies the host's primary emission paths exist on
  * disk. The expected set mirrors `buildHostArtifacts` in @noir-ai/create:
  *
  *   - AGENTS.md for the hosts that emit it (agents-md/cursor/opencode — their
  *     native context surface IS AGENTS.md). claude/gemini do NOT emit AGENTS.md
  *     (their CLAUDE.md/GEMINI.md @-import the canonical .noir/ sources; a root
- *     AGENTS.md would double-import them — fix-wave I1 removed that delta).
+ *     AGENTS.md would double-import them, so neither emits it).
  *   - The host's native context file when distinct from AGENTS.md
  *     (claude → CLAUDE.md; gemini → GEMINI.md; agents-md/cursor/opencode →
  *     none, AGENTS.md IS the context). Cursor's working-rules ride AGENTS.md's
  *     `@.noir/rules/RULES.md` import — NO separate `.cursor/rules/noir-contract.mdc`
- *     host-rules pointer (it was `noir-`-prefixed and the C3 cursor flat-skill
+ *     host-rules pointer (it was `noir-`-prefixed, so the cursor flat-skill
  *     prune deleted it on every sync).
  *   - The host's MCP config (.mcp.json / .gemini/mcp.json / .cursor/mcp.json /
  *     opencode.json).
@@ -727,7 +728,7 @@ function checkHostArtifacts(
   // restore with `noir sync`. Kept inline (not imported) so doctor stays a
   // READ-ONLY health probe with zero write-side coupling.
   const expected: string[] = [];
-  // AGENTS.md — only for hosts whose emitContext IS the AGENTS.md (I1: claude/
+  // AGENTS.md — only for hosts whose emitContext IS the AGENTS.md (claude/
   // gemini skip it — their native context file already covers .noir/).
   const emitsAgentsMd = host === 'agents-md' || host === 'cursor' || host === 'opencode';
   if (emitsAgentsMd) {
@@ -737,7 +738,7 @@ function checkHostArtifacts(
   if (host === 'claude') expected.push('CLAUDE.md');
   else if (host === 'gemini') expected.push('GEMINI.md');
   // Cursor has NO separate host-rules .mdc — the prior `noir-contract.mdc`
-  // pointer was REMOVED (it was `noir-`-prefixed, so the C3 cursor flat-skill
+  // pointer was REMOVED (it was `noir-`-prefixed, so the cursor flat-skill
   // prune in emitSkillsToDir deleted it on every noir init/create/sync).
   // Cursor's rules ride AGENTS.md's `@.noir/rules/RULES.md` import instead.
   // Host MCP config (fallback .mcp.json for claude/agents-md).
@@ -754,7 +755,7 @@ function checkHostArtifacts(
 }
 
 // ---------------------------------------------------------------------------
-// SP-A — nested-`.noir` detection (read-only).
+// Nested-`.noir` detection (read-only).
 // ---------------------------------------------------------------------------
 
 /**
@@ -765,8 +766,8 @@ function checkHostArtifacts(
  * (`.noir/CLAUDE.md`, `.noir/.mcp.json`, `.noir/.claude/`, and the ignore files
  * `.noir/.gitignore` / `.dockerignore` / `.npmignore` / `.prettierignore`).
  * Read-only `warn` —
- * doctor never mutates; remediation is manual removal (a future follow-up
- * slice can automate it). Never `fail`: a nested store wastes space + confuses
+ * doctor never mutates; remediation is manual removal (a follow-up
+ * change could automate it). Never `fail`: a nested store wastes space + confuses
  * tooling but does not break the outer project.
  */
 export function checkNestedNoir(
@@ -796,7 +797,7 @@ export function checkNestedNoir(
 }
 
 // ---------------------------------------------------------------------------
-// SP-C deferred — semantic duplicate detection (`--dedup`; loads the embedder).
+// Deferred — semantic duplicate detection (`--dedup`; loads the embedder).
 // ---------------------------------------------------------------------------
 
 /** Local embedder shape (@noir-ai/context's `EmbedFn`). */
@@ -893,7 +894,7 @@ export async function checkSemanticDupDoctor(
 }
 
 // ---------------------------------------------------------------------------
-// S11 — publish-readiness check (advisory, repo-developer-facing).
+// Publish-readiness check (advisory, repo-developer-facing).
 // ---------------------------------------------------------------------------
 
 /**
@@ -981,7 +982,7 @@ function npmPackDryRun(
 }
 
 /**
- * S11 publish-readiness check. For every workspace `package.json` under
+ * Publish-readiness check. For every workspace `package.json` under
  * `packagesDir`, validate publishability:
  *   - `name` starts with `@noir-ai/`
  *   - `version` matches {@link SEMVER_ISH}
@@ -1089,7 +1090,7 @@ export function checkPublish(
   return { checked, issues };
 }
 
-/** Repo-relative POSIX form of `abs` under `root`. Defensive (N2): rejects
+/** Repo-relative POSIX form of `abs` under `root`. Defensive: rejects
  *  paths that escape `root` — mirrors `hostRel` in @noir-ai/create/manifest.ts.
  *  A future adapter that returns a stray path fails loudly here instead of
  *  producing a misleading "missing" row for a path doctor would never probe.
@@ -1187,7 +1188,7 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   }
   const publish = checkPublish(checks, resolveWorkspacePackagesDir());
 
-  // C1 — install-method check (advisory, cache-only, never fail).
+  // Install-method check (advisory, cache-only, never fail).
   const installCheck = buildInstallCheck({
     method: detectActiveMethod(),
     version: readInstallRecord()?.version ?? null,

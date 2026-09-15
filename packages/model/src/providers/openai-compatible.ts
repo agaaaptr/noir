@@ -1,5 +1,5 @@
 // OpenAI-COMPATIBLE provider adapter — single-shot chat completions over the
-// GLOBAL `fetch` (slice S8 / t3, blueprint D5). Zero non-fetch dependencies.
+// GLOBAL `fetch`. Zero non-fetch dependencies.
 //
 // This is the local / self-host escape hatch: any endpoint that speaks the
 // OpenAI Chat Completions JSON shape is reached here via its `baseURL` — Ollama
@@ -8,11 +8,11 @@
 //
 // HARD RULES enforced here, by construction:
 //
-// - SINGLE-SHOT (D5 / FR-8): the POST body carries ONLY `model`, `messages`,
+// - SINGLE-SHOT: the POST body carries ONLY `model`, `messages`,
 //   and (optionally) `max_tokens`. No `tools` / `functions` / `stream` — this
 //   adapter cannot express an agent/tool loop. One request, parse, return.
-// - NO SDK, NO RETRY MACHINERY (NFR-2/3): raw `fetch` is a single shot;
-//   the only retry lives in the structured path (t4). Uses the GLOBAL `fetch`
+// - NO SDK, NO RETRY MACHINERY: raw `fetch` is a single shot;
+//   the only retry lives in the structured path. Uses the GLOBAL `fetch`
 //   (Node ≥20, per `engines.node ">=20"`) — zero added dependency.
 // - SECRETS stay in env: `key` is the VALUE resolved by `complete()`; an
 //   ANONYMOUS local provider (Ollama with no `apiKeyEnv`) reaches here with
@@ -73,7 +73,7 @@ export const openaiCompatibleAdapter: ProviderAdapter = {
     }
     const endpoint = joinEndpoint(baseURL);
 
-    // FR-8: ONLY bounded fields. No `tools` / `stream` — by construction.
+    // ONLY bounded fields. No `tools` / `stream` — by construction.
     const body: Record<string, unknown> = {
       model: req.model,
       messages: buildMessages(req),
@@ -97,7 +97,7 @@ export const openaiCompatibleAdapter: ProviderAdapter = {
       });
 
       if (!res.ok) {
-        // NFR-4: surface ONLY the HTTP status — NEVER embed the raw response
+        // Surface ONLY the HTTP status — NEVER embed the raw response
         // body in `reason`. A malicious or echoing endpoint (Ollama / LM
         // Studio / vLLM / any gateway) could echo the request body (the
         // prompt) or reflect headers (the `Bearer` / `sk-` key) into its
@@ -141,5 +141,5 @@ export const openaiCompatibleAdapter: ProviderAdapter = {
 // Self-register on import: a consumer that imports `@noir-ai/model` (whose
 // index side-effect-imports this module) gets the adapter wired automatically;
 // `complete()` dispatches by provider name `openai-compatible`. (Routing a
-// free-form provider key like `ollama` to this adapter is the t4 dispatch job.)
+// free-form provider key like `ollama` to this adapter is `complete()`'s job.)
 registerProviderAdapter('openai-compatible', openaiCompatibleAdapter);

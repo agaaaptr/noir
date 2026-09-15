@@ -19,7 +19,7 @@ export async function startStdioServer(ctx: ServerContext): Promise<void> {
     () => undefined,
   );
   // One engine per serve lifecycle, built from the same store handle. The
-  // gate-config bridge (c4-surface-wiring S5) resolves the user's
+  // gate-config bridge resolves the user's
   // `prd.mandatoryFor` override so it reaches the engine.
   const engine = daemonStore
     ? buildWorkflowEngine(
@@ -49,8 +49,8 @@ export async function startStdioServer(ctx: ServerContext): Promise<void> {
         daemonStore.degraded,
       )
     : undefined;
-  // Consolidation is OPT-IN + provider-explicit (D5/D6 — NEVER a silent
-  // paid call, the Agent-Memory anti-pattern §9). The master switch is the
+  // Consolidation is OPT-IN + provider-explicit (NEVER a silent
+  // paid call, the Agent-Memory anti-pattern). The master switch is the
   // user's `memory.consolidation.enabled`; only when it is true does the
   // model-derived provider+model even get considered. `resolveMemoryConfig` is
   // the pure core→memory bridge (no env inference, no cycle); resolved once and

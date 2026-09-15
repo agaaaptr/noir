@@ -27,8 +27,8 @@ export type WorkflowState = (typeof STATES)[number];
 export type Mode = 'full' | 'quick';
 
 /**
- * Task classification — drives the soft, escapable gate predicates (slice P:
- * the PRD recommendation at the spec gate). Mirrors the user-facing
+ * Task classification — drives the soft, escapable gate predicates (the PRD
+ * recommendation at the spec gate). Mirrors the user-facing
  * `prd.mandatoryFor` enum in @noir-ai/core's `NoirConfigSchema` (declared
  * LOCALLY here so workflow has no core-cycle concern; the two literals stay in
  * sync by tests). `undefined` (the default for legacy tasks) ⇒ no soft gate
@@ -49,10 +49,10 @@ export type TaskClass = (typeof TASK_CLASSES)[number];
  * Input shape for {@link recordGate} — what CALLERS pass. Omits `at` (the
  * recorder stamps it from `Date.now()` so the audit reflects when the gate
  * actually fired, not when the caller constructed the object). Split out of
- * {@link GateResult} (debt-batch A): callers used to pass a throwaway
+ * {@link GateResult}: callers used to pass a throwaway
  * `at: 0` that recordGate overrode — this shape makes the override implicit.
  *
- * c4-verify-gate-recovery: the `decision` set widens to include `'failed'`
+ * The `decision` set widens to include `'failed'`
  * (evidence ran and failed — recovery offered), and an optional `evidence`
  * payload records the validation run. `'pending'` is NOT recorded — it is the
  * absence of a decision (advance did not land).
@@ -83,13 +83,13 @@ export interface GateResultInput {
   phase: Phase;
   decision: GateDecision;
   reason?: string;
-  /** c4-verify-gate-recovery: validation evidence (verify gate). */
+  /** Validation evidence (verify gate). */
   evidence?: GateEvidence;
 }
 
 /**
  * A recorded gate decision — the AUTHORITATIVE shape stored in the
- * `audit:<taskId>` KV (the SOT per spec §5 / §11 OQ-5) and surfaced via
+ * `audit:<taskId>` KV (the single source of truth) and surfaced via
  * `task.history` (a derived view the engine regenerates from the audit KV).
  * `at` is always present here; callers that want to RECORD a gate pass
  * {@link GateResultInput} (no `at`) to {@link recordGate}.
@@ -107,7 +107,7 @@ export interface TaskState {
   mode: Mode;
   /**
    * DERIVED view of the gate audit for this task, regenerated from the
-   * authoritative `audit:<taskId>` KV (spec §11 OQ-5) by the engine on
+   * authoritative `audit:<taskId>` KV by the engine on
    * every write and every status read. Kept on the TaskState so consumers
    * (CLI `task status`, the daemon `workflow_status` tool, MCP clients) can
    * read the gate history from the persisted TaskState without a second KV
@@ -115,13 +115,13 @@ export interface TaskState {
    * {@link readGateHistory}.
    */
   history: GateResult[];
-  /** Task classification (slice P). `undefined` ⇒ no soft PRD gate fires. */
+  /** Task classification. `undefined` ⇒ no soft PRD gate fires. */
   taskClass?: TaskClass;
   jumpEntry?: Phase; // recorded if a jump-to-phase happened
   /** Reason captured by `setBlocked` (admin escape; set directly, not via FSM). */
   blockReason?: string;
   /**
-   * c4-research-grounding: open questions raised during clarify. When non-empty,
+   * Open questions raised during clarify. When non-empty,
    * the clarify→spec transition is gated (force/skip escape it). Set via the
    * engine's `setOpenQuestions(taskId, questions)` (engine.ts).
    */
@@ -130,7 +130,7 @@ export interface TaskState {
 }
 
 /**
- * c4-research-grounding: a typed, append-only research-finding record persisted
+ * A typed, append-only research-finding record persisted
  * at `research:<taskId>` (mirrors the gate audit at `audit:<taskId>`). SMALL +
  * evidence-backed: a `source` is REQUIRED unless the type is `grounding-fact`
  * (defeats the "faux context" failure mode); `text` is length-capped.
@@ -157,7 +157,7 @@ export interface ResearchEntry {
 }
 
 /**
- * The gate-config slice the engine consumes (debt-batch A). Mirrors the
+ * The gate-config block the engine consumes. Mirrors the
  * user-facing `prd:` block from @noir-ai/core's `NoirConfigSchema` — declared
  * locally (with a `readonly` array) so workflow has no core-cycle concern; the
  * daemon / CLI bridges NoirConfig → this shape at construction time. Every
@@ -176,7 +176,7 @@ export interface WorkflowGateConfig {
     mandatoryFor: readonly TaskClass[];
   };
   /**
-   * Verify-gate config (c4-verify-gate-recovery). When `required` resolves
+   * Verify-gate config. When `required` resolves
    * truthy for a task's class, the verify gate becomes evidence-backed: advance
    * into `done` requires fresh passing evidence (all HARD checks exit 0); a
    * failed HARD check blocks advance and offers recovery; SOFT checks record a
@@ -191,7 +191,7 @@ export interface WorkflowGateConfig {
     checks?: { name: string; command: string; tier?: 'hard' | 'soft' }[];
   };
   /**
-   * c4-research-grounding: research soft-gate config. `recommendFor` lists the
+   * research soft-gate config. `recommendFor` lists the
    * task classes for which an empty `research:<taskId>` (or only source-less
    * assumptions) at the spec gate surfaces an observable, escapable grounding
    * recommendation (mirrors the PRD gate — the advance always proceeds).

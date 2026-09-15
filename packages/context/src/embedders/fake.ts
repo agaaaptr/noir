@@ -1,13 +1,13 @@
 // Deterministic fake embedder for TESTS ONLY (no production path consumes it —
 // the `kind:'none'` branch throws its own stub rather than returning a fake).
 //
-// DESIGN (spec §13 / NFR-2 / NFR-5):
+// DESIGN:
 //   - The full unit suite runs OFFLINE with no model download and no network.
 //     `fakeEmbedFn` is the deterministic stand-in: same text → same vector,
 //     different text → different direction, always `EMBED_DIM`-wide and
 //     unit-norm. This makes chunker/rrf/retriever/indexer tests reproducible.
 //   - Determinism comes from a SHA-256 of the text (no RNG, no clock) —
-//     identical inputs produce bit-identical vectors (NFR-5).
+//     identical inputs produce bit-identical vectors.
 //   - Output is L2-normalized through the shared helper so it is
 //     indistinguishable from a real embedder at the store boundary.
 

@@ -1,5 +1,5 @@
 // `noir` bin entry. Migrated from the hand-rolled `parseArgs` dispatcher onto a
-// commander Command tree (S9 t1). Behavior of init / sync / mcp serve / daemon
+// commander Command tree. Behavior of init / sync / mcp serve / daemon
 // start|stop / doctor is preserved flag-for-flag; the only change is the dispatch
 // path and the new global flags + exit-code contract.
 //
@@ -78,13 +78,13 @@ import { buildPaletteCommands } from './tui/commands/registry.js';
 import type { PaletteCommand } from './tui/palette/types.js';
 
 // Exit-code contract, error type, `fail`, and exit-code mapping live in
-// `./output.js` (S9 t2 central output infra). Re-exported here so existing
+// `./output.js` (the central output + exit-code infrastructure). Re-exported here so existing
 // imports from `./bin.js` (bin.test.ts, future commands) keep working without
 // a second source of truth.
 export { EXIT, fail, inferExitCode, NoirCliError };
 
 /**
- * The TUI palette source (B3). Walks a FRESH {@link createProgram} at `noir tui`
+ * The TUI palette source. Walks a FRESH {@link createProgram} at `noir tui`
  * launch and projects every leaf subcommand into a {@link PaletteCommand}.
  * Defined here (not in the tui) so the palette derives from the REAL command
  * tree without the tui graph importing the bin (which would be circular).
@@ -166,7 +166,7 @@ function toStatusOptions(g: Record<string, unknown>): StatusOptions {
 }
 
 /**
- * S10 — narrow commander's `string | undefined` host option to `HostId |
+ * Narrow commander's `string | undefined` host option to `HostId |
  * undefined`. Commander's `.choices(SUPPORTED_HOSTS)` already rejects unknown
  * values at parse time (usage=2), so by the time the action runs any string
  * present IS one of `SUPPORTED_HOSTS`. The cast is therefore total — but kept
@@ -255,7 +255,7 @@ export function createProgram(): Command {
     .name('noir')
     .description('Noir — discipline, context, and memory layer for agentic CLIs.')
     .version(NOIR_VERSION, '-v, --version')
-    // Global flags (S9). makeGlobal() propagates each to every subcommand so
+    // Global flags. makeGlobal() propagates each to every subcommand so
     // they parse in any position (e.g. `noir status --json` as well as `noir
     // --json status`) and appear on subcommand --help.
     .addOption(new Option('--json', 'emit machine-readable JSON to stdout'))
@@ -313,7 +313,8 @@ export function createProgram(): Command {
     }
     // Load project-local .noir/.env AFTER the --cwd chdir so the .env root
     // matches the effective project (a `--cwd /other` run must never inherit the
-    // launch dir's tokens into the host subprocess). Idempotent — and spec 12.1
+    // launch dir's tokens into the host subprocess). Idempotent — and the
+    // `.noir/.env` rule
     // inverts the usual dotenv rule: a key the file DEFINES wins, and the real
     // environment is the fallback for keys the file omits. The overlay is
     // confined to this process tree (see applyNoirEnv), so a sibling shell and
@@ -326,7 +327,7 @@ export function createProgram(): Command {
     // command only — every other command just applies the overlay.
     if (actionCmd.name() === 'env') captureAmbientEnv();
     applyNoirEnv(process.cwd());
-    // SP-G: propagate --json / --no-input to the deep conflict resolver via env
+    // Propagate --json / --no-input to the deep conflict resolver via env
     // so a regenerate conflict never prompts under those flags (the @clack
     // prompt writes to stdout — it would corrupt --json output and violate
     // --no-input). Done here centrally so init/create/sync need no arg changes
@@ -391,7 +392,7 @@ export function createProgram(): Command {
         const upgrade = opts.upgrade === true;
         const force = opts.force === true;
         const host = parseHost(opts.host);
-        // F1: --dry-run/--preview collapse to a single dryRun boolean (the
+        // --dry-run/--preview collapse to a single dryRun boolean (the
         // command modules read both spellings, but the bin normalizes).
         const dryRun = opts.dryRun === true || opts.preview === true;
         const result = await init(process.cwd(), {
@@ -414,7 +415,7 @@ export function createProgram(): Command {
       },
     );
 
-  // `noir create [dir]` — greenfield AI-layer bootstrap (slice S). Lazy import
+  // `noir create [dir]` — greenfield AI-layer bootstrap. Lazy import
   // mirrors sync's dispatcher so the create module isn't loaded for unrelated
   // commands. Optional `[dir]` defaults to process.cwd() inside the action.
   program
@@ -448,7 +449,7 @@ export function createProgram(): Command {
           opts.transport === 'streamable-http' ? 'streamable-http' : 'stdio';
         const force = opts.force === true;
         const host = parseHost(opts.host);
-        // F1: --dry-run/--preview collapse to a single dryRun boolean.
+        // --dry-run/--preview collapse to a single dryRun boolean.
         const dryRun = opts.dryRun === true || opts.preview === true;
         const { create } = await import('./commands/create.js');
         const result = await create(dir, {
@@ -492,7 +493,7 @@ export function createProgram(): Command {
       ),
     )
     .addOption(
-      // S10: optional `--host` override. When omitted, sync reads host from
+      // Optional `--host` override. When omitted, sync reads host from
       // `.noir/config.yml` (whatever `noir init --host <id>` persisted). The
       // override is rarely needed — documented as advanced.
       new Option(
@@ -519,7 +520,7 @@ export function createProgram(): Command {
         const merge = opts.merge === true;
         // `--no-merge-regions` → commander stores `mergeRegions: false`.
         const noMergeRegions = opts.mergeRegions === false;
-        // F1: --dry-run/--preview collapse to a single dryRun boolean.
+        // --dry-run/--preview collapse to a single dryRun boolean.
         const dryRun = opts.dryRun === true || opts.preview === true;
         // Single-positional regression anchor: when no `--host`/`--force`/`--merge`/
         // `--no-merge-regions`/`--dry-run` is given, call `sync(cwd)` exactly
@@ -558,10 +559,10 @@ export function createProgram(): Command {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir mcp serve [--stdio]');
   });
 
-  // `daemon` group — start/stop/status/restart (S9).
+  // `daemon` group — start/stop/status/restart.
   // `start` runs the daemon in the FOREGROUND by default; `--detach` forks a
-  // detached child (D1). `--_detached-child` is the hidden marker the detached
-  // child carries (D2): it tells the child it IS the daemon (run in-process),
+  // detached child. `--_detached-child` is the hidden marker the detached
+  // child carries: it tells the child it IS the daemon (run in-process),
   // so it is never shown in `--help` and never meant for users.
   const daemonGrp = program.command('daemon').description('control the Noir daemon');
   daemonGrp
@@ -720,8 +721,9 @@ export function createProgram(): Command {
       await doctor({ ...toCliOptions(g), ...(dedup ? { dedup: true } : {}) });
     });
 
-  // ----- new subcommand groups (wired by t4) -----
-  // Signatures match S9 §7 so --help is accurate; every action dispatches to
+  // ----- new subcommand groups -----
+  // Signatures match the exit-code + stream discipline so --help is accurate;
+  // every action dispatches to
   // its command module in ./commands/*.js.
 
   program
@@ -734,7 +736,7 @@ export function createProgram(): Command {
     });
 
   // `noir env` — which configuration is in effect and where each value comes
-  // from. READ-ONLY, and names-and-shapes only: never a value (spec 12.4).
+  // from. READ-ONLY, and names-and-shapes only: never a value.
   program
     .command('env')
     .description('which configuration is in effect and where each value comes from')
@@ -900,7 +902,7 @@ export function createProgram(): Command {
     );
   });
 
-  // `skills` group — list/sync the builtin pack in-process (S9, S5).
+  // `skills` group — list/sync the builtin pack in-process.
   const skillsGrp = program.command('skills').description('builtin skills');
   skillsGrp
     .command('list')
@@ -1112,7 +1114,7 @@ export function createProgram(): Command {
     );
   });
 
-  // C1 -- `noir install` / `noir migrate`: move to the native install path,
+  // `noir install` / `noir migrate`: move to the native install path,
   // preserving all settings. `migrate` is an alias (mirrors claude migrate-installer).
   const installCmd = program
     .command('install')
@@ -1146,7 +1148,7 @@ export function createProgram(): Command {
   // `migrate` alias -- same behavior.
   installCmd.alias('migrate');
 
-  // C1 --- `noir update`: self-update via the active install method.
+  // `noir update`: self-update via the active install method.
   program
     .command('update')
     .description('update Noir to the latest version via the active install method')
@@ -1186,7 +1188,7 @@ export function createProgram(): Command {
     });
 
   // `noir release <version> [--channel beta|stable] [--dry-run]` — guided
-  // orchestrator over the patch-release flow (c4-release-phase S2). Hands off
+  // orchestrator over the patch-release flow. Hands off
   // at the human-approval gates; NEVER auto-approves the GitHub publish job.
   program
     .command('release')
@@ -1256,8 +1258,8 @@ export function createProgram(): Command {
       await runTui(opts, dispatch);
     });
 
-  // `noir palette` — the fuzzy command palette opened directly (home-consolidation
-  // S3). Same lazy Ink mount as `noir tui` but renders the App palette-first
+  // `noir palette` — the fuzzy command palette opened directly. Same lazy Ink
+  // mount as `noir tui` but renders the App palette-first
   // (`{ kind: 'palette' }` initial mode), so the user can fuzzy-run any command
   // without first entering the dashboard. Interactive-only (requireInteractive →
   // exit 2 under non-TTY/--json/--no-input/CI/NO_COLOR), exactly like `noir tui`.
@@ -1283,10 +1285,10 @@ export function createProgram(): Command {
     });
 
   // `noir run <prompt>` — drive the host CLI headless and render its
-  // stream-json (v2 orchestrator, Archetype B). Streams the host's output and
+  // stream-json (the headless host-driving surface). Streams the host's output and
   // reports token/cost from the `result` event. `--command <binary>` overrides
   // the per-host default so users with multiple profiles (claude vs claude-work)
-  // can point at their own binary (D2a). Scriptable under `--json`.
+  // can point at their own binary. Scriptable under `--json`.
   program
     .command('run')
     .description('ask the host agent a question and print the answer')
@@ -1316,7 +1318,8 @@ export function createProgram(): Command {
     });
 
   /** `noir run --list-profiles`: show the configured run profiles (NAME / DEFAULT / BINARY).
-   *  Under --json the rows go to stdout as one {ok,data} envelope (S9 contract —
+   *  Under --json the rows go to stdout as one {ok,data} envelope (the exit-code
+   *  contract —
    *  the table/info helpers are silenced in json mode, so json is handled FIRST). */
   function listProfilesCommand(opts: CliOptions): void {
     const config = loadRunConfig(process.cwd());
@@ -1337,7 +1340,7 @@ export function createProgram(): Command {
     // Bare `noir` (no subcommand) → the home router. But a leftover positional
     // here is an UNKNOWN command: every registered subcommand consumes its own
     // leading arg via its own action, so anything still in `cmd.args` didn't
-    // match. Reject it exit 3 (NOT_FOUND) per the S9 contract instead of
+    // match. Reject it exit 3 (NOT_FOUND) per the exit-code contract instead of
     // silently routing the typo through home (which would exit 0).
     const leftovers = cmd.args;
     if (leftovers.length > 0) {
@@ -1356,7 +1359,7 @@ export function createProgram(): Command {
 /** Singleton program used by the bin entry (`run`) and re-exported for convenience. */
 export const program: Command = createProgram();
 
-// Home-menu deps, built ONCE at module scope (home-consolidation S2). Defined
+// Home-menu deps, built ONCE at module scope. Defined
 // OUTSIDE createProgram so the palette commands are computed a single time and
 // never recurse (createProgram → homeDeps → createProgram → …). The bare-`noir`
 // action inside createProgram closes over this module-level const.
@@ -1372,7 +1375,7 @@ const homeDeps: HomeDeps = {
     }
   },
   // The grouped home menu resolves its sections against the LIVE palette
-  // registry (home-consolidation S1/S2) — the same source the TUI palette
+  // registry — the same source the TUI palette
   // uses — so the menu cannot drift from the commander tree.
   commands: buildPaletteCommands(createProgram()),
 };

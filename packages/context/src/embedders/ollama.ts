@@ -2,18 +2,18 @@
 //
 // DESIGN:
 //   - Provider-explicit and NEVER the default. The caller selects `kind:'ollama'`
-//     with a concrete `baseURL`; the blueprint rejects an always-on Ollama
-//     sidecar, so this is the supported opt-in path for users who already run
+//     with a concrete `baseURL`; an always-on Ollama sidecar is deliberately
+//     rejected, so this is the supported opt-in path for users who already run
 //     Ollama locally.
 //   - Like the remote embedder, a missing `baseURL` throws a clear "not
 //     configured" error from `embed()` (not at construction) so the engine can
-//     report status and degrade to BM25-only (F8).
+//     report status and degrade to BM25-only.
 //   - Ollama's `/api/embeddings` returns the model's native-width vector; we
 //     Matryoshka-truncate to `EMBED_DIM` (384) and re-normalize via the shared
 //     `l2normalize`. A vector shorter than 384 is a hard config error (the user
 //     must pick a >= 384-dim Ollama model such as `nomic-embed-text`).
 //
-// Thin stub: direct `fetch`, no retry/batching (post-v0, plan §7).
+// Thin stub: direct `fetch`, no retry/batching (not implemented yet).
 
 import type { EmbedFn } from '../types.js';
 import { EMBED_DIM, l2normalize } from './normalize.js';

@@ -161,7 +161,8 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     const limit = Number.isFinite(raw) && raw > 0 ? Math.min(Math.floor(raw), MAX_HITS) : 10;
     // bm25(): more negative = more relevant, so ORDER BY score ascending.
     // snippet(docs_fts, 0, ...): column 0 is `content`; 16-token window with
-    // <<match>> markers — NEVER the full content (blueprint §9.2).
+    // <<match>> markers — NEVER the full content (a narrow context window, so
+    // the host gets the match and its surroundings, not whole files).
     const source = opts?.source;
     // Escape the raw query into literal phrases (see ftsEscape) so operator
     // chars in a user query are searched as text, not parsed as FTS5 syntax.

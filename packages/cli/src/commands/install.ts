@@ -36,8 +36,8 @@ export interface MigrationPlan {
   shouldMigrate: boolean;
   isDowngrade: boolean;
   /**
-   * I2 — `update.minVersion` floor (config.ts:238). True when the resolved
-   * target is a concrete version below the configured floor. Channel targets
+   * True when the resolved target is a concrete version below the configured
+   * `update.minVersion` floor. Channel targets
    * (`latest`/`beta`) resolve to the newest at install time and never trip it.
    * Enforced in {@link install} with the same warn/refuse pattern as the
    * downgrade guard.
@@ -71,7 +71,7 @@ export function buildMigrationPlan(opts: {
   installedVersion: string | null;
   /**
    * The `update.minVersion` floor from config (default `'1.6.0'`). When
-   * omitted, the config default applies. See I2.
+   * omitted, the config default applies. See the floor check in {@link install}.
    */
   minVersion?: string;
 }): MigrationPlan {
@@ -82,7 +82,7 @@ export function buildMigrationPlan(opts: {
   if (opts.installedVersion && nativeVersion !== 'latest' && nativeVersion !== 'beta') {
     isDowngrade = semverLt(nativeVersion, opts.installedVersion);
   }
-  // I2 — minVersion floor: only a concrete version below the floor trips it;
+  // minVersion floor: only a concrete version below the floor trips it;
   // 'latest'/'beta' resolve to the newest at install time (always >= floor).
   const floor = opts.minVersion ?? '1.6.0';
   const belowMinVersion =
@@ -106,7 +106,7 @@ export interface InstallManagedNodeOptions {
   version?: string;
   env: NodeJS.ProcessEnv;
   /**
-   * Forwarded into {@link provisionManagedNode} (P1). Carries the offline mock
+   * Forwarded into {@link provisionManagedNode}. Carries the offline mock
    * seams (`fetch`, `exec`, `target`, `signal`) so the install pipeline is
    * unit-testable without network — same pattern as `provisionManagedNode`'s
    * own suite in `packages/core/test/node-provision.test.ts`.
@@ -114,7 +114,7 @@ export interface InstallManagedNodeOptions {
   provision?: Pick<ProvisionOptions, 'fetch' | 'exec' | 'target' | 'signal'>;
 }
 
-/** Normalized record of which runtime backed an install (P2). */
+/** Normalized record of which runtime backed an install. */
 export interface InstallManagedNodeResult {
   ok: boolean;
   version: string | null;
@@ -125,7 +125,7 @@ export interface InstallManagedNodeResult {
 }
 
 /**
- * Provision the managed Node runtime (P1) and install `@noir-ai/cli` into an
+ * Provision the managed Node runtime and install `@noir-ai/cli` into an
  * isolated `~/.noir/cli` prefix, shimmed from `~/.noir/bin/noir`.
  *
  * Replaces the prior "not provisioned" fail branch: instead of requiring the
@@ -146,7 +146,7 @@ export async function installManagedNode(
   mkdirSync(cliDir, { recursive: true });
   mkdirSync(binDir, { recursive: true });
 
-  // Provision the managed Node runtime (P1). Idempotent — re-runs are no-ops.
+  // Provision the managed Node runtime. Idempotent — re-runs are no-ops.
   // On any failure, provisionManagedNode either falls back to a system Node
   // >=22 (returns { source: 'system' }) or throws — we surface the throw as an
   // {ok:false} envelope rather than letting it kill the CLI.
@@ -183,7 +183,7 @@ export async function installManagedNode(
   atomicWriteFile(shim, shimBody);
   chmodSync(shim, 0o755); // must be executable — atomicWriteFile sets 0o644 by default
   ensureShimExecutable(); // defense-in-depth: re-assert 0o755 (idempotent, never throws)
-  // (POSIX shim; Windows uses a .cmd wrapper -- install.sh/install.ps1, P3.)
+  // (POSIX shim; Windows uses a .cmd wrapper — install.sh/install.ps1.)
 
   // Resolve installed version via the provisioned node.
   const ver = await runManagerCmd(
@@ -254,7 +254,7 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
   const currentMethod = detectActiveMethod();
   const detected = await detectInstallMethods(process.env);
   const installedRecord = readInstallRecord();
-  // I2 — read the `update.minVersion` floor from the project config (falls
+  // Read the `update.minVersion` floor from the project config (falls
   // back to the config default '1.6.0' when the project isn't initialized or
   // the block is absent). Same try/catch pattern as home.ts's update-config read.
   let minVersion = '1.6.0';
@@ -271,7 +271,7 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
     minVersion,
   });
 
-  // I2 — refuse to install a version below the configured minVersion floor, and
+  // Refuse to install a version below the configured minVersion floor, and
   // refuse a downgrade, UNCONDITIONALLY. The floor/downgrade-guard exist as
   // safety invariants; gating them on `--no-input` meant the common interactive
   // path (and `--json`, which does not set input:false) silently proceeded with
@@ -323,7 +323,7 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
     else warn('Previous install NOT removed (non-zero exit). You can remove it manually.');
   }
 
-  // S9 --json: emit the canonical {ok:true,data} success envelope on stdout.
+  // Under --json: emit the canonical {ok:true,data} success envelope on stdout.
   if (opts.json === true) {
     process.stdout.write(
       `${JSON.stringify({ ok: true, data: { version: result.version, runtimeSource: result.runtimeSource } })}\n`,

@@ -1,5 +1,5 @@
 // Tokens that must NOT survive a port (predecessor plugin internals + Superpowers
-// rhetoric). Shared by the compiler's lint helper and the hygiene tests (T5).
+// rhetoric). Shared by the compiler's lint helper and the hygiene tests.
 export const FORBIDDEN_RESIDUE: readonly string[] = [
   'workflow/<task', // predecessor state file
   'noir-workflow.mode', // predecessor mode flag

@@ -1,7 +1,7 @@
 import * as z from 'zod';
 
 export const NoirConfigSchema = z.object({
-  // S10 multi-host: widens from `z.literal('claude')` to a 5-value enum. The
+  // Multi-host: widens from `z.literal('claude')` to a 5-value enum. The
   // canonical `HostId` union lives in @noir-ai/adapters (single owner); core
   // owns the enum STRING here so it does not import adapters (no core→adapters
   // cycle — mirrors the existing pattern where `model`/`memory`/`context`/`prd`
@@ -31,14 +31,14 @@ export const NoirConfigSchema = z.object({
     })
     .default({ idleTimeoutSec: 900 })
     .describe('Local daemon settings'),
-  // Slice S6 context layer (@noir-ai/context). Mirrors the `daemon` idiom — a
+  // The context layer (@noir-ai/context). Mirrors the `daemon` idiom — a
   // top-level object with `.default({})` so a config with NO `context:` block
-  // still parses and behaves as local-embedder-attempted (AC-7 / NFR-6). The
+  // still parses and behaves as local-embedder-attempted. The
   // embedder shape is `kind`-based to match the discriminated `EmbedderConfig`
   // the context factory consumes; `resolveEmbedderConfig` (@noir-ai/context) is
   // the single bridge from this user-facing schema to the factory input, so core
   // never imports context (no core→context cycle). Provider-explicit, NEVER
-  // silent remote (blueprint D6): `kind:'remote'`/`'ollama'` are opt-in only;
+  // silent remote: `kind:'remote'`/`'ollama'` are opt-in only;
   // the default `'local'` is in-process, offline, free, private.
   context: z
     .object({
@@ -87,15 +87,15 @@ export const NoirConfigSchema = z.object({
     // still resolves to local-embedder/empty-roots/4096). Mirrors `daemon:`.
     .default({ embedder: { kind: 'local', dim: 384 }, roots: [], budgetTokens: 4096 })
     .describe('Context retrieval settings'),
-  // Slice S8 bounded model layer (@noir-ai/model). Mirrors the `daemon` idiom —
+  // The bounded model layer (@noir-ai/model). Mirrors the `daemon` idiom —
   // a top-level object with `.default({})` so a config with NO `model:` block
   // still parses and behaves as fully-degraded (every `complete()` call returns
-  // `null`; callers substitute a template — the always-available offline path,
-  // blueprint D5). `resolveModelConfig` (@noir-ai/model) is the single
+  // `null`; callers substitute a template — the always-available offline path).
+  // `resolveModelConfig` (@noir-ai/model) is the single
   // bridge from this user-facing schema to the runtime shape `complete()`
   // consumes, so core never imports model (no core→model cycle).
   //
-  // Provider-EXPLICIT, never silent paid (blueprint D5): the provider is
+  // Provider-EXPLICIT, never silent paid: the provider is
   // resolved ONLY from explicit `defaultProvider` / a tier's provider key. Env-
   // var presence is NEVER consulted to pick a provider — `ANTHROPIC_API_KEY`
   // being set for another tool does NOT activate Anthropic in Noir. No explicit,
@@ -180,12 +180,13 @@ export const NoirConfigSchema = z.object({
   // runtime `MemoryConfig` the engine consumes, so core never imports memory
   // (no core→memory cycle; mirrors @noir-ai/context + @noir-ai/model).
   //
-  // Provider-EXPLICIT, never silent paid (blueprint D6): the provider is
+  // Provider-EXPLICIT, never silent paid: the provider is
   // resolved ONLY from explicit `consolidation.provider`. Env-var presence is
   // NEVER consulted to pick a provider — `ANTHROPIC_API_KEY` being set for
   // another tool does NOT activate consolidation. No explicit, enabled provider
   // ⇒ `runConsolidation` refuses with `'no-provider'` + writes a miss audit, and
-  // NO S8 `complete()` call is made (the Agent-Memory anti-pattern, §9). The
+  // NO `complete()` call is made (the Agent-Memory anti-pattern: an LLM
+  // synthesizing memories from their own summary rather than the source). The
   // outer default matches the parsed output shape (Zod v4 requirement).
   memory: z
     .object({
@@ -201,7 +202,7 @@ export const NoirConfigSchema = z.object({
           // string so openai-compatible providers stay expressible without an
           // enum churn; required (alongside enabled) for consolidation to run.
           provider: z.string().optional().describe('Provider key for consolidation'),
-          // Provider-specific model id (consumed by S8 complete(); optional
+          // Provider-specific model id (consumed by `complete()`; optional
           // here only because a future anonymous local provider may not need it
           // — runConsolidation still refuses when model is absent).
           model: z.string().optional().describe('Model id for consolidation'),
@@ -240,7 +241,7 @@ export const NoirConfigSchema = z.object({
     // absent `rules:` block resolves to enabled/6 — the registry-active default.
     .default({ enabled: true, lengthBudgetKb: 6 })
     .describe('Rules registry (parsed; consumer ships with the rule engine)'),
-  // Slice P (PRD) — `prd:` block. Additive, escapable-soft-gate config for the
+  // `prd:` block. Additive, escapable-soft-gate config for the
   // pre-SDD Product Requirements Document. The workflow engine reads
   // `mandatoryFor` to decide when a missing PRD warrants an observable,
   // escapable recommendation at the spec gate (the advance still proceeds —
@@ -264,7 +265,7 @@ export const NoirConfigSchema = z.object({
     })
     .default({ mandatoryFor: ['feature', 'epic'] })
     .describe('Soft PRD gate settings'),
-  // c4-verify-gate-recovery — `workflow.gate.verify` block. Additive + default
+  // `workflow.gate.verify` block. Additive + default
   // OFF: a config with no `workflow:` block leaves the verify gate as the
   // legacy record-only gate (byte-identical to v1.9.4). When `required` resolves
   // truthy for a task's class, advance into `done` requires fresh passing
@@ -319,7 +320,7 @@ export const NoirConfigSchema = z.object({
             })
             .default({ required: false, retryBudget: 2 })
             .describe('Evidence-backed verify gate'),
-          // c4-research-grounding — soft grounding gate.
+          // Soft grounding gate.
           research: z
             .object({
               recommendFor: z
@@ -357,7 +358,7 @@ export const NoirConfigSchema = z.object({
       },
     })
     .describe('SDD workflow engine settings'),
-  // Slice X integration layer (@noir-ai/skills `integrations/<name>/`). Additive
+  // Integration layer (@noir-ai/skills `integrations/<name>/`). Additive
   // block keyed by integration name — every field optional + default-`{}` so a
   // config with NO `integrations:` block still parses and behaves as "no
   // integrations wired" (degraded by default; the skill playbook still ships
@@ -367,7 +368,7 @@ export const NoirConfigSchema = z.object({
   // USER-facing overlay (which integration is enabled + where it points), not
   // a re-statement of the declaration.
   //
-  // Doctrine (slice-x spec + Q4b): the auth TOKEN stays in env (tokenEnv name
+  // Doctrine: the auth TOKEN stays in env (tokenEnv name
   // is declared in integration.json, NOT here); ClickUp-specific ids are
   // optional workspace binding; `runtime` mirrors the declaration tiers so a
   // user can DOWNGRADE an integration locally (e.g. force `none` for a
@@ -406,7 +407,7 @@ export const NoirConfigSchema = z.object({
     )
     .default({})
     .describe('Opt-in integration overlays, keyed by integration name'),
-  // C1 — `update:` block. Additive, no-op when absent (defaults make it a
+  // The `update:` block. Additive, no-op when absent (defaults make it a
   // pass-through). Configures the async startup version check + self-update
   // surface (`noir update`). Mirrors the `daemon:`/`rules:`/`prd:` idiom: an
   // absent `update:` block resolves to enabled/24h/latest/notice — the safe
@@ -479,7 +480,7 @@ export const NoirConfigSchema = z.object({
     })
     .default({ profiles: {} })
     .describe('Host orchestrator run settings'),
-  // Shared cross-repo workspaces (ADR-0009). A workspace daemon is a long-lived
+  // Shared cross-repo workspaces. A workspace daemon is a long-lived
   // shared server, so its idle timeout defaults to 0 (never auto-stop) — the
   // user stops it explicitly with `noir workspace stop`.
   workspace: z

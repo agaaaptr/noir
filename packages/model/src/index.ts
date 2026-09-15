@@ -1,6 +1,6 @@
-// @noir-ai/model — Noir's bounded single-shot model layer (slice S8).
+// @noir-ai/model — Noir's bounded single-shot model layer.
 //
-// A thin LIBRARY (NOT a host/MCP surface — blueprint D5): one
+// A thin LIBRARY (NOT a host/MCP surface): one
 // `complete()` function backed by provider adapters (`anthropic` / `openai` /
 // `openai-compatible`). It is consumed IN-PROCESS for artifact drafting,
 // memory consolidation, and home help to fill bounded content slots
@@ -12,8 +12,8 @@
 //
 // No MCP tools are registered here: the daemon `ServerContext` is NOT
 // extended with a model service. Packages that need drafting import `complete`
-// directly; this keeps the model layer unreachable from the host and enforces
-// D5 at the boundary.
+// directly; this keeps the model layer unreachable from the host and keeps the
+// single-shot boundary enforced there.
 
 export {
   clearProviderAdapters,
@@ -31,7 +31,7 @@ export {
   type ResolvedTiers,
   resolveModelConfig,
 } from './config.js';
-// --- Bounded draft helpers (slice P / debt-batch A — single-shot PRD drafting) ---
+// --- Bounded draft helpers (single-shot PRD drafting) -----------------------
 export {
   type DraftPrdInput,
   type DraftPrdOptions,
@@ -49,7 +49,7 @@ export type {
   Tier,
 } from './types.js';
 
-// --- Provider adapter self-registration (t2/t3 seam) ------------------------
+// --- Provider adapter self-registration (the provider-adapter seam) ---------
 //
 // Side-effect imports ONLY. Each adapter module calls `registerProviderAdapter`
 // at module load, so any consumer that imports `@noir-ai/model` gets the wired
@@ -58,10 +58,10 @@ export type {
 // and `@anthropic-ai/sdk` are imported DYNAMICALLY inside their adapters'
 // `complete()`, and `openai-compatible` uses the global `fetch` with zero deps —
 // so a tree-shaken CLI that never selects a hosted adapter ships no hosted-SDK
-// bytes (NFR-2 import isolation). The `complete.js` re-export above is evaluated
-// BEFORE these side-effect imports, so the registry (`adapters` Map) is already
-// initialized when each adapter's self-registration runs (no TDZ on the cycle
-// back through `registerProviderAdapter`).
+// bytes (no forced runtime dependency). The `complete.js` re-export above is
+// evaluated BEFORE these side-effect imports, so the registry (`adapters` Map)
+// is already initialized when each adapter's self-registration runs (no TDZ on
+// the cycle back through `registerProviderAdapter`).
 import './providers/anthropic.js';
 import './providers/openai-compatible.js';
 import './providers/openai.js';

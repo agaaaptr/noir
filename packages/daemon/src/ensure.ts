@@ -59,7 +59,7 @@ export async function ensureDaemonRunning(opts: {
   const { project } = opts;
   // Retire the pre-1.14 single global record first: a daemon from the previous
   // version still holds a write handle on this project's store, and the two
-  // would fight over the single writer (spec 4.5). A no-op once retired.
+  // would fight over the single writer. A no-op once retired.
   await retireLegacyDaemonRecord();
 
   // Scoped read: this can only ever return THIS project's record, so there is

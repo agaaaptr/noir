@@ -3,12 +3,12 @@
 // Local-first, in-process memory: append-only observations (pattern /
 // preference / architecture / bug / workflow / fact / decision / lesson) stored
 // ON TOP of the existing @noir-ai/store (FTS5 docs + sqlite-vec + KV — NO schema
-// migration), recalled via the S6 hybrid retriever reused as-is (BM25 + vec +
-// RRF k=60) scoped to `source:'memory'`, and consolidated into derived
-// `type:'lesson'` rows by an explicit, provider-gated job that consumes the S8
-// bounded model.
+// migration), recalled via the context layer's hybrid retriever reused as-is
+// (BM25 + vec + RRF k=60) scoped to `source:'memory'`, and consolidated into
+// derived `type:'lesson'` rows by an explicit, provider-gated job that consumes
+// the bounded model layer.
 //
-// Blueprint D6 hard rules (non-negotiable):
+// Non-negotiable rules:
 //   • in-process only — NO sidecar / external server;
 //   • canonical ProjectId — NEVER a filesystem path (observations are
 //     project-scoped via the store's projectId-keyed DB; KV keys namespaced
@@ -16,15 +16,16 @@
 //   • capture / store / retrieve ALWAYS local + free;
 //   • ANY LLM touch (consolidation) is OPT-IN + provider-explicit — refuse +
 //     log if no provider, NEVER a silent paid call (the Agent-Memory
-//     anti-pattern, §9);
-//   • never truncate snippets — window-extract is inherited from the store/S6;
+//     anti-pattern);
+//   • never truncate snippets — window-extract is inherited from the store and
+//     the context layer;
 //     the full observation `content` is hydrated from the authoritative KV row
 //     `memory:obs:<id>` on every recall.
 //
 // Public surface: the MemoryEngine (the
 // `ctx.memory` service) + the store-layer KV helpers + the data-model types.
 
-// --- Capture (host-neutral CaptureEvent → SaveInput mapper; opt-in, t7) ---
+// --- Capture (host-neutral CaptureEvent → SaveInput mapper; opt-in) ---
 // The bridge a host hook (Claude Code PreToolUse/PostToolUse/UserPromptSubmit/
 // Stop, or any future host) uses to turn its event into a `memory_save`-shaped
 // SaveInput. Pure — NO I/O, NO network, NO LLM (capture is always local + free). Auto-capture is OPT-IN: the user installs the hooks template
@@ -52,7 +53,7 @@ export {
 // resolveEmbedderConfig + @noir-ai/model's resolveModelConfig). Pure projection:
 // provider-EXPLICIT, reads NO env, never infers a provider — a missing
 // block resolves to consolidation-disabled, so runConsolidation refuses +
-// logs (`no-provider`) and makes NO paid S8 call.
+// logs (`no-provider`) and makes NO paid model call.
 export {
   type MemoryUserConfig,
   resolveMemoryConfig,
@@ -73,7 +74,7 @@ export {
   serializeCandidates,
 } from './consolidate.js';
 
-// --- Engine (the ctx.memory service; built once per serve lifecycle; t2) ---
+// --- Engine (the ctx.memory service; built once per serve lifecycle) ---
 export {
   createMemoryEngine,
   type MemoryCompleteRequest,
@@ -83,7 +84,7 @@ export {
   type MemoryModel,
 } from './engine.js';
 
-// --- Recall (hybrid BM25 ∪ kNN → RRF → entity-boost → KV hydration; t3) ---
+// --- Recall (hybrid BM25 ∪ kNN → RRF → entity-boost → KV hydration) ---
 // recallMemory is the standalone hybrid pipeline (reuses @noir-ai/context's
 // fuseRrf, scoped to source:'memory', with a cheap regex entity-boost).
 // extractEntities is exported for direct unit testing, mirroring how
@@ -94,7 +95,7 @@ export {
   type RecallMemoryResult,
   recallMemory,
 } from './recall.js';
-// --- Store layer (KV layout + single-key accessors + session RMW helpers; t2) ---
+// --- Store layer (KV layout + single-key accessors + session RMW helpers) ---
 export {
   appendConsolidationMiss,
   bumpSession,
@@ -114,7 +115,7 @@ export {
   setObservationIds,
   setSessions,
 } from './store.js';
-// --- Types (the data model + engine contract; t1) ---
+// --- Types (the data model + engine contract) ---
 export {
   type ConsolidateOptions,
   type ConsolidationConfig,

@@ -2,7 +2,7 @@
 // CLICKUP_API_TOKEN) are available even when the CLI/daemon is launched from a
 // context that does not inherit the user's shell rc (GUI MCP clients, launchd).
 //
-// Semantics (spec 12.1). NOTE the deliberate departure from the 12-factor /
+// Semantics. NOTE the deliberate departure from the 12-factor /
 // dotenv / Node --env-file consensus, which fills only UNSET keys:
 //   - a key `.noir/.env` DEFINES wins; the REAL environment is the FALLBACK for
 //     the keys the file omits. For PROJECT configuration the project file must
@@ -12,7 +12,7 @@
 //   - `sources` records which side won, per key, so `noir env` + doctor can
 //     report provenance without re-reading anything (names only, never values);
 //   - a missing file is a silent no-op (Node --env-file-if-exists behavior);
-//   - a file git TRACKS is refused outright (spec 12.2): it may have arrived
+//   - a file git TRACKS is refused outright: it may have arrived
 //     with the clone, and under this precedence it could redirect a credential
 //     that the fallback supplies. Untracked (the normal case — Noir's managed
 //     .gitignore block lists `/.noir/.env`) is trusted;
@@ -60,7 +60,7 @@ const ENV_FILE_REL_PATH = '.noir/.env';
 //
 // That same boundary is why each NOIR_* name must be its own alternative: it
 // admits descendants (`NOIR_RUNTIME_DIR_X`) but never sibling names, so
-// `NOIR_DAEMON_JSON` does NOT cover `NOIR_DAEMON_DIR` (spec 4.4 — the daemon
+// `NOIR_DAEMON_JSON` does NOT cover `NOIR_DAEMON_DIR` (the daemon
 // record directory is read through, so redirecting it is a hijack vector).
 // `NOIR_TEMPLATES_DIR` is here for the identical reason: template-loader.ts
 // resolves it as a path override (the templates directory is read through), so
@@ -168,10 +168,11 @@ export interface LoadedEnv {
 /**
  * Read `<root>/.noir/.env` (missing = no-op) and compute the overlay to apply:
  * every parsed var the deny-list does not refuse. A key the file defines WINS
- * over `env`; `env` is the fallback for keys the file omits (spec 12.1).
+ * over `env`; `env` is the fallback for keys the file omits.
  *
- * A file git TRACKS is refused outright (spec 12.2, see `isGitTracked`): it may
- * have arrived with the clone, and under 12.1 precedence it would be able to
+ * A file git TRACKS is refused outright (see `isGitTracked`): it may
+ * have arrived with the clone, and under the file-wins precedence it would be
+ * able to
  * redirect credentials that the ambient environment supplies. The refusal is
  * decided BEFORE parsing, so a tracked file's contents are never even read into
  * the overlay — the only thing emitted for it is the remedy.
@@ -187,7 +188,7 @@ export function loadNoirEnv(
   } catch {
     return { overlay: {}, warnings: [], sources: {} }; // missing file — silent no-op
   }
-  // TRACKED-FILE REFUSAL (spec 12.2). Runs before the parse so a repo-supplied
+  // TRACKED-FILE REFUSAL. Runs before the parse so a repo-supplied
   // file is never interpreted at all — a refused file must not be able to warn
   // about, shadow, or contribute a single key. Same early-return shape as the
   // missing-file no-op (empty overlay), plus the refusal warning.
@@ -215,7 +216,7 @@ export function loadNoirEnv(
   } catch {
     /* stat race (deleted between read + stat) — no advisory */
   }
-  // PRECEDENCE (spec 12.1): a key this file defines WINS; the real environment
+  // PRECEDENCE: a key this file defines WINS; the real environment
   // is the FALLBACK for keys the file omits. This departs from Node --env-file
   // fill-only-unset deliberately: for PROJECT configuration, the project file
   // must be able to describe the project. `sources` records the winner so

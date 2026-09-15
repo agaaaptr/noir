@@ -1,8 +1,9 @@
-// Structural quality checks for the builtin skill pack — the C3 quality gate.
+// Structural quality checks for the builtin skill pack — the artifact
+// quality gate.
 //
 // Split from compiler.ts so `validateSkill` (hard errors) and `lintSkill` (soft
 // warnings) share one source of truth for the body-structure rules, and so the
-// rules are unit-testable in isolation. Canonical template (C3 spec §3):
+// rules are unit-testable in isolation. Canonical template:
 //
 //   Overview → When to use → Procedure → Verification → Notes
 //
@@ -24,7 +25,7 @@ export const MAX_BODY_LINES = 500;
 export const MIN_FULL_BODY_LINES = 20;
 
 /** The canonical heading a skill MUST carry to describe its trigger conditions.
- *  Accepts the C3 template spelling AND common variants so existing skills
+ *  Accepts the canonical template spelling AND common variants so existing skills
  *  aren't forced into a single casing. */
 const WHEN_SECTION = /^## When to use$/im;
 
@@ -72,7 +73,7 @@ export function chainedReferences(skill: BuiltinSkill): string[] {
 
 /**
  * True when the description carries BOTH a WHEN trigger lead AND a WHAT clause.
- * The C3 rule: `description` MUST lead with a WHEN cue (existing compiler rule)
+ * The rule: `description` MUST lead with a WHEN cue (existing compiler rule)
  * AND contain a compact WHAT clause naming what the skill does.
  *
  * Two canonical shapes both pass:
@@ -152,7 +153,7 @@ export function lintWarnings(skill: BuiltinSkill): string[] {
  *  per-type artifact dirs (store db, audit export, rules, daemon state). */
 const NON_ARTIFACT_DIRS = new Set(['store', 'audit', 'rules', 'state']);
 
-/** Canonical artifact directory → its type code(s) (from the C3 registry).
+/** Canonical artifact directory → its type code(s) (from the artifact registry).
  *  One directory can host multiple kinds (`subagents/` → BR + RP). */
 const DIR_TO_CODES: ReadonlyMap<string, ReadonlySet<string>> = (() => {
   const m = new Map<string, Set<string>>();

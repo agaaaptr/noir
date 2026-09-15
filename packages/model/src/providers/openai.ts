@@ -1,16 +1,15 @@
-// OpenAI provider adapter — single-shot chat completions via the `openai` SDK
-// (slice S8 / t3, blueprint D5).
+// OpenAI provider adapter — single-shot chat completions via the `openai` SDK.
 //
 // HARD RULES enforced here, by construction:
 //
-// - SINGLE-SHOT (D5 / FR-8): the request to `chat.completions.create` carries
+// - SINGLE-SHOT: the request to `chat.completions.create` carries
 //   ONLY `model`, `messages`, and (optionally) `max_tokens`. There is no
 //   `tools`, `functions`, or `stream` key — so this adapter cannot express an
 //   agent/tool loop even if a caller tried. Single bounded call, then return.
-// - SDK retries DISABLED (`maxRetries: 0` / NFR-3): the hosted SDK
+// - SDK retries DISABLED (`maxRetries: 0`): the hosted SDK
 //   defaults to retrying transient failures; we opt out so one call can never
-//   silently multi-charge. The only retry lives in the structured path (t4).
-// - IMPORT-ISOLATED (NFR-2): the `openai` SDK is imported DYNAMICICALLY inside
+//   silently multi-charge. The only retry lives in the structured path.
+// - IMPORT-ISOLATED: the `openai` SDK is imported DYNAMICALLY inside
 //   `complete()`. A bundle whose configured provider never resolves to this
 //   adapter pays zero `openai` bytes — the SDK is only pulled in at call time.
 // - SECRETS stay in env: `key` is the resolved VALUE that `complete()`
@@ -27,7 +26,7 @@ import type { CompleteRequest, CompleteResult, ProviderAdapter } from '../types.
 // Structural aliases for the dynamically-imported SDK, so this file does NOT
 // depend on the SDK's exact exported types at compile time (resilient to minor
 // version churn) AND does not pull the SDK into the module's top-level import
-// graph (NFR-2 import isolation). The shape is exactly what we use: a
+// graph. The shape is exactly what we use: a
 // constructor taking `{ apiKey?, baseURL?, maxRetries }` and a
 // `chat.completions.create(...)` returning the OpenAI ChatCompletion shape.
 type OpenAIChatCompletionsCreate = (
@@ -37,7 +36,7 @@ type OpenAIChatCompletionsCreate = (
     max_tokens?: number;
   },
   // Second options argument mirrors the real SDK's `(params, options?)` shape,
-  // so this adapter can forward the caller's wall-clock bound (NFR-3) and
+  // so this adapter can forward the caller's wall-clock bound and
   // re-assert no retries at the per-request level — same pattern the
   // anthropic adapter uses for `messages.create`.
   options?: { signal?: AbortSignal; maxRetries?: number },
@@ -83,7 +82,7 @@ export const openaiAdapter: ProviderAdapter = {
     }
     try {
       // Dynamic import — a bundle that never selects the `openai` adapter ships
-      // no `openai` dependency (NFR-2). `default` is the `OpenAI` client class.
+      // no `openai` dependency. `default` is the `OpenAI` client class.
       // Cast through `unknown` into a structural view so this file never depends
       // on the SDK's exact exported types (resilient to minor version churn).
       const sdk = (await import('openai')) as unknown as { default: OpenAISDK };
@@ -100,12 +99,12 @@ export const openaiAdapter: ProviderAdapter = {
         {
           model: req.model,
           messages: buildMessages(req),
-          // FR-8: ONLY bounded fields. No `tools` / `stream` — by construction.
+          // ONLY bounded fields. No `tools` / `stream` — by construction.
           ...(req.maxTokens !== undefined ? { max_tokens: req.maxTokens } : {}),
         },
         {
           maxRetries: 0, // belt-and-suspenders: per-request as well as constructor.
-          // Forward the caller's wall-clock bound (NFR-3) — same conditional
+          // Forward the caller's wall-clock bound — same conditional
           // spread as the other optional fields (only when a signal is present).
           ...(req.signal ? { signal: req.signal } : {}),
         },
@@ -141,5 +140,5 @@ export const openaiAdapter: ProviderAdapter = {
 // Self-register on import: a consumer that imports `@noir-ai/model` (whose
 // index side-effect-imports this module) gets the adapter wired automatically;
 // `complete()` then dispatches by provider name `openai`. The SDK itself is NOT
-// loaded by this registration — only inside `complete()` above (NFR-2).
+// loaded by this registration — only inside `complete()` above.
 registerProviderAdapter('openai', openaiAdapter);

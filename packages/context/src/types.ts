@@ -1,4 +1,4 @@
-// Context-local types for @noir-ai/context (slice S6).
+// Context-local types for @noir-ai/context.
 //
 // These are the package's OWN interfaces — the storage surface (`Store`,
 // `EmbedFn`, `IndexDoc`, `FtsHit`, `VecHit`) is re-exported from
@@ -16,7 +16,7 @@
 
 /**
  * Logical source buckets a chunk can belong to. Reused for memory —
- * `'memory'` is reserved for that slice. The store treats `source` as a
+ * `'memory'` is reserved for the memory corpus. The store treats `source` as a
  * free-form string; this enum is the context package's contract for what a
  * well-formed `source` value is.
  */
@@ -45,7 +45,7 @@ export interface LocalEmbedderConfig {
  * Opt-in remote embeddings (OpenAI / Voyage / Cohere). Provider-explicit:
  * sends source text to a cloud endpoint. Vectors are L2-normalized and
  * Matryoshka-truncated to `dim` client-side to stay vec0-compatible.
- * NEVER the default (blueprint D6 — no silent paid calls).
+ * NEVER the default (no silent paid calls).
  */
 export interface RemoteEmbedderConfig {
   kind: 'remote';
@@ -80,9 +80,9 @@ export interface NoneEmbedderConfig {
 }
 
 /**
- * Discriminated configuration for the embedder factory (`createEmbedFn`,
- * task t3). The core zod schema maps onto this via `resolveEmbedderConfig`
- * (task t10) — that mapper is the only bridge between the two layers.
+ * Discriminated configuration for the embedder factory (`createEmbedFn`).
+ * The core zod schema maps onto this via `resolveEmbedderConfig` — that mapper
+ * is the only bridge between the two layers.
  */
 export type EmbedderConfig =
   | LocalEmbedderConfig
@@ -159,7 +159,7 @@ export type SearchMode = 'hybrid' | 'knn' | 'bm25-only';
  * reaches the retriever already enriched, while a kNN-only hit may only
  * carry `id` + `source` until the retriever backfills the rest. The primary
  * `path` / `parentDocId` fields live top-level on {@link RetrieverHit}
- * (spec F6); this holds the remaining enrichment.
+ * (the public hit shape); this holds the remaining enrichment.
  */
 export interface RetrieverMeta {
   language?: string;
@@ -172,7 +172,7 @@ export interface RetrieverMeta {
  * (`snippet(docs_fts,0,'<<','>>','…',16)`) for BM25 hits, or a window around
  * the chunk's first N tokens for kNN-only hits — never truncated mid-token.
  *
- * `path` and `parentDocId` are top-level (spec F6 enumerates the item as
+ * `path` and `parentDocId` are top-level (the public item shape is
  * `{id, source, score, snippet, path, parentDocId}`): the retriever
  * backfills them from the chunk's `meta` before the hit leaves `search()`,
  * so they are always present at the public/MCP boundary.
@@ -202,7 +202,7 @@ export interface SearchResult {
   consumedTokens: number;
   /** `true` if the budget was hit before exhausting the ranked list. */
   truncated: boolean;
-  /** `true` when the embedder was unavailable (BM25-only fallback, F8). */
+  /** `true` when the embedder was unavailable (BM25-only fallback). */
   degraded: boolean;
   /** Retrieval mode actually used. */
   mode: SearchMode;
@@ -217,7 +217,7 @@ export interface SearchResult {
  * either newly `indexed`, `skipped` (content-hash unchanged in KV), or part
  * of a `deleted`/`failed` file. `totalChunks` is the running total tracked
  * for the indexed paths after this call. `degraded` mirrors the search path
- * (spec F10: `context_index -> {indexed, skipped, deleted, degraded}`).
+ * (the `context_index` payload carries `{indexed, skipped, deleted, degraded}`).
  */
 export interface IndexResult {
   /** Chunks newly written to `docs` + `vec0` this run. */
@@ -241,9 +241,10 @@ export interface IndexResult {
 // Re-exports (single import surface for the rest of the package)
 // ---------------------------------------------------------------------------
 
-// Canonical project identifier (NEVER a filesystem path — blueprint D6).
+// Canonical project identifier (NEVER a filesystem path).
 export type { ProjectId } from '@noir-ai/core';
-// The storage seam S6 builds on. Re-exported here so context modules import
+// The storage seam the context layer builds on. Re-exported here so context
+// modules import
 // from `../types.js` (or the barrel) rather than reaching into @noir-ai/store
 // directly for the handful of primitives they need.
 export type {

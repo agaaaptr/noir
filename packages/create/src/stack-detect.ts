@@ -7,7 +7,7 @@ import { join } from 'node:path';
  * adaptation (where to drop `.claude/` vs `.cursor/` etc., future), ignore-file
  * selection, and the onboarding TUI's confirm step.
  *
- * Design rules (spec §4.5):
+ * Design rules:
  *  - Never throws. A foreign/empty dir returns `{ languages: [], monorepo:
  *    false, frameworks: [], packageManager: null }`.
  *  - Never opens network, never parses code beyond a `package.json`/`pyproject`
@@ -30,18 +30,18 @@ export interface StackInfo {
   /** `pnpm` | `npm` | `yarn` when a lockfile is present, else null. */
   packageManager: string | null;
   /**
-   * c4-project-discovery S1: source of the resolved PM. `packageManager-field`
+   * Source of the resolved PM. `packageManager-field`
    * (package.json#packageManager), `lockfile`, `user-agent` (invoke-time
    * npm_config_user_agent), or `unknown`.
    */
   pmSource: 'packageManager-field' | 'lockfile' | 'user-agent' | 'unknown';
   /**
-   * c4-project-discovery S3: detected CI. `github`/`gitlab`/`circleci`/
+   * Detected CI. `github`/`gitlab`/`circleci`/
    * `jenkins`/`none`.
    */
   ci: string | null;
   /**
-   * c4-project-discovery S2: existing AI instruction files found under root.
+   * Existing AI instruction files found under root.
    * Never clobbered — the scaffold confirms the write strategy (skip/add-section/
    * standalone).
    */
@@ -189,7 +189,7 @@ export function detectStack(root: string): StackInfo {
     languages.add('rust');
     const raw = safeRead(join(root, 'Cargo.toml'));
     if (raw) {
-      // M3: Cargo.toml deps are always `name = "ver"` or `name = { … }`, so
+      // Cargo.toml deps are always `name = "ver"` or `name = { … }`, so
       // require the `=` after the crate name. The old `/^\s*actix\b/m` matched
       // `actix-web` (word boundary between `x` and `-`) and falsely reported
       // `actix`. Treat the hyphenated runtime (`actix-web`) as its OWN id and
@@ -206,7 +206,7 @@ export function detectStack(root: string): StackInfo {
     packageManager = packageManager ?? 'cargo';
   }
 
-  // c4-project-discovery S1: invoke-time PM via npm_config_user_agent (fallback
+  // Invoke-time PM via npm_config_user_agent (fallback
   // after lockfile + packageManager field). `pmConflict` flags when invoke-time
   // differs from project-state (the "no surprise" principle).
   let pmSource: StackInfo['pmSource'] = 'unknown';
@@ -252,15 +252,14 @@ export function detectStack(root: string): StackInfo {
     }
   }
 
-  // c4-project-discovery S3: CI detection.
+  // CI detection.
   let ci: string | null = null;
   if (existsSync(join(root, '.github', 'workflows'))) ci = 'github';
   else if (existsSync(join(root, '.gitlab-ci.yml'))) ci = 'gitlab';
   else if (existsSync(join(root, '.circleci', 'config.yml'))) ci = 'circleci';
   else if (existsSync(join(root, 'Jenkinsfile'))) ci = 'jenkins';
 
-  // c4-project-discovery S2: existing AI instruction files (never clobbered).
-  // c4-project-discovery S2: existing AI instruction files (never clobbered).
+  // Existing AI instruction files (never clobbered).
   const aiFiles: [string, string][] = [
     ['AGENTS.md', 'agents-md'],
     ['CLAUDE.md', 'claude'],

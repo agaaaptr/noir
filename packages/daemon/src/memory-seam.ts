@@ -13,7 +13,7 @@ import type { Store } from '@noir-ai/store';
  * Derive the consolidation provider + model id from a resolved MODEL config —
  * the MODEL-DERIVED FALLBACK used ONLY when the user enabled consolidation
  * under `memory:` but did NOT name a provider there (see
- * {@link resolveConsolidationCapability}). Blueprint D5/D6 — provider-EXPLICIT,
+ * {@link resolveConsolidationCapability}). Provider-EXPLICIT,
  * never env-inferred.
  *
  * The provider is resolved ONLY from an explicit opt-in: the `consolidate` tier
@@ -48,7 +48,7 @@ export function resolveMemoryConsolidation(
  * engine's `consolidate` can run. Returns the usable `{provider, model}` when
  * consolidation is ON, or `null` when it must be fully off.
  *
- * The gate is the AND of ALL three (blueprint D6 / §9 — NEVER a silent paid
+ * The gate is the AND of ALL three (NEVER a silent paid
  * call, the Agent-Memory anti-pattern):
  *  (a) `resolvedMemory.consolidation.enabled === true` — the user's EXPLICIT
  *      master switch under `memory:`. This is the LOAD-BEARING gate: a config
@@ -65,7 +65,7 @@ export function resolveMemoryConsolidation(
  * pure core→memory bridge (no env inference, no cycle). Pure projection — reads
  * NO env, holds NO secrets, never throws. Whether the provider is actually
  * CALLABLE at runtime (key present, network up) is decided inside `complete()`
- * (S8) — here we only decide config-time capability.
+ * — here we only decide config-time capability.
  */
 export function resolveConsolidationCapability(
   resolvedMemory: MemoryConfig | undefined,
@@ -74,7 +74,7 @@ export function resolveConsolidationCapability(
   const cons = resolvedMemory?.consolidation;
   // (a) The master switch — load-bearing gate. Must be explicitly `true`; an
   // absent OR `false` block disables consolidation regardless of `model:`.
-  // This is the line against the §9 "silent paid consolidation" leak: a
+  // This is the line against the "silent paid consolidation" leak: a
   // `model.defaultProvider:'anthropic'` set for summarize/title/draft must NOT
   // activate a paid memory consolidation call the user opted out of.
   if (cons?.enabled !== true) return null;
@@ -87,7 +87,7 @@ export function resolveConsolidationCapability(
 }
 
 /**
- * Adapt S8's {@link complete} (single-shot, provider-explicit) into the
+ * Adapt the model layer's {@link complete} (single-shot, provider-explicit) into the
  * {@link MemoryModel} shape the memory engine consumes. This is the ONLY LLM
  * entry point in the memory layer, and it is reached ONLY after the engine's
  * provider gate passes (never a silent paid call). `null` degrades to the
@@ -121,8 +121,8 @@ function bindMemoryModel(modelCfg: ResolvedModelConfig): MemoryModel {
 /**
  * Build the daemon's {@link MemoryEngine} from its already-open store handle +
  * the project `root` + `projectId` + the SAME `EmbedFn` the daemon resolved once
- * for S6 (the daemon owns one embedder; memory takes `{store, embed, ...}`, no
- * embedder duplication — plan §Architecture).
+ * for the context engine (the daemon owns one embedder; memory takes
+ * `{store, embed, ...}`, no embedder duplication).
  *
  * One engine per serve lifecycle — constructed once alongside the store (see
  * {@link openStoreForDaemon}), the workflow engine (see
@@ -131,16 +131,17 @@ function bindMemoryModel(modelCfg: ResolvedModelConfig): MemoryModel {
  * those handles are. The engine — like the context indexer — is the ONLY thing
  * that writes `source:'memory'` rows through the injected handle; it never opens
  * a second connection, so the daemon's single-writer discipline is preserved
- * (blueprint D6: in-process, no sidecar, canonical `ProjectId`).
+ * (in-process, no sidecar, canonical `ProjectId`).
  *
- * Consolidation is OPT-IN + provider-explicit (§9 — NEVER a silent paid
+ * Consolidation is OPT-IN + provider-explicit (NEVER a silent paid
  * call). The capability gate is {@link resolveConsolidationCapability} — the AND
  * of the user's `memory.consolidation.enabled` master switch (the load-bearing
  * gate), a usable provider+model (preferring the `memory:` block, falling back
  * to the model-derived derivation when enabled but no provider named under
- * `memory:`), and `modelCfg` being present to bind S8's `complete`. When the
- * gate resolves a `{provider, model}`:
- *   - S8's {@link complete} is bound as the engine's model injection, AND
+ * `memory:`), and `modelCfg` being present to bind the model layer's `complete`.
+ * When the gate resolves a `{provider, model}`:
+ *   - the model layer's {@link complete} is bound as the engine's model
+ *     injection, AND
  *   - the runtime gate `config.consolidation` is set so `consolidate` can run.
  * When the gate is `null` — most importantly when `enabled === false`, regardless
  * of `model.defaultProvider` — NO model is wired and `engine.consolidate`
@@ -166,7 +167,7 @@ export function buildMemoryEngine(
   storeDegraded?: boolean,
   resolvedMemory?: MemoryConfig,
 ): MemoryEngine {
-  // Consolidation capability gate (§9). The AND of the user's master
+  // Consolidation capability gate. The AND of the user's master
   // switch + a usable provider+model. `null` ⇒ consolidation fully OFF: no model
   // wired, `memory_consolidate` not registered, and `engine.consolidate` refuses
   // `'no-provider'` WITHOUT a model call — regardless of `model.defaultProvider`.
@@ -183,10 +184,12 @@ export function buildMemoryEngine(
       ...(resolvedMemory ? { config: resolvedMemory } : {}),
     });
   }
-  // Consolidation-capable. Bind S8 `complete` as the sole LLM entry point when
+  // Consolidation-capable. Bind the model layer's `complete` as the sole LLM
+  // entry point when
   // modelCfg is available; open the runtime gate so `consolidate` can run. If
   // modelCfg is absent (provider named under `memory:` but no `model:` block to
-  // bind S8), the model stays unset and `consolidate` refuses `model-unavailable`.
+  // bind the model layer), the model stays unset and `consolidate` refuses
+  // `model-unavailable`.
   const model = modelCfg ? bindMemoryModel(modelCfg) : undefined;
   const config: MemoryConfig = {
     consolidation: { enabled: true, provider: cons.provider, model: cons.model },

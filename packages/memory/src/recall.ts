@@ -1,14 +1,14 @@
 // Hybrid recall pipeline for @noir-ai/memory.
 //
-// Reuses the S6 hybrid retriever's recipe — BM25 (`Store.searchFt`) ∪
+// Reuses the context layer's hybrid retriever recipe — BM25 (`Store.searchFt`) ∪
 // cosine kNN (`Store.knn`) fused by Reciprocal Rank Fusion (rank-based, k=60,
 // weights [0.5, 0.5] — raw BM25+cosine scores are NEVER summed) — scoped to
-// `source:'memory'` so context (S6) and memory never collide. Adds a cheap
+// `source:'memory'` so context and memory rows never collide. Adds a cheap
 // regex **entity-boost** (identifiers / file-paths extracted from the query,
 // NO LLM) that promotes hits whose `content` / `concepts` / `files`
 // mention a queried entity.
 //
-// Pipeline (spec §6):
+// Pipeline:
 //   recallMemory(query, opts)
 //     ├─ store.searchFt(query, {limit, source:'memory'})        → FtsHit[]  (BM25)
 //     ├─ store.knn(await embed(query), {limit, source:'memory'}) → VecHit[]  (kNN)
@@ -20,8 +20,9 @@
 //          `memory:obs:<id>` (FULL content — never the truncated FTS snippet),
 //          applying the optional `type` / `sessionId` filters.
 //
-// Degradation (mirrors the S6 retriever's F8): if `embed()` throws (the
-// embedder is `kind:'none'`, a native load failure, a provider error) OR `knn()`
+// Degradation (mirrors the context retriever's BM25-only fallback): if `embed()`
+// throws (the embedder is `kind:'none'`, a native load failure, a provider
+// error) OR `knn()`
 // itself threw, the kNN leg is skipped and recall degrades to BM25-only — the
 // searchFt results are still returned, fused trivially (each with only its BM25
 // rank term), and the outcome carries `degraded:true, mode:'bm25-only'`. A BM25
@@ -30,13 +31,13 @@
 // than crashing.
 //
 // This module owns NO state and opens NO second store connection — it reads
-// through the INJECTED handle only (blueprint D6: in-process only, canonical
+// through the INJECTED handle only (in-process only, canonical
 // ProjectId, capture/store/retrieve always local + free). The engine passes its
-// single-writer handle + the SAME `EmbedFn` the daemon already resolved for S6
+// single-writer handle + the SAME `EmbedFn` the daemon already resolved for the
+// context engine
 // (no embedder duplication). `lastAccessTs` is intentionally NOT bumped here:
 // recall is a read pipeline, kept side-effect-free + deterministic for tests;
-// the field is set at save time and a best-effort bump is a tracked v1.x extra
-// (the task marks the bump optional).
+// the field is set at save time and a best-effort bump is a deferred extra.
 
 import { fuseRrf } from '@noir-ai/context';
 import type { FtsHit, Store, VecHit } from '@noir-ai/store';
@@ -50,7 +51,7 @@ import type { EmbedFn, MemoryHit, Observation, RecallOptions } from './types.js'
 /** Source bucket for every memory row (keeps context + memory disjoint). */
 const MEMORY_SOURCE = 'memory';
 
-/** Default recall hit cap (mirrors Store.searchFt + the S6 retriever default). */
+/** Default recall hit cap (mirrors Store.searchFt + the context retriever default). */
 const DEFAULT_RECALL_LIMIT = 10;
 
 /** Hard cap on a single recall — a huge caller limit must not hydrate every row. */
@@ -120,7 +121,7 @@ const STOPWORDS: ReadonlySet<string> = new Set([
 // Dependencies + outcome
 // ---------------------------------------------------------------------------
 
-/** The injected store handle + the shared S6 embedder (read-only pipeline). */
+/** The injected store handle + the shared context embedder (read-only pipeline). */
 export interface RecallDeps {
   /** The daemon's single-writer store handle (may be read-only — reads keep working). */
   store: Store;
@@ -240,7 +241,7 @@ function entityBoostForObs(obs: Observation, entities: ReadonlyArray<string>): n
 /**
  * Run hybrid recall (BM25 ∪ kNN → RRF → entity-boost → KV hydration) scoped to
  * `source:'memory'`. Read-only against the injected store; no second connection,
- * no network, no LLM (blueprint D6).
+ * no network, no LLM.
  *
  * The returned hits carry the FULL `content` hydrated from the authoritative KV
  * row (never the truncated FTS snippet). `degraded`/`mode` describe the
@@ -273,7 +274,7 @@ export async function recallMemory(
     ftsFailed = true;
   }
 
-  // --- kNN leg (attempted; any failure ⇒ BM25-only degradation, F8-style) ---
+  // --- kNN leg (attempted; any failure ⇒ BM25-only degradation) ---
   let knnHits: VecHit[] = [];
   let knnFailed = false;
   try {
@@ -285,7 +286,7 @@ export async function recallMemory(
       knnFailed = true;
     }
   } catch {
-    // embed() threw: the embedder is unavailable. BM25-only (F8).
+    // embed() threw: the embedder is unavailable. BM25-only.
     knnFailed = true;
   }
 

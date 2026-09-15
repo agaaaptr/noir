@@ -5,11 +5,11 @@ import { NOIR_VERSION } from './version.js';
 
 /**
  * The canonical registry of `.noir/` artifact kinds — the SINGLE SOURCE OF TRUTH
- * for how generated files are named and where they live. The C3 quality gate
+ * for how generated files are named and where they live. The quality gate
  * (`packages/skills/src/quality.ts`) cross-checks every `.noir/…` path a skill
  * prescribes against this table; the workflow writers and the CLI handoff
  * writer build filenames from it. See `docs/reference/artifact-format.md` +
- * `docs/decisions/0007-…` (C3 generated-artifact standard).
+ * `docs/decisions/0007-…` (the generated-artifact standard).
  */
 export const ARTIFACT_TYPES = {
   task: { code: 'TS', dir: 'tasks', hasTaskId: true, hasSlug: true },

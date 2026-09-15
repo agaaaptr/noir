@@ -1,7 +1,7 @@
 /**
  * Migration model — Nx-style declarative upgrade scripts, hand-rolled.
  *
- * Per the Slice S design (S-OQ2 resolved → inline conflict markers, never
+ * Per the migration design (inline conflict markers, never
  * interactive prompts), every migration script:
  *  - is a small, IDEMPOTENT TypeScript function (`run(root, opts) → result`).
  *    Re-running it on an already-migrated tree is a no-op (or produces the

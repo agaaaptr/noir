@@ -155,7 +155,7 @@ export async function runTui(opts: CliOptions, dispatch: TuiDeps['dispatch']): P
 }
 
 /**
- * `noir palette` — mount the App palette-first (S3). Reuses the SAME
+ * `noir palette` — mount the App palette-first. Reuses the SAME
  * `runTui` deps (dispatch seam, commands, recents) so the fuzzy command
  * palette is identical to the dashboard's Ctrl+K palette, just opened
  * directly. `dispatch` is the same shape `runTui` receives from bin.ts.
@@ -181,7 +181,7 @@ export async function runPalette(opts: CliOptions, dispatch: TuiDeps['dispatch']
  * the palette source, and the dispatch seam are identical).
  */
 async function buildTuiDeps(opts: CliOptions, dispatch: TuiDeps['dispatch']): Promise<TuiDeps> {
-  // ProjectId-keyed recent-commands persistence (C3): resolve the canonical id
+  // ProjectId-keyed recent-commands persistence: resolve the canonical id
   // once at launch so recents are isolated per project (respects the .noir/
   // single-source-of-truth invariant). An uninitialized project (loadProjectInfo
   // throws) degrades to empty recents — the palette still works with the full
@@ -199,9 +199,9 @@ async function buildTuiDeps(opts: CliOptions, dispatch: TuiDeps['dispatch']): Pr
     // routes a `run <prompt>` selection to the screen instead of dispatching it
     // through the captured-command path — see `enterRunOrDispatch` in App.tsx.
     run: defaultRunDeps(opts),
-    // The palette source, derived from a fresh commander program at launch (B3).
+    // The palette source, derived from a fresh commander program at launch.
     commands: buildPaletteCommandsForTui(),
-    // C3 — persistent recent commands (projectId-keyed). recordRecent is async
+    // Persistent recent commands (projectId-keyed). recordRecent is async
     // only to match the TuiDeps seam; it never rejects.
     record: (argv) => {
       if (projectId) recordRecent(projectId, argv);

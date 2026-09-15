@@ -1,4 +1,4 @@
-// Run profiles (D2c → `run.profiles` in .noir/config.yml): named host-binary
+// Run profiles (`run.profiles` in .noir/config.yml): named host-binary
 // bundles selected by `--profile` / NOIR_PROFILE / run.defaultProfile, modeled
 // on the ssh_config / VS-Code-terminal-profiles precedent. Selection precedence
 // is the universal ladder: explicit flag > env var > persisted config default >

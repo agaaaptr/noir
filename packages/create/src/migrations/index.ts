@@ -61,7 +61,7 @@ const synthetic: MigrationScript = {
   },
 };
 
-// --- 1.0.0 → 1.1.0: the first real migration (spec §11.2) --------------------
+// --- 1.0.0 → 1.1.0: the first real migration -------------------------------
 
 /** Marker line that guards the `.noir/.env` pointer block in `config.yml`.
  *  Its presence means the block is already on disk — emitted by
@@ -99,10 +99,10 @@ function appendSeparated(prev: string, block: string): string {
  *
  *  Scoped to the one transformation `skipIfExists` structurally cannot perform.
  *  `config.yml` is a user-owned seed written once at init, so the manifest
- *  never opens an existing one — a project initialized before this slice would
- *  therefore never learn where secrets belong. Everything else this slice adds
- *  is *creation* (§11.1's `skipIfExists` backfill) or *managed blocks*
- *  (`managedBlock` re-emission); the migration duplicates neither. */
+ *  never opens an existing one — a project initialized before this migration
+ *  existed would therefore never learn where secrets belong. Everything else
+ *  this version adds is *creation* (a `skipIfExists` backfill) or *managed
+ *  blocks* (`managedBlock` re-emission); the migration duplicates neither. */
 const envPointer: MigrationScript = {
   from: '1.0.0',
   to: '1.1.0',
@@ -246,8 +246,8 @@ function errorMessage(err: unknown): string {
 // --- conflict-marker helpers (exported for migration authors) ---------------
 
 /** Write git-style inline conflict markers around `theirs`/`ours` so a human
- *  or AI agent can resolve later. This is the CI-safe fallback the spec locks
- *  in (S-OQ2) — no interactive prompts, ever. */
+ *  or AI agent can resolve later. This is the CI-safe fallback —
+ *  no interactive prompts, ever. */
 export function applyInlineConflict(
   ours: string,
   theirs: string,

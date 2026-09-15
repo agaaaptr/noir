@@ -14,7 +14,7 @@
 //      stderr/audit bodies (the token travels only in the tool RESULT to the
 //      trusted host + the outbound `Authorization` header).
 //   3. `writeIntegrationAudit` — append-only JSONL into the SAME `.noir/audit/`
-//      dir as the gate export (X-OQ2 resolved: REUSE, do not invent a new
+//      dir as the gate export (reuse it — do not invent a new
 //      audit location). One executed write ⇒ one line; dry-runs are NOT audited.
 //
 // Doctrine: graceful degradation (no-token ⇒ manual-paste / no-token refuse,
@@ -234,7 +234,8 @@ export interface IntegrationAuditEntry {
 
 /**
  * Append one integration audit record to `.noir/audit/integration-<short>.jsonl`
- * (the SAME `.noir/audit/` dir as the gate export — X-OQ2 resolved: REUSE).
+ * (the SAME `.noir/audit/` dir as the gate export — reuse it, never a second
+ * audit location).
  * Append-only JSONL so concurrent/sequential writes don't clobber each other and
  * the file grows linearly with executed writes. Creates the dir if missing.
  *
@@ -249,7 +250,7 @@ export function writeIntegrationAudit(
   integrationName: string,
   entry: IntegrationAuditEntry,
 ): void {
-  // X-OQ2 resolved: REUSE the `.noir/audit/` dir (SOT — no second audit
+  // Reuse the `.noir/audit/` dir (the single source of truth — no second audit
   // location). Integration writes are append-only + cross-task (not keyed by a
   // Noir task id), so a per-integration JSONL file is the natural shape: one
   // executed write ⇒ one line. The `.jsonl` extension keeps it distinct from

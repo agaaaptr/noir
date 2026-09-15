@@ -1,4 +1,4 @@
-// complete() — the single bounded model entry point (slice S8, blueprint D5).
+// complete() — the single bounded model entry point.
 //
 // HARD RULES enforced here, by construction:
 //
@@ -10,12 +10,12 @@
 // - null-degradation FIRST-CLASS: the unconfigured / missing-key paths
 //   return `null` (NEVER throw), so callers branch on presence and the full
 //   Noir test suite runs offline + free. `null` is the always-available default.
-// - SINGLE-SHOT (D5): there is no loop here — `complete()` dispatches one
+// - SINGLE-SHOT: there is no loop here — `complete()` dispatches one
 //   adapter call and returns. The `CompleteRequest` type forbids `tools` /
 //   `stream`, so even an adapter cannot turn this into an agent loop.
 //
-// The adapter registry is the seam slices t2/t3 fill: each adapter module
-// calls {@link registerProviderAdapter} at import time. Until a configured
+// The adapter registry is the seam the provider adapters fill: each adapter
+// module calls {@link registerProviderAdapter} at import time. Until a configured
 // provider has a registered adapter, `complete()` returns `{ ok: false, reason }`
 // (a real misconfiguration, intentionally distinct from the first-class `null`
 // degradation so callers can tell "offline" from "wired wrong").
@@ -30,12 +30,12 @@ import type {
   Tier,
 } from './types.js';
 
-// --- Adapter registry (the t2/t3 seam) --------------------------------------
+// --- Adapter registry (the provider-adapter seam) ----------------------------
 //
 // A plain module-level map. Adapters self-register on import; `complete()`
-// looks one up by provider name. Kept here (not a separate file) because t1's
-// file list is {index,types,complete} and the registry is small + tightly
-// coupled to dispatch. `clearProviderAdapters` exists for test isolation.
+// looks one up by provider name. Kept here (not a separate file) because the
+// registry is small and tightly coupled to dispatch. `clearProviderAdapters`
+// exists for test isolation.
 const adapters = new Map<string, ProviderAdapter>();
 
 /** Register a provider adapter under `name` (e.g. `anthropic`, `openai`). */
@@ -72,7 +72,7 @@ function resolveAuthToken(providerCfg: ProviderConfig): string | undefined {
   return process.env[providerCfg.authTokenEnv];
 }
 
-// --- Per-tier output caps (FR-10) -------------------------------------------
+// --- Per-tier output caps --------------------------------------------------
 //
 // Applied when a request omits `maxTokens` AND signals a tier. A tier ONLY
 // picks the output cap — it never selects a provider or model, so this
@@ -87,7 +87,7 @@ export const TIER_MAX_TOKENS: Readonly<Record<Tier, number>> = {
   consolidate: 2048,
 };
 
-// --- Adapter resolution (t4) ------------------------------------------------
+// --- Adapter resolution -----------------------------------------------------
 //
 // A configured provider block is keyed by an arbitrary NAME the user picks
 // (`anthropic`, `openai`, `ollama`, `lm-studio`, …). The ADAPTER set is fixed
@@ -95,14 +95,13 @@ export const TIER_MAX_TOKENS: Readonly<Record<Tier, number>> = {
 // hosted built-ins; a local endpoint like Ollama is configured under a free-form
 // name (e.g. `ollama`) but must reach the `openai-compatible` adapter.
 //
-// Resolution rule (the openai-compatible adapter's closing comment flags this as
-// the t4 dispatch job):
+// Resolution rule:
 //   1. DIRECT match — a registered adapter exists under `providerName` (covers
 //      `anthropic`, `openai`, `openai-compatible`, and any custom-registered
 //      adapter that self-registers under its provider name). Always preferred.
 //   2. BASE URL fallback — a provider block with a `baseURL` but no direct
 //      adapter is an OpenAI-shaped LOCAL endpoint (Ollama / LM Studio / vLLM),
-//      so route it to `openai-compatible` (raw fetch, zero SDK dep — NFR-2).
+//      so route it to `openai-compatible` (raw fetch, no SDK dependency).
 //   3. otherwise undefined — a named provider with no adapter and no `baseURL`
 //      is a wiring fault ⇒ `{ ok: false, reason }` (distinct from `null`).
 function resolveAdapterName(providerName: string, providerCfg: ProviderConfig): string | undefined {
@@ -197,7 +196,7 @@ export async function complete(
   //    the call routes through the structured path (prompt-JSON + validate + ≤1
   //    repair retry — the ONLY retry in the model layer). Otherwise a
   //    plain free-text adapter call. Either way at most two adapter invocations
-  //    total, and no `tools`/`stream` exist on the request to loop on (FR-8).
+  //    total, and no `tools`/`stream` exist on the request to loop on.
   try {
     return dispatchReq.schema
       ? await runStructured(adapter, dispatchReq, key)

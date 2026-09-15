@@ -8,10 +8,10 @@ import type { IntegrationMcpEmission, McpConfigOptions } from './types.js';
  * `opencode.ts`.
  *
  * The Noir server entry is always present; an optional integration entry merges
- * alongside it (per the Slice X adapter contract — only `external-mcp`
+ * alongside it (per the adapter contract — only `external-mcp`
  * integrations surface a `hostMcp` block by the time it reaches here).
  *
- * Refactored out of `claude.ts` in S10-Adapters so every `{mcpServers}`-shape
+ * Refactored out of `claude.ts` so every `{mcpServers}`-shape
  * host emits byte-identical JSON. Claude's `emitMcpConfig` now delegates here
  * (the claude.test.ts + create/scaffold.test.ts parity gates must hold).
  *

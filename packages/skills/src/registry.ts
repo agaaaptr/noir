@@ -1,8 +1,8 @@
-// Runtime-derived skill registry — C3.
+// Runtime-derived skill registry.
 //
 // The registry is NOT a committed file: frontmatter is the single source of
 // truth and `buildRegistry()` derives a queryable index from `discoverAll()`
-// on demand (the CLI calls it; no drift risk, per the C3 decision D3). Every
+// on demand (the CLI calls it; no drift risk, since nothing is persisted). Every
 // field comes from either frontmatter (`metadata.category`, `metadata.version`)
 // or a shape check (`status` from the stub marker, `referenceCount`/`lines`
 // from the discovered files).
@@ -28,7 +28,7 @@ export interface SkillRegistryEntry {
   /** `full` when the body has no `> **Stub:**` marker; `stub` otherwise. */
   status: 'full' | 'stub';
   /** Lifecycle stage of the skill. `active` = currently shipped and usable;
-   *  `deprecated` = superseded (a renamed/merged predecessor). C3 spec §8.
+   *  `deprecated` = superseded (a renamed/merged predecessor).
    *  The curated pack has no deprecated members today. */
   lifecycle: 'active' | 'deprecated';
   /** The WHAT+WHEN description (the trigger the host sees). */
@@ -57,7 +57,7 @@ function toEntry(s: BuiltinSkill, kind: 'builtin' | 'integration'): SkillRegistr
     version,
     status,
     // Every shipped skill is active; `deprecated` is reserved for a future
-    // superseded member (C3 spec §8).
+    // superseded member.
     lifecycle: 'active' as const,
     description: typeof s.frontmatter.description === 'string' ? s.frontmatter.description : '',
     referenceCount: s.references.length,

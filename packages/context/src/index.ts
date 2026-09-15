@@ -1,4 +1,4 @@
-// @noir-ai/context — Noir's embedded hybrid retrieval engine (slice S6).
+// @noir-ai/context — Noir's embedded hybrid retrieval engine.
 //
 // Fills the `EmbedFn` seam declared (but never implemented) by @noir-ai/store:
 // local embeddings (@huggingface/transformers + all-MiniLM-L6-v2, 384-dim),
@@ -7,7 +7,7 @@
 // Reciprocal Rank Fusion (k=60, rank-based) into a token-budget packer with
 // window-extracted snippets (never truncated).
 //
-// Public surface (spec §15 Definition of Done): the ContextEngine (the
+// Public surface: the ContextEngine (the
 // `ctx.context` service), the embedder factory + provider implementations, the
 // chunker, the indexer, the RRF fusion, the retriever, the config mapper, and
 // the shared types. The store/core primitives (`EmbedFn`, `Store`, `ProjectId`…)

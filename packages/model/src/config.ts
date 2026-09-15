@@ -1,10 +1,10 @@
-// Model config resolver for @noir-ai/model (slice S8).
+// Model config resolver for @noir-ai/model.
 //
 // The single bridge from @noir-ai/core's user-facing `model` zod schema to the
 // runtime shape `complete()` (and `noir doctor`) consume. Lives HERE, in model,
 // so @noir-ai/core never imports @noir-ai/model (no core→model cycle): core owns
-// the user-facing schema, model owns this mapper + the runtime types (blueprint
-// D5 / hard rule). The fully-resolved zod output is structurally assignable to
+// the user-facing schema, model owns this mapper + the runtime types. The
+// fully-resolved zod output is structurally assignable to
 // the permissive {@link ModelUserConfig} mirror below, so the mapper accepts a
 // `NoirConfig['model']` directly — callers pass `resolveModelConfig(cfg.model)`.
 //
@@ -25,7 +25,7 @@
 
 /**
  * User-facing model config shape — mirrors `NoirConfig['model']` (the zod block
- * @noir-ai/core ships, slice S8). Declared LOCALLY with every field optional so
+ * @noir-ai/core ships). Declared LOCALLY with every field optional so
  * this module type-checks WITHOUT a forward dependency on a core type (core
  * never imports model — no cycle; @noir-ai/model is not even in this package's
  * node_modules), AND so a config with no `model:` block (or a partial one) maps
@@ -127,7 +127,7 @@ export interface ResolvedModelConfig {
  *
  * - `undefined` / missing block ⇒ `{ tiers: {}, providers: {} }` (full
  *   degradation — `complete()` will then return `null` for every call, the
- *   always-available offline path; blueprint D5).
+ *   always-available offline path).
  * - Each provider's API key is materialized from `process.env[apiKeyEnv]` into
  *   `apiKey`; `hasKey` is `true` when a keyed provider has at least one of its
  *   named credential env vars set (doctor surfaces a miss; `complete()` returns

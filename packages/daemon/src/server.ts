@@ -37,7 +37,7 @@ import { buildStatus, type Transport } from './status.js';
 /** Gate phases in lifecycle order (spec → plan → verify), used by {@link nextGateAfter}. */
 const GATE_PHASES: readonly Phase[] = ['spec', 'plan', 'verify'] as const;
 
-/** Workspace-specific server context (spec §6). */
+/** Workspace-specific server context. */
 export interface WorkspaceServerContext {
   /** Workspace name (identity + reported by `/health`). */
   name: string;
@@ -93,11 +93,11 @@ export interface ServerContext {
    * Optional memory engine. When present, the `memory_save`, `memory_recall`,
    * `memory_search`, `memory_sessions`, and `memory_forget` tools are
    * registered. Built once per serve lifecycle from the same store handle + the
-   * SAME `EmbedFn` already resolved for S6 (see `buildMemoryEngine` in
+   * SAME `EmbedFn` already resolved for the context engine (see `buildMemoryEngine` in
    * `./memory-seam.js`) and reused across HTTP requests, mirroring the store +
    * engine + context. The engine is the only thing that writes `source:memory`
    * rows through the injected handle, so the daemon's single-writer discipline
-   * is preserved (blueprint D6: in-process, no sidecar, canonical `ProjectId`).
+   * is preserved (in-process, no sidecar, canonical `ProjectId`).
    */
   memory?: MemoryEngine;
   /**
@@ -106,7 +106,7 @@ export interface ServerContext {
    * resolved (see `resolveConsolidationCapability` in `./memory-seam.js`, the AND
    * of the master switch + the provider derivation). Only when this is true is the
    * `memory_consolidate` tool registered: consolidation is OPT-IN +
-   * provider-explicit (blueprint D5/D6 / §9), NEVER a silent paid call — a
+   * provider-explicit (NEVER a silent paid call), a
    * `model:` block set for summarize/title/draft does NOT flip this when the user
    * left `memory.consolidation.enabled` false. The engine's `consolidate`
    * self-refuses (`no-provider`/`model-unavailable`) when this flag is false, so
@@ -128,7 +128,7 @@ export interface ServerContext {
    */
   integrations?: IntegrationService;
   /**
-   * Workspace context — set on a workspace daemon request (spec §6). When
+   * Workspace context — set on a workspace daemon request. When
    * present, memory tools are the WORKSPACE memory engine (shared across
    * members), provenance is stamped from {@link WorkspaceServerContext.repo}
    * (the `?p=` identity, never caller-supplied), and the change-feed tools
@@ -176,7 +176,7 @@ export interface WorkflowStatus {
   /** Next gate-phase ahead of the current phase (null past verify, or blocked). */
   nextGate: Phase | null;
   mode: Mode;
-  /** In-process view of the observable gate audit (Noir §9.1). */
+  /** In-process view of the observable gate audit (the never-silent checkpoint invariant). */
   history: GateResult[];
   updatedAt: number;
   /** Mirrors `store_status`: true when the store is a read-only fallback. */
@@ -246,7 +246,7 @@ function errorMessage(err: unknown): string {
 }
 
 /**
- * Workspace sharing protocol surfaced to the host agent at connect (spec §8.3).
+ * Workspace sharing protocol surfaced to the host agent at connect.
  * Signal-only, pull-on-read: the daemon wakes long-poll waiters on a write, it
  * never pushes content into the agent's context.
  */
@@ -364,7 +364,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
     );
 
     // `workflow_start` / `workflow_advance` expose the engine's writes that the
-    // S9 `task new` / `task advance` CLI commands drive (previously those were
+    // `task new` / `task advance` CLI commands drive (previously those were
     // honest "not exposed" stubs). Both are writes, so a read-only (daemon-down)
     // store fences them off up front with a clear envelope (mirrors
     // `context_index` / `memory_save`). The result reuses buildWorkflowStatus so
@@ -408,9 +408,9 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           // default the docs describe (getting-started "full vs quick").
           const resolvedMode: Mode = mode ?? ctx.project.config.mode ?? 'full';
           // taskClass plumbs into startTask so the soft PRD gate (prdRecommendation)
-          // can fire for mandatoryFor classes (c4-surface-wiring S1).
+          // can fire for mandatoryFor classes.
           await engine.startTask(taskId, slug, resolvedMode, taskClass as TaskClass | undefined);
-          // Quick mode wiring (c4-surface-wiring S3): runQuick writes the stub spec
+          // Quick mode: runQuick writes the stub spec
           // + records the spec/plan gates as skipped + fast-forwards to executing.
           // Previously --mode quick started the task without the fast-forward (inert).
           if (resolvedMode === 'quick') {
@@ -514,7 +514,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       },
     );
 
-    // `workflow_resume` surfaces the engine's `resumeTask` (c4-surface-wiring S2):
+    // `workflow_resume` surfaces the engine's `resumeTask`:
     // reads the active (or named) task; blocked/in-flight tasks are resumable,
     // done/abandoned are terminal. A read — allowed under a degraded (read-only)
     // store, mirroring `workflow_status`. Returns the status payload + a
@@ -561,7 +561,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       },
     );
 
-    // `workflow_block` surfaces `engine.setBlocked` (c4-surface-wiring S4): mark
+    // `workflow_block` surfaces `engine.setBlocked`: mark
     // the active (or named) task blocked with a non-empty reason. A write — a
     // degraded (read-only) store refuses it up front (no crash).
     server.registerTool(
@@ -598,7 +598,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       },
     );
 
-    // `workflow_abandon` surfaces `engine.abandon` (c4-surface-wiring S4): mark
+    // `workflow_abandon` surfaces `engine.abandon`: mark
     // the active (or named) task abandoned (terminal). A write — degraded stores
     // refuse it up front.
     server.registerTool(
@@ -634,7 +634,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       },
     );
 
-    // `workflow_research_record` (c4-research-grounding): record a research
+    // `workflow_research_record`: record a research
     // finding — appends to `research:<taskId>` (mirrors the gate audit). A write;
     // degraded stores refuse it up front.
     server.registerTool(
@@ -687,7 +687,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
   // The context engine is optional: stdio/HTTP inject it alongside the store +
   // workflow engine (same lifecycle, same single store handle). When present,
   // expose Noir's hybrid retrieval (BM25 ∪ cosine-kNN fused by RRF) via three
-  // tools — `context_search`, `context_index`, `context_status` (spec F9/F10/F11).
+  // tools — `context_search`, `context_index`, `context_status`.
   // `host_status` / `store_status` / `workflow_status` above are unchanged.
   if (ctx.context) {
     const context = ctx.context;
@@ -718,7 +718,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           // Singular `source` (not the spec's plural `sources`): both store
           // primitives (SearchFtOpts.source / VecOpts.source) and the engine's
           // SearchOptions.source take a single string, so a plural array is not
-          // honor-able here. Spec F9 source-filtering surfaces as one bucket.
+          // honor-able here. The source filter surfaces as one bucket.
           source: z
             .string()
             .optional()
@@ -730,17 +730,17 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           const result = await context.search(query, { limit, budgetTokens, source });
           return textResult({ ok: true, ...result });
         } catch (err) {
-          // Never crash the daemon: surface a degraded envelope (spec F12).
+          // Never crash the daemon: surface a degraded envelope.
           return textResult({ ok: false, degraded: true, error: errorMessage(err) });
         }
       },
     );
 
-    // No `watch` param is exposed here on purpose: watch mode (spec F5, daemon
+    // No `watch` param is exposed here on purpose: watch mode (daemon
     // --watch via chokidar) is deferred and the engine's IndexPathOptions has
     // no watch field. Accepting it now would silently no-op; if exposed later,
-    // return an explicit `ok:false, error:'watch not implemented (F5)'` rather
-    // than ignoring the flag. (spec F10 lists watch, but it is not wired yet.)
+    // return an explicit `ok:false, error:'watch not implemented'` rather
+    // than ignoring the flag. (Watch is planned, but not wired yet.)
     server.registerTool(
       'context_index',
       {
@@ -760,7 +760,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       async ({ paths, force }) => {
         // Read-only (daemon-down) store: indexing is a write, so fence it off
         // up front with a clear envelope rather than letting the first write
-        // throw partway through (spec F12 / AC-5).
+        // throw partway through.
         if (storeDegraded) {
           return textResult({
             ok: false,
@@ -770,8 +770,8 @@ export function createNoirServer(ctx: ServerContext): McpServer {
         }
         try {
           // force:true → full reindex: drop every indexed chunk + vector, then
-          // re-index the registered roots from scratch (spec F1 "warn + offer
-          // reindex"). Any `paths` in the same call are a no-op for reindex —
+          // re-index the registered roots from scratch (the "warn + offer
+          // reindex" behavior). Any `paths` in the same call are a no-op for reindex —
           // it re-reads the registered roots. The default remains the
           // content-hash incremental walk.
           if (force === true) {
@@ -808,9 +808,9 @@ export function createNoirServer(ctx: ServerContext): McpServer {
 
   // The memory engine is optional: stdio/HTTP inject it alongside the store +
   // workflow + context engines (same lifecycle, same single store handle, the
-  // SAME EmbedFn already resolved for S6). When present, expose Noir's
+  // SAME EmbedFn already resolved for the context engine). When present, expose Noir's
   // cross-session memory — append-only observations stored on top of the store
-  // (FTS5 + vec0 + KV) — via five tools (spec §8): `memory_save`,
+  // (FTS5 + vec0 + KV) — via five tools: `memory_save`,
   // `memory_recall` (hybrid BM25 ∪ kNN + RRF, hydrated to FULL content),
   // `memory_search` (BM25-only instant), `memory_sessions`, `memory_forget`.
   // `host_status` / `store_status` / `workflow_status` / `context_*` above are
@@ -1050,10 +1050,10 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       },
     );
 
-    // Workspace change feed (spec §8): registered ONLY on a workspace daemon.
+    // Workspace change feed: registered ONLY on a workspace daemon.
     // `changes_since` is the pull backstop (always works); `await_changes` is the
     // long-poll "notification" — signal-only, the agent still reads on demand
-    // (content push is an anti-pattern — spec §2).
+    // (content push into the agent's context is an anti-pattern).
     if (ctx.workspace) {
       const feedStore = ctx.workspace.feedStore;
       server.registerTool(
@@ -1090,14 +1090,14 @@ export function createNoirServer(ctx: ServerContext): McpServer {
       );
     }
 
-    // Consolidation is OPT-IN + provider-explicit (blueprint D5/D6 / §9):
+    // Consolidation is OPT-IN + provider-explicit (NEVER a silent paid call):
     // the tool is registered ONLY when the daemon wired a consolidation-capable
     // engine — i.e. the user set `memory.consolidation.enabled: true` AND a usable
     // provider+model resolved (see `resolveConsolidationCapability`). The engine's
     // `consolidate` self-refuses (`no-provider`/`model-unavailable`) and logs the
     // miss otherwise — never a crash, never a silent paid call. A `model:` block
     // set for summarize/title/draft does NOT register this tool when the user
-    // opted out under `memory:` (the Agent-Memory anti-pattern, §9).
+    // opted out under `memory:` (the Agent-Memory anti-pattern).
     if (ctx.memoryConsolidation === true) {
       server.registerTool(
         'memory_consolidate',
@@ -1202,8 +1202,8 @@ export function createNoirServer(ctx: ServerContext): McpServer {
     // binding (a caller-supplied `url` is ignored) — the prompt-injection
     // defense. The confirm gate is HARD: unless `confirm === true`, NO `fetch`
     // is made; the tool returns a dry-run preview (method/allowlisted URL/
-    // redacted headers/body). Executed writes append to `.noir/audit/`
-    // (X-OQ2: REUSE the dir).
+    // redacted headers/body). Executed writes append to `.noir/audit/`,
+    // the single audit location (no second audit dir).
     const clickupBinding = findBinding(integrations, 'noir-clickup');
     if (clickupBinding && clickupBinding.effectiveRuntime === 'gated-write-proxy') {
       const binding = clickupBinding;
@@ -1358,7 +1358,8 @@ export function createNoirServer(ctx: ServerContext): McpServer {
           }
 
           // 5. Audit every EXECUTED request to .noir/audit/integration-clickup.jsonl
-          //    (X-OQ2: REUSE the dir). Best-effort; the result envelope reports
+          //    (the same `.noir/audit/` dir the gate export uses, not a second
+          //    audit location). Best-effort; the result envelope reports
           //    `audited:false` if the write failed.
           let audited = true;
           for (const r of results) {

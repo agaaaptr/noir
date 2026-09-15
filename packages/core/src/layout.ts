@@ -10,7 +10,7 @@ export const NOIR_DIR = '.noir';
  * Hosts cross-project, user-scoped state — today the daemon record
  * (`~/.noir/daemon.json`, written by @noir-ai/daemon) and the embedding-model
  * cache ({@link modelsDir}). Kept HOME-relative so a single project checkout
- * stays portable across machines (blueprint: `ProjectId` is canonical, never a
+ * stays portable across machines (`ProjectId` is canonical, never a
  * filesystem path; the project `.noir/` dir never holds machine-local caches).
  */
 export function noirHome(): string {
@@ -21,7 +21,7 @@ export function noirHome(): string {
  * User-global cache for downloaded embedding-model weights: `~/.noir/models/`.
  *
  * Used by @noir-ai/context's local embedder (`@huggingface/transformers` pins
- * `env.cacheDir` here on first load). HOME-relative per spec OQ-7 (resolved) —
+ * `env.cacheDir` here on first load). HOME-relative —
  * the ~22 MB MiniLM download is user-scoped, not per-project, so projects stay
  * portable and the weight is fetched at most once per machine.
  */
@@ -53,7 +53,7 @@ export const paths = {
   projectId: (root: string) => join(root, NOIR_DIR, 'project.id'),
   storeDir: (root: string) => join(root, NOIR_DIR, 'store'),
   storeDb: (root: string, projectId: string) => join(root, NOIR_DIR, 'store', `${projectId}.db`),
-  // Artifact directories and files — filenames follow the C3 generated-artifact
+  // Artifact directories and files — filenames follow the generated-artifact
   // standard (`<CODE>-<NNNN>-<taskId>-<slug>.md`); see docs/reference/artifact-format.md
   specsDir: (root: string) => join(root, NOIR_DIR, 'specs'),
   specFile: (root: string, nnnn: number, taskId: string, slug: string) =>

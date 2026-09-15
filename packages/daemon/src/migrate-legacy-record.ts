@@ -3,7 +3,7 @@
 // `~/.noir/daemon.json`; once it has run the file is gone and no code path
 // reads the legacy shape again. Without it, a daemon from the previous version
 // keeps a write handle on the project DB while the new version opens a second
-// one (spec 4.5).
+// one (only one process may hold a write handle on a project DB).
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { uptime } from 'node:os';
 import { join } from 'node:path';

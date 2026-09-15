@@ -1,4 +1,4 @@
-// S9 — `noir skills {list,sync}`.
+// `noir skills {list,sync}`.
 //
 // Both sub-commands are IN-PROCESS (no daemon, no store): the builtin skill
 // pack is a filesystem artifact shipped with `@noir-ai/skills`, so `list` reads
@@ -7,7 +7,7 @@
 // `noir sync` use). Skill state is host-local files, never the daemon store, so
 // these never hit exit 4 (DAEMON_DOWN).
 //
-// Scriptability (S9 hard rule): `--json` emits the versioned `{ok,data}`
+// Scriptability (hard rule): `--json` emits the versioned `{ok,data}`
 // envelope to stdout (the only stdout write); the human table + banner go to
 // stderr via the centralized `table()` / `log()` helpers, which auto-strip
 // under NO_COLOR / non-TTY / --json. No interactive input is ever required, so
@@ -32,7 +32,7 @@ export interface SkillsOptions extends CliOptions {}
 // ---------------------------------------------------------------------------
 // Category derivation.
 //
-// Skills ship no `category` frontmatter field (S5 contract is `{name,
+// Skills ship no `category` frontmatter field (the skill contract is `{name,
 // description, references?}`), so the column is a PRESENTATION-layer grouping
 // derived from the skill name. The map covers the 26 builtins; an unknown name
 // falls back to its `noir-`-stripped segment so a newly authored skill still
@@ -81,11 +81,11 @@ export interface SkillRow {
   name: string;
   category: string;
   description: string;
-  /** Slice X — distinguishes the shipped builtins from the integration skills
+  /** Distinguishes the shipped builtins from the integration skills
    *  (e.g. `noir-clickup`) so `noir skills list` shows the full pack and which
    *  entries are integrations. Defaults to `'builtin'` for back-compat. */
   kind: 'builtin' | 'integration';
-  /** C3 — `full` (playbook) vs `stub` (marker). Derived from the body; the
+  /** `full` (playbook) vs `stub` (marker). Derived from the body; the
    *  registry enriches this from the same source so list + registry agree. */
   status: 'full' | 'stub';
 }
@@ -94,7 +94,7 @@ function toRow(s: BuiltinSkill, kind: 'builtin' | 'integration' = 'builtin'): Sk
   const description =
     typeof s.frontmatter.description === 'string' ? s.frontmatter.description : '';
   const status: 'full' | 'stub' = s.skillMd.includes('> **Stub:**') ? 'stub' : 'full';
-  // Category: frontmatter `metadata.category` is the C3 single source of truth
+  // Category: frontmatter `metadata.category` is the single source of truth
   // ("data, not code"); the curated CATEGORY map is only the fallback for a
   // legacy skill that lacks metadata. Keeps `skills list`, the registry, and
   // the docs table agreeing on one category per skill.
@@ -105,8 +105,9 @@ function toRow(s: BuiltinSkill, kind: 'builtin' | 'integration' = 'builtin'): Sk
 /**
  * Truncate `text` to `max` chars on a word boundary for dense table cells. This
  * is DISPLAY-ONLY for the human table; the full description is always carried
- * verbatim in the `--json` payload. (Distinct from the S6 "never truncate the
- * retrieval DATA" rule — that governs search snippets, not table formatting.)
+ * verbatim in the `--json` payload. (Distinct from the context engine's
+ * "never truncate the retrieval DATA" rule — that governs search snippets,
+ * not table formatting.)
  */
 function truncate(text: string, max: number): string {
   if (text.length <= max) return text;
@@ -149,7 +150,7 @@ export async function skillsList(opts: SkillsOptions): Promise<void> {
   ];
   // Status is derived from the body (stub marker); category uses the CLI's
   // CATEGORY map (name-derived) until skills carry `metadata.category` — after
-  // the C3 content rewrite every skill does, and `skills registry` reads it.
+  // the content rewrite every skill gets, and `skills registry` reads it.
   // `skills list` keeps the curated CATEGORY map as its single source so the
   // human table is stable; the registry is the queryable form.
   const data = { count: rows.length, skills: rows };
@@ -196,7 +197,7 @@ export async function skillsList(opts: SkillsOptions): Promise<void> {
 export async function skillsSync(opts: SkillsOptions): Promise<void> {
   const root = process.cwd();
   // loadProjectInfo asserts Noir is initialized; route it through fail() so an
-  // uninitialized project emits the canonical S9 {ok:false,error} envelope under
+  // uninitialized project emits the canonical {ok:false,error} envelope under
   // --json (a plain Error would leave stdout empty) — same as every other command.
   let project: ProjectInfo;
   try {
@@ -259,7 +260,7 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
 // `noir skills lint`
 // ---------------------------------------------------------------------------
 /**
- * `noir skills lint`: the C3 structural quality gate over the full shipped pack.
+ * `noir skills lint`: the structural quality gate over the full shipped pack.
  * Runs `lintSkill` (validateSkill errors + soft warnings) over `discoverAll()`.
  * In-process (no daemon) — the pack is a filesystem artifact.
  *
@@ -289,7 +290,7 @@ export async function skillsLint(opts: SkillsOptions): Promise<void> {
   const data = { count: skills.length, errored: errored.length, skills };
 
   // Exit-1 contract (the gate must FAIL, not silently pass): a lint error
-  // produces a non-zero exit + the canonical S9 failure envelope under --json
+  // produces a non-zero exit + the canonical failure envelope under --json
   // (`{ok:false,error:{code,message}}` — no ad-hoc `{ok:false,data}` shape).
   if (errored.length > 0) {
     const message = `skills lint: ${errored.length} skill${errored.length === 1 ? '' : 's'} failed validation`;
@@ -334,11 +335,11 @@ export async function skillsLint(opts: SkillsOptions): Promise<void> {
 // `noir skills registry`
 // ---------------------------------------------------------------------------
 /**
- * `noir skills registry`: emit the C3 runtime-derived skill registry (id, kind,
+ * `noir skills registry`: emit the runtime-derived skill registry (id, kind,
  * category, version, status, refs, lines). In-process (no daemon) — reads the
  * shipped pack via `buildRegistry()`. The registry is NOT a committed file;
  * frontmatter is the single source of truth and this command derives it on
- * demand (C3 decision D3).
+ * demand (nothing is cached to disk).
  *
  * `--json` emits `{ok:true, data:{count, skills: SkillRegistryEntry[]}}` to
  * stdout; the human view is a table to stderr.

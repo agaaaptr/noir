@@ -13,15 +13,15 @@ import type { ManagedBlock } from '@noir-ai/core';
 import { atomicWriteFile, stripManagedBlock, writeManagedRegion } from '@noir-ai/core';
 
 /**
- * The three-mode writer — generalizes keystone-K's `writeManagedRegion` into
+ * The three-mode writer — generalizes the earlier `writeManagedRegion` into
  * the declarative dispatch the scaffold manifest drives. Each mode maps 1:1 to
- * an artifact class in the spec §4.5 matrix:
+ * an artifact class in the artifact matrix:
  *
  *  - {@link regenerate}    — pure pointers (`.mcp.json`, `NOIR.md` brief, …).
  *                           Always overwritten, atomically.
  *  - {@link managedBlock}  — co-owned files (`CLAUDE.md` context/rules,
  *                           `.gitignore` noir block, …). DELEGATES to
- *                           keystone-K's `writeManagedRegion` so user content
+ *                           core's `writeManagedRegion` so user content
  *                           outside the markers is preserved byte-for-byte and
  *                           re-runs are idempotent. Never duplicate the
  *                           managed-region logic.
@@ -29,7 +29,7 @@ import { atomicWriteFile, stripManagedBlock, writeManagedRegion } from '@noir-ai
  *                           `project.id`). Write once; never clobber.
  *
  * The orchestrator (`scaffold.ts`) is the only intended caller; the per-mode
- * functions are exported so the cli (S-T2) and tests can drive them directly
+ * functions are exported so the cli and tests can drive them directly
  * when a one-off write is needed outside the manifest.
  */
 
@@ -64,7 +64,7 @@ export function regenerate(absPath: string, content: string): WriteOutcome {
   // rename is the real atomicity guarantee on POSIX (and practical-enough on
   // the win32 targets Noir supports).
   //
-  // M1: the tmp MUST be cleaned up on EVERY exit path. The previous shape only
+  // The tmp MUST be cleaned up on EVERY exit path. The previous shape only
   // ran `rmSync(tmp)` when `renameSync` threw, so a `writeSync` failure (disk
   // full, EPERM, …) left the tmp behind. A single try/finally with `force:true`
   // rmSync (no-op ENOENT after a successful rename consumed the file) covers
@@ -93,7 +93,7 @@ export function regenerate(absPath: string, content: string): WriteOutcome {
   return { path: absPath, mode: 'regenerate', written: true };
 }
 
-/** Re-emit a managed region, delegating to keystone-K's `writeManagedRegion`.
+/** Re-emit a managed region, delegating to core's `writeManagedRegion`.
  *  `regionText` MUST already include the begin/end markers (matches the shape
  *  `writeManagedRegion` expects and that `IGNORE_BLOCK`/`CONTEXT_BLOCK`
  *  callers build in core/cli). Use {@link buildRegion} to assemble it from a
@@ -134,7 +134,7 @@ export function managedBlock(
  *
  *  Single-region files (NOIR.md brief, ignore files) do NOT route through here
  *  — the orchestrator only calls this for groups of ≥2 managed blocks, so
- *  single-region byte-stability (delegated to keystone-K `writeManagedRegion`)
+ *  single-region byte-stability (delegated to core's `writeManagedRegion`)
  *  is unchanged. */
 export function managedBlocks(
   absPath: string,
@@ -177,7 +177,7 @@ export function managedBlocks(
  *  conventional trailing newline in `.tmpl` files without producing a
  *  double-newline before the end marker. This keeps the output byte-identical
  *  to `claudeAdapter.emitContext`/`emitRules` and core's `syncIgnores`, which
- *  S-T2 relies on for a diff-free refactor. */
+ *  the cli refactor relies on for diff-free output. */
 export function buildRegion(block: ManagedBlock, body: string): string {
   return `${block.begin}\n${body.trimEnd()}\n${block.end}\n`;
 }
@@ -227,7 +227,7 @@ export function predictManagedBlocks(
 /** Write `content` to `absPath` only if no file exists there. Returns whether
  *  bytes were written. Parent dirs are created by {@link atomicWriteFile}.
  *
- *  `fileMode` (slice E, §8.1) is the permission for the NEWLY created file —
+ *  `fileMode` is the permission for the NEWLY created file —
  *  `0o600` for the `.noir/.env` credential seed. It is applied to the temp file
  *  BEFORE the rename (see `AtomicWriteOptions.mode`), so the file never exists
  *  at its final path with a laxer mode. It is deliberately ignored when the
@@ -268,7 +268,7 @@ export function refreshSeed(absPath: string, content: string): WriteOutcome {
 }
 
 /**
- * Merge-aware JSON write (C3 SessionStart hook). `settings.local.json` is JSON
+ * Merge-aware JSON write (the SessionStart hook the scaffold emits). `settings.local.json` is JSON
  * and CANNOT carry `<!-- noir:* -->` managed markers, so it is neither
  * `managedBlock` (would need comments) nor `regenerate` (would clobber the
  * user's `permissions`/`env`/`enabledPlugins`) nor `skipIfExists` (would go

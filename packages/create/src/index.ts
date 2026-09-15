@@ -1,7 +1,7 @@
 /**
  * @noir-ai/create — the Noir scaffold engine.
  *
- * Public surface (consumed by `@noir-ai/cli` in S-T2 and by tests):
+ * Public surface (consumed by `@noir-ai/cli` and by tests):
  *  - {@link scaffold} — the orchestrator for init/create/sync.
  *  - {@link buildManifest} + {@link ManifestEntry} — the declarative artifact table.
  *  - {@link regenerate} / {@link managedBlock} / {@link skipIfExists} — the
@@ -15,8 +15,8 @@
  *    {@link CURRENT_SCAFFOLD_VERSION} — scaffold-version stamp.
  *  - {@link runMigrations} / {@link MIGRATIONS} — version-upgrade runner.
  *
- * This package has NO bin in S-T1 (the spec's `npm create noir-ai` greenfield
- * entry point is a later slice). It is engine-only: cli (S-T2) imports it.
+ * This package has NO bin — the `npm create noir-ai` greenfield
+ * entry point is not implemented yet. It is engine-only: the cli imports it.
  */
 
 // --- Ancestor store (three-way managed-region merge; opt-in) ---

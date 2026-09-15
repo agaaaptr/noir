@@ -79,7 +79,7 @@ function rankMap(
  * normalization). Results sort by score descending; ties break by the doc's
  * best (minimum) rank across both lists, then by first-seen insertion order
  * (bm25 list first, then kNN-only docs) — all deterministic, so identical
- * inputs always yield identical ordering (NFR-5).
+ * inputs always yield identical ordering (no RNG, no clock).
  *
  * Pure and side-effect-free.
  */

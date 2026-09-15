@@ -1,10 +1,11 @@
-// v2 — `noir run <prompt>`: drive the host agentic CLI headless and render its
-// stream-json. This is the programmatic host-driving line (roadmap v2.0) and the
-// v2 orchestrator surface: Noir spawns the host as a subprocess (Archetype B),
+// `noir run <prompt>`: drive the host agentic CLI headless and render its
+// stream-json. This is the programmatic host-driving line and the
+// headless orchestrator surface: Noir spawns the host as a subprocess,
 // streams its output, and reports the token/cost from the `result` event — it
-// never runs its own model + tool loop (D5).
+// never runs its own model + tool loop (an agent loop is impossible by
+// construction: the model request type has no tools/stream parameter).
 //
-// Custom command (D2a): `--command <binary>` lets users with multiple host
+// Custom command: `--command <binary>` lets users with multiple host
 // profiles (e.g. two Claude Code installs, `claude` vs `claude-work`) point the
 // orchestrator at their own binary without restarting the terminal. The host
 // default is used when `--command` is absent.
@@ -47,9 +48,9 @@ const CREDENTIAL_ENV_VARS = [
  * source that won for it (`.noir/.env` vs the environment), so the "unset it"
  * advice stays actionable: after consolidation `applyNoirEnv` re-injects a
  * file-scoped key on every invocation, so shell-level unsetting does nothing —
- * the message must point at the file (spec 13.2).
+ * the message must point at the file.
  *
- * NAMES AND SOURCES ONLY (spec G4): the message is loggable and shareable, so
+ * NAMES AND SOURCES ONLY: the message is loggable and shareable, so
  * no branch here may ever print a variable's value. Returns `''` when no
  * recognised credential variable is set.
  */
@@ -78,9 +79,9 @@ function credentialNote(
 export interface RunOptions extends CliOptions {
   /** Host to drive (default `claude`). */
   readonly host?: string;
-  /** Custom host binary overriding the per-host default (D2a). */
+  /** Custom host binary overriding the per-host default. */
   readonly command?: string;
-  /** Named run profile from .noir/config.yml `run.profiles` (D). */
+  /** Named run profile from .noir/config.yml `run.profiles`. */
   readonly profile?: string;
 }
 
@@ -157,9 +158,9 @@ async function runOnce(
 
   const root = process.cwd();
   // Credential provenance for the failure advice: `sources` records, per key,
-  // whether `.noir/.env` or the ambient environment won (spec 12.4). Names
+  // whether `.noir/.env` or the ambient environment won. Names
   // only — never a value. Read from `process.env`, which the bin's preAction
-  // has already overlaid with `.noir/.env` (spec 12.1: the file wins).
+  // has already overlaid with `.noir/.env` (the file wins).
   const envSources = loadNoirEnv(root).sources;
 
   // Run-profile resolution: --profile > NOIR_PROFILE > run.defaultProfile >

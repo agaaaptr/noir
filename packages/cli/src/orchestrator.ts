@@ -1,6 +1,7 @@
-// v2 — the host orchestrator (Archetype B). Drives the host agentic CLI as a
+// The host orchestrator. Drives the host agentic CLI as a
 // headless subprocess and consumes its `stream-json` event stream, rather than
-// Noir running its own model + tool loop (which D5 forbids).
+// Noir running its own model + tool loop (impossible by construction — the
+// model request type has no tools/stream parameter).
 //
 // This module is the PURE, testable core:
 //   - `resolveHostRun` — the spawn command for a host (custom binary wins over
