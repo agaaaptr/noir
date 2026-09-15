@@ -29,19 +29,25 @@ noir context index --path src --path packages/cli
 noir context index --force
 ```
 
-The indexer walks the configured roots (`context.roots` in `.noir/config.yml`,
-the project root by default), splits each file into chunks, and stores those
-chunks plus a vector for each.
+The indexer walks the paths you give it — the project root when you give none —
+splits each file into chunks, and stores those chunks plus a vector for each.
+That scope is the one you *index*, not one you configure: the
+`context.roots` key in `.noir/config.yml` is descriptive only, and
+`noir context index` does not read it.
 
 | Flag | What it does |
 |---|---|
-| `--path <p>` | Index only this path. **Repeatable** — `--path a --path b` indexes both, not just the last one. |
-| `--force` | Drop every indexed chunk and vector, then re-index from scratch. |
+| `--path <p>` | Index only this path. **Repeatable** — `--path a --path b` indexes both, not just the last one. The header line names the scope it used. |
+| `--force` | Drop every indexed chunk and vector, then re-index the paths already on record from scratch. `--path` in the same call is a no-op for this — a forced rebuild covers what was indexed before. |
 
 Without `--force` the walk is **incremental**: a file whose content hash has not
 changed is skipped, and a file that vanished is deleted from the index. Reach
-for `--force` when the index looks wrong rather than merely stale (an embedder
-change, a corrupted store, a `.noir/config.yml` roots edit).
+for `--force` when the index looks wrong rather than merely stale — after an
+embedder swap, or a corrupted store.
+
+To keep the index small, index the directories that matter rather than the whole
+project: `noir context index --path src --path packages/cli`. Indexing one path
+leaves chunks under other paths alone.
 
 ```
 context index — .
@@ -194,8 +200,10 @@ file is outside `context.roots`, or was added after the last index, run
 `noir context index`. If `Degraded` is `yes`, or the header said `degraded:
 BM25-only`, start the daemon.
 
-**"The index is huge and slow."** Narrow `context.roots` in `.noir/config.yml`
-to the directories that matter, then `noir context index --force` to rebuild.
+**"The index is huge and slow."** Index the directories that matter instead of
+the whole project — `noir context index --path src --path packages/cli`. Editing
+`context.roots` in `.noir/config.yml` will not do it: the index scope is what you
+pass to `--path`, and a bare `noir context index` always means the project root.
 
 **"`context index` exits 4 but search works."** Correct — they differ on
 purpose. Search can still read on its own; indexing writes to the project

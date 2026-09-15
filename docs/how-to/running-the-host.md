@@ -44,9 +44,15 @@ noir run --host gemini "…"           # a different host adapter
 noir run --command claude-work "…"   # a specific host binary
 ```
 
-`--host` takes one of the supported adapter ids; `--command` takes an
-executable. Shell **aliases do not work** as `--command` values — use an
-executable, a launcher script, or a run profile (§4).
+`--host` takes one of the supported adapter ids; `--command` takes the binary
+that host should be driven through. When the name is not on `PATH` — it is an
+alias or a function from your shell rc, or a `PATH` entry only your interactive
+shell knows — Noir probes your shell for it and either re-spawns the resolved
+path or bridges the alias through it, passing the prompt as argv only, never
+shell-parsed. That probe needs `$SHELL` to be `zsh`, `bash`, or `fish`, and is
+skipped on Windows: without it, `--command` fails with "no executable found".
+A launcher script is the most predictable answer, and a run profile (§4) saves
+typing either way. Details: [host-profiles.md](host-profiles.md#note-shell-resolution-fallback).
 
 When the host fails, the run exits non-zero with one actionable sentence. On an
 **authentication** failure it also names every credential and gateway variable
@@ -224,21 +230,30 @@ The answer streams into the pane as the host writes it, every tool call the host
 starts is listed, and the status bar tracks the model, the elapsed time, and the
 running token totals.
 
-| Key | In the run screen |
-|---|---|
-| `Enter` | Run the prompt typed on the input line. |
-| `Esc` | Cancel the run (the `RUN_CANCEL_HINT` reads `cancelling…` while it winds down). |
-| `Ctrl+C` | Same as `Esc` while a run is live; a second `Ctrl+C` leaves at once. With nothing running, `Ctrl+C` exits the dashboard. |
-| `Ctrl+T` | Open the transcripts picker — reopen a past `.noir/transcripts/` entry read-only. |
+The prompt is the one you typed on the dashboard line, so the screen starts
+running straight away — there is no second prompt to fill in. The keyboard is
+the screen's own while it is open:
+
+| Key | While a host is live | Once it has finished |
+|---|---|---|
+| `Esc` | Cancel the run; the notice line reads `cancelling…` while the host winds down. | Leave the screen back to the dashboard. |
+| `Ctrl+C` | Same as `Esc`. | Same as `Esc`. |
+| `Ctrl+C` twice | Force the host now instead of waiting out the grace. | — |
+| `Enter` | — | Accept the highlighted row — on the answer prompt this opens the post-run menu (§5) as an overlay. |
+| `Up` / `Down` | — | Move between the rows of that menu. |
 
 A cancelled run returns to the dashboard as soon as the host has stopped, with
 `interrupted · transcript: <path>` on the notice line. A successful run offers
 the same post-run actions as §5, as an overlay; a failed or cancelled one offers
 nothing.
 
-One thing to know: only a **bare** `run <prompt>` opens the live screen. A `run`
-carrying any flag (`--json`, `--profile`, `--command`) dispatches as an ordinary
-captured command on the dashboard instead.
+Two things to know:
+
+- Only a **bare** `run <prompt>` opens the live screen. A `run` carrying any flag
+  (`--json`, `--profile`, `--command`) dispatches as an ordinary captured command
+  on the dashboard instead.
+- `Ctrl+T` on the **dashboard** (not inside the run screen) opens the transcripts
+  picker, where you can reopen a past `.noir/transcripts/` entry read-only.
 
 ## Notes & troubleshooting
 
@@ -246,9 +261,12 @@ captured command on the dashboard instead.
 form that carries no assistant text (a tool-only turn, for instance). The
 transcript records everything the host sent; read it there.
 
-**"`noir run` says the binary was not found."** `--command` needs an executable,
-not a shell alias or a function. Point it at a real binary or a launcher script,
-or declare a run profile and use `--profile`.
+**"`noir run` says the binary was not found."** The name is not on `PATH` and
+the shell probe could not resolve it — usually `$SHELL` is unset (a GUI or
+launchd-launched process) or is not `zsh`/`bash`/`fish`, or you are on Windows.
+Point `--command` at a real executable or a launcher script, or declare a run
+profile and use `--profile`. See
+[host-profiles.md](host-profiles.md#note-shell-resolution-fallback).
 
 **"It runs with the wrong credentials."** Run `noir env` to see which source
 wins for each key — a value in `.noir/.env` beats the environment. See

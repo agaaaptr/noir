@@ -48,7 +48,7 @@ question it cannot answer.
 The command prints the new id and the stored observation:
 
 ```
-Saved memory 4f2c1a8e-… .
+Saved memory 4f2c1a8e-….
 id           4f2c1a8e-…
 type         architecture
 importance   0.5

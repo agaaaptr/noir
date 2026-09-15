@@ -1,9 +1,9 @@
 # How to run a spec-driven task end to end
 
-A Noir task moves through a fixed ladder of phases — clarify, spec, plan,
-execute, verify, document — and three of those transitions are **gates**: the
-engine will not move past them unless the discipline was followed, or you say
-so explicitly with a reason.
+A Noir task moves through a fixed ladder of phases — intake, clarify, spec,
+plan, execute, verify, document — and three of those transitions are **gates**
+(spec, plan, verify): the engine will not move past them unless the discipline
+was followed, or you say so explicitly with a reason.
 
 You normally drive this by talking to the host. This page is for the times you
 drive it yourself — scripting it, resuming after a break, or reading exactly
@@ -19,8 +19,10 @@ noir daemon start --detach
 ```
 
 Writes (`task new`, `advance`, `verify`, `block`, `abandon`, `research-record`)
-go through the daemon and exit `4` when it cannot be reached. Reads (`status`,
-`next`, `resume`) fall back to an in-process read-only pass and keep working.
+go through the daemon and exit `4` when it cannot be reached. `noir task status`
+is the one command with a read fallback: with the daemon confirmed down it
+answers from the store directly and marks itself `degraded`. `next` and `resume`
+need the daemon.
 
 ## 1. Start a task
 
@@ -39,7 +41,7 @@ forking a second one.
 | Flag | Values | What it changes |
 |---|---|---|
 | `--mode` | `full` (default) \| `quick` | `full` authors spec and plan and makes you review them; `quick` writes a stub spec and records the spec and plan gates as `skipped`, then fast-forwards to execute. **The verify gate still fires either way.** |
-| `--class` | `feature` \| `epic` \| `enhancement` \| `bugfix` \| `spike` \| `quick-task` \| `refactor` | Drives the soft **PRD gate**: a `feature` or `epic` entering the spec phase without a PRD gets an observable recommendation. |
+| `--class` | `feature` \| `epic` \| `enhancement` \| `bugfix` \| `spike` \| `quick-task` \| `refactor` | Drives the soft **PRD gate**: a `feature` or `epic` that reaches the spec gate without a PRD gets an observable recommendation. |
 
 Both flags are validated on your machine before anything is sent, so a typo is a
 clean usage error (exit `2`) listing the values that are accepted — not a
@@ -102,9 +104,10 @@ next section exists.
 tells you where you landed. Two things it does implicitly when you land at
 `done`: it appends a changelog entry and a pending decision-record stub (pass
 `--no-artifacts` to skip), and it never clobbers an existing file — the artifact
-writes use a preserve-on-conflict policy. When you advance **to `verify`** it
-prints one hint, `run \`noir handoff\` for a ready-to-paste host prompt`, because
-that is the moment work leaves Noir's planning and enters the host's execution.
+writes use a preserve-on-conflict policy. When you name `verify` explicitly —
+`noir task advance --to verify` — it also prints one hint, ``run `noir handoff`
+for a ready-to-paste host prompt``, because that is the moment work leaves
+Noir's planning and enters the host's execution.
 
 ## 4. Escape a gate on purpose
 
@@ -163,7 +166,7 @@ A failing gate is a **failure** — exit `1`, never a silent success — and it
 prints the recovery options it will accept:
 
 ```
-verify gate: 1 check failed (1 passed, 1 failed)
+verify gate: evidence-failed at 2026-09-15T04:10:02Z (1 passed, 1 failed)
 recovery: `noir task verify` | `noir task advance --force <reason>` | `noir task advance --skip` | `noir task block <reason>`
 ```
 
@@ -193,8 +196,8 @@ noir task research-record --type discovery \
 
 The source requirement is the whole point: an entry with no evidence is an
 assumption, so it must be typed as one. Recording findings is also what silences
-the **research-grounding recommendation** — a `feature` or `epic` entering the
-spec phase with no source-backed findings gets a recommendation to record some
+the **research-grounding recommendation** — a `feature` or `epic` reaching the
+spec gate with no source-backed findings gets a recommendation to record some
 (or `--force <reason>` to proceed without). It is a soft gate, so it never
 blocks.
 
@@ -230,13 +233,14 @@ or CI there is no prompt and it proceeds, so be deliberate there.
 noir task decompose cap-06 --out .noir/plans/cap-06.json
 ```
 
-This drafts an offline **SlicePlan** — a template skeleton, no provider needed —
-and either writes it to `--out` or prints a one-line summary per slice. Each
-slice is meant to enter the same ladder you have been using:
+This drafts an offline **SlicePlan** — a template skeleton, no provider needed,
+so it works with no key configured. `--out <path>` also persists the plan JSON;
+either way it prints a line per slice. Each slice is meant to enter the same
+ladder you have been using:
 
 ```
 decompose — cap-06
-slice-1: Documentation index (feature) — rationale: …
+s1-walking-skeleton: Walking skeleton — thinnest end-to-end (feature) — rationale: The first slice for capability cap-06.
 each piece enters the existing clarify→spec→plan→execute→verify→document workflow
 ```
 
@@ -259,7 +263,9 @@ The rest of the artifact set is created as you go — `.noir/intake/`,
 ## Notes & troubleshooting
 
 **"`task advance` exits 4."** The daemon is not running and the command writes.
-`noir daemon start --detach`, then retry. Reads (`status`, `next`) do not need it.
+`noir daemon start --detach`, then retry. `noir task status` is the one read with
+a fallback — with the daemon confirmed down it answers from the store directly
+and marks the row `degraded`. `noir task next` still needs the daemon.
 
 **"The gate says the PRD is missing."** That is the soft PRD gate on a `feature`
 or `epic`. Either write the PRD or record why you are not:
