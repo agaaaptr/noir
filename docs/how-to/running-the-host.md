@@ -68,7 +68,7 @@ The non-JSON summary on stderr ends with the path:
 
 ```
 usage: 12,480 in / 1,204 out $0.12 · 3 turns (API-equivalent estimate, not billed)
-transcript: .noir/transcripts/claude-20260915T041002Z.jsonl
+transcript: .noir/transcripts/claude-2026-09-15T04-10-02-000Z.jsonl
 ```
 
 The cost figure appears only when the host reported one.
@@ -116,7 +116,7 @@ noir run --json "summarize the TODOs in src/"
     "usage": { "inputTokens": 12480, "outputTokens": 1204, "totalCostUsd": 0.12, "numTurns": 3 },
     "numTurns": 3,
     "events": 42,
-    "transcript": ".noir/transcripts/claude-20260915T041002Z.jsonl",
+    "transcript": ".noir/transcripts/claude-2026-09-15T04-10-02-000Z.jsonl",
     "answerText": "The TODOs in src/ are…",
     "sessionId": "5f2c…"
   }
@@ -138,27 +138,14 @@ full output.
 
 ## 4. Choose which host setup runs it (`--profile`)
 
-Run **profiles** are named host setups defined in `.noir/config.yml`
-(`run.profiles.<name>.binary` plus optional `args` and `env`). They are how you
-keep several hosts, several accounts, or several credential sets side by side:
-
-```bash
-noir run --profile work "…"
-noir run --list-profiles
-```
-
-`--list-profiles` prints the configured profiles as `NAME` / `DEFAULT` / `BINARY`
-rows and exits without running anything (`--json` gives the same rows as data).
-The selection precedence is:
-
-```
---profile <name>  >  NOIR_PROFILE  >  run.defaultProfile  >  built-in default
-```
-
-An unknown profile name is a hard error that lists the names that do exist — it
-never falls back silently to a different host. See
-[host-profiles.md](host-profiles.md) for the config shape and the `${VAR}`
-interpolation a profile's `env` supports.
+Run **profiles** are named host setups in `.noir/config.yml` — how you keep
+several hosts, accounts, or credential sets side by side: `noir run --profile
+work "…"` selects one, and `noir run --list-profiles` prints the configured
+names without running anything. The selection order is `--profile <name>` >
+`NOIR_PROFILE` > `run.defaultProfile` > built-in default, and an unknown name is
+a hard error listing the names that exist — never a silent fallback to a
+different host; the full config shape and the `${VAR}` interpolation a profile's
+`env` supports are in [host-profiles.md](host-profiles.md).
 
 ## 5. Decide what to do with the answer
 
@@ -210,7 +197,7 @@ summary — the host did as it was told. What the host had already produced is
 written to the transcript before Noir leaves, and the message says where:
 
 ```
-interrupted · transcript: .noir/transcripts/claude-20260915T041002Z.jsonl
+interrupted · transcript: .noir/transcripts/claude-2026-09-15T04-10-02-000Z.jsonl
 ```
 
 If the file could not be written, the path reads `(not persisted)`. Under
@@ -236,8 +223,8 @@ the screen's own while it is open:
 
 | Key | While a host is live | Once it has finished |
 |---|---|---|
-| `Esc` | Cancel the run; the notice line reads `cancelling…` while the host winds down. | Leave the screen back to the dashboard. |
-| `Ctrl+C` | Same as `Esc`. | Same as `Esc`. |
+| `Esc` | Cancel the run; the screen's own hint line under the panel reads `cancelling…` while the host winds down. | Leave the screen back to the dashboard. |
+| `Ctrl+C` | Same as `Esc`. | **Quit `noir tui` altogether** — *not* the same as `Esc`. With nothing running there is nothing to cancel, so this is the dashboard-wide quit key, and you leave the dashboard rather than return to it. |
 | `Ctrl+C` twice | Force the host now instead of waiting out the grace. | — |
 | `Enter` | — | Accept the highlighted row — on the answer prompt this opens the post-run menu (§5) as an overlay. |
 | `Up` / `Down` | — | Move between the rows of that menu. |
