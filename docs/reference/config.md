@@ -52,6 +52,11 @@ vars, never config keys — see
 |---|---|---|---|---|
 | `context` | `object` | no | {"embedder":{"kind":"local","dim":384},"roots":[],"budgetTokens":4096} | Context retrieval settings |
 | `context.embedder` | `object` | no | {"kind":"local","dim":384} | Embedder configuration |
+| `context.embedder.kind` | `enum` | no | "local" | Embedder backend (local = offline in-process; remote/ollama = opt-in) |
+| `context.embedder.model` | `string` | no | — | Embedder model id (HF repo / provider model / Ollama tag) |
+| `context.embedder.provider` | `string` | no | — | Remote embedder provider (openai | voyage | cohere) |
+| `context.embedder.baseURL` | `string` | no | — | Ollama base URL |
+| `context.embedder.dim` | `number` | no | 384 | Embedding dimension (must match the vec0 table) |
 | `context.roots` | `array` | no | [] | Configured index roots (informational) |
 | `context.budgetTokens` | `number` | no | 4096 | Default context_search token budget |
 
@@ -62,6 +67,10 @@ vars, never config keys — see
 | `model` | `object` | no | {} | Bounded model layer (provider-explicit; absent = fully degraded) |
 | `model.defaultProvider` | `string` | no | — | Fallback provider key (into `providers`) for unassigned tiers |
 | `model.tiers` | `object` | no | — | Per-tier provider overrides |
+| `model.tiers.draft` | `string` | no | — | Provider key for the draft tier |
+| `model.tiers.title` | `string` | no | — | Provider key for the title tier |
+| `model.tiers.summarize` | `string` | no | — | Provider key for the summarize tier |
+| `model.tiers.consolidate` | `string` | no | — | Provider key for the consolidate tier |
 | `model.providers` | `record` | no | — | Configured model providers, keyed by name |
 | `model.providers.<name>` | `record value` | yes | — | A named provider block |
 | `model.providers.<name>.model` | `string` | yes | — | Model id for this provider |
@@ -76,6 +85,10 @@ vars, never config keys — see
 |---|---|---|---|---|
 | `memory` | `object` | no | {"consolidation":{"enabled":false}} | Cross-session memory settings |
 | `memory.consolidation` | `object` | no | {"enabled":false} | Memory consolidation (LLM; opt-in + provider-explicit) |
+| `memory.consolidation.enabled` | `boolean` | no | false | Master switch for LLM memory consolidation |
+| `memory.consolidation.provider` | `string` | no | — | Provider key for consolidation |
+| `memory.consolidation.model` | `string` | no | — | Model id for consolidation |
+| `memory.consolidation.types` | `array` | no | — | Candidate-type filter |
 
 ### rules
 
@@ -98,6 +111,13 @@ vars, never config keys — see
 |---|---|---|---|---|
 | `workflow` | `object` | no | {"gate":{"verify":{"required":false,"retryBudget":2},"research":{"recommendFor":["feature","epic"],"requireSource":true}}} | SDD workflow engine settings |
 | `workflow.gate` | `object` | no | {"verify":{"required":false,"retryBudget":2},"research":{"recommendFor":["feature","epic"],"requireSource":true}} | Workflow gates (verify / research) |
+| `workflow.gate.verify` | `object` | no | {"required":false,"retryBudget":2} | Evidence-backed verify gate |
+| `workflow.gate.verify.required` | `union` | no | false | HARD verify gate when truthy (bool or per-task-class map) |
+| `workflow.gate.verify.retryBudget` | `number` | no | 2 | Allowed verify retries before the gate blocks |
+| `workflow.gate.verify.checks` | `array` | no | — | Checks `noir task verify` resolves and runs |
+| `workflow.gate.research` | `object` | no | {"recommendFor":["feature","epic"],"requireSource":true} | Research grounding gate |
+| `workflow.gate.research.recommendFor` | `array` | no | ["feature","epic"] | Task classes that get the soft research-grounding recommendation |
+| `workflow.gate.research.requireSource` | `boolean` | no | true | Require research records to cite a source |
 
 ### integrations
 
@@ -106,6 +126,7 @@ vars, never config keys — see
 | `integrations` | `record` | no | {} | Opt-in integration overlays, keyed by integration name |
 | `integrations.<name>` | `record value` | yes | — | A per-integration config overlay |
 | `integrations.<name>.auth` | `object` | no | {} | Auth overrides |
+| `integrations.<name>.auth.tokenEnv` | `optional` | no | — | Override the token env-var name for this integration |
 | `integrations.<name>.runtime` | `enum` | no | "none" | Runtime tier (none = read-only; downgrade to disable writes) |
 | `integrations.<name>.teamId` | `string` | no | — | ClickUp team id (custom task IDs) |
 | `integrations.<name>.listId` | `string` | no | — | ClickUp list id (create/batch flows) |

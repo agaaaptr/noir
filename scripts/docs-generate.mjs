@@ -22,10 +22,20 @@
 //   <!-- noir:doc:packages -->     → package inventory table
 //   <!-- noir:doc:release-history -->→ recent release history (from releases.json)
 
-import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { execFile, execFileSync } from 'node:child_process';
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -37,13 +47,8 @@ const REGISTRY_PATH = join(ROOT, '.noir', 'docs-registry.json');
 
 // ── Argument parsing ──────────────────────────────────────────────
 
-const command = process.argv[2];
 const USAGE = 'Usage: node scripts/docs-generate.mjs <generate|validate|registry|index>';
-
-if (!command || !['generate', 'validate', 'registry', 'index'].includes(command)) {
-  console.error(USAGE);
-  process.exit(1);
-}
+const COMMANDS = ['generate', 'validate', 'registry', 'index'];
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -67,6 +72,27 @@ function readFile(path) {
     return readFileSync(path, 'utf8');
   } catch {
     return null;
+  }
+}
+
+/**
+ * Async sibling of `exec`. The CLI reference walk issues one help invocation
+ * per command and overlaps them, which needs a non-blocking spawn —
+ * `execFileSync` would serialize the event loop and erase the overlap.
+ */
+async function execAsync(cmd, args, opts = {}) {
+  try {
+    const { stdout } = await execFileAsync(cmd, args, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      cwd: ROOT,
+      timeout: 20_000,
+      ...opts,
+    });
+    return stdout.trim();
+  } catch (err) {
+    if (opts.nullable) return '';
+    throw err;
   }
 }
 
@@ -149,24 +175,221 @@ function genVersionStatus() {
   ].join('\n');
 }
 
-function genCliReference() {
-  // Run `noir --help` and capture all command help
-  const built = join(ROOT, 'packages', 'cli', 'dist', 'bin.js');
-  let mainHelp = '';
-  try {
-    mainHelp = exec('node', [built, '--help'], { nullable: true });
-  } catch {
-    mainHelp = '_(CLI not built — run `pnpm build` to generate CLI reference)_';
+/** How many `node <built> --help` processes the walk keeps in flight at once. */
+const CLI_HELP_CONCURRENCY = 8;
+
+/** A command token may be an alias list (`install|migrate`); the first is canonical. */
+function cliCommandName(token) {
+  return token.split('|')[0];
+}
+
+/**
+ * The lines of the blank-line-delimited block introduced by `header` (e.g.
+ * `Commands:`, `Options:`). Commander separates Usage / description /
+ * Arguments / Options / Commands / after-text with blank lines, so stopping at
+ * the first blank line is what keeps hand-written after-text (command examples)
+ * out of the parsed sections.
+ */
+function helpSection(help, header) {
+  const lines = help.split('\n');
+  const start = lines.indexOf(header);
+  if (start === -1) return [];
+  const body = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    if (lines[i].trim() === '') break;
+    body.push(lines[i]);
+  }
+  return body;
+}
+
+/** The `Usage:` line from a help page, without its prefix. */
+function helpUsage(help) {
+  const line = help.split('\n').find((l) => l.startsWith('Usage: '));
+  return line ? line.slice('Usage: '.length).trim() : '';
+}
+
+/** The command's description block — the lines between Usage and the first section. */
+function helpDescription(help) {
+  const lines = help.split('\n');
+  const start = lines.findIndex((l) => l.startsWith('Usage: '));
+  if (start === -1) return '';
+  const parts = [];
+  for (let i = start + 2; i < lines.length; i++) {
+    if (lines[i].trim() === '') break;
+    parts.push(lines[i].trim());
+  }
+  return parts.join(' ');
+}
+
+/**
+ * Command tokens from a help page's `Commands:` block, in commander
+ * registration order (the order the CLI registers them, which the help prints
+ * verbatim). A command entry is indented exactly two spaces; the wrapped
+ * remainder of a long description is indented to the description column, so the
+ * two-space test separates entries from their own continuations.
+ */
+function helpCommands(help) {
+  const tokens = [];
+  for (const line of helpSection(help, 'Commands:')) {
+    const entry = line.match(/^ {2}(\S.*)$/);
+    if (!entry) continue;
+    tokens.push(entry[1].split(/\s+/)[0]);
+  }
+  return tokens;
+}
+
+/**
+ * Options from a help page's `Options:` block. Commander pads the flag column
+ * and separates it from the description by at least two spaces, so each entry
+ * splits at the first run of two-or-more spaces (never inside a flag, whose own
+ * space separates `--flag` from its `<value>` placeholder). Wrapped description
+ * lines are joined back into one cell. The built-in help/version flags are
+ * dropped — this table documents the command's own flags.
+ */
+function helpOptions(help) {
+  const options = [];
+  for (const line of helpSection(help, 'Options:')) {
+    const entry = line.match(/^ {2}(\S.*)$/);
+    if (!entry) {
+      // Wrapped description of the previous entry.
+      if (options.length > 0) {
+        options[options.length - 1].description += ` ${line.trim()}`;
+      }
+      continue;
+    }
+    const split = entry[1].search(/\s{2,}/);
+    options.push({
+      flag: (split === -1 ? entry[1] : entry[1].slice(0, split)).trim(),
+      description: split === -1 ? '' : entry[1].slice(split).trim(),
+    });
+  }
+  return options.filter(
+    (o) => !/^(-h, )?--help$/.test(o.flag) && !/^(-V, )?--version$/.test(o.flag),
+  );
+}
+
+/**
+ * Bounded-concurrency `--help` runner. Commander documents a subcommand's flags
+ * only under that subcommand's own help, so each command needs its own process;
+ * the bound keeps the walk from spawning one process per sibling at a level.
+ */
+function createCliHelpRunner(built) {
+  let inFlight = 0;
+  const waiting = [];
+  const stats = { invocations: 0 };
+
+  const run = async (path) => {
+    if (inFlight >= CLI_HELP_CONCURRENCY) {
+      await new Promise((resolve) => waiting.push(resolve));
+    }
+    inFlight++;
+    stats.invocations++;
+    try {
+      return await execAsync('node', [built, ...path, '--help'], { nullable: true });
+    } finally {
+      inFlight--;
+      const next = waiting.shift();
+      if (next) next();
+    }
+  };
+
+  return { run, stats };
+}
+
+/**
+ * Walk the command tree depth-first in registration order, reading each
+ * command's own help. A level's help reads are launched together (bounded by
+ * the runner) but consumed in order, so a group's children are rendered
+ * directly after the group regardless of which process finishes first. A
+ * command whose help cannot be read is recorded in place with a placeholder
+ * rather than failing the whole run.
+ */
+async function walkCliCommands(path, tokens, sections, seen, run) {
+  const pending = tokens.map((token) => run([...path, cliCommandName(token)]));
+
+  for (let i = 0; i < tokens.length; i++) {
+    const fullPath = [...path, cliCommandName(tokens[i])];
+    const key = fullPath.join(' ');
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const help = await pending[i];
+    if (!help) {
+      sections.push({ path: fullPath, unavailable: true });
+      continue;
+    }
+
+    const subcommands = helpCommands(help);
+    sections.push({
+      path: fullPath,
+      usage: helpUsage(help),
+      description: helpDescription(help),
+      options: helpOptions(help),
+    });
+    if (subcommands.length > 0) {
+      await walkCliCommands(fullPath, subcommands, sections, seen, run);
+    }
+  }
+}
+
+/** A literal `|` would close a markdown table cell, so it is escaped in cell text. */
+function escapeTableCell(value) {
+  return value.replace(/\|/g, '\\|');
+}
+
+/** One section per command: its path, usage line, description, and own flags. */
+function renderCliSection(section) {
+  const out = [`### noir ${section.path.join(' ')}`, ''];
+
+  if (section.unavailable) {
+    out.push('_(help unavailable for this command)_', '');
+    return out;
   }
 
-  const lines = ['# CLI Command Reference', '', '> Auto-generated from `noir --help` output.', ''];
+  if (section.usage) out.push(`**Usage:** \`${section.usage}\``, '');
+  if (section.description) out.push(section.description, '');
+  if (section.options.length > 0) {
+    out.push('| Flag | Description |');
+    out.push('|---|---|');
+    for (const option of section.options) {
+      out.push(`| \`${option.flag}\` | ${escapeTableCell(option.description)} |`);
+    }
+    out.push('');
+  }
+  return out;
+}
+
+/**
+ * The full CLI reference. The root help alone documents no subcommand flag —
+ * commander prints those under `<command> --help` — so this walks the tree and
+ * emits one section per command on top of the root block.
+ */
+async function genCliReference() {
+  const built = join(ROOT, 'packages', 'cli', 'dist', 'bin.js');
+  const notBuilt = '_(CLI not built — run `pnpm build` to generate CLI reference)_';
+  const lines = [
+    '# CLI Command Reference',
+    '',
+    '> Auto-generated from the built CLI: the root `noir --help`, then',
+    '> `noir <command> --help` for every command in the tree.',
+    '',
+  ];
+
+  if (!existsSync(built)) {
+    lines.push(notBuilt);
+    lines.push('');
+    return { markdown: lines.join('\n'), invocations: 0 };
+  }
+
+  const { run, stats } = createCliHelpRunner(built);
+  const mainHelp = await run([]);
 
   if (mainHelp) {
     lines.push('```');
     lines.push(mainHelp);
     lines.push('```');
   } else {
-    lines.push(mainHelp);
+    lines.push(notBuilt);
   }
 
   lines.push('');
@@ -182,8 +405,19 @@ function genCliReference() {
   lines.push('| `--tui` / `--no-tui` | Advisory routing for bare `noir` |');
   lines.push('| `--no-tips` | Suppress hints on stderr |');
   lines.push('');
+  lines.push('## Commands');
+  lines.push('');
 
-  return lines.join('\n');
+  if (mainHelp) {
+    const sections = [];
+    await walkCliCommands([], helpCommands(mainHelp), sections, new Set(), run);
+    for (const section of sections) lines.push(...renderCliSection(section));
+  } else {
+    lines.push('_(Command help unavailable — run `pnpm build` first.)_');
+    lines.push('');
+  }
+
+  return { markdown: lines.join('\n'), invocations: stats.invocations };
 }
 
 function genConfigSchema() {
@@ -236,8 +470,15 @@ function genConfigSchema() {
         const rawShape = schema._def?.shape;
         const shape = typeof rawShape === 'function' ? rawShape() : (rawShape || {});
         const result = {};
-        // Reflect a field (one level deep for object/record fields so nested
-        // keys — context.embedder.kind, run.profiles.<name>, … — appear too).
+        // Reflect a field, descending into nested object fields so their keys
+        // become their own rows (context.embedder.dim,
+        // memory.consolidation.provider, workflow.gate.verify.required,
+        // run.profiles.<name>, …). Three levels is the budget: the config
+        // blocks users actually edit sit at most that deep, and stopping there
+        // keeps z.record value shapes from expanding into noise. A record
+        // value is reflected from its own depth instead (see the '<name>'
+        // block below), so integrations.<name>.auth.tokenEnv is reached in
+        // two.
         const describeField = (key, field, depth) => {
           // Zod v4: a wrapped field (optional/nullable/default) keeps its real
           // schema on _def.innerType; the type is a short string on _def.type
@@ -300,7 +541,7 @@ function genConfigSchema() {
               }
             }
           }
-          if (depth < 1) {
+          if (depth < 3) {
             const objShape = inner?._def?.shape;
             if (objShape && typeof objShape === 'object') {
               for (const [childKey, childField] of Object.entries(objShape)) {
@@ -877,7 +1118,7 @@ function validateDocs() {
 
 // ── Commands ───────────────────────────────────────────────────────
 
-function cmdGenerate() {
+async function cmdGenerate() {
   console.log('Generating documentation...\n');
 
   // Read current state
@@ -938,9 +1179,9 @@ function cmdGenerate() {
   // CLI and config references require the project to be built
   const cliBuilt = existsSync(join(ROOT, 'packages', 'cli', 'dist', 'bin.js'));
   if (cliBuilt) {
-    const cliContent = genCliReference();
-    writeFileSync(join(ROOT, 'docs', 'reference', 'cli.md'), cliContent, 'utf8');
-    console.log('  ✓ docs/reference/cli.md (generated)');
+    const { markdown, invocations } = await genCliReference();
+    writeFileSync(join(ROOT, 'docs', 'reference', 'cli.md'), markdown, 'utf8');
+    console.log(`  ✓ docs/reference/cli.md (generated; ${invocations} help invocations)`);
     updated++;
   } else {
     console.log('  ⚠ docs/reference/cli.md skipped (run pnpm build first)');
@@ -1044,20 +1285,41 @@ function cmdIndex() {
 
 // ── Dispatch ───────────────────────────────────────────────────────
 
-switch (command) {
-  case 'generate':
-    cmdGenerate();
-    break;
-  case 'validate':
-    cmdValidate();
-    break;
-  case 'registry':
-    cmdRegistry();
-    break;
-  case 'index':
-    cmdIndex();
-    break;
-  default:
+/**
+ * True when this module is the Node entry point
+ * (`node scripts/docs-generate.mjs <cmd>`). When imported as a module — the
+ * test suite does — the CLI dispatch + `process.exit` paths are skipped so the
+ * generators and help parsers below are testable. Resolves symlinks.
+ */
+function isMainModule() {
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+if (isMainModule()) {
+  const command = process.argv[2];
+  if (!command || !COMMANDS.includes(command)) {
     console.error(USAGE);
     process.exit(1);
+  }
+
+  switch (command) {
+    case 'generate':
+      await cmdGenerate();
+      break;
+    case 'validate':
+      cmdValidate();
+      break;
+    case 'registry':
+      cmdRegistry();
+      break;
+    case 'index':
+      cmdIndex();
+      break;
+  }
 }
+
+export { genCliReference, genConfigSchema, helpCommands, helpDescription, helpOptions, helpUsage };

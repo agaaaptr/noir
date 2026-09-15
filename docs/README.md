@@ -1,7 +1,7 @@
 # Documentation
 
 > Auto-generated documentation index.
-> Last updated: 2026-09-11T12:06:46.061Z
+> Last updated: 2026-09-15T03:00:24.187Z
 
 ## Getting Started
 
@@ -55,6 +55,7 @@
 - [**ADR-0009 — Shared cross-repo workspaces**](decisions/0009-shared-workspaces.md) — 
 - [**ADR-0010 — Per-project daemon records, a real `daemon.port`, and HTTP-only auth**](decisions/0010-per-project-daemon-records-and-http-auth.md) — 
 - [**ADR-0011 — `.noir/.env` precedence, provenance, and the configuration doctrine**](decisions/0011-noir-env-precedence-and-doctrine.md) — 
+- [**ADR-0012: Provider transport fields + ambient-env neutralization**](decisions/0012-provider-transport-fields-and-ambient-env-neutralization.md) — 
 - [**Architecture Decision Records**](decisions/README.md) — 
 
 ## Roadmap
@@ -107,6 +108,7 @@
 - [**Plan — v2 Orchestrator TUI implementation**](internal/plans/2026-08-14-v2-orchestrator-tui.md) — [ARCHIVED] 
 - [**Shared Workspace Context Implementation Plan**](internal/plans/2026-09-09-shared-workspace-context.md) — [ARCHIVED] 
 - [**Daemon Hardening + Init Completeness + `.noir/.env` Consolidation — Implementation Plan**](internal/plans/2026-09-11-daemon-hardening-init-completeness.md) — [ARCHIVED] 
+- [**Env Templates + Upgrade Completeness + Provider Gateways + `noir run` UX — Implementation Plan**](internal/plans/2026-09-14-env-templates-upgrade-provider-run-ux.md) — [ARCHIVED] 
 - [**Noir — AI Toolkit Design Blueprint**](internal/specs/2026-07-23-noir-toolkit-design.md) — [ARCHIVED] 
 - [**Noir — Walking Skeleton Design (S0 → S2 → S3)**](internal/specs/2026-07-23-noir-walking-skeleton-design.md) — [ARCHIVED] 
 - [**Noir — S1 Stores Design (`@noir-ai/store`)**](internal/specs/2026-07-23-s1-stores-design.md) — [ARCHIVED] 
@@ -139,4 +141,5 @@
 - [**2026-08-19 — v2 TUI fixes + `noir run` orchestration + configuration surface**](internal/specs/2026-08-19-run-orchestration-fixes-and-config-design.md) — [ARCHIVED] 
 - [**Shared Workspace Context — Design**](internal/specs/2026-09-09-shared-workspace-context-design.md) — [ARCHIVED] 
 - [**Daemon Hardening + Init Completeness — Design**](internal/specs/2026-09-11-daemon-hardening-init-completeness-design.md) — [ARCHIVED] 
+- [**Env Templates + Upgrade Completeness + Provider Gateways + `noir run` UX — Design**](internal/specs/2026-09-14-env-templates-upgrade-provider-run-ux-design.md) — [ARCHIVED] 
 
