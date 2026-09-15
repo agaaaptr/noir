@@ -1,7 +1,7 @@
 # Documentation
 
 > Auto-generated documentation index.
-> Last updated: 2026-09-15T04:09:41.072Z
+> Last updated: 2026-09-15T04:32:48.354Z
 
 ## Getting Started
 
@@ -15,11 +15,15 @@
 
 - [**Using the ClickUp integration (noir-clickup)**](how-to/clickup.md) — 
 - [**Configuring a project with `.noir/.env`**](how-to/configure-env.md) — 
+- [**How to search your codebase and hand off a session**](how-to/context-and-handoff.md) — 
 - [**Connecting through a gateway**](how-to/gateways.md) — 
 - [**Running with multiple host profiles**](how-to/host-profiles.md) — 
 - [**Installing Noir**](how-to/installation.md) — 
+- [**How to use cross-session memory**](how-to/memory.md) — 
 - [**Adding a package**](how-to/packaging.md) — 
 - [**Releasing Noir**](how-to/releasing.md) — 
+- [**How to run the host agent headless**](how-to/running-the-host.md) — 
+- [**How to run a spec-driven task end to end**](how-to/sdd-tasks.md) — 
 - [**Sharing memory across repositories (workspaces)**](how-to/shared-workspaces.md) — 
 
 ## Reference

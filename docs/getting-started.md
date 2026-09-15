@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.14.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.14.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-15T04:09:34.300Z*
+*Last auto-generated: 2026-09-15T04:32:43.152Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -154,7 +154,7 @@ You work **through** the host. After `noir init` and opening the project in Clau
 noir-brainstorming  →  noir-spec  →  noir-planning  →  noir-executing-plans  →  noir-verifying  →  noir-wrap
 ```
 
-- `noir-executing-plans` uses `context_search` to pull focused, ranked snippets instead of re-reading whole files, and `memory_recall` for anything you saved in a prior session.
+- `noir-executing-plans` uses `context_search` to pull focused, ranked snippets instead of re-reading whole files, and `memory_recall` for anything you saved in a prior session — see [**context-and-handoff.md**](how-to/context-and-handoff.md) and [**memory.md**](how-to/memory.md).
 - `noir-wrap` ends with `memory_save`, so insights carry into the next session.
 - **Every gate decision is recorded** in `.noir/audit/`. State persists to the project-local store, so a new session can resume a task where the last one left off.
 
@@ -168,7 +168,12 @@ noir task verify    # run configured checks and submit evidence to the verify ga
 noir doctor         # config / store / embedder / native deps / provider / install status
 ```
 
-Other task commands: `noir task new --class feature`, `advance --force`, `block`, `abandon`, `research-record`, `decompose`, `next`. The daemon exposes `workflow_*` MCP tools (`workflow_status`, `workflow_start`, `workflow_advance`, `workflow_resume`, `workflow_block`, `workflow_abandon`, `workflow_research_record`, `checkpoint`).
+Driving that lifecycle yourself — `task new --class feature`, `advance --force`,
+`block`, `abandon`, `research-record`, `decompose` — is covered end to end in
+[**sdd-tasks.md**](how-to/sdd-tasks.md). The daemon exposes the same surface as
+`workflow_*` MCP tools (`workflow_status`, `workflow_start`, `workflow_advance`,
+`workflow_resume`, `workflow_block`, `workflow_abandon`,
+`workflow_research_record`, `checkpoint`).
 
 `noir doctor` includes an **install row** (advisory `ok`/`warn`, never `fail`, no network call) that reports the detected install method (`native`/`npm`/`pnpm`/…), the installed version, and the latest-known version from the update cache — a non-blocking `native recommended` nudge appears when you're on a non-native path.
 
@@ -229,53 +234,33 @@ A raw stream-json transcript is always persisted to `.noir/transcripts/`.
   as `--command` values; use an executable, a launcher script, or a profile.
 - **Progress while it works.** On a terminal the run keeps a live status line on
   stderr — host, model once known, elapsed time, and running token totals — so the
-  wait before the first token is never silence. It redraws only when the host
-  reports something, and it stays out of the answer's way. `--json` and `--quiet`
-  emit none of it, and when stderr is not a terminal it becomes two plain markers
-  (one at the start, one at the end) instead of an animated line.
-- **Stopping a run.** `Ctrl+C` (`SIGINT`), or a `SIGTERM` from whatever started
-  Noir, stops the **host** — politely first, forcefully after five seconds if it
-  has not exited — and then Noir leaves with the conventional `128 + signal` code
-  (`130` for `SIGINT`, `143` for `SIGTERM`). The host is never detached from Noir,
-  so it is reaped before the command returns and nothing is left running behind.
-  What it had already produced is written to the transcript first, and the message
-  says where: `interrupted · transcript: .noir/transcripts/<file>.jsonl`, or
-  `interrupted · transcript: (not persisted)` if the file could not be written.
-  An interrupted run is **not** a failure — no `failed` line and no token/cost
-  summary, since the host did as it was told. A **second** `Ctrl+C` leaves
-  immediately rather than waiting the grace out. Under `--json` the interrupt is
-  one `{ok:false,error:{code,message}}` envelope on stdout, like any other error.
-- **After the answer.** On an interactive terminal — both stdin and stdout a TTY,
-  and not `--json`, `--no-input`, CI, or `NO_COLOR` — a successful run asks what
-  to do with the answer: save it to memory, record it as a finding on the active
-  task, write a handoff artifact, write it to a file you name, or continue the
-  session with a follow-up prompt — with **Dismiss** (nothing further) as the
-  default. Everywhere else (a pipe, `--json`, `--no-input`, CI, `NO_COLOR`) it is
-  offered nothing at all, and no choice —
-  including dismissing — changes the run's exit code. **Continue** asks for a
-  follow-up prompt and re-invokes the **host** headless with
-  `--resume <session-id>` appended to the configured profile's own arguments —
-  a fresh host invocation, not a `noir run` flag; the session id and the answer
-  as plain text are also in the `--json` envelope (`data.answerText`,
-  `data.sessionId`). The memory and research actions go through the daemon; if
-  it is unreachable they say so and leave everything else alone.
+  wait before the first token is never silence. `--json` and `--quiet` emit none
+  of it, and when stderr is not a terminal it becomes two plain markers (one at
+  the start, one at the end) instead of an animated line.
+- **Stopping a run.** `Ctrl+C` stops the **host** — politely first, forcefully
+  after five seconds — and Noir leaves with the conventional `128 + signal` code
+  (`130` for `SIGINT`, `143` for `SIGTERM`). What the host had already produced
+  is written to the transcript first. A **second** `Ctrl+C` leaves immediately.
+  An interrupted run is **not** a failure: no `failed` line, no token summary.
+- **After the answer.** On an interactive terminal a successful run asks what to
+  do with the answer — save it to memory, record it as task research, write a
+  handoff artifact, write it to a file, or continue the session with a follow-up
+  prompt, with **Dismiss** as the default. Everywhere else (a pipe, `--json`,
+  `--no-input`, CI, `NO_COLOR`) it is offered nothing, and no choice changes the
+  run's exit code.
 - **Reading a failure.** The failure message quotes the last 20 lines of the
-  host's own stderr alongside its error, since that is where the host's progress
-  and its deeper error detail are — otherwise the run is unauditable. That tail
-  is a human diagnostic and appears only on screen, never inside the `--json`
-  envelope, whose `error.message` stays a single concise sentence. The full
-  output is always in the transcript.
+  host's own stderr alongside its error, and names every credential variable in
+  effect and where it came from — never a value. That tail is a human diagnostic
+  and never enters the `--json` envelope.
 - **In the dashboard.** `noir tui`'s `/run <prompt>` opens a **live run screen**
-  rather than a headless one: the answer streams into the pane as the host
-  writes it, every tool call it starts is listed, and the status bar tracks the
-  model, the elapsed time and the running token totals. `Esc` asks the host to
-  stop — `SIGTERM`, forced after five seconds if the host does not exit — and the
-  screen returns to the dashboard once it has, with
-  `interrupted · transcript: <path>` on the notice line. A
-  `run` carrying flags (`--json`, `--profile`, `--command`) still dispatches as a
-  normal captured command. A successful run offers the same post-run actions as
-  an overlay; a failed or cancelled one offers nothing. `Ctrl+T` lists the
-  recent `.noir/transcripts/` entries and reopens one read-only.
+  rather than a headless one: the answer streams into the pane, tool calls are
+  listed as they start, and `Esc` cancels. `Ctrl+T` reopens a recent transcript
+  read-only.
+
+The full walkthrough — the `--json` envelope field by field, `--profile` and
+`--list-profiles`, the exact interrupt ladder, the post-run menu choices, and the
+run screen's keybindings — is in
+[**running-the-host.md**](how-to/running-the-host.md).
 
 ## Configuration
 
@@ -291,11 +276,17 @@ Set up the ClickUp integration with [clickup.md](how-to/clickup.md).
 
 The precedence chain, what belongs in the file, and the commands that show
 which value is in effect (`noir env`) —
-[configure-env.md](how-to/configure-env.md).
+[configure-env.md](how-to/configure-env.md). The `noir env` report and its
+`--json` contract are specified in
+[environment.md](reference/environment.md#noir-env--see-which-source-won).
 
 ## Where to go next
 
-- [installation.md](how-to/installation.md) — the full install reference (every path, troubleshooting, the channel model).
+- [installation.md](how-to/installation.md) — the full install reference (every path, troubleshooting, the channel model, and what `noir init --upgrade` does to a project).
+- [running-the-host.md](how-to/running-the-host.md) — driving the host headless: `--json`, profiles, the interrupt ladder, the post-run menu, the live run screen.
+- [sdd-tasks.md](how-to/sdd-tasks.md) — the task lifecycle from a terminal: start, advance, escape a gate, verify, resume.
+- [memory.md](how-to/memory.md) — save, recall, capture, consolidate, forget.
+- [context-and-handoff.md](how-to/context-and-handoff.md) — index and search the codebase, and hand a session over (`noir handoff` / `noir wrap`).
 - [shared-workspaces.md](how-to/shared-workspaces.md) — share decision memory across repositories (BE ↔ FE) through one workspace daemon.
 - [CLI Reference](reference/cli.md) — every command (auto-generated from `noir --help`). The `.noir/config.yml` schema is in [config.md](reference/config.md).
 - [Architecture](explanation/architecture.md) — how the 11 packages fit together.
