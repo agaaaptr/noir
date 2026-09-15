@@ -4,8 +4,8 @@ Packaging for a Homebrew tap for Noir, the discipline, context, and memory layer
 
 ## What this is
 
-- `Formula/noir.rb` — a template for a formula that will install `@noir-ai/cli` (the `noir` bin) via npm into the formula's `libexec`, then symlink `noir` into Homebrew's `bin`. It follows the standard [Node-for-Formula-Authors](https://docs.brew.sh/Node-for-Formula-Authors) pattern.
-- Once published, the tap will be stable-only. For the **beta** channel (`@noir-ai/cli@beta`), use npm directly — see [docs/installation.md](../../docs/how-to/installation.md#npm--pnpm--yarn--bun).
+- `Formula/noir.rb` — the formula that installs `@noir-ai/cli` (the `noir` bin) via npm into the formula's `libexec`, then symlinks `noir` into Homebrew's `bin`. It follows the standard [Node-for-Formula-Authors](https://docs.brew.sh/Node-for-Formula-Authors) pattern.
+- The tap is stable-only (Homebrew taps are single-channel). For the **beta** channel (`@noir-ai/cli@beta`), use npm directly — see [docs/installation.md](../../docs/how-to/installation.md#npm--pnpm--yarn--bun).
 
 ## Why a tap is heavier than npm/npx (be honest before you choose this)
 

@@ -174,6 +174,7 @@ variable **name**; Noir reads `process.env[<that name>]` at call time. So:
 model:
   providers:
     anthropic:
+      model: claude-opus-5           # required — the provider's model id
       apiKeyEnv: ANTHROPIC_API_KEY   # -> reads $ANTHROPIC_API_KEY
   # The tiers below accept only draft / title / summarize / consolidate, each a
   # bare provider key (an unrecognised tier key is dropped silently):
