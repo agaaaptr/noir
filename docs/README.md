@@ -1,11 +1,11 @@
 # Documentation
 
 > Auto-generated documentation index.
-> Last updated: 2026-09-15T03:00:24.187Z
+> Last updated: 2026-09-15T03:58:49.367Z
 
 ## Getting Started
 
-- [**Noir**](README.md) —  — Project overview
+- [**Noir**](../README.md) — Project overview
 
 ## Tutorial
 
@@ -40,7 +40,7 @@
 
 ## Records
 
-- [**Changelog**](CHANGELOG.md) — 
+- [**Changelog**](../CHANGELOG.md) — 
 
 ## Architecture Decision Records
 

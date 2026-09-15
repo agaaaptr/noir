@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.14.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.14.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-15T03:00:15.965Z*
+*Last auto-generated: 2026-09-15T03:58:42.941Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -252,12 +252,13 @@ A raw stream-json transcript is always persisted to `.noir/transcripts/`.
   session with a follow-up prompt — with **Dismiss** (nothing further) as the
   default. Everywhere else (a pipe, `--json`, `--no-input`, CI, `NO_COLOR`) it is
   offered nothing at all, and no choice —
-  including dismissing — changes the run's exit code. **Continue** is a *new*
-  headless invocation carrying `--resume <session-id>`; the session id and the
-  answer as plain text are also in the `--json` envelope
-  (`data.answerText`, `data.sessionId`). The memory and research actions go
-  through the daemon; if it is unreachable they say so and leave everything else
-  alone.
+  including dismissing — changes the run's exit code. **Continue** asks for a
+  follow-up prompt and re-invokes the **host** headless with
+  `--resume <session-id>` appended to the configured profile's own arguments —
+  a fresh host invocation, not a `noir run` flag; the session id and the answer
+  as plain text are also in the `--json` envelope (`data.answerText`,
+  `data.sessionId`). The memory and research actions go through the daemon; if
+  it is unreachable they say so and leave everything else alone.
 - **Reading a failure.** The failure message quotes the last 20 lines of the
   host's own stderr alongside its error, since that is where the host's progress
   and its deeper error detail are — otherwise the run is unauditable. That tail

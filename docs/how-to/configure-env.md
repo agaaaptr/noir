@@ -175,9 +175,12 @@ model:
   providers:
     anthropic:
       apiKeyEnv: ANTHROPIC_API_KEY   # -> reads $ANTHROPIC_API_KEY
+  # The tiers below accept only draft / title / summarize / consolidate, each a
+  # bare provider key (an unrecognised tier key is dropped silently):
   tiers:
-    default:
-      provider: anthropic
+    consolidate: anthropic
+  # Fallback for tiers you leave unassigned — optional:
+  defaultProvider: anthropic
 ```
 
 ```bash

@@ -10,7 +10,7 @@ This reference covers the 5 flows noir-clickup implements. It is the canonical s
 
 ### 1. Get task — `GET /task/{id}`
 
-| | |
+| Field | Value |
 |---|---|
 | Method | `GET` |
 | Path | `/task/{task_id}` or `/task/{custom_task_id}?custom_task_ids=true&team_id={team_id}` |
@@ -56,7 +56,7 @@ Notes:
 
 ### 2. Update task — `PUT /task/{task_id}`
 
-| | |
+| Field | Value |
 |---|---|
 | Method | `PUT` |
 | Path | `/task/{task_id}` |
@@ -77,7 +77,7 @@ Response: the updated task object (same shape as GET). Returns `400` if `status`
 
 ### 3. Create subtask — `POST /list/{list_id}/task` (+ `PUT /task/{sub}`)
 
-| | |
+| Field | Value |
 |---|---|
 | Method | `POST` |
 | Path | `/list/{list_id}/task` |
@@ -98,7 +98,7 @@ Response: the new task object. Optional follow-up `PUT /task/{new_sub_id} { "sta
 
 ### 4. Comment — `POST /task/{task_id}/comment`
 
-| | |
+| Field | Value |
 |---|---|
 | Method | `POST` |
 | Path | `/task/{task_id}/comment` |

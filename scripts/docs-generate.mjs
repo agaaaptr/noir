@@ -1270,11 +1270,15 @@ function cmdIndex() {
     lines.push(`## ${group.title}`);
     lines.push('');
     for (const doc of group.docs) {
-      // Links from docs/README.md are relative — strip docs/ prefix
-      const relativePath = doc.path.replace(/^docs\//, '');
+      // Links from docs/README.md are relative — strip docs/ prefix. A document
+      // that lives outside docs/ (the root README) is one level up instead; the
+      // bare path would resolve back to docs/README.md itself, a self-link.
+      const isOutsideDocs = !doc.path.startsWith('docs/');
+      const relativePath = isOutsideDocs ? `../${doc.path}` : doc.path.replace(/^docs\//, '');
       const archivedLabel = doc.lifecycle === 'archived' ? '[ARCHIVED] ' : '';
-      const suffix = doc.category === 'root' ? ' — Project overview' : '';
-      lines.push(`- [**${doc.title}**](${relativePath}) — ${archivedLabel}${suffix}`);
+      const note = doc.category === 'root' ? 'Project overview' : '';
+      const suffix = note === '' ? archivedLabel : `${archivedLabel}${note}`;
+      lines.push(`- [**${doc.title}**](${relativePath}) — ${suffix}`);
     }
     lines.push('');
   }

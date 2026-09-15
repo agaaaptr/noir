@@ -13,15 +13,15 @@
 > powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.ps1 | iex"
 > ```
 >
-> <!-- noir:doc:status -->
+> Pin a version with `NOIR_VERSION=<VERSION>` (POSIX) or `$env:NOIR_VERSION='<VERSION>'` (PowerShell).
+
+<!-- noir:doc:status -->
 **Latest stable:** `1.14.0` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
 **Current beta:** `1.14.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.14.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-15T03:00:17.129Z*
+*Last auto-generated: 2026-09-15T03:58:43.423Z*
 <!-- /noir:doc:status -->
->
-> Pin a version with `NOIR_VERSION=<VERSION>` (POSIX) or `$env:NOIR_VERSION='<VERSION>'` (PowerShell).
 
 ---
 

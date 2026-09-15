@@ -1,6 +1,6 @@
 # Homebrew formula for Noir
 
-A future Homebrew tap for Noir, the discipline, context, and memory layer for any agentic CLI. **Not available yet:** this repository contains a maintainer template with a placeholder tarball URL and checksum, to be completed after Noir's first stable release. For all current installs, use the [native installer](../../docs/how-to/installation.md) or `npm i -g @noir-ai/cli`.
+Packaging for a Homebrew tap for Noir, the discipline, context, and memory layer for any agentic CLI. The formula in this directory is maintained and current: it pins the real `version`, tarball `url`, and `sha256` of the published `@noir-ai/cli` stable npm release, and those three fields are refreshed with each stable release. It is published through a tap repository you create yourself — there is no official Noir tap, so until you set one up, use the [native installer](../../docs/how-to/installation.md) or `npm i -g @noir-ai/cli`.
 
 ## What this is
 
@@ -20,15 +20,15 @@ These are prebuilt for **mac/linux on x64 + arm64** (and Windows prebuilds exist
 - On exotic platforms (no prebuild), the formula needs a C/C++ toolchain (`xcode-select --install` on macOS, `build-essential` on Debian/Ubuntu). The npm install path needs the same toolchain in that case; it just isn't Homebrew-specific.
 - Each `brew upgrade noir` re-runs the npm install under the formula's `libexec`.
 
-**Until the formula is published, use npm/npx.** After the first stable release, use the tap only if you already manage your dev stack through Homebrew and want `brew upgrade` to own Noir's lifecycle.
+**Until you publish the formula to a tap of your own, use npm/npx.** Once it is in a tap, use that tap only if you already manage your dev stack through Homebrew and want `brew upgrade` to own Noir's lifecycle.
 
 ## Tap setup (create the tap repo first)
 
-The formula is intentionally incomplete until the first stable npm release. Once its tarball URL and checksum are filled in, publish it through a tap repository. Homebrew expects a GitHub repo named `homebrew-<name>` (the `homebrew-` prefix is required) with the formula at `Formula/noir.rb`.
+The formula is complete — it carries the current stable release's `version`, tarball `url`, and `sha256` — but it lives in a tap repository that you create and publish yourself. Homebrew expects a GitHub repo named `homebrew-<name>` (the `homebrew-` prefix is required) with the formula at `Formula/noir.rb`.
 
 1. **Create the tap repo** (one-time, out of scope here): create a **public** GitHub repository named `homebrew-noir` under your account or org. For Noir that is `agaaaptr/homebrew-noir`.
 2. **Drop the formula in:** copy this repo's `packaging/homebrew/noir.rb` to `Formula/noir.rb` in the tap repo (the path `Formula/` matters — Homebrew looks there).
-3. **Fill in the tarball + checksum** (only after the first stable npm release). Inside `Formula/noir.rb`, replace the placeholder `url` / `sha256` / `version` with the real values from the registry:
+3. **Refresh the tarball + checksum** (once per stable release). Inside `Formula/noir.rb`, update `url` / `sha256` / `version` to the values from the registry:
 
    ```bash
    curl -sL https://registry.npmjs.org/@noir-ai/cli/latest | \

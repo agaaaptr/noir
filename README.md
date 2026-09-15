@@ -26,7 +26,7 @@ The `noir` grouped home menu — section picker + per-section action lists with 
 **Current beta:** `1.14.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.14.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-15T03:00:15.074Z*
+*Last auto-generated: 2026-09-15T03:58:42.403Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
@@ -100,7 +100,7 @@ MCP tools → [MCP Tools Reference](docs/reference/mcp-tools.md).
 
 ## Documentation
 
-| | |
+| Type | Links |
 |---|---|
 | **Tutorial** | [Getting Started](docs/getting-started.md) |
 | **How-to** | [Installation](docs/how-to/installation.md) · [ClickUp integration](docs/how-to/clickup.md) · [Host profiles](docs/how-to/host-profiles.md) · [Releasing](docs/how-to/releasing.md) · [Adding a Package](docs/how-to/packaging.md) · [Shared workspaces](docs/how-to/shared-workspaces.md) |
