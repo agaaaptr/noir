@@ -20,7 +20,7 @@
 **Current beta:** `1.14.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.14.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-15T04:09:34.893Z*
+*Last auto-generated: 2026-09-15T04:32:43.668Z*
 <!-- /noir:doc:status -->
 
 ---
@@ -204,6 +204,67 @@ Two env kill-switches are honored (independent of config):
 | `NOIR_DISABLE_UPDATES` | Hard kill-switch for the **entire self-update surface**. `noir update` refuses to run (exit 2) with a message pointing to your package manager / image rebuild. Use this to enforce "updates flow only through ops, never from inside the CLI". |
 
 See [Configuration → `update:` block](../reference/config.md) for the schema and defaults.
+
+### Upgrading a project's scaffold (`noir init --upgrade`)
+
+Updating the CLI does not by itself bring an existing project's scaffold
+forward. That is `noir init --upgrade`, which re-runs the scaffold engine
+against the version now installed and runs any registered migrations:
+
+```bash
+noir init --upgrade
+noir init --upgrade --dry-run      # preview: nothing is written
+```
+
+Everything the scaffold emits is idempotent, and most of it is **create-only**:
+a `skipIfExists` entry is written when it is absent and never touched when it is
+present, so an existing `.noir/.env`, `.noir/config.yml`, or `.noir/project.id`
+is not rewritten by an upgrade — the two secrets-bearing files in particular
+(`.noir/.env` at mode `0600`, and `config.yml`) are **never** replaced.
+
+**Two documentation seeds are the exception**, and only in the upgrade
+direction:
+
+| Seed | Why it can change |
+|---|---|
+| `.noir/.env.example` | The committable guide to every variable and the precedence order — its text changes when the variable set does. |
+| `.noir/rules/RULES.md` | The Noir-curated rules seed wired into the host context file. |
+
+Both carry a **refresh-if-stale** marker, and the rule is deliberately narrow: a
+seed is refreshed **only when its bytes are an exact match for a version Noir
+previously shipped** *and* differ from what this build renders. In other words —
+**an unedited copy is brought forward; an edited one is left alone.** A file you
+have touched is not a stale seed, it is yours.
+
+What you see on an upgrade:
+
+```
+Refreshed 1 unedited doc seed(s): .noir/.env.example
+```
+
+An edited copy is reported through the ordinary conflict path instead, which
+**preserves** it by default (and prompts in an interactive terminal). Only an
+explicit `--force` switches the policy to overwrite:
+
+```bash
+noir init --upgrade --force        # overwrite conflicting files instead of preserving
+```
+
+A refresh replaces the file's **contents** — the permission bits already on the
+file are kept. Under `--dry-run` the preview separates the two cases so it never
+reads as "Noir will overwrite your files":
+
+```
+Would refresh (unedited older copy):
+  .noir/.env.example
+Would leave as-is (already present):
+  .noir/.env
+  .noir/config.yml
+```
+
+> The refresh happens **only** under `--upgrade`. A plain `noir init`, `noir
+> create`, or `noir sync` never refreshes a doc seed — they only backfill a
+> missing one.
 
 ---
 

@@ -32,6 +32,7 @@ Config stores env-var **names**, not values. Secrets are read at call time:
 model:
   providers:
     anthropic:
+      model: claude-opus-5           # required — the provider's model id
       apiKeyEnv: ANTHROPIC_API_KEY   # name only — value read at runtime
 ```
 

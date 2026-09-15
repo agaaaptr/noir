@@ -190,6 +190,81 @@ defines them:
 it is tracked by git; `noir env` lists only the keys that actually won. Full
 detail: [Configuring a project with `.noir/.env`](../how-to/configure-env.md).
 
+## `noir env` — see which source won
+
+`noir env` is the read-only answer to "which value is in effect, and who
+supplied it?". It **never prints a value** — only a name, its winning source,
+and a redacted shape.
+
+```
+KEY                                       SOURCE                             VALUE
+CLICKUP_API_TOKEN                         .noir/.env                         pk_…(24)
+ANTHROPIC_API_KEY                         .noir/.env (shadows environment)   sk-…(20)
+NOIR_PROFILE                              environment                        …(4)
+OLLAMA_BASE_URL                           environment                        htt…(22)
+```
+
+| Column | Meaning |
+|---|---|
+| `KEY` | The variable name — the part you type. |
+| `SOURCE` | `environment` = the file does not define the key, so the ambient value (or the built-in default) applies. `.noir/.env` = the file defined it. `.noir/.env (shadows environment)` = the file defined it **and** the ambient environment had a **different** value, so the file is overriding something you may have forgotten about. Equal values are not a shadow. |
+| `VALUE` | The first three characters plus the total length (`pk_…(42)`), which tells two tokens apart without printing either. A value of 8 characters or fewer is shown as a length only (`…(4)`), because a three-character prefix of a short value is most of the value. |
+
+**The report is curated, not a dump.** It lists exactly three groups:
+
+1. Every key `.noir/.env` defines.
+2. The Noir-relevant ambient names a user might reasonably have exported:
+   `CLICKUP_API_TOKEN`, `OPENAI_API_KEY`, `VOYAGE_API_KEY`, `COHERE_API_KEY`,
+   `OLLAMA_BASE_URL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`,
+   `ANTHROPIC_BASE_URL`, `API_TIMEOUT_MS`, `NOIR_PROFILE`.
+3. Any name the project's own `model.providers.<name>.apiKeyEnv` asks for, read
+   through the shipped config mapper — so a provider key the allowlist would
+   never have guessed still appears.
+
+Your whole shell environment is neither listed nor an answer to the question.
+
+### Stream and exit contract
+
+| | Human path | `--json` |
+|---|---|---|
+| **stdout** | nothing | one `{ok:true, data:{vars, warnings}}` envelope |
+| **stderr** | the `KEY`/`SOURCE`/`VALUE` table | — |
+| **exit code** | `0` | `0` |
+
+`noir env` **always exits 0**: this is a report, and "your file is not being
+loaded" is information, not a failure. When there is nothing to report — the
+file defines no keys in effect and no curated ambient variable is set — it says
+so on stderr instead of printing an empty table.
+
+### The `--json` contract
+
+```json
+{
+  "ok": true,
+  "data": {
+    "vars": [
+      { "key": "CLICKUP_API_TOKEN", "source": "file", "valueLength": 24 },
+      { "key": "ANTHROPIC_API_KEY", "source": "file", "shadowed": true, "valueLength": 20 },
+      { "key": "NOIR_PROFILE", "source": "env", "valueLength": 4 }
+    ],
+    "warnings": []
+  }
+}
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `key` | string | The variable name. |
+| `source` | `"file"` \| `"env"` | Which side won. |
+| `shadowed` | boolean, **optional** | Present and `true` only when `source` is `"file"` **and** the ambient environment defined a different value. Omitted otherwise — an absent field means "not shadowed", not "unknown". |
+| `valueLength` | number | The value's length in characters. This is all the JSON carries about the value: **no prefix, no shape** — strictly less than the human table shows. |
+
+`warnings` carries the loader's own diagnostics for the run — a malformed line,
+a refused process-injection key, the tracked-file refusal, the `.noir/.env`
+shadow notice. They are carried even though the loader has already written them
+to stderr during startup, so a machine consumer never has to scrape stderr to
+learn that the file was not applied.
+
 ## Secrets policy
 
 - **Never commit tokens.** `.noir/.env` is gitignored by the managed

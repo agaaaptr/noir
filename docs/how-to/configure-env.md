@@ -52,7 +52,11 @@ file out.
 
 Because the seed has no active value, creating it changes no behaviour. Both
 entries are `skipIfExists`, so re-running `noir init` (or `noir init --upgrade`)
-never overwrites a file you have edited.
+never overwrites a file you have edited. The one asymmetry worth knowing:
+`.noir/.env.example` is a documentation seed, so `noir init --upgrade` will
+bring an **unedited** copy of it forward to the text the installed version ships
+— `.noir/.env` itself is never refreshed. See
+[installation.md → Upgrading a project's scaffold](installation.md#upgrading-a-projects-scaffold-noir-init---upgrade).
 
 Creating it by hand — from an older project, or after deleting it:
 
