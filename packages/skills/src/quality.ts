@@ -187,13 +187,17 @@ export function artifactPathDrift(skill: BuiltinSkill): string[] {
       const codes = DIR_TO_CODES.get(dir);
       if (codes === undefined) {
         if (!NON_ARTIFACT_DIRS.has(dir)) {
-          drifts.add(`.noir/${dir}/ is not a canonical artifact directory (C3 artifact standard)`);
+          drifts.add(
+            `.noir/${dir}/ is not a canonical artifact directory (see docs/reference/artifact-format.md)`,
+          );
         }
         continue;
       }
       const expected = [...codes].join('/');
       if (![...codes].some((c) => name.startsWith(`${c}-`))) {
-        drifts.add(`.noir/${dir}/${name} must be ${expected}-<NNNN>-… (C3 artifact standard)`);
+        drifts.add(
+          `.noir/${dir}/${name} must be ${expected}-<NNNN>-… (see docs/reference/artifact-format.md)`,
+        );
       }
     }
   }

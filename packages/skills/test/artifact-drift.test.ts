@@ -42,7 +42,7 @@ describe('artifactPathDrift (C3 generated-artifact standard)', () => {
   it('flags an unknown .noir/ directory', async () => {
     const skill = await skillWith('Write to `.noir/sdd/task-N-brief.md`.');
     expect(artifactPathDrift(skill)).toContain(
-      '.noir/sdd/ is not a canonical artifact directory (C3 artifact standard)',
+      '.noir/sdd/ is not a canonical artifact directory (see docs/reference/artifact-format.md)',
     );
   });
 
