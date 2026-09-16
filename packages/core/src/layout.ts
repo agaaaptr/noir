@@ -53,6 +53,7 @@ export const paths = {
   projectId: (root: string) => join(root, NOIR_DIR, 'project.id'),
   storeDir: (root: string) => join(root, NOIR_DIR, 'store'),
   storeDb: (root: string, projectId: string) => join(root, NOIR_DIR, 'store', `${projectId}.db`),
+  transcriptsDir: (root: string) => join(root, NOIR_DIR, 'transcripts'),
   // Artifact directories and files — filenames follow the generated-artifact
   // standard (`<CODE>-<NNNN>-<taskId>-<slug>.md`); see docs/reference/artifact-format.md
   specsDir: (root: string) => join(root, NOIR_DIR, 'specs'),

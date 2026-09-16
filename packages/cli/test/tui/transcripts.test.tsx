@@ -219,19 +219,14 @@ describe('transcript store', () => {
   });
 
   it('persists a run into the project it is rooted at, and lists it back', async () => {
-    root = mkdtempSync(join(tmpdir(), 'noir-transcripts-write-'));
-    const store = createTranscriptStore({ host: 'claude', root });
-    // The writer resolves the project root the way `noir run` does, so the
-    // working directory IS the seam here.
-    const cwd = process.cwd();
-    try {
-      process.chdir(root);
-      expect(await store.write(['{"type":"system"}', '{"type":"result"}'])).toContain(
-        join('.noir', 'transcripts'),
-      );
-    } finally {
-      process.chdir(cwd);
-    }
+    const rootPath = mkdtempSync(join(tmpdir(), 'noir-transcripts-write-'));
+    root = rootPath;
+    const store = createTranscriptStore({ host: 'claude', root: rootPath });
+    // The writer threads the store's own root through, so the write lands in
+    // THIS project even though the process's working directory is elsewhere.
+    const written = await store.write(['{"type":"system"}', '{"type":"result"}']);
+    expect(written).toContain(join('.noir', 'transcripts'));
+    expect(written.startsWith(rootPath)).toBe(true);
     const listed = await store.list();
     expect(listed.length).toBe(1);
     expect(listed[0]?.name.startsWith('claude-')).toBe(true);

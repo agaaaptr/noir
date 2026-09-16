@@ -11,14 +11,9 @@
 
 import { constants } from 'node:os';
 import { type HostChild, signalChild } from './orchestrator.js';
+import { INTERRUPT_GRACE_MS } from './run-timing.js';
 
-/**
- * How long the polite signal gets before the forceful one. A host that is
- * mid-request needs a moment to wind down and finish writing its own record of
- * the session; a host that ignores the signal entirely must not hold the
- * terminal past this.
- */
-export const INTERRUPT_GRACE_MS = 5000;
+export { INTERRUPT_GRACE_MS };
 
 /** The signals a run answers, in the order they are installed. */
 export const INTERRUPT_SIGNALS = ['SIGINT', 'SIGTERM'] as const;

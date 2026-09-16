@@ -20,6 +20,7 @@ import { spawn } from 'node:child_process';
 import { constants } from 'node:os';
 import { createInterface } from 'node:readline';
 import type { HostId } from '@noir-ai/adapters';
+import { INTERRUPT_GRACE_MS } from './run-timing.js';
 import { buildBridgeArgs, resolveCommandViaShell } from './shell-bridge.js';
 
 /** A resolved spawn command: binary + the headless flags appended before prompt. */
@@ -421,7 +422,7 @@ export function signalChild(child: HostChild, signal: NodeJS.Signals): void {
  * spawn and the process that has to die.
  */
 export const BRIDGE_POLITE_RESEND_MS = 250;
-export const BRIDGE_POLITE_WINDOW_MS = 5000;
+export const BRIDGE_POLITE_WINDOW_MS = INTERRUPT_GRACE_MS;
 
 export interface RunHostOptions {
   readonly host: HostId;

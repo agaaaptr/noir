@@ -13,6 +13,7 @@
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
+import { paths } from '@noir-ai/core';
 import { writeTranscript } from '../commands/run.js';
 
 /** One persisted transcript, as the picker lists it. */
@@ -39,7 +40,7 @@ export const TRANSCRIPT_LIST_LIMIT = 20;
 
 /** The transcript directory under `root`, where every run persists its stream. */
 export function transcriptDir(root: string = process.cwd()): string {
-  return join(root, '.noir', 'transcripts');
+  return paths.transcriptsDir(root);
 }
 
 /**
@@ -95,7 +96,9 @@ export function createTranscriptStore(opts: {
     write: async (lines: readonly string[]) => {
       // Delegates to the CLI's own writer so a run started from the TUI lands in
       // the same place, with the same permissions, as one started from a shell.
-      return writeTranscript(opts.host, lines);
+      // The store's own `root` is threaded through so list/read/write all resolve
+      // against the same project, not the process's working directory.
+      return writeTranscript(opts.host, lines, root);
     },
   };
 }

@@ -18,7 +18,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type HostId, SUPPORTED_HOSTS } from '@noir-ai/adapters';
-import { isDeniedEnvKey, loadNoirEnv, NOIR_DIR, parseConfig } from '@noir-ai/core';
+import { isDeniedEnvKey, loadNoirEnv, NOIR_DIR, parseConfig, paths } from '@noir-ai/core';
 import {
   type NoirEvent,
   type RunHostResult,
@@ -470,9 +470,13 @@ function safeTranscript(host: string, lines: readonly string[]): string {
  * for a transcript on disk — a second implementation would be a second answer
  * to "who can read this file".
  */
-export function writeTranscript(host: string, lines: readonly string[]): string {
+export function writeTranscript(
+  host: string,
+  lines: readonly string[],
+  root: string = process.cwd(),
+): string {
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
-  const dir = join(process.cwd(), '.noir', 'transcripts');
+  const dir = paths.transcriptsDir(root);
   const file = join(dir, `${host}-${ts}.jsonl`);
   try {
     // Transcripts contain raw host prompts/output (may include secrets) — create
