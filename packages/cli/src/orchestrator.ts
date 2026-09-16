@@ -405,6 +405,24 @@ export function signalChild(child: HostChild, signal: NodeJS.Signals): void {
   child.kill(signal);
 }
 
+/**
+ * How often a bridged child is offered the polite signal again, and for how long.
+ *
+ * A bridged child is the user's INTERACTIVE shell until its alias hands the
+ * process over to the host, and an interactive shell discards a SIGTERM that
+ * arrives while it is still starting up (sourcing the rc files): the signal is
+ * gone before the alias runs, so the host never sees it and only the caller's
+ * escalation ends the run. One signal is therefore not enough for a bridged run
+ * — it is offered again on this beat until the child is reaped, or until this
+ * window closes (the same order as the interrupt grace, so a host that ignores
+ * every signal is still ended by the escalation).
+ *
+ * A directly spawned host needs none of this: nothing interposes between the
+ * spawn and the process that has to die.
+ */
+export const BRIDGE_POLITE_RESEND_MS = 250;
+export const BRIDGE_POLITE_WINDOW_MS = 5000;
+
 export interface RunHostOptions {
   readonly host: HostId;
   readonly prompt: string;
@@ -478,12 +496,17 @@ export function runHost(opts: RunHostOptions): Promise<RunHostResult> {
  * error (and not already a shell-bridge run) it attempts the shell fallback:
  * the name may be an alias/function or a PATH entry only visible inside the
  * user's interactive shell — see `shell-bridge.ts` for the safety model.
+ *
+ * `bridged` marks the spawn whose process is an interactive shell before it is
+ * the host, which is the one case where a single polite signal can be lost —
+ * see {@link BRIDGE_POLITE_RESEND_MS}.
  */
 function spawnAndConsume(
   binary: string,
   args: readonly string[],
   opts: RunHostOptions,
   shellRun: boolean,
+  bridged = false,
 ): Promise<RunHostResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(binary, [...args], {
@@ -505,8 +528,26 @@ function spawnAndConsume(
     // Cancellation. The listener is dropped the moment the child is gone, so a
     // controller reused across runs does not accumulate dead children.
     const { signal } = opts;
+    let resend: NodeJS.Timeout | undefined;
+    let offersLeft = Math.ceil(BRIDGE_POLITE_WINDOW_MS / BRIDGE_POLITE_RESEND_MS);
+    const stopResend = (): void => {
+      if (resend === undefined) return;
+      clearTimeout(resend);
+      resend = undefined;
+    };
+    /** Offer the polite signal again while there is still a child to take it. */
+    const offerAgain = (): void => {
+      if (offersLeft <= 0) return;
+      offersLeft -= 1;
+      resend = setTimeout(() => {
+        resend = undefined;
+        signalChild(child, 'SIGTERM');
+        offerAgain();
+      }, BRIDGE_POLITE_RESEND_MS);
+    };
     const onAbort = (): void => {
       signalChild(child, 'SIGTERM');
+      if (bridged) offerAgain();
     };
     if (signal) {
       if (signal.aborted) onAbort();
@@ -514,6 +555,7 @@ function spawnAndConsume(
     }
     const detachAbort = (): void => {
       signal?.removeEventListener('abort', onAbort);
+      stopResend();
     };
 
     child.on('error', (err) => {
@@ -593,7 +635,9 @@ async function shellFallback(
     }
     if (res.kind === 'alias' || res.kind === 'function') {
       const bridge = buildBridgeArgs(binary, args, res.shell);
-      resolve(await spawnAndConsume(bridge.binary, bridge.args, opts, true));
+      // `bridged`: this child is the user's interactive shell until the alias
+      // execs the host, so its stop has to survive that shell's startup.
+      resolve(await spawnAndConsume(bridge.binary, bridge.args, opts, true, true));
       return;
     }
   } catch {

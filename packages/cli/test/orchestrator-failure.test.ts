@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { type HostChild, normalizeStreamEvent, runHost } from '../src/orchestrator.js';
-import { RunInterrupt } from '../src/run-interrupt.js';
+import { INTERRUPT_GRACE_MS, RunInterrupt } from '../src/run-interrupt.js';
 
 const fix = (name: string): string => fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
 
@@ -207,7 +207,10 @@ describe('runHost — cancellation', () => {
     async () => {
       // The window a run cannot close by listening: the stop arrives while the
       // command is still being resolved, so there is no child to signal yet. The
-      // bridge that appears afterwards has to be stopped on the way in.
+      // bridge that appears afterwards has to be stopped on the way in — and it
+      // is the user's INTERACTIVE shell until it execs the host, so the stop has
+      // to survive that shell's startup too. What matters is the outcome: the run
+      // ends, on the polite signal, well inside the grace a stoppable host gets.
       const bridgeDir = mkdtempSync(join(tmpdir(), 'noir-bridge-early-'));
       writeFileSync(
         join(bridgeDir, '.zshrc'),
@@ -216,6 +219,7 @@ describe('runHost — cancellation', () => {
       );
       const controller = new AbortController();
       controller.abort();
+      const stoppedAt = Date.now();
       const r = await runHost({
         host: 'claude',
         prompt: 'x',
@@ -223,10 +227,49 @@ describe('runHost — cancellation', () => {
         env: { ...process.env, SHELL: '/bin/zsh', ZDOTDIR: bridgeDir, HOME: bridgeDir },
         signal: controller.signal,
       });
+      const elapsed = Date.now() - stoppedAt;
       rmSync(bridgeDir, { recursive: true, force: true });
 
       expect(r.isError).toBe(true);
-      expect(r.exitCode).not.toBe(0);
+      // The polite signal is what ended it — not the forceful one after a grace.
+      expect(r.errorText).toContain('terminated by signal SIGTERM');
+      expect(elapsed).toBeLessThan(INTERRUPT_GRACE_MS);
+    },
+  );
+
+  it.skipIf(!hasZsh)(
+    'offers the polite signal again when a bridged host refuses the first one',
+    async () => {
+      // A host that sits out the polite signal must not be able to outlast the
+      // stop: the signal is offered again until it lands. This host refuses the
+      // first one it receives and exits 7 on the second, so the run ending at all
+      // — well inside the grace, and ending on the polite signal rather than the
+      // escalation — is the proof that the signal was offered a second time.
+      const bridgeDir = mkdtempSync(join(tmpdir(), 'noir-bridge-resend-'));
+      writeFileSync(
+        join(bridgeDir, '.zshrc'),
+        `alias slowbridge="exec '${fix('host-refuses-first-term.sh')}'"\n`,
+        { mode: 0o644 },
+      );
+      const controller = new AbortController();
+      const stoppedAt = Date.now();
+      // Stop on the host's first line: the fixture arms its refusal before it
+      // says anything, so this is the earliest moment the stop is provably
+      // addressed to a host that counts signals rather than to a shell starting
+      // up (which is a case the test above already covers).
+      const r = await runHost({
+        host: 'claude',
+        prompt: 'x',
+        customBinary: 'slowbridge',
+        env: { ...process.env, SHELL: '/bin/zsh', ZDOTDIR: bridgeDir, HOME: bridgeDir },
+        signal: controller.signal,
+        onLine: () => controller.abort(),
+      });
+      const elapsed = Date.now() - stoppedAt;
+      rmSync(bridgeDir, { recursive: true, force: true });
+
+      expect(r.exitCode).toBe(7); // the host counted two polite signals
+      expect(elapsed).toBeLessThan(INTERRUPT_GRACE_MS);
     },
   );
 
