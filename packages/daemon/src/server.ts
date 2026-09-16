@@ -469,7 +469,7 @@ export function createNoirServer(ctx: ServerContext): McpServer {
             })
             .optional()
             .describe(
-              'c4-verify-gate-recovery: validation evidence for the verify gate (ranAt + checks[]). Required when the verify gate is configured for the task class.',
+              'Validation evidence for the verify gate (ranAt + checks[]). Required when the verify gate is configured for the task class.',
             ),
         },
       },
