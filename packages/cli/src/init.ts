@@ -309,13 +309,21 @@ async function emitHostSkills(
   // The count above is skills that are fully current. Anything left behind is
   // named on its own line: a run that kept stale files and reported only a
   // success count is how a CI upgrade silently stops refreshing skills.
-  const preserved = summary.preserved ?? [];
-  if (preserved.length > 0) {
-    process.stderr.write(
-      `${preserved.length} skill(s) preserved as stale (interactive TTY required to refresh): ${preserved.join(', ')}\n`,
-    );
-  }
+  const stale = preservedStaleLine(summary.preserved ?? []);
+  if (stale !== undefined) process.stderr.write(`${stale}\n`);
   return summary;
+}
+
+/**
+ * The line that names the skills an emit left behind as stale, or undefined when
+ * there are none. ONE wording across `init`, `sync`, `create` and `skills`, so
+ * `preserved as stale` in a CI log greps to every command that emits the pack —
+ * a run that kept stale files and reported only a success count is how an
+ * upgrade silently stops refreshing skills.
+ */
+export function preservedStaleLine(preserved: readonly string[]): string | undefined {
+  if (preserved.length === 0) return undefined;
+  return `${preserved.length} skill(s) preserved as stale (interactive TTY required to refresh): ${preserved.join(', ')}`;
 }
 
 /**

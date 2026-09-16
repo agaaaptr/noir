@@ -7,11 +7,12 @@
 // drive the REAL bin program (`createProgram().parseAsync`) against a temp dir
 // and pin both halves of the honest report: the stderr line naming the stale
 // skills, and the `--json` payload carrying the records.
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createProgram, EXIT, inferExitCode } from '../src/bin.js';
+import { create } from '../src/commands/create.js';
 
 let root: string;
 let origCwd: string;
@@ -73,6 +74,7 @@ function envelopeOf(stdout: string): {
   data: {
     skillConflicts?: Array<{ path: string; resolution: string }>;
     preservedSkills?: string[];
+    preserved?: string[];
   };
 } {
   const last = stdout.trim().split('\n').pop();
@@ -136,5 +138,69 @@ describe('skill emit reports what it wrote, not what it attempted', () => {
     const envelope = envelopeOf(r.stdout);
     expect(envelope.data.preservedSkills).toEqual([]);
     expect(envelope.data.skillConflicts).toEqual([]);
+  });
+});
+
+// Every command that emits the pack reports a preserved skill the same way, in
+// the same words: one stale skill must not be visible from `noir init` and
+// invisible from the commands a CI job is likelier to run.
+describe('every skill emitter reports preserved skills the same way', () => {
+  /** A run of the real command with its stderr captured, for the paths that are
+   *  not driven through `parse()` (create is called as the CLI calls it). */
+  async function stderrOf(fn: () => Promise<unknown>): Promise<string> {
+    const chunks: string[] = [];
+    const orig = process.stderr.write.bind(process.stderr);
+    process.stderr.write = ((chunk: unknown) => {
+      chunks.push(String(chunk));
+      return true;
+    }) as typeof process.stderr.write;
+    try {
+      await fn();
+    } finally {
+      process.stderr.write = orig;
+    }
+    return chunks.join('');
+  }
+
+  it('names the preserved skills when `noir sync` re-emits the pack', async () => {
+    await parse(['init']);
+    writeFileSync(join(root, SKILL_REL), USER_EDIT, 'utf8');
+
+    const r = await parse(['sync', '--json']);
+
+    expect(r.exitCode).toBe(EXIT.OK);
+    expect(r.stderr).toMatch(
+      /1 skill\(s\) preserved as stale \(interactive TTY required to refresh\): noir-brainstorming/,
+    );
+  });
+
+  it('names the preserved skills when `noir create` emits the pack', async () => {
+    const target = join(root, 'app');
+    mkdirSync(join(target, '.claude', 'skills', 'noir-brainstorming'), { recursive: true });
+    writeFileSync(join(target, '.claude', 'skills', 'noir-brainstorming', 'SKILL.md'), USER_EDIT);
+
+    const stderr = await stderrOf(() => create(target, { transport: 'stdio' }));
+
+    expect(stderr).toMatch(
+      /1 skill\(s\) preserved as stale \(interactive TTY required to refresh\): noir-brainstorming/,
+    );
+    // The user's bytes survived the emit — the report matches the disk.
+    expect(
+      readFileSync(join(target, '.claude', 'skills', 'noir-brainstorming', 'SKILL.md'), 'utf8'),
+    ).toBe(USER_EDIT);
+  });
+
+  it('carries the preserved field in `skills sync --json`, empty rather than absent', async () => {
+    // `skills sync` re-emits with the overwrite policy, so nothing is preserved
+    // here — the field is what tells a consumer so without an existence check,
+    // and it is the same one the other emitters carry.
+    await parse(['init']);
+
+    const r = await parse(['skills', 'sync', '--json']);
+
+    expect(r.exitCode).toBe(EXIT.OK);
+    const envelope = envelopeOf(r.stdout);
+    expect(envelope.data).toHaveProperty('preserved');
+    expect(envelope.data.preserved).toEqual([]);
   });
 });

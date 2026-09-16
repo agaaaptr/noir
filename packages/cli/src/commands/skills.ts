@@ -24,6 +24,7 @@ import {
   type IntegrationSkill,
   lintSkill,
 } from '@noir-ai/skills';
+import { preservedStaleLine } from '../init.js';
 import { type CliOptions, EXIT, fail, info, log, table, warn } from '../output.js';
 
 /** Options accepted by `skills` sub-commands (the global flags only). */
@@ -230,11 +231,16 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
   const target: CompileTarget = project.config.host;
   const summary = await emitSkillsToDir(dir, { target });
   const pruned = summary.pruned ?? [];
+  const preserved = summary.preserved ?? [];
   const data = {
     emitted: summary.emitted,
     references: summary.references,
     dir,
     pruned,
+    // What the count above does NOT cover: skills whose files were preserved
+    // (stale on disk, by design, in a non-interactive run). Same field `noir
+    // init --json` carries, so a consumer reads one shape from every emitter.
+    preserved,
   };
 
   if (opts.json === true) {
@@ -254,6 +260,11 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
       opts,
     );
   }
+  // Same wording (and same reason) as `noir init`: the count above is skills
+  // that are fully current, and a skill left stale has to be named — under
+  // --json the `preserved` field above is what carries it.
+  const stale = preservedStaleLine(preserved);
+  if (stale !== undefined) warn(stale, opts);
 }
 
 // ---------------------------------------------------------------------------

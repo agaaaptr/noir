@@ -31,7 +31,7 @@ import { type ScaffoldResult, scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 import { buildConflictOpts } from './conflict.js';
 import { checkWritePathDedup } from './dedup-write.js';
-import { reportPlannedWrites } from './init.js';
+import { preservedStaleLine, reportPlannedWrites } from './init.js';
 import { resolveInteractive } from './output.js';
 
 export interface SyncOptions {
@@ -142,6 +142,11 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
         `Pruned ${pruned.length} stale noir-* skill dir${pruned.length === 1 ? '' : 's'}: ${pruned.join(', ')}\n`,
       );
     }
+    // The emitted count above is skills that are fully current; anything the
+    // emit preserved is stale on disk and has to be named, exactly as `noir
+    // init` names it.
+    const stale = preservedStaleLine(summary.preserved ?? []);
+    if (stale !== undefined) process.stderr.write(`${stale}\n`);
   }
 
   // Write-path semantic dedup. Non-blocking; degrades to a

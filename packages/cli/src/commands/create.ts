@@ -35,7 +35,7 @@ import { type ScaffoldResult, scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 import { buildConflictOpts } from '../conflict.js';
 import { checkWritePathDedup } from '../dedup-write.js';
-import { assertTransportUrl, reportPlannedWrites } from '../init.js';
+import { assertTransportUrl, preservedStaleLine, reportPlannedWrites } from '../init.js';
 import { resolveInteractive } from '../output.js';
 
 export interface CreateOptions {
@@ -130,6 +130,11 @@ export async function create(
     process.stderr.write(
       `Emitted ${summary.emitted.length} Noir skills to ${relDir}/ (target: ${target}).\n`,
     );
+    // The emitted count above is skills that are fully current; a skill whose
+    // files were preserved is stale on disk and has to be named, in the same
+    // words `noir init` uses.
+    const stale = preservedStaleLine(summary.preserved ?? []);
+    if (stale !== undefined) process.stderr.write(`${stale}\n`);
   }
 
   // Write-path semantic dedup. Greenfield create rarely has
