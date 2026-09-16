@@ -12,7 +12,7 @@ Noir's long-term strategic direction as an AI development platform. Several "vis
 - **Bounded model layer** — single-shot `complete()`, provider-explicit, null-degradation, no tools/stream by construction (D5) ([`packages/model/src/complete.ts`](../../packages/model/src/complete.ts)).
 - **Hybrid retrieval** — BM25 ∪ kNN → RRF, local 384-dim embeddings by default, remote/Ollama embedders opt-in ([`packages/context/src/contextEngine.ts`](../../packages/context/src/contextEngine.ts)).
 - **Cross-session memory** — save/recall/search/sessions/forget/consolidate, provider-gated consolidation that refuses cleanly without a provider ([`packages/memory/src/engine.ts`](../../packages/memory/src/engine.ts)).
-- **Daemon MCP server** — 17+ tools, stdio + Streamable HTTP transports, single-writer store ([`packages/daemon/src/server.ts`](../../packages/daemon/src/server.ts)).
+- **Daemon MCP server** — 24 tools, stdio + Streamable HTTP transports, single-writer store ([`packages/daemon/src/server.ts`](../../packages/daemon/src/server.ts)).
 - **CLI** — commander command tree, home menu, Ink TUI (single-surface palette + `noir run` headless host-driving, ADR-0008), `noir doctor`, stable exit codes ([`packages/cli/src/bin.ts`](../../packages/cli/src/bin.ts)).
 - **SDD workflow engine** — FSM (Intake→Clarify→Spec→Plan→Execute→Verify→Document) with observable, escapable gates (D4) + soft PRD recommendation ([`docs/internal/specs/2026-07-23-noir-toolkit-design.md`](../../docs/internal/specs/2026-07-23-noir-toolkit-design.md)).
 - **5 host adapters + universal AGENTS.md** — `claude`/`agents-md`/`gemini`/`cursor`/`opencode` via `resolveAdapter(host)` (ADR-0004) ([`docs/decisions/0004-multi-host-adapters.md`](../decisions/0004-multi-host-adapters.md)).

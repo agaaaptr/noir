@@ -22,7 +22,7 @@ The local runtime behind the Noir CLI: an `@noir-ai/daemon` MCP server with a si
 - **ProjectId-keyed database** at `.noir/store/<projectId>.db` ([layout.ts](../../packages/core/src/layout.ts)).
 - **CLI MCP client over the daemon**: `withDaemon` / `callDaemonTool` / `probeDaemon` via Streamable HTTP ([daemon-client.ts](../../packages/cli/src/daemon-client.ts)).
 - **CLI surface**: `noir status` (probe-only, honest when daemon is down), `noir doctor` (liveness / native-deps / embedder / provider), `noir daemon token` (prints the bearer token for a host `headersHelper`), `mcp serve` ([daemon.ts](../../packages/cli/src/commands/daemon.ts)).
-- **`host_status` MCP tool** plus a 17+ tool surface across workflow / context / memory / store / integrations.
+- **`host_status` MCP tool** plus a 24-tool surface across workflow / context / memory / store / integrations.
 
 ## Gap / roadmap delta
 
