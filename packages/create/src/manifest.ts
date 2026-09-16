@@ -575,7 +575,7 @@ export function buildHostArtifacts(
  *  deterministic, NOT in the skill-listing 1% budget. Kept small (<10k chars)
  *  so Claude never file-izes it. */
 const SESSION_START_HOOK_SCRIPT = `#!/usr/bin/env node
-// Noir C3 SessionStart hook — injects the skill router contract at session start.
+// Noir SessionStart hook — injects the skill router contract at session start.
 // The mutable contract lives in .noir/router.md (a Noir managed block, so user
 // edits outside the markers survive noir sync). This script is a pure runner.
 import { readFileSync, existsSync } from 'node:fs';
