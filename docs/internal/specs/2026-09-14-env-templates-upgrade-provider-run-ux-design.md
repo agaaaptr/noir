@@ -384,9 +384,11 @@ NAME; the value is read from the overlaid `process.env` at call time).
 
 `noir env` gains a gateway section (curated keys: `ANTHROPIC_BASE_URL`,
 `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY`, `API_TIMEOUT_MS` — with winning source, names
-only); profile-sourced credentials are labeled `(run profile)` rather than falling through
-to `(the environment)`. `docs/reference/environment.md` + `config.md` gain the ANTHROPIC_*
-entries and the `authTokenEnv`/`timeoutMs` fields (self-maintaining via `.describe()`).
+only). Its provenance is file-vs-environment: run profiles are resolved at `noir run` time, so
+a profile-sourced value is not a source `noir env` can attribute, and `noir run` surfaces it in
+its own credential note instead. `docs/reference/environment.md` + `config.md` gain the
+ANTHROPIC_* entries and the `authTokenEnv`/`timeoutMs` fields (self-maintaining via
+`.describe()`).
 
 ---
 
@@ -414,7 +416,7 @@ A hand-rolled status line — no ora — written to stderr, redrawn only at even
 with `needsArg`, the palette enters an inline argument step (the existing input line,
 placeholder `prompt for run…`), then dispatches `[...argv, arg]`. Registry derives `needsArg`
 from commander's own `requiredArgument`s introspection (no hand-maintained list). Fixes all
-seven dead leaves. `run` gains a curated home-section entry ("Ask the host"). Destructive
+six dead leaves. `run` gains a curated home-section entry ("Ask the host"). Destructive
 confirm unchanged.
 
 ### 7.3 D3: TUI live progress (run mode)

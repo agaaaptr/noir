@@ -113,7 +113,8 @@
 
 ### Task 12: C3 — surfacing
 - `cli/commands/env.ts`: gateway section (`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`,
-  `ANTHROPIC_API_KEY`, `API_TIMEOUT_MS`) with winning source; profile-sourced label.
+  `ANTHROPIC_API_KEY`, `API_TIMEOUT_MS`) with winning source (file-vs-environment provenance;
+  profile-sourced values are reported by `noir run`, not `noir env`).
 - `docs/reference/environment.md`: ANTHROPIC_* entries + corrected deny-list table + SHELL +
   npm_config_user_agent + NOIR_NON_INTERACTIVE ambient note; `docs/how-to/gateways.md` new
   (Z.AI / LiteLLM / OpenRouter worked examples, host path vs model path).
@@ -141,7 +142,7 @@
   `Palette.tsx`/`App.tsx`: Enter with `needsArg` → inline arg step (existing input line,
   placeholder = label) → dispatch `[...argv, arg]`; Esc returns to filter.
 - `sections.ts`: add curated `run` action ("Ask the host", `needsArg: 'prompt'`).
-- Tests: ink-testing-library flow for `run` + `context search`; seven dead leaves fixed;
+- Tests: ink-testing-library flow for `run` + `context search`; six dead leaves fixed;
   destructive confirm unchanged.
 
 ### Task 15: D4 — post-run actions (before D3 — the terminal menu ships independent of the TUI mode)
