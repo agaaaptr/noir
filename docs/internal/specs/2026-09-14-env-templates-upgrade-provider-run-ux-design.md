@@ -97,9 +97,12 @@ Empirically reproduced against the built CLI (15 agents, all adversarial verdict
   and fails with exit 2 ("a prompt is required"). The palette has no argument-collection
   capability: rows carry a fixed argv, typing only filters. The `needsArg` mechanism exists
   (`packages/cli/src/tui/commands/sections.ts:42-45`) but is honored only by the @clack home
-  menu and dropped by the Ink palette (`rows.ts:147`). Seven leaves with required positionals
-  are affected (`run`, `context search`, `daemon join`, …). `run` is also absent from the home
-  sections. The only working path today is typing `/run <prompt>` in the dashboard.
+  menu and dropped by the Ink palette (`rows.ts:147`). Six leaves with required positionals are
+  affected (`context search`, `daemon join`, `memory forget`, `memory recall`, `task block`,
+  `task decompose`). `run` declares its prompt as optional (`[prompt...]`, so `--list-profiles`
+  works with no argument) and therefore is NOT one of them — it instead gets its requirement from
+  the curated palette action. `run` is also absent from the home sections. The only working path
+  today is typing `/run <prompt>` in the dashboard.
 - **No visual feedback at either layer.** In the TUI, `capture.ts:31-59` swaps
   `process.stdout.write` and `process.stderr.write` for string collectors for the whole
   dispatch; the OutputPane is filled only after the await resolves. The dashboard shows a
