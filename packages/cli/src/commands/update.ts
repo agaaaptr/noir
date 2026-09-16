@@ -54,11 +54,11 @@ export function buildUpdateTarget(opts: {
   minVersion?: string;
 }): UpdateTarget {
   const targetSpec = opts.spec ?? opts.channel;
-  // The guard target: a concrete `--spec` (an exact version) WINS over the
+  // The guard target: a concrete `spec` (an exact version) WINS over the
   // fetched registry version, because the downgrade and minVersion guards must
   // evaluate what we will ACTUALLY install — not what the registry happens to
-  // offer. A pinned `--spec 1.9.0` against a 1.12.0 registry is a DOWNGRADE,
-  // and a pinned `--spec 1.5.0` can trip the minVersion floor; both were
+  // offer. A pinned `spec 1.9.0` against a 1.12.0 registry is a DOWNGRADE,
+  // and a pinned `spec 1.5.0` can trip the minVersion floor; both were
   // previously missed because the guards only ever looked at `latestKnown`.
   const concrete =
     opts.spec != null && opts.spec !== 'latest' && opts.spec !== 'beta'
@@ -196,7 +196,7 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
   // Checked before the isUpgrade branch: a below-floor offer is unsafe even if
   // it happens to be newer than the (very old) current install.
   if (target.belowMinVersion) {
-    // Name the ACTUAL target (a concrete --spec), not the registry's latest.
+    // Name the ACTUAL target (a concrete positional spec), not the registry's latest.
     warn(`Target ${target.targetSpec} is below the minVersion floor (${minVersion}).`);
     fail(
       EXIT.USAGE,

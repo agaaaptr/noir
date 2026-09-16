@@ -70,8 +70,8 @@ describe('buildUpdateTarget (pure)', () => {
     });
     expect(t.isUpgrade).toBe(false);
   });
-  it('a pinned --spec (with a leading `v`) is the guard target, not latestKnown', () => {
-    // current 1.10.0, registry 1.12.0, but --spec v1.9.0 is a DOWNGRADE — the
+  it('a pinned spec (with a leading `v`) is the guard target, not latestKnown', () => {
+    // current 1.10.0, registry 1.12.0, but spec v1.9.0 is a DOWNGRADE — the
     // guards must evaluate the concrete spec, not the registry's latest.
     const t = buildUpdateTarget({
       method: 'native',
