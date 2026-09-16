@@ -222,8 +222,8 @@ edited out of `.noir/handoff/` — it is a generated artifact, not a source file
 - [memory.md](memory.md) — the cross-session memory the handoff seeds from.
 - [sdd-tasks.md](sdd-tasks.md) — the task whose phase and next skill the
   handoff reports.
-- [config.md](../reference/config.md) — `context.roots`,
-  `context.embedder`, `context.budgetTokens`.
+- [config.md](../reference/config.md) — `context.roots` and
+  `context.embedder`.
 - [configure-env.md](configure-env.md) — remote embedder keys and the local
   default.
 - [architecture.md](../explanation/architecture.md) — how the context and
