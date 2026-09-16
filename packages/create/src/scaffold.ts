@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs
 import { basename, dirname, join } from 'node:path';
 import {
   createProjectId,
+  loadProjectInfo,
   type ManagedBlock,
   paths,
   readManagedBlock,
@@ -149,6 +150,10 @@ export interface ScaffoldResult {
   migrationsRan: string[];
   /** Migration conflicts (repo-relative or `<runner>:…`), when upgrade ran. */
   migrationConflicts: string[];
+  /** Repo-relative paths a migration CHANGED (wrote or refreshed), when upgrade
+   *  ran — reported separately from {@link refreshed} so callers can name
+   *  "migrated" files (e.g. `.noir/config.yml`) apart from doc seeds. */
+  migrationChanged: string[];
   stack: StackInfo;
   projectId: string;
   fromVersion: string | null;
@@ -296,13 +301,31 @@ export function assertSafeRoot(root: string): void {
   }
 }
 
+/** The configured host from an existing `.noir/config.yml`, or `'claude'`.
+ *  A bare re-scaffold (`create --force`) must keep the host the project already
+ *  chose; an absent or unreadable config degrades to the default. Mirrors
+ *  init.ts's resolveInitHost. */
+function readConfiguredHost(root: string): HostTag {
+  if (!existsSync(paths.config(root))) return 'claude';
+  try {
+    return loadProjectInfo(root).config.host;
+  } catch {
+    return 'claude';
+  }
+}
+
 export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   // Root-safety: refuse to scaffold at/inside a .noir/ directory BEFORE
   // any write (incl. `create`'s target mkdir). Prevents the nested .noir/.noir/
   // re-init bug. Hard guard; not bypassable.
   assertSafeRoot(opts.root);
 
-  const host: HostTag = opts.host ?? 'claude';
+  // The host a bare re-scaffold emits for. `init` resolves the host itself and
+  // always passes it; `create` may omit it, so a `--force`/re-run over an
+  // existing project keeps the host that project already configured rather than
+  // falling back to the default and emitting artifacts for the wrong host.
+  // Mirrors init.ts's resolveInitHost: explicit > configured > 'claude'.
+  const host: HostTag = opts.host ?? readConfiguredHost(opts.root);
   const transport: BuildManifestContext['transport'] = opts.transport ?? 'stdio';
   if (transport === 'streamable-http' && !opts.url) {
     throw new Error("transport 'streamable-http' requires opts.url");
@@ -380,6 +403,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
       noop: true,
       migrationsRan: [],
       migrationConflicts: [],
+      migrationChanged: [],
       stack,
       projectId,
       fromVersion,
@@ -396,6 +420,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   //    runner treats `null` as `0.0.0`, so the full registered chain runs.
   const migrationsRan: string[] = [];
   const migrationConflicts: string[] = [];
+  const migrationChanged: string[] = [];
   if (
     opts.mode === 'init' &&
     opts.upgrade === true &&
@@ -406,6 +431,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     });
     migrationsRan.push(...m.ran);
     migrationConflicts.push(...m.conflicts);
+    migrationChanged.push(...m.changed);
   }
 
   // 5. Build manifest + filter by host + mode.
@@ -755,6 +781,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     noop: false,
     migrationsRan,
     migrationConflicts,
+    migrationChanged,
     stack,
     projectId,
     fromVersion,

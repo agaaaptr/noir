@@ -128,6 +128,7 @@ describe('reportPlannedWrites — the refresh section', () => {
       noop: false,
       migrationsRan: [],
       migrationConflicts: [],
+      migrationChanged: [],
       stack: {
         languages: ['typescript'],
         monorepo: false,

@@ -170,6 +170,14 @@ export async function init(root: string, opts: InitOptions): Promise<InitResult 
       `Refreshed ${res.refreshed.length} unedited doc seed(s): ${res.refreshed.join(', ')}\n`,
     );
   }
+  // Migration-transformed files (e.g. `.noir/config.yml` gaining the env
+  // pointer) are surfaced on their own — distinct from `refreshed` (doc seeds),
+  // because a migrated file is a config change the next `git diff` will show.
+  if (res.migrationChanged.length > 0) {
+    process.stderr.write(
+      `Migrated ${res.migrationChanged.length} file(s): ${res.migrationChanged.join(', ')}\n`,
+    );
+  }
   process.stderr.write(
     `Noir initialized in ${root} (host: ${host}, transport: ${opts.transport}).\n`,
   );

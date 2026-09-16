@@ -55,6 +55,7 @@ function fakeRes(written: string[]): ScaffoldResult {
     noop: false,
     migrationsRan: [],
     migrationConflicts: [],
+    migrationChanged: [],
     stack: {} as unknown as ScaffoldResult['stack'],
     projectId: 'test',
     fromVersion: null,

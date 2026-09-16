@@ -73,7 +73,9 @@ export async function create(
   assertTransportUrl(opts);
 
   const root = resolve(dir ?? process.cwd());
-  const host: HostId = opts.host ?? 'claude';
+  // Host is left to the engine (explicit `--host` > the project's configured
+  // host > `'claude'`) so `create --force` over an existing project keeps its
+  // host; `res.host` reports the host actually emitted.
   // Derive interactive once (consistency with init/sync) so both scaffold
   // and skills emission see the same hermetic flag.
   const interactive = resolveInteractive();
@@ -86,7 +88,7 @@ export async function create(
   const res = await scaffold({
     root,
     mode: 'create',
-    host,
+    ...(opts.host !== undefined ? { host: opts.host } : {}),
     transport: opts.transport,
     interactive,
     ...(opts.url !== undefined ? { url: opts.url } : {}),
@@ -103,6 +105,10 @@ export async function create(
   }
   // A no-op (already-initialized guard) must not re-emit skills.
   if (res.noop) return res;
+
+  // The host the engine actually emitted (explicit --host, or the project's
+  // configured host resolved inside scaffold).
+  const host: HostId = res.host;
 
   // Skills are out-of-manifest by design — same composition as init.
   const adapter = resolveAdapter(host);

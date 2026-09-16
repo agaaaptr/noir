@@ -265,6 +265,26 @@ describe('noir init — the re-emit host round-trips from .noir/config.yml', () 
   });
 });
 
+describe('noir create --force — the re-emit host round-trips from .noir/config.yml', () => {
+  it('a forced re-create over a gemini project keeps gemini artifacts and writes no claude surface', async () => {
+    const target = join(root, 'force-gemini');
+    await create(target, { transport: 'stdio', host: 'gemini' });
+    // Delete the gemini surfaces so their reappearance is proof the forced
+    // re-create ran under gemini and not under the default host.
+    rmSync(join(target, 'GEMINI.md'));
+    rmSync(join(target, '.gemini'), { recursive: true, force: true });
+
+    // No --host: the engine must resolve the configured host (gemini).
+    await create(target, { transport: 'stdio', force: true });
+
+    expect(existsSync(join(target, 'GEMINI.md'))).toBe(true);
+    expect(existsSync(join(target, '.gemini', 'mcp.json'))).toBe(true);
+    // A claude-default run would have written these instead.
+    expect(existsSync(join(target, 'CLAUDE.md'))).toBe(false);
+    expect(existsSync(join(target, '.mcp.json'))).toBe(false);
+  });
+});
+
 describe('noir init — claude byte-identity (regression anchor)', () => {
   // Fix-wave I1 restored the byte-identity guarantee: the default `noir init` is
   // now FULLY byte-equivalent to v1.1 (the additive root AGENTS.md was REMOVED

@@ -59,6 +59,9 @@ describe('migration 1.1.0 → 1.2.0 — the doc seeds', () => {
 
     expect(res.migrationsRan).toContain('1.1.0→1.2.0');
     expect(res.migrationConflicts).toEqual([]);
+    // The migration-changed file is surfaced (so init can report it), not folded
+    // silently into the doc-seed `refreshed` set.
+    expect(res.migrationChanged).toContain('.noir/.env.example');
     expect(readFileSync(examplePath(), 'utf8')).toBe(CURRENT_ENV_EXAMPLE);
     expect(readScaffoldVersion(root)).toBe('1.2.0');
   });

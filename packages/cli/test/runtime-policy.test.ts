@@ -237,6 +237,7 @@ describe('ScaffoldResult gap close — init/sync/create emit ScaffoldResult unde
       noop: false,
       migrationsRan: [],
       migrationConflicts: [],
+      migrationChanged: [],
       stack: {
         languages: ['typescript'],
         monorepo: false,
@@ -278,6 +279,7 @@ describe('ScaffoldResult gap close — init/sync/create emit ScaffoldResult unde
       noop: false,
       migrationsRan: [],
       migrationConflicts: [],
+      migrationChanged: [],
       stack: {
         languages: ['typescript'],
         monorepo: false,
@@ -312,6 +314,7 @@ describe('ScaffoldResult gap close — init/sync/create emit ScaffoldResult unde
       noop: true,
       migrationsRan: [],
       migrationConflicts: [],
+      migrationChanged: [],
       stack: {
         languages: [],
         monorepo: false,
