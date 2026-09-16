@@ -165,18 +165,18 @@ describe('docs generator — reference stub gate', () => {
 });
 
 describe('docs generator — internal-doc lifecycle', () => {
-  it('marks the in-flight spec/plan active and the shipped SDD history archived', () => {
+  it('marks a shipped spec/plan pair archived alongside the SDD history', () => {
     const lifecycle = new Map(buildRegistry().documents.map((d) => [d.path, d.lifecycle]));
-    // The current (unshipped) spec + plan pair is the active work.
+    // The 2026-09-14 spec + plan pair shipped in 1.15.0, so it is history now.
     expect(
       lifecycle.get(
         'docs/internal/specs/2026-09-14-env-templates-upgrade-provider-run-ux-design.md',
       ),
-    ).toBe('active');
+    ).toBe('archived');
     expect(
       lifecycle.get('docs/internal/plans/2026-09-14-env-templates-upgrade-provider-run-ux.md'),
-    ).toBe('active');
-    // An older, shipped plan is history.
+    ).toBe('archived');
+    // An older, shipped plan is history too.
     expect(lifecycle.get('docs/internal/plans/2026-07-25-s7-memory.md')).toBe('archived');
   });
 });

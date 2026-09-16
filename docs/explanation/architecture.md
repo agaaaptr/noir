@@ -27,12 +27,12 @@ Noir is a **host-agnostic orchestration layer** — not an LLM runtime. The host
 
 | Package | Responsibility |
 |---|---|
-| `@noir-ai/core` | Domain types, the `NoirConfigSchema` (zod/v4), `.noir/` path/layout, artifact helpers. No I/O. |
+| `@noir-ai/core` | Domain types, the `NoirConfigSchema` (zod/v4), `.noir/` path/layout, artifact helpers. No store or network I/O — pure types plus local filesystem helpers. |
 | `@noir-ai/store` | Embedded storage — `better-sqlite3` (SQLite) + FTS5 (BM25, window snippets) + `sqlite-vec` (384-dim kNN). Single writer = the daemon; read-only FS-fallback when the daemon is down. |
 | `@noir-ai/workflow` | The SDD lifecycle engine — a hand-rolled FSM (Intake→Clarify→Spec→Plan→Execute→Verify→Document) with observable, escapable gates; Full/Quick modes plus cross-session resume; state persists in the store so work survives daemon restarts and new sessions. |
 | `@noir-ai/skills` | The native builtin skill pack (26 builtins + 1 integration = 27 skills) + a copy-and-validate compiler with a structural quality gate. Emits host-shaped `noir-*` artifacts: Claude `SKILL.md` files or Cursor `.mdc` rules. |
 | `@noir-ai/context` | Hybrid retrieval: local in-process embeddings (all-MiniLM-L6-v2), markdown/line-token chunker, SHA-256 incremental indexer, BM25 ∪ kNN → Reciprocal Rank Fusion → token-budget fill, windowed snippets (never truncated). |
-| `@noir-ai/memory` | Cross-session memory layered on the store (no schema migration): save / recall / search / sessions / forget / consolidate; append-only consolidation; governance (audit, delete-with-reason). |
+| `@noir-ai/memory` | Cross-session memory layered on the store (no schema migration): save / recall / search / sessions / forget / consolidate; append-only consolidation; governance (audit). |
 | `@noir-ai/model` | Optional bounded model layer — one single-shot `complete()` (Anthropic / OpenAI / OpenAI-compatible). No `tools`/`stream`; agent loops impossible by construction; first-class `null` degradation without a key. |
 | `@noir-ai/daemon` | The runtime authority: owns the store write handle, resolves the embedder once, and exposes the single Noir MCP server (stdio + Streamable HTTP on 127.0.0.1). |
 | `@noir-ai/adapters` | `HostAdapter` interface + a `resolveAdapter(host)` registry over `HostId`. Ships 5 adapters — `claude` (default: `.mcp.json`, managed `CLAUDE.md` @import block, `.claude/skills/`), `agents-md` (universal `AGENTS.md`), `gemini` (`GEMINI.md` + `.gemini/mcp.json`), `cursor` (`AGENTS.md`, `.cursor/rules/*.mdc`, `.cursor/mcp.json`), `opencode` (`AGENTS.md`, `opencode.json`). A shared `emitAgentsMd(ctx)` helper writes the byte-identical universal `AGENTS.md` for agents-md, Cursor, and OpenCode. |
@@ -67,7 +67,7 @@ The workspace daemon **multiplexes on the `?p=` project identity**:
 
 - `memory_*` + the shared-workspace feed tools (`changes_since` / `await_changes`)
   route to the **shared** store at `~/.noir/workspaces/<name>/store.db`;
-- `context_*`, `workflow_*`, and `task_*` route to the requesting member's **own
+- `context_*` and `workflow_*` route to the requesting member's **own
   project store**.
 
 A non-member `?p=` is refused, and the **one-writer-per-DB invariant** is
@@ -82,7 +82,7 @@ remains a v2.0 item.
 
 - **Local-first.** The default embedder runs in-process (`@huggingface/transformers` + `Xenova/all-MiniLM-L6-v2`, 384-dim) — offline and private. Remote embedders (OpenAI/Voyage/Cohere) and Ollama are opt-in, provider-explicit, never default.
 - **Never a silent paid call.** The model layer resolves the provider solely from explicit config (`req.provider || cfg.defaultProvider`); it is never inferred from env-var presence. Missing key ⇒ `null` / `{ok:false}` **before** an SDK client is constructed, so the SDKs' own env-var fallbacks can never trigger a paid call. Memory consolidation is opt-in (`memory.consolidation.enabled`) and refuses cleanly without a provider.
-- **Full governance** over memory: audit trail, delete-with-reason, per-session rollups.
+- **Full governance** over memory: audit trail, per-session rollups.
 
 ## Governing principles
 

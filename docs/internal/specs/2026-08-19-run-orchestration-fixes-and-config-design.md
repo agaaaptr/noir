@@ -1,6 +1,6 @@
 # 2026-08-19 — v2 TUI fixes + `noir run` orchestration + configuration surface
 
-> **Status:** approved-for-implementation (this session). Supersedes none; builds on ADR-0008.
+> **Status:** implemented (shipped 2026-08-20 in v1.12.0-beta.1; folded into v1.13.0). Supersedes none; builds on ADR-0008.
 > **Scope:** fix two shipped v1.11.2 defects, harden `noir run` host-error handling, add three
 > run/config features (shell-bridge fallback, run profiles, `.noir/.env`), and make the
 > configuration surface fully documented. No release in this session — commits stay local.

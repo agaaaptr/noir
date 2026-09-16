@@ -1,6 +1,6 @@
 # Daemon Hardening + Init Completeness — Design
 
-> **Status:** specified (not implemented)
+> **Status:** implemented (shipped 2026-09-11 in v1.14.0)
 > **Target:** v1.14.0 (breaking: the daemon record layout changes, and `.noir/.env` precedence
 > inverts — see §15)
 > **Capability:** C5 Runtime Infrastructure + C6 Documentation & Knowledge System + C7 Engineering Governance

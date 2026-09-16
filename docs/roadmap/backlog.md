@@ -34,6 +34,18 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 - **`listProjectDaemonRecords` has no production consumer** — OPEN, recorded rather than dropped. `packages/daemon/src/project-record.ts:54` is exported from `packages/daemon/src/index.ts` and exercised by `project-record.test.ts`, but nothing in `packages/{daemon,cli}` calls it: the spec's `noir daemon status --all` never shipped, and the only per-record readers are the single-project `readProjectDaemonRecord` paths. It is a small, tested, importable seam — kept deliberately (a future `daemon status --all` / doctor sweep is the obvious consumer) rather than deleted to satisfy a coverage metric, but it is dead surface today and should not be described as powering anything.
 - **Part D (connect-triggered activation) was NOT deferred** — the spec's §7.3 escape hatch ("the natural candidate to defer if it adds complexity without a measurable win") did not trigger: `withDaemon` is connect-first on the project path and the workspace path is untouched. Recorded here so the escape hatch is not mistaken for a taken decision.
 
+## Env templates + `noir init --upgrade` completeness + provider gateways + `noir run` UX (2026-09-14 → 1.15.0)
+
+> **Packaged as 1.15.0 (2026-09-16); in the standard beta→stable flow — not yet published.** Spec `2026-09-14-env-templates-upgrade-provider-run-ux-design.md`; ADR-0012 (provider transport fields + ambient-env neutralization). Full gate green.
+
+- ✅ **Env template split** — RESOLVED: `.noir/.env` is a short, all-comment, sectioned activation sheet; `.noir/.env.example` is the detailed reference. Both carried to existing projects by the `1.1.0 → 1.2.0` scaffold migration (unedited seeds regenerated, edited seeds conflict-prompted).
+- ✅ **`refreshIfStale` for doc-only seeds** — RESOLVED: a byte-exact template-history registry (`isStaleSeed`) decides regenerate / preserve / conflict-prompt per seed on `noir init --upgrade` and `noir sync`; an unreadable seed is preserved rather than aborting the upgrade, and `noir doctor` gains a `doc seed` drift row naming `.noir/.env.example`.
+- ✅ **`run.profiles.<n>.env` injection deny-list** — RESOLVED: the process-injection / redirect names already refused from `.noir/.env` (`NODE_OPTIONS`, `LD_PRELOAD`, `npm_config_*`, …) are now refused from a run profile's `env` too, closing a `noir run --profile` → `spawn` hole.
+- ✅ **Provider gateway transport** — RESOLVED (ADR-0012): `model.providers.<name>` gains `authTokenEnv` + `timeoutMs`, `baseURL` is honored by both adapters, and the SDK's ambient-env fallbacks (`ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN`, `OPENAI_BASE_URL`) are neutralized. Narrow breaking change for anyone relying on the accidental ambient path; documented in CHANGELOG.
+- ✅ **`noir run` dead palette leaves** — RESOLVED: `PaletteRow.needsArg` is derived from commander's own `requiredArgument`s introspection (no hand-maintained list) and collected inline instead of failing exit 2.
+- ✅ **`noir run` live feedback + post-run dead end** — RESOLVED: a TTY-gated status line (stderr), an in-process TUI run mode (live output + token/cost bar), and a post-run action menu (memory / research / handoff / resume / save).
+- **`mergeJson` (`.claude/settings.local.json`) is not surfaced by `noir doctor`** — OPEN, recorded decision. `noir doctor` surfaces scaffold-stamp drift and `.noir/.env.example` seed drift, but not the `mergeJson` backfill, because that file is user-owned and `--upgrade` deliberately excludes the mode (see the 1.14.0 section). The accepted consequence: a project whose `SessionStart` hook was never written gets no doctor nudge — the remedy is a fresh `noir init` or `--force`, and prompting for a file the user may have deliberately trimmed is worse than silence.
+
 ## Workflow / lifecycle (C4)
 
 > **Shipped 2026-08-11** — all 6 C4 slices implemented across 8 commits. Full gate green (lint/build/typecheck/test 1593/docs:validate). Each item below was resolved in this session.
@@ -70,7 +82,7 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 
 - **Graph / temporal-KG expansion** (Zep/Graphiti-style entities + edges; needs an extraction LLM + graph storage).
 - **LLM auto-tagging** (`concepts` / `type` on save).
-- **Auto-capture-by-default** — an opt-in Claude Code hooks template ships today (never auto-wired), documenting the explicit-save surface. `noir memory capture` lands in **1.13.0** (manual only — never auto-wired); auto-capture-by-default remains a future slice.
+- **Auto-capture-by-default** — `noir memory capture` exists (manual only — never auto-wired), and `packages/memory/templates/claude-hooks.md` documents the explicit-save wiring, but that template is repo-only: it is not in the package's `files` and nothing emits it, so there is no shipped, adoptable hooks template yet. Auto-capture-by-default remains unimplemented.
 - **Multi-user / org scoping** (per-user memory namespaces; v1 is solo power-user).
 
 ## Model

@@ -12,9 +12,9 @@ compatibility: claude · agents-md · gemini · cursor · opencode
 
 
 ## When to use
-- When the user triggers this skill.
 
-Isolate feature work from the current workspace via git worktrees. One feature, one directory, no cross-contamination.
+- A feature spans multiple files, branches, or dependencies, and you want it isolated from the current checkout.
+- A parallel task would otherwise collide with work in progress in the current tree.
 
 ## Procedure
 

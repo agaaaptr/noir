@@ -1,6 +1,6 @@
 # Env Templates + Upgrade Completeness + Provider Gateways + `noir run` UX — Design
 
-> **Status:** specified (not implemented)
+> **Status:** implemented (shipped 2026-09-16 in v1.15.0)
 > **Target:** v1.15.0
 > **Capability:** C2 CLI Runtime & UX + C5 Runtime Infrastructure (partial: model layer sits in
 > `@noir-ai/model`, consumed by C7 consolidation) + C6 Documentation & Knowledge System

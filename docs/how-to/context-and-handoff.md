@@ -196,10 +196,12 @@ task, which is why you will see it named in the phase ladder
 ## Notes & troubleshooting
 
 **"Search returns nothing for a term I know is in the file."** Run
-`noir context status` and check the covered roots and the embedder line. If the
-file is outside `context.roots`, or was added after the last index, run
-`noir context index`. If `Degraded` is `yes`, or the header said `degraded:
-BM25-only`, start the daemon.
+`noir context status` and check the `Docs` and `Indexed files` counts, then look
+at the scope line of your last `noir context index` run. If the file was never in
+that scope — or was added after the last index — re-run the index naming it
+explicitly: `noir context index --path <dir>`. Coverage comes from the `--path`
+values, never from `context.roots`, which is informational only. If `Degraded` is
+`yes`, or the header said `degraded: BM25-only`, start the daemon.
 
 **"The index is huge and slow."** Index the directories that matter instead of
 the whole project — `noir context index --path src --path packages/cli`. Editing

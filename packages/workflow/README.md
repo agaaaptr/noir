@@ -1,6 +1,6 @@
 # @noir-ai/workflow
 
-The spec-driven development lifecycle engine: a hand-rolled finite-state machine (Intake → Clarify → Spec → Plan → Execute → Verify → Document) with observable, escapable gates. Every decision is recorded; phases can be force-skipped with a reason or jumped to directly. Supports Full, Quick, and Resume modes with cross-session resume.
+The spec-driven development lifecycle engine: a hand-rolled finite-state machine (Intake → Clarify → Spec → Plan → Execute → Verify → Document) with observable, escapable gates. Every decision is recorded; phases can be force-skipped with a reason or jumped to directly. Two modes (`full`, `quick`) plus cross-session resume (`noir task resume`).
 
 Part of the **[Noir](https://github.com/agaaaptr/noir#readme)** toolkit — the discipline, context, and memory layer for any agentic CLI.
 

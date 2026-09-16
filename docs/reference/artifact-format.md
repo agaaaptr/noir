@@ -38,13 +38,13 @@ Uncoded (not per-type documents): `.noir/CHANGELOG.md` (append-only) and `.noir/
 
 ## Frontmatter
 
-Every `.md` artifact carries YAML frontmatter as the first bytes (no BOM, single leading `---` block). Required fields:
+Every workflow-written or skill-authored `.md` artifact carries YAML frontmatter as the first bytes (no BOM, single leading `---` block). The `handoff` artifact is the one exception — `noir handoff --write` emits engine-rendered fixed headings with no frontmatter (see the per-type outlines below). Required fields:
 
 ```yaml
 ---
 kind: plan            # enum = one of the 12 kinds above
 id: t4k3b1e9          # the store key (taskId) — or ADR-0007 for decisions
-slug: artifact-format
+slug: artifact-format # required only for kinds that carry one — omitted for intake and handoff
 title: Artifact format
 status: draft         # lifecycle kinds: draft | review | approved | done ; adr: proposed | accepted | rejected | superseded
 date: 2026-08-13      # ISO-8601
@@ -53,9 +53,11 @@ generated_at: 2026-08-13T09:00:00Z   # RFC3339
 ---
 ```
 
-Optional (validated when present): `version` (document version, distinct from tool version), `author`/`owner`, `tags`, `related` (ids), `supersedes` (required when `status: superseded`), `source`, `checksum` (`sha256:…`).
+Reserved (declared optional in ADR-0007; not yet written or validated by any code): `version`, `author`/`owner`, `tags`, `related`, `supersedes`, `source`, `checksum` (`sha256:…`).
 
-**Invariant:** `filename code == frontmatter kind == directory`. The gate enforces it for skill-prescribed paths; the writers always emit it.
+`slug` is conditional, not unconditional: the writer emits it only when a slug is passed, and the registry marks `intake` and `handoff` as carrying none — so it is required for every kind except those two (see Naming above).
+
+**Invariant:** `filename code == frontmatter kind == directory`. The gate enforces only the filename-code-vs-directory half, and only for paths a skill prescribes: `artifactPathDrift` scans skill bodies and references for `.noir/<dir>/<name>` strings and requires the filename to carry one of that directory's type codes — it never opens or parses an artifact. The frontmatter `kind` is emitted by the artifact writers and is not checked by any gate; nor does the frontmatter half apply to the `handoff` artifact, which carries no frontmatter at all.
 
 ## Per-type outlines
 

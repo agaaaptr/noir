@@ -37,7 +37,9 @@ jobs:
       - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
-      # Validate documentation: broken links, stale version refs, registry integrity.
+      # Validate documentation: broken links + anchors, stale version refs,
+      # half-generated reference stubs. (The release registry is validated
+      # separately by `pnpm release:validate`.)
       - run: pnpm docs:validate
 
   # ── C1: install smoke test ───────────────────────────────────

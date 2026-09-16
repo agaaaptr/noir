@@ -5,12 +5,15 @@ If you have more than one host setup — two Claude Code installs, a work profil
 and a personal one, a different binary per project — define them as **run
 profiles** instead of typing `--command` every time.
 
-> **Aliases don't work.** `noir run --command my-alias` fails with ENOENT when
-> `my-alias` is a shell alias or function: `spawn()` does not go through the
-> shell, so aliases/functions from `.zshrc` are invisible. Use an executable on
-> `PATH`, an absolute path, a launcher script in `~/.local/bin/`, or a profile
-> below. (Noir can resolve PATH entries and aliases through your interactive
-> shell automatically when they only exist there — see the note at the end.)
+> **Shell aliases are not on `PATH`.** `spawn()` does not go through the shell,
+> so `noir run --command my-alias` cannot see an alias or function from `.zshrc`
+> directly. Noir falls back to probing `$SHELL` and bridges the alias when
+> `$SHELL` is `zsh`, `bash`, or `fish` on a POSIX host (Windows, or an
+> unset/unsupported `$SHELL`, still fails with ENOENT). For predictable behavior
+> use an executable on `PATH`, an absolute path, a launcher script in
+> `~/.local/bin/`, or a profile below. (Noir can resolve PATH entries and aliases
+> through your interactive shell automatically when they only exist there — see
+> the note at the end.)
 
 ## 1. Define profiles
 

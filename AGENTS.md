@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for AI coding agents (Claude Code, Cursor, Codex, …) working **on this repository** — i.e., developing and maintaining the **Noir toolkit** under `packages/`. For *using* Noir in a project, see the [README](README.md).
+Guidance for AI coding agents (Claude Code, Cursor, Codex, …) working **on this repository** — i.e., developing and maintaining the **Noir toolkit** under `packages/`. For *using* Noir in a project, see the [README](README.md). The human-facing contribution policy lives in `CONTRIBUTING.md` — read it before opening a PR.
 
 ## What this repo is
 
@@ -37,8 +37,8 @@ The new package is **automatically** included in workspace detection, the root b
 
 This repo dogfoods Noir's own Spec-Driven Development flow: **brainstorm → spec → plan → subagent-driven implement + review → final whole-branch review**. Specs and plans live under `docs/internal/`:
 
-- **Per-slice design specs** → `docs/internal/specs/YYYY-MM-DD-sN-<topic>-design.md`.
-- **Per-slice implementation plans** (+ acceptance) → `docs/internal/plans/YYYY-MM-DD-sN-<topic>.md`.
+- **Design specs** → `docs/internal/specs/YYYY-MM-DD-<topic>-design.md`.
+- **Implementation plans** (+ acceptance) → `docs/internal/plans/YYYY-MM-DD-<topic>.md`.
 - The single top-level **design document** lives at `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (dated, status: implemented — see `docs/internal/specs/` for the full set of capability design specs).
 - **Architecture Decision Records** → `docs/decisions/NNNN-<slug>.md` (append-only — supersede, never rewrite).
 - `.superpowers/` is gitignored local session scratch; never commit it.
@@ -63,10 +63,10 @@ There is **no plugin and no marketplace**. Skills are native `noir-` builtins, a
   - `name` must match `/^noir-[a-z0-9]+(?:-[a-z0-9]+)*$/`, and the directory name must equal `name`.
   - `description` is **WHAT+WHEN** — it must lead with a trigger cue (`Use`/`Using`/`When`/`Before`/`After`/`Upon`/…) AND contain a WHAT clause. A WHAT-summary or WHEN-only description is rejected. ≤ 1024 chars.
   - `metadata.{category,version}` is required (structural gate).
-  - Body carries required sections: `## When to use`, `## Procedure` (or `## Steps`), and one of `## Verification`/`## Notes`/`## Fallbacks`.
+  - Body carries required sections: `## When to use`, `## Procedure` (or `## Steps`), and one of `## Verification`/`## Notes`/`## Fallbacks`/`## Troubleshooting`.
   - Body ≤ 500 lines; references one-level deep only (`<kebab>.md`, no chained references).
   - Quality gate: `noir skills lint` reports errors + warnings; `noir skills registry --json` queries the runtime-derived registry.
-- **Compile target is Claude Code only** in v1 (canonical format copied verbatim). The multi-host transform that emits one host's own shape is not implemented yet.
+- **Per-host compile targets.** Skills compile to each host's own shape, not a verbatim copy — `cursor` emits flat `.mdc` files in `.cursor/rules/` (one file per skill, no per-name subdirectory) via `compileSkill(_, 'cursor')`; the other hosts take the canonical `SKILL.md` shape.
 - **Forbidden-residue guard** (`packages/skills/src/residue.ts`, `FORBIDDEN_RESIDUE`, checked by the hygiene tests): a native skill must not contain predecessor-plugin internals or Superpowers rhetoric — e.g. `workflow/<task`, `noir-workflow.mode`, `noir-workflow`, `plugins/noir-workflow`, `@uiigateway`, `<EXTREMELY-IMPORTANT`, `SUBAGENT-STOP`. If you are porting an old playbook, scrub these before committing. (Note: `ClickUp`/`clickup` were forbidden during the predecessor-port era but are **allowed again** — ClickUp is now a first-class Noir integration under `packages/skills/integrations/noir-clickup/`. The residue list is the source of truth; check it before assuming a token is banned.)
 
 ## Privacy + provider-explicit rules (honor in any change)

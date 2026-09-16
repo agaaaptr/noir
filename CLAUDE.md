@@ -19,7 +19,7 @@ pnpm build              # tsup build all 11 packages (ESM + dts)
 pnpm typecheck          # tsc across packages
 pnpm lint               # biome check .  (use pnpm format to autofix)
 pnpm test               # build + vitest run (offline/free — never needs network or a key)
-pnpm docs:validate      # broken links + stale version refs + registry integrity
+pnpm docs:validate      # broken links + anchors, stale version refs, half-generated stubs
 pnpm docs:generate      # regenerate managed docs blocks + reference docs
 ```
 

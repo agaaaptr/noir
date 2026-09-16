@@ -5,7 +5,7 @@ Packaging for a Homebrew tap for Noir, the discipline, context, and memory layer
 ## What this is
 
 - `Formula/noir.rb` — the formula that installs `@noir-ai/cli` (the `noir` bin) via npm into the formula's `libexec`, then symlinks `noir` into Homebrew's `bin`. It follows the standard [Node-for-Formula-Authors](https://docs.brew.sh/Node-for-Formula-Authors) pattern.
-- The tap is stable-only (Homebrew taps are single-channel). For the **beta** channel (`@noir-ai/cli@beta`), use npm directly — see [docs/installation.md](../../docs/how-to/installation.md#npm--pnpm--yarn--bun).
+- The tap is stable-only (Homebrew taps are single-channel). For the **beta** channel (`@noir-ai/cli@beta`), use npm directly — see [docs/how-to/installation.md](../../docs/how-to/installation.md#npm--pnpm--yarn--bun).
 
 ## Why a tap is heavier than npm/npx (be honest before you choose this)
 
@@ -32,7 +32,7 @@ The formula is complete — it carries the current stable release's `version`, t
 
    ```bash
    curl -sL https://registry.npmjs.org/@noir-ai/cli/latest | \
-     jq -r '.version, .dist.tarball, .dist.shasum'
+     jq -r '.version, .dist.tarball, .dist.integrity'
    shasum -a 256 <(curl -sL "<tarball>")   # publish this as the formula's sha256
    ```
 
@@ -68,5 +68,5 @@ brew update && brew upgrade noir
 
 ## See also
 
-- [docs/installation.md](../../docs/how-to/installation.md) — current install paths (native installer, npm/pnpm/yarn/bun, npx) and the Homebrew availability status.
-- [docs/releasing.md](../../docs/how-to/releasing.md) — how a stable release is cut and how the formula's `version` + `sha256` should be refreshed each release.
+- [docs/how-to/installation.md](../../docs/how-to/installation.md) — current install paths (native installer, npm/pnpm/yarn/bun, npx) and the Homebrew availability status.
+- [docs/how-to/releasing.md](../../docs/how-to/releasing.md) — how a stable release is cut and how the formula's `version` + `sha256` should be refreshed each release.

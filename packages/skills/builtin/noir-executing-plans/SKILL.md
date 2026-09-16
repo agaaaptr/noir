@@ -29,7 +29,7 @@ Drive a written implementation plan task by task, in order. Each task: implement
    | **Inline (sequential)** | Ordered tasks with dependencies, small-to-medium scope | Drive tasks one-by-one in this session — implement, test, commit, move to next. You stay in control. |
    | **Subagent-driven** | Independent tasks, fan-out plans, need per-task review | Hand off to `noir-subagent` — dispatch fresh subagent per task with briefs and review gates. |
    | **Combination** | Mix of sequential + independent tasks | Start inline for dependency-chain tasks, then fan out independent ones via subagents. |
-   | **Workflow orchestration** | Large plans, "ultracode" active, multi-agent parallelism | Use the host's Workflow tool to orchestrate many agents concurrently with review between stages. Only offered when the host's effort/capability level supports it. |
+   | **Workflow orchestration** | Large plans needing many agents in parallel | Use the host's Workflow tool to orchestrate many agents concurrently with review between stages. Only offered when the host exposes that tool and it is active. |
 
    **Default:** if the user doesn't choose, use inline (sequential) — it's the safest, most reviewable path.
 
@@ -38,7 +38,7 @@ Drive a written implementation plan task by task, in order. Each task: implement
    - **Subagent-driven:** route to `noir-subagent` (it handles briefs, dispatch, review, integration).
    - **Combination:** execute dependency-chain tasks inline first, then fan out independent ones.
    - **Workflow:** compose the workflow script (phases, agents, review gates) from the plan, then dispatch.
-4. **Mark progress.** Update the plan's checkboxes `- [x]` as tasks complete. The engine's execute gate records checkpoints observably.
+4. **Mark progress.** Update the plan's checkboxes `- [x]` as tasks complete — the plan file is the progress record the next session reads.
 5. **When the plan is done:** all tasks ticked, all tests green, the implementation matches the spec → hand off to `noir-verifying`.
 
 ## Verification

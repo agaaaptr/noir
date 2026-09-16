@@ -25,8 +25,8 @@ tools) decide what is worth keeping, and it is stored locally and free.
 into a memory observation with capture provenance (`auto:<hook>`), via the
 `memory_capture` MCP tool. It is a **manual** command — Noir never auto-installs
 hooks. Auto-capture-by-default (wiring the `PreToolUse`/`PostToolUse`/
-`UserPromptSubmit`/`Stop` hooks so the host saves on its own) is tracked as a
-future slice; until it lands, use the explicit paths below.
+`UserPromptSubmit`/`Stop` hooks so the host saves on its own) is not implemented;
+until it does, use the explicit paths below.
 
 ## Wiring a hook today (explicit save)
 
@@ -42,7 +42,7 @@ observation), but it cannot introspect the hook's stdin JSON yet:
         "hooks": [
           {
             "type": "command",
-            "command": "noir memory save --content \"session ended — review what you learned\" --type observation"
+            "command": "noir memory save --content \"session ended — review what you learned\" --type fact"
           }
         ]
       }

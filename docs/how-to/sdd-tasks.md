@@ -97,8 +97,11 @@ noir task advance --to execute     # jump to a later phase
 ```
 
 `--to` accepts any phase in the ladder and is validated client-side. A jump
-forward evaluates **every gate it passes through**, which is exactly why the
-next section exists.
+forward **bypasses** the gates it skips — the engine records at most the one gate
+guarding the phase you land on (spec → `specified`, plan → `planned`, document →
+the verify/`done` gate); a jump landing on execute or verify records nothing at
+all. A jumped-over gate only appears in the task's audit trail if you later jump
+back through it.
 
 `advance` prints the same status block as `task status`, so one command always
 tells you where you landed. Two things it does implicitly when you land at
@@ -166,9 +169,13 @@ A failing gate is a **failure** — exit `1`, never a silent success — and it
 prints the recovery options it will accept:
 
 ```
-verify gate: evidence-failed at 2026-09-15T04:10:02Z (1 passed, 1 failed)
+verify gate: evidence-failed at 1757912402123 (1 passed, 1 failed)
 recovery: `noir task verify` | `noir task advance --force <reason>` | `noir task advance --skip` | `noir task block <reason>`
 ```
+
+The number after `evidence-failed at` is the task's `updatedAt` in epoch
+milliseconds, printed raw — the status block's `Updated` field is the one that is
+formatted as a readable timestamp.
 
 Under `--json` a pending gate keeps its full context: `{ok:false, error:{…},
 data:{pendingGate, recovery, evidence}}`.
@@ -211,9 +218,10 @@ noir task abandon
 ```
 
 **`resume`** is the cross-session entry point: it reads the task back and prints
-state, phase, next gate, and the skill for the current phase. `--prompt` records
-a continue instruction and surfaces it in the briefing. A task with nothing to
-resume exits `1` — again, honest rather than silently empty.
+state, phase, next gate, and the skill for the current phase. `--prompt`
+surfaces a continue instruction in this run's briefing (echoed on stderr only —
+it is not persisted, so a later `noir task resume` will not show it). A task
+with nothing to resume exits `1` — again, honest rather than silently empty.
 
 **`block`** marks the task blocked with a mandatory non-empty reason (an empty
 one is exit `2`). A blocked task is resumable, but only by jumping:
@@ -273,7 +281,8 @@ or `epic`. Either write the PRD or record why you are not:
 
 **"I forgot my phase — `advance` did something unexpected."** Run
 `noir task status` before advancing. A bare `noir task advance` always moves one
-step from wherever you are, and a `--to` jump evaluates every gate in between.
+step from wherever you are, while a `--to` jump bypasses the gates in between —
+only the gate guarding the phase you land on can be recorded.
 
 **"Nothing happened when I re-ran `task new` with the same slug."** It did: the
 task was reset to `draft`/intake. Re-starting a slug overwrites it by design.

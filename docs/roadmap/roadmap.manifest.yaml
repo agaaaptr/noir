@@ -4,7 +4,7 @@ current_phase: shipped
 
 active_capability: null
 
-active_slice: null  # v2 orchestrator TUI shipped 2026-08-14 (1.11.0, ADR-0008)
+active_slice: null  # env-templates-upgrade-provider-run-ux shipped 2026-09-16 (1.15.0, ADR-0012)
 
 roadmap:
   - id: C1
@@ -17,7 +17,7 @@ roadmap:
     title: CLI Runtime & User Experience
     status: completed
     priority: high
-    note: "C2 shipped as 1.8.0 (published 2026-08-05, ADR-0006): Ctrl+K command palette + richer widgets (input-history recall, persistent recent commands, destructive confirm, output search), daemon start --detach real backgrounding, context index --force full reindex, init/create/sync --dry-run/--preview, in-process read fallback. v2 orchestrator TUI (Archetype B) shipped as 1.11.0 (2026-08-14, ADR-0008): single-surface palette consolidation + noir run headless host-driving."
+    note: "C2 shipped as 1.8.0 (published 2026-08-05, ADR-0006): Ctrl+K command palette + richer widgets (input-history recall, persistent recent commands, destructive confirm, output search), daemon start --detach real backgrounding, context index --force full reindex, init/create/sync --dry-run/--preview, in-process read fallback. v2 orchestrator TUI (Archetype B) shipped as 1.11.0 (2026-08-14, ADR-0008): single-surface palette consolidation + noir run headless host-driving. 2026-09-16 (1.15.0): noir run UX — TTY status line, palette argument collection (needsArg from commander introspection, fixing the dead leaves), in-process TUI run mode with live output + token/cost bar, post-run action menu (memory/research/handoff/resume/save), and an interrupt contract (SIGTERM→5s→SIGKILL, transcript-on-interrupt, exit 130/143); noir init --upgrade completeness — refreshIfStale for doc seeds (byte-exact template history), the split .noir/.env vs .env.example templates carried by the 1.1.0→1.2.0 scaffold migration, host-aware artifact emission, and honest skill reporting."
 
   - id: C3
     title: Built-in Skill System
@@ -46,6 +46,7 @@ roadmap:
     title: Documentation & Knowledge System
     status: partial
     priority: high
+    note: "2026-09-16 (1.15.0): the CLI reference is generated from the commander tree (full flag/argument surface), docs:generate walks three config levels, docs:validate fails on a half-generated reference, and four new how-tos (run, memory, sdd-tasks, context-and-handoff) land alongside a project-wide no-internal-jargon convention in AGENTS.md + CLAUDE.md."
 
   - id: C7
     title: Engineering Governance & Project OS

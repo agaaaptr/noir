@@ -41,7 +41,7 @@ pnpm build
 pnpm typecheck && pnpm lint && pnpm test
 ```
 
-The full test suite runs **offline and free** — it must never depend on a network call or a paid API key. Do not claim a change is done until all four gates (`build`, `typecheck`, `lint`, `test`) are green.
+The full test suite runs **offline and free** — it must never depend on a network call or a paid API key. Do not claim a change is done until all five gates (`lint`, `build`, `typecheck`, `test`, `docs:validate`) are green.
 
 > This repo is a **pnpm monorepo** of 11 `@noir-ai/*` packages. See [`AGENTS.md`](AGENTS.md) for the toolchain contract and [`docs/how-to/packaging.md`](docs/how-to/packaging.md) for how packages are structured.
 
@@ -77,7 +77,7 @@ This repo dogfoods **Spec-Driven Development (SDD)**: brainstorm → spec → pl
 
 ### PR checklist
 
-- [ ] All four gates green locally (`build`, `typecheck`, `lint`, `test`)
+- [ ] All five gates green locally (`lint`, `build`, `typecheck`, `test`, `docs:validate`)
 - [ ] `pnpm docs:validate` passes
 - [ ] Tests added/updated for the change
 - [ ] Docs updated where behavior changed
@@ -94,7 +94,7 @@ If you use AI coding tools (Claude Code, Cursor, Copilot, …) to produce change
 - **Lint / format:** Biome. `pnpm lint` (check) and `pnpm format` (write).
 - **TypeScript:** strict ESM (`NodeNext`, `strict`, `noUncheckedIndexedAccess`). `pnpm typecheck`.
 - **Tests:** Vitest. `pnpm test` (build + vitest run). Keep the suite offline/free.
-- **Docs validation:** `pnpm docs:validate` (broken links, stale version refs, registry integrity).
+- **Docs validation:** `pnpm docs:validate` (broken links + anchors, stale version refs, half-generated reference stubs). There is no docs-registry integrity check: `pnpm docs:registry` only rebuilds `.noir/docs-registry.json`, and `pnpm release:validate` validates the separate release registry against npm + git tags.
 
 ## Documentation & roadmap changes
 

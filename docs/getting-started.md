@@ -28,9 +28,9 @@ Two channels ship in parallel:
 <!-- noir:doc:status -->
 **Latest stable:** `1.14.0` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
 **Current beta:** `1.14.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
-**Source version:** `1.14.0` (clean SemVer in `packages/*/package.json`)
+**Source version:** `1.15.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-16T03:37:56.038Z*
+*Last auto-generated: 2026-09-16T05:06:41.137Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -45,7 +45,7 @@ The installer is idempotent (re-run = upgrade), prints a PATH hint if `noir` isn
 
 ### From source (repo developers only)
 
-If you're developing Noir itself rather than using it, install from source: `git clone`, then `pnpm install && pnpm build`, then put `noir` on PATH via `pnpm --filter @noir-ai/cli link --global`. The `.mcp.json` written by `noir init` calls `command: "noir"`, so Claude Code needs `noir` resolvable on PATH. Full from-source walk-through (native deps, the first-run model download, the PATH papercut): **[installation.md](how-to/installation.md)**. End users should ignore this path and use the native installer or npm.
+If you're developing Noir itself rather than using it, install from source: `git clone`, then `pnpm install && pnpm build`, then put `noir` on PATH via `pnpm --filter @noir-ai/cli link --global`. The `.mcp.json` written by `noir init` calls `command: "noir"`, so Claude Code needs `noir` resolvable on PATH. For the troubleshooting that surrounds an install — native-dependency build failures, the first-run model download, and PATH problems after install — see **[installation.md](how-to/installation.md)**. End users should ignore this path and use the native installer or npm.
 
 ## Initialize a project
 

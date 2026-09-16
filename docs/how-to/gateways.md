@@ -104,7 +104,7 @@ fields directly, and the credentials stay in `.noir/.env` behind a **name**:
 # .noir/config.yml
 model:
   providers:
-    gateway:
+    anthropic:
       baseURL: https://api.z.ai/api/anthropic
       authTokenEnv: ZAI_AUTH_TOKEN     # a NAME, never the value
       timeoutMs: 300000                # milliseconds, minimum 1000
@@ -113,16 +113,32 @@ model:
   # bare provider key (an unrecognised key is dropped silently). Consolidation
   # reads `tiers.consolidate`:
   tiers:
-    consolidate: gateway
+    consolidate: anthropic
   # Fallback for tiers you leave unassigned — optional:
-  defaultProvider: gateway
+  defaultProvider: anthropic
 
 # Consolidation is the one place Noir's model layer calls out, and it is
-# opt-in: without this switch the gateway above is never used.
+# opt-in: without this switch the provider above is never used.
 memory:
   consolidation:
     enabled: true
 ```
+
+The provider block's **name is a wire-format selector**, not a free label — that
+is why the example above is called `anthropic`:
+
+- `anthropic` is driven by the Anthropic adapter, which is the one that speaks
+  the Anthropic message API and honours `authTokenEnv` as a Bearer header.
+- `openai` and `openai-compatible` cover OpenAI-shaped endpoints.
+- Any other name only works for an OpenAI-shaped endpoint: an unrecognised name
+  that carries a `baseURL` is routed to `openai-compatible`. There, `authTokenEnv`
+  is **ignored** and the credential comes from `apiKeyEnv`, sent as
+  `Authorization: Bearer`, and the message path is appended as
+  `/chat/completions`.
+
+So an arbitrary name like `gateway` is not Anthropic-shaped: it silently drops
+its `authTokenEnv` and posts to the wrong path, and the call comes back
+`{ok:false}` rather than reaching your endpoint.
 
 ```bash
 # .noir/.env

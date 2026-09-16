@@ -12,16 +12,17 @@ compatibility: claude · agents-md · gemini · cursor · opencode
 
 
 ## When to use
-- When the user triggers this skill.
 
-Check what's wrong. Run `noir doctor` and read every row — it prints one row per named check with a pass/warn/fail status. Checks are added over time, so `noir doctor`'s own output is the authoritative roster (never work from a list memorized elsewhere); the rows worth reading first for configuration are in the Notes below. Advisory, not mandatory — even a red check doesn't block.
+- Diagnosing why a Noir command isn't working — the daemon won't start, the store looks wrong, a key is missing, or the install is broken.
+- After a config or environment change, to confirm the new value actually won.
 
 ## Procedure
 
 1. **Run `noir doctor`.** In-process — no daemon needed. Read the full output on stderr.
-2. **Surface actionable issues.** A failed check should tell you what to fix. The install row checks Node version + managed runtime (if installed via native installer).
-3. **Fix one at a time.** Don't batch fixes — each fix deserves its own verification that the underlying issue resolved.
-4. **Re-run `noir doctor` to confirm green.**
+2. **Read every row.** It prints one row per named check with a pass/warn/fail status. Checks are added over time, so the command's own output is the authoritative roster — never work from a list memorized elsewhere.
+3. **Treat a red row as blocking.** `noir doctor` exits non-zero when any check fails, so a `fail` is a real gate; a `warn` alone does not fail the run.
+4. **Fix one at a time.** Don't batch fixes — each fix deserves its own verification that the underlying issue resolved.
+5. **Re-run `noir doctor` to confirm green.**
 
 ## When done → next skill
 

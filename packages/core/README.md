@@ -1,6 +1,6 @@
 # @noir-ai/core
 
-Shared domain types, the configuration schema (`NoirConfigSchema`), the `.noir/` on-disk layout, and the marker constants that the rest of the Noir toolkit is built on. This is the type-contract package — it holds no runtime I/O of its own.
+Shared domain types, the configuration schema (`NoirConfigSchema`), the `.noir/` on-disk layout, and the marker constants that the rest of the Noir toolkit is built on — plus the shared on-disk helpers those types are enforced through (the managed-block writer, the `.noir/.env` loader, the gitignore manager, and the git-tracked check).
 
 Part of the **[Noir](https://github.com/agaaaptr/noir#readme)** toolkit — the discipline, context, and memory layer for any agentic CLI.
 

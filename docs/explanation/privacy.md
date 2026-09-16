@@ -22,7 +22,7 @@ Noir is local-first by design. No data leaves your machine unless you explicitly
 ## Governance
 
 - **Audit trail:** every gated write (e.g., `noir_clickup_write`) appends to `.noir/audit/integration-*.jsonl`.
-- **Memory operations:** `memory_forget` deletes with reason; `memory_sessions` lists per-session rollups. (Noir has no `memory_export` tool — that is the *agentmemory plugin*'s surface, not a Noir tool.)
+- **Memory operations:** `memory_forget` takes observation ids and removes them — on a shared workspace it soft-forgets (the row is marked forgotten and kept for audit), on a project store it deletes the authoritative row plus a best-effort doc/vector purge; `memory_sessions` lists per-session rollups. (Noir has no `memory_export` tool — that is the *agentmemory plugin*'s surface, not a Noir tool.)
 - **Never auto-captures.** Memory save is explicit; an opt-in hooks template is provided but never auto-wired.
 
 ## Environmental Variables

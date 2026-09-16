@@ -28,7 +28,7 @@ Turn a raw idea, ticket, or ambiguous ask into a shared, written understanding o
 1. **Restate the goal.** In one sentence, say what the user is trying to achieve and why. If `$ARGUMENTS` was provided, start from it.
 2. **Surface requirements with a structured prompt.** Ask the clarifying questions you genuinely need — but batch them, don't pepper one at a time. On Claude Code, use the `AskUserQuestion` tool (question + up to 4 options) so the user picks instead of types; on hosts without it (Gemini/Cursor/Copilot), ask in plain text. Cover scope, constraints, users, non-goals, and any acceptance you can see.
 3. **Offer 2-3 distinct approaches.** Present options with explicit trade-offs. Do not collapse to a single path prematurely; the user chooses.
-4. **Record the decision.** Capture the chosen direction + open questions as a spec stub under `.noir/specs/` if the project is Noir-initialized. This is observable, not rhetorical — the SDD engine records the brainstorm checkpoint.
+4. **Record the decision.** Capture the chosen direction + open questions as a spec stub under `.noir/specs/` if the project is Noir-initialized. This is discipline, not ceremony — the artifact it produces (a spec, a PRD, or a researched direction) is what the later gates read.
 5. **Hand off.** Point to `noir-spec` (formalize) → then `noir-planning` (break down).
 
 ## Verification
@@ -40,7 +40,7 @@ Turn a raw idea, ticket, or ambiguous ask into a shared, written understanding o
 
 ## Notes
 
-- Discipline is observable: the SDD engine's gates record that brainstorming happened. This skill is the playbook.
+- Discipline shows up downstream: the spec or PRD you produce here is what the engine's `spec` gate records. This skill is the playbook.
 - For a genuinely trivial request (a one-liner with a clear answer), say so and skip the full ritual — brainstorming is for creative or ambiguous work.
 - If the user has a strong opinion, follow it; your job is to surface the space, not to win an argument.
 

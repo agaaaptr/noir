@@ -32,7 +32,7 @@ One sentence: what are we building and why.
 ## Authoring rules
 
 1. **Goal first, one sentence.** If the goal needs two sentences, it's two features.
-2. **Acceptance criteria are the contract.** The implementation plan maps each criterion to a task; the verify gate checks each one. Write them so a reader can check them off without asking you.
+2. **Acceptance criteria are the contract.** The implementation plan maps each criterion to a task, and you check them off during `noir-verifying`. The verify gate itself runs the shell checks configured under `workflow.gate.verify.checks` — it does not read the criteria. Write them so a reader can check them off without asking you.
 3. **Non-goals prevent scope creep.** "We are not doing X" is as important as "we are doing Y."
 4. **A short spec with sharp boundaries beats a long essay.** 10 crisp lines > 200 fuzzy ones.
 5. **Reference sibling specs** when this builds on another — don't copy-paste its content.

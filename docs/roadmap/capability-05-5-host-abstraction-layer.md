@@ -36,9 +36,9 @@ Noir is host-agnostic behind an abstract `HostAdapter`. `@noir-ai/adapters` ship
 - **MET — 5 adapters** (`claude`, `agents-md`, `gemini`, `cursor`, `opencode`) resolve via `resolveAdapter(host)` with an exhaustiveness guard; `SUPPORTED_HOSTS` is frozen and drives CLI `--host` choices and `noir doctor`.
 - **MET — per-host emission** — `noir init` / `create` / `sync --host` emit the host's native context file, MCP config, and skills (`.claude/skills/`, `.cursor/rules/`); `claude` remains the default and single-host projects stay byte-equivalent.
 - **MET — handoff seam** — `noir handoff` produces a host-correct launch directive + default handoff block for every supported host (covered by `packages/adapters/test/handoff.test.ts`).
-- **DONE — capability negotiation** — `HostAdapter` exposes a typed probe (e.g. `hasSkills` / `hasMcpShape`) and the CLI consumes it instead of hardcoded per-host knowledge.
-- **DONE — certification** — a published compatibility matrix plus a defined host-certification process; certified hosts are listed in docs.
-- **DONE — prompt compilation** — a real Skill → Host Context → Formatter pipeline lands on at least one host, or the gap is explicitly re-scoped as a non-goal in ADR-0004.
+- **DONE-WHEN — capability negotiation** — `HostAdapter` exposes a typed probe (e.g. `hasSkills` / `hasMcpShape`) and the CLI consumes it instead of hardcoded per-host knowledge.
+- **DONE-WHEN — certification** — a published compatibility matrix plus a defined host-certification process; certified hosts are listed in docs.
+- **DONE-WHEN — prompt compilation** — a real Skill → Host Context → Formatter pipeline lands on at least one host, or the gap is explicitly re-scoped as a non-goal in ADR-0004.
 
 ## References
 

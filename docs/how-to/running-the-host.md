@@ -218,8 +218,11 @@ starts is listed, and the status bar tracks the model, the elapsed time, and the
 running token totals.
 
 The prompt is the one you typed on the dashboard line, so the screen starts
-running straight away — there is no second prompt to fill in. The keyboard is
-the screen's own while it is open:
+running straight away — there is no second prompt to fill in. One keystroke does
+stand between the two: `run` is treated as a destructive command, so a `y / n`
+confirm overlay asks you to approve it first. `y` opens the live run screen with
+the prompt you typed; `n` or `Esc` leaves the run unstarted and returns you to
+the palette. The keyboard is the screen's own while it is open:
 
 | Key | While a host is live | Once it has finished |
 |---|---|---|

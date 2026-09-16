@@ -8,7 +8,7 @@ Noir's long-term strategic direction as an AI development platform. Several "vis
 
 ## Shipped today
 
-- **11 `@noir-ai/*` packages (1.14.0 is the latest published), 26 builtin `noir-` skills (+ 1 integration), release registry** tracking versions from 1.5.0 through 1.14.0 (latest published) ([`AGENTS.md`](../../AGENTS.md), [`docs/roadmap/releases.md`](releases.md)).
+- **11 `@noir-ai/*` packages (1.14.0 is the latest published), 26 builtin `noir-` skills (+ 1 integration), release registry** tracking 51 releases from 1.0.0-beta.1 (2026-07-25) through 1.14.0 (latest stable) ([`AGENTS.md`](../../AGENTS.md), [`docs/roadmap/releases.md`](releases.md)).
 - **Bounded model layer** — single-shot `complete()`, provider-explicit, null-degradation, no tools/stream by construction (D5) ([`packages/model/src/complete.ts`](../../packages/model/src/complete.ts)).
 - **Hybrid retrieval** — BM25 ∪ kNN → RRF, local 384-dim embeddings by default, remote/Ollama embedders opt-in ([`packages/context/src/contextEngine.ts`](../../packages/context/src/contextEngine.ts)).
 - **Cross-session memory** — save/recall/search/sessions/forget/consolidate, provider-gated consolidation that refuses cleanly without a provider ([`packages/memory/src/engine.ts`](../../packages/memory/src/engine.ts)).
@@ -16,12 +16,12 @@ Noir's long-term strategic direction as an AI development platform. Several "vis
 - **CLI** — commander command tree, home menu, Ink TUI (single-surface palette + `noir run` headless host-driving, ADR-0008), `noir doctor`, stable exit codes ([`packages/cli/src/bin.ts`](../../packages/cli/src/bin.ts)).
 - **SDD workflow engine** — FSM (Intake→Clarify→Spec→Plan→Execute→Verify→Document) with observable, escapable gates (D4) + soft PRD recommendation ([`docs/internal/specs/2026-07-23-noir-toolkit-design.md`](../../docs/internal/specs/2026-07-23-noir-toolkit-design.md)).
 - **5 host adapters + universal AGENTS.md** — `claude`/`agents-md`/`gemini`/`cursor`/`opencode` via `resolveAdapter(host)` (ADR-0004) ([`docs/decisions/0004-multi-host-adapters.md`](../decisions/0004-multi-host-adapters.md)).
-- **Release automation** — auto-prerelease versioning, branch-based dist-tag (stable/beta), SLSA provenance, version registry ([`docs/roadmap/releases.md`](releases.md)).
+- **Release automation** — auto-prerelease versioning, version-string-based dist-tag (tag `vX.Y.Z-beta.N` → `beta`, tag `vX.Y.Z` → `latest`), SLSA provenance, version registry ([`docs/roadmap/releases.md`](releases.md)).
 
 ## Gap / roadmap delta
 
-- **Wire `draftPrd` into a real runtime consumer** — second caller beyond memory consolidation.
-- **Ship memory auto-capture** — `noir memory capture` shipped in 1.13.0 as a manual verb; auto-capture-by-default (host hooks wired so the host saves on its own) remains a future slice.
+- **Wire `draftPrd` into its first runtime consumer** — `draftPrd` is exported from `@noir-ai/model` but has no caller anywhere; memory consolidation goes through `complete()`, not `draftPrd`.
+- **Ship memory auto-capture** — `noir memory capture` shipped in 1.13.0 as a manual verb; auto-capture-by-default (host hooks wired so the host saves on its own) remains future work.
 - **Technology radar artifact** (adopt/trial/assess/hold) — acceptance criterion claims it must exist; nothing does.
 - **Innovation backlog artifact** — items with objective/value/complexity/dependency/research-status/recommendation.
 - **New-technology evaluation mechanism + periodic research cadence.**
@@ -38,11 +38,11 @@ Deferred engineering items are tracked per-area in [`docs/roadmap/backlog.md`](b
 - **MET** — Long-term vision framing is grounded: every shipped item above resolves to a real path in this repo; no shipped claim without a source.
 - **MET** — Hybrid retrieval, vector search, host-agnostic core, structured output, and MCP exist and are exercised (context engine, model layer, host adapters, daemon).
 - **MET** — Multi-agent collaboration, autonomous engineering, and enterprise readiness are explicitly recorded as non-goals / v2.0, not as active backlog.
-- **DONE** — `draftPrd` has a runtime consumer beyond memory consolidation (new caller wired in `packages/*/src`).
+- **DONE-WHEN** — `draftPrd` has a runtime consumer (new caller wired in `packages/*/src`).
 - **DONE** (shipped in 1.13.0) — `noir memory capture` is a manual CLI verb (provenance `auto:<hook>` via `memory_capture` MCP tool; auto-capture-by-default remains deferred).
-- **DONE** — Technology radar artifact exists with items classified adopt/trial/assess/hold.
-- **DONE** — Innovation backlog artifact exists with the required item fields.
-- **DONE** — Sunset/deprecation mechanism is documented as a repeatable evaluate/deprecate/migrate/remove process (beyond ADR-0002).
+- **DONE-WHEN** — Technology radar artifact exists with items classified adopt/trial/assess/hold.
+- **DONE-WHEN** — Innovation backlog artifact exists with the required item fields.
+- **DONE-WHEN** — Sunset/deprecation mechanism is documented as a repeatable evaluate/deprecate/migrate/remove process (beyond ADR-0002).
 
 ## References
 

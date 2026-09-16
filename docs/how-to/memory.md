@@ -153,11 +153,22 @@ set of lessons from them — the "what general rule do these five bugs imply?"
 noir memory consolidate --types bug --limit 50
 ```
 
-It runs **only when you have explicitly turned it on**. Three things must be
-true: `memory.consolidation.enabled: true` in `.noir/config.yml`, a provider
-assigned to the `consolidate` tier, and that provider's model resolvable. When
-they are, the daemon registers the `memory_consolidate` tool and the command
-works:
+It runs **only when you have explicitly turned it on**. Two things must be true:
+`memory.consolidation.enabled: true` in `.noir/config.yml`, plus a usable
+provider and model, obtained either way:
+
+- **Name them under `memory.consolidation`** — set `provider` together with its
+  own `model`. This is checked first.
+- **Or leave that block's provider unset** and let the `consolidate` tier supply
+  it — `model.tiers.consolidate`, falling back to `model.defaultProvider`. Whichever
+  provider block the tier resolves to must itself declare a `model` id.
+
+Naming a provider under `memory.consolidation` **without** a `model` fails
+outright: it does not fall through to the `consolidate` tier, and a `consolidate`
+tier does not rescue it.
+
+When both are true, the daemon registers the `memory_consolidate` tool and the
+command works:
 
 ```
 Consolidated 2 lessons from 7 observations.

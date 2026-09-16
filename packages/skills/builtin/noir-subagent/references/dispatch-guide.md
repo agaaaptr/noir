@@ -37,8 +37,8 @@ If any item fails, return the report to the subagent with the specific issue. Do
 ## Files as the contract
 
 Subagents communicate through FILES, not conversation. Each task writes:
-- `task-N-brief.md` — what it was asked (you write before dispatch).
-- `task-N-report.md` — what it did + test results (it writes on return).
+- `.noir/subagents/BR-<NNNN>-<slug>.md` — what it was asked (you write before dispatch).
+- `.noir/subagents/RP-<NNNN>-<slug>.md` — what it did + test results (it writes on return).
 
 These become the integration record and the `noir-wrap` handoff input. Structured outputs (JSON, CSV, markdown tables) beat prose for machine consumption.
 

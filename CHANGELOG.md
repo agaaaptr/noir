@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.15.0 (2026-09-16) — env templates + `noir init --upgrade` completeness + provider gateways + `noir run` UX
+
+### Changed
+- **BREAKING (narrow) — the model layer routes only where configuration says.** The `@anthropic-ai/sdk` client is now constructed with an explicit value for every transport-affecting option (`baseURL`, `authToken`, `apiKey`, `timeout`), so its constructor-time env fallbacks (`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`) can no longer answer a field the provider config left unset; the openai adapter pins its endpoint (`baseURL` defaults to `https://api.openai.com/v1`) the same way. A setup that worked *by accident* through ambient env — most often memory consolidation routed through a corporate gateway — must now name the endpoint and credential in `model.providers.<name>` (`baseURL`, `authTokenEnv`). The host path is untouched: `noir run` still passes `.noir/.env` to the spawned host by inheritance, which remains the documented gateway surface for hosts. See ADR-0012.
+- **The two env templates are split by purpose instead of duplicating one noisy file.** `.noir/.env` is a short, all-comment, sectioned activation sheet — gateway, integrations, remote embedders, provider key, run profile, update kill-switches — where every line starts commented, `noir env` shows the winning source per key, and Noir runs on defaults while everything stays commented. `.noir/.env.example` becomes the detailed reference: the same variable set with explanations and placeholders rather than a second copy of the activation sheet. Both templates warn that the project file wins over the shell environment for every key it defines.
+- **`noir init --upgrade` now refreshes stale seeds, not just backfills absent ones.** A seed whose on-disk bytes still match a template Noir previously shipped (`CURRENT_SCAFFOLD_VERSION`) is regenerated from the current template; a seed the user edited is left alone (interactive: a conflict prompt; non-interactive: preserved and reported). An unreadable seed is treated as preserved rather than aborting the upgrade, and a project created before the stamp existed runs its legacy migrations instead of being skipped.
+
+### Added
+- **Provider transport fields** (`model.providers.<name>`): `authTokenEnv` (a variable *name*, sent as `Authorization: Bearer`) and `timeoutMs` (per-request timeout, min 1000), alongside `baseURL` — which is now honored by **both** the anthropic and openai-compatible adapters instead of being silently dropped by the former. `hasKey` treats an empty credential as unset, and `noir doctor` reports token-only providers correctly.
+- **`refreshIfStale` + a template-history registry** (`packages/create`) — the byte-exact seed registry (`isStaleSeed`) that decides, per seed, whether to regenerate, preserve, or conflict-prompt on `noir init --upgrade` / `noir sync`, and the `1.1.0 → 1.2.0` scaffold migration that carries the redesigned templates to existing projects.
+- **`noir run` terminal status line** (stderr, TTY-gated) — `▶ host · model · mm:ss elapsed`, running `↓in↑out` token totals (max-per-message.id dedup preserved), tool activity (`⚙ name…`), redrawn only at event boundaries and cleared at the end. `--json`/`--quiet` output is byte-identical to 1.14.0. Host stderr is no longer fully withheld: a bounded tail surfaces on failure, and progress-bearing stderr lines pass through live on a TTY.
+- **Palette argument collection** — rows that require an argument (derived from commander's own introspection, not a hand-maintained list) now prompt inline instead of failing with exit 2, which fixes every dead leaf in the command palette.
+- **In-process TUI run mode** — `/run <prompt>` streams host output live into the output pane with the token/cost bar in the status line, `Esc` cancels, and a transcript picker lists recent runs. Host output flows through the event stream into Ink state (never through the swapped capture path).
+- **Post-run action menu** (terminal + TUI run mode) — save the answer to memory (`memory_capture`, distilled answer text), record it as task research, write a handoff artifact, continue the session (`--resume <sessionId>`), or copy/save the answer. Interactive-only; non-interactive runs behave exactly as 1.14.0. The `--json` envelope gains `answerText`.
+- **Interrupt contract for `noir run`** — `SIGINT`/`SIGTERM` (and TUI `Esc`) writes the transcript best-effort, terminates the child (`SIGTERM`, then `SIGKILL` after 5 s), prints `interrupted · transcript: <path>`, and exits 130/143. No orphaned children: the child is tracked so the kill path works however the TUI exits, and a second signal escalates immediately.
+- **Gateway variables in `noir env`** — the `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` / model-remap / `API_TIMEOUT_MS` / `CLAUDE_CODE_*` names are reported (name + winning source only) so the host-passthrough path and the model-layer config path are inspectable separately.
+
+### Fixed
+- A bridged host (zsh `-i`) that ignores the first polite `SIGTERM` during shell startup is now re-offered the signal every 250 ms until it takes, instead of leaking past the grace window.
+- A second interrupt signal during the grace window now leaves the verdict behind and exits immediately rather than racing a duplicate `--json` envelope (one-shot claim guard).
+- Tool calls in the live run fold no longer render as duplicate provisional/committed rows, and tool-use-only assistant lines surface as tool events rather than being dropped.
+- A non-positive host-stderr tail bound is honored (no unbounded tail).
+
+### Security & robustness
+- **`run.profiles.<n>.env` deny-list** — the process-injection / redirect names already refused from `.noir/.env` (`NODE_OPTIONS`, `LD_PRELOAD`, `npm_config_*`, …) are now refused from a run profile's `env` too, closing an injection path through `noir run --profile` → `spawn`.
+- **Ambient-env neutralization in the model layer** (see Changed) — a `.noir/.env` key can no longer silently redirect consolidation traffic to an attacker-chosen host *via the SDK*; it can only do so through explicit config, which is the auditable path.
+
+### Upgrade steps
+1. **Run `noir init --upgrade`** — the recommended post-upgrade step. It refreshes the redesigned `.noir/.env.example` (regenerating the unedited seed, conflict-prompting the edited one), runs the `1.1.0 → 1.2.0` migration for the templates, and reports which skills were preserved versus re-emitted honestly. `noir doctor`'s scaffold-drift row prompts it.
+2. **If you relied on ambient `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` for the model layer** (e.g. memory consolidation through a gateway), add `baseURL` and `authTokenEnv` to `model.providers.<name>` in `.noir/config.yml`. The host-passthrough path (a gateway exported to `.noir/.env` for `noir run`) is unchanged.
+3. **Nothing else to do.** The `noir run` output contract is unchanged on stdout; the status line and post-run menu are interactive-only and disappear under `--json`/`--quiet`/CI.
+
+---
+
 ## 1.14.0 (2026-09-11) — daemon hardening + `noir init` completeness + `.noir/.env` precedence
 
 ### Changed

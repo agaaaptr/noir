@@ -14,13 +14,17 @@ A PRD captures what and why before the spec captures how. It is the user-facing 
 
 ## When to use
 
-## Procedure
-1. **Follow the guidance** in the notes and verification.
-
 - A feature needs stakeholder-facing rationale before a technical spec.
 - The user says "write a PRD", "why are we building this", "who is this for."
 - After `noir-brainstorming` when the idea is clear but needs a formal "why."
 - **Do NOT use:** for the technical implementation plan — that's `noir-planning`.
+
+## Procedure
+
+1. **Confirm the "why" exists.** A PRD with no evidence behind it is fiction. Gather from the `noir-brainstorming` output or the task brief; if there is no data, ticket, or user report, collect that before drafting.
+2. **Confirm it's wanted.** Explicit opt-in — never auto-draft a PRD; ask first.
+3. **Fill the sections below.** On Claude Code, use `AskUserQuestion` to close gaps (who is the user, what metric); on other hosts, ask in text. Never invent an answer to close a gap.
+4. **Write to** `.noir/prd/PRD-<NNNN>-<taskId>-<slug>.md`.
 
 ## Sections (Noir template)
 
@@ -33,13 +37,6 @@ A PRD captures what and why before the spec captures how. It is the user-facing 
 7. **No-gos.** Explicitly out of scope.
 8. **Rabbit holes.** Known pitfalls to avoid.
 9. **Open Questions.** Unresolved items that need human input.
-
-## Drafting
-
-1. Gather from brainstorming output or the task brief.
-2. On Claude Code, use `AskUserQuestion` to fill gaps (who is the user, what metric). On other hosts, ask.
-3. Write to `.noir/prd/PRD-<NNNN>-<taskId>-<slug>.md`.
-4. **Explicit opt-in.** Never auto-draft a PRD — ask first.
 
 ## When done → next skill
 

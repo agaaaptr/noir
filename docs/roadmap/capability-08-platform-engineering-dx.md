@@ -27,7 +27,7 @@ The internal platform-engineering layer of Noir itself: a pnpm monorepo with uni
 - **Benchmark suite + perf regression gate** — no performance measurement today (startup, indexing, context/skill loading).
 - **Engineering metrics collection** — no build/test/lint duration, coverage, or tech-debt tracking.
 - **Capability/specification/slice generator + roadmap updater** — `new-package.mjs` only scaffolds a package.
-- **Engineering command layer** beyond release/validate — no `audit` / `benchmark` / `cleanup` / `repair` / `migrate` commands.
+- **Engineering command layer** beyond release/validate — no `audit` / `benchmark` / `cleanup` / `repair` commands.
 - **DX guideline document + explicit engineering-platform specification.**
 - **Automated changelog generation** — `CHANGELOG.md` is hand-maintained today.
 - **Dependency-update automation** — no dependabot/renovate.
@@ -41,7 +41,7 @@ The internal platform-engineering layer of Noir itself: a pnpm monorepo with uni
 - **MET** — `scripts/new-package.mjs <name>` produces a publish-ready package with the vitest alias wired.
 - **GAP** — `pnpm health` reports duplicates/stale/orphan artifacts and exits non-zero on findings (extends `docs:validate`).
 - **GAP** — a benchmark suite with a perf regression gate runs in CI on `main`/`develop`; regressions fail the build.
-- **GAP** — an engineering command layer exposes `audit` / `benchmark` / `cleanup` / `repair` / `migrate` alongside the existing release/validate commands.
+- **GAP** — an engineering command layer exposes `audit` / `benchmark` / `cleanup` / `repair` alongside the existing release/validate commands.
 - **GAP** — changelog and dependency updates are generated/opened automatically by tooling, not hand-maintained.
 
 ## References

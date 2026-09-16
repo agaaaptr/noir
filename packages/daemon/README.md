@@ -10,7 +10,7 @@ Part of the **[Noir](https://github.com/agaaaptr/noir#readme)** toolkit — the 
 npm install @noir-ai/daemon
 ```
 
-> Most users install the CLI instead, which manages the daemon lifecycle (`noir daemon start|stop|status`):
+> Most users install the CLI instead, which manages the daemon lifecycle (`noir daemon start|join|stop|status|restart|token`):
 >
 > ```bash
 > npm install -g @noir-ai/cli

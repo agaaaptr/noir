@@ -34,7 +34,7 @@ noir init                  # scaffolds .noir/ + host wiring + skills where suppo
 
 ## Commands
 
-`noir` (home menu / `status --json`), `status [--json]`, `init`, `create [dir]`, `sync`, `run [prompt...]`, `release [version]`, `mcp serve [--stdio]`, `daemon {start|stop|status|restart}`, `context {search|index|status}`, `memory {recall|save|sessions|forget|consolidate}`, `skills {list|sync|lint|registry}`, `task {new|status|advance|next|decompose|verify|research|research-record|resume|block|abandon}`, `handoff [--write]`, `wrap [--write]`, `install|migrate`, `update`, `tui`, `palette`, `doctor`.
+`noir` (home menu / `status --json`), `status [--json]`, `init`, `create [dir]`, `sync`, `env`, `run [prompt...]`, `release [version]`, `mcp serve [--stdio]`, `daemon {start|join|stop|status|restart|token}`, `workspace {list|status|leave|stop}`, `context {search|index|status}`, `memory {recall|save|capture|sessions|forget|consolidate}`, `skills {list|sync|lint|registry}`, `task {new|status|advance|next|decompose|verify|research|research-record|resume|block|abandon}`, `handoff [--write]`, `wrap [--write]`, `install|migrate`, `update`, `tui`, `palette`, `doctor`.
 
 Global flags: `--json`, `--no-input`, `--quiet`, `--verbose`, `--cwd`. Data → stdout, diagnostics → stderr. Exit codes: `0` ok · `1` error · `2` usage · `3` not-found · `4` daemon-down · `5` cancelled.
 
@@ -47,6 +47,6 @@ This package is the CLI shell. Noir is a pnpm monorepo of 11 `@noir-ai/*` packag
 - **Command reference:** [docs/reference/cli.md](../../docs/reference/cli.md)
 - **Config schema:** [docs/reference/config.md](../../docs/reference/config.md)
 - **Roadmap & status:** [docs/roadmap/](../../docs/roadmap/)
-- **Releasing (npm token + provenance):** [docs/releasing.md](../../docs/how-to/releasing.md)
+- **Releasing (npm token + provenance):** [docs/how-to/releasing.md](../../docs/how-to/releasing.md)
 
 MIT © agaaaptr

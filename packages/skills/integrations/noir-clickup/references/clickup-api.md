@@ -4,7 +4,7 @@ Base URL: `https://api.clickup.com/api/v2`
 Auth header: `Authorization: pk_<personal-token>` (NO `Bearer` prefix — a Bearer-prefixed header is rejected with `401`).
 Token env var: `CLICKUP_API_TOKEN` (resolved server-side via the `integrations_auth` MCP tool; manual-paste fallback when absent).
 
-This reference covers the 5 flows noir-clickup implements. It is the canonical source of truth for the skill playbook and the `noir_clickup_write` gated proxy.
+This reference covers the 7 flows noir-clickup implements. It is the canonical source of truth for the skill playbook and the `noir_clickup_write` gated proxy.
 
 ## Endpoints used
 
@@ -159,6 +159,7 @@ X-RateLimit-Reset: 1700000000
 - `PUT /task/{id}`
 - `POST /list/{list_id}/task`
 - `POST /task/{id}/comment`
+- `POST /task/{id}/attachment`
 
 Optional auxiliary reads (skill-side only):
 - `GET /list/{list_id}` — to read the list's `statuses` array before a status PUT (community-attested; falls back to probe + handle `400`).

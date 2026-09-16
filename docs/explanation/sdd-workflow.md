@@ -31,7 +31,7 @@ Gates fire at the transition INTO a phase and record a `GateResult` in the audit
 |---|---|---|
 | **spec gate** | clarify → spec | `approved` / `forced` (--force <reason>) / `skipped` (quick) |
 | **plan gate** | spec → plan | `approved` / `forced` / `skipped` |
-| **verify gate** | execute → verify | `approved` / `forced` / `skipped` |
+| **verify gate** | verify → document (fires on entering `done`, so it is still ahead while the task sits at the verify phase) | `approved` / `forced` / `skipped`, plus `failed` when the gate is evidence-backed (`workflow.gate.verify.required` truthy for the task's class; default `false`): a HARD check exiting non-zero records `failed`, which blocks the move to `done`, and the recovery options are retry / force / skip / block. The `failed` decision is recorded in the audit and counts against `verify.retryBudget`. |
 
 Each decision is timestamped and auditable. `--force <reason>` bypasses soft checks (like the PRD recommendation) while recording the rationale. Quick mode skips gates transparently.
 

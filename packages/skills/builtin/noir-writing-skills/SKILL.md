@@ -14,13 +14,17 @@ The pack's authoring manual. Every skill must be: valid (passes `validateSkill`)
 
 ## When to use
 
-## Procedure
-1. **Follow the guidance** in the notes and verification.
-
 - Creating a new `noir-*` skill.
 - Revising an existing skill's body, description, or metadata.
 - The user says "write a skill", "update the skill", "add a skill for X."
 - Verifying the pack — `noir skills lint`.
+
+## Procedure
+
+1. **Check the boundary.** Search the pack for a sibling that already covers the trigger. Extend it, or sharpen its `description`, rather than adding a near-duplicate.
+2. **Write the frontmatter, then the body** against the rules below.
+3. **Add evals.** `evals/<skill>/evals.json` with offline assertions that exercise the skill's directives.
+4. **Lint the pack.** `noir skills lint` — zero errors before you call it done.
 
 ## Skill writing rules
 

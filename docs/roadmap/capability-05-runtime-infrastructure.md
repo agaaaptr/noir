@@ -8,7 +8,7 @@ The local runtime behind the Noir CLI: an `@noir-ai/daemon` MCP server with a si
 
 ## Shipped today
 
-- **Foreground HTTP daemon** on 127.0.0.1: `GET /health` plus the `/mcp` Streamable HTTP route; idle-timeout shutdown and SIGINT/SIGTERM cleanup ([http.ts](../../packages/daemon/src/http.ts), [lifecycle.ts](../../packages/daemon/src/lifecycle.ts)).
+- **Foreground HTTP daemon** on 127.0.0.1: `GET /health` plus the `/mcp` Streamable HTTP route; idle-timeout shutdown and SIGINT/SIGTERM cleanup ([http.ts](../../packages/daemon/src/http.ts)).
 - **Per-project daemon records**: one record per identity at `~/.noir/daemons/<projectId>.json` (`{pid, port, startedAt, mode?, projectId}`), so two projects on one machine never clobber each other; `NOIR_DAEMON_DIR` overrides the directory for isolation. The `wrongProject` guards this replaces are deleted — foreign-record access is impossible by construction ([project-record.ts](../../packages/daemon/src/project-record.ts), ADR-0010).
 - **One-shot legacy migration**: the pre-1.14 global `~/.noir/daemon.json` is read exactly once — the recorded pid is SIGTERMed (bounded wait, boot-boundary-aware) and the file is deleted — then no code path reads the legacy shape again ([migrate-legacy-record.ts](../../packages/daemon/src/migrate-legacy-record.ts)).
 - **`daemon.port` honoured as a preference**: when configured it is threaded to the listener; on `EADDRINUSE` the daemon degrades to an ephemeral port with a warning rather than failing, and the record always names the port actually bound ([http.ts](../../packages/daemon/src/http.ts)).

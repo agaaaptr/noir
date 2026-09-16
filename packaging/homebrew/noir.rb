@@ -16,7 +16,7 @@
 #   shasum -a 256 <(curl -sL "<tarball>")   # sha256 of the tarball
 #
 # Stable-only: Homebrew taps are single-channel. For the beta channel
-# (`@noir-ai/cli@beta`), install via npm directly — see docs/installation.md.
+# (`@noir-ai/cli@beta`), install via npm directly — see docs/how-to/installation.md.
 #
 # Must pass `brew audit --strict` — Homebrew's lines.rb cop forbids the older
 # `std_npm_install_args` in favour of `std_npm_args`.

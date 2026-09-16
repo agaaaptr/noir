@@ -25,7 +25,7 @@ Break an approved spec into a concrete, step-by-step implementation plan. The pl
 2. **Decompose into tasks.** Break the work into the smallest units that carry their own test cycle and are worth a reviewer's gate. Each task names the files it touches and the interface it produces.
 3. **Order the tasks by dependency.** Which task must finish before another starts? List the chain.
 4. **Define the interfaces.** For each task, state what it consumes (from earlier tasks) and what it produces (for later tasks). Be specific — exact function names, parameter types, file paths.
-5. **Write the plan.** Record under `.noir/plans/PL-<NNNN>-<taskId>-<slug>.md`. Use a numbered task list with checkbox syntax (`- [ ]`) so the engine's verify gate can track completion.
+5. **Write the plan.** Record under `.noir/plans/PL-<NNNN>-<taskId>-<slug>.md`. Use a numbered task list with checkbox syntax (`- [ ]`) so progress is visible at a glance — the checkboxes are a record for you and the next session, not something the engine reads. The verify gate is driven by the shell checks configured under `workflow.gate.verify.checks` and run by `noir task verify`.
 6. **Hand off.** Point to `noir-executing-plans` to drive the plan task by task.
 
 ## Verification

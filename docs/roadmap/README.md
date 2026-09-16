@@ -5,7 +5,7 @@
 - **Where Noir is today:** [`releases.md`](releases.md) (shipped status, release history, version targets) + [`STATUS.md`](STATUS.md) (per-capability progress).
 - **What is deferred:** [`backlog.md`](backlog.md) (consolidated engineering debt).
 - **Origin / detailed rationale:** `docs/internal/specs/2026-07-23-noir-toolkit-design.md`.
-- **Decisions of record:** `docs/decisions/` (ADR `0001`…`0011`).
+- **Decisions of record:** `docs/decisions/` (ADR `0001`…`0012`).
 
 Every capability on this roadmap must go through the project lifecycle before implementation — **research → analysis → architecture proposal → specification → planning → slice → implementation → validation → documentation → checkpoint → release**. Implementation is never done directly from the roadmap alone; the spec derived from it is the reference.
 
@@ -86,7 +86,7 @@ This is a *conceptual* dependency graph. The final implementation dependency is 
 
 ## How to use this roadmap
 
-- **When shipping a version:** update `releases.md` + `STATUS.md` + `roadmap.manifest.yaml`, add the release to the root `CHANGELOG.md`, run `pnpm release:history`.
+- **When shipping a version:** update `releases.md` + `STATUS.md` + `roadmap.manifest.yaml`, add the release to the root `CHANGELOG.md`; the release registry (`.noir/releases/`) is updated automatically by CI on publish — run `pnpm release:history` to view it and `pnpm release:rebuild` to regenerate it locally.
 - **When direction changes:** update the vision + capability index, and record the *why* as an ADR in `docs/decisions/`.
 - **When tempted to add scope:** check `backlog.md` / `releases.md` Deferred table — if it is listed, it is intentional; add new deferrals there rather than dropping them silently.
 - **To change a capability doc:** see [`CONTRIBUTING.md`](CONTRIBUTING.md).

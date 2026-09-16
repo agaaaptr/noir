@@ -842,10 +842,7 @@ function genPackages() {
  * stale (a shipped spec keeps its "not implemented" line), so the marker is this
  * explicit list. Clear an entry when its release ships.
  */
-const IN_FLIGHT_INTERNAL = new Set([
-  'docs/internal/specs/2026-09-14-env-templates-upgrade-provider-run-ux-design.md',
-  'docs/internal/plans/2026-09-14-env-templates-upgrade-provider-run-ux.md',
-]);
+const IN_FLIGHT_INTERNAL = new Set([]);
 
 /**
  * A reference-doc stub line: the generators write an explicit italic
