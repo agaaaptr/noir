@@ -100,6 +100,19 @@ describe('resolveModelConfig — key resolution from env', () => {
     });
   });
 
+  it('treats an empty-string credential as unset (doctor and runtime agree)', async () => {
+    await withEnv('NOIR_TEST_EMPTY_KEY', '', async () => {
+      const r = resolveModelConfig({
+        providers: { anthropic: { model: 'claude-haiku', apiKeyEnv: 'NOIR_TEST_EMPTY_KEY' } },
+      });
+      const p = r.providers.anthropic;
+      // The raw value is carried, but readiness is false — matching complete()'s
+      // falsy-key rule so `doctor` and the model layer never disagree.
+      expect(p?.apiKey).toBe('');
+      expect(p?.hasKey).toBe(false);
+    });
+  });
+
   it('treats an anonymous provider (no apiKeyEnv) as ready — hasKey true, no key needed', () => {
     // Local Ollama / LM Studio: omit apiKeyEnv entirely; the openai-compatible
     // adapter then sends no auth header. hasKey is vacuously true.

@@ -158,7 +158,13 @@ export function resolveModelConfig(raw?: ModelUserConfig): ResolvedModelConfig {
       const apiKey = apiKeyEnv ? process.env[apiKeyEnv] : undefined;
       const authToken = authTokenEnv ? process.env[authTokenEnv] : undefined;
       const keyed = Boolean(apiKeyEnv) || Boolean(authTokenEnv);
-      const hasKey = !keyed || apiKey !== undefined || authToken !== undefined;
+      // A credential set to the empty string is "unset", matching the runtime
+      // path (complete.ts treats a falsy key as absent) so doctor and the model
+      // layer never disagree about readiness.
+      const hasKey =
+        !keyed ||
+        (apiKey !== undefined && apiKey !== '') ||
+        (authToken !== undefined && authToken !== '');
 
       const resolved: ResolvedProviderConfig = { hasKey };
       if (entry.model !== undefined) resolved.model = entry.model;

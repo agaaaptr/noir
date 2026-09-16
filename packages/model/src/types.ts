@@ -88,9 +88,9 @@ export interface CompleteRequest {
   authToken?: string;
   /**
    * Per-request timeout in milliseconds. NOT caller-set: `complete()` forwards
-   * it from the resolved provider block (`cfg.providers[name].timeoutMs`) so
-   * every adapter bounds its call the same way. Optional — omit to keep the
-   * adapter's own default.
+   * it from the resolved provider block (`cfg.providers[name].timeoutMs`), and
+   * it is honored by the anthropic adapter (and any adapter that consumes it).
+   * Optional — omit to keep the adapter's own default.
    */
   timeoutMs?: number;
   /** Optional abort signal to bound the call (single shot, no streaming). */
