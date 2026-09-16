@@ -226,6 +226,18 @@ async function runOnce(
   // host child is live. A Ctrl+C in the terminal — or a SIGTERM from whatever
   // started Noir — stops the HOST and then reports it, rather than killing Noir
   // and leaving the host running behind it.
+  // One verdict per run, whichever path reaches it first. The second-signal path
+  // below writes its envelope and leaves, but it leaves only once that write has
+  // landed — and the child it forced can resolve this run inside that window, so
+  // the run's own interrupted path can arrive at the verdict second. A run that
+  // wrote two verdicts would hand a scripted consumer two answers to one run.
+  let verdictWritten = false;
+  const claimVerdict = (): boolean => {
+    if (verdictWritten) return false;
+    verdictWritten = true;
+    return true;
+  };
+
   const interrupt = new RunInterrupt({
     // A second interrupt leaves at once, and leaves the same verdict behind as
     // the first: the run owes its consumer an envelope under --json, and this is
@@ -234,7 +246,9 @@ async function runOnce(
     // host behind.
     exitNow: (code) => {
       interrupt.forceNow();
-      failAndExit(code, interruptedNotice(safeTranscript(host, transcriptLines)), opts);
+      if (claimVerdict()) {
+        failAndExit(code, interruptedNotice(safeTranscript(host, transcriptLines)), opts);
+      }
     },
   });
   interrupt.watch();
@@ -268,7 +282,12 @@ async function runOnce(
     // run was asked to end, and why the host never got going is beside the point
     // — reporting it as a failure would blame the host for doing as it was told.
     if (interrupt.interruptedBy !== undefined) {
-      failInterrupted(interrupt.interruptedBy, host, transcriptLines, opts);
+      if (claimVerdict()) {
+        failInterrupted(interrupt.interruptedBy, host, transcriptLines, opts);
+      }
+      // The verdict is already written by the path that left the process; this
+      // one has nothing to add but a second answer.
+      return;
     }
     const detail = err instanceof Error ? err.message : String(err);
     const enoent = (err as NodeJS.ErrnoException)?.code === 'ENOENT';
@@ -296,7 +315,11 @@ async function runOnce(
     // written: it is read as the run's last word, not as more of the stream.
     status.end();
     status.finishRow();
-    failInterrupted(interrupt.interruptedBy, host, transcriptLines, opts);
+    if (claimVerdict()) {
+      failInterrupted(interrupt.interruptedBy, host, transcriptLines, opts);
+    }
+    // The leaving path already wrote the verdict this run owes its consumer.
+    return;
   }
 
   const transcript = safeTranscript(host, transcriptLines);

@@ -300,6 +300,16 @@ describe('noir run — the interrupt contract', () => {
     (current as StubbornChild).die();
     await done;
     expect(process.listenerCount('SIGINT')).toBe(listenersBefore);
+
+    // The run can still resolve inside the window between the forced kill and
+    // the deferred exit (a pipe under backpressure widens it), so the count is
+    // read again after the run has settled: one run, one answer — the leaving
+    // path and the run's own interrupted path cannot both write one.
+    const settled = stdoutText()
+      .split('\n')
+      .filter((line) => line.length > 0);
+    expect(settled).toHaveLength(1);
+    expect(JSON.parse(settled[0] as string)).toMatchObject({ ok: false, error: { code: 130 } });
   });
 
   it('honours a second interrupt without --json — the verdict and the exit code', async () => {
@@ -333,6 +343,14 @@ describe('noir run — the interrupt contract', () => {
     (current as StubbornChild).die();
     await done;
     expect(process.listenerCount('SIGTERM')).toBe(listenersBefore);
+
+    // One verdict, once the run has settled: the same last-word rule the --json
+    // case is held to, on the stream the human reads.
+    const verdicts = stderrText()
+      .split('\n')
+      .filter((line) => line.includes('interrupted · transcript: '));
+    expect(verdicts).toHaveLength(1);
+    expect(stdoutText()).toBe('');
   });
 
   it('leaves a run that is never interrupted exactly as it was', async () => {
