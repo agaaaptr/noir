@@ -36,9 +36,19 @@ function repoRoot(): string {
 // parsers — the `isMainModule()` guard keeps the CLI dispatch from firing on
 // import, so this is safe + side-effect-free.
 const GENERATOR_URL = pathToFileURL(join(repoRoot(), 'scripts', 'docs-generate.mjs')).href;
-const { genConfigSchema, helpCommands, helpDescription, helpOptions, helpUsage } = (await import(
-  GENERATOR_URL
-)) as {
+const {
+  buildRegistry,
+  findGeneratedPlaceholders,
+  genConfigSchema,
+  helpCommands,
+  helpDescription,
+  helpOptions,
+  helpUsage,
+} = (await import(GENERATOR_URL)) as {
+  buildRegistry: () => {
+    documents: { path: string; lifecycle: 'active' | 'archived'; category: string }[];
+  };
+  findGeneratedPlaceholders: (docs: { path: string; content: string }[]) => string[];
   genConfigSchema: () => string;
   helpCommands: (help: string) => string[];
   helpDescription: (help: string) => string;
@@ -107,6 +117,67 @@ describe('docs generator — help parsers', () => {
         description: 're-scaffold even if already initialized (bypasses the already-init no-op)',
       },
     ]);
+  });
+});
+
+describe('docs generator — reference stub gate', () => {
+  // The generators write an italic placeholder when the build artefact they read
+  // is missing, so a placeholder surviving into docs/reference/ means the doc was
+  // committed half-generated. The gate must fail on it.
+  it('flags a generated placeholder left in a reference doc', () => {
+    const issues = findGeneratedPlaceholders([
+      {
+        path: 'docs/reference/cli.md',
+        content:
+          '# CLI Command Reference\n\n_(CLI not built — run `pnpm build` to generate CLI reference)_\n',
+      },
+      { path: 'docs/reference/packages.md', content: '# Packages\n\n| a | b |\n|---|---|\n' },
+    ]);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toContain('docs/reference/cli.md');
+    expect(issues[0]).toContain('[GENERATED-PLACEHOLDER]');
+  });
+
+  it('ignores a placeholder-looking line outside docs/reference/ and prose inside one', () => {
+    const issues = findGeneratedPlaceholders([
+      { path: 'docs/how-to/x.md', content: '_(help unavailable for this command)_\n' },
+      {
+        path: 'docs/reference/mcp-tools.md',
+        content: '| tool | Degrades to BM25-only when the embedder is unavailable. |\n',
+      },
+    ]);
+    expect(issues).toEqual([]);
+  });
+
+  it('flags the committed reference docs only when they really carry a stub', () => {
+    // The committed docs are fully generated, so the live check is a no-op today;
+    // the assertion pins that the scan sees the real tree (not an empty list).
+    const registry = buildRegistry();
+    const reference = registry.documents
+      .filter((d) => d.path.startsWith('docs/reference/') && d.path.endsWith('.md'))
+      .map((d) => ({
+        path: d.path,
+        content: readFileSync(join(repoRoot(), d.path), 'utf8'),
+      }));
+    expect(reference.length).toBeGreaterThan(0);
+    expect(findGeneratedPlaceholders(reference)).toEqual([]);
+  });
+});
+
+describe('docs generator — internal-doc lifecycle', () => {
+  it('marks the in-flight spec/plan active and the shipped SDD history archived', () => {
+    const lifecycle = new Map(buildRegistry().documents.map((d) => [d.path, d.lifecycle]));
+    // The current (unshipped) spec + plan pair is the active work.
+    expect(
+      lifecycle.get(
+        'docs/internal/specs/2026-09-14-env-templates-upgrade-provider-run-ux-design.md',
+      ),
+    ).toBe('active');
+    expect(
+      lifecycle.get('docs/internal/plans/2026-09-14-env-templates-upgrade-provider-run-ux.md'),
+    ).toBe('active');
+    // An older, shipped plan is history.
+    expect(lifecycle.get('docs/internal/plans/2026-07-25-s7-memory.md')).toBe('archived');
   });
 });
 
