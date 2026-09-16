@@ -25,7 +25,7 @@ import {
   runHost,
   type UsageSnapshot,
 } from '../orchestrator.js';
-import { type CliOptions, EXIT, fail, json, log, success } from '../output.js';
+import { type CliOptions, EXIT, fail, failAndExit, json, log, success } from '../output.js';
 import { offerPostRunActions } from '../run-actions.js';
 import { exitCodeForSignal, interruptedNotice, RunInterrupt } from '../run-interrupt.js';
 import { loadRunConfig, resolveRunProfile } from '../run-profiles.js';
@@ -226,7 +226,17 @@ async function runOnce(
   // host child is live. A Ctrl+C in the terminal — or a SIGTERM from whatever
   // started Noir — stops the HOST and then reports it, rather than killing Noir
   // and leaving the host running behind it.
-  const interrupt = new RunInterrupt();
+  const interrupt = new RunInterrupt({
+    // A second interrupt leaves at once, and leaves the same verdict behind as
+    // the first: the run owes its consumer an envelope under --json, and this is
+    // the one path where `fail()` cannot write it (there is no caller left to
+    // catch its throw). The child is forced first, so leaving does not leave a
+    // host behind.
+    exitNow: (code) => {
+      interrupt.forceNow();
+      failAndExit(code, interruptedNotice(safeTranscript(host, transcriptLines)), opts);
+    },
+  });
   interrupt.watch();
 
   let result: RunHostResult;

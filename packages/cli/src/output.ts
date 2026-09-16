@@ -10,8 +10,11 @@
 // interactive shell, a pipe, and CI.
 //
 // Exit codes: 0 ok · 1 error · 2 usage · 3 not-found · 4 daemon-down ·
-// 5 cancelled. These constants live HERE (the single source of truth); bin.ts
-// re-exports them so existing imports from `./bin.js` keep working.
+// 5 cancelled · 130/143 interrupted (128 + the signal that stopped the run:
+// SIGINT and SIGTERM). The first six are the `EXIT` enum below; the interrupt
+// codes come from the run's own stop path, not from `fail()`'s contract. These
+// constants live HERE (the single source of truth); bin.ts re-exports them so
+// existing imports from `./bin.js` keep working.
 
 import Table from 'cli-table3';
 import { CommanderError } from 'commander';
@@ -417,6 +420,15 @@ export function spinner(text = '', opts: CliOptions = {}): Spinner {
 // ---------------------------------------------------------------------------
 
 /**
+ * The one-line `{ok:false,error}` envelope every `--json` failure writes. Built
+ * in one place so a failure written by `fail()` and one written on the way out
+ * of a signal handler cannot drift apart.
+ */
+function failureEnvelope(exitCode: number, message: string): string {
+  return `${JSON.stringify({ ok: false, error: { code: exitCode, message } })}\n`;
+}
+
+/**
  * Write a diagnostic and throw a `CommanderError` carrying the given exit code,
  * so bin.ts's `exitOverride` + `handleError` surface it as `process.exitCode`
  * without any mid-action `process.exit`. Under `--json` the message becomes a
@@ -425,11 +437,45 @@ export function spinner(text = '', opts: CliOptions = {}): Spinner {
  */
 export function fail(exitCode: number, message: string, opts: CliOptions = {}): never {
   if (isJsonMode(opts)) {
-    process.stdout.write(`${JSON.stringify({ ok: false, error: { code: exitCode, message } })}\n`);
+    process.stdout.write(failureEnvelope(exitCode, message));
   } else if (message.length > 0) {
     process.stderr.write(`${message}\n`);
   }
   throw new CommanderError(exitCode, NOIR_ERROR_CODE, message);
+}
+
+/** How long a leaving path waits for its own last line to land before it goes. */
+const EXIT_FLUSH_MS = 250;
+
+/**
+ * {@link fail} for the paths that leave from a signal handler, where there is no
+ * caller left to catch what it throws: the verdict is written and the exit
+ * follows it, with the same shape and the same exit code an ordinary failure
+ * would have produced. Under `--json` the envelope is the run's last output, so
+ * the exit waits for the write to land — a process that exits with stdout still
+ * queued loses it — and goes without it if the write never lands, because the
+ * whole point of this path is to leave.
+ */
+export function failAndExit(exitCode: number, message: string, opts: CliOptions = {}): void {
+  // The code this process leaves with, even if the write below never lands.
+  process.exitCode = exitCode;
+  const jsonMode = isJsonMode(opts);
+  const text = jsonMode
+    ? failureEnvelope(exitCode, message)
+    : message.length > 0
+      ? `${message}\n`
+      : '';
+  if (text.length === 0) {
+    process.exit(exitCode);
+  }
+  let left = false;
+  const leave = (): void => {
+    if (left) return;
+    left = true;
+    process.exit(exitCode);
+  };
+  (jsonMode ? process.stdout : process.stderr).write(text, leave);
+  setTimeout(leave, EXIT_FLUSH_MS);
 }
 
 /**

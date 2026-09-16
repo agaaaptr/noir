@@ -27,7 +27,25 @@ class FakeChild extends EventEmitter implements HostChild {
   }
 }
 
-let current: FakeChild | undefined;
+/**
+ * A host that will not take the polite signal: it records what it was sent and
+ * keeps running. The run therefore stays live after the first interrupt, which
+ * is the state the second one has to resolve.
+ */
+class StubbornChild extends EventEmitter implements HostChild {
+  readonly signals: NodeJS.Signals[] = [];
+  readonly pid = 4343;
+  kill(signal: NodeJS.Signals = 'SIGTERM'): boolean {
+    this.signals.push(signal);
+    return true;
+  }
+  /** End the stand-in host, so the run that owns it can settle and clean up. */
+  die(): void {
+    this.emit('exit');
+  }
+}
+
+let current: FakeChild | StubbornChild | undefined;
 
 const { runHostMock } = vi.hoisted(() => ({ runHostMock: vi.fn() }));
 vi.mock('../src/orchestrator.js', async (importOriginal) => {
@@ -57,6 +75,7 @@ function flush(): Promise<void> {
 describe('noir run — the interrupt contract', () => {
   let stderr: MockInstance<typeof process.stderr.write>;
   let stdout: MockInstance<typeof process.stdout.write>;
+  let exit: MockInstance<typeof process.exit>;
   let cwd: MockInstance<typeof process.cwd>;
   let tmp: string;
   let prevExit: typeof process.exitCode;
@@ -67,8 +86,26 @@ describe('noir run — the interrupt contract', () => {
     current = undefined;
     tmp = mkdtempSync(join(tmpdir(), 'noir-run-interrupt-'));
     cwd = vi.spyOn(process, 'cwd').mockReturnValue(tmp);
-    stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    // A write's completion callback is honoured, because the path that leaves
+    // from a signal handler exits from it: a stub that swallowed the callback
+    // would hide the exit (and its envelope) entirely.
+    stderr = vi.spyOn(process.stderr, 'write').mockImplementation(((
+      _chunk: unknown,
+      cb?: () => void,
+    ) => {
+      if (typeof cb === 'function') cb();
+      return true;
+    }) as never);
+    stdout = vi.spyOn(process.stdout, 'write').mockImplementation(((
+      _chunk: unknown,
+      cb?: () => void,
+    ) => {
+      if (typeof cb === 'function') cb();
+      return true;
+    }) as never);
+    // Leaving really would end this test process, so the exit is observed and
+    // the run is asserted up to the point it happens.
+    exit = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
     runHostMock.mockReset();
     // A host that runs until something stops it, and reports the kill the way
     // the real orchestrator does (128 + the signal that ended it).
@@ -92,6 +129,7 @@ describe('noir run — the interrupt contract', () => {
   afterEach(() => {
     stderr.mockRestore();
     stdout.mockRestore();
+    exit.mockRestore();
     cwd.mockRestore();
     process.exitCode = prevExit;
     runHostMock.mockReset();
@@ -208,6 +246,93 @@ describe('noir run — the interrupt contract', () => {
     expect(stderrText()).toContain('interrupted · transcript: ');
     expect(stderrText()).not.toContain('failed to run');
     expect(stderrText()).not.toContain('No executable');
+  });
+
+  it('honours a second interrupt at once, and still writes the one --json envelope', async () => {
+    // A host that refuses the polite signal keeps the run live, so the SECOND
+    // interrupt is the one that ends it. Leaving there must not leave a machine
+    // consumer without an answer: one envelope, the same one the first interrupt
+    // would have produced — and the host forced, so nothing is left behind.
+    runHostMock.mockImplementationOnce(async (opts: RunHostOptions): Promise<RunHostResult> => {
+      const child = new StubbornChild();
+      current = child;
+      opts.onChild?.(child);
+      await new Promise<void>((resolve) => child.once('exit', resolve));
+      return {
+        exitCode: 143,
+        usage: { inputTokens: 0, outputTokens: 0, totalCostUsd: 0, numTurns: 0 },
+        eventCount: 0,
+        stderr: '',
+        isError: true,
+      };
+    });
+    // Not awaited yet: the host never dies on its own, so the run stays live —
+    // the second interrupt is what ends it, which is exactly what is asserted.
+    const listenersBefore = process.listenerCount('SIGINT');
+    const done = runCli(['run', 'why is the build slow', '--json']);
+    await flush();
+    expect(current).toBeDefined();
+
+    process.emit('SIGINT'); // stop the host politely
+    process.emit('SIGINT'); // and insist
+
+    // The forced kill lands, and the process leaves with the second signal's code.
+    expect(current?.signals).toEqual(['SIGTERM', 'SIGKILL']);
+    expect(exit).toHaveBeenCalledWith(130);
+
+    // One line on stdout, and it is the envelope: a scripted consumer gets its
+    // answer even when the interrupt that ended the run was the second one.
+    const lines = stdoutText()
+      .split('\n')
+      .filter((line) => line.length > 0);
+    expect(lines).toHaveLength(1);
+    const envelope = JSON.parse(lines[0] as string) as {
+      ok: boolean;
+      error: { code: number; message: string };
+    };
+    expect(envelope.ok).toBe(false);
+    expect(envelope.error.code).toBe(130);
+    expect(envelope.error.message).toContain('interrupted · transcript: ');
+
+    // Close the run the way the forced kill would, so it hands the process's
+    // own signal handling back — an interrupt handler left installed would
+    // answer for every later run in this process.
+    (current as StubbornChild).die();
+    await done;
+    expect(process.listenerCount('SIGINT')).toBe(listenersBefore);
+  });
+
+  it('honours a second interrupt without --json — the verdict and the exit code', async () => {
+    runHostMock.mockImplementationOnce(async (opts: RunHostOptions): Promise<RunHostResult> => {
+      const child = new StubbornChild();
+      current = child;
+      opts.onChild?.(child);
+      await new Promise<void>((resolve) => child.once('exit', resolve));
+      return {
+        exitCode: 143,
+        usage: { inputTokens: 0, outputTokens: 0, totalCostUsd: 0, numTurns: 0 },
+        eventCount: 0,
+        stderr: '',
+        isError: true,
+      };
+    });
+    const listenersBefore = process.listenerCount('SIGTERM');
+    const done = runCli(['run', 'why is the build slow']);
+    await flush();
+
+    process.emit('SIGTERM'); // stop the host politely
+    process.emit('SIGTERM'); // and insist
+
+    expect(current?.signals).toEqual(['SIGTERM', 'SIGKILL']);
+    expect(exit).toHaveBeenCalledWith(143);
+    expect(stderrText()).toContain('interrupted · transcript: ');
+    expect(stderrText()).not.toContain('failed (exit');
+    // Nothing extra on stdout: the answer stream was never a place for a verdict.
+    expect(stdoutText()).toBe('');
+
+    (current as StubbornChild).die();
+    await done;
+    expect(process.listenerCount('SIGTERM')).toBe(listenersBefore);
   });
 
   it('leaves a run that is never interrupted exactly as it was', async () => {
