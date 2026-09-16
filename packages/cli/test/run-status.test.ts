@@ -329,4 +329,11 @@ describe('hostStderrTail', () => {
   it('honors an explicit bound', () => {
     expect(hostStderrTail('a\nb\nc\n', 1)).toBe('… (2 earlier lines omitted)\nc');
   });
+
+  it('returns nothing for a non-positive bound', () => {
+    // `slice(-0)` is `slice(0)`: the bound would print the whole tail, which is
+    // the one thing the bound exists to prevent.
+    expect(hostStderrTail('a\nb\nc\n', 0)).toBe('');
+    expect(hostStderrTail('a\nb\nc\n', -1)).toBe('');
+  });
 });

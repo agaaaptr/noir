@@ -254,6 +254,10 @@ export class RunStatusLine {
  * redact and no value of Noir's to leak.
  */
 export function hostStderrTail(stderr: string, maxLines = HOST_STDERR_TAIL_LINES): string {
+  // A non-positive bound asks for no lines at all. `slice(-0)` is `slice(0)`,
+  // so without this an unbounded tail would be printed by the code that exists
+  // to bound it.
+  if (maxLines <= 0) return '';
   const lines = stderr.split('\n').map((line) => line.trimEnd());
   // A trailing newline produces one empty element that is not a line of output.
   while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
