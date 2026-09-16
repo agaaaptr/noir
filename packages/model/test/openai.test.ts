@@ -74,6 +74,16 @@ describe('openaiAdapter — request shape (blueprint D5: single-shot, no tools/s
     expect(mocks.ctorOpts[0]?.baseURL).toBe('https://gateway.example/v1');
   });
 
+  it('pins the hosted default baseURL when none is forwarded (OPENAI_BASE_URL is inert)', async () => {
+    // Pinned, never omitted: the SDK answers an OMITTED `baseURL` from
+    // OPENAI_BASE_URL, so leaving it out hands the endpoint to the ambient
+    // environment (or a committable `.noir/.env`). Mirrors the anthropic
+    // adapter, whose baseURL is pinned the same way.
+    mocks.createMock.mockResolvedValue({ choices: [{ message: { content: 'ok' } }] });
+    await openaiAdapter.complete(baseReq(), 'sk-test');
+    expect(mocks.ctorOpts[0]?.baseURL).toBe('https://api.openai.com/v1');
+  });
+
   it('forwards req.signal + maxRetries: 0 to the create call options (NFR-3 wall-clock bound)', async () => {
     // The SDK's `create` takes a SECOND options argument for per-request
     // signal / maxRetries. Unlike fetch, the SDK does not inherit the caller's

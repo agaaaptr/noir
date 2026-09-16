@@ -76,7 +76,9 @@ export const openaiAdapter: ProviderAdapter = {
     // anonymous `openai` block (no `apiKeyEnv`) cannot fall through to the SDK's
     // OWN env fallback (`OPENAI_API_KEY`) — that would be a silent paid call via
     // env presence, which is forbidden. Anonymous LOCAL endpoints belong to the
-    // dedicated `openai-compatible` adapter, not this one.
+    // dedicated `openai-compatible` adapter, not this one. This guards the
+    // CREDENTIAL only; the endpoint is pinned at the client below, so neither
+    // transport-affecting option is ever left for the environment to answer.
     if (!key) {
       return { ok: false, reason: 'openai: missing API key (set apiKeyEnv on the provider block)' };
     }
@@ -88,10 +90,13 @@ export const openaiAdapter: ProviderAdapter = {
       const sdk = (await import('openai')) as unknown as { default: OpenAISDK };
       const client = new sdk.default({
         apiKey: key, // the VALUE complete() resolved from process.env[apiKeyEnv]
-        // Honor a forwarded baseURL if present (lets this adapter target a
-        // custom OpenAI-shaped endpoint; the common local case uses the
-        // dedicated `openai-compatible` adapter instead).
-        ...(req.baseURL ? { baseURL: req.baseURL } : {}),
+        // Pin the endpoint explicitly, exactly as the anthropic adapter does:
+        // the SDK reads OPENAI_BASE_URL ONLY when `baseURL` is `undefined`, so
+        // omitting it would hand the endpoint to the ambient environment — a
+        // committable `.noir/.env` could then route every call to a host the
+        // config never named. A configured `baseURL` still wins; the hosted
+        // default (the SDK's own) is the fallback.
+        baseURL: req.baseURL ?? 'https://api.openai.com/v1',
         maxRetries: 0, // Never silently retry (bounded cost).
       });
 
