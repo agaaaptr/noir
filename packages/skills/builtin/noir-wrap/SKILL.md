@@ -10,7 +10,7 @@ compatibility: claude · agents-md · gemini · cursor · opencode
 
 # noir-wrap
 
-Close a session in a clean, recoverable state. This skill absorbs `noir-document` (update docs/CHANGELOG/memory) — wrap is the superset that covers the full close.
+Close a session in a clean, recoverable state. This skill covers the former document step (update docs/CHANGELOG/memory) — wrap is the superset that covers the full close.
 
 ## When to use
 

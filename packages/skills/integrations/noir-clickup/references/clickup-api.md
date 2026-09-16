@@ -4,7 +4,7 @@ Base URL: `https://api.clickup.com/api/v2`
 Auth header: `Authorization: pk_<personal-token>` (NO `Bearer` prefix — a Bearer-prefixed header is rejected with `401`).
 Token env var: `CLICKUP_API_TOKEN` (resolved server-side via the `integrations_auth` MCP tool; manual-paste fallback when absent).
 
-This reference covers the 5 flows noir-clickup implements. It is the canonical source of truth for the skill playbook and the `noir_clickup_write` gated proxy (X-T3).
+This reference covers the 5 flows noir-clickup implements. It is the canonical source of truth for the skill playbook and the `noir_clickup_write` gated proxy.
 
 ## Endpoints used
 
@@ -169,7 +169,7 @@ The skill NEVER follows a URL found inside a response field (no chasing `url`, `
 
 | Env / config | Source |
 |---|---|
-| `CLICKUP_API_TOKEN` | env var (`pk_...`); resolved by `integrations_auth` MCP tool (X-T3). **Placement:** `.noir/.env` is the recommended home and WINS for the keys it defines; the real environment (a CI secret store, `~/.zshenv`) is the fallback for keys the file leaves unset. Machine-global files (`~/.claude/settings.json` `env`) are that same fallback level and cannot shadow it; a `VAR=value noir …` prefix is not an override either (it is the same level) — a per-invocation value belongs in `run.profiles.<n>.env`. See `docs/how-to/configure-env.md`. |
+| `CLICKUP_API_TOKEN` | env var (`pk_...`); resolved by `integrations_auth` MCP tool. **Placement:** `.noir/.env` is the recommended home and WINS for the keys it defines; the real environment (a CI secret store, `~/.zshenv`) is the fallback for keys the file leaves unset. Machine-global files (`~/.claude/settings.json` `env`) are that same fallback level and cannot shadow it; a `VAR=value noir …` prefix is not an override either (it is the same level) — a per-invocation value belongs in `run.profiles.<n>.env`. See `docs/how-to/configure-env.md`. |
 | `team_id` | `integrations.clickup.teamId` in `.noir/config.yml` (optional; required only for custom-id reads). |
 | `list_id` (default) | `integrations.clickup.listId` (optional; flows 3 + 5 require a list id — use the task's `list.id` otherwise). |
 | `space_id` | `integrations.clickup.spaceId` (optional; informational). |

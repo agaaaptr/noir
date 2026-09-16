@@ -77,6 +77,10 @@ the **host** path; Noir's own model layer is configured in `config.yml` instead
 |---|---|---|---|
 | `ANTHROPIC_BASE_URL` | — | no | Base URL of an Anthropic-shaped gateway. Host-only: give the origin without the message path — the host appends it. Read by the host, never by Noir. |
 | `ANTHROPIC_AUTH_TOKEN` | — | no | The gateway credential, sent as `Authorization: Bearer`. Do not set it together with `ANTHROPIC_API_KEY` (sent as `x-api-key`) — the host treats both set at once as an auth conflict. |
+| `ANTHROPIC_API_KEY` | — | no | The other credential shape, sent as `x-api-key`. Do not set it together with `ANTHROPIC_AUTH_TOKEN` (sent as `Authorization: Bearer`) — the host treats both set at once as an auth conflict. |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | — | no | Remaps the `haiku` model alias to the id the gateway serves. Host-only: read by the host, never by Noir. |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | — | no | Remaps the `sonnet` model alias to the id the gateway serves. Host-only: read by the host, never by Noir. |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | — | no | Remaps the `opus` model alias to the id the gateway serves. Host-only: read by the host, never by Noir. |
 | `API_TIMEOUT_MS` | host default (Claude Code: `600000`) | no | Per-request timeout in milliseconds. A host variable passed through by inheritance — Noir never reads it. |
 
 ## Shell bridge (`noir run --command`)

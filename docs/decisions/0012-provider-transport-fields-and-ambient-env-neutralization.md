@@ -1,6 +1,6 @@
 # ADR-0012: Provider transport fields + ambient-env neutralization
 
-- **Status:** proposed
+- **Status:** Accepted
 - **Date:** 2026-09-14
 - **Scope:** `@noir-ai/model`, `@noir-ai/core` (config schema), `@noir-ai/cli` (`noir env`)
 - **Spec:** `docs/internal/specs/2026-09-14-env-templates-upgrade-provider-run-ux-design.md` §6
@@ -8,7 +8,7 @@
 ## Context
 
 Noir's model layer promises provider-explicit, no-silent-paid-call behavior: the provider is
-resolved only from explicit config, never from env-var presence. Two verified defects break
+resolved only from explicit config, never from env-var presence. Two verified defects broke
 that promise in opposite directions:
 
 1. **A decoy field.** `model.providers.anthropic.baseURL` is accepted by the config schema

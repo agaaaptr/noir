@@ -96,8 +96,9 @@ can follow:
 - `degraded: BM25-only` — the daemon was unreachable, so Noir fell back to a
   **read-only** in-process search over the same store. Keyword matching only;
   nothing was written. Start the daemon and re-run for the full ranking.
-- `(budget hit — results truncated)` — there were more hits than the token
-  budget allowed. Narrow the query or raise `context.budgetTokens`.
+- `(budget hit — results truncated)` — more hits were ranked than fit the
+  per-request token budget (about 4k tokens). Narrow the query so the best hits
+  come in under it.
 
 `--limit` caps the number of hits (default 10); an invalid value is a usage
 error (exit `2`) before anything touches the daemon.

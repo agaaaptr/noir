@@ -12,7 +12,7 @@ references:
 
 # noir-verifying
 
-Gather evidence before asserting success. Absorbs `noir-verify` and `noir-review` into one gate: run, read, verify, then claim done.
+Gather evidence before asserting success. Covers the former verify and review steps in one gate: run, read, verify, then claim done.
 
 ## When to use
 
