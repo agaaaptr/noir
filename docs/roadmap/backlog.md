@@ -36,7 +36,7 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 
 ## Env templates + `noir init --upgrade` completeness + provider gateways + `noir run` UX (2026-09-14 → 1.15.0)
 
-> **Packaged as 1.15.0 (2026-09-16); in the standard beta→stable flow — not yet published.** Spec `2026-09-14-env-templates-upgrade-provider-run-ux-design.md`; ADR-0012 (provider transport fields + ambient-env neutralization). Full gate green.
+> **Shipped 2026-09-16 as 1.15.0 (latest + beta).** Spec `2026-09-14-env-templates-upgrade-provider-run-ux-design.md`; ADR-0012 (provider transport fields + ambient-env neutralization). Full gate green.
 
 - ✅ **Env template split** — RESOLVED: `.noir/.env` is a short, all-comment, sectioned activation sheet; `.noir/.env.example` is the detailed reference. Both carried to existing projects by the `1.1.0 → 1.2.0` scaffold migration (unedited seeds regenerated, edited seeds conflict-prompted).
 - ✅ **`refreshIfStale` for doc-only seeds** — RESOLVED: a byte-exact template-history registry (`isStaleSeed`) decides regenerate / preserve / conflict-prompt per seed on `noir init --upgrade` and `noir sync`; an unreadable seed is preserved rather than aborting the upgrade, and `noir doctor` gains a `doc seed` drift row naming `.noir/.env.example`.
