@@ -24,6 +24,15 @@ export {
   runAssertions,
 } from './evals.js';
 export {
+  checkHygiene,
+  HYGIENE_RULES,
+  type HygieneFinding,
+  type HygieneKind,
+  type HygieneRule,
+  type HygieneTier,
+  MAX_COMMENT_BLOCK_LINES,
+} from './hygiene.js';
+export {
   IntegrationAuthSchema,
   IntegrationDeclarationSchema,
   IntegrationMcpSchema,
@@ -43,7 +52,7 @@ export {
 } from './quality.js';
 export type { SkillRegistryEntry } from './registry.js';
 export { buildRegistry, NOIR_NAMESPACE, registryByCategory } from './registry.js';
-export { FORBIDDEN_RESIDUE } from './residue.js';
+export { FORBIDDEN_RESIDUE, RESIDUE_RULES } from './residue.js';
 export type {
   BuiltinReference,
   BuiltinSkill,
