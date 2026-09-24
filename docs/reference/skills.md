@@ -1,6 +1,6 @@
 # Builtin Skills
 
-> Auto-generated from `packages/skills/builtin/*/SKILL.md` and `integrations/*/SKILL.md`.
+> Auto-generated from `packages/skills/builtin/*/SKILL.md` and `packages/skills/integrations/*/SKILL.md`.
 
 **28 skills** (27 builtins + 1 integration)
 

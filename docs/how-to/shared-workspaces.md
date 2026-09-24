@@ -129,9 +129,10 @@ present it gets a `401` refusal naming the token file.
 - The token is minted **fresh on every daemon start** and written `0600` to
   `~/.noir/daemons/<workspace-name>.token`. A token therefore never outlives the
   daemon that issued it.
-- **The bridge is the only reader.** It reads the token at connect time and
-  sends it in the `Authorization` header; the token never reaches a config file,
-  a command line, or a log. You never copy it anywhere.
+- **The bridge and the CLI's own workspace commands are the readers.** Both read
+  the token file at connect time and send it in the `Authorization` header; the
+  token never reaches a config file, a command line, or a log. You never copy it
+  anywhere.
 - `/health` stays **token-free**, so liveness probes work — which is exactly
   what lets the bridge and `noir workspace status` check the daemon without a
   credential. Its body carries no secret.
