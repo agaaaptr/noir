@@ -146,9 +146,12 @@ export function atomicWriteFile(path: string, data: string, opts: AtomicWriteOpt
   // final path with the umask default (a credential readable by others). The
   // temp is unique per write, so a requested mode always lands on CREATION —
   // which is why it applies to a rewrite too, not just to a first write.
-  // `mode` on writeFileSync is masked by umask, but 0o600 has no group/other
-  // bits, so it survives any umask. On Windows the argument is ignored
-  // (permissions are ACL-based), so callers must not assert a POSIX mode there.
+  // `mode` on writeFileSync is masked by the process umask, so the requested
+  // bits are an upper bound rather than a guarantee: 0o600 normally lands
+  // owner-only because the default umask (0o022) clears only group and other
+  // bits, but an owner-stripping umask (say 0o200) narrows the owner bits too.
+  // On Windows the argument is ignored (permissions are ACL-based), so callers
+  // must not assert a POSIX mode there.
   writeFileSync(
     tmp,
     data,
