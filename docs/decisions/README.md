@@ -22,3 +22,4 @@ ADRs record *why* a choice was made — not *what* the code does (the skills the
 - [ADR-0010 — Per-project daemon records, a real `daemon.port`, and HTTP-only auth](0010-per-project-daemon-records-and-http-auth.md)
 - [ADR-0011 — `.noir/.env` precedence, provenance, and the configuration doctrine](0011-noir-env-precedence-and-doctrine.md)
 - [ADR-0012 — Provider transport fields and ambient-env neutralization](0012-provider-transport-fields-and-ambient-env-neutralization.md)
+- [ADR-0013 — Workspace transport via the stdio bridge, and 400 for a misdirected workspace URL](0013-workspace-transport-and-daemon-routing.md)
