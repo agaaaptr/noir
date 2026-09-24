@@ -15,10 +15,10 @@ Noir is a host-agnostic, spec-driven-workflow + native-context + cross-session-m
 
   ```bash
   pnpm install
-  pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm docs:validate
+  pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm docs:validate && pnpm hygiene:gate
   ```
 
-  Do not claim a change is done until all five are green. The full test suite runs **offline/free** — never make it depend on a network call or a paid key.
+  Do not claim a change is done until all six are green. The full test suite runs **offline/free** — never make it depend on a network call or a paid key.
 
 - **Don't touch `packages/` source unless that's the task.** Doc-only work (READMEs, ADRs, roadmap) should not edit package source.
 

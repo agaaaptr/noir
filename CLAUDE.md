@@ -23,6 +23,7 @@ pnpm lint               # biome check .  (use pnpm format to autofix)
 pnpm test               # build + vitest run (offline/free — never needs network or a key)
 pnpm docs:validate      # broken links + anchors, stale version refs, half-generated stubs
 pnpm docs:generate      # regenerate managed docs blocks + reference docs
+pnpm hygiene:gate       # output-hygiene gate (fail-tier blocks; same scan `noir doctor` reports)
 ```
 
 Run a single test file:
@@ -31,7 +32,7 @@ Run a single test file:
 pnpm vitest run packages/store/test/readonly.test.ts --testTimeout=40000
 ```
 
-The full gate (what CI enforces, in order): `pnpm lint` → `pnpm build` → `pnpm typecheck` → `pnpm test` → `pnpm docs:validate`. **Do not claim a change is done until all five are green.**
+The full gate (what CI enforces, in order): `pnpm lint` → `pnpm build` → `pnpm typecheck` → `pnpm test` → `pnpm docs:validate` → `pnpm hygiene:gate`. **Do not claim a change is done until all six are green.**
 
 ## Architecture (big picture)
 
@@ -75,7 +76,7 @@ Noir ships two channels in parallel from git tags: `vX.Y.Z-beta.N` (pushed on `d
 ### Prerequisites
 - `gh` authenticated, npm logged in (granular automation token), `NPM_TOKEN` GitHub secret set.
 - Local tree clean, on `develop`, HEAD pushed to origin.
-- Full gate green: `pnpm lint → build → typecheck → test → docs:validate`.
+- Full gate green: `pnpm lint → build → typecheck → test → docs:validate → hygiene:gate`.
 - `pnpm release:compute <version> beta` and `pnpm release:compute <version> stable` to confirm no version collision on npm.
 
 ### Full checklist (run each command — do not skip)
@@ -90,7 +91,7 @@ node scripts/bump-version.mjs X.Y.Z    # bump all 11 packages
 # Edit docs/roadmap/roadmap.manifest.yaml: update package note
 
 # 2. GATE + COMMIT + PUSH
-pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm docs:validate
+pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm docs:validate && pnpm hygiene:gate
 git add -A && git commit -m "chore(release): vX.Y.Z + docs sync"
 git push origin develop
 
