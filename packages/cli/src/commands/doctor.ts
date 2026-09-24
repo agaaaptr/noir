@@ -866,12 +866,26 @@ export function checkNestedNoir(
 // the planning corpus, and formats the rules cannot read (JSON, an image
 // fixture) are out of scope; a file states its own exemption with the marker
 // the rules honour, so no path list is kept here.
+//
+// The check runs only where the layout it is written for exists: a package
+// tree, `scripts/`, or `docs/`. Anywhere else — an ordinary application
+// repository, which is a README and little more — it reports `ok` and reads
+// nothing, root documents included. These rules judge the text this project
+// writes, not the prose of whoever happened to run the command.
 // ---------------------------------------------------------------------------
 
 /** How many findings the detail cell names before it reports the rest as a
  *  count. A tree that has drifted can carry hundreds, and the row is a signal
  *  to act on, not an inventory; the counts still cover every finding. */
 export const HYGIENE_FINDING_CAP = 5;
+
+/** The largest file the scan reads. A file this big is generated data or a
+ *  bundle rather than the source and prose the rules are written for. */
+export const HYGIENE_MAX_FILE_BYTES = 512 * 1024;
+
+/** The most files one scan reads, so the check stays responsive in a tree far
+ *  larger than this repository's. Reaching it is reported in the row. */
+export const HYGIENE_MAX_FILES = 2000;
 
 /** The source extensions the check reads. Anything else is skipped: the rules
  *  are written for comments and for prose, and a data format (JSON, YAML) has
@@ -917,10 +931,22 @@ export interface HygieneScanFinding {
 export interface HygieneScanResult {
   /** Files read. */
   scanned: number;
+  /** Files the scan did not read because they exceed the size cap. */
+  skipped: number;
+  /** True when the file cap stopped the scan before it read the whole tree, so
+   *  the counts below describe a prefix of it. */
+  truncated: boolean;
   /** Every finding, failures first, then in reading order across the tree. */
   findings: HygieneScanFinding[];
   fail: number;
   warn: number;
+}
+
+/** A walk in progress: the files it has accepted, and whether the file cap has
+ *  stopped it. */
+interface HygieneWalk {
+  files: HygieneScanFile[];
+  truncated: boolean;
 }
 
 /** `readdirSync` entries, or none when the directory does not exist. */
@@ -932,6 +958,15 @@ function readDirEntries(dir: string): Dirent[] {
   }
 }
 
+/** Whether `path` is an existing directory. */
+function isDirectory(path: string): boolean {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 /** The kind of text a path holds, or `null` when the rules cannot read it. */
 function hygieneKindOf(path: string): HygieneKind | null {
   if (HYGIENE_MARKDOWN_EXTENSIONS.test(path)) return 'markdown';
@@ -939,24 +974,55 @@ function hygieneKindOf(path: string): HygieneKind | null {
   return null;
 }
 
-/** Offers every readable file under `root`/`relDir` to `add`. Symlinked
+/** The layout this check exists for: a package source or test tree, `scripts/`,
+ *  or a documentation tree. A repository that has none of them is not the
+ *  audience of these rules, and nothing is read there. */
+function hasScannableLayout(root: string): boolean {
+  if (isDirectory(join(root, 'docs')) || isDirectory(join(root, 'scripts'))) return true;
+  for (const entry of readDirEntries(join(root, 'packages'))) {
+    if (!entry.isDirectory()) continue;
+    if (isDirectory(join(root, 'packages', entry.name, 'src'))) return true;
+    if (isDirectory(join(root, 'packages', entry.name, 'test'))) return true;
+  }
+  return false;
+}
+
+/** Adds `rel` to the walk when it is a file the rules can read and the walk has
+ *  room for it. A dot-file is never read (a dot-directory is skipped by the
+ *  walk itself), and once the file cap is reached the walk records the
+ *  truncation instead of adding more. */
+function addHygieneFile(rel: string, walk: HygieneWalk): void {
+  const name = rel.slice(rel.lastIndexOf('/') + 1);
+  if (name.startsWith('.') || HYGIENE_EXCLUDED_FILES.has(name)) return;
+  const kind = hygieneKindOf(rel);
+  if (kind === null) return;
+  if (walk.files.length >= HYGIENE_MAX_FILES) {
+    walk.truncated = true;
+    return;
+  }
+  walk.files.push({ path: rel, kind });
+}
+
+/** Offers every readable file under `root`/`relDir` to the walk. Symlinked
  *  directories are not followed: a link out of the tree is not the
  *  repository's own source, and a link to an ancestor would not terminate. */
 function walkScannable(
   root: string,
   relDir: string,
   skip: ReadonlySet<string>,
-  add: (rel: string) => void,
+  walk: HygieneWalk,
 ): void {
+  if (walk.truncated) return;
   for (const entry of readDirEntries(join(root, relDir))) {
+    if (walk.truncated) return;
     const rel = `${relDir}/${entry.name}`;
     if (entry.isDirectory()) {
       if (HYGIENE_SKIP_DIRS.has(entry.name) || entry.name.startsWith('.') || skip.has(rel)) {
         continue;
       }
-      walkScannable(root, rel, skip, add);
+      walkScannable(root, rel, skip, walk);
     } else if (entry.isFile()) {
-      add(rel);
+      addHygieneFile(rel, walk);
     }
   }
 }
@@ -966,55 +1032,68 @@ const NO_SKIP_DIRS: ReadonlySet<string> = new Set();
 /** The files the check reads: documents at the root and under `docs/` (minus
  *  the planning corpus), the repository-authored agent skills, each package's
  *  sources and tests, and `scripts/`. Sorted by path so a report is the same on
- *  every run. */
-function collectHygieneFiles(root: string): HygieneScanFile[] {
-  const files: HygieneScanFile[] = [];
-  const add = (rel: string): void => {
-    const name = rel.slice(rel.lastIndexOf('/') + 1);
-    if (HYGIENE_EXCLUDED_FILES.has(name)) return;
-    const kind = hygieneKindOf(rel);
-    if (kind !== null) files.push({ path: rel, kind });
-  };
+ *  every run. Called only where {@link hasScannableLayout} holds. */
+function collectHygieneFiles(root: string): HygieneWalk {
+  const walk: HygieneWalk = { files: [], truncated: false };
   for (const entry of readDirEntries(root)) {
-    if (entry.isFile()) add(entry.name);
+    if (entry.isFile()) addHygieneFile(entry.name, walk);
   }
-  walkScannable(root, 'docs', HYGIENE_EXCLUDED_DIRS, add);
-  walkScannable(root, '.claude/skills', NO_SKIP_DIRS, add);
+  walkScannable(root, 'docs', HYGIENE_EXCLUDED_DIRS, walk);
+  walkScannable(root, '.claude/skills', NO_SKIP_DIRS, walk);
   for (const entry of readDirEntries(join(root, 'packages'))) {
     if (!entry.isDirectory()) continue;
-    walkScannable(root, `packages/${entry.name}/src`, NO_SKIP_DIRS, add);
-    walkScannable(root, `packages/${entry.name}/test`, NO_SKIP_DIRS, add);
+    walkScannable(root, `packages/${entry.name}/src`, NO_SKIP_DIRS, walk);
+    walkScannable(root, `packages/${entry.name}/test`, NO_SKIP_DIRS, walk);
   }
-  walkScannable(root, 'scripts', NO_SKIP_DIRS, add);
-  files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
-  return files;
+  walkScannable(root, 'scripts', NO_SKIP_DIRS, walk);
+  walk.files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  return walk;
 }
 
-/** The report line: the counts, the locations that carry them, and how many
- *  the cap left out. Failures are named before warnings, so a truncated list
- *  still shows what blocks. */
+/** What the scan left out, in one parenthesis. Empty when it left out nothing,
+ *  so a complete report carries no note. */
+function hygieneOmissions(result: HygieneScanResult): string {
+  const notes: string[] = [];
+  if (result.skipped > 0) {
+    notes.push(
+      `${result.skipped} file${result.skipped === 1 ? '' : 's'} over ${HYGIENE_MAX_FILE_BYTES / 1024} KiB skipped`,
+    );
+  }
+  if (result.truncated) notes.push(`stopped at ${HYGIENE_MAX_FILES} files`);
+  return notes.length > 0 ? ` (${notes.join('; ')})` : '';
+}
+
+/** The report line: the counts, the locations that carry them, how many the cap
+ *  left out, and what the scan itself omitted. Failures are named before
+ *  warnings, so a truncated list still shows what blocks. */
 function hygieneDetail(result: HygieneScanResult): string {
+  const omitted = hygieneOmissions(result);
   if (result.scanned === 0) {
-    return 'nothing to scan (no packages/*/src, packages/*/test, scripts/ or documents found)';
+    return `nothing to scan (no packages/*/src, packages/*/test, scripts/ or documents found)${omitted}`;
   }
   if (result.findings.length === 0) {
-    return `clean — ${result.scanned} file${result.scanned === 1 ? '' : 's'} scanned`;
+    return `clean — ${result.scanned} file${result.scanned === 1 ? '' : 's'} scanned${omitted}`;
   }
   const files = new Set(result.findings.map((f) => f.path)).size;
   const named = result.findings.slice(0, HYGIENE_FINDING_CAP);
-  const omitted = result.findings.length - named.length;
+  const hidden = result.findings.length - named.length;
   const where = named.map((f) => `${f.path}:${f.line} ${f.id}`).join('; ');
-  return `${result.fail} fail, ${result.warn} warn in ${files} file${files === 1 ? '' : 's'} — ${where}${omitted > 0 ? ` (+${omitted} more)` : ''}`;
+  return `${result.fail} fail, ${result.warn} warn in ${files} file${files === 1 ? '' : 's'} — ${where}${hidden > 0 ? ` (+${hidden} more)` : ''}${omitted}`;
 }
 
 /**
  * Reads the repository's own source and documents through `checkHygiene` and
  * pushes one row: `fail` when a fail-tier pattern is present, `warn` when only
- * warn-tier patterns are, `ok` when the tree is clean.
+ * warn-tier patterns are, `ok` when the tree is clean or is not the tree this
+ * check is written for.
+ *
+ * Nothing is read unless {@link hasScannableLayout} holds, so a repository
+ * without the layout gets an `ok` row and pays one `stat` per candidate.
  *
  * Each file is read once, and a file that carries the exemption marker comes
  * back from `checkHygiene` with no findings at all, so the marker costs one
- * scan of a file's text rather than a path list kept here.
+ * scan of a file's text rather than a path list kept here. Files past the size
+ * cap and files past the count cap are left out; the row says so.
  *
  * The check never throws and never writes: an unreadable file is skipped, and
  * the commands that repair the tree (`noir skills lint`, the repository's own
@@ -1022,19 +1101,37 @@ function hygieneDetail(result: HygieneScanResult): string {
  * callers that want more than the row.
  */
 export function checkOutputHygiene(checks: CheckResult[], root: string): HygieneScanResult {
-  const files = collectHygieneFiles(root);
+  const empty: HygieneScanResult = {
+    scanned: 0,
+    skipped: 0,
+    truncated: false,
+    findings: [],
+    fail: 0,
+    warn: 0,
+  };
+  if (!hasScannableLayout(root)) {
+    checks.push({ name: 'output hygiene', status: 'ok', detail: hygieneDetail(empty) });
+    return empty;
+  }
+  const walk = collectHygieneFiles(root);
   const findings: HygieneScanFinding[] = [];
   let scanned = 0;
-  for (const file of files) {
-    let text: string;
+  let skipped = 0;
+  for (const file of walk.files) {
+    const abs = join(root, file.path);
     try {
-      text = readFileSync(join(root, file.path), 'utf8');
+      if (statSync(abs).size > HYGIENE_MAX_FILE_BYTES) {
+        skipped++;
+        continue;
+      }
+      const text = readFileSync(abs, 'utf8');
+      scanned++;
+      for (const found of checkHygiene(text, file.kind)) {
+        findings.push({ path: file.path, line: found.line, id: found.id, tier: found.tier });
+      }
     } catch {
-      continue;
-    }
-    scanned++;
-    for (const found of checkHygiene(text, file.kind)) {
-      findings.push({ path: file.path, line: found.line, id: found.id, tier: found.tier });
+      // An unreadable path says nothing about hygiene — the store check owns
+      // broken files — so the scan moves on to the next one.
     }
   }
   findings.sort((a, b) => {
@@ -1043,7 +1140,14 @@ export function checkOutputHygiene(checks: CheckResult[], root: string): Hygiene
     return a.line - b.line;
   });
   const fail = findings.filter((f) => f.tier === 'fail').length;
-  const result: HygieneScanResult = { scanned, findings, fail, warn: findings.length - fail };
+  const result: HygieneScanResult = {
+    scanned,
+    skipped,
+    truncated: walk.truncated,
+    findings,
+    fail,
+    warn: findings.length - fail,
+  };
   checks.push({
     name: 'output hygiene',
     status: fail > 0 ? 'fail' : result.warn > 0 ? 'warn' : 'ok',

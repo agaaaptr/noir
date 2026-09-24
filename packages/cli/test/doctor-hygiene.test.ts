@@ -30,6 +30,8 @@ import {
   checkOutputHygiene,
   doctor,
   HYGIENE_FINDING_CAP,
+  HYGIENE_MAX_FILE_BYTES,
+  HYGIENE_MAX_FILES,
 } from '../src/commands/doctor.js';
 
 /** A divider drawn in punctuation around `label` — a fail-tier banner. */
@@ -83,11 +85,55 @@ describe('checkOutputHygiene', () => {
   });
 
   it('reports a failing check for a fail-tier pattern in a document', () => {
+    write('packages/a/src/clean.ts', 'export const a = 1;\n');
     write('README.md', `${emojiHeading()}A change log.\n`);
     const { row } = run();
     expect(row.status).toBe('fail');
     expect(row.detail).toContain('README.md:1');
     expect(row.detail).toContain('decorative-emoji-doc');
+  });
+
+  it('scans nothing and passes when the repository has none of the layout the check is for', () => {
+    // The everyday case: an application repository that is a README and little
+    // else. Its prose is not what these rules judge, so the check reads nothing.
+    write('README.md', `${emojiHeading()}A change log.\n`);
+    const { row, fail, warn } = run();
+    expect(row.status).toBe('ok');
+    expect(row.detail).toMatch(/nothing to scan/);
+    expect(fail).toBe(0);
+    expect(warn).toBe(0);
+  });
+
+  it('skips dot-files, which are tool configuration rather than repository source', () => {
+    write('scripts/build.sh', 'echo build\n');
+    write('.eslintrc.cjs', `${banner('rules')}module.exports = {};\n`);
+    const { row } = run();
+    expect(row.status).toBe('ok');
+  });
+
+  it('skips files over the size cap and says so', () => {
+    write('scripts/build.sh', 'echo build\n');
+    write(
+      'scripts/huge.ts',
+      `${banner('huge')}${'x'.repeat(HYGIENE_MAX_FILE_BYTES)}\nexport const big = 1;\n`,
+    );
+    const { row, fail } = run();
+    expect(fail).toBe(0);
+    expect(row.status).toBe('ok');
+    expect(row.detail).toContain('1 file over');
+    expect(row.detail).toContain('skipped');
+  });
+
+  it('stops at the file cap and says the scan was truncated', () => {
+    mkdirSync(join(root, 'packages', 'a', 'src'), { recursive: true });
+    // One more file than the cap, every one of them a finding, so the row is
+    // the same whichever file the cap drops.
+    for (let i = 0; i <= HYGIENE_MAX_FILES; i++) {
+      writeFileSync(join(root, 'packages', 'a', 'src', `f-${i}.ts`), banner(`f${i}`));
+    }
+    const { row } = run();
+    expect(row.status).toBe('fail');
+    expect(row.detail).toContain(`stopped at ${HYGIENE_MAX_FILES} files`);
   });
 
   it('reports a failing check for a forbidden residue token', () => {
