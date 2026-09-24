@@ -406,21 +406,16 @@ function formatCell(value: unknown): string {
 export interface DefinitionRow {
   /** Field label (left column). */
   label: string;
-  /** Field value; coerced to a string the same way table cells are. */
+  /** Field value; passed through unchanged so the table formats it exactly once. */
   value: unknown;
 }
 
 export function definitionList(rows: readonly DefinitionRow[], opts: CliOptions = {}): void {
   table(
-    rows.map((r) => ({ Field: r.label, Value: formatCell(r.value) })),
+    rows.map((r) => ({ Field: r.label, Value: r.value })),
     ['Field', 'Value'],
     opts,
   );
-}
-
-/** Render a single `label: value` line to stderr (human only). */
-export function kv(label: string, value: unknown, opts: CliOptions = {}): void {
-  log(`${c.bold(label)}: ${formatCell(value)}`, opts);
 }
 
 // ---------------------------------------------------------------------------
