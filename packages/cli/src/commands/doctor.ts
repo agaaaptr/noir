@@ -353,6 +353,52 @@ async function checkStore(
 const ENV_REFUSAL_PREFIX = '.noir/.env: refusing to load';
 
 /**
+ * Why a `.noir/.env` is readable beyond its owner — the two causes the permission
+ * advisory tells apart.
+ *
+ * `legacy` — nothing has changed the file's mode since its contents were last
+ * written, so the mode is the one the file was created with. Seeding this file
+ * owner-only arrived in Noir 1.14.0, so a project carried over from an earlier
+ * version (or a file created by hand, or one delivered by a clone) simply came
+ * this way. The reader did nothing wrong.
+ *
+ * `changed` — the mode was altered after the contents were last written: a
+ * `chmod`, a `chown`, or a restore that re-applied metadata.
+ */
+type EnvModeCause = 'legacy' | 'changed';
+
+/**
+ * Which cause left `st`'s file readable beyond its owner.
+ *
+ * POSIX stamps `mtime` only when the contents change, and `ctime` on every inode
+ * change — a `chmod` and a `chown` included — so equal timestamps mean the mode
+ * has not been touched since the contents were written, and a newer `ctime` means
+ * something set it afterwards. That is the whole of what the file can say about
+ * its own history: a file rewritten in place AFTER someone loosened its mode
+ * re-stamps both times and is read as `legacy` again.
+ */
+function envModeCause(st: Stats): EnvModeCause {
+  return st.ctimeMs > st.mtimeMs ? 'changed' : 'legacy';
+}
+
+/** A mode as the owner-only contract spells it: four octal digits (`0600`). */
+function octalMode(mode: number): string {
+  return mode.toString(8).padStart(4, '0');
+}
+
+/**
+ * The permission advisory for a file that is not owner-only: the mode observed,
+ * the remedy, and why the file is in that state — the remedy comes before the
+ * cause, because a long detail is the first thing a narrow table truncates.
+ */
+function describeEnvMode(cause: EnvModeCause, mode: number): string {
+  const lead = `is ${octalMode(mode)} — accessible to other accounts; run \`noir sync\` (or \`chmod 600 .noir/.env\`) to make it owner-only.`;
+  return cause === 'legacy'
+    ? `${lead} Nothing has changed its mode since the file was written, so the file predates the owner-only contract (an older Noir seeded it, a clone delivered it, or it was created by hand) — this is not a change you made.`
+    : `${lead} Its mode was changed after the file was written (a \`chmod\`, a \`chown\`, or a restore that re-applied metadata), so no older Noir left it this way.`;
+}
+
+/**
  * `.noir/.env` rows (names only, never values).
  *
  * Three concerns, in the order the user should read them:
@@ -365,7 +411,9 @@ const ENV_REFUSAL_PREFIX = '.noir/.env: refusing to load';
  *      loader, which refuses before it even parses (so it emits no other
  *      diagnostic either).
  *   2. PERMISSION advisory — a group/world-readable file can leak tokens
- *      (ssh/aws-credentials convention). Warn, never fail.
+ *      (ssh/aws-credentials convention). Warn, never fail. The row names the
+ *      mode it observed and whether the file predates the owner-only contract,
+ *      so a file an older Noir seeded is not reported as the reader's own doing.
  *   3. PROVENANCE — one `ok` row per key the file DEFINES, naming the side that
  *      won. The file is the user's own short list, so this is not an
  *      enumeration of the environment (see `noir env` for the curated view);
@@ -388,15 +436,20 @@ function checkNoirEnv(checks: CheckResult[], root: string, loaded: LoadedEnv): v
     return;
   }
   const mode = st.mode & 0o777;
+  // Owner-only is the contract, so ANY group or other bit is exposure to another
+  // account — the same predicate the heal uses, which is why a row that warns here
+  // is a row the next `init`/`sync` tightens. After that heal the file is 0600,
+  // this row is `ok`, and the loader's matching advisory stays silent: neither
+  // repeats once the file is owner-only.
   const tooOpen = (st.mode & 0o077) !== 0;
   checks.push(
     tooOpen
       ? {
           name: 'noir-env',
           status: 'warn',
-          detail: `${path} is ${mode.toString(8)} — readable by others; run chmod 600`,
+          detail: `${path} ${describeEnvMode(envModeCause(st), mode)}`,
         }
-      : { name: 'noir-env', status: 'ok', detail: `${path} permissions ok (${mode.toString(8)})` },
+      : { name: 'noir-env', status: 'ok', detail: `${path} permissions ok (${octalMode(mode)})` },
   );
   // Provenance rows. Named `noir-env:<KEY>` so they group under the permission
   // row in the table and stay uniquely addressable in the `--json` payload.
