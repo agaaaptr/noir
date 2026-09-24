@@ -50,6 +50,7 @@ import {
   warn,
 } from '../output.js';
 import { badge } from '../theme.js';
+import { truncateToWidth } from '../width.js';
 
 /** Options accepted by every `task` sub-command (globals + daemon knobs). */
 export interface TaskOptions extends CliOptions, DaemonClientOptions {}
@@ -807,10 +808,7 @@ export async function taskResearchRecord(opts: TaskResearchRecordOptions): Promi
     process.stdout.write(`${JSON.stringify({ ok: true, data: res })}\n`);
     return;
   }
-  success(
-    `research recorded → ${opts.type}: ${opts.text.slice(0, 80)}${opts.text.length > 80 ? '…' : ''}`,
-    opts,
-  );
+  success(`research recorded → ${opts.type}: ${truncateToWidth(opts.text, 80)}`, opts);
 }
 // ---------------------------------------------------------------------------
 // `noir task decompose <capability-id>`  → draft a SlicePlan

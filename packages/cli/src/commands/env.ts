@@ -34,6 +34,7 @@
 import { loadNoirEnv, loadProjectInfo } from '@noir-ai/core';
 import { resolveModelConfig } from '@noir-ai/model';
 import { type CliOptions, info, json, table } from '../output.js';
+import { truncateToWidth } from '../width.js';
 
 /**
  * Ambient (environment-only) names worth reporting: the Noir-relevant keys a
@@ -142,7 +143,9 @@ const SHORT_VALUE_MAX = 8;
 
 function redactShape(value: string): string {
   if (value.length <= SHORT_VALUE_MAX) return `…(${value.length})`;
-  return `${value.slice(0, 3)}…(${value.length})`;
+  // Three columns of the value, taken through the shared width module: an index
+  // slice could cut a surrogate pair in half and print a broken glyph.
+  return `${truncateToWidth(value, 3, '')}…(${value.length})`;
 }
 
 /**

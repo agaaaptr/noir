@@ -26,6 +26,7 @@ import {
 } from '@noir-ai/skills';
 import { preservedStaleLine } from '../init.js';
 import { type CliOptions, EXIT, fail, info, log, table, warn } from '../output.js';
+import { truncateToWidth } from '../width.js';
 
 /** Options accepted by `skills` sub-commands (the global flags only). */
 export interface SkillsOptions extends CliOptions {}
@@ -103,22 +104,6 @@ function toRow(s: BuiltinSkill, kind: 'builtin' | 'integration' = 'builtin'): Sk
   return { name: s.name, category, description, kind, status };
 }
 
-/**
- * Truncate `text` to `max` chars on a word boundary for dense table cells. This
- * is DISPLAY-ONLY for the human table; the full description is always carried
- * verbatim in the `--json` payload. (Distinct from the context engine's
- * "never truncate the retrieval DATA" rule — that governs search snippets,
- * not table formatting.)
- */
-function truncate(text: string, max: number): string {
-  if (text.length <= max) return text;
-  const slice = text.slice(0, Math.max(0, max - 1));
-  // Cut at the last whitespace inside the slice so we don't split a word.
-  const boundary = slice.lastIndexOf(' ');
-  const head = boundary > 0 ? slice.slice(0, boundary) : slice;
-  return `${head.trimEnd()}…`;
-}
-
 // ---------------------------------------------------------------------------
 // `noir skills list`
 // ---------------------------------------------------------------------------
@@ -173,7 +158,9 @@ export async function skillsList(opts: SkillsOptions): Promise<void> {
       Kind: r.kind,
       Category: r.category,
       Status: r.status,
-      Description: truncate(r.description, 80),
+      // Display-only cut for the dense table cell; the `--json` payload always
+      // carries the description whole (search snippets must never be truncated).
+      Description: truncateToWidth(r.description, 80),
     })),
     ['Skill', 'Kind', 'Category', 'Status', 'Description'],
     opts,

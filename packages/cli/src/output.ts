@@ -20,6 +20,7 @@ import Table from 'cli-table3';
 import { CommanderError } from 'commander';
 import ora, { type Ora } from 'ora';
 import { c, isCiEnv, terminalWidth } from './theme.js';
+import { displayWidth, truncateMiddle, truncateToWidth } from './width.js';
 
 // ---------------------------------------------------------------------------
 // Exit-code contract + error types
@@ -200,8 +201,11 @@ export function tip(msg: string, opts: CliOptions = {}): void {
 // PRE-COLOR the header strings ourselves via `theme.c` (picocolors). Result:
 // the header, border, and body all strip consistently under NO_COLOR / non-TTY,
 // because picocolors is the SOLE color authority. Responsive `colWidths` are
-// computed from `terminalWidth()` so tables never overflow; `wordWrap` keeps
-// free-text cells readable, and `truncate: '…'` caps any single over-long token.
+// measured in DISPLAY columns (see `./width.js`) so a coloured or wide cell is
+// allocated the space it actually draws, and cells too long for their column are
+// cut by that same module rather than by cli-table3's code-unit arithmetic.
+// `wordWrap` keeps free-text cells readable; `truncate: '…'` is the final
+// backstop for a long token inside a wrapped cell.
 // ---------------------------------------------------------------------------
 export function table(
   rows: readonly Record<string, unknown>[],
@@ -213,17 +217,18 @@ export function table(
     info('(no rows)', opts);
     return;
   }
+  const widths = computeColWidths(rows, cols);
   const t = new Table({
     head: cols.map((col) => c.bold(c.info(col))),
     // Empty arrays ⇒ cli-table3 applies NO @colors/colors wrap (neither the
     // default red header nor a colored border). All color is ours, via theme.
     style: { head: [], border: [] },
-    colWidths: computeColWidths(rows, cols),
+    colWidths: widths,
     wordWrap: true,
     truncate: '…',
   });
   for (const row of rows) {
-    t.push(cols.map((col) => formatCell(row[col])));
+    t.push(cols.map((col, i) => truncateCell(row[col], (widths[i] ?? 0) - 2)));
   }
   process.stderr.write(`${t.toString()}\n`);
 }
@@ -232,8 +237,8 @@ export function table(
  * Compute per-column widths (cli-table3 `colWidths`, which INCLUDE each column's
  * 2 padding chars) that fit `terminalWidth()`. Strategy:
  *
- *   1. Measure each column's NATURAL content width (longest cell, at least the
- *      header label so a header never wraps/truncates).
+ *   1. Measure each column's NATURAL content width in DISPLAY columns (longest
+ *      cell, at least the header label so a header never wraps/truncates).
  *   2. If the natural total fits, use it as-is — every cell renders whole.
  *   3. Otherwise GREEDILY TRIM ONLY THE WIDEST column (down to its header width)
  *      until the row fits. Narrow columns (paths, ids, statuses) keep their full
@@ -241,9 +246,12 @@ export function table(
  *      loses information. The widest column is the free-text one (descriptions,
  *      details, snippets); it has spaces and absorbs the shrink via `wordWrap`.
  *
- * cli-table3 accepts only positive integers (negatives collapse). Each returned
- * width is `content + 2` to reserve the column's padding, so the content area
- * equals the measured width and the math against `terminalWidth()` is exact.
+ * Widths are measured through `displayWidth` (ANSI stripped, wide glyphs count 2)
+ * so a coloured badge or a CJK character does not inflate the column past what it
+ * draws. cli-table3 accepts only positive integers (negatives collapse). Each
+ * returned width is `content + 2` to reserve the column's padding, so the
+ * content area equals the measured width and the math against `terminalWidth()`
+ * is exact.
  */
 function computeColWidths(
   rows: readonly Record<string, unknown>[],
@@ -251,11 +259,11 @@ function computeColWidths(
 ): number[] {
   const n = cols.length;
   if (n === 0) return [];
-  const headerLen = cols.map((col) => col.length);
+  const headerLen = cols.map((col) => displayWidth(col));
   const natural = cols.map((col, i) => {
-    let max = Math.max(headerLen[i] ?? col.length, 3);
+    let max = Math.max(headerLen[i] ?? displayWidth(col), 3);
     for (const row of rows) {
-      const len = formatCell(row[col]).length;
+      const len = displayWidth(formatCell(row[col]));
       if (len > max) max = len;
     }
     return max;
@@ -291,6 +299,40 @@ function computeColWidths(
     sum -= cut;
   }
   return content.map((w) => w + 2);
+}
+
+/**
+ * True for a value shaped like a filesystem path. Paths legitimately contain
+ * whitespace (a directory named "My Projects"), so this is a SHAPE test rather
+ * than a single-token test: the value must carry a separator AND either start
+ * like a path — a leading `/`, `./`, `../`, `~/`, or a Windows drive prefix such
+ * as `C:\` — or end in a file extension (`…/store.db`). A sentence that merely
+ * contains a slash ("the spec/plan docs") matches neither, so it is still left
+ * to `wordWrap` instead of being cut.
+ */
+function isPathToken(s: string): boolean {
+  if (!/[\\/]/.test(s)) return false;
+  return /^(\/|\.\/|\.\.\/|~\/|[A-Za-z]:[\\/])/.test(s) || /\.[A-Za-z0-9][A-Za-z0-9_-]*$/.test(s);
+}
+
+/**
+ * A cell value cut to fit its column's content area.
+ *
+ * Only a cell that OVERFLOWS is touched, and the untouched path returns the
+ * value byte-for-byte — which is what keeps a coloured cell coloured, since the
+ * truncators strip ANSI and return plain text. A path is cut in the MIDDLE, so
+ * the leading directories and the final file name both survive; it is tested
+ * first because a path can contain spaces and would otherwise be mistaken for
+ * free text. A non-path multi-word cell is left entirely to `wordWrap`, and a
+ * single-token cell — which cannot wrap — is cut at the tail. Every cut is
+ * measured in display columns and never splits a grapheme cluster.
+ */
+function truncateCell(value: unknown, contentWidth: number): string {
+  const s = formatCell(value);
+  if (contentWidth <= 0 || displayWidth(s) <= contentWidth) return s;
+  if (isPathToken(s)) return truncateMiddle(s, contentWidth);
+  if (/\s/.test(s)) return s; // multi-word free text: `wordWrap` folds it
+  return truncateToWidth(s, contentWidth);
 }
 
 function formatCell(value: unknown): string {

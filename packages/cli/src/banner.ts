@@ -13,6 +13,7 @@
 import gradient from 'gradient-string';
 import type { CliOptions } from './output.js';
 import { accessibleMode, c, useColor } from './theme.js';
+import { displayWidth } from './width.js';
 
 // figlet "ANSI Shadow" — regenerated 2026-07-26 from the standard per-letter
 // glyphs and verified (N, O, I, R) to read "NOIR". Do NOT hand-edit — regenerate
@@ -35,6 +36,23 @@ const NOIR_GRADIENT = gradient('#2c5282', '#3b82f6', '#7dd3fc');
 /** One-line product tagline (shown under the wordmark). */
 export const NOIR_TAGLINE = 'discipline, context, and memory layer for agentic CLIs';
 
+/**
+ * The block wordmark's own width, in display columns — the widest line of the
+ * art. Measured rather than assumed so a regenerated wordmark cannot silently
+ * become wider than the terminals it is drawn into (a hand-copied constant would
+ * drift the moment the glyphs are regenerated).
+ */
+const BLOCK_WIDTH = NOIR_BLOCK.reduce((max, line) => Math.max(max, displayWidth(line)), 0);
+
+/**
+ * The narrowest terminal the block wordmark reads well in. It is the art's own
+ * width plus seventeen columns of margin — enough to keep the wordmark off the
+ * terminal edges and give the tagline under it room to breathe. Below this the
+ * compact `◆ noir` mark is used instead, because the full block would collide
+ * with the terminal's right edge.
+ */
+const BLOCK_MIN_WIDTH = BLOCK_WIDTH + 17;
+
 interface BannerOptions {
   /** Terminal width in columns (defaults to process.stdout.columns, else 80). */
   width?: number;
@@ -43,8 +61,8 @@ interface BannerOptions {
 }
 
 /**
- * Render the Noir banner. Wide terminals (≥50 cols) get the full block
- * wordmark; narrow terminals get a compact `◆ noir` mark.
+ * Render the Noir banner. Wide terminals (the art's own width plus margin) get
+ * the full block wordmark; narrow terminals get a compact `◆ noir` mark.
  *
  * Color gating: decoration is on only when the caller did not pass
  * `color:false` AND `useColor()` agrees (honoring NO_COLOR / CLICOLOR_FORCE /
@@ -55,7 +73,7 @@ interface BannerOptions {
 export function renderBanner(opts: BannerOptions = {}): string {
   const width = opts.width ?? process.stdout.columns ?? 80;
   const colorOn = opts.color !== false && useColor();
-  if (width < 50) {
+  if (width < BLOCK_MIN_WIDTH) {
     return colorOn ? `${c.accent('◆')} noir` : '◆ noir';
   }
   const block = NOIR_BLOCK.join('\n');

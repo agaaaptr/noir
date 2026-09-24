@@ -16,6 +16,7 @@
 //     carry symbol+text unconditionally, so the flag is a no-op for them.
 
 import pc from 'picocolors';
+import { truncateToWidth } from './width.js';
 
 // A private always-on colorizer. The PUBLIC `c` object gates every call through
 // `useColor()`, so `useColor()` is the single live authority over whether ANY
@@ -66,12 +67,20 @@ const BADGE_SYMBOL: Readonly<Record<BadgeState, string>> = {
  * is on. The TEXT LABEL is unconditional — this is the accessibility invariant.
  * `label` defaults to the state name, so `badge('ok')` reads `✓ ok`.
  *
+ * `maxWidth` bounds the badge to that many terminal columns — pass it when the
+ * badge goes into a column of a known width (a table cell). The text is cut
+ * BEFORE the color is applied, because the truncators strip ANSI escapes and
+ * return plain text; colouring first would leave the badge uncoloured or, worse,
+ * with its colour codes cut in half.
+ *
  * @example badge('ok')              // → green "✓ ok"
  * @example badge('warn','degraded') // → yellow "⚠ degraded"
  * @example badge('error','down')    // → red "✗ down"
+ * @example badge('warn','degraded',12) // → yellow "⚠ degraded", ≤ 12 columns
  */
-export function badge(state: BadgeState, label: string = state): string {
-  const text = `${BADGE_SYMBOL[state]} ${label}`;
+export function badge(state: BadgeState, label: string = state, maxWidth?: number): string {
+  const full = `${BADGE_SYMBOL[state]} ${label}`;
+  const text = maxWidth === undefined ? full : truncateToWidth(full, maxWidth);
   switch (state) {
     case 'ok':
       return c.ok(text);
