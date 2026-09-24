@@ -282,23 +282,34 @@ function computeColWidths(
     return max;
   });
   // cli-table3 row overhead: per column 1 left border + 2 padding, plus a final
-  // right border ⇒ 3n + 1 non-content chars. `contentBudget` is what remains for
-  // the sum of column CONTENT areas.
-  const contentBudget = Math.max(n * 4, terminalWidth() - 3 * n - 1);
+  // right border ⇒ 3n + 1 non-content chars. `budget` is what remains for the
+  // sum of column CONTENT areas, and it is the ONLY budget this function uses:
+  // every "does it fit" test below — the natural-width fast path included —
+  // compares against it, so no branch can return a row wider than the terminal.
+  //
+  // Floored at `n` (one content column per column) deliberately. A narrower
+  // budget would be a lie twice over: cli-table3 accepts only POSITIVE integer
+  // widths, so a zero or negative column collapses rather than shrinking; and
+  // whenever `4n + 1 > terminalWidth()` the row is unachievable anyway — the
+  // borders and padding alone no longer fit, so no arrangement of the content
+  // can save it. The floor keeps the trim from driving a column to zero on such
+  // a terminal and gives the final pass a natural stopping point (all columns
+  // one content column wide). Do not "fix" it away as redundant.
+  const budget = Math.max(n, terminalWidth() - 3 * n - 1);
   const naturalSum = natural.reduce((a, b) => a + b, 0);
-  if (naturalSum <= contentBudget) {
+  if (naturalSum <= budget) {
     return natural.map((w) => w + 2);
   }
   // Overflow: greedily cut the widest reducible column down to its floor.
   const content = natural.slice();
   let sum = naturalSum;
   // A column's floor is its own header — so a table that can fit its headers
-  // keeps every one of them on a single line — capped at the whole content
-  // budget, because a header wider than that can never be honoured anyway.
-  // Without the cap, one very long header would pin its column open and push
-  // the row past the terminal.
-  const floor = headerLen.map((h) => Math.min(Math.max(h, MIN_CONTENT_WIDTH), contentBudget));
-  while (sum > contentBudget) {
+  // keeps every one of them on a single line — capped at the whole budget,
+  // because a header wider than that can never be honoured anyway. Without the
+  // cap, one very long header would pin its column open and push the row past
+  // the terminal.
+  const floor = headerLen.map((h) => Math.min(Math.max(h, MIN_CONTENT_WIDTH), budget));
+  while (sum > budget) {
     let idx = -1;
     let widest = -1;
     for (let i = 0; i < n; i++) {
@@ -310,7 +321,7 @@ function computeColWidths(
       }
     }
     if (idx === -1) break; // every column is at its floor — stop
-    const overshoot = sum - contentBudget;
+    const overshoot = sum - budget;
     const reducible = (content[idx] ?? 0) - (floor[idx] ?? MIN_CONTENT_WIDTH);
     const cut = Math.min(overshoot, reducible);
     content[idx] = (content[idx] ?? 0) - cut;
@@ -320,9 +331,8 @@ function computeColWidths(
   // still will not fit, shrink the widest columns below that floor (down to a
   // single content column each) so the cells ellipsise and the row fits. The
   // pass visits each column at most once, so it always terminates.
-  const hardBudget = Math.max(n, terminalWidth() - 3 * n - 1);
-  if (sum > hardBudget) {
-    for (let pass = 0; pass < n && sum > hardBudget; pass++) {
+  if (sum > budget) {
+    for (let pass = 0; pass < n && sum > budget; pass++) {
       let idx = -1;
       let widest = 0;
       for (let j = 0; j < n; j++) {
@@ -333,7 +343,7 @@ function computeColWidths(
         }
       }
       if (idx === -1) break; // every column is a single column wide — give up
-      const cut = Math.min(sum - hardBudget, (content[idx] ?? 1) - 1);
+      const cut = Math.min(sum - budget, (content[idx] ?? 1) - 1);
       content[idx] = (content[idx] ?? 1) - cut;
       sum -= cut;
     }

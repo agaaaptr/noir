@@ -92,6 +92,14 @@ const manyCols = Array.from({ length: 15 }, (_, i) => `c${i}`);
 const manyRow: Record<string, string> = {};
 for (const col of manyCols) manyRow[col] = `tok_${col}_${'x'.repeat(40)}`;
 
+// Many columns of SHORT content, the shape whose natural total lands just above
+// the real budget while still fitting an inflated one (see the test that uses
+// these). Twelve 3-character headers over 4-character cells give every column a
+// natural width of 4.
+const shortCols = Array.from({ length: 12 }, (_, i) => `h${String(i).padStart(2, '0')}`);
+const shortRow: Record<string, string> = {};
+for (const col of shortCols) shortRow[col] = 'abcd';
+
 describe('table overflow — real cli-table3 rendering', () => {
   it.each([80, 100, 120] as const)(
     'a table with one very wide column never exceeds %i columns',
@@ -115,6 +123,18 @@ describe('table overflow — real cli-table3 rendering', () => {
     // implementation returns immediately, so an infinite loop fails the run
     // rather than passing silently.
     const out = renderTable(80, [manyRow], manyCols);
+    expect(maxLineWidth(out)).toBeLessThanOrEqual(80);
+  });
+
+  it('keeps short content in many columns inside the terminal', () => {
+    // Natural widths that sit BETWEEN the true content budget and an inflated
+    // one: 12 columns × 4 = 48 content columns, where the terminal can hold
+    // 80 − 3·12 − 1 = 43. A fast path that compares the natural total against a
+    // budget inflated to four content columns per column (12 × 4 = 48) accepts
+    // this table and renders 48 + 3·12 + 1 = 85 columns into an 80-column
+    // terminal, and the final pass never runs to correct it. Every width
+    // decision must be taken against the one real budget.
+    const out = renderTable(80, [shortRow], shortCols);
     expect(maxLineWidth(out)).toBeLessThanOrEqual(80);
   });
 
