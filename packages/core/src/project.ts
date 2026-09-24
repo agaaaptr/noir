@@ -37,3 +37,19 @@ export function loadProjectInfo(root: string): ProjectInfo {
     config,
   };
 }
+
+/** The resolved config from `.noir/config.yml`, or `undefined` when the file is
+ *  absent, unreadable, or does not parse.
+ *
+ *  Unlike {@link loadProjectInfo} this does not need a canonical project id, so
+ *  a caller that runs BEFORE (or without) an identity — a first `noir init` over
+ *  a config the user wrote by hand — can still see what the project configured.
+ *  An unusable config degrades to `undefined` and the caller applies the schema
+ *  defaults, which is what an absent config means anyway. */
+export function readProjectConfig(root: string): NoirConfig | undefined {
+  try {
+    return parseConfig(parseYaml(readFileSync(paths.config(root), 'utf8')));
+  } catch {
+    return undefined;
+  }
+}

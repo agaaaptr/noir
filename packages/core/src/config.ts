@@ -215,32 +215,35 @@ export const NoirConfigSchema = z.object({
     })
     .default({ consolidation: { enabled: false } })
     .describe('Cross-session memory settings'),
-  // Debt-batch A — `rules:` block. Additive, no-op when absent (defaults make it
-  // a pass-through). Reserved for the upcoming rule-driven lint surface (the
-  // `@noir-ai/workflow` rule registry + future `noir check`); for v1.x this
-  // block is parsed + validated but no consumer reads it yet — declaring it
-  // here lets early adopters pin `enabled: false` or a non-default budget in
-  // `.noir/config.yml` without a schema churn when the rule engine ships.
+  // The `rules:` block. Two consumers: the working-rules seed the scaffold
+  // emits (`.noir/rules/RULES.md`, gated by `enabled`) and the RULES.md budget
+  // check in `noir doctor`, which measures that file against `lengthBudgetKb`.
   rules: z
     .object({
-      // Master switch (default true — the rule registry is opt-OUT; a project
-      // that wants no part of it sets `enabled: false`). When the rule engine
-      // ships, false ⇒ no rules registered + `noir check` is a no-op.
-      enabled: z.boolean().default(true).describe('Rule registry master switch'),
-      // Soft per-rule body budget in KB (targets file-size discipline for the
-      // markdown rules; the future rule registry clips over-budget rule bodies
-      // and surfaces a warning rather than rejecting the file). Positive int.
+      // Master switch (default true — opt-out). False ⇒ `noir init`/`noir
+      // create` emit no `.noir/rules/RULES.md` and `noir init --upgrade` does
+      // not backfill one, and `noir doctor` reports its budget check as
+      // disabled. A RULES.md already on disk is never deleted or rewritten
+      // because of the switch: it is the user's text, and turning a check off
+      // is not a request to erase writing.
+      enabled: z
+        .boolean()
+        .default(true)
+        .describe('Emit the working-rules seed and run its budget check in `noir doctor`'),
+      // Soft byte budget for `.noir/rules/RULES.md`, in KB. `noir doctor` warns
+      // (never fails) when the file exceeds it — an over-long rules file tends
+      // to accumulate clauses no failure stands behind. Positive int.
       lengthBudgetKb: z
         .number()
         .int()
         .positive()
         .default(6)
-        .describe('Soft per-rule body budget (KB)'),
+        .describe('Soft budget for `.noir/rules/RULES.md` (KB), measured by `noir doctor`'),
     })
     // Outer default matches the parsed output shape (Zod v4 requirement): an
-    // absent `rules:` block resolves to enabled/6 — the registry-active default.
+    // absent `rules:` block resolves to enabled/6 — the seed-emitting default.
     .default({ enabled: true, lengthBudgetKb: 6 })
-    .describe('Rules registry (parsed; consumer ships with the rule engine)'),
+    .describe('Working-rules seed and its `noir doctor` budget'),
   // `prd:` block. Additive, escapable-soft-gate config for the
   // pre-SDD Product Requirements Document. The workflow engine reads
   // `mandatoryFor` to decide when a missing PRD warrants an observable,

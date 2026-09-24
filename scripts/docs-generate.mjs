@@ -636,9 +636,12 @@ function genConfigSchema() {
   lines.push('## Honest notes');
   lines.push('');
   lines.push(
-    '- `rules.enabled`, `update.display`, `context.roots`, and `context.budgetTokens`',
+    '- `update.display`, `context.roots`, and `context.budgetTokens`',
     '  are parsed + validated but have no live consumer yet — declaring them now avoids',
     '  schema churn when their feature ships. Do not rely on them.',
+    '- `rules.enabled` IS read: when false, `noir init`/`noir create` emit no',
+    '  `.noir/rules/RULES.md` (and an upgrade does not backfill one) and `noir doctor`',
+    '  reports its budget check as disabled. A RULES.md already on disk is left alone.',
     "- `rules.lengthBudgetKb` IS read: `noir doctor`'s RULES.md budget check.",
     '- `run.*` (host profiles; first surfaced on `beta` as 1.12.0-beta.1) and `workspace.*` (shared cross-repo workspaces, ADR-0009) are new in 1.13.0. All other blocks predate 1.13.0.',
   );

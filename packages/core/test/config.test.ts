@@ -307,40 +307,8 @@ describe('parseConfig — Slice X integrations block', () => {
   });
 });
 
-// Debt-batch A — `rules:` block. Additive, schema-validated, no-op until
-// the rule registry ships. The outer default resolves to enabled/6 so a config
-// with NO `rules:` block still parses to the registry-active shape.
-describe('parseConfig — rules block', () => {
-  it('defaults the rules block to enabled + 6KB when absent (no-op carrier)', () => {
-    const cfg = parseConfig({ host: 'claude' });
-    expect(cfg.rules.enabled).toBe(true);
-    expect(cfg.rules.lengthBudgetKb).toBe(6);
-  });
-
-  it('round-trips an explicit rules block', () => {
-    const cfg = parseConfig({
-      host: 'claude',
-      rules: { enabled: false, lengthBudgetKb: 12 },
-    });
-    expect(cfg.rules.enabled).toBe(false);
-    expect(cfg.rules.lengthBudgetKb).toBe(12);
-  });
-
-  it('applies field-level defaults for a partial rules block', () => {
-    const cfg = parseConfig({ host: 'claude', rules: { enabled: false } });
-    expect(cfg.rules.enabled).toBe(false);
-    expect(cfg.rules.lengthBudgetKb).toBe(6); // default carries
-  });
-
-  it('rejects a non-positive lengthBudgetKb', () => {
-    expect(() => parseConfig({ host: 'claude', rules: { lengthBudgetKb: 0 } })).toThrow();
-    expect(() => parseConfig({ host: 'claude', rules: { lengthBudgetKb: -1 } })).toThrow();
-  });
-
-  it('rejects a non-integer lengthBudgetKb', () => {
-    expect(() => parseConfig({ host: 'claude', rules: { lengthBudgetKb: 1.5 } })).toThrow();
-  });
-});
+// The `rules:` block's own tests live in `config-rules.test.ts` (parsing plus
+// the schema text's accuracy).
 
 // Slice P (PRD) — `prd:` block. The mandatoryFor default mirrors the
 // noir-prd skill ("feature/epic"); the workflow engine reads it to decide when

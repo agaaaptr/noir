@@ -132,6 +132,14 @@ export type BuildManifestContext = {
    *  .prettierignore only for JS; .dockerignore only when a Dockerfile is
    *  present; an unknown/empty stack ⇒ all four, for backward compat). */
   stack?: StackInfo;
+  /** The `rules.enabled` switch from the project's `.noir/config.yml`. False
+   *  drops the working-rules seed from the manifest, so no command emits or
+   *  backfills `.noir/rules/RULES.md` for a project that opted out. Undefined
+   *  (the schema's default state, and every caller that predates the switch)
+   *  means enabled — a project with no `rules:` block emits the seed exactly
+   *  as before. A file already on disk is never removed: dropping the entry
+   *  removes the emission, not the file. */
+  rulesEnabled?: boolean;
 };
 
 // --- named managed blocks ----------------------------------------------------
@@ -338,7 +346,10 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
     existsSync(join(ctx.root, 'Dockerfile')) ||
     existsSync(join(ctx.root, 'docker-compose.yml')) ||
     existsSync(join(ctx.root, 'compose.yaml'));
+  // The working-rules seed follows the project's own `rules.enabled` switch.
+  const rulesEnabled = ctx.rulesEnabled !== false;
   return entries.filter((e) => {
+    if (e.path === P.rulesMd) return rulesEnabled;
     if (e.path === '.npmignore' || e.path === '.prettierignore') return isJs;
     if (e.path === '.dockerignore') return hasDocker;
     return true;

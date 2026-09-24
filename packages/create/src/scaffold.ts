@@ -6,6 +6,7 @@ import {
   type ManagedBlock,
   paths,
   readManagedBlock,
+  readProjectConfig,
   resolveNoirCommand,
   sha256Hex12,
 } from '@noir-ai/core';
@@ -343,6 +344,20 @@ function readConfiguredHost(root: string): HostTag {
   }
 }
 
+/** The `rules.enabled` switch from an existing `.noir/config.yml`, or `true`.
+ *  A project with no config yet (a fresh `init`/`create`) has not opted out of
+ *  anything, and an absent, unreadable or invalid config degrades to the schema
+ *  default — so the working-rules seed keeps being emitted exactly as it always
+ *  was.
+ *
+ *  Reads the config directly rather than through {@link loadProjectInfo}, which
+ *  also demands a canonical project id: the first `init` over a config the user
+ *  wrote by hand is exactly the state in which the switch has to be honoured,
+ *  and it has no id yet. */
+function readConfiguredRulesEnabled(root: string): boolean {
+  return readProjectConfig(root)?.rules.enabled ?? true;
+}
+
 export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   // Root-safety: refuse to scaffold at/inside a .noir/ directory BEFORE
   // any write (incl. `create`'s target mkdir). Prevents the nested .noir/.noir/
@@ -477,6 +492,11 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     url: opts.url,
     command,
     stack,
+    // The project's own working-rules switch: a project that set
+    // `rules.enabled: false` gets no `.noir/rules/RULES.md` — not on the first
+    // scaffold, and not backfilled by an upgrade. Unchanged (enabled) whenever
+    // the config is absent or says nothing about rules.
+    rulesEnabled: readConfiguredRulesEnabled(opts.root),
   });
   // Which subset this run emits — `null` means every mode (a fresh
   // `init`/`create`, and `--force`). `sync` re-emits the runtime subset;

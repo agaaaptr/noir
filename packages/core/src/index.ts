@@ -82,7 +82,7 @@ export {
   type ProvisionOptions,
   provisionManagedNode,
 } from './node-provision.js';
-export { loadProjectInfo, type ProjectInfo } from './project.js';
+export { loadProjectInfo, type ProjectInfo, readProjectConfig } from './project.js';
 export { createProjectId, isValidProjectId, type ProjectId } from './project-id.js';
 export {
   fetchLatestVersion,

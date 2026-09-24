@@ -96,9 +96,10 @@ export interface DoctorPayload {
    *  `drift` is true only when
    *  a stamp is present AND differs from the engine's current version. */
   scaffold: { onDisk: string | null; current: string; drift: boolean };
-  /** RULES.md budget measurement. `null` when the project isn't
-   *  initialized OR `.noir/rules/RULES.md` is absent — in either case there
-   *  is nothing to measure and the check row stays informational (warn skip
+  /** RULES.md budget measurement. `null` when there is nothing to measure —
+   *  the project isn't initialized, `rules.enabled` is false in
+   *  `.noir/config.yml`, or `.noir/rules/RULES.md` is absent — and in each of
+   *  those cases the check row stays informational (warn skip, ok "disabled",
    *  or ok "no RULES.md"). Never drives `fail` — over-budget is a `warn`. */
   rules: {
     onDisk: { bytes: number; lines: number };
@@ -653,14 +654,17 @@ function checkSeedDrift(checks: CheckResult[], root: string): void {
  * an over-budget RULES.md tends to accumulate stale / speculative clauses, so
  * doctor warns (NEVER fails — purely a hygiene nudge) when the file exceeds
  * the configured `lengthBudgetKb` (default 6 KB) OR a 150-line ceiling. The
- * check is honest about the three "nothing to measure" cases:
+ * check is honest about the "nothing to measure" cases:
  *
  *   • project not initialized  → skip-warn (parity with store/embedder/provider)
+ *   • `rules.enabled: false`   → ok "disabled" (the user opted out of the
+ *                                working-rules surface; an existing RULES.md is
+ *                                left exactly as it is)
  *   • RULES.md absent          → ok informational (no file = no budget problem)
  *   • RULES.md unreadable      → warn (treat like a malformed-stamp: surface it)
  *
  * Returns the structured measurement for the `--json` envelope's `data.rules`,
- * or `null` when there is nothing to measure (absent / skipped).
+ * or `null` when there is nothing to measure (disabled / absent / skipped).
  */
 function checkRulesMdBudget(
   checks: CheckResult[],
@@ -673,6 +677,19 @@ function checkRulesMdBudget(
 } | null {
   if (!project) {
     checks.push({ name: 'rules budget', status: 'warn', detail: 'skipped — not initialized' });
+    return null;
+  }
+  // The switch wins over everything below: a project that opted out has no
+  // budget to enforce. Reported as `ok` — an explicit opt-out is a decision,
+  // not a problem — but the row says disabled, so a green run never hides the
+  // fact that nothing was measured. A RULES.md that exists is NOT measured and
+  // NOT touched: `noir doctor` never writes.
+  if (project.config.rules.enabled === false) {
+    checks.push({
+      name: 'rules budget',
+      status: 'ok',
+      detail: 'disabled — rules.enabled is false in .noir/config.yml (RULES.md is not measured)',
+    });
     return null;
   }
   const rulesPath = paths.rulesMd(root);

@@ -436,6 +436,29 @@ describe('noir doctor — RULES.md budget', () => {
     expect(row.status).toBe('warn');
     expect(row.detail).toMatch(/200\/150 lines/);
   });
+
+  it('rules.enabled false → check reports disabled instead of measuring', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    mkdirSync(join(root, '.noir', 'rules'), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-rules-disabled\n', 'utf8');
+    // Budget 1 KB so the file below would read as OVER if the check still ran —
+    // a green row here proves the switch gated the measurement, not the budget.
+    writeFileSync(
+      paths.config(root),
+      'host: claude\nmode: full\nrules:\n  enabled: false\n  lengthBudgetKb: 1\n',
+      'utf8',
+    );
+    writeFileSync(paths.rulesMd(root), `${'x'.repeat(4096)}\n`, 'utf8');
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    expect(env.data.rules).toBeNull(); // nothing was measured
+    const row = findCheck(env.data.checks, 'rules budget');
+    expect(row.status).toBe('ok'); // an opt-out is not a warning
+    expect(row.detail).toMatch(/disabled/);
+    // The row names the lever, so the reader can find the switch.
+    expect(row.detail).toMatch(/rules\.enabled/);
+  });
 });
 
 // ---------------------------------------------------------------------------
