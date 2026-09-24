@@ -234,17 +234,30 @@ export function table(
 }
 
 /**
+ * The narrowest a column's content area may normally be, in display columns.
+ * Below this a cell is nothing but its ellipsis, so it is only reached by the
+ * final overflow pass, never by the ordinary greedy trim.
+ */
+const MIN_CONTENT_WIDTH = 3;
+
+/**
  * Compute per-column widths (cli-table3 `colWidths`, which INCLUDE each column's
  * 2 padding chars) that fit `terminalWidth()`. Strategy:
  *
  *   1. Measure each column's NATURAL content width in DISPLAY columns (longest
- *      cell, at least the header label so a header never wraps/truncates).
+ *      cell, at least a small minimum content width).
  *   2. If the natural total fits, use it as-is — every cell renders whole.
- *   3. Otherwise GREEDILY TRIM ONLY THE WIDEST column (down to its header width)
- *      until the row fits. Narrow columns (paths, ids, statuses) keep their full
- *      width — they're single tokens that can't word-wrap, so truncating them
- *      loses information. The widest column is the free-text one (descriptions,
- *      details, snippets); it has spaces and absorbs the shrink via `wordWrap`.
+ *   3. Otherwise GREEDILY TRIM ONLY THE WIDEST column, down to its own header
+ *      length (never below the minimum content width, and never held open above
+ *      the content budget), until the row fits. A long header can therefore not
+ *      pin a column open (the header wraps), while narrow columns (paths, ids,
+ *      statuses) still give up as little as possible: they are single tokens
+ *      that can't word-wrap, so truncating them loses information.
+ *   4. When every column is already at that floor and the row still does not
+ *      fit (many columns, so the per-column padding alone exhausts the width),
+ *      make one final bounded pass that shrinks the widest columns below the
+ *      floor. The cells those columns hold are then drawn with a visible
+ *      ellipsis, so the row stays inside the terminal instead of overflowing.
  *
  * Widths are measured through `displayWidth` (ANSI stripped, wide glyphs count 2)
  * so a coloured badge or a CJK character does not inflate the column past what it
@@ -261,7 +274,7 @@ function computeColWidths(
   if (n === 0) return [];
   const headerLen = cols.map((col) => displayWidth(col));
   const natural = cols.map((col, i) => {
-    let max = Math.max(headerLen[i] ?? displayWidth(col), 3);
+    let max = Math.max(headerLen[i] ?? displayWidth(col), MIN_CONTENT_WIDTH);
     for (const row of rows) {
       const len = displayWidth(formatCell(row[col]));
       if (len > max) max = len;
@@ -276,27 +289,54 @@ function computeColWidths(
   if (naturalSum <= contentBudget) {
     return natural.map((w) => w + 2);
   }
-  // Overflow: greedily cut the widest reducible column (≥ its header width).
+  // Overflow: greedily cut the widest reducible column down to its floor.
   const content = natural.slice();
   let sum = naturalSum;
-  const floor = headerLen.map((h) => Math.max(h, 3));
+  // A column's floor is its own header — so a table that can fit its headers
+  // keeps every one of them on a single line — capped at the whole content
+  // budget, because a header wider than that can never be honoured anyway.
+  // Without the cap, one very long header would pin its column open and push
+  // the row past the terminal.
+  const floor = headerLen.map((h) => Math.min(Math.max(h, MIN_CONTENT_WIDTH), contentBudget));
   while (sum > contentBudget) {
     let idx = -1;
     let widest = -1;
     for (let i = 0; i < n; i++) {
       const c = content[i] ?? 0;
-      const f = floor[i] ?? 3;
+      const f = floor[i] ?? MIN_CONTENT_WIDTH;
       if (c > f && c > widest) {
         widest = c;
         idx = i;
       }
     }
-    if (idx === -1) break; // every column is at its header floor — stop
+    if (idx === -1) break; // every column is at its floor — stop
     const overshoot = sum - contentBudget;
-    const reducible = (content[idx] ?? 0) - (floor[idx] ?? 3);
+    const reducible = (content[idx] ?? 0) - (floor[idx] ?? MIN_CONTENT_WIDTH);
     const cut = Math.min(overshoot, reducible);
     content[idx] = (content[idx] ?? 0) - cut;
     sum -= cut;
+  }
+  // Final bounded pass: when the columns are all at their floor yet the row
+  // still will not fit, shrink the widest columns below that floor (down to a
+  // single content column each) so the cells ellipsise and the row fits. The
+  // pass visits each column at most once, so it always terminates.
+  const hardBudget = Math.max(n, terminalWidth() - 3 * n - 1);
+  if (sum > hardBudget) {
+    for (let pass = 0; pass < n && sum > hardBudget; pass++) {
+      let idx = -1;
+      let widest = 0;
+      for (let j = 0; j < n; j++) {
+        const c = content[j] ?? 0;
+        if (c > 1 && c > widest) {
+          widest = c;
+          idx = j;
+        }
+      }
+      if (idx === -1) break; // every column is a single column wide — give up
+      const cut = Math.min(sum - hardBudget, (content[idx] ?? 1) - 1);
+      content[idx] = (content[idx] ?? 1) - cut;
+      sum -= cut;
+    }
   }
   return content.map((w) => w + 2);
 }

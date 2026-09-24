@@ -153,10 +153,11 @@ export function accessibleMode(): boolean {
 }
 
 /**
- * Terminal width in columns. Honors `COLUMNS` (the conventional override) then
- * `process.stdout.columns`, defaulting to 80 when neither is set (the same
- * default `picocolors` / `cli-table3` assume). Floored at a small minimum so a
- * misconfigured shell never produces a degenerate zero/negative-width table.
+ * Terminal width in columns. Honors `COLUMNS` (the conventional override), then
+ * the width of the stream the CLI's tables are written to (stderr), falling
+ * back to stdout and finally to 80 (the same default `picocolors` /
+ * `cli-table3` assume). Floored at a small minimum so a misconfigured shell
+ * never produces a degenerate zero/negative-width table.
  */
 export function terminalWidth(): number {
   const fromEnv = process.env.COLUMNS;
@@ -164,8 +165,10 @@ export function terminalWidth(): number {
     const n = Number(fromEnv);
     if (Number.isInteger(n) && n > 0) return Math.max(n, 20);
   }
-  const cols = process.stdout.columns;
-  if (typeof cols === 'number' && cols > 0) return Math.max(cols, 20);
+  const stderrCols = process.stderr.columns;
+  if (typeof stderrCols === 'number' && stderrCols > 0) return Math.max(stderrCols, 20);
+  const stdoutCols = process.stdout.columns;
+  if (typeof stdoutCols === 'number' && stdoutCols > 0) return Math.max(stdoutCols, 20);
   return 80;
 }
 
