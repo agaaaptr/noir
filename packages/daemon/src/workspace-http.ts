@@ -231,7 +231,25 @@ export async function startWorkspaceHttpServer(
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     if (!validateHost(req, res) || !validateOrigin(req, res)) return;
     touch();
-    if (req.method === 'GET' && (req.url === '/health' || req.url?.startsWith('/health?'))) {
+    const method = req.method ?? 'GET';
+    // Route on the parsed pathname, never the raw URL: /health tolerates a
+    // query string and /mcp carries the member identity in one (?p=<projectId>),
+    // so neither may fall past its route because of the query. A target that
+    // cannot be parsed routes nowhere and lands on the 404 below.
+    let pathname = '';
+    try {
+      pathname = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
+    } catch {
+      // Unparseable target: fall through to the 404.
+    }
+    if (pathname === '/health') {
+      if (method !== 'GET') {
+        res.writeHead(405, { 'content-type': 'application/json', allow: 'GET' });
+        res.end(
+          JSON.stringify({ ok: false, error: 'method not allowed: /health answers GET only' }),
+        );
+        return;
+      }
       const registry = readWorkspaceRegistry(name);
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(
@@ -245,7 +263,21 @@ export async function startWorkspaceHttpServer(
       );
       return;
     }
-    if (req.url === '/mcp' || req.url?.startsWith('/mcp?')) {
+    if (pathname === '/mcp') {
+      // The same method set the Streamable HTTP transport itself accepts, so a
+      // request refused here and one refused deeper down agree on what this
+      // endpoint allows. Refused before auth: a wrong method is wrong no matter
+      // who sends it, and the transport would answer 405 anyway.
+      if (method !== 'GET' && method !== 'POST' && method !== 'DELETE') {
+        res.writeHead(405, { 'content-type': 'application/json', allow: 'GET, POST, DELETE' });
+        res.end(
+          JSON.stringify({
+            ok: false,
+            error: 'method not allowed: /mcp answers GET, POST and DELETE',
+          }),
+        );
+        return;
+      }
       // Auth on the HTTP transport only and AHEAD of the
       // membership check: an unauthenticated caller must not learn whether a
       // given projectId is a member of this workspace (401 before 403).

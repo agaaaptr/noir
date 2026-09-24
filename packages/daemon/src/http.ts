@@ -141,7 +141,28 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     // accept.
     if (!validateHost(req, res) || !validateOrigin(req, res)) return;
     lastActivity = Date.now();
-    if (req.method === 'GET' && req.url === '/health') {
+    const method = req.method ?? 'GET';
+    // Route on the parsed pathname, never the raw URL: a query string selects
+    // within a route rather than falling past it (this daemon answers /health,
+    // and /mcp with nothing after the path). A target that cannot be parsed
+    // routes nowhere and lands on the 404 below.
+    let pathname = '';
+    let hasQuery = false;
+    try {
+      const target = new URL(req.url ?? '/', 'http://127.0.0.1');
+      pathname = target.pathname;
+      hasQuery = target.search !== '';
+    } catch {
+      // Unparseable target: fall through to the 404.
+    }
+    if (pathname === '/health') {
+      if (method !== 'GET') {
+        res.writeHead(405, { 'content-type': 'application/json', allow: 'GET' });
+        res.end(
+          JSON.stringify({ ok: false, error: 'method not allowed: /health answers GET only' }),
+        );
+        return;
+      }
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(
         JSON.stringify({
@@ -153,7 +174,36 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
       );
       return;
     }
-    if (req.url === '/mcp') {
+    if (pathname === '/mcp') {
+      // The same method set the Streamable HTTP transport itself accepts, so a
+      // request refused here and one refused deeper down agree on what this
+      // endpoint allows. Refused before auth: a wrong method is wrong no matter
+      // who sends it, and the transport would answer 405 anyway.
+      if (method !== 'GET' && method !== 'POST' && method !== 'DELETE') {
+        res.writeHead(405, { 'content-type': 'application/json', allow: 'GET, POST, DELETE' });
+        res.end(
+          JSON.stringify({
+            ok: false,
+            error: 'method not allowed: /mcp answers GET, POST and DELETE',
+          }),
+        );
+        return;
+      }
+      // A query-string MCP URL is the WORKSPACE daemon's shape (?p=<projectId>).
+      // This daemon serves one project at a bare /mcp, so answer 400 naming the
+      // mismatch — before auth, so a misdirected host gets the actionable
+      // message rather than a 401 about a token that was never the problem.
+      if (hasQuery) {
+        res.writeHead(400, { 'content-type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            ok: false,
+            error:
+              'unexpected query string: this is a project daemon, which serves one project at /mcp with no query string; a ?p=<projectId> URL belongs to a workspace daemon.',
+          }),
+        );
+        return;
+      }
       // Auth on the HTTP transport only. The guard shares its exact
       // predicate with the route below, so no request can reach the MCP handler
       // without passing it. /health stays token-free — the liveness probe
