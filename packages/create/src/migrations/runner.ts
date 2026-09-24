@@ -24,10 +24,14 @@ export function runMigrations(
   root: string,
   from: string | null,
   to: string,
-  opts: { dryRun?: boolean } = {},
+  opts: { dryRun?: boolean; rulesEnabled?: boolean } = {},
 ): MigrationResult & { from: string | null; to: string; ran: string[] } {
   const window = pickWindow(from ?? '0.0.0', to, MIGRATIONS);
-  const ctx: MigrationContext = { root, dryRun: opts.dryRun === true };
+  const ctx: MigrationContext = {
+    root,
+    dryRun: opts.dryRun === true,
+    rulesEnabled: opts.rulesEnabled,
+  };
   const aggregate: MigrationResult = { changed: [], conflicts: [], notes: [] };
   const ran: string[] = [];
 

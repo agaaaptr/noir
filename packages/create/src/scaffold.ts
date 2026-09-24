@@ -473,6 +473,11 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   ) {
     const m = runMigrations(opts.root, fromVersion, CURRENT_SCAFFOLD_VERSION, {
       dryRun: opts.dryRun === true,
+      // The migration runs BEFORE the manifest, so it cannot see the manifest's
+      // own rules-gating. Hand the switch through so a migration that would
+      // rewrite the working-rules seed (the doc-seed refresh keyed on recorded
+      // older bytes) leaves a switch-off project's RULES.md alone.
+      rulesEnabled: readConfiguredRulesEnabled(opts.root),
     });
     migrationsRan.push(...m.ran);
     migrationConflicts.push(...m.conflicts);

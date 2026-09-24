@@ -18,6 +18,12 @@ export type HostId = 'claude' | 'agents-md' | 'gemini' | 'cursor' | 'opencode';
 
 export interface EmitContext {
   root: string;
+  /** The project's `rules.enabled` switch, when the caller knows it. False says
+   *  this project has no `.noir/rules/RULES.md` — the scaffold withholds the
+   *  seed — so no emitted host file may `@`-import it or describe it. Undefined
+   *  (every caller that predates the switch, and every project with no `rules:`
+   *  block) means enabled, exactly as before. */
+  rulesEnabled?: boolean;
 }
 
 export interface McpConfigOptions {

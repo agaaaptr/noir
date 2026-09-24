@@ -26,6 +26,12 @@ export interface MigrationContext {
    *  the same `changed`/`conflicts` shape, but does NOT touch disk. Used by
    *  `noir doctor`/CI to preview. */
   dryRun?: boolean;
+  /** The project's `rules.enabled` switch, when the caller knows it. False
+   *  tells a migration that `.noir/rules/RULES.md` is not part of this project
+   *  — the scaffold withholds the seed — so a migration must not write that
+   *  file back, however convincing its evidence for a refresh. Undefined means
+   *  enabled, which is the state of every project that predates the switch. */
+  rulesEnabled?: boolean;
 }
 
 export interface MigrationResult {

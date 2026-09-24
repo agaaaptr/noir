@@ -19,7 +19,9 @@ import {
   readWorkspaceMarker,
 } from '@noir-ai/core';
 import type { StackInfo } from './stack-detect.js';
+import { render } from './template.js';
 import type { SeedKind } from './template-history.js';
+import { loadTemplate } from './template-loader.js';
 import type { WriteMode } from './writers.js';
 
 /**
@@ -159,6 +161,33 @@ export const BRIEF_BLOCK: ManagedBlock = managedBlock('brief', 'html');
  *  freeze it at init time; a managed block keeps both sides honest. */
 export const README_BLOCK: ManagedBlock = managedBlock('readme', 'html');
 
+/** The one row of the `.noir/README.md` store map that describes the
+ *  working-rules seed. The map ships as a single template because it documents
+ *  the whole canonical store at once, but the rules row describes a file that
+ *  only exists while `rules.enabled` is on. It is therefore dropped from the
+ *  rendered text rather than kept in a second template variant: one template
+ *  keeps the wording (and the surrounding table) in one place, and a test
+ *  asserts the template still carries exactly one row with this prefix, so a
+ *  reworded or renamed row fails loudly instead of silently surviving a
+ *  switch-off emit.
+ *
+ *  A prefix match, not a full-line constant: the row's prose is free to change
+ *  without a second edit here. */
+const RULES_MAP_ROW_PREFIX = '| `rules/RULES.md` |';
+
+/** Render the `.noir/README.md` store map: the shipped template, minus the
+ *  working-rules row when the project has switched the seed off. With the
+ *  switch on (and for every project that predates it) this is exactly what
+ *  {@link renderEntry} produced from the plain template. */
+function readmeMapContent(ctx: BuildManifestContext): string {
+  const rendered = render(loadTemplate('noir-readme.md.tmpl'), ctx);
+  if (ctx.rulesEnabled !== false) return rendered;
+  return rendered
+    .split('\n')
+    .filter((line) => !line.startsWith(RULES_MAP_ROW_PREFIX))
+    .join('\n');
+}
+
 // --- repo-relative path constants (mirror @noir-ai/core/layout.ts) -----------
 // Inlined as string literals so the manifest has zero runtime dep on layout
 // for path strings; the test suite cross-checks against `paths.*`.
@@ -295,10 +324,14 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
       // next. Host-agnostic: it describes the canonical store, which every
       // host shares. Co-owned (README_BLOCK) so user notes survive while the
       // map stays current through `noir sync` / `init --upgrade`.
+      //
+      // Rendered here rather than left to `renderEntry` because one row of the
+      // map depends on the project: the working-rules row is dropped when
+      // `rules.enabled` is off (see {@link readmeMapContent}).
       path: P.readme,
       mode: 'managedBlock',
       block: README_BLOCK,
-      template: 'noir-readme.md.tmpl',
+      content: readmeMapContent(ctx),
       description: '.noir/ runtime map (what exists now / what appears later)',
     },
 
@@ -372,6 +405,12 @@ export interface BuildHostArtifactsContext {
    *  native install is detected, else `'noir'`). Passed through to
    *  `adapter.emitMcpConfig`. */
   command: string;
+  /** The project's `rules.enabled` switch. False drops the rules `@`-import a
+   *  host would otherwise emit (CLAUDE.md's rules block, GEMINI.md's rules
+   *  block, AGENTS.md's rules import) so no host file points at a
+   *  `.noir/rules/RULES.md` that the switch withheld. Undefined means enabled —
+   *  byte-identical to every build that predates the switch. */
+  rulesEnabled?: boolean;
 }
 
 /**
@@ -406,6 +445,14 @@ export interface BuildHostArtifactsContext {
  *      collided with the cursor flat-skill prune of `noir-*.mdc` under
  *      `.cursor/rules/`, and cursor's rules are already delivered via
  *      AGENTS.md's `@.noir/rules/RULES.md` import.)
+ *
+ *      That rules import/block is dropped for every host when
+ *      `ctx.rulesEnabled` is false: the switch withholds the seed, so pointing
+ *      a host at it would resolve to nothing. The context import is unaffected
+ *      — the switch gates the rules, not the brief. A host file that already
+ *      carries the rules region from when the switch was on keeps it: dropping
+ *      the entry stops the emission, and nothing here rewrites a region out of
+ *      an existing file.
  *   3. **Host MCP config** — `regenerate` at `adapter.mcpConfigPath(ctx)`
  *      (default `<root>/.mcp.json` for claude), content from
  *      `adapter.emitMcpConfig(ctx, {transport,url})`. Claude KEEPS the template
@@ -424,7 +471,8 @@ export function buildHostArtifacts(
   adapter: HostAdapter,
   ctx: BuildHostArtifactsContext,
 ): ManifestEntry[] {
-  const ectx: EmitContext = { root: ctx.root };
+  const rulesEnabled = ctx.rulesEnabled !== false;
+  const ectx: EmitContext = { root: ctx.root, rulesEnabled };
   const host = adapter.id;
   const entries: ManifestEntry[] = [];
 
@@ -459,14 +507,21 @@ export function buildHostArtifacts(
         template: 'claude-context-block.md.tmpl',
         description: 'CLAUDE.md context @import block',
       });
-      entries.push({
-        path: 'CLAUDE.md',
-        mode: 'managedBlock',
-        host,
-        block: RULES_BLOCK,
-        template: 'claude-rules-block.md.tmpl',
-        description: 'CLAUDE.md rules @import block',
-      });
+      // The rules block only exists when the project HAS a rules file. With the
+      // switch off the block is not emitted — a fresh project gets no dangling
+      // `@import`, and a project that already carries the block from when the
+      // switch was on keeps it (off stops the emission; it never cuts a region
+      // out of a user's file).
+      if (rulesEnabled) {
+        entries.push({
+          path: 'CLAUDE.md',
+          mode: 'managedBlock',
+          host,
+          block: RULES_BLOCK,
+          template: 'claude-rules-block.md.tmpl',
+          description: 'CLAUDE.md rules @import block',
+        });
+      }
       break;
     case 'gemini':
       // GEMINI.md carries CONTEXT_BLOCK + RULES_BLOCK with Gemini's bare
@@ -482,14 +537,17 @@ export function buildHostArtifacts(
         content: '@.noir/NOIR.md',
         description: 'GEMINI.md context @-import block',
       });
-      entries.push({
-        path: 'GEMINI.md',
-        mode: 'managedBlock',
-        host,
-        block: RULES_BLOCK,
-        content: '@.noir/rules/RULES.md',
-        description: 'GEMINI.md rules @-import block',
-      });
+      // Same rule as claude's: no rules file, no rules import.
+      if (rulesEnabled) {
+        entries.push({
+          path: 'GEMINI.md',
+          mode: 'managedBlock',
+          host,
+          block: RULES_BLOCK,
+          content: '@.noir/rules/RULES.md',
+          description: 'GEMINI.md rules @-import block',
+        });
+      }
       break;
     case 'agents-md':
     case 'cursor':

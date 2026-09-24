@@ -137,4 +137,15 @@ describe('emitAgentsMd — the universal shared helper', () => {
     const bBody = b.split('\n\n').slice(1).join('\n\n');
     expect(aBody).toBe(bBody);
   });
+
+  it('rulesEnabled: false drops the rules import AND the prose that names it', () => {
+    // A project whose `rules.enabled` is off has no `.noir/rules/RULES.md`
+    // (the scaffold withholds the seed), so AGENTS.md must not send the reader
+    // — or the host's `@`-import resolver — after a file that is not there.
+    // The brief import stays: the switch gates the rules, not the context.
+    const md = emitAgentsMd({ root: '/tmp/demo', rulesEnabled: false });
+    expect(md).not.toContain('RULES.md');
+    expect(md).toContain('@.noir/NOIR.md');
+    expect(md).toContain('`.noir/NOIR.md`');
+  });
 });

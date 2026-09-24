@@ -175,7 +175,8 @@ const envPointer: MigrationScript = {
  *  unedited older copy must be brought forward. RULES.md is carried in the same
  *  loop although its text did NOT change here — its current render equals the
  *  recorded bytes, so the refresh decision leaves it alone today, and a future
- *  release that does change it is already handled. */
+ *  release that does change it is already handled. It is skipped entirely for a
+ *  project that switched the working rules off; see {@link envTemplates}. */
 const DOC_SEEDS: ReadonlyArray<{ rel: string; kind: SeedKind; template: string }> = [
   { rel: '.noir/.env.example', kind: 'envExample', template: 'env.example.tmpl' },
   { rel: '.noir/rules/RULES.md', kind: 'rulesSeed', template: 'rules-seed.md.tmpl' },
@@ -188,7 +189,16 @@ const DOC_SEEDS: ReadonlyArray<{ rel: string; kind: SeedKind; template: string }
  *  a recorded past seed AND differ from the current render. A user-edited file
  *  (or one already current) is left alone. The write goes through
  *  {@link refreshSeed}, which overwrites the bytes while keeping the permission
- *  bits the file already has. */
+ *  bits the file already has.
+ *
+ *  The working-rules seed is skipped outright when the project switched it off.
+ *  That switch says this project has no working rules for Noir to maintain, and
+ *  the refresh's evidence — "these bytes are a seed Noir shipped, so nobody
+ *  edited them" — is exactly the case the switch must not act on: it would
+ *  rewrite the rules text of a project that has opted out of having any, on the
+ *  strength of a comparison the user never asked for. `.env.example` is a
+ *  different file with a different owner (pure documentation, no switch), so it
+ *  refreshes either way. */
 const envTemplates: MigrationScript = {
   from: '1.1.0',
   to: '1.2.0',
@@ -196,6 +206,10 @@ const envTemplates: MigrationScript = {
   run: (ctx) => {
     const result: MigrationResult = { changed: [], conflicts: [], notes: [] };
     for (const seed of DOC_SEEDS) {
+      if (seed.kind === 'rulesSeed' && ctx.rulesEnabled === false) {
+        result.notes.push(`${seed.rel}: skipped — the working-rules switch is off`);
+        continue;
+      }
       const abs = join(ctx.root, seed.rel);
 
       // Absent: nothing to refresh, and creating it is NOT this migration's

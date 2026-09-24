@@ -92,8 +92,28 @@ describe('buildManifest', () => {
     expect(readme?.mode).toBe('managedBlock');
     expect(readme?.host).toBeUndefined();
     expect(readme?.block?.name).toBe('readme');
-    expect(readme?.template).toBe('noir-readme.md.tmpl');
+    // Rendered at manifest-build time (one of its rows follows the project's
+    // rules switch), and for a project with the switch on — the default — that
+    // render IS the shipped template, byte for byte.
+    expect(readme?.content).toBe(loadTemplate('noir-readme.md.tmpl'));
     expect(readme?.fileMode).toBeUndefined(); // not a credential seed
+  });
+
+  it('rulesEnabled: false drops the working-rules row from the .noir/README.md map', () => {
+    const on = m.find((e) => e.path === '.noir/README.md');
+    const off = buildManifest({ ...CTX, rulesEnabled: false }).find(
+      (e) => e.path === '.noir/README.md',
+    );
+    // The map must not list a file no command writes for this project...
+    expect(off?.content).not.toMatch(/RULES\.md/);
+    // ...and must otherwise be the same map: dropped line only, nothing else.
+    expect(off?.content).toBe(
+      (on?.content ?? '')
+        .split('\n')
+        .filter((line) => !line.includes('RULES.md'))
+        .join('\n'),
+    );
+    expect(off?.content).toMatch(/`NOIR\.md`/);
   });
 
   it('every path is repo-relative POSIX (no leading "/", no drive, no "..")', () => {
@@ -292,6 +312,33 @@ describe('buildHostArtifacts — emission contract per adapter (S10)', () => {
       mcpConfigPath: () => '/elsewhere/mcp.json',
     };
     expect(() => buildHostArtifacts(rogue, { root, transport: 'stdio' })).toThrow(/not under root/);
+  });
+
+  it('rulesEnabled: false drops every host pointer at .noir/rules/RULES.md', () => {
+    for (const h of ['claude', 'gemini', 'agents-md', 'cursor', 'opencode'] as const) {
+      const e = buildHostArtifacts(resolveAdapter(h), {
+        root,
+        transport: 'stdio',
+        rulesEnabled: false,
+      });
+      // Render template-backed entries (claude/gemini) so the check sees the
+      // emitted bytes, not just the template filename.
+      const rendered = e
+        .map((x) => (x.template !== undefined ? loadTemplate(x.template) : (x.content ?? '')))
+        .join('\n');
+      expect(rendered, `${h}: still points at RULES.md`).not.toContain('RULES.md');
+
+      // claude/gemini keep their context import; only the rules block is gone.
+      if (h === 'claude') {
+        expect(e.filter((x) => x.path === 'CLAUDE.md')).toHaveLength(1);
+      }
+      if (h === 'gemini') {
+        expect(e.filter((x) => x.path === 'GEMINI.md')).toHaveLength(1);
+      }
+    }
+
+    // The default (undefined) keeps the rules block — the byte-identity anchor.
+    expect(entries('claude').filter((x) => x.path === 'CLAUDE.md')).toHaveLength(2);
   });
 });
 
