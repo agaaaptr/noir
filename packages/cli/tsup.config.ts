@@ -43,4 +43,16 @@ export default defineConfig([
     // them down next to dist/). External keeps the dashboard chunk tiny.
     external: ['react', 'react/jsx-runtime', 'ink'],
   },
+  // The output-hygiene scan, built as its own entry so the CI gate
+  // (scripts/hygiene-gate.mjs) can import it without pulling the whole CLI
+  // graph (commander, the daemon, the model layer). It keeps only
+  // `@noir-ai/skills` as a runtime dependency, so the gate never loads a native
+  // binding. No banner: this is an imported module, not an executable.
+  {
+    entry: ['src/hygiene-scan.ts'],
+    format: ['esm'],
+    dts: true,
+    sourcemap: true,
+    splitting: false,
+  },
 ]);

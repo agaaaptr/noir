@@ -25,6 +25,7 @@
     "release:validate": "node scripts/release-registry.mjs validate",
     "docs:generate": "node scripts/docs-generate.mjs generate",
     "docs:validate": "node scripts/docs-generate.mjs validate",
+    "hygiene:gate": "node scripts/hygiene-gate.mjs",
     "docs:registry": "node scripts/docs-generate.mjs registry",
     "docs:index": "node scripts/docs-generate.mjs index"
   },

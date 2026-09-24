@@ -39,6 +39,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./hygiene-scan": {
+      "types": "./dist/hygiene-scan.d.ts",
+      "import": "./dist/hygiene-scan.js"
     }
   },
   "files": [
