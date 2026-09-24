@@ -15,7 +15,6 @@ import { createRequire } from 'node:module';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Writable } from 'node:stream';
 import { fileURLToPath, pathToFileURL, URL } from 'node:url';
 import { paths } from '@noir-ai/core';
 import { tokenPath, writeDaemonToken, writeWorkspaceDaemonRecord } from '@noir-ai/daemon';
@@ -137,33 +136,6 @@ async function startFakeDaemon(opts: { pid: number; workspace: string }): Promis
   };
 }
 
-/** Collect everything written to stderr while `body` runs. */
-async function captureStderr(body: () => Promise<void>): Promise<string[]> {
-  const written: string[] = [];
-  const spy = vi.spyOn(process.stderr, 'write').mockImplementation((chunk: unknown) => {
-    written.push(String(chunk));
-    return true;
-  });
-  try {
-    await body();
-  } finally {
-    spy.mockRestore();
-  }
-  return written;
-}
-
-/** A writable that keeps everything written to it, so a test can inspect it. */
-function captureStream(): { stream: Writable; written: () => string } {
-  const chunks: string[] = [];
-  const stream = new Writable({
-    write(chunk, _encoding, done) {
-      chunks.push(String(chunk));
-      done();
-    },
-  });
-  return { stream, written: () => chunks.join('') };
-}
-
 beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), 'noir-bridge-home-'));
   process.env.NOIR_WORKSPACES_DIR = join(home, 'workspaces');
@@ -255,18 +227,33 @@ describe('resolveWorkspaceDaemon', () => {
 
 describe('bridgeStdioToWorkspace', () => {
   it('fails with the daemon-down exit code, on stderr only, when no daemon is recorded', async () => {
-    const out = captureStream();
+    const errors: string[] = [];
+    const outputs: string[] = [];
+    // Both spies use the same mechanism, so the pairing is what makes the empty
+    // stdout meaningful: the stderr spy demonstrably captures the failure, while
+    // the stdout spy captures nothing because the failure never touches stdout.
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation((chunk: unknown) => {
+      errors.push(String(chunk));
+      return true;
+    });
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: unknown) => {
+      outputs.push(String(chunk));
+      return true;
+    });
 
-    const written = await captureStderr(async () => {
+    try {
       await expect(bridgeStdioToWorkspace(WORKSPACE, root)).rejects.toMatchObject({
         exitCode: EXIT.DAEMON_DOWN,
       });
-    });
+    } finally {
+      stderr.mockRestore();
+      stdout.mockRestore();
+    }
 
-    expect(written.join('')).toContain(`no daemon recorded for workspace ${WORKSPACE}`);
+    expect(errors.join('')).toContain(`no daemon recorded for workspace ${WORKSPACE}`);
     // stdout belongs to the host's protocol traffic — a failure must not be
     // written where the host would read it as a message.
-    expect(out.written()).toBe('');
+    expect(outputs.join('')).toBe('');
   });
 
   it('relays a session to the workspace daemon without ever writing the secret out', async () => {

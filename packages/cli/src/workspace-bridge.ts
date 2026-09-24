@@ -133,9 +133,12 @@ async function probeHealth(port: number, name: string, pid: number): Promise<Hea
 /**
  * Serve the host over stdio by relaying every message to the workspace daemon.
  *
- * Resolving or connecting can fail; both are reported on stderr with the
- * daemon-down exit code, because a host that cannot reach its server must see a
- * failure rather than a server that silently answers nothing.
+ * A workspace that cannot be resolved to a healthy daemon fails here: the reason
+ * goes to stderr with the daemon-down exit code, because a host that cannot
+ * reach its server must see a failure rather than a server that silently answers
+ * nothing. Once the session is running the bridge does not exit that way — a
+ * connection failure is reported on stderr and closes the relay, which the host
+ * observes as the session ending.
  */
 export async function bridgeStdioToWorkspace(name: string, root: string): Promise<void> {
   const resolved = await resolveWorkspaceDaemon(name, root);
@@ -169,26 +172,33 @@ export async function bridgeStdioToWorkspace(name: string, root: string): Promis
 async function relay(host: StdioBridgeTransport, daemon: Transport): Promise<void> {
   await new Promise<void>((resolve) => {
     let settled = false;
+    // Set as soon as the session starts coming down. Closing the transport
+    // rejects whatever send is still in flight, and that rejection is the
+    // shutdown working, not a bridge failure — so it must not be reported as one.
+    let closing = false;
     const settle = (): void => {
       if (settled) return;
       settled = true;
+      closing = true;
       resolve();
+    };
+    const closeDaemon = (): void => {
+      closing = true;
+      void daemon.close().catch(() => {});
     };
 
     host.onmessage = (message) => {
       // A send that fails is terminal for the session — the daemon is gone or
       // refused the message, and relaying anything further would report a
       // success the host cannot trust.
-      void daemon.send(message).catch(() => {
-        void daemon.close().catch(() => {});
-      });
+      void daemon.send(message).catch(closeDaemon);
     };
     host.onclose = () => {
-      void daemon.close().catch(() => {});
+      closeDaemon();
       settle();
     };
     host.onerror = () => {
-      void daemon.close().catch(() => {});
+      closeDaemon();
       settle();
     };
 
@@ -200,8 +210,10 @@ async function relay(host: StdioBridgeTransport, daemon: Transport): Promise<voi
       settle();
     };
     daemon.onerror = (error) => {
-      // Reported, never fatal on its own: the transport also rejects the send
-      // that caused it, and that path closes the session.
+      // An abort while the session is closing is expected and silent; anything
+      // else is reported, though never fatal on its own — the send that caused
+      // it is rejected too, and that path closes the session.
+      if (closing) return;
       process.stderr.write(
         `noir: workspace bridge: ${error instanceof Error ? error.message : String(error)}\n`,
       );
@@ -209,7 +221,7 @@ async function relay(host: StdioBridgeTransport, daemon: Transport): Promise<voi
 
     const failStart = (error: Error): void => {
       host.onerror?.(error);
-      void daemon.close().catch(() => {});
+      closeDaemon();
       settle();
     };
     void daemon.start().catch(failStart);
