@@ -30,7 +30,7 @@
 // `npm audit --json` uses (valid JSON out, non-zero exit when issues found).
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, type Stats, statSync } from 'node:fs';
+import { type Dirent, existsSync, readdirSync, readFileSync, type Stats, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { type HostId, resolveAdapter } from '@noir-ai/adapters';
@@ -56,6 +56,7 @@ import {
 } from '@noir-ai/create';
 import { pidAlive, readProjectDaemonRecord } from '@noir-ai/daemon';
 import { resolveModelConfig } from '@noir-ai/model';
+import { checkHygiene, type HygieneKind, type HygieneTier } from '@noir-ai/skills';
 import { PROBE_TIMEOUT_MS } from '../daemon-client.js';
 import {
   type CliOptions,
@@ -850,6 +851,208 @@ export function checkNestedNoir(
 }
 
 // ---------------------------------------------------------------------------
+// Output hygiene (repository-developer-facing, two tiers).
+//
+// The repository's own source and documents are checked against the hygiene
+// rules @noir-ai/skills declares: the patterns that make text read as machine
+// output. A fail-tier pattern is objectively mechanical (a divider drawn in
+// punctuation, numbered narration, a decorative emoji, a forbidden residue
+// token), so the check is CRITICAL and exit 1s. A warn-tier pattern is a
+// judgement call (a long comment block, a marker nobody can act on), which
+// would stall legitimate work if it blocked, so it warns — WARN rows never
+// trigger exit 1, exactly as the daemon and provider rows do not.
+//
+// The scan reads the repository's own text only. Generated and vendored trees,
+// the planning corpus, and formats the rules cannot read (JSON, an image
+// fixture) are out of scope; a file states its own exemption with the marker
+// the rules honour, so no path list is kept here.
+// ---------------------------------------------------------------------------
+
+/** How many findings the detail cell names before it reports the rest as a
+ *  count. A tree that has drifted can carry hundreds, and the row is a signal
+ *  to act on, not an inventory; the counts still cover every finding. */
+export const HYGIENE_FINDING_CAP = 5;
+
+/** The source extensions the check reads. Anything else is skipped: the rules
+ *  are written for comments and for prose, and a data format (JSON, YAML) has
+ *  no comment for them to read, while a binary fixture would only produce
+ *  nonsense. */
+const HYGIENE_CODE_EXTENSIONS = /\.(?:ts|tsx|js|jsx|mjs|cjs|sh)$/i;
+
+/** The document extensions the check reads as prose. */
+const HYGIENE_MARKDOWN_EXTENSIONS = /\.(?:md|mdx)$/i;
+
+/** Directories the walk never descends into: dependencies, build output and
+ *  coverage. A dot-directory is skipped too (`.git`, `.noir`, local scratch
+ *  directories), which is how the maintainer's exclusion of session scratch is
+ *  honoured by construction rather than by naming it here. */
+const HYGIENE_SKIP_DIRS = new Set(['node_modules', 'dist', 'coverage']);
+
+/** Directories excluded from the scan by the maintainer's decision: the
+ *  planning corpus, where decisions are recorded in the maintainer's own
+ *  shorthand. Root-relative POSIX paths. */
+const HYGIENE_EXCLUDED_DIRS = new Set(['docs/internal', 'docs/decisions', 'docs/roadmap']);
+
+/** The release log, excluded by basename wherever it sits: the root copy is the
+ *  single source of truth and `docs/CHANGELOG.md` is a pointer to it. */
+const HYGIENE_EXCLUDED_FILES = new Set(['CHANGELOG.md']);
+
+/** A file the scan will read, with the kind of text it holds. */
+interface HygieneScanFile {
+  /** Root-relative POSIX path. */
+  path: string;
+  kind: HygieneKind;
+}
+
+/** One finding, reduced to what the report needs. */
+export interface HygieneScanFinding {
+  path: string;
+  /** 1-based line number. */
+  line: number;
+  /** The rule id, exactly as the rule table declares it. */
+  id: string;
+  tier: HygieneTier;
+}
+
+export interface HygieneScanResult {
+  /** Files read. */
+  scanned: number;
+  /** Every finding, failures first, then in reading order across the tree. */
+  findings: HygieneScanFinding[];
+  fail: number;
+  warn: number;
+}
+
+/** `readdirSync` entries, or none when the directory does not exist. */
+function readDirEntries(dir: string): Dirent[] {
+  try {
+    return readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return []; // absent or unreadable — there is nothing to scan
+  }
+}
+
+/** The kind of text a path holds, or `null` when the rules cannot read it. */
+function hygieneKindOf(path: string): HygieneKind | null {
+  if (HYGIENE_MARKDOWN_EXTENSIONS.test(path)) return 'markdown';
+  if (HYGIENE_CODE_EXTENSIONS.test(path)) return 'code';
+  return null;
+}
+
+/** Offers every readable file under `root`/`relDir` to `add`. Symlinked
+ *  directories are not followed: a link out of the tree is not the
+ *  repository's own source, and a link to an ancestor would not terminate. */
+function walkScannable(
+  root: string,
+  relDir: string,
+  skip: ReadonlySet<string>,
+  add: (rel: string) => void,
+): void {
+  for (const entry of readDirEntries(join(root, relDir))) {
+    const rel = `${relDir}/${entry.name}`;
+    if (entry.isDirectory()) {
+      if (HYGIENE_SKIP_DIRS.has(entry.name) || entry.name.startsWith('.') || skip.has(rel)) {
+        continue;
+      }
+      walkScannable(root, rel, skip, add);
+    } else if (entry.isFile()) {
+      add(rel);
+    }
+  }
+}
+
+const NO_SKIP_DIRS: ReadonlySet<string> = new Set();
+
+/** The files the check reads: documents at the root and under `docs/` (minus
+ *  the planning corpus), the repository-authored agent skills, each package's
+ *  sources and tests, and `scripts/`. Sorted by path so a report is the same on
+ *  every run. */
+function collectHygieneFiles(root: string): HygieneScanFile[] {
+  const files: HygieneScanFile[] = [];
+  const add = (rel: string): void => {
+    const name = rel.slice(rel.lastIndexOf('/') + 1);
+    if (HYGIENE_EXCLUDED_FILES.has(name)) return;
+    const kind = hygieneKindOf(rel);
+    if (kind !== null) files.push({ path: rel, kind });
+  };
+  for (const entry of readDirEntries(root)) {
+    if (entry.isFile()) add(entry.name);
+  }
+  walkScannable(root, 'docs', HYGIENE_EXCLUDED_DIRS, add);
+  walkScannable(root, '.claude/skills', NO_SKIP_DIRS, add);
+  for (const entry of readDirEntries(join(root, 'packages'))) {
+    if (!entry.isDirectory()) continue;
+    walkScannable(root, `packages/${entry.name}/src`, NO_SKIP_DIRS, add);
+    walkScannable(root, `packages/${entry.name}/test`, NO_SKIP_DIRS, add);
+  }
+  walkScannable(root, 'scripts', NO_SKIP_DIRS, add);
+  files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  return files;
+}
+
+/** The report line: the counts, the locations that carry them, and how many
+ *  the cap left out. Failures are named before warnings, so a truncated list
+ *  still shows what blocks. */
+function hygieneDetail(result: HygieneScanResult): string {
+  if (result.scanned === 0) {
+    return 'nothing to scan (no packages/*/src, packages/*/test, scripts/ or documents found)';
+  }
+  if (result.findings.length === 0) {
+    return `clean — ${result.scanned} file${result.scanned === 1 ? '' : 's'} scanned`;
+  }
+  const files = new Set(result.findings.map((f) => f.path)).size;
+  const named = result.findings.slice(0, HYGIENE_FINDING_CAP);
+  const omitted = result.findings.length - named.length;
+  const where = named.map((f) => `${f.path}:${f.line} ${f.id}`).join('; ');
+  return `${result.fail} fail, ${result.warn} warn in ${files} file${files === 1 ? '' : 's'} — ${where}${omitted > 0 ? ` (+${omitted} more)` : ''}`;
+}
+
+/**
+ * Reads the repository's own source and documents through `checkHygiene` and
+ * pushes one row: `fail` when a fail-tier pattern is present, `warn` when only
+ * warn-tier patterns are, `ok` when the tree is clean.
+ *
+ * Each file is read once, and a file that carries the exemption marker comes
+ * back from `checkHygiene` with no findings at all, so the marker costs one
+ * scan of a file's text rather than a path list kept here.
+ *
+ * The check never throws and never writes: an unreadable file is skipped, and
+ * the commands that repair the tree (`noir skills lint`, the repository's own
+ * sweep) are the caller's business. Returns the structured scan for the
+ * callers that want more than the row.
+ */
+export function checkOutputHygiene(checks: CheckResult[], root: string): HygieneScanResult {
+  const files = collectHygieneFiles(root);
+  const findings: HygieneScanFinding[] = [];
+  let scanned = 0;
+  for (const file of files) {
+    let text: string;
+    try {
+      text = readFileSync(join(root, file.path), 'utf8');
+    } catch {
+      continue;
+    }
+    scanned++;
+    for (const found of checkHygiene(text, file.kind)) {
+      findings.push({ path: file.path, line: found.line, id: found.id, tier: found.tier });
+    }
+  }
+  findings.sort((a, b) => {
+    if (a.tier !== b.tier) return a.tier === 'fail' ? -1 : 1;
+    if (a.path !== b.path) return a.path < b.path ? -1 : 1;
+    return a.line - b.line;
+  });
+  const fail = findings.filter((f) => f.tier === 'fail').length;
+  const result: HygieneScanResult = { scanned, findings, fail, warn: findings.length - fail };
+  checks.push({
+    name: 'output hygiene',
+    status: fail > 0 ? 'fail' : result.warn > 0 ? 'warn' : 'ok',
+    detail: hygieneDetail(result),
+  });
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Deferred — semantic duplicate detection (`--dedup`; loads the embedder).
 // ---------------------------------------------------------------------------
 
@@ -1236,6 +1439,7 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   const rules = checkRulesMdBudget(checks, root, project);
   const host = checkHostArtifacts(checks, root, project);
   checkNestedNoir(checks, root);
+  checkOutputHygiene(checks, root);
   if (opts.dedup === true) {
     await checkSemanticDupDoctor(checks, root, project);
   }

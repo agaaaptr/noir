@@ -2,4 +2,11 @@
 // this file remains as a re-export shim so `./doctor.js` (used by
 // index.ts and historical imports) keeps resolving. New code should import from
 // `./commands/doctor.js`.
-export { type DoctorOptions, doctor } from './commands/doctor.js';
+export {
+  checkOutputHygiene,
+  type DoctorOptions,
+  doctor,
+  HYGIENE_FINDING_CAP,
+  type HygieneScanFinding,
+  type HygieneScanResult,
+} from './commands/doctor.js';
