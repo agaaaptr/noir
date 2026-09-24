@@ -34,6 +34,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Restore the ambient environment: the pin above is this file's, and a leaked
+  // value would silently decide the MCP command of a later test in this worker.
+  delete process.env.NOIR_MCP_COMMAND;
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -59,7 +62,7 @@ describe('migration 1.0.0 → 1.1.0 — the .noir/.env pointer on an existing co
     const res = await upgrade();
     // The migration is on the path from the fixture's stamp to current.
     expect(res.migrationsRan).toContain('1.0.0→1.1.0');
-    // R1: the literal assertion that pins where the chain lands. `--upgrade`
+    // The literal assertion that pins where the chain lands. `--upgrade`
     // restamps, so a 1.0.0 project is current afterwards and doctor stops
     // reporting drift.
     expect(readScaffoldVersion(root)).toBe('1.3.0');

@@ -336,7 +336,9 @@ export function assertSafeRoot(root: string): void {
  *  version. Only one of the two runs per invocation. */
 function envOwnerOnly(opts: ScaffoldOptions): EnvMode | undefined {
   if (opts.dryRun === true) return undefined;
-  return ensureOwnerOnly(join(opts.root, '.noir', '.env'));
+  // Through the layout helper, like every other `.noir/` path: the directory
+  // name lives in one place, so a rename cannot leave this file behind.
+  return ensureOwnerOnly(join(paths.noirDir(opts.root), '.env'));
 }
 
 /** The configured host from an existing `.noir/config.yml`, or `'claude'`.

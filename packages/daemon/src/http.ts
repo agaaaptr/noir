@@ -28,6 +28,19 @@ import {
 } from './token.js';
 import { buildWorkflowEngine, resolveGateConfig } from './workflow-seam.js';
 
+/** The method set `/mcp` accepts — the same one the Streamable HTTP transport
+ *  itself accepts, so a request refused here and one refused deeper down agree
+ *  on what this endpoint allows. One list, three consumers: the guard below,
+ *  the `Allow` header, and the refusal message, so a change lands in all three
+ *  at once instead of leaving two of them behind. */
+const MCP_METHODS: readonly string[] = ['GET', 'POST', 'DELETE'];
+
+/** The method set as an HTTP `Allow` header value. */
+const MCP_ALLOW = MCP_METHODS.join(', ');
+
+/** The method set as a sentence reads it: `GET, POST and DELETE`. */
+const MCP_ALLOW_SPOKEN = `${MCP_METHODS.slice(0, -1).join(', ')} and ${MCP_METHODS[MCP_METHODS.length - 1]}`;
+
 export interface StartHttpOptions {
   project: ProjectInfo;
   port?: number;
@@ -175,16 +188,15 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
       return;
     }
     if (pathname === '/mcp') {
-      // The same method set the Streamable HTTP transport itself accepts, so a
-      // request refused here and one refused deeper down agree on what this
-      // endpoint allows. Refused before auth: a wrong method is wrong no matter
-      // who sends it, and the transport would answer 405 anyway.
-      if (method !== 'GET' && method !== 'POST' && method !== 'DELETE') {
-        res.writeHead(405, { 'content-type': 'application/json', allow: 'GET, POST, DELETE' });
+      // The set the transport itself accepts (MCP_METHODS), refused before auth:
+      // a wrong method is wrong no matter who sends it, and the transport would
+      // answer 405 anyway.
+      if (!MCP_METHODS.includes(method)) {
+        res.writeHead(405, { 'content-type': 'application/json', allow: MCP_ALLOW });
         res.end(
           JSON.stringify({
             ok: false,
-            error: 'method not allowed: /mcp answers GET, POST and DELETE',
+            error: `method not allowed: /mcp answers ${MCP_ALLOW_SPOKEN}`,
           }),
         );
         return;

@@ -221,6 +221,10 @@ beforeAll(async () => {
   expect(noirEntryArgs(repoB)).toEqual(['mcp', 'serve', '--stdio', '--workspace', WORKSPACE]);
 }, 60000);
 
+// The hook's own timeout must exceed the shutdown bound it waits on: `awaitExit`
+// allows the daemon 15s to die before the SIGKILL fallback, so a hung shutdown
+// under vitest's 10s default would trip the hook first and leave the process
+// behind — the leak this teardown exists to prevent.
 afterAll(async () => {
   // Stop the daemon we started and wait for it to finish (bounded)...
   if (daemon !== undefined && daemon.exitCode === null && daemon.signalCode === null) {
@@ -238,7 +242,7 @@ afterAll(async () => {
   delete process.env.NOIR_WORKSPACES_DIR;
   rmSync(home, { recursive: true, force: true });
   rmSync(repos, { recursive: true, force: true });
-});
+}, 60_000);
 
 describe('workspace bridge end to end', () => {
   it.each([

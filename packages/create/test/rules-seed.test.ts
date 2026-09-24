@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { claudeAdapter, resolveAdapter, SUPPORTED_HOSTS } from '@noir-ai/adapters';
-import { paths } from '@noir-ai/core';
+import { NoirConfigSchema, paths } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { scaffold } from '../src/scaffold.js';
 
@@ -23,10 +23,15 @@ import { scaffold } from '../src/scaffold.js';
  * themselves are asserted as content here.
  */
 
-/** `noir doctor`'s default RULES.md budget: 6 KB / 150 lines — see
- *  `checkRulesMdBudget` in @noir-ai/cli. Asserted against the same
- *  measurement so a seed that passes here cannot trip the doctor. */
-const BUDGET_BYTES = 6 * 1024;
+/** `noir doctor`'s default RULES.md budget: the byte cap is the schema's own
+ *  `rules.lengthBudgetKb` default (read from the schema, so a changed default
+ *  cannot leave this assertion behind), and the line ceiling is the `maxLines`
+ *  local in `checkRulesMdBudget` (@noir-ai/cli, which @noir-ai/create cannot
+ *  import — the CLI depends on this package). Both are asserted against the
+ *  same measurement the doctor applies, so a seed that passes here cannot trip
+ *  the doctor. */
+const BUDGET_KB = NoirConfigSchema.shape.rules.parse(undefined).lengthBudgetKb;
+const BUDGET_BYTES = BUDGET_KB * 1024;
 const BUDGET_LINES = 150;
 
 /** Text that only makes sense inside the Noir repository itself, or only for
@@ -128,7 +133,7 @@ describe('rules seed — carries the core hygiene rules', () => {
 
 describe('rules seed — stays inside the doctor budget', () => {
   it.each([...SUPPORTED_HOSTS])(
-    'is within the 6 KB / 150-line budget for host %s',
+    'is within the doctor’s byte/line budget for host %s',
     async (host) => {
       const seed = await seedFor(host, join(root, host));
       // Same measurement `checkRulesMdBudget` applies: UTF-8 byte length for the
