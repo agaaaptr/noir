@@ -1,11 +1,20 @@
 import { applyNoirEnv, loadProjectInfo } from '@noir-ai/core';
 import { ensureDaemonRunning, startStdioServer } from '@noir-ai/daemon';
+import { bridgeStdioToWorkspace } from './workspace-bridge.js';
 
-export async function serve(opts: { stdio: boolean }): Promise<void> {
+export async function serve(opts: { stdio: boolean; workspace?: string }): Promise<void> {
   // Load .noir/.env before constructing the MCP server so integration tokens
   // (e.g. CLICKUP_API_TOKEN) are resolvable at call time even when the daemon
   // was launched from a context that did not inherit the shell rc.
   applyNoirEnv(process.cwd());
+  // A workspace member reaches its daemon through this same stdio entry point:
+  // the entry names the workspace, and the bridge resolves the daemon's address
+  // and token from disk itself. Nothing about the daemon — its URL, its secret —
+  // lives in the host's config, so nothing there can go stale or leak.
+  if (opts.workspace !== undefined) {
+    await bridgeStdioToWorkspace(opts.workspace, process.cwd());
+    return; // the bridge runs until the host closes stdin
+  }
   const project = loadProjectInfo(process.cwd());
   if (opts.stdio) {
     await startStdioServer({ project, transport: 'stdio', daemon: false });

@@ -558,11 +558,18 @@ export function createProgram(): Command {
     .command('serve')
     .description('run the Noir MCP server (stdio, or via the shared daemon)')
     .option('--stdio', 'force the stdio transport')
-    .action(async (opts: { stdio?: boolean }) => {
-      await serve({ stdio: opts.stdio === true });
+    .option(
+      '--workspace <name>',
+      'serve a shared workspace over stdio, bridging to that workspace daemon',
+    )
+    .action(async (opts: { stdio?: boolean; workspace?: string }) => {
+      await serve({
+        stdio: opts.stdio === true,
+        ...(typeof opts.workspace === 'string' ? { workspace: opts.workspace } : {}),
+      });
     });
   mcpCmd.action(() => {
-    throw new NoirCliError(EXIT.USAGE, 'Usage: noir mcp serve [--stdio]');
+    throw new NoirCliError(EXIT.USAGE, 'Usage: noir mcp serve [--stdio] [--workspace <name>]');
   });
 
   // `daemon` group — start/stop/status/restart.
