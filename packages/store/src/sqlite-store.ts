@@ -1,6 +1,6 @@
-import { mkdirSync } from 'node:fs';
+import { closeSync, mkdirSync, openSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { type ProjectId, paths } from '@noir-ai/core';
+import { ensureOwnerOnly, ensureOwnerOnlyDir, type ProjectId, paths } from '@noir-ai/core';
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
 import { exportMarkdown } from './markdown.js';
@@ -76,7 +76,28 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
   const projectId: ProjectId = opts.projectId;
   const dbPath = opts.dbPath ?? paths.storeDb(opts.root, projectId);
   if (opts.readonly !== true) {
-    mkdirSync(dirname(dbPath), { recursive: true });
+    // The store directory holds the project's whole database, so it is private
+    // to the account that owns the repo: created 0700, and narrowed on every
+    // writable open if an older Noir (or a lax umask) left it group/other
+    // accessible. `mkdirSync`'s mode is masked by the process umask, but 0o700
+    // has no group/other bits to mask, so it survives every umask that leaves
+    // the owner their own access.
+    const storeDir = dirname(dbPath);
+    mkdirSync(storeDir, { recursive: true, mode: 0o700 });
+    ensureOwnerOnlyDir(storeDir);
+    // SQLite creates the database file itself and takes no creation mode, so
+    // without this it would land at the umask default (0644) — the project's
+    // indexed context readable by every account on the machine. Creating the
+    // file here first, at 0600, means SQLite only ever opens an existing file.
+    // 'a' appends, so an existing database is never truncated.
+    try {
+      closeSync(openSync(dbPath, 'a', 0o600));
+    } catch {
+      // Best-effort: a database this process cannot pre-create (an unwritable
+      // directory, a read-only mount) must fail at the open below, with
+      // SQLite's own error, rather than here.
+    }
+    ensureOwnerOnly(dbPath); // heal a database an earlier version left lax
   }
 
   const db = new Database(dbPath, { readonly: opts.readonly === true });
@@ -111,6 +132,12 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
         'CREATE VIRTUAL TABLE IF NOT EXISTS vec USING vec0(embedding float[384], source TEXT, id TEXT)',
       );
     }
+    // SQLite creates the write-ahead log and shared-memory files itself, at the
+    // umask default, and they carry database pages — the same content as the
+    // database. They are re-created on a later open, so they are tightened here
+    // on every writable open, once the migration above has made both exist.
+    ensureOwnerOnly(`${dbPath}-wal`);
+    ensureOwnerOnly(`${dbPath}-shm`);
   }
   // read-only: do not write. If the schema is missing, queries simply fail —
   // acceptable for degraded reads (e.g. inspecting a foreign DB).

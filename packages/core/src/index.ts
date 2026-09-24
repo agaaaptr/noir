@@ -30,6 +30,11 @@ export {
   loadNoirEnv,
   parseEnvFile,
 } from './env-file.js';
+export {
+  ensureOwnerOnly,
+  ensureOwnerOnlyDir,
+  type FileModeOutcome,
+} from './file-mode.js';
 export { sha256Hex, sha256Hex12 } from './hash.js';
 export { IGNORE_BLOCK, syncIgnores } from './ignore-manager.js';
 export {
