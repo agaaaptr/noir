@@ -259,7 +259,8 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
 // ---------------------------------------------------------------------------
 /**
  * `noir skills lint`: the structural quality gate over the full shipped pack.
- * Runs `lintSkill` (validateSkill errors + soft warnings) over `discoverAll()`.
+ * Runs `lintSkill` over `discoverAll()` — the structural errors, the hygiene
+ * fail tier and the advisory warnings (the hygiene warn tier included).
  * In-process (no daemon) — the pack is a filesystem artifact.
  *
  * Exit contract: 0 when every skill validates clean (errors empty); 1 when any
@@ -283,7 +284,10 @@ export async function skillsLint(opts: SkillsOptions): Promise<void> {
     );
   }
   const errored = skills.filter((s) => s.errors.length > 0);
-  const warned = skills.filter((s) => s.warnings.length > 0 && s.errors.length === 0);
+  // A skill can carry both tiers, so the warnings a failing skill also has are
+  // kept visible: `skills lint` prints every finding, not only the ones that
+  // fail, and still exits non-zero purely on the errors.
+  const warned = skills.filter((s) => s.warnings.length > 0);
 
   const data = { count: skills.length, errored: errored.length, skills };
 

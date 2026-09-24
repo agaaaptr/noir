@@ -7,6 +7,8 @@ import { runtimeEmitsHostMcp } from './integrations-schema.js';
 import {
   artifactPathDrift,
   chainedReferences,
+  hygieneFindings,
+  hygieneMessage,
   isWhatWhenDescription,
   lintWarnings,
   looksLikeWhenDescription,
@@ -93,6 +95,14 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
   // Generated-artifact standard: no `.noir/` output-path drift in the body
   // or references (unknown dir, or a filename missing its type-code prefix).
   for (const d of artifactPathDrift(skill)) errors.push(d);
+  // Output hygiene (the rules in hygiene.ts): a fail-tier finding blocks
+  // emission exactly as a missing section does, and a warn-tier finding is
+  // advisory like the style warnings below.
+  for (const finding of hygieneFindings(body)) {
+    const message = hygieneMessage(finding);
+    if (finding.tier === 'fail') errors.push(message);
+    else warnings.push(message);
+  }
   // Soft warnings (lint-level) — advisory, non-failing.
   warnings.push(...lintWarnings(skill));
   return { ok: errors.length === 0, errors, warnings: warnings.length > 0 ? warnings : undefined };
@@ -100,9 +110,10 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
 
 /**
  * `lintSkill` — the soft quality gate. Errors = `validateSkill` errors (a
- * skill that fails validation is broken); warnings = `quality.ts` style rules
- * (thin body, no examples, first-person narration, …). A skill can validate
- * clean yet still carry lint warnings the author should resolve.
+ * skill that fails validation is broken, the hygiene fail tier included);
+ * warnings = the hygiene warn tier plus the `quality.ts` style rules (thin
+ * body, no examples, first-person narration, …). A skill can validate clean
+ * yet still carry lint warnings the author should resolve.
  */
 export function lintSkill(skill: BuiltinSkill): {
   name: string;

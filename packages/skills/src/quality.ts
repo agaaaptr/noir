@@ -14,6 +14,7 @@
 // forces every SKILL.md to carry a real playbook shape, not a shell.
 
 import { ARTIFACT_TYPES } from '@noir-ai/core';
+import { checkHygiene, HYGIENE_EXEMPT_MARKERS, type HygieneFinding } from './hygiene.js';
 import type { BuiltinSkill } from './types.js';
 
 /** The max body length the canon recommends (Anthropic: "under 500 lines").
@@ -202,4 +203,76 @@ export function artifactPathDrift(skill: BuiltinSkill): string[] {
     }
   }
   return [...drifts];
+}
+
+// ---------------------------------------------------------------------------
+// Output hygiene (the rules live in hygiene.ts).
+//
+// A SKILL.md body is a markdown document that also carries fenced code blocks,
+// so each part is checked with the kind of text it is: the prose as markdown,
+// the fenced blocks as source. Checking the whole body as one kind misfires in
+// both directions — a source rule reads markdown bold (`**text**`) as a block
+// comment, and a prose rule reads a `//` line inside a fence as a heading.
+// The fail tier blocks emission and the warn tier is advisory; which findings
+// go to which list is `validateSkill`'s decision, not this module's.
+// ---------------------------------------------------------------------------
+
+/** A body split into the two kinds of text it holds: the prose, and the fenced
+ *  code blocks. Blanking the other side's lines, rather than dropping them,
+ *  keeps every finding on the line number it has in the body. Only backtick
+ *  fences open a code block; the fence markers themselves are document syntax,
+ *  so they stay with the prose. */
+function splitFencedBlocks(body: string): { prose: string; code: string } {
+  const prose: string[] = [];
+  const code: string[] = [];
+  let inFence = false;
+  for (const line of body.split('\n')) {
+    const isFence = /^[ \t]{0,3}```/.test(line);
+    if (isFence) inFence = !inFence;
+    const isCode = inFence && !isFence;
+    prose.push(isCode ? '' : line);
+    code.push(isCode ? line : '');
+  }
+  return { prose: prose.join('\n'), code: code.join('\n') };
+}
+
+/** The 1-based line the body's exemption marker sits on, or 0 when it carries
+ *  none. A SKILL.md body states its own exemption with the markdown marker. */
+function exemptionLine(body: string): number {
+  const marker = HYGIENE_EXEMPT_MARKERS.markdown;
+  const lines = body.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    if ((lines[i] ?? '').trim() === marker) return i + 1;
+  }
+  return 0;
+}
+
+/** Every hygiene finding a skill body produces, in reading order.
+ *
+ *  A body that carries the exemption marker above its first finding is exempt
+ *  in both kinds. The marker is a statement about the file, and a body is one
+ *  file even though it is read as prose and as source — a fenced code block
+ *  cannot carry the document's marker, so without this the code rules would
+ *  keep firing inside a body that declared itself exempt. */
+export function hygieneFindings(body: string): HygieneFinding[] {
+  const { prose, code } = splitFencedBlocks(body);
+  const findings = [...checkHygiene(prose, 'markdown'), ...checkHygiene(code, 'code')];
+  const seen = new Set<string>();
+  const ordered = findings
+    .filter((f) => {
+      const key = `${f.id}:${f.line}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => a.line - b.line);
+  const exemptAt = exemptionLine(body);
+  if (exemptAt !== 0 && exemptAt < (ordered[0]?.line ?? Number.POSITIVE_INFINITY)) return [];
+  return ordered;
+}
+
+/** One hygiene finding as a gate message: the rule that fired, the line it
+ *  fired on, why that line is noise, and what to write instead. */
+export function hygieneMessage(finding: HygieneFinding): string {
+  return `${finding.id} (line ${finding.line}): ${finding.rationale} ${finding.fix}`;
 }
