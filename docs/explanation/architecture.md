@@ -51,7 +51,7 @@ The daemon is the **single writer** to the store; if it is down, reads (FTS/kNN/
 
 ## The `.noir/` portable store
 
-`.noir/` is the project's single source of truth, keyed by a **canonical `ProjectId` — never a filesystem path** (paths break across machines). It holds `config.yml`, `.env` (the gitignored `0600` project configuration/secrets file, read in-process and winning for every key it defines — see [configure-env.md](../how-to/configure-env.md)), `.env.example` (its committable, never-loaded documentation twin), `NOIR.md` (the canonical context file the host merely `@import`s), the ProjectId-keyed SQLite DB, and SDD artifacts (`intake/`, `specs/`, `plans/`, `tasks/`, `decisions/`, `audit/`, `CHANGELOG.md`). `~/.noir/` holds user-global concerns (the embedder model cache, the per-project daemon records at `daemons/<projectId>.json` + their `0600` bearer tokens (ADR-0010), and — for shared cross-repo workspaces — `workspaces/<name>/` with a registry + shared store, see ADR-0009). Generated host artifacts are pointers/transforms of `.noir/`, never drifting copies.
+`.noir/` is the project's single source of truth, keyed by a **canonical `ProjectId` — never a filesystem path** (paths break across machines). It holds `config.yml`, `.env` (the gitignored `0600` project configuration/secrets file, read in-process and winning for every key it defines — see [configure-env.md](../how-to/configure-env.md)), `.env.example` (its committable, never-loaded documentation twin), `NOIR.md` (the canonical context file the host merely `@import`s), the ProjectId-keyed SQLite DB, and SDD artifacts (`intake/`, `specs/`, `plans/`, `tasks/`, `decisions/`, `audit/`, `CHANGELOG.md`). `~/.noir/` holds user-global concerns (the embedder model cache, the per-project daemon records at `daemons/<projectId>.json` + their `0600` bearer tokens, and — for shared cross-repo workspaces — `workspaces/<name>/` with a registry + shared store). Generated host artifacts are pointers/transforms of `.noir/`, never drifting copies.
 
 ## Workspaces (cross-repo sharing)
 
@@ -73,8 +73,8 @@ The workspace daemon **multiplexes on the `?p=` project identity**:
 A non-member `?p=` is refused, and the **one-writer-per-DB invariant** is
 preserved: a single daemon process holds N store handles (one shared, N member
 projects). Provenance on a shared observation is stamped server-side from the
-request identity, never caller-supplied. See
-[ADR-0009](../decisions/0009-shared-workspaces.md) and the
+request identity, never caller-supplied. See the
+[shared-workspaces decision](../decisions/0009-shared-workspaces.md) and the
 [user-facing guide](../how-to/shared-workspaces.md); cross-machine/team sharing
 remains a v2.0 item.
 

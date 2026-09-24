@@ -43,7 +43,7 @@ Every workflow-written or skill-authored `.md` artifact carries YAML frontmatter
 ```yaml
 ---
 kind: plan            # enum = one of the 12 kinds above
-id: t4k3b1e9          # the store key (taskId) — or ADR-0007 for decisions
+id: t4k3b1e9          # the store key (taskId); a decision uses its ADR number instead (e.g. `ADR-0007`)
 slug: artifact-format # required only for kinds that carry one — omitted for intake and handoff
 title: Artifact format
 status: draft         # lifecycle kinds: draft | review | approved | done ; adr: proposed | accepted | rejected | superseded
@@ -53,7 +53,7 @@ generated_at: 2026-08-13T09:00:00Z   # RFC3339
 ---
 ```
 
-Reserved (declared optional in ADR-0007; not yet written or validated by any code): `version`, `author`/`owner`, `tags`, `related`, `supersedes`, `source`, `checksum` (`sha256:…`).
+Reserved (declared optional in the [generated-artifact standard decision](../decisions/0007-generated-artifact-standard.md); not yet written or validated by any code): `version`, `author`/`owner`, `tags`, `related`, `supersedes`, `source`, `checksum` (`sha256:…`).
 
 `slug` is conditional, not unconditional: the writer emits it only when a slug is passed, and the registry marks `intake` and `handoff` as carrying none — so it is required for every kind except those two (see Naming above).
 
