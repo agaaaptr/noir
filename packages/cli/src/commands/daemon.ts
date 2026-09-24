@@ -111,9 +111,7 @@ async function isHealthy(
   }
 }
 
-// ---------------------------------------------------------------------------
 // `noir daemon start` (foreground default; `--detach` + `--_detached-child`)
-// ---------------------------------------------------------------------------
 /**
  * Start the Noir daemon — foreground by default, or detached via `--detach`.
  *
@@ -296,9 +294,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
   log(`Noir daemon already running at ${ensured.url}`, opts);
 }
 
-// ---------------------------------------------------------------------------
 // `noir daemon stop`
-// ---------------------------------------------------------------------------
 /**
  * Stop the recorded daemon (SIGTERM its pid) and clear the record.
  *
@@ -385,9 +381,7 @@ export async function daemonStop(opts: DaemonOptions): Promise<void> {
   }
 }
 
-// ---------------------------------------------------------------------------
 // `noir daemon status`
-// ---------------------------------------------------------------------------
 /**
  * Report daemon liveness: read the record, confirm the pid is alive, and ping
  * `/health` for a live uptime. A missing/stale/unresponsive record maps to
@@ -481,9 +475,7 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
   );
 }
 
-// ---------------------------------------------------------------------------
 // `noir daemon token`
-// ---------------------------------------------------------------------------
 /**
  * Print this project's daemon bearer token — the command a host's
  * MCP `headersHelper` runs at connect time so no secret lives in a config file.
@@ -548,9 +540,7 @@ export async function daemonToken(opts: DaemonOptions): Promise<void> {
   process.stdout.write(`${token}\n`);
 }
 
-// ---------------------------------------------------------------------------
 // `noir daemon restart`
-// ---------------------------------------------------------------------------
 /**
  * Stop any running daemon, then start a fresh one (foreground by default,
  * detached when `--detach` is forwarded through).

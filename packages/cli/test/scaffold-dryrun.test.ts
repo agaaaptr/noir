@@ -112,11 +112,9 @@ describe('noir init --dry-run (F1 dryRun surfacing)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // The dry-run summary reports a planned doc-seed refresh apart from the
 // planned writes: "Noir will re-emit this pointer file" and "Noir will replace
 // a doc seed you never edited" are different news and read differently.
-// ---------------------------------------------------------------------------
 
 describe('reportPlannedWrites — the refresh section', () => {
   function result(over: Partial<ScaffoldResult>): ScaffoldResult {

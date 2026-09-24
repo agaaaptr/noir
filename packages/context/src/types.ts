@@ -10,9 +10,7 @@
 // Conventions mirror @noir-ai/store types (JSDoc on every interface/field)
 // and @noir-ai/workflow types (`as const` source tables → derived unions).
 
-// ---------------------------------------------------------------------------
 // Source taxonomy
-// ---------------------------------------------------------------------------
 
 /**
  * Logical source buckets a chunk can belong to. Reused for memory —
@@ -23,9 +21,7 @@
 export const SOURCES = ['codebase', 'docs', 'spec', 'memory'] as const;
 export type SourceKind = (typeof SOURCES)[number];
 
-// ---------------------------------------------------------------------------
 // Embedder configuration + info
-// ---------------------------------------------------------------------------
 
 /** Discriminant for {@link EmbedderConfig}. */
 export type EmbedderKind = 'local' | 'remote' | 'ollama' | 'none';
@@ -101,9 +97,7 @@ export interface EmbedderInfo {
   dim: number;
 }
 
-// ---------------------------------------------------------------------------
 // Chunking
-// ---------------------------------------------------------------------------
 
 /** Metadata attached to every chunk (stored as `docs.meta` / `vec.meta`). */
 export interface ChunkMeta {
@@ -134,9 +128,7 @@ export interface Chunk {
   meta: ChunkMeta;
 }
 
-// ---------------------------------------------------------------------------
 // Retrieval
-// ---------------------------------------------------------------------------
 
 /** Pair of non-negative weights `[bm25Weight, kNNWeight]`; defaults `[0.5, 0.5]`. */
 export type RRFWeights = [number, number];
@@ -208,9 +200,7 @@ export interface SearchResult {
   mode: SearchMode;
 }
 
-// ---------------------------------------------------------------------------
 // Indexing
-// ---------------------------------------------------------------------------
 
 /**
  * Return value of `indexPaths`. Counts are mutually consistent: a chunk is
@@ -237,9 +227,7 @@ export interface IndexResult {
   totalChunks: number;
 }
 
-// ---------------------------------------------------------------------------
 // Re-exports (single import surface for the rest of the package)
-// ---------------------------------------------------------------------------
 
 // Canonical project identifier (NEVER a filesystem path).
 export type { ProjectId } from '@noir-ai/core';

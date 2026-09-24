@@ -48,13 +48,11 @@ import { DEFAULT_UPDATE_CONFIG, runAsyncUpdateCheck } from './update.js';
 /** Options accepted by `status` (global flags + daemon-client knobs). */
 export interface StatusOptions extends CliOptions, DaemonClientOptions {}
 
-// ---------------------------------------------------------------------------
 // Tool result shapes (the relevant slices of the daemon's payloads). The daemon
 // returns these as JSON text; daemon-client parses them to `unknown`, so each
 // reader below treats a missing/foreign field as `undefined` and the section is
 // reported `null`. Keeping these local (rather than importing the daemon's
 // internal types) means the CLI depends only on the MCP wire contract.
-// ---------------------------------------------------------------------------
 interface HostStatusResult {
   noir: string;
   project: { id: string; name: string };
@@ -99,11 +97,9 @@ interface MemorySessionsResult {
   sessions: Array<{ id: string; count: number; lastTs: number }>;
 }
 
-// ---------------------------------------------------------------------------
 // Normalized payload (the `data` of the `--json` envelope + the source for the
 // human table). Every optional section is `null` when its engine is absent, so
 // a `--json` consumer can branch with a simple null check.
-// ---------------------------------------------------------------------------
 export interface StatusPayload {
   noir: string;
   project: { id: string; name: string };
@@ -247,11 +243,9 @@ function buildPayload(
   };
 }
 
-// ---------------------------------------------------------------------------
 // Human rendering (stderr). A two-column Field/Value table is the leanest
 // readable shape for a status snapshot; cli-table3 is auto-stripped under
 // NO_COLOR / non-TTY and the whole call is a no-op under --json.
-// ---------------------------------------------------------------------------
 function formatDuration(sec?: number): string {
   if (typeof sec !== 'number' || sec < 0) return 'unknown';
   if (sec < 60) return `${sec}s`;

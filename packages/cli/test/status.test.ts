@@ -52,11 +52,9 @@ vi.mock('@noir-ai/core', () => ({
 import { type StatusOptions, status } from '../src/commands/status.js';
 import { probeDaemon, withRunningDaemon } from '../src/daemon-client.js';
 
-// ---------------------------------------------------------------------------
 // Fake daemon caller. `callTool(name)` returns PAYLOADS[name]; per-test a test
 // can override behaviour (throw, swap a payload) by re-mapping PAYLOADS or by
 // reassigning currentCaller (and callerHolder.current).
-// ---------------------------------------------------------------------------
 type Caller = { callTool: ReturnType<typeof vi.fn> };
 
 const PAYLOADS: Record<string, unknown> = {};

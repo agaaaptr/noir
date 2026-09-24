@@ -389,9 +389,7 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
   });
 }
 
-// ---------------------------------------------------------------------------
 // Host-specific artifact generation. One entry point: `buildHostArtifacts`.
-// ---------------------------------------------------------------------------
 
 /** Context shape passed to {@link buildHostArtifacts}. A strict subset of
  *  {@link BuildManifestContext} (no `projectId`/`host` — the adapter IS the

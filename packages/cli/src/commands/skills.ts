@@ -31,7 +31,6 @@ import { truncateToWidth } from '../width.js';
 /** Options accepted by `skills` sub-commands (the global flags only). */
 export interface SkillsOptions extends CliOptions {}
 
-// ---------------------------------------------------------------------------
 // Category derivation.
 //
 // Skills ship no `category` frontmatter field (the skill contract is `{name,
@@ -40,7 +39,6 @@ export interface SkillsOptions extends CliOptions {}
 // falls back to its `noir-`-stripped segment so a newly authored skill still
 // gets a sensible cell instead of an empty one. This is display-only — the
 // `--json` payload carries `category` too (same derivation) for consistency.
-// ---------------------------------------------------------------------------
 const CATEGORY: Record<string, string> = {
   'noir-brainstorming': 'discovery',
   'noir-sync': 'discovery',
@@ -105,9 +103,7 @@ function toRow(s: BuiltinSkill, kind: 'builtin' | 'integration' = 'builtin'): Sk
   return { name: s.name, category, description, kind, status };
 }
 
-// ---------------------------------------------------------------------------
 // `noir skills list`
-// ---------------------------------------------------------------------------
 /**
  * `noir skills list`: discover the full shipped pack (builtins + integrations)
  * and render it. Consistent with `emitSkillsToDir` (which emits BOTH) — the
@@ -168,9 +164,7 @@ export async function skillsList(opts: SkillsOptions): Promise<void> {
   );
 }
 
-// ---------------------------------------------------------------------------
 // `noir skills sync`
-// ---------------------------------------------------------------------------
 /**
  * `noir skills sync`: re-emit the builtin pack into the host adapter's skills
  * dir. Reuses the same `emitSkillsToDir` primitive as `noir init` / `noir sync`
@@ -255,9 +249,7 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
   if (stale !== undefined) warn(stale, opts);
 }
 
-// ---------------------------------------------------------------------------
 // `noir skills lint`
-// ---------------------------------------------------------------------------
 /**
  * `noir skills lint`: the structural quality gate over the full shipped pack.
  * Runs `lintSkill` over `discoverAll()` — the structural errors, the hygiene
@@ -334,9 +326,7 @@ export async function skillsLint(opts: SkillsOptions): Promise<void> {
   }
 }
 
-// ---------------------------------------------------------------------------
 // `noir skills registry`
-// ---------------------------------------------------------------------------
 /**
  * `noir skills registry`: emit the runtime-derived skill registry (id, kind,
  * category, version, status, refs, lines). In-process (no daemon) — reads the

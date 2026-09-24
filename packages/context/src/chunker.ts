@@ -27,9 +27,7 @@
 import { sha256Hex } from './hash.js';
 import type { Chunk, SourceKind } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Tunable defaults (mirror the `context.chunk` config block)
-// ---------------------------------------------------------------------------
 
 /** Default maximum estimated tokens per non-markdown chunk. */
 export const DEFAULT_CHUNK_MAX_TOKENS = 512;
@@ -44,9 +42,7 @@ export const DEFAULT_CHUNK_OVERLAP = 64;
  */
 export const TOKEN_ESTIMATE_FACTOR = 1.3;
 
-// ---------------------------------------------------------------------------
 // Options
-// ---------------------------------------------------------------------------
 
 /**
  * Input to {@link chunkFile}. `path` + `content` are required; everything else
@@ -76,9 +72,7 @@ export interface ChunkOptions {
   overlap?: number;
 }
 
-// ---------------------------------------------------------------------------
 // Identifier explosion
-// ---------------------------------------------------------------------------
 
 /**
  * Split the identifiers in `text` into lowercase tokens, expanding
@@ -131,9 +125,7 @@ export function withIdentifierExplosion(content: string): string {
   return exploded.length > 0 ? `${content}\n${exploded}` : content;
 }
 
-// ---------------------------------------------------------------------------
 // Token estimation (shared with the retriever's budget packer)
-// ---------------------------------------------------------------------------
 
 /**
  * Cheap token-count proxy: ~1.3 tokens per whitespace-separated word (see
@@ -147,9 +139,7 @@ export function estimateTokens(text: string): number {
   return Math.ceil(words.length * TOKEN_ESTIMATE_FACTOR);
 }
 
-// ---------------------------------------------------------------------------
 // Language + source inference
-// ---------------------------------------------------------------------------
 
 const EXT_TO_LANGUAGE: Readonly<Record<string, string>> = {
   ts: 'typescript',
@@ -210,9 +200,7 @@ function defaultSource(path: string, language?: string): SourceKind {
   return isMarkdown(path, language) ? 'docs' : 'codebase';
 }
 
-// ---------------------------------------------------------------------------
 // Hashing
-// ---------------------------------------------------------------------------
 
 /** `parentDocId` + `chunkId` root — `sha256(path)`, stable across re-index. */
 function parentDocIdOf(path: string): string {
@@ -228,9 +216,7 @@ function chunkSha256(content: string): string {
   return sha256Hex(withIdentifierExplosion(content));
 }
 
-// ---------------------------------------------------------------------------
 // Markdown sectioning (code-fence-aware ATX-heading split)
-// ---------------------------------------------------------------------------
 
 const ATX_HEADING = /^(#{1,6})\s/;
 const FENCE_OPEN = /^\s*(`{3,}|~{3,})/;
@@ -282,9 +268,7 @@ function markdownSections(content: string): string[] {
   return sections;
 }
 
-// ---------------------------------------------------------------------------
 // Code windowing (line-bounded, token-budgeted, overlapping)
-// ---------------------------------------------------------------------------
 
 /**
  * Split code/general text into line-bounded windows of ~`maxTokens` estimated
@@ -354,9 +338,7 @@ function codeWindows(content: string, maxTokens: number, overlap: number): strin
   return windows;
 }
 
-// ---------------------------------------------------------------------------
 // Public entry point
-// ---------------------------------------------------------------------------
 
 /**
  * Split a file's content into {@link Chunk}s.

@@ -163,7 +163,7 @@ export function App({
   const [argBuffer, setArgBuffer] = useState('');
   const [argNotice, setArgNotice] = useState<string | null>(null);
 
-  // ----- load the palette's recent commands once on mount ------------------
+  // Load the palette's recent commands once on mount.
   useEffect(() => {
     if (!deps.loadRecent) return;
     const loader = deps.loadRecent;
@@ -185,7 +185,7 @@ export function App({
     };
   }, [deps.loadRecent, seed]);
 
-  // ----- resolve the curated home sections once ---------------------------
+  // Resolve the curated home sections once.
   useEffect(() => {
     let cancelled = false;
     void resolveSections(deps.commands ?? []).then((sections) => {
@@ -196,7 +196,7 @@ export function App({
     };
   }, [deps.commands]);
 
-  // ----- snapshot refresh: paused while a dispatch is in flight ----------
+  // Snapshot refresh, paused while a dispatch is in flight.
   useEffect(() => {
     // Pause polling while a dispatch runs OR the palette/confirm overlay is
     // open (the dashboard snapshot is off-screen then, so polling only wastes
@@ -237,7 +237,7 @@ export function App({
     };
   }, [running, mode.kind, refreshMs, deps.fetchStatus]);
 
-  // ----- dispatch runner: fires after the "running" frame has flushed ------
+  // Dispatch runner, fired after the "running" frame has flushed.
   useEffect(() => {
     if (pending === null) return;
     const argv = pending;
@@ -261,14 +261,14 @@ export function App({
     };
   }, [pending, deps.dispatch]);
 
-  // ----- shared dispatch helper --------------------------------------------
+  // Shared dispatch helper.
   function dispatchCmd(argv: readonly string[]): void {
     setOutput(null);
     setRunning(true);
     setPending([...argv]);
   }
 
-  // ----- unified run seam: every selection (palette / home / confirm) ------
+  // Unified run seam: every selection path (palette / home / confirm).
   function handleRun(argv: readonly string[], destructive: boolean): void {
     if (destructive) {
       setMode({ kind: 'confirm', argv: [...argv] });
@@ -300,7 +300,7 @@ export function App({
     if (recorder) void recorder(argv);
   }
 
-  // ----- palette open / cycle helpers --------------------------------------
+  // Palette open / cycle helpers.
   function openPalette(corpus: Corpus): void {
     setPaletteQuery('');
     setPaletteActive(0);
@@ -324,7 +324,7 @@ export function App({
     return 'commands';
   }
 
-  // ----- dashboard-mode keybinding handler -------------------------------
+  // Dashboard-mode keybinding handler.
   function handleDashboardInput(input: string, key: Key): void {
     if (running) return;
     setNotice(null);
@@ -403,7 +403,7 @@ export function App({
     }
   }
 
-  // ----- palette-mode keybinding handler (single router) -------------------
+  // Palette-mode keybinding handler (single router).
   // Clamp the active cursor to the FULL row list. The renderer slides a
   // VISIBLE_ROWS window over the list, so the cursor (and Enter) can reach
   // every row, not just the first ten.
@@ -481,7 +481,7 @@ export function App({
     }
   }
 
-  // ----- argument-collection keybinding handler ---------------------------
+  // Argument-collection keybinding handler.
   // The input line now carries the command's argument: Enter dispatches the
   // command with it appended (through the same confirm gate as any other
   // selection), and Esc drops back to the filter with the query untouched.
@@ -522,7 +522,7 @@ export function App({
     }
   }
 
-  // ----- confirm-mode keybinding handler ----------------------------------
+  // Confirm-mode keybinding handler.
   function handleConfirmInput(input: string, key: Key): void {
     if (key.escape || input === 'n' || input === 'N') {
       // Back to the palette with a clean query so the full list is visible.
@@ -539,7 +539,7 @@ export function App({
     }
   }
 
-  // ----- keybinding dispatcher (single `useInput` for the whole App) ------
+  // Keybinding dispatcher (a single useInput for the whole App).
   useInput((input, key) => {
     // Ctrl+C leaves the dashboard, as it always has — except while a host is
     // live, where the run screen takes it as "stop the host" (the same thing Esc
@@ -614,7 +614,7 @@ export function App({
     [mode, paletteQuery, deps.commands, deps.matcher, recent, homeSections, searchLines],
   );
 
-  // ----- render -----------------------------------------------------------
+  // Render the view for the active mode.
   if (mode.kind === 'palette') {
     const collecting = mode.collecting;
     return (

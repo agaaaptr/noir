@@ -69,9 +69,7 @@ export function resolveHostRun(host: HostId, customBinary?: string): HostRunSpec
   return { binary, flags: HOST_FLAGS[host] };
 }
 
-// ---------------------------------------------------------------------------
 // Event normalization
-// ---------------------------------------------------------------------------
 
 /** A token-usage snapshot (the fields of the stream-json `usage` object). */
 export interface TokenUsage {
@@ -304,9 +302,7 @@ function normalizeStreamEventInner(inner: Record<string, unknown> | null): NoirE
   return { kind: 'other', subtype: innerType ?? 'stream_event' };
 }
 
-// ---------------------------------------------------------------------------
 // Usage reduction
-// ---------------------------------------------------------------------------
 
 /** A monotonic token/cost accumulator snapshot. */
 export interface UsageSnapshot {
@@ -373,9 +369,7 @@ export class UsageReducer {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Spawn integration
-// ---------------------------------------------------------------------------
 
 /**
  * A host child a caller can stop, as the cancel path sees it: what `spawn`

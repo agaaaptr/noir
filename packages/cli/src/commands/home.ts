@@ -131,7 +131,6 @@ export async function home(opts: CliOptions, deps: HomeDeps): Promise<void> {
   await deps.dispatch(['status']);
 }
 
-// ---------------------------------------------------------------------------
 // The grouped home menu (interactive arm).
 //
 // Two levels driven by a small state machine so navigation is smooth:
@@ -142,7 +141,6 @@ export async function home(opts: CliOptions, deps: HomeDeps): Promise<void> {
 // prompt). We return a sentinel from each level and branch on it, so "back"
 // from level 2 loops back to level 1, and "next"/"previous" from level 2 jump
 // to the adjacent section's action list. Cancel anywhere → exit 5 (CANCELLED).
-// ---------------------------------------------------------------------------
 
 /** @clack's `select` result is a value | cancel-symbol. */
 type ClackChoice = string | symbol;

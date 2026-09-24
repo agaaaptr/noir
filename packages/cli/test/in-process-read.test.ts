@@ -71,10 +71,8 @@ import { memoryRecall, memorySessions } from '../src/commands/memory.js';
 import { taskNew, taskStatus } from '../src/commands/task.js';
 import { probeDaemon, withInProcessRead } from '../src/daemon-client.js';
 
-// ---------------------------------------------------------------------------
 // Fixtures: a real temp project with a seeded store (docs + memory + a task),
 // opened writable here to SEED, then re-opened READ-ONLY by the fallback.
-// ---------------------------------------------------------------------------
 let root: string;
 let projectId: string;
 let project: ProjectInfo;
@@ -167,9 +165,7 @@ function captureStreams(): { capture: () => Captured; restore: () => void } {
   };
 }
 
-// ---------------------------------------------------------------------------
 // The fallback helper itself
-// ---------------------------------------------------------------------------
 describe('withInProcessRead (daemon-client)', () => {
   it('opens a read-only store + context/memory/workflow engines and closes the store', async () => {
     const seen: string[] = [];
@@ -195,9 +191,7 @@ describe('withInProcessRead (daemon-client)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Wire-level: READS fall back, WRITES keep exit 4
-// ---------------------------------------------------------------------------
 describe('in-process read fallback — daemon down', () => {
   it("'context search foo' returns results (exit 0), not exit 4", async () => {
     const { capture, restore } = captureStreams();

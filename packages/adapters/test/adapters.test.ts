@@ -12,14 +12,12 @@ import type { EmitContext, HostAdapter, IntegrationMcpEmission } from '../src/ty
 
 const ctx: EmitContext = { root: '/tmp/demo' };
 
-// ---------------------------------------------------------------------------
 // Shared emission invariant — adapters whose `emitContext` IS the universal
 // AGENTS.md (agents-md / cursor / opencode) produce BYTE-IDENTICAL content.
 // Gemini is EXCLUDED here — like claude, its `emitContext` returns its NATIVE
 // context (GEMINI.md); the universal AGENTS.md is composed SEPARATELY by the
 // cli via the same `emitAgentsMd` helper (identical by construction), so it is
 // not asserted through `emitContext`. Claude is excluded for the same reason.
-// ---------------------------------------------------------------------------
 describe('AGENTS.md parity — adapters whose emitContext IS the AGENTS.md', () => {
   const agentsMdHosts: HostAdapter[] = [agentsMdAdapter, cursorAdapter, opencodeAdapter];
 
@@ -48,9 +46,7 @@ describe('AGENTS.md parity — adapters whose emitContext IS the AGENTS.md', () 
   });
 });
 
-// ---------------------------------------------------------------------------
 // Per-adapter emission contracts.
-// ---------------------------------------------------------------------------
 
 describe('agents-md adapter (the universal minimal)', () => {
   it('id is "agents-md"', () => {
@@ -302,9 +298,7 @@ describe('opencode adapter', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // buildMcpServersJson — the shared {mcpServers} helper (claude parity anchor).
-// ---------------------------------------------------------------------------
 
 describe('buildMcpServersJson — the shared {mcpServers} helper', () => {
   it('claude.emitMcpConfig delegates here (byte-identical output)', () => {
@@ -380,12 +374,10 @@ describe('buildMcpServersJson — the shared {mcpServers} helper', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Path seams — the four NEW adapters implement mcpConfigPath + agentsMdPath.
 // Claude is intentionally EXCLUDED (per the spec: "existing adapters keep
 // working unchanged" — claude leaves these optional seams undefined; its MCP
 // path stays hardcoded in the cli/create scaffold as before).
-// ---------------------------------------------------------------------------
 
 describe('path seams — every new adapter declares its MCP + AGENTS.md paths', () => {
   it.each([
@@ -407,13 +399,11 @@ describe('path seams — every new adapter declares its MCP + AGENTS.md paths', 
   });
 });
 
-// ---------------------------------------------------------------------------
 // MCP command threading — cross-adapter parity contract.
 // Every host adapter MUST honor opts.command (the absolute native shim that
 // resolveNoirCommand() emits for native installs). opencode used to hardcode
 // 'noir' and silently drop it — this table-driven test locks the contract so
 // the bug can't silently recur for ANY of the 5 hosts.
-// ---------------------------------------------------------------------------
 
 describe('MCP command threading — every adapter honors opts.command', () => {
   // Extract the noir command from whatever shape each host emits. The 4

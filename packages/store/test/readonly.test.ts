@@ -57,7 +57,7 @@ afterEach(() => {
 
 describeVec(describeLabel, () => {
   it('reads all data types in read-only mode; all writes throw', async () => {
-    // Step 1: Open writable and populate the DB with KV, FTS, and vec data.
+    // Seed the database writable first, so the read-only reopen below has data to read back.
     const writable = await openStore({ projectId: id, root });
     const testDoc = {
       id: 'test-doc',
@@ -72,10 +72,10 @@ describeVec(describeLabel, () => {
     writable.setState('workflow', testKv);
     await writable.close();
 
-    // Step 2: Reopen the SAME db file read-only.
+    // Reopen the SAME database file read-only — persistence is part of what this proves.
     const ro = await openStore({ projectId: id, root, readonly: true });
     try {
-      // Step 3: Assert reads work — all data types are accessible.
+      // All three data types (KV, FTS, vec) must round-trip through the read-only handle.
       const kv = ro.getState<typeof testKv>('workflow');
       expect(kv).toEqual(testKv);
 
@@ -88,7 +88,7 @@ describeVec(describeLabel, () => {
       expect(vecHits.length).toBe(1);
       expect(vecHits[0]?.id).toBe('test-vec');
 
-      // Step 4: Assert all writes throw with the degraded-read message.
+      // Every write path must refuse with the degraded-read message, not crash or silently pass.
       expect(() => ro.setState('key', 'value')).toThrow('store is read-only (daemon down)');
       expect(() => ro.indexDoc({ id: 'x', source: 's', content: 'c' })).toThrow(
         'store is read-only (daemon down)',

@@ -93,12 +93,9 @@ export function buildPaletteCommandsForTui(): PaletteCommand[] {
   return buildPaletteCommands(createProgram());
 }
 
-// ---------------------------------------------------------------------------
 // Program factory. Each call returns a fresh, independently-parseable Command
 // (commander parse state is mutable, so tests should drive a fresh program).
-// ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
 // Action-option bridge. Commander passes each action handler the positional
 // args + options + the action's Command as the LAST argument. The global flags
 // (`--json/--no-input/--quiet/--verbose/--cwd`, registered `` on
@@ -106,7 +103,6 @@ export function buildPaletteCommandsForTui(): PaletteCommand[] {
 // those globals off the trailing Command without depending on how many params
 // commander injected in front of it (it varies with the command's arity), so a
 // single pattern works for every action.
-// ---------------------------------------------------------------------------
 function actionGlobals(args: readonly unknown[]): Record<string, unknown> {
   // `noUncheckedIndexedAccess` → element access yields `unknown`; the optional
   // chain + cast handles the undefined case without a runtime branch.
@@ -181,7 +177,6 @@ function parseHost(raw: string | undefined): HostId | undefined {
   return raw as HostId;
 }
 
-// ---------------------------------------------------------------------------
 // TUI policy + deprecation / redirect infrastructure.
 //
 // Approach B (locked): TUI-primary UX, but NEVER hard-gate any subcommand. The
@@ -189,7 +184,6 @@ function parseHost(raw: string | undefined): HostId | undefined {
 // stays 100% scriptable. `--json` is the headless contract. The deprecation
 // registry below is the formal "warn for N → redirect for N → never silently
 // remove" channel; ZERO entries today (no command is deprecated).
-// ---------------------------------------------------------------------------
 
 /** One entry in the {@link DEPRECATIONS} registry. */
 export interface DeprecationEntry {
@@ -347,7 +341,7 @@ export function createProgram(): Command {
     emitDeprecationHintsFor(actionCmd, toCliOptions(opts));
   });
 
-  // ----- migrated commands (behavior-preserving) -----
+  // Migrated commands (behavior-preserving).
 
   program
     .command('init')
@@ -734,7 +728,7 @@ export function createProgram(): Command {
       await doctor({ ...toCliOptions(g), ...(dedup ? { dedup: true } : {}) });
     });
 
-  // ----- new subcommand groups -----
+  // New subcommand groups.
   // Signatures match the exit-code + stream discipline so --help is accurate;
   // every action dispatches to
   // its command module in ./commands/*.js.
@@ -1393,11 +1387,9 @@ const homeDeps: HomeDeps = {
   commands: buildPaletteCommands(createProgram()),
 };
 
-// ---------------------------------------------------------------------------
 // Error → exit-code mapping lives in `./output.js` (`handleError`); it never
 // throws and never calls `process.exit` (commander's `exitOverride` already
 // prevented that for commander's own errors).
-// ---------------------------------------------------------------------------
 
 /**
  * Parse `argv` (user-form: NO node/script prefix) on the singleton program and

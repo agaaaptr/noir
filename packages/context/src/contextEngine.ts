@@ -54,9 +54,7 @@ import type {
   Store,
 } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Status payload (mirrors StoreStatus in @noir-ai/daemon server.ts)
-// ---------------------------------------------------------------------------
 
 /**
  * JSON returned by the `context_status` MCP tool. Mirrors
@@ -82,9 +80,7 @@ export interface ContextStatus {
   degraded: boolean;
 }
 
-// ---------------------------------------------------------------------------
 // Construction options
-// ---------------------------------------------------------------------------
 
 /** Construction options for {@link ContextEngine}. */
 export interface ContextEngineOptions {
@@ -116,9 +112,7 @@ export interface ContextEngineOptions {
   storeDegraded?: boolean;
 }
 
-// ---------------------------------------------------------------------------
 // Engine
-// ---------------------------------------------------------------------------
 
 /**
  * Noir's embedded hybrid retrieval engine — the `ctx.context` service.

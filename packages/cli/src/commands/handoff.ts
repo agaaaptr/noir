@@ -57,10 +57,8 @@ export interface HandoffOptions extends CliOptions, DaemonClientOptions {
 /** Bounded extraction limits — small enough to seed a prompt, never a dump. */
 const SEED_LIMIT = 5;
 
-// ---------------------------------------------------------------------------
 // Wire result shapes (slices of the daemon payloads; local types — the CLI
 // depends only on the MCP wire contract, mirrors status.ts / context.ts).
-// ---------------------------------------------------------------------------
 interface ContextSearchHit {
   path?: string;
   score?: number;
@@ -125,9 +123,7 @@ export interface HandoffPayloadFull {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Rendering — the markdown artifact (STDOUT) + the structured payload (--json).
-// ---------------------------------------------------------------------------
 
 /** Heading line: `# Noir handoff — <name> (<id>)`. */
 function heading(name: string, id: string): string {
@@ -275,12 +271,10 @@ function handoffFilePath(root: string, taskId: string | undefined, projectId: st
   return resolveArtifactPath(root, 'handoff', { taskId: id });
 }
 
-// ---------------------------------------------------------------------------
 // Bounded extraction — `context_search` + `memory_recall` for the active task's
 // domain. Uses `withRunningDaemon` (probe-only — NEVER starts a daemon) so a
 // down daemon degrades to `null` (exit 0) instead of exit 4. A missing embedder
 // throws inside the tool call → `tryTool` folds to `null` → "degraded" note.
-// ---------------------------------------------------------------------------
 
 /** Run the bounded extraction over one daemon connection (if the daemon is up).
  *  Returns `{context, memory}` where each is `null` on any failure path. The
@@ -342,9 +336,7 @@ async function probeOnly(opts: HandoffOptions): Promise<DaemonProbe> {
   return probeDaemon(opts);
 }
 
-// ---------------------------------------------------------------------------
 // The command.
-// ---------------------------------------------------------------------------
 
 /**
  * `noir handoff` (alias `noir wrap`): gather the live snapshot + a bounded

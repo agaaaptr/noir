@@ -96,7 +96,7 @@ function shasumsUrl(version: string): string {
   return `${nodeDistBaseUrl()}v${version}/SHASUMS256.txt`;
 }
 
-/* ------------------------------- exec seam ------------------------------ */
+// Exec seam.
 
 /** The shape `extractNode` expects from any executor (real or mocked). */
 export type ExecSeam = (
@@ -135,7 +135,7 @@ const defaultExec: ExecSeam = (cmd, args, opts) =>
     });
   });
 
-/* --------------------------- download + verify -------------------------- */
+// Download + verify.
 
 /** A fetch seam — defaults to the global `fetch` (mockable in tests). */
 export type FetchSeam = typeof globalThis.fetch;
@@ -210,7 +210,7 @@ function parseSha256Entry(sumsBody: string, basename: string): string | null {
   return null;
 }
 
-/* ------------------------------- extract -------------------------------- */
+// Extract.
 
 /**
  * Extract a Node archive into `destDir`. Posix uses `tar -xzf`, win32 uses
@@ -296,7 +296,7 @@ async function assertNoTraversal(
   }
 }
 
-/* ------------------------------ provision ------------------------------- */
+// Provision.
 
 export interface ProvisionedNode {
   /** What runtime backs this node: `'managed'` (downloaded into ~/.noir) or `'system'` (fallback). */

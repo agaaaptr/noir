@@ -11,9 +11,7 @@ import {
   validateIntegration,
 } from '../src/integrations-schema.js';
 
-// ---------------------------------------------------------------------------
 // Schema validation — valid + invalid shapes.
-// ---------------------------------------------------------------------------
 describe('integration.json schema', () => {
   it('parses the shipped ClickUp declaration', () => {
     const v = parseIntegration({
@@ -106,9 +104,7 @@ describe('runtimeEmitsHostMcp', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // discoverIntegrations() — finds + validates the shipped ClickUp integration.
-// ---------------------------------------------------------------------------
 describe('discoverIntegrations() — shipped pack', () => {
   it('finds noir-clickup with a valid declaration', () => {
     const integrations = discoverIntegrations();
@@ -139,9 +135,7 @@ describe('discoverAll() — builtins + integrations merged', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // compileIntegration() — host MCP emission widening.
-// ---------------------------------------------------------------------------
 describe('compileIntegration() — host MCP widening', () => {
   it('does NOT emit hostMcp for gated-write-proxy (ClickUp)', () => {
     const [cu] = discoverIntegrations().filter((i) => i.name === 'noir-clickup');
@@ -198,9 +192,7 @@ describe('compileIntegration() — host MCP widening', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // emitSkillsToDir() — emits integrations alongside builtins when asked.
-// ---------------------------------------------------------------------------
 describe('emitSkillsToDir() — integrations opt-in', () => {
   it('emits the shipped integration under the default (no builtinDir override)', async () => {
     const target = await mkdtemp(join(tmpdir(), 'noir-emit-'));
@@ -254,10 +246,8 @@ describe('emitSkillsToDir() — integrations opt-in', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Fixture helper — writes a synthetic integration dir under a tmpdir's
 // `integrations/` sibling so discoverIntegrations(tmpdir/integrations) finds it.
-// ---------------------------------------------------------------------------
 async function writeFixtureIntegration(
   decl: Omit<
     {

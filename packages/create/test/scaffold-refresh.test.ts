@@ -14,7 +14,6 @@
 // ordinary conflict flow, which keeps their bytes unless someone says otherwise.
 //
 // WHY THE TEMPLATES ARE SUBSTITUTED
-// ---------------------------------
 // The report is decided by comparing two things: the bytes on disk and what the
 // current template renders to. The packaged templates still render to exactly
 // the bytes recorded for the initial scaffold version, so against them a refresh

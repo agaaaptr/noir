@@ -51,9 +51,7 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-// ---------------------------------------------------------------------------
 // windowSnippet — pure unit (no store, no sqlite-vec gate)
-// ---------------------------------------------------------------------------
 
 describe('windowSnippet (pure)', () => {
   it('wraps query-term matches with <<…>> markers (mirrors FTS5 convention)', () => {
@@ -90,9 +88,7 @@ describe('windowSnippet (pure)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Degraded knn path — stubbed store (no sqlite-vec dependency; deterministic)
-// ---------------------------------------------------------------------------
 
 /** Minimal Store stub: only `searchFt`/`knn` are exercised by the retriever. */
 function stubStore(overrides: { searchFt: Store['searchFt']; knn: Store['knn'] }): Store {
@@ -155,9 +151,7 @@ describe('retriever (degraded paths, stubbed store)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Store-backed hybrid search (gated on sqlite-vec)
-// ---------------------------------------------------------------------------
 
 // Build a ChunkMeta exactly as the indexer will, so the retriever's
 // backfill path is exercised against the real shape.

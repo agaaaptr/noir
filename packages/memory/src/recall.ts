@@ -44,9 +44,7 @@ import type { FtsHit, Store, VecHit } from '@noir-ai/store';
 import { getObservation } from './store.js';
 import type { EmbedFn, MemoryHit, Observation, RecallOptions } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Constants
-// ---------------------------------------------------------------------------
 
 /** Source bucket for every memory row (keeps context + memory disjoint). */
 const MEMORY_SOURCE = 'memory';
@@ -117,9 +115,7 @@ const STOPWORDS: ReadonlySet<string> = new Set([
   'etc',
 ]);
 
-// ---------------------------------------------------------------------------
 // Dependencies + outcome
-// ---------------------------------------------------------------------------
 
 /** The injected store handle + the shared context embedder (read-only pipeline). */
 export interface RecallDeps {
@@ -139,9 +135,7 @@ export interface RecallMemoryResult {
   mode: 'hybrid' | 'bm25-only';
 }
 
-// ---------------------------------------------------------------------------
 // Entity extraction (cheap regex, NO LLM)
-// ---------------------------------------------------------------------------
 
 /**
  * Cheap regex extraction of identifiers + file/path tokens from a query (NO LLM). Two kinds of entity are collected, de-duplicated:
@@ -234,9 +228,7 @@ function entityBoostForObs(obs: Observation, entities: ReadonlyArray<string>): n
   return matched * ENTITY_BOOST_PER_MATCH;
 }
 
-// ---------------------------------------------------------------------------
 // Hybrid recall
-// ---------------------------------------------------------------------------
 
 /**
  * Run hybrid recall (BM25 ∪ kNN → RRF → entity-boost → KV hydration) scoped to
@@ -320,9 +312,7 @@ export async function recallMemory(
   return { hits: hits.slice(0, limit), degraded, mode };
 }
 
-// ---------------------------------------------------------------------------
 // Small pure helpers (module-local)
-// ---------------------------------------------------------------------------
 
 /**
  * Project an {@link Observation} into a {@link MemoryHit} at a given (already

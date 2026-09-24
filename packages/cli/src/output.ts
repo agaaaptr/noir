@@ -25,9 +25,7 @@ import ora, { type Ora } from 'ora';
 import { c, isCiEnv, terminalWidth } from './theme.js';
 import { displayWidth, truncateMiddle, truncateToWidth } from './width.js';
 
-// ---------------------------------------------------------------------------
 // Exit-code contract + error types
-// ---------------------------------------------------------------------------
 export const EXIT = {
   OK: 0,
   ERROR: 1,
@@ -61,13 +59,11 @@ export class NoirCliError extends Error {
  */
 const NOIR_ERROR_CODE = 'noir.error';
 
-// ---------------------------------------------------------------------------
 // Global-option shape. Commander stores `--no-input` under the attribute
 // `input` (default `true`; the flag sets it `false`) — see commander's
 // `Option.attributeName()` which strips the leading `no-`. Both `input`
 // (commander's real key) and `noInput` (the spec's intent) are accepted so
 // callers may pass either commander's raw globals or a hand-built object.
-// ---------------------------------------------------------------------------
 export interface CliOptions {
   readonly json?: boolean;
   readonly quiet?: boolean;
@@ -108,11 +104,9 @@ function envFlagSet(name: string): boolean {
 
 // `isCiEnv` is imported from ./theme.js (the color authority) — see note there.
 
-// ---------------------------------------------------------------------------
 // Interactivity gate. Drives both the @clack home menu and the
 // decoration of every helper below. Requires BOTH stdin and stdout to be TTYs:
 // @clack reads keypresses from stdin while ora/picocolors render to stdout.
-// ---------------------------------------------------------------------------
 export function isInteractive(opts: CliOptions = {}): boolean {
   if (isJsonMode(opts) || isNoInput(opts)) return false;
   if (isCiEnv() || envFlagSet('NO_COLOR')) return false;
@@ -140,21 +134,17 @@ function flaggedNonInteractiveCli(): boolean {
   return v !== undefined && v !== '';
 }
 
-// ---------------------------------------------------------------------------
 // Data output (stdout). The ONLY helper here that writes to stdout; under
 // `--json` a command calls this exactly once with its full payload and never
 // mixes other stdout writes, keeping machine output pristine.
-// ---------------------------------------------------------------------------
 export function json(obj: unknown): void {
   process.stdout.write(`${JSON.stringify(obj)}\n`);
 }
 
-// ---------------------------------------------------------------------------
 // Human diagnostics (stderr). picocolors auto-strips ANSI under NO_COLOR /
 // non-TTY, and each helper additionally short-circuits under `--json`
 // (decoration off, payload is the output) — and `info`/`log`/`success` also
 // under `--quiet`. `warn`/`error` survive `--quiet` (they carry signal).
-// ---------------------------------------------------------------------------
 export function log(msg: string, opts: CliOptions = {}): void {
   if (isJsonMode(opts) || isQuietMode(opts)) return;
   process.stderr.write(`${msg}\n`);
@@ -192,7 +182,6 @@ export function tip(msg: string, opts: CliOptions = {}): void {
   process.stderr.write(`${c.warn(msg)}\n`);
 }
 
-// ---------------------------------------------------------------------------
 // Tables (stderr). Suppressed entirely under `--json` — the command has
 // already emitted the rows as a JSON array via `json()`.
 //
@@ -209,7 +198,6 @@ export function tip(msg: string, opts: CliOptions = {}): void {
 // cut by that same module rather than by cli-table3's code-unit arithmetic.
 // `wordWrap` keeps free-text cells readable; `truncate: '…'` is the final
 // backstop for a long token inside a wrapped cell.
-// ---------------------------------------------------------------------------
 export function table(
   rows: readonly Record<string, unknown>[],
   cols: readonly string[],
@@ -397,12 +385,10 @@ function formatCell(value: unknown): string {
   return JSON.stringify(value);
 }
 
-// ---------------------------------------------------------------------------
 // Definition list (stderr). A two-column Field/Value rendering for snapshot-
 // shaped output (status / task / context-status). `status.ts` hand-rolled this
 // exact shape; this generalizes it. Rendered via the same responsive `table()`,
 // so it inherits the clean (non-red) header + NO_COLOR behavior automatically.
-// ---------------------------------------------------------------------------
 export interface DefinitionRow {
   /** Field label (left column). */
   label: string;
@@ -418,10 +404,8 @@ export function definitionList(rows: readonly DefinitionRow[], opts: CliOptions 
   );
 }
 
-// ---------------------------------------------------------------------------
 // Spinner (stderr). ora when interactive; a no-op otherwise so scriptable /
 // CI / `--json` / `--quiet` runs pay nothing and never animate a pipe.
-// ---------------------------------------------------------------------------
 export interface Spinner {
   start(text?: string): Spinner;
   stop(): Spinner;
@@ -505,9 +489,7 @@ export function spinner(text = '', opts: CliOptions = {}): Spinner {
   return new OraSpinner(text);
 }
 
-// ---------------------------------------------------------------------------
 // Failure + exit-code mapping
-// ---------------------------------------------------------------------------
 
 /**
  * The one-line `{ok:false,error}` envelope every `--json` failure writes. Built

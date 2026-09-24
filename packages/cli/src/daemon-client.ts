@@ -136,13 +136,11 @@ function failDaemonDown(opts: DaemonClientOptions, cause: unknown): never {
   fail(EXIT.DAEMON_DOWN, DAEMON_DOWN_HINT, opts);
 }
 
-// ---------------------------------------------------------------------------
 // Liveness probe (read-only). `noir status` uses this to report daemon state
 // HONESTLY without auto-starting one: it reads the daemon record + checks the
 // pid + GETs /health, and returns {running:false} on any miss. It NEVER calls
 // ensureDaemonRunning. Active commands keep using {@link withDaemon} (which may
 // start a daemon); only the informational `status` command is probe-only.
-// ---------------------------------------------------------------------------
 
 /** Outcome of a read-only daemon liveness probe (never starts a daemon). */
 export interface DaemonProbe {
@@ -638,12 +636,10 @@ export async function callDaemonTool<T = unknown>(
   return withDaemon<T>(opts, (caller) => caller.callTool<T>(name, args));
 }
 
-// ---------------------------------------------------------------------------
 // In-process read-only fallback. READS only — the single-writer
 // invariant is preserved because the store is opened READ-ONLY and every engine
 // built over it (context retriever, memory recall/sessions, workflow status) is
 // a pure reader. Writes keep the daemon-required path (exit 4 when down).
-// ---------------------------------------------------------------------------
 
 /** Engines constructed in-process by {@link withInProcessRead} (reads only). */
 export interface InProcessEngines {
@@ -740,13 +736,11 @@ export async function withInProcessRead<T>(
   }
 }
 
-// ---------------------------------------------------------------------------
 // Workspace-aware routing. In a repo that joined a workspace (a
 // `.noir/workspace.json` marker), `memory *` commands route to the WORKSPACE
 // daemon (`?p=<projectId>`), not the per-project daemon. The read fallback opens
 // the workspace store read-only (single-writer preserved). Context/workflow/task
 // commands keep the project daemon.
-// ---------------------------------------------------------------------------
 
 /** A repo's workspace membership (name + this repo's project id), or null. */
 export interface WorkspaceRouting {

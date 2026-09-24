@@ -55,9 +55,7 @@ import { truncateToWidth } from '../width.js';
 /** Options accepted by every `task` sub-command (globals + daemon knobs). */
 export interface TaskOptions extends CliOptions, DaemonClientOptions {}
 
-// ---------------------------------------------------------------------------
 // Tool result shapes (slices of the daemon wire payloads; local types).
-// ---------------------------------------------------------------------------
 
 /** `workflow_status` success payload (WorkflowStatus). */
 interface WorkflowStatusResult {
@@ -100,12 +98,10 @@ interface WorkflowResumeResult {
   error?: string;
 }
 
-// ---------------------------------------------------------------------------
 // Phase → skill suggestion (grounded in the real @noir-ai/skills builtin pack;
 // each phase maps to a shipped noir-* skill the host can invoke next).
 // Exported so `noir handoff` reuses the SAME phase→skill map when naming
 // the next gate's skill in the handoff artifact — single source.
-// ---------------------------------------------------------------------------
 export const PHASE_SKILL: Readonly<Record<string, string>> = {
   // Skill curation: intake+clarify merged into brainstorming;
   // execute → executing-plans; verify → verifying; document → wrap.
@@ -148,9 +144,7 @@ function writeDoneArtifacts(opts: CliOptions, taskId: string): void {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Shared fetch + render
-// ---------------------------------------------------------------------------
 
 /**
  * Call `workflow_status` (active task when `taskId` is absent). Returns the
@@ -200,9 +194,7 @@ function renderStatusRow(s: WorkflowStatusResult, opts: CliOptions): void {
   definitionList(rows, opts);
 }
 
-// ---------------------------------------------------------------------------
 // `noir task status [<id>]`
-// ---------------------------------------------------------------------------
 export interface TaskStatusOptions extends TaskOptions {
   /** Positional task id; omitted ⇒ the active task. */
   id?: string;
@@ -276,9 +268,7 @@ export async function taskStatus(opts: TaskStatusOptions): Promise<void> {
   renderStatusRow(s, opts);
 }
 
-// ---------------------------------------------------------------------------
 // `noir task next`
-// ---------------------------------------------------------------------------
 export async function taskNext(opts: TaskOptions): Promise<void> {
   const s = await fetchStatus(opts);
   const suggestion = skillFor(s.phase);
@@ -312,9 +302,7 @@ export async function taskNext(opts: TaskOptions): Promise<void> {
   }
 }
 
-// ---------------------------------------------------------------------------
 // `noir task new --slug <slug> [--mode full|quick]`  → workflow_start
-// ---------------------------------------------------------------------------
 export interface TaskNewOptions extends TaskOptions {
   slug: string;
   mode?: string;
@@ -369,9 +357,7 @@ export async function taskNew(opts: TaskNewOptions): Promise<void> {
   renderStatusRow(res, opts);
 }
 
-// ---------------------------------------------------------------------------
 // `noir task advance [--to <phase>] [--force <reason>]`  → workflow_advance
-// ---------------------------------------------------------------------------
 export interface TaskAdvanceOptions extends TaskOptions {
   to?: string;
   force?: string;
@@ -430,10 +416,8 @@ export async function taskAdvance(opts: TaskAdvanceOptions): Promise<void> {
   renderStatusRow(res, opts);
 }
 
-// ---------------------------------------------------------------------------
 // `noir task resume [<id>] [--prompt '<continue instruction>']`
 //   → workflow_resume
-// ---------------------------------------------------------------------------
 export interface TaskResumeOptions extends TaskOptions {
   id?: string;
   prompt?: string;
@@ -493,9 +477,7 @@ export async function taskResume(opts: TaskResumeOptions): Promise<void> {
   renderResumeBriefing(res, opts);
 }
 
-// ---------------------------------------------------------------------------
 // `noir task block <reason> [--task <id>]`  → workflow_block
-// ---------------------------------------------------------------------------
 export interface TaskBlockOptions extends TaskOptions {
   reason: string;
   task?: string;
@@ -524,9 +506,7 @@ export async function taskBlock(opts: TaskBlockOptions): Promise<void> {
   renderStatusRow(res, opts);
 }
 
-// ---------------------------------------------------------------------------
 // `noir task abandon [--task <id>]`  → workflow_abandon (destructive confirm)
-// ---------------------------------------------------------------------------
 export interface TaskAbandonOptions extends TaskOptions {
   task?: string;
 }
@@ -567,10 +547,8 @@ export async function taskAbandon(opts: TaskAbandonOptions): Promise<void> {
   renderStatusRow(res, opts);
 }
 
-// ---------------------------------------------------------------------------
 // `noir task verify [--check <name> ...]`  → runs checks + submits evidence
 //   to workflow_advance.
-// ---------------------------------------------------------------------------
 export interface TaskVerifyOptions extends TaskOptions {
   /** Restrict to a named subset of checks; defaults to all configured checks. */
   check?: string[];
@@ -751,11 +729,9 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
   fail(EXIT.ERROR, `task verify: ${detail}`, opts);
 }
 
-// ---------------------------------------------------------------------------
 // `noir task research [<id>]` — list research findings
 // `noir task research record --type <t> --text "..." [--source <ref>] [--task <id>]`
 //   → workflow_research_record
-// ---------------------------------------------------------------------------
 export interface TaskResearchOptions extends TaskOptions {
   id?: string;
 }
@@ -810,9 +786,7 @@ export async function taskResearchRecord(opts: TaskResearchRecordOptions): Promi
   }
   success(`research recorded → ${opts.type}: ${truncateToWidth(opts.text, 80)}`, opts);
 }
-// ---------------------------------------------------------------------------
 // `noir task decompose <capability-id>`  → draft a SlicePlan
-// ---------------------------------------------------------------------------
 export interface TaskDecomposeOptions extends TaskOptions {
   capability: string;
   out?: string;

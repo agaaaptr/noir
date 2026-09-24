@@ -54,7 +54,7 @@ const PALETTE: readonly PaletteCommand[] = [
   },
 ];
 
-// ---- Fixture accessors ------------------------------------------------------
+// Fixture accessors.
 // Non-null-guarded locals so tests never use `!` (biome noNonNullAssertion).
 // `statusCmd`/`snapshotCmd`/`startCmd` are the three fixtures the tests index.
 // `PALETTE[0]` is `PaletteCommand | undefined` under noUncheckedIndexedAccess;

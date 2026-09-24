@@ -1,9 +1,12 @@
+// noir-hygiene: exempt
+// The template literals below record historical seed-template bytes verbatim;
+// their banner-looking `# ---` lines are load-bearing bytes, not comments, and
+// must stay byte-identical to what users already have on disk.
 /**
  * Template history — the evidence needed to decide whether a shipped seed
  * file may be refreshed during an upgrade.
  *
  * WHY THIS EXISTS
- * ---------------
  * `noir init` writes two files whose only job is to be read by a human:
  * `.noir/.env.example` (documents the variable set) and `.noir/rules/RULES.md`
  * (the AI working-contract seed). Both are emitted create-only-if-absent, and
@@ -25,7 +28,6 @@
  * leftover and refreshing it loses nothing.
  *
  * THE CONTRACT
- * ------------
  * {@link isStaleSeed} answers exactly that question. It is deliberately
  * conservative in one direction: it returns `true` only on an exact match
  * against a recorded past version, so ANY other byte difference — a user edit,
@@ -42,7 +44,6 @@
  * file it just read; the argument makes it say so.
  *
  * RENDERING
- * ---------
  * Seed templates are normally interpolated through `render(template, vars)`
  * before writing. That step is a no-op for the two templates recorded here:
  * neither contains a `{{...}}` token, so `render(text, vars) === text` for
@@ -59,7 +60,6 @@
  * requirement impossible to overlook.
  *
  * APPENDING TO THE HISTORY
- * ------------------------
  * Record the template bytes as they shipped, keyed by the scaffold version
  * whose `init` wrote them, and never edit an existing entry — a user's disk
  * still holds those old bytes, and rewriting history would silently reclassify

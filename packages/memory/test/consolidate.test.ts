@@ -37,9 +37,7 @@ import {
   setObservationIds,
 } from '../src/index.js';
 
-// ---------------------------------------------------------------------------
 // In-memory store stand-in (KV tracked via a Map; doc/vec unused here)
-// ---------------------------------------------------------------------------
 
 function mockStore(): Store {
   const kv = new Map<string, unknown>();
@@ -91,9 +89,7 @@ function seed(store: Store, obs: Observation[]): void {
   setObservationIds(store, ids);
 }
 
-// ---------------------------------------------------------------------------
 // Fake models
-// ---------------------------------------------------------------------------
 
 /** A fake model that records every call + returns a fixed lesson text. */
 function fakeModel(text: string): MemoryModel & { calls: number; lastReq: unknown } {
@@ -163,9 +159,7 @@ const ENABLED: MemoryConfig = {
   consolidation: { enabled: true, provider: 'anthropic', model: 'claude-haiku' },
 };
 
-// ===========================================================================
 // runConsolidation — provider gate (the line between free and paid)
-// ===========================================================================
 
 describe('runConsolidation — provider gate', () => {
   it('refuses no-provider when consolidation is disabled', async () => {
@@ -226,9 +220,7 @@ describe('runConsolidation — provider gate', () => {
   });
 });
 
-// ===========================================================================
 // runConsolidation — model gate (S8 wiring)
-// ===========================================================================
 
 describe('runConsolidation — model gate (S8 wiring)', () => {
   it('refuses model-unavailable when enabled+provider but no model injected', async () => {
@@ -284,9 +276,7 @@ describe('runConsolidation — model gate (S8 wiring)', () => {
   });
 });
 
-// ===========================================================================
 // runConsolidation — candidate gate
-// ===========================================================================
 
 describe('runConsolidation — candidate gate', () => {
   it('refuses no-candidates when the store is empty', async () => {
@@ -330,9 +320,7 @@ describe('runConsolidation — candidate gate', () => {
   });
 });
 
-// ===========================================================================
 // runConsolidation — success (append-only)
-// ===========================================================================
 
 describe('runConsolidation — success (append-only lesson)', () => {
   it('appends ONE type:lesson with provenance + canonical projectId', async () => {
@@ -446,9 +434,7 @@ describe('runConsolidation — success (append-only lesson)', () => {
   });
 });
 
-// ===========================================================================
 // gatherCandidates — deterministic selection (pure)
-// ===========================================================================
 
 describe('gatherCandidates (pure)', () => {
   it('returns newest-first, excludes lessons, respects types + limit', () => {
@@ -485,9 +471,7 @@ describe('gatherCandidates (pure)', () => {
   });
 });
 
-// ===========================================================================
 // serializeCandidates / dedupeConcepts (pure)
-// ===========================================================================
 
 describe('serializeCandidates (pure)', () => {
   it('emits a 1-indexed, type+ts-annotated block per candidate', () => {
@@ -513,9 +497,7 @@ describe('dedupeConcepts (pure)', () => {
   });
 });
 
-// ===========================================================================
 // ConsolidationResult shape (compile-time contract sanity)
-// ===========================================================================
 
 describe('ConsolidationResult variants', () => {
   it('the ok:true variant carries lessons + from', async () => {

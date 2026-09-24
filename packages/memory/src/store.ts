@@ -32,9 +32,7 @@
 import type { Store } from '@noir-ai/store';
 import type { Observation, SessionInfo } from './types.js';
 
-// ---------------------------------------------------------------------------
 // KV keys (namespaced `memory:`)
-// ---------------------------------------------------------------------------
 
 /** Per-observation authoritative-row key prefix; value is the full {@link Observation}. */
 export const OBS_PREFIX = 'memory:obs:';
@@ -50,9 +48,7 @@ export function obsKey(id: string): string {
   return `${OBS_PREFIX}${id}`;
 }
 
-// ---------------------------------------------------------------------------
 // Authoritative observation row (KV `memory:obs:<id>`)
-// ---------------------------------------------------------------------------
 
 /**
  * Hydrate the FULL {@link Observation} for `id` from the authoritative KV row.
@@ -79,9 +75,7 @@ export function clearObservation(store: Store, id: string): void {
   store.setState(obsKey(id), null);
 }
 
-// ---------------------------------------------------------------------------
 // Observation id index (KV `memory:index`) — status count + consolidate source
-// ---------------------------------------------------------------------------
 
 /** All observation ids currently tracked (insertion order). Empty array if none. */
 export function getObservationIds(store: Store): string[] {
@@ -93,9 +87,7 @@ export function setObservationIds(store: Store, ids: string[]): void {
   store.setState(INDEX_KEY, ids);
 }
 
-// ---------------------------------------------------------------------------
 // Sessions rollup (KV `memory:sessions`)
-// ---------------------------------------------------------------------------
 
 /** The per-project {@link SessionInfo} rollup list (empty array if none). */
 export function getSessions(store: Store): SessionInfo[] {
@@ -149,9 +141,7 @@ export function decrementSession(store: Store, sessionId: string): void {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Consolidation refusal audit (KV `memory:consolidation:miss`)
-// ---------------------------------------------------------------------------
 
 /**
  * One recorded consolidation refusal. `reason` is the documented

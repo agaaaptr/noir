@@ -554,9 +554,7 @@ describe('run screen — live render', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Entry from the dashboard, and the capture invariant either side of it.
-// ---------------------------------------------------------------------------
 
 const RUN: PaletteCommand = {
   id: 'run',

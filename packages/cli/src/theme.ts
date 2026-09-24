@@ -93,11 +93,9 @@ export function badge(state: BadgeState, label: string = state, maxWidth?: numbe
   }
 }
 
-// ---------------------------------------------------------------------------
 // Environment gates. Evaluated LIVE (not captured at module load) so tests that
 // flip NO_COLOR / CLICOLOR_FORCE between cases see the right answer, and so a
 // user exporting NO_COLOR mid-session is honored on the next render.
-// ---------------------------------------------------------------------------
 
 function envFlagSet(name: string): boolean {
   // NO_COLOR spec: present AND non-empty disables color (any value).

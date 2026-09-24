@@ -133,9 +133,7 @@ export interface DoctorPayload {
   } | null;
 }
 
-// ---------------------------------------------------------------------------
 // Small helpers
-// ---------------------------------------------------------------------------
 
 /** Best-effort probe of the `onnxruntime-node` native binding. */
 async function probeOnnx(): Promise<{ ok: boolean; reason: string }> {
@@ -173,11 +171,9 @@ function msg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-// ---------------------------------------------------------------------------
 // Checks. Each appends to `checks`; project-dependent ones short-circuit to a
 // `warn` "skipped" row when the project isn't initialized (so the table still
 // accounts for them, but a pre-init `noir doctor` never exit-1s on them).
-// ---------------------------------------------------------------------------
 
 async function checkRuntime(checks: CheckResult[]): Promise<void> {
   checks.push({
@@ -553,9 +549,7 @@ function checkProvider(
   });
 }
 
-// ---------------------------------------------------------------------------
 // Doctor install row (advisory; ok/warn only, never fail, cache-only).
-// ---------------------------------------------------------------------------
 
 export interface InstallCheckOutcome {
   name: 'install';
@@ -825,9 +819,7 @@ function checkHostArtifacts(
   return { active: host, expected, missing };
 }
 
-// ---------------------------------------------------------------------------
 // Nested-`.noir` detection (read-only).
-// ---------------------------------------------------------------------------
 
 /**
  * Detects the fingerprint of a `noir init`/`create` run from INSIDE `.noir/`
@@ -867,7 +859,6 @@ export function checkNestedNoir(
   return { detected, paths: found };
 }
 
-// ---------------------------------------------------------------------------
 // Output hygiene (repository-developer-facing, two tiers).
 //
 // The repository's own source and documents are checked against the hygiene
@@ -889,7 +880,6 @@ export function checkNestedNoir(
 // repository, which is a README and little more — it reports `ok` and reads
 // nothing, root documents included. These rules judge the text this project
 // writes, not the prose of whoever happened to run the command.
-// ---------------------------------------------------------------------------
 
 /** How many findings the detail cell names before it reports the rest as a
  *  count. A tree that has drifted can carry hundreds, and the row is a signal
@@ -1173,9 +1163,7 @@ export function checkOutputHygiene(checks: CheckResult[], root: string): Hygiene
   return result;
 }
 
-// ---------------------------------------------------------------------------
 // Deferred — semantic duplicate detection (`--dedup`; loads the embedder).
-// ---------------------------------------------------------------------------
 
 /** Local embedder shape (@noir-ai/context's `EmbedFn`). */
 type EmbedLike = (text: string) => Promise<Float32Array>;
@@ -1270,9 +1258,7 @@ export async function checkSemanticDupDoctor(
   });
 }
 
-// ---------------------------------------------------------------------------
 // Publish-readiness check (advisory, repo-developer-facing).
-// ---------------------------------------------------------------------------
 
 /**
  * Resolve the workspace `packages/` directory from the CLI's own location —

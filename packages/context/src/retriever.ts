@@ -72,9 +72,7 @@ import type {
   VecHit,
 } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Defaults
-// ---------------------------------------------------------------------------
 
 /**
  * Default per-query hit cap applied to BOTH the BM25 and kNN legs so RRF has
@@ -93,9 +91,7 @@ export const DEFAULT_BUDGET_TOKENS = 4096;
  */
 export const DEFAULT_SNIPPET_WINDOW_TOKENS = 16;
 
-// ---------------------------------------------------------------------------
 // Options
-// ---------------------------------------------------------------------------
 
 /**
  * Content + meta returned by the optional {@link RetrieverOptions.readDoc}
@@ -159,9 +155,7 @@ export interface Retriever {
   search(query: string, opts?: SearchOptions): Promise<SearchResult>;
 }
 
-// ---------------------------------------------------------------------------
 // Small narrowing / windowing helpers
-// ---------------------------------------------------------------------------
 
 /**
  * Defensively narrow an `unknown` meta (from `FtsHit.meta` / `ChunkDoc.meta`)
@@ -266,9 +260,7 @@ export function windowSnippet(content: string, query: string, windowTokens: numb
   );
 }
 
-// ---------------------------------------------------------------------------
 // Collapse + budget
-// ---------------------------------------------------------------------------
 
 /**
  * Collapse duplicate parent-docs: keep the FIRST (top-scoring, since `hits` is
@@ -317,9 +309,7 @@ function packBudget(hits: ReadonlyArray<RetrieverHit>, budgetTokens: number): Pa
   return { hits: packed, consumedTokens: consumed, truncated: false };
 }
 
-// ---------------------------------------------------------------------------
 // Factory
-// ---------------------------------------------------------------------------
 
 /**
  * Build a hybrid retriever over an injected store + embedder.

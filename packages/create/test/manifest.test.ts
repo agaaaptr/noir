@@ -187,9 +187,7 @@ describe('buildManifest', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // S10 — `buildHostArtifacts` per-host emission matrix.
-// ---------------------------------------------------------------------------
 
 describe('buildHostArtifacts — emission contract per adapter (S10)', () => {
   const root = '/sample/root';
@@ -342,9 +340,7 @@ describe('buildHostArtifacts — emission contract per adapter (S10)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Refreshable doc seeds — the flag and the seed-kind table must agree.
-// ---------------------------------------------------------------------------
 
 describe('refreshIfStale', () => {
   const m = buildManifest(CTX);

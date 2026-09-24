@@ -314,9 +314,7 @@ async function promptDedupAction(
   return 'preserve';
 }
 
-// ---------------------------------------------------------------------------
 // Content-hash cache (.noir/dedup-cache.json).
-// ---------------------------------------------------------------------------
 
 interface DedupCache {
   version: number;
@@ -370,9 +368,7 @@ function makeCachedEmbed(cache: DedupCache, embed: EmbedLike): EmbedLike {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Small helpers.
-// ---------------------------------------------------------------------------
 
 function safeRead(abs: string): string | undefined {
   try {

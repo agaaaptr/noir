@@ -43,9 +43,7 @@ import {
   type ProjectId,
 } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Constants
-// ---------------------------------------------------------------------------
 
 /** Default cap on consolidation candidates (deterministic selection). */
 export const DEFAULT_CONSOLIDATE_LIMIT = 50;
@@ -67,9 +65,7 @@ export const CONSOLIDATION_SYSTEM_PROMPT = [
   'Output only the lesson text (no preamble, no JSON, no formatting).',
 ].join(' ');
 
-// ---------------------------------------------------------------------------
 // Deps (the engine supplies these; tests fake them)
-// ---------------------------------------------------------------------------
 
 /**
  * Capabilities `runConsolidation` needs from the engine. The engine owns the
@@ -97,9 +93,7 @@ export interface ConsolidationDeps {
   indexDerived: (observation: Observation) => Promise<void>;
 }
 
-// ---------------------------------------------------------------------------
 // runConsolidation — the explicit, provider-gated job
-// ---------------------------------------------------------------------------
 
 /**
  * Run one explicit consolidation pass.
@@ -223,10 +217,8 @@ export async function runConsolidation(
   return { ok: true, lessons: [lesson], from: provenance };
 }
 
-// ---------------------------------------------------------------------------
 // Pure helpers (exported for direct unit testing — mirrors @noir-ai/context
 // exporting its pure RRF / snippet helpers)
-// ---------------------------------------------------------------------------
 
 /**
  * Gather consolidation candidates: observations with `type != 'lesson'`,

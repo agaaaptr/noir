@@ -92,10 +92,8 @@ async function withMemoryDaemon<T>(
   return withWorkspaceDaemon<T>(opts, ws.routing, fn);
 }
 
-// ---------------------------------------------------------------------------
 // Tool result shapes (slices of the daemon wire payloads; CLI depends only on
 // the MCP contract — local types, mirrors context.ts / status.ts).
-// ---------------------------------------------------------------------------
 
 /** A daemon logical-failure envelope, read generically. */
 interface ToolFailure {
@@ -167,9 +165,7 @@ interface MemoryConsolidateRefusal {
   logged?: boolean;
 }
 
-// ---------------------------------------------------------------------------
 // Small shared helpers
-// ---------------------------------------------------------------------------
 
 /** Coerce `--limit` (commander string) to a positive int, else exit 2. */
 function parseLimit(raw: string | undefined, label: string, opts: CliOptions): number | undefined {
@@ -222,9 +218,7 @@ function stamp(ts: number): string {
   return new Date(ts).toISOString().replace('T', ' ').replace(/\..*$/, 'Z');
 }
 
-// ---------------------------------------------------------------------------
 // `noir memory recall <query> [--limit N]`
-// ---------------------------------------------------------------------------
 export interface MemoryRecallOptions extends MemoryOptions {
   query: string;
   limit?: string;
@@ -342,9 +336,7 @@ function renderRecall(
   }
 }
 
-// ---------------------------------------------------------------------------
 // `noir memory save [--content] [--type] [--files]`
-// ---------------------------------------------------------------------------
 export interface MemorySaveOptions extends MemoryOptions {
   content?: string;
   type?: string;
@@ -412,9 +404,7 @@ function renderObservation(obs: Record<string, unknown>, opts: CliOptions): void
   if (typeof content === 'string') log(`\n${content}`, opts);
 }
 
-// ---------------------------------------------------------------------------
 // `noir memory capture [file]` — manual transcript/notes distill
-// ---------------------------------------------------------------------------
 export interface MemoryCaptureOptions extends MemoryOptions {
   /** A transcript/notes file to distill (or pipe stdin). */
   file?: string;
@@ -486,9 +476,7 @@ async function resolveCaptureContent(opts: MemoryCaptureOptions): Promise<string
   return String(value);
 }
 
-// ---------------------------------------------------------------------------
 // `noir memory sessions`
-// ---------------------------------------------------------------------------
 export async function memorySessions(opts: MemoryOptions): Promise<void> {
   const ws = resolveWorkspace();
   if (ws !== null) {
@@ -583,9 +571,7 @@ function renderSessions(sessions: SessionRow[], opts: CliOptions): void {
   );
 }
 
-// ---------------------------------------------------------------------------
 // `noir memory forget <id> [<id> ...]`
-// ---------------------------------------------------------------------------
 export interface MemoryForgetOptions extends MemoryOptions {
   /** Positional observation ids. */
   ids: string[];
@@ -610,9 +596,7 @@ export async function memoryForget(opts: MemoryForgetOptions): Promise<void> {
   log(`Forgot ${deleted} observation${deleted === 1 ? '' : 's'}.`, opts);
 }
 
-// ---------------------------------------------------------------------------
 // `noir memory consolidate [--types <csv>] [--limit N]`
-// ---------------------------------------------------------------------------
 export interface MemoryConsolidateOptions extends MemoryOptions {
   /** Comma-separated type filter (mapped to the daemon's `types[]`). */
   types?: string;

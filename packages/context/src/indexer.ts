@@ -42,9 +42,7 @@ import { chunkFile, inferLanguage, withIdentifierExplosion } from './chunker.js'
 import { sha256Hex } from './hash.js';
 import type { ChunkMeta, EmbedderInfo, EmbedFn, IndexResult, SourceKind, Store } from './types.js';
 
-// ---------------------------------------------------------------------------
 // KV schema (namespaced `ctx:` — disjoint from `workflow:*` / store meta)
-// ---------------------------------------------------------------------------
 
 /** KV key holding the sorted list of indexed path keys. */
 export const CTX_REGISTRY_KEY = 'ctx:registry';
@@ -72,9 +70,7 @@ export function ctxFileKey(pathKey: string): string {
   return `${CTX_FILE_PREFIX}${pathKey}`;
 }
 
-// ---------------------------------------------------------------------------
 // Walk skips (VCS / Noir state / build artifacts / dependency trees)
-// ---------------------------------------------------------------------------
 
 /**
  * Directory names never descended into during a walk. Covers the
@@ -201,13 +197,11 @@ export function isBinaryExt(pathOrName: string): boolean {
   return BINARY_EXTS.has(m[1]);
 }
 
-// ---------------------------------------------------------------------------
 // Sensitive-file denylist (post-review hardening: prevent secret exposure via
 // context_search). These files are NEVER chunked/embedded/indexed even when
 // they are plain text — indexing a `.env` or `id_rsa` would leak its contents
 // into FTS + vector snippets. Covers env files, private keys, credential
 // stores, and OS junk. Path-aware: pass a basename or a `/`-separated rel path.
-// ---------------------------------------------------------------------------
 
 /** Exact basenames never indexed (case-insensitive). */
 const SENSITIVE_NAMES = new Set([
@@ -262,18 +256,14 @@ export function isSensitive(name: string): boolean {
   return false;
 }
 
-// ---------------------------------------------------------------------------
 // Small path helpers (stable, cross-platform keys)
-// ---------------------------------------------------------------------------
 
 /** Normalize OS separators to `/` so registry keys match across platforms. */
 function posix(p: string): string {
   return sep === '/' ? p : p.split(sep).join('/');
 }
 
-// ---------------------------------------------------------------------------
 // Options + return types
-// ---------------------------------------------------------------------------
 
 /** Construction options for {@link createIndexer}. */
 export interface IndexerOptions {
@@ -348,9 +338,7 @@ export interface Indexer {
   readChunkContent(id: string): { content: string; meta: ChunkMeta } | null;
 }
 
-// ---------------------------------------------------------------------------
 // Factory
-// ---------------------------------------------------------------------------
 
 /**
  * Build an {@link Indexer} bound to a single store handle. Construction does no
@@ -807,9 +795,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Embedder comparison (model-swap detection)
-// ---------------------------------------------------------------------------
 
 function sameEmbedder(a: EmbedderInfo, b: EmbedderInfo): boolean {
   return a.kind === b.kind && a.model === b.model && a.dim === b.dim;

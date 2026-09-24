@@ -25,12 +25,10 @@ afterEach(() => {
   rmSync(tmp, { recursive: true, force: true });
 });
 
-// ---------------------------------------------------------------------------
 // Task: grep-level invariant — no raw writeFileSync/writeFile to a generated
 // artifact outside the contract. The producers must go through `onConflict` /
 // `buildConflictOpts`. A stub onConflict that records its consultation proves
 // the seam fires; a non-interactive guard proves CI/--json never hangs.
-// ---------------------------------------------------------------------------
 describe('universal contract — producers consult the seam', () => {
   it('skills/compiler emitSkillsToDir consults onConflict on a differing file', async () => {
     // Build a one-skill pack, pre-populate the target with a differing file,
@@ -149,10 +147,8 @@ Overview sentence.
   // live alongside the producers.
 });
 
-// ---------------------------------------------------------------------------
 // Task 2: diff preview — lineDiff produces a structured unified diff; the
 // clack resolver renders it to stderr (NO_COLOR honored via the theme).
-// ---------------------------------------------------------------------------
 describe('diff preview (lineDiff + theme)', () => {
   it('lineDiff emits add/del/eq records LCS-based', () => {
     const diff = lineDiff('a\nb\nc', 'a\nB\nc');
@@ -185,11 +181,9 @@ describe('diff preview (lineDiff + theme)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Task 3: apply-to-all — a regenerate conflict resolution with applyToAll
 // reduces an N-prompt run to 1 prompt; managedBlock stays per-file (memory key
 // is the path, not the class).
-// ---------------------------------------------------------------------------
 describe('apply-to-all (per-class memory)', () => {
   it('regenerate conflict: applyToAll=true fires the resolver ONCE for N files', async () => {
     // First init to seed the project + .mcp.json.
@@ -263,10 +257,8 @@ describe('apply-to-all (per-class memory)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Task 4: 6th "merge (with conflict markers)" option — zdiff3 markers on an
 // unresolved overlap. mergeThreeWay(style:'zdiff3') emits `||||||| base`.
-// ---------------------------------------------------------------------------
 describe('6th merge option (zdiff3 markers)', () => {
   it('mergeThreeWay(zdiff3) emits <<<<<<< / ||||||| base / ======= / >>>>>>>', () => {
     // Forcing an overlap: base has line L, ours changes it to O, theirs to T.
@@ -294,10 +286,8 @@ describe('6th merge option (zdiff3 markers)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Task 5: structured --json report — ScaffoldResult.conflicts[] is populated
 // when non-interactive (no prompt fires).
-// ---------------------------------------------------------------------------
 describe('ScaffoldResult.conflicts[] under non-interactive', () => {
   it('a differing regenerate file populates conflicts[] with hashes + resolution (no prompt)', async () => {
     await scaffold({ root: tmp, mode: 'init', transport: 'stdio' });

@@ -7,7 +7,6 @@
 // current, or user-edited files produce no row.
 //
 // WHY THE TEMPLATES ARE SUBSTITUTED
-// ---------------------------------
 // The report compares the bytes on disk against what the current template
 // renders to. The packaged template still renders to the bytes recorded for the
 // initial scaffold version, so against it drift could never trigger. Pointing

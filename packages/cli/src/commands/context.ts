@@ -31,13 +31,11 @@ import { badge } from '../theme.js';
 /** Options accepted by every `context` sub-command (globals + daemon knobs). */
 export interface ContextOptions extends CliOptions, DaemonClientOptions {}
 
-// ---------------------------------------------------------------------------
 // Tool result shapes (the relevant slices of the daemon's wire payloads). The
 // daemon returns these as JSON text; daemon-client parses to `unknown`, so each
 // reader treats a foreign field as undefined and the command degrades to a clear
 // error rather than crashing. Local types = the CLI depends only on the MCP
 // wire contract (mirrors status.ts).
-// ---------------------------------------------------------------------------
 
 /** Normalized search hit rendered to humans + emitted in the JSON payload. */
 export interface ContextHit {
@@ -108,9 +106,7 @@ interface ContextIndexResult {
   degraded?: boolean;
 }
 
-// ---------------------------------------------------------------------------
 // Small shared helpers
-// ---------------------------------------------------------------------------
 
 /**
  * Coerce a commander `--limit <n>` string into a positive int, or fail with
@@ -149,9 +145,7 @@ function toHit(raw: unknown): ContextHit {
   };
 }
 
-// ---------------------------------------------------------------------------
 // `noir context search <query> [--limit N]`
-// ---------------------------------------------------------------------------
 export interface ContextSearchOptions extends ContextOptions {
   query: string;
   /** Raw `--limit` string from commander; parsed + validated here. */
@@ -252,9 +246,7 @@ function renderSearch(data: ContextSearchData, opts: CliOptions): void {
   );
 }
 
-// ---------------------------------------------------------------------------
 // `noir context index [--path ...] [--force]`
-// ---------------------------------------------------------------------------
 export interface ContextIndexOptions extends ContextOptions {
   /** Raw repeated `--path` values from commander (`undefined` ⇒ index root). */
   paths?: string[];
@@ -308,9 +300,7 @@ function renderIndex(data: ContextIndexData, paths: string[] | undefined, opts: 
   }
 }
 
-// ---------------------------------------------------------------------------
 // `noir context status`
-// ---------------------------------------------------------------------------
 export async function contextStatus(opts: ContextOptions): Promise<void> {
   const res = await callDaemonTool<ContextStatusData | ToolFailure>(opts, 'context_status');
   if (res.ok !== true) failTool('context status', res, opts);

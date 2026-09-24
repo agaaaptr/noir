@@ -61,9 +61,7 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-// ---------------------------------------------------------------------------
 // 1. Pure unit — extractEntities (cheap regex, NO LLM)
-// ---------------------------------------------------------------------------
 
 describe('extractEntities', () => {
   it('splits camelCase / PascalCase identifiers into lowercase subwords', () => {
@@ -109,9 +107,7 @@ describe('extractEntities', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // 2. Mock-store unit — recallMemory (deterministic, no sqlite-vec gate)
-// ---------------------------------------------------------------------------
 
 /** Build a minimal Observation row for test fixtures. */
 function makeObs(partial: Partial<Observation> & Pick<Observation, 'id' | 'content'>): Observation {
@@ -350,9 +346,7 @@ describe('recallMemory — filters + truncation', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // 3. Real-store integration — engine.recall() end-to-end (gated on sqlite-vec)
-// ---------------------------------------------------------------------------
 
 describeStore(storeLabel, () => {
   it('recall returns the FULL observation content via the hybrid path', async () => {

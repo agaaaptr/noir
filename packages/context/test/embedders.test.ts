@@ -136,7 +136,6 @@ describe('localEmbedder (lazy import)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Guarded real-model integration test (slice S6, task t11).
 //
 // Mirrors packages/store/test/vec.test.ts' VEC_PROBE pattern: the local
@@ -148,7 +147,6 @@ describe('localEmbedder (lazy import)', () => {
 // reason when the package is not installed — a CI matrix without the native
 // runtime then reports a clear skip, not a red build. When the package IS
 // installed, the block exercises the real lazy load + embed path end to end.
-// ---------------------------------------------------------------------------
 
 const nodeRequire = createRequire(import.meta.url);
 

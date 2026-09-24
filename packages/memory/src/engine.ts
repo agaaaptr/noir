@@ -87,9 +87,7 @@ import {
   type SessionInfo,
 } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Constants
-// ---------------------------------------------------------------------------
 
 /** Source bucket for every memory row (keeps context + memory disjoint). */
 const MEMORY_SOURCE = 'memory';
@@ -100,9 +98,7 @@ const DEFAULT_SEARCH_LIMIT = 10;
 /** Default observation type when {@link SaveInput.type} is omitted. */
 const DEFAULT_TYPE: Observation['type'] = 'fact';
 
-// ---------------------------------------------------------------------------
 // Model injection (the ONLY LLM entry point — provider-gated, single-shot)
-// ---------------------------------------------------------------------------
 
 /**
  * Per-call request shape passed to {@link MemoryModel.complete}. A structural
@@ -145,9 +141,7 @@ export interface MemoryModel {
   complete(req: MemoryCompleteRequest): Promise<MemoryCompleteResult>;
 }
 
-// ---------------------------------------------------------------------------
 // Construction options
-// ---------------------------------------------------------------------------
 
 /** Construction options for {@link MemoryEngineImpl} / {@link createMemoryEngine}. */
 export interface MemoryEngineOptions {
@@ -177,9 +171,7 @@ export interface MemoryEngineOptions {
   softForget?: boolean;
 }
 
-// ---------------------------------------------------------------------------
 // Engine
-// ---------------------------------------------------------------------------
 
 /**
  * Noir's cross-session memory engine — the `ctx.memory` service. Constructed
@@ -228,9 +220,7 @@ export class MemoryEngineImpl implements MemoryEngine {
     this.softForget = opts.softForget === true;
   }
 
-  // -------------------------------------------------------------------------
   // save
-  // -------------------------------------------------------------------------
 
   /** @inheritDoc MemoryEngine.save */
   save(input: SaveInput): Promise<Observation> {
@@ -315,9 +305,7 @@ export class MemoryEngineImpl implements MemoryEngine {
     }
   }
 
-  // -------------------------------------------------------------------------
   // get (extra public method — hydrate the FULL row from KV)
-  // -------------------------------------------------------------------------
 
   /**
    * Hydrate the full {@link Observation} for `id` from the authoritative KV row.
@@ -350,9 +338,7 @@ export class MemoryEngineImpl implements MemoryEngine {
     this.store.indexDoc({ id, source: MEMORY_SOURCE, content: obs.content, meta: obsMeta(next) });
   }
 
-  // -------------------------------------------------------------------------
   // recall (hybrid BM25 ∪ kNN + RRF + entity-boost — see recall.ts)
-  // -------------------------------------------------------------------------
 
   /** @inheritDoc MemoryEngine.recall */
   async recall(query: string, opts?: RecallOptions): Promise<MemoryHit[]> {
@@ -374,9 +360,7 @@ export class MemoryEngineImpl implements MemoryEngine {
     return recallMemory({ store: this.store, embed: this.embed }, query, opts);
   }
 
-  // -------------------------------------------------------------------------
   // search (BM25-only instant path — final design)
-  // -------------------------------------------------------------------------
 
   /** @inheritDoc MemoryEngine.search */
   async search(query: string, opts?: SearchOptions): Promise<MemoryHit[]> {
@@ -418,18 +402,14 @@ export class MemoryEngineImpl implements MemoryEngine {
     return out;
   }
 
-  // -------------------------------------------------------------------------
   // sessions
-  // -------------------------------------------------------------------------
 
   /** @inheritDoc MemoryEngine.sessions */
   sessions(): SessionInfo[] {
     return getSessions(this.store);
   }
 
-  // -------------------------------------------------------------------------
   // forget (synchronous + atomic — see file header)
-  // -------------------------------------------------------------------------
 
   /** @inheritDoc MemoryEngine.forget */
   forget(ids: string[]): ForgetResult {
@@ -467,9 +447,7 @@ export class MemoryEngineImpl implements MemoryEngine {
     return { deleted, ids };
   }
 
-  // -------------------------------------------------------------------------
   // consolidate (explicit, provider-gated)
-  // -------------------------------------------------------------------------
 
   /** @inheritDoc MemoryEngine.consolidate */
   consolidate(opts?: ConsolidateOptions): Promise<ConsolidationResult> {
@@ -505,9 +483,7 @@ export class MemoryEngineImpl implements MemoryEngine {
     );
   }
 
-  // -------------------------------------------------------------------------
   // status
-  // -------------------------------------------------------------------------
 
   /** @inheritDoc MemoryEngine.status */
   status(): MemoryStatus {
@@ -519,9 +495,7 @@ export class MemoryEngineImpl implements MemoryEngine {
     };
   }
 
-  // -------------------------------------------------------------------------
   // shared internals
-  // -------------------------------------------------------------------------
 
   /**
    * Best-effort embedding: returns the vec, or `null` if the embedder is
@@ -561,9 +535,7 @@ export class MemoryEngineImpl implements MemoryEngine {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Factory (the daemon seam / tests construct via this — mirrors buildContextEngine)
-// ---------------------------------------------------------------------------
 
 /**
  * Build a {@link MemoryEngineImpl} bound to a single store handle + the shared
@@ -578,9 +550,7 @@ export function createMemoryEngine(opts: MemoryEngineOptions): MemoryEngineImpl 
   return new MemoryEngineImpl(opts);
 }
 
-// ---------------------------------------------------------------------------
 // Small pure helpers (module-local)
-// ---------------------------------------------------------------------------
 
 /**
  * Build the denormalized `docs.meta` search payload (Observation minus `content`

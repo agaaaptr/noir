@@ -362,9 +362,7 @@ describeStore(storeLabel, () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Pure-logic describes (in-memory mock store — no sqlite-vec gate)
-// ---------------------------------------------------------------------------
 
 /** Minimal in-memory store for logic tests (KV tracked; doc/vec recorded). */
 function mockStore(opts?: { failIndexDocFirst?: boolean }): {

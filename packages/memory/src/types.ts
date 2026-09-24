@@ -31,9 +31,7 @@
 
 import type { ProjectId } from '@noir-ai/core';
 
-// ---------------------------------------------------------------------------
 // Taxonomy (dev-flavored OPEN enum; unknown values accepted + stored)
-// ---------------------------------------------------------------------------
 
 /**
  * Known observation types (dev-flavored). `lesson` is reserved for
@@ -78,9 +76,7 @@ export type MemorySource = 'explicit' | `auto:${string}`;
  */
 export type ObservationStatus = 'active' | 'superseded' | 'forgotten';
 
-// ---------------------------------------------------------------------------
 // Defaults (applied at save time / on derived consolidation lessons)
-// ---------------------------------------------------------------------------
 
 /**
  * Default observation salience. Applied by `MemoryEngine.save` when
@@ -90,9 +86,7 @@ export type ObservationStatus = 'active' | 'superseded' | 'forgotten';
  */
 export const DEFAULT_IMPORTANCE = 0.5;
 
-// ---------------------------------------------------------------------------
 // Observation (the canonical row)
-// ---------------------------------------------------------------------------
 
 /**
  * The canonical memory row. Realized ON TOP of the store: the full row
@@ -141,9 +135,7 @@ export interface Observation {
   supersedes?: string;
 }
 
-// ---------------------------------------------------------------------------
 // Save input (the `memory_save` payload)
-// ---------------------------------------------------------------------------
 
 /**
  * Input to {@link MemoryEngine.save} / the `memory_save` MCP tool. Only
@@ -172,9 +164,7 @@ export interface SaveInput {
   supersedes?: string;
 }
 
-// ---------------------------------------------------------------------------
 // Recall / search hits (full content, never truncated)
-// ---------------------------------------------------------------------------
 
 /**
  * Options for {@link MemoryEngine.recall} (the hybrid path). Mirrors the context
@@ -226,9 +216,7 @@ export interface MemoryHit {
   supersedes?: string;
 }
 
-// ---------------------------------------------------------------------------
 // Sessions rollup (KV `memory:sessions`)
-// ---------------------------------------------------------------------------
 
 /**
  * Per-session rollup, listed by {@link MemoryEngine.sessions}. Stored in KV
@@ -245,9 +233,7 @@ export interface SessionInfo {
   lastTs: number;
 }
 
-// ---------------------------------------------------------------------------
 // Config (the runtime consolidation gate)
-// ---------------------------------------------------------------------------
 
 /**
  * Consolidation config block. Provider-EXPLICIT: the
@@ -278,9 +264,7 @@ export interface MemoryConfig {
   consolidation?: ConsolidationConfig;
 }
 
-// ---------------------------------------------------------------------------
 // Op results
-// ---------------------------------------------------------------------------
 
 /**
  * Result of {@link MemoryEngine.forget}: the KV row removed + best-effort
@@ -332,9 +316,7 @@ export interface MemoryStatus {
   degraded: boolean;
 }
 
-// ---------------------------------------------------------------------------
 // Engine contract (the `ctx.memory` service)
-// ---------------------------------------------------------------------------
 
 /**
  * The memory engine — the `ctx.memory` service (the contract the daemon seam
@@ -394,9 +376,7 @@ export interface MemoryEngine {
   status(): MemoryStatus;
 }
 
-// ---------------------------------------------------------------------------
 // Re-exports (single import surface — mirrors @noir-ai/context types.ts)
-// ---------------------------------------------------------------------------
 
 // The embedder seam reuses: recall embeds the query via the SAME `EmbedFn`
 // the daemon already resolved for the context engine. Re-exported from

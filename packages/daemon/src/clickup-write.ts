@@ -55,7 +55,6 @@ export class InvalidOp extends Error {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Op vocabulary (spec resolution). The proxy accepts BOTH the short verbs
 // (`status` | `subtask` | `comment` | `batch`) from the spec AND the
 // `task:`-prefixed verbs (`task:set-status` | `task:create-subtask` |
@@ -63,7 +62,6 @@ export class InvalidOp extends Error {
 // documents. The skill is locked (cannot be edited), so the tool MUST
 // honor the verbs the skill emits; the short forms are accepted as aliases for
 // ergonomics + spec alignment. Normalized to the short form internally.
-// ---------------------------------------------------------------------------
 const OP_ALIASES: Record<string, string> = {
   'task:set-status': 'status',
   'task:create-subtask': 'subtask',
@@ -125,10 +123,8 @@ function resolveBinding(payload: Record<string, unknown>, binding: ClickUpBindin
   return resolved;
 }
 
-// ---------------------------------------------------------------------------
 // Request builders — one per op. Each returns the request(s) the op renders.
 // URLs come ONLY from these templates; a caller-supplied `url` is ignored.
-// ---------------------------------------------------------------------------
 function buildStatus(payload: Record<string, unknown>): BuiltRequest {
   const taskId = assertId(String(payload.taskId ?? ''), 'taskId');
   const status = payload.status;
@@ -369,12 +365,10 @@ export function previewRows(requests: BuiltRequest[]): RequestRow[] {
   }));
 }
 
-// ---------------------------------------------------------------------------
 // Execute path. Reached ONLY when `confirm === true`. The token is added here
 // (and ONLY here) as `Authorization: pk_<token>` (NO Bearer — ClickUp v2 rejects
 // Bearer). 429 backoff reads `X-RateLimit-Reset` and awaits until reset, then
 // retries ONCE per request.
-// ---------------------------------------------------------------------------
 
 /** Minimal fetch shape the proxy needs. Bound to global `fetch` in production;
  *  a spy in tests (cassette). */

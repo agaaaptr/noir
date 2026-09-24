@@ -64,10 +64,8 @@ vi.mock('@noir-ai/core', async (importOriginal) => {
 
 import { type HandoffOptions, handoff } from '../src/commands/handoff.js';
 
-// ---------------------------------------------------------------------------
 // Fake daemon caller. `callTool(name, args)` returns PAYLOADS[name]; per-test
 // overrides are applied by re-mapping PAYLOADS or swapping callerHolder.current.
-// ---------------------------------------------------------------------------
 type Caller = { callTool: ReturnType<typeof vi.fn> };
 
 const PAYLOADS: Record<string, unknown> = {};

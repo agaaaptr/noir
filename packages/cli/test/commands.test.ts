@@ -90,9 +90,7 @@ import { memoryRecall } from '../src/commands/memory.js';
 import { taskStatus } from '../src/commands/task.js';
 import { callDaemonTool } from '../src/daemon-client.js';
 
-// ---------------------------------------------------------------------------
 // Stream capture (data→stdout, diagnostics→stderr; matches the per-command suites)
-// ---------------------------------------------------------------------------
 interface Captured {
   out: string;
   err: string;
@@ -139,9 +137,7 @@ async function run(
   return { stdout: c.out, stderr: c.err, err: thrown };
 }
 
-// ---------------------------------------------------------------------------
 // Shared flow fixtures: realistic tool payloads for the three read commands.
-// ---------------------------------------------------------------------------
 function installFlowPayloads(): void {
   payloads.current = {
     context_search: {
@@ -197,9 +193,7 @@ beforeEach(() => {
   installFlowPayloads();
 });
 
-// ===========================================================================
 // 1. Daemon-backed command flow (context → memory → task)
-// ===========================================================================
 describe('daemon-backed command flow — shared mocked daemon, stream discipline', () => {
   it('--json: each command emits its own `{ok:true,data}` line to STDOUT, stderr pristine', async () => {
     const { capture, restore } = captureStreams();
@@ -335,9 +329,7 @@ describe('daemon-backed command flow — shared mocked daemon, stream discipline
   });
 });
 
-// ===========================================================================
 // 2. doctor provider-status — pure projection, NO live network call
-// ===========================================================================
 describe('doctor provider-status — resolveModelConfig is a pure projection (no live call)', () => {
   // doctor reads process.cwd(); run against a throwaway initialized project so
   // checkConfig → ok and checkProvider has a real `project.config.model` to hand

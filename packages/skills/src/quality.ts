@@ -219,7 +219,6 @@ export function artifactPathDrift(skill: BuiltinSkill): string[] {
   return [...drifts];
 }
 
-// ---------------------------------------------------------------------------
 // Output hygiene (the rules live in hygiene.ts).
 //
 // A SKILL.md body is a markdown document that also carries fenced code blocks,
@@ -229,7 +228,6 @@ export function artifactPathDrift(skill: BuiltinSkill): string[] {
 // comment, and a prose rule reads a `//` line inside a fence as a heading.
 // The fail tier blocks emission and the warn tier is advisory; which findings
 // go to which list is `validateSkill`'s decision, not this module's.
-// ---------------------------------------------------------------------------
 
 /** A body split into the two kinds of text it holds: the prose, and the fenced
  *  code blocks. Blanking the other side's lines, rather than dropping them,

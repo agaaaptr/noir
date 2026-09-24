@@ -85,8 +85,6 @@ function freshIndexer(
 }
 
 describeVec(describeLabel, () => {
-  // ---------------------------------------------------------------------------
-
   it('indexes a new tree: writes docs + vecs and records KV state', async () => {
     store = await openStore({ projectId, root });
     indexer = freshIndexer();
@@ -376,10 +374,8 @@ describeVec(describeLabel, () => {
     expect(store.countDocs()).toBe(docsBoth); // 'b' chunks still present
   });
 
-  // -------------------------------------------------------------------------
   // Post-review hardening (slice S6): sensitive-file denylist, path
   // confinement, and single-flight serialization of mutating ops.
-  // -------------------------------------------------------------------------
 
   it('isSensitive flags the denylist (secrets / keys / credentials)', () => {
     // Exact env / credential / OS-junk basenames.
@@ -531,9 +527,7 @@ describeVec(describeLabel, () => {
     expect(store.countVecs()).toBe(total);
   });
 
-  // ---------------------------------------------------------------------------
   // readChunkContent (kNN-only-hit snippet hydration)
-  // ---------------------------------------------------------------------------
 
   it('readChunkContent returns the CLEAN chunk content + meta for an indexed chunk', async () => {
     store = await openStore({ projectId, root });

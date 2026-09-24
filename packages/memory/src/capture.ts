@@ -25,9 +25,7 @@
 
 import type { MemorySource, MemoryType, ProjectId, SaveInput } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Hook event names (open enum — forward-compat with new host hook names)
-// ---------------------------------------------------------------------------
 
 /**
  * Known host hook events Noir can capture (the four Claude Code hooks the v1
@@ -41,9 +39,7 @@ export const CAPTURE_HOOKS = ['PreToolUse', 'PostToolUse', 'UserPromptSubmit', '
 /** One of {@link CAPTURE_HOOKS} OR any host-defined hook name (open enum). */
 export type CaptureEventType = (typeof CAPTURE_HOOKS)[number] | (string & {});
 
-// ---------------------------------------------------------------------------
 // Defaults — the opinionated capture policy
-// ---------------------------------------------------------------------------
 
 /**
  * Hook events captured by DEFAULT. Persist session-end summaries + the
@@ -61,9 +57,7 @@ export const DEFAULT_CAPTURE_HOOKS: readonly CaptureEventType[] = ['Stop', 'User
  */
 export const DEFAULT_CAPTURE_POLICY: CapturePolicy = { hooks: DEFAULT_CAPTURE_HOOKS };
 
-// ---------------------------------------------------------------------------
 // CaptureEvent (the host-neutral schema)
-// ---------------------------------------------------------------------------
 
 /**
  * The structured payload a host hook forwards. All fields optional — a hook
@@ -106,9 +100,7 @@ export interface CaptureEvent {
   payload: CapturePayload;
 }
 
-// ---------------------------------------------------------------------------
 // Capture policy
-// ---------------------------------------------------------------------------
 
 /**
  * An opinionated capture policy. Controls WHICH hook events are persisted when
@@ -125,9 +117,7 @@ export interface CapturePolicy {
   hooks?: ReadonlyArray<CaptureEventType>;
 }
 
-// ---------------------------------------------------------------------------
 // toSaveInput — the pure host-event → SaveInput mapper
-// ---------------------------------------------------------------------------
 
 /**
  * Project a host-neutral {@link CaptureEvent} into a {@link SaveInput} ready for
@@ -178,9 +168,7 @@ export function toSaveInput(
   return input;
 }
 
-// ---------------------------------------------------------------------------
 // Pure content / type / file helpers (exported for direct unit testing)
-// ---------------------------------------------------------------------------
 
 /**
  * Build the observation `content` for an event from its payload, or `null` when
@@ -280,9 +268,7 @@ export function captureSource(eventType: CaptureEventType): MemorySource {
   return `auto:${String(eventType).toLowerCase()}`;
 }
 
-// ---------------------------------------------------------------------------
 // Module-local helpers
-// ---------------------------------------------------------------------------
 
 /** Words that mark a prompt as decision-shaped (heuristic for `type:'decision'`). */
 const DECISION_CUES = [

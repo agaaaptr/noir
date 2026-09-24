@@ -15,7 +15,7 @@ import {
   provisionManagedNode,
 } from '../src/node-provision.js';
 
-/* ---------- isolated runtime dir (NOIR_RUNTIME_DIR override) ---------- */
+// Isolated runtime dir (NOIR_RUNTIME_DIR override).
 let dir: string;
 let prevRuntime: string | undefined;
 let prevDistUrl: string | undefined;
@@ -34,7 +34,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-/* ---------- helpers: build a fake archive + SHASUMS256.txt ---------- */
+// Helpers: build a fake archive + SHASUMS256.txt.
 function fakeArchive(payload: string): { buf: Buffer; sha256: string } {
   const buf = Buffer.from(payload, 'utf8');
   const sha256 = createHash('sha256').update(buf).digest('hex');
@@ -91,7 +91,7 @@ function fakeExecThatExtracts(version: string) {
   );
 }
 
-/* =========================== detectNodeTarget =========================== */
+// detectNodeTarget.
 describe('detectNodeTarget', () => {
   it('maps the host platform/arch to a Node dist target', () => {
     const t = detectNodeTarget();
@@ -103,7 +103,7 @@ describe('detectNodeTarget', () => {
   });
 });
 
-/* =========================== nodeArchiveUrl ============================ */
+// nodeArchiveUrl.
 describe('nodeArchiveUrl', () => {
   it('builds the canonical nodejs.org dist URL', () => {
     const u = nodeArchiveUrl('22.11.0', { os: 'darwin', arch: 'arm64', archive: 'tar.gz' });
@@ -121,7 +121,7 @@ describe('nodeArchiveUrl', () => {
   });
 });
 
-/* ========================== downloadAndVerify ========================== */
+// downloadAndVerify.
 describe('downloadAndVerify', () => {
   const target: NodeTarget = { os: 'linux', arch: 'x64', archive: 'tar.gz' };
 
@@ -175,7 +175,7 @@ describe('downloadAndVerify', () => {
   });
 });
 
-/* ============================= extractNode ============================= */
+// extractNode.
 describe('extractNode', () => {
   it('lists (tar -tzf) then extracts (tar -xzf) for posix .tar.gz', async () => {
     const exec = vi.fn(async () => ({ code: 0, stdout: '', stderr: '' }));
@@ -224,7 +224,7 @@ describe('extractNode', () => {
   });
 });
 
-/* ========================= provisionManagedNode ======================== */
+// provisionManagedNode.
 describe('provisionManagedNode', () => {
   const target: NodeTarget = { os: 'linux', arch: 'x64', archive: 'tar.gz' };
 
@@ -350,7 +350,7 @@ describe('provisionManagedNode', () => {
   });
 });
 
-/* ============================ layout.runtimeDir ======================= */
+// layout.runtimeDir.
 describe('runtimeDir (layout)', () => {
   it('points at ~/.noir/runtime by default and honors NOIR_RUNTIME_DIR', () => {
     // With NOIR_RUNTIME_DIR set to our temp dir in beforeEach.

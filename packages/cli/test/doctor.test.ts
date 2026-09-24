@@ -461,9 +461,7 @@ describe('noir doctor — RULES.md budget', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // S10 — host-artifacts presence check.
-// ---------------------------------------------------------------------------
 describe('noir doctor — host artifacts (S10)', () => {
   it('host row warns "skipped" when the project is not initialized; data.host null', async () => {
     const r = await run(() => doctor({ json: true }));
@@ -599,9 +597,7 @@ describe('noir doctor — host artifacts (S10)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // C1 — doctor install row (advisory; ok/warn only, never fail, never network).
-// ---------------------------------------------------------------------------
 describe('buildInstallCheck (pure)', () => {
   // Import the function + the param type via dynamic import (tree-shaken by the
   // entrypoint, but directly importable for a unit test).
@@ -632,9 +628,7 @@ describe('buildInstallCheck (pure)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // S11 — publish-readiness check (advisory; warn-only).
-// ---------------------------------------------------------------------------
 //
 // The check is exercised via `checkPublish(checks, packagesDir)` directly with
 // synthetic package dirs (isolated, deterministic — no dependency on the real

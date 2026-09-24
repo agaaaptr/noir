@@ -201,11 +201,9 @@ describe('buildUpdateTarget (pure)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // update() — integration tests for the T6 hardening behaviors. The core
 // module is mocked at the boundary (no real network, no real install record),
 // so these stay offline/free.
-// ---------------------------------------------------------------------------
 
 /** Capture stderr around `fn` (info/warn/success go to stderr per S9). */
 async function runStderr(fn: () => Promise<void>): Promise<{ stderr: string; err: unknown }> {

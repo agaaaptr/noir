@@ -170,11 +170,9 @@ describe('buildMigrationPlan (pure)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // install() --dismiss — C1 hardening (brief Step 2): persists the current CLI
 // version on install.json's dismissedVersions so the migration banner stops
 // showing for that version. Idempotent.
-// ---------------------------------------------------------------------------
 
 /** Capture stderr around `fn` (success/info go to stderr per S9). */
 async function runStderr(fn: () => Promise<void>): Promise<{ stderr: string }> {
@@ -243,11 +241,9 @@ describe('install() --dismiss (banner dismissal persistence)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // installManagedNode() -- P2: now delegates to provisionManagedNode (P1) and
 // proceeds (no "not provisioned" error) for both the managed path and the
 // system-Node fallback path. Records managedRuntimeVersion per source.
-// ---------------------------------------------------------------------------
 
 /** Capture stderr around `fn` (warn/info/success go to stderr per S9). */
 async function runStderrFn<T>(fn: () => Promise<T>): Promise<{ stderr: string; result: T }> {

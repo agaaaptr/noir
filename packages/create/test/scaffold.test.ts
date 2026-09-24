@@ -255,10 +255,8 @@ describe('scaffold upgrade — migrations', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // PARITY: scaffold output must equal the live adapter + syncIgnores byte-for-byte
 // so S-T2 can swap init.ts/sync.ts for scaffold() without producing a git diff.
-// ---------------------------------------------------------------------------
 describe('scaffold parity with @noir-ai/adapters + syncIgnores (S-T2 refactor gate)', () => {
   it('.mcp.json (stdio) byte-equals claudeAdapter.emitMcpConfig output + trailing newline', async () => {
     await init(root, { transport: 'stdio' });
@@ -310,12 +308,10 @@ describe('scaffold parity with @noir-ai/adapters + syncIgnores (S-T2 refactor ga
   });
 });
 
-// ---------------------------------------------------------------------------
 // Slice E (T9) — the `.noir/README.md` runtime map. ADDITIVE: two files are
 // added (`.noir/README.md`, `.noir/.env`) and exactly ONE pre-existing file's
 // content changed (`.noir/.env.example`, spec 9.1, landed in T8). Every other
 // pre-existing entry stays byte-identical — claude is the regression anchor.
-// ---------------------------------------------------------------------------
 describe('scaffold — .noir/README.md runtime map (slice E)', () => {
   it('writes .noir/README.md and reports it', async () => {
     const res = await init(root);
@@ -445,9 +441,7 @@ describe('scaffold result shape', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Fix-wave coverage (adversarial review of Slice S).
-// ---------------------------------------------------------------------------
 
 describe('scaffold — project.id integrity', () => {
   it('heals a corrupt (empty) .noir/project.id so the file and NOIR.md agree', async () => {
@@ -618,14 +612,12 @@ describe('scaffold — a failed migration must not stamp current', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // S10 — host-parametric scaffold. The default (claude) is BYTE-IDENTICAL to
 // v1.1 (REMOVED the additive root AGENTS.md — claude's CLAUDE.md
 // already @-imports .noir/; emitting AGENTS.md too double-imported them). Each
 // non-claude host emits its own native context surface + the host MCP config.
 // AGENTS.md is emitted only for agents-md/cursor/opencode (whose native context
 // surface IS AGENTS.md); claude/gemini use their own CLAUDE.md/GEMINI.md.
-// ---------------------------------------------------------------------------
 describe('scaffold — host-parametric (--host <id>)', () => {
   it('default host (no opts.host) is claude; CLAUDE.md + .mcp.json present; NO AGENTS.md', async () => {
     const res = await scaffold({ root, mode: 'init', transport: 'stdio' });
