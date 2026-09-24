@@ -56,6 +56,27 @@ What IS allowed:
 - Decision rationale explained in self-contained plain language.
 - A pointer to a named document **alongside** that rationale — an ADR reference is fine when the decision itself is restated next to it. It is never the sole explanation.
 
+## No decorative noise in comments or docs
+
+A comment or a document earns its place by carrying what the code cannot show — why this order holds, which invariant it protects, what breaks otherwise. Three shapes fail the check outright, because each one is unmistakably machine output rather than writing, and each one spends a reader's attention while giving nothing back:
+
+- **Banners drawn in punctuation** — a label fenced by a long run of `=`, `-`, `*`, `_`, or `~`, as in a comment opening `// ==== Fetch users ====`. The divider marks a boundary for whoever authored the file and says nothing to the reader, and it makes the whole file read as generated. Delete the divider; if the label it wrapped names something a reader needs, make that a heading, or name it in the declaration below. Only a run that opens a comment counts, so a markdown thematic break or a heading underline is structure, not decoration, and stays.
+- **Step-by-step narration** — comments that walk a reader through the code in the order it runs, opening with something like "Step 2:" or "Then,". It restates what the code already says, in the order the code already says it, and it goes stale the moment that order changes. Keep only what the code cannot show: why this order, which invariant is held, or what breaks otherwise. An ordinal that goes on to give the reason — "first, init so sync can read it" — is exactly the note to keep.
+- **Decorative emoji and icons** — in a comment, or opening a heading or a bullet in a document. The glyph spends the reader's attention and gives back nothing, and it is the clearest single sign the text was generated rather than written. Remove it and let the sentence carry the emphasis; if it stood for a state, name the state in words. A glyph the text is talking *about* — quoted, or named as the character it is — is not decoration, and is left alone.
+
+A fourth family fails the same check, and it is not about decoration at all: the forbidden-residue tokens listed under the guard in the section below — predecessor-plugin internals and the overwrought framing copied from the upstream tool. Those are hard errors on exactly the same terms, and the sweep reads every file it covers for them, not only the skills it lints.
+
+Two more shapes are reported as warnings, since they are judgement calls rather than certain noise:
+
+- **A TODO or FIXME with no owner and no reason** — nobody knows who will do it or what would make it unnecessary, so nobody can act on it and nobody can retire it. Name an owner or a tracked issue, plus the condition that retires the marker — "revisit once the v2 client lands".
+- **A long unbroken comment block** — a run of comment lines with no break between them is usually narration, or a restatement of the code beneath it: a reader skips it, and it drifts out of date. Cut it to the part a reader cannot get from the code, and move reference detail into the document that owns it.
+
+Where the gate runs: `noir doctor` has an **output hygiene** check over the repository's own text — the root documents, `docs/` outside the planning corpus, the repository's agent skills under `.claude/skills/`, each package's `src/` and `test/`, and `scripts/`. A shape described above as a hard error fails the check; a warning is reported without failing it. `noir skills lint` applies the same rules when it lints a skill, and CI runs both, so a new fail-tier finding fails the build instead of waiting for a reviewer to notice.
+
+A file that has to name what the rules forbid — the rule table, its token list, its fixtures — cannot itself be clean. Such a file declares the exemption with a marker on a line above its first finding: `<!-- noir-hygiene: exempt -->` in a document, `// noir-hygiene: exempt` in source. The marker speaks for the whole file, so it belongs only where the prohibited shape is quoted deliberately, and it must sit at the top — below the first finding it exempts nothing.
+
+The planning corpus is excluded from the sweep by decision, not by oversight: `docs/internal/**`, `docs/decisions/**`, and `docs/roadmap/**` are working notes where decisions are recorded in the maintainer's own shorthand, and `CHANGELOG.md` is a release log. `.superpowers/**` is gitignored session scratch, and the sweep skips dot-directories along with build output and dependencies. Everything else the sweep reads is fair game — if a file outside that list trips the check, fix the file rather than reaching for the marker.
+
 ## Native skills — the only skill mechanism
 
 There is **no plugin and no marketplace**. Skills are native `noir-` builtins, authored as Claude Code `SKILL.md` files and compiled by `@noir-ai/skills`.

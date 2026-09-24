@@ -66,6 +66,7 @@ Key invariants to respect:
 - Don't push to `main` without explicit go-ahead.
 - Don't require `noir init` to have been run in this repo — Noir is not yet mature/initialized here; the plugin stack (agentmemory, context-mode, superpowers) is the current context layer.
 - Don't write internal jargon — slice/task codes, roadmap codenames, or bare spec/plan/ADR section citations — in comments or docs; explain the why in self-contained plain language.
+- Don't dress comments and docs in decoration — banners drawn in punctuation, step-by-step narration, decorative emoji/icons, bare TODO/FIXME, or long unbroken comment blocks; write the reason instead. Enforced by `noir doctor`'s output-hygiene check and `noir skills lint` (see AGENTS.md).
 
 ## Patch release flow (beta → stable)
 
