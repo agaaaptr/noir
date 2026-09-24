@@ -1,5 +1,7 @@
 # AGENTS.md
 
+<!-- noir-hygiene: exempt -->
+
 Guidance for AI coding agents (Claude Code, Cursor, Codex, …) working **on this repository** — i.e., developing and maintaining the **Noir toolkit** under `packages/`. For *using* Noir in a project, see the [README](README.md). The human-facing contribution policy lives in `CONTRIBUTING.md` — read it before opening a PR.
 
 ## What this repo is

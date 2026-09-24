@@ -10,7 +10,8 @@
 // Usage:
 //   node scripts/new-package.mjs <name>      # e.g. node scripts/new-package.mjs telemetry
 //
-// Then: pnpm install && pnpm build && pnpm test, and fill in src/ + README +
+// The scaffold cannot install, build or test the new package, so afterwards
+// run `pnpm install && pnpm build && pnpm test` and fill in src/ + README +
 // package.json description/deps. The new package is automatically included in
 // unified versioning (scripts/bump-version.mjs) and the release.yml publish.
 //
