@@ -6,6 +6,7 @@ import { discoverAll, discoverBuiltin } from './discover.js';
 import { runtimeEmitsHostMcp } from './integrations-schema.js';
 import {
   artifactPathDrift,
+  bodyOf,
   chainedReferences,
   hygieneFindings,
   hygieneMessage,
@@ -17,10 +18,10 @@ import {
   withinLineBudget,
 } from './quality.js';
 
-// Re-exported for backward-compat — callers (hygiene tests, CLI) import
-// `looksLikeWhenDescription` from './compiler.js'. The single source of truth
-// is quality.ts; this alias keeps the old import surface stable.
-export { looksLikeWhenDescription } from './quality.js';
+// Re-exported for backward-compat — callers (hygiene tests, CLI) import these
+// from './compiler.js'. The single source of truth is quality.ts (where the
+// body-structure rules live); these aliases keep the old import surface stable.
+export { bodyOf, looksLikeWhenDescription } from './quality.js';
 
 import type {
   BuiltinSkill,
@@ -52,10 +53,6 @@ export function parseFrontmatter(md: string): SkillFrontmatter {
     throw new Error('Skill frontmatter requires string `name` + `description`');
   }
   return fm;
-}
-
-export function bodyOf(md: string): string {
-  return md.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
 }
 
 export function validateSkill(skill: BuiltinSkill): ValidationResult {

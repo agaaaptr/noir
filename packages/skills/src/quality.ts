@@ -17,6 +17,14 @@ import { ARTIFACT_TYPES } from '@noir-ai/core';
 import { checkHygiene, HYGIENE_EXEMPT_MARKERS, type HygieneFinding } from './hygiene.js';
 import type { BuiltinSkill } from './types.js';
 
+/** The SKILL.md body — the markdown after the YAML frontmatter block. The
+ *  frontmatter is metadata the host reads on its own; the body is the playbook
+ *  a reader loads. The validator and the lint rules both measure this string,
+ *  so it lives here (single source of truth) rather than in compiler.ts. */
+export function bodyOf(md: string): string {
+  return md.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+}
+
 /** The max body length the canon recommends (Anthropic: "under 500 lines").
  *  SKILL.md is a navigator, not a repository — split to references/ past this. */
 export const MAX_BODY_LINES = 500;
@@ -114,21 +122,27 @@ export function looksLikeWhenDescription(description: string): boolean {
  */
 export function lintWarnings(skill: BuiltinSkill): string[] {
   const warnings: string[] = [];
-  const body = skill.skillMd; // linting the whole file (frontmatter + body) is fine for prose checks
+  // The two body rules below measure the body, not the file: a long description
+  // (or any other frontmatter line) must not make a short body look substantial,
+  // and a cue in the description must not stand in for a worked example. The
+  // prose checks after them read the whole file, so a first-person phrase or a
+  // stale version pin is surfaced wherever it sits.
+  const file = skill.skillMd;
+  const body = bodyOf(file);
   const bodyLines = body.split('\n').length;
 
-  if (bodyLines < MIN_FULL_BODY_LINES + 6) {
-    // frontmatter is ~6 lines; a full playbook should clear 20 body lines
+  if (bodyLines < MIN_FULL_BODY_LINES) {
     warnings.push('thin-body: full playbook body is under 20 lines');
   }
-  // Concrete examples: at least one fenced block or an "example:" mention.
+  // Concrete examples: at least one fenced block or an "example:" mention in
+  // the body.
   const hasExample = /```/.test(body) || /\bexample:?\b/i.test(body) || /\be\.g\.\b/i.test(body);
   if (!hasExample) {
     warnings.push('no-example: no concrete code fence or worked example in the body');
   }
   // First/second-person narration — "I/we/you" as the agent doing work.
   if (
-    /\b(I|we|you)\s+(will|should|can|need|must|do|write|create|implement|run|build)\b/i.test(body)
+    /\b(I|we|you)\s+(will|should|can|need|must|do|write|create|implement|run|build)\b/i.test(file)
   ) {
     warnings.push('first-person: narration addresses the reader instead of imperative steps');
   }
@@ -136,14 +150,14 @@ export function lintWarnings(skill: BuiltinSkill): string[] {
   // ("wait 5 seconds" without why). Very loose — catches "wait N seconds" without
   // a "why".
   if (
-    /\b(?:wait|sleep|retry|backoff|limit|cap)\s+[a-z]*\s*(\d{1,4})\b/i.test(body) &&
-    !/because|to (avoid|prevent|give|let)/i.test(body)
+    /\b(?:wait|sleep|retry|backoff|limit|cap)\s+[a-z]*\s*(\d{1,4})\b/i.test(file) &&
+    !/because|to (avoid|prevent|give|let)/i.test(file)
   ) {
     warnings.push('voodoo-constant: numeric threshold without a stated reason');
   }
   // Time-sensitive version pins outside a Legacy section.
-  const hasVersionPin = /as of \d{4}|\bversion \d+\.\d+\.\d+\b|"v\d+\.\d+"/i.test(body);
-  const hasLegacySection = /^## Legacy|^## Old patterns/i.test(body);
+  const hasVersionPin = /as of \d{4}|\bversion \d+\.\d+\.\d+\b|"v\d+\.\d+"/i.test(file);
+  const hasLegacySection = /^## Legacy|^## Old patterns/i.test(file);
   if (hasVersionPin && !hasLegacySection) {
     warnings.push('time-sensitive: version/date pin outside a Legacy section');
   }
