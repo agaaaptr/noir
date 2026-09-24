@@ -5,7 +5,6 @@ import {
   readFileSync,
   renameSync,
   rmSync,
-  writeFileSync,
   writeSync,
 } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
@@ -131,6 +130,11 @@ export function managedBlock(
  *      blank-line separator (`END\n` + `\n` + `BEGIN`) — byte-identical to what
  *      the single-block path emits on a first run, so the CONTEXT/RULES parity
  *      gates against `claudeAdapter.emitContext/emitRules` keep passing.
+ *   4. Write the result atomically (via core's `atomicWriteFile`: temp sibling +
+ *      rename). This target is a file the user also owns, so an interrupted
+ *      write must not leave the user's own content half-written — and the swap
+ *      keeps the file's existing permissions, which a fresh temp file would
+ *      otherwise reset to the umask default.
  *
  *  Single-region files (NOIR.md brief, ignore files) do NOT route through here
  *  — the orchestrator only calls this for groups of ≥2 managed blocks, so
@@ -163,7 +167,7 @@ export function managedBlocks(
   // stripped) → emit just the regions, no leading separator.
   const next =
     stripped.trim().length > 0 ? `${stripped.trimEnd()}\n\n${regionsJoined}` : regionsJoined;
-  writeFileSync(absPath, next, 'utf8');
+  atomicWriteFile(absPath, next);
   return { path: absPath, mode: 'managedBlock', written: true };
 }
 

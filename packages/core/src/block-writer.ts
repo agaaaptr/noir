@@ -1,5 +1,6 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { basename, extname } from 'node:path';
+import { atomicWriteFile } from './install-method.js';
 import type { CommentStyle, ManagedBlock } from './markers.js';
 
 const HASH_FILES = new Set([
@@ -43,7 +44,14 @@ export function readManagedBlock(file: string, block: ManagedBlock): string | nu
 }
 
 /** Idempotently write `regionText` (a full `<begin>…<end>` block) into `file`,
- *  stripping any prior region for `block` and preserving all other content. */
+ *  stripping any prior region for `block` and preserving all other content.
+ *
+ *  The write is atomic (via `atomicWriteFile`: temp sibling + rename), because
+ *  this region lives in a file the user also owns — CLAUDE.md, .gitignore and
+ *  friends. A plain truncating write that is interrupted part-way through would
+ *  leave the user's own content half-written on disk. The temp-and-rename swap
+ *  also keeps the destination's existing permissions (the helper restores them),
+ *  so rewrites never silently change the file's mode. */
 export function writeManagedRegion(file: string, block: ManagedBlock, regionText: string): void {
   let content = '';
   try {
@@ -53,5 +61,5 @@ export function writeManagedRegion(file: string, block: ManagedBlock, regionText
   }
   const stripped = stripManagedBlock(content, block);
   const next = `${stripped ? `${stripped.trimEnd()}\n\n` : ''}${regionText}`;
-  writeFileSync(file, next, 'utf8');
+  atomicWriteFile(file, next);
 }
