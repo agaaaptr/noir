@@ -140,6 +140,7 @@ unset means "baseURL required"):
 | `NOIR_NO_BANNER` | — | no | Non-empty suppresses the startup banner even in an interactive terminal. |
 | `NOIR_ACCESSIBLE` | — | no | Non-empty swaps the banner gradient for a solid accent (accessibility). |
 | `NOIR_NON_INTERACTIVE` | set by `--json` / `--no-input` | no | Propagates the "no prompts" decision into engines that never read `process.env` themselves. It is an output, not an input: the CLI deletes any ambient value it finds for an invocation that is not `--json` / `--no-input`, so exporting it by hand has no effect. |
+| `NOIR_QUIET` | set by `--quiet` | no | Propagates the "no decoration" decision to the colour authority (`theme.useColor`), which never sees the parsed options. An output, not an input, like `NOIR_NON_INTERACTIVE`: the CLI deletes any ambient value it finds for an invocation that is not `--quiet`, so exporting it by hand has no effect. |
 | `NOIR_DISABLE_TUI_HISTORY` | — | no | Non-empty makes palette recents in-memory only (no `~/.noir/<projectId>/tui-history.json`). |
 
 ## Advanced / test-only seams

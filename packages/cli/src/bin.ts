@@ -335,6 +335,12 @@ export function createProgram(): Command {
     const nonInteractive = opts.json === true || opts.input === false;
     if (nonInteractive) process.env.NOIR_NON_INTERACTIVE = '1';
     else delete process.env.NOIR_NON_INTERACTIVE;
+    // Propagate --quiet the same way, for the colour authority (theme.useColor),
+    // which never sees the parsed options. Mirrors NOIR_NON_INTERACTIVE: it is
+    // an output, not an input — any ambient NOIR_QUIET is deleted when the run
+    // did not ask for quiet, so exporting it by hand has no effect.
+    if (opts.quiet === true) process.env.NOIR_QUIET = '1';
+    else delete process.env.NOIR_QUIET;
     // Deprecation / redirect hints. Scans {@link DEPRECATIONS} against the
     // dispatched command path; emits via `tip()` (suppressed by --no-tips /
     // --json). Empty registry today — no-op until an entry is added.

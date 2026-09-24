@@ -7,7 +7,10 @@
 //
 // Decoration (picocolors / cli-table3 / ora) auto-disables under `--json`,
 // `--quiet`, `CI`, `NO_COLOR`, or a non-TTY, so the same code path is safe in an
-// interactive shell, a pipe, and CI.
+// interactive shell, a pipe, and CI. The `--quiet` half is enforced by the
+// colour authority itself: bin.ts's `preAction` bridges the flag to `NOIR_QUIET`,
+// which `theme.useColor()` reads, so a quiet run emits no ANSI even where a
+// string is coloured without consulting this module's `opts`.
 //
 // Exit codes: 0 ok · 1 error · 2 usage · 3 not-found · 4 daemon-down ·
 // 5 cancelled · 130/143 interrupted (128 + the signal that stopped the run:

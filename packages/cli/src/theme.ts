@@ -6,7 +6,7 @@
 // split is what painted every table header red while the body stripped. Routing
 // ALL color through this module (the `c` object + `badge()`) closes that leak:
 // there is exactly one color authority, and it honors NO_COLOR / CLICOLOR_FORCE
-// / TTY uniformly.
+// / `--quiet` / TTY uniformly.
 //
 // Accessibility:
 //   - `badge()` ALWAYS returns SYMBOL + TEXT LABEL (e.g. `⚠ warn`), so NO_COLOR
@@ -30,8 +30,8 @@ export type BadgeState = 'ok' | 'warn' | 'error' | 'info';
 
 /**
  * The semantic palette. Each method returns its input unchanged when color is
- * off (NO_COLOR / non-TTY / not forced), so callers can wrap freely without
- * guarding. Compose with `c.bold(c.info(s))` etc.
+ * off (NO_COLOR / `--quiet` / non-TTY / not forced), so callers can wrap freely
+ * without guarding. Compose with `c.bold(c.info(s))` etc.
  */
 export const c = {
   /** Green — success / healthy. */
@@ -118,8 +118,27 @@ export function isCiEnv(): boolean {
 }
 
 /**
+ * `NOIR_QUIET`: the value the CLI's own `preAction` writes for a `--quiet`
+ * invocation, so this module — which never sees the parsed command options —
+ * reads the same quiet signal the output helpers take from their `opts`. Read
+ * live like every other gate here. The CLI owns the variable: it sets it to
+ * `1` for a quiet run and deletes whatever value it found otherwise, so a
+ * hand-exported one has no effect (the same "output, not input" rule as
+ * `NOIR_NON_INTERACTIVE`).
+ */
+function quietMode(): boolean {
+  const v = process.env.NOIR_QUIET;
+  return v !== undefined && v !== '';
+}
+
+/**
  * The single authority on whether decoration should emit ANSI. Honors:
  *   - `NO_COLOR`           → always off (spec: present + non-empty).
+ *   - `NOIR_QUIET` (`--quiet`) → always off. The documented contract says
+ *                            decoration auto-disables under `--quiet`, so a
+ *                            quiet run wins even over `CLICOLOR_FORCE` (which
+ *                            remains the escape hatch for a run that did NOT
+ *                            ask for quiet).
  *   - `CLICOLOR_FORCE=1`   → always on (forces color on a redirected stream).
  *   - `CI=true` (alone)    → always OFF. picocolors' `isColorSupported`
  *                            snapshot turns color ON under `!!env.CI` (it
@@ -137,6 +156,7 @@ export function isCiEnv(): boolean {
  */
 export function useColor(): boolean {
   if (envFlagSet('NO_COLOR')) return false;
+  if (quietMode()) return false;
   if (process.env.CLICOLOR_FORCE === '1') return true;
   if (isCiEnv()) return false;
   return pc.isColorSupported;

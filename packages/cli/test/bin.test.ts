@@ -183,6 +183,22 @@ describe('commander migration — exit codes + stream discipline', () => {
     );
   });
 
+  it('`noir --quiet` bridges the flag to NOIR_QUIET for the colour authority', async () => {
+    delete process.env.NOIR_QUIET;
+    try {
+      await parse(['--quiet', 'status']);
+      expect(process.env.NOIR_QUIET).toBe('1');
+    } finally {
+      delete process.env.NOIR_QUIET;
+    }
+  });
+
+  it('a non-quiet invocation deletes an ambient NOIR_QUIET (output, not input)', async () => {
+    process.env.NOIR_QUIET = '1';
+    await parse(['status']);
+    expect(process.env.NOIR_QUIET).toBeUndefined();
+  });
+
   it('`noir mcp` (bare group) → exit 2 + legacy usage line', async () => {
     const r = await parse(['mcp']);
     expect(r.exitCode).toBe(EXIT.USAGE);
