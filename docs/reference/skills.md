@@ -2,7 +2,7 @@
 
 > Auto-generated from `packages/skills/builtin/*/SKILL.md` and `integrations/*/SKILL.md`.
 
-**27 skills** (26 builtins + 1 integration)
+**28 skills** (27 builtins + 1 integration)
 
 | Skill | Type | Category | Description |
 |---|---|---|---|
@@ -10,6 +10,7 @@
 | `noir-brainstorming` | builtin | discovery | Use when starting a new feature or task from a raw idea, ticket, or issue — explore intent, requirements, and design space before implementation. Do NOT use for single-file edits, typo fixes, or pure refactors. |
 | `noir-checkpoint` | builtin | discovery | Use when saving mid-session state before a context-risky moment or interruption — preserve the current task, progress, and open decisions. Use when the user says "save my place" or "checkpoint this". Do NOT use to close a session — use noir-wrap. |
 | `noir-clickup` | integration | integration | Use when interacting with ClickUp — reading tasks, updating statuses, creating subtasks, posting comments, or batch-creating tasks from markdown lists. Writes route through the noir_clickup_write gated proxy (dry-run → confirm); reads use host fetch with the pk_ token resolved by integrations_auth. |
+| `noir-code-hygiene` | builtin | meta | Use when writing or reviewing comments, docstrings, summaries, or documents — keep every line carrying something a reader can act on. Use when the user says "clean this up", "this reads like machine output", or asks for a comment sweep. Do NOT use for layout (indentation, quoting, line length); this is about what the text says. |
 | `noir-context` | builtin | context | Use when a question spans more files than fit in context — query Noir's hybrid retrieval index (BM25 + kNN) for windowed snippets. Use when the user says "index this", "search the codebase", or "find where X is used". Do NOT use for a single-file lookup. |
 | `noir-doctor` | builtin | meta | Use when diagnosing environment or project health — dependencies, config, runtime, toolchain, and Noir store integrity. Do NOT use for routine status checks — use noir-sync or noir-checkpoint. |
 | `noir-executing-plans` | builtin | execute | Use when you have a written implementation plan and are ready to code — drive it task by task with a disciplined implement-test-commit loop. Use when the user says "implement this" or "start building". Do NOT use when there is no plan; run noir-planning first. |

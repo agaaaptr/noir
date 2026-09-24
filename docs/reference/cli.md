@@ -135,6 +135,7 @@ run the Noir MCP server (stdio, or via the shared daemon)
 | Flag | Description |
 |---|---|
 | `--stdio` | force the stdio transport |
+| `--workspace <name>` | serve a shared workspace over stdio, bridging to that workspace daemon |
 
 ### noir daemon
 
