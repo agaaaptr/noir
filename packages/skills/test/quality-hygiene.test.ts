@@ -63,12 +63,14 @@ const lineOf = (body: string, needle: string): number =>
  *  with a decorative emoji would be a finding in this file. */
 const PICTOGRAPH_LINE_EMOJI = '\u{1F3AF}';
 
-/** The 1-based line `needle` sits on in the string the gate actually checks.
- *  `validateSkill` and `lintSkill` run the rules over `bodyOf(skillMd)`, which
- *  keeps the blank line that separates the frontmatter from the body — so a
- *  line pin has to be counted there, not in the fixture as written. */
-const gateLine = (body: string, needle: string): number =>
-  lineOf(bodyOf(skillWithBody(body).skillMd), needle);
+/** The body the gate numbers its findings in: `bodyOf(skillMd)` carries the
+ *  blank line that separates the frontmatter from the body, and the gate drops
+ *  that one line so a finding names the line the author wrote in the body. */
+const gatedBody = (body: string): string => bodyOf(skillWithBody(body).skillMd).replace(/^\n/, '');
+
+/** The 1-based line `needle` sits on in the string the gate actually checks, so
+ *  a line pin is counted the way the finding is — in the authored body. */
+const gateLine = (body: string, needle: string): number => lineOf(gatedBody(body), needle);
 
 describe('hygiene gate: fail tier blocks validation', () => {
   it('fails a skill whose body carries a decorative banner in its prose', () => {
@@ -79,8 +81,11 @@ describe('hygiene gate: fail tier blocks validation', () => {
     const hygieneErrors = res.errors.filter((e) => e.includes('decorative-banner'));
     expect(hygieneErrors).toHaveLength(1);
     // The message carries the rule id, the line, the rationale and the fix —
-    // and the line is the banner's line in the body.
+    // and the line is the banner's line in the BODY: the blank line that
+    // separates the frontmatter from the body is not counted, so the number is
+    // the one the author sees next to the text.
     expect(hygieneErrors[0]).toContain(`(line ${gateLine(body, banner)})`);
+    expect(gateLine(body, banner)).toBe(lineOf(body, banner));
     expect(hygieneErrors[0]).toContain('machine output');
     expect(hygieneErrors[0]).toContain('Delete the divider');
   });

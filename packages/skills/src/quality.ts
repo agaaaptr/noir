@@ -19,10 +19,23 @@ import type { BuiltinSkill } from './types.js';
 
 /** The SKILL.md body — the markdown after the YAML frontmatter block. The
  *  frontmatter is metadata the host reads on its own; the body is the playbook
- *  a reader loads. The validator and the lint rules both measure this string,
- *  so it lives here (single source of truth) rather than in compiler.ts. */
+ *  a reader loads. The validator and the two body-structure lint rules both
+ *  measure this string, so it lives here (single source of truth) rather than
+ *  in compiler.ts. */
 export function bodyOf(md: string): string {
   return md.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+}
+
+/** The body with the blank line that separates it from the frontmatter removed
+ *  — the text the author wrote as the body, which is what a finding's line
+ *  number has to count in. `bodyOf` keeps that separator line, so numbering
+ *  findings against its raw output reports every one of them a line past the
+ *  line the author sees in the file. Only a leading blank line is dropped, and
+ *  only one, so the rest of the body keeps the numbering it is written with. */
+function authoredBody(body: string): string {
+  if (body.startsWith('\r\n')) return body.slice(2);
+  if (body.startsWith('\n')) return body.slice(1);
+  return body;
 }
 
 /** The max body length the canon recommends (Anthropic: "under 500 lines").
@@ -282,13 +295,18 @@ function exemptionLine(body: string): number {
 
 /** Every hygiene finding a skill body produces, in reading order.
  *
+ *  The lines are counted in the authored body (see {@link authoredBody}), so a
+ *  finding names the line a reader opening the SKILL.md finds the text on: the
+ *  number is frontmatter-exclusive and starts at the body's own first line.
+ *
  *  A body that carries the exemption marker above its first finding is exempt
  *  in both kinds. The marker is a statement about the file, and a body is one
  *  file even though it is read as prose and as source — a fenced code block
  *  cannot carry the document's marker, so without this the code rules would
  *  keep firing inside a body that declared itself exempt. */
 export function hygieneFindings(body: string): HygieneFinding[] {
-  const { prose, code } = splitFencedBlocks(body);
+  const text = authoredBody(body);
+  const { prose, code } = splitFencedBlocks(text);
   const findings = [...checkHygiene(prose, 'markdown'), ...checkHygiene(code, 'code')];
   const seen = new Set<string>();
   const ordered = findings
@@ -299,7 +317,7 @@ export function hygieneFindings(body: string): HygieneFinding[] {
       return true;
     })
     .sort((a, b) => a.line - b.line);
-  const exemptAt = exemptionLine(body);
+  const exemptAt = exemptionLine(text);
   if (exemptAt !== 0 && exemptAt < (ordered[0]?.line ?? Number.POSITIVE_INFINITY)) return [];
   return ordered;
 }
