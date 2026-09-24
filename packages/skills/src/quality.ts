@@ -219,17 +219,38 @@ export function artifactPathDrift(skill: BuiltinSkill): string[] {
 
 /** A body split into the two kinds of text it holds: the prose, and the fenced
  *  code blocks. Blanking the other side's lines, rather than dropping them,
- *  keeps every finding on the line number it has in the body. Only backtick
- *  fences open a code block; the fence markers themselves are document syntax,
- *  so they stay with the prose. */
+ *  keeps every finding on the line number it has in the body.
+ *
+ *  Fences follow the CommonMark rule: a line opening with a run of at least
+ *  three backticks or tildes opens a block, and only a run of the same
+ *  character at least as long closes it — a shorter run of the same character
+ *  (or the other character) inside the block is content, so a block that
+ *  documents a fenced example stays one block. An unclosed fence runs to the
+ *  end of the body, which is where CommonMark renders its content too. */
 function splitFencedBlocks(body: string): { prose: string; code: string } {
   const prose: string[] = [];
   const code: string[] = [];
-  let inFence = false;
+  // The closing fence of the block currently open: same character, at least the
+  // opening run's length, with only whitespace after it. Null when not in a
+  // fence.
+  let closing: RegExp | null = null;
   for (const line of body.split('\n')) {
-    const isFence = /^[ \t]{0,3}```/.test(line);
-    if (isFence) inFence = !inFence;
-    const isCode = inFence && !isFence;
+    let boundary = false;
+    if (closing === null) {
+      const open = line.match(/^[ \t]{0,3}(`{3,}|~{3,})/);
+      const run = open?.[1];
+      if (run) {
+        const char = run[0] ?? '';
+        closing = new RegExp(`^[ \\t]{0,3}${char}{${run.length},}[ \\t]*$`);
+        boundary = true;
+      }
+    } else if (closing.test(line)) {
+      closing = null;
+      boundary = true;
+    }
+    // The fence markers themselves are document syntax; the lines between them
+    // are source.
+    const isCode = closing !== null && !boundary;
     prose.push(isCode ? '' : line);
     code.push(isCode ? line : '');
   }
