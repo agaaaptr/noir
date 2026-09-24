@@ -384,6 +384,33 @@ describe('RunStatusLine — fitting the terminal', () => {
     expect(displayWidth(text)).toBeLessThan(displayWidth(wide));
   });
 
+  it('does not erase the row above when the answer has taken the rows below', () => {
+    setColumns(ROOMY);
+    const h = harness();
+    h.status.begin();
+    h.status.event({ kind: 'init', model: LONG_MODEL });
+    h.status.event({
+      kind: 'assistant',
+      messageId: 'm1',
+      usage: { inputTokens: 1_200, outputTokens: 340 },
+    });
+    // The answer is written below the status row, so the cursor has moved down
+    // and the text the line last drew is no longer the row above it.
+    h.status.beforeStdout('the answer\n');
+
+    setColumns(NARROW);
+    h.advance(1_000);
+    h.status.event({
+      kind: 'assistant',
+      messageId: 'm1',
+      usage: { inputTokens: 1_200, outputTokens: 341 },
+    });
+
+    // Those rows belong to the answer now: reaching into one would eat it.
+    expect(h.writes.at(-1)?.startsWith(ERASE_ONE_ROW)).toBe(true);
+    expect(h.text()).not.toContain(`${ESC}[1A`);
+  });
+
   it('leaves only one row to erase while the terminal has not moved', () => {
     setColumns(NARROW);
     const h = harness();

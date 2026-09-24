@@ -165,7 +165,12 @@ export class RunStatusLine {
     if (chunk.length === 0) return;
     if (this.animated && this.sharesCursor && this.onRow) {
       this.write('\n');
+      // The row is abandoned. What was drawn on it is no longer above the
+      // cursor — the answer now stands between the two — so the text is
+      // forgotten with it. Keeping it would let the next redraw reach back up
+      // over a row of the answer.
       this.onRow = false;
+      this.rendered = '';
     }
     this.stdoutAtRowStart = chunk.endsWith('\n');
   }
@@ -209,6 +214,8 @@ export class RunStatusLine {
     // wider and the terminal folds the overflow onto a row of its own, where
     // this line neither drew it nor knows to clear it. The width is read per
     // render, so a window resized mid-run is honored from the next redraw.
+    // Truncating is what strips colour, so colouring the status text would have
+    // to happen after this call, never before it.
     const text = truncateToWidth(this.render(), terminalWidth());
     if (text === this.rendered) return;
     this.write(`${this.erase(this.rendered)}${text}`);
@@ -227,7 +234,12 @@ export class RunStatusLine {
    * fitted a wider terminal does not stop existing when the window narrows: the
    * terminal folds it onto rows below, and clearing only the row the cursor
    * ends on would leave the rest above as residue. So the sequence walks back
-   * up over every row the text occupies.
+   * up over every row the text occupies. That folding is the behaviour of the
+   * common terminals (iTerm2, Terminal.app, GNOME Terminal and recent xterm);
+   * one that clips the row instead has no continuation to clear.
+   *
+   * The caller must have forgotten the text once its row was abandoned —
+   * `rendered` is only meaningful while `onRow` is true.
    */
   private erase(previous: string): string {
     const rows = Math.max(1, Math.ceil(displayWidth(previous) / terminalWidth()));
