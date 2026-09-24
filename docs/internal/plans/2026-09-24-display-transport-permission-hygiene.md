@@ -40,14 +40,14 @@ owns the code.
 
 1. **Injected width that disagrees with `process.stdout.columns`.** `ink-testing-library` hard-codes 100 columns,
    so tests that do not inject a width cannot exercise the 80-column case at all — which is how the footer and
-   divider bugs shipped. The harness itself is the risk. (Task A6)
+   divider bugs shipped. The harness itself is the risk. (Task 6)
 2. **Text that is already wider than the whole terminal.** A 200-column path in an 80-column terminal must
    ellipsise rather than emit an over-wide row, and must not loop forever when no column can shrink further.
-   (Task A3)
+   (Task 3)
 3. **A workspace daemon that died between the record write and the host's dial.** The bridge must report a precise
    cause and must not hang, including when the record's pid has been recycled by an unrelated process. (Tasks B1, B5)
 4. **A `.noir/.env` the user owns and has deliberately set to another mode.** The heal must be explicit and
-   reported, never silent, and must be a no-op where the platform has no POSIX bits. (Task C1)
+   reported, never silent, and must be a no-op where the platform has no POSIX bits. (Task 15)
 5. **A hygiene rule that fires on legitimate code.** A false positive that blocks CI is itself the failure mode
    the gate is meant to prevent; every FAIL-tier pattern must be anchored so it cannot match ordinary prose.
    (Tasks D1, D3)
@@ -56,7 +56,7 @@ owns the code.
 
 ## Workstream A — Display integrity
 
-### Task A1: Shared display-width module
+### Task 1 (Workstream A): Shared display-width module
 
 **Files:**
 - Create: `packages/cli/src/width.ts`
@@ -67,9 +67,9 @@ owns the code.
 - Produces: `displayWidth(s: string): number`, `truncateToWidth(s: string, width: number, ellipsis = '…'): string`,
   `padToWidth(s: string, width: number): string`, `truncateMiddle(s: string, width: number, ellipsis = '…'): string`
 
-- [ ] **Step 1:** Confirm the dependency decision (see "Open decision" below) and, if approved, add the width
-      library to `packages/cli/package.json` dependencies with an exact-range pin matching the version Ink already
-      resolves, then run `pnpm install` and commit the lockfile with the change.
+- [ ] **Step 1:** Declare the width library in `packages/cli/package.json` dependencies, pinned to the same major Ink
+      already resolves, then run `pnpm install` and commit the lockfile with the change. (The decision and its
+      reasoning are in "Resolved decision" at the end of this plan.)
 - [ ] **Step 2: Write the failing tests.** Cover: ANSI SGR is not counted (`'\u001b[33m⚠ WARN\u001b[39m'` → 6);
       a wide character counts 2; an emoji counts 2; `truncateToWidth` never splits a surrogate pair (property test
       over astral-plane code points); `truncateToWidth` counts the ellipsis inside the budget;
@@ -81,7 +81,7 @@ owns the code.
 - [ ] **Step 5:** Run the test file; all cases pass. Run `pnpm typecheck`.
 - [ ] **Step 6:** Commit `feat(cli): add a display-width module as the single text-measurement authority`.
 
-### Task A2: Route every measurement and truncation site through the module
+### Task 2 (Workstream A): Route every measurement and truncation site through the module
 
 **Files:**
 - Modify: `packages/cli/src/output.ts` (the column-width calculator, the trim loop, the table options)
@@ -92,7 +92,7 @@ owns the code.
 - Test: `packages/cli/test/width-integration.test.ts`
 
 **Interfaces:**
-- Consumes: `displayWidth`, `truncateToWidth`, `truncateMiddle` from Task A1.
+- Consumes: `displayWidth`, `truncateToWidth`, `truncateMiddle` from Task 1.
 
 - [ ] **Step 1: Write failing tests** proving the observable defects are gone: a table whose cell contains a colored
       badge allocates the badge's visible width, not its escape-inflated length; a cell containing a wide character
@@ -108,7 +108,7 @@ owns the code.
 - [ ] **Step 6:** Full file tests pass; `pnpm typecheck` clean.
 - [ ] **Step 7:** Commit `fix(cli): measure terminal text by display width, not code-unit length`.
 
-### Task A3: Correct table geometry and graceful overflow
+### Task 3 (Workstream A): Correct table geometry and graceful overflow
 
 **Files:**
 - Modify: `packages/cli/src/theme.ts` (the terminal-width helper — read the stream the table is written to)
@@ -128,7 +128,7 @@ owns the code.
 - [ ] **Step 4:** Tests pass at all three widths; add a regression test at 40 columns (degenerate but must not throw).
 - [ ] **Step 5:** Commit `fix(cli): keep tables inside the terminal and ellipsise instead of overflowing`.
 
-### Task A4: Derive TUI width budgets from the container
+### Task 4 (Workstream A): Derive TUI width budgets from the container
 
 **Files:**
 - Modify: `packages/cli/src/tui/overlays/PostRunOverlay.tsx` (focused and non-focused rows)
@@ -138,7 +138,7 @@ owns the code.
 - Test: `packages/cli/test/tui/layout-budget.test.tsx`
 
 **Interfaces:**
-- Consumes: `truncateToWidth`, `padToWidth` from Task A1.
+- Consumes: `truncateToWidth`, `padToWidth` from Task 1.
 - Produces: `Panel` exposes its inner text budget so children stop guessing.
 
 - [ ] **Step 1: Write failing render tests.** Render `PostRunOverlay` with the real options list at 80, 100, 120 and
@@ -153,7 +153,7 @@ owns the code.
 - [ ] **Step 4:** All widths pass. Confirm the pre-existing palette tests still pass unchanged.
 - [ ] **Step 5:** Commit `fix(cli): derive TUI width budgets from the container instead of constants`.
 
-### Task A5: Clamp the live run-status line
+### Task 5 (Workstream A): Clamp the live run-status line
 
 **Files:**
 - Modify: `packages/cli/src/run-status.ts` (the render and the clear sequence)
@@ -167,7 +167,7 @@ owns the code.
       writing (clear the line and any wrapped continuation).
 - [ ] **Step 4:** Test passes; commit `fix(cli): clamp the live run-status line to the terminal`.
 
-### Task A6: A render harness that can vary the terminal width
+### Task 6 (Workstream A): A render harness that can vary the terminal width
 
 **Files:**
 - Create: `packages/cli/test/helpers/render-at-width.tsx`
@@ -181,10 +181,10 @@ owns the code.
       gap), then a test for the new helper asserting `renderAtWidth(<Footer />, 80)` reports 80 columns.
 - [ ] **Step 2:** Implement the helper by rendering through Ink's own `render` with an injected stdout shim that
       reports the requested `columns`, so width is a parameter rather than an ambient constant.
-- [ ] **Step 3:** Migrate the TUI layout tests from Task A4 to the helper and delete their local width workarounds.
+- [ ] **Step 3:** Migrate the TUI layout tests from Task 4 to the helper and delete their local width workarounds.
 - [ ] **Step 4:** Commit `test(cli): add a TUI render harness that varies terminal width`.
 
-### Task A7: Honour the documented quiet-mode contract
+### Task 7 (Workstream A): Honour the documented quiet-mode contract
 
 **Files:**
 - Modify: `packages/cli/src/output.ts`, `packages/cli/src/theme.ts`
@@ -200,7 +200,7 @@ to implement.
 - [ ] **Step 3:** Make the colour decision account for quiet mode, and confirm `--json` behaves consistently.
 - [ ] **Step 4:** Commit `fix(cli): disable decoration under --quiet as documented`.
 
-### Task A8: Remove the dead and duplicated output helpers
+### Task 8 (Workstream A): Remove the dead and duplicated output helpers
 
 **Files:**
 - Modify: `packages/cli/src/output.ts`
@@ -219,7 +219,7 @@ to implement.
 
 ## Workstream B — Workspace transport and daemon safety
 
-### Task B1: The workspace stdio bridge
+### Task 9 (Workstream B): The workspace stdio bridge
 
 **Files:**
 - Create: `packages/cli/src/workspace-bridge.ts`
@@ -241,7 +241,7 @@ to implement.
 - [ ] **Step 4:** Tests pass; add a test asserting the bridge never writes the token to stdout or stderr.
 - [ ] **Step 5:** Commit `feat(cli): reach a workspace daemon through a stdio bridge`.
 
-### Task B2: Emit a workspace-aware MCP entry that preserves user wiring
+### Task 10 (Workstream B): Emit a workspace-aware MCP entry that preserves user wiring
 
 **Files:**
 - Modify: `packages/cli/src/workspace-mcp.ts` (the entry writer and the leave path)
@@ -255,7 +255,7 @@ to implement.
       merging into any existing entry instead of replacing the object.
 - [ ] **Step 4:** Tests pass; commit `fix(cli): emit a workspace-aware MCP entry without discarding user wiring`.
 
-### Task B3: Stop downgrading a joined repository
+### Task 11 (Workstream B): Stop downgrading a joined repository
 
 **Files:**
 - Modify: `packages/cli/src/sync.ts`, `packages/cli/src/init.ts`, `packages/create/src/manifest.ts`,
@@ -270,7 +270,7 @@ to implement.
       migration for existing http entries.
 - [ ] **Step 4:** Tests pass; commit `fix(create): keep a joined repo's MCP entry workspace-aware`.
 
-### Task B4: Correct HTTP routing in both daemon flavours
+### Task 12 (Workstream B): Correct HTTP routing in both daemon flavours
 
 **Files:**
 - Modify: `packages/daemon/src/http.ts`, `packages/daemon/src/workspace-http.ts`
@@ -285,7 +285,7 @@ to implement.
       string to produce the 400. Add the 405 branch to both flavours.
 - [ ] **Step 4:** Tests pass; commit `fix(daemon): answer 400 for a misdirected workspace URL and 405 for a wrong method`.
 
-### Task B5: Prove ownership before signalling
+### Task 13 (Workstream B): Prove ownership before signalling
 
 **Files:**
 - Modify: `packages/cli/src/commands/workspace.ts` (stop, status, list)
@@ -298,7 +298,7 @@ to implement.
 - [ ] **Step 3:** Add the `/health` ownership probe before signalling and before reporting liveness.
 - [ ] **Step 4:** Tests pass; commit `fix(cli): verify daemon ownership before signalling or reporting`.
 
-### Task B6: End-to-end proof over two repositories
+### Task 14 (Workstream B): End-to-end proof over two repositories
 
 **Files:**
 - Create: `packages/cli/test/workspace-e2e.test.ts`
@@ -315,7 +315,7 @@ to implement.
 
 ## Workstream C — Permission contract
 
-### Task C1: Re-assert `.noir/.env` to 0600
+### Task 15 (Workstream C): Re-assert `.noir/.env` to 0600
 
 **Files:**
 - Modify: `packages/create/src/writers.ts` (or a new heal helper next to the existing executable-bit one)
@@ -334,20 +334,20 @@ to implement.
       that can touch the file. Record the heal in the scaffold result so the command can report it once.
 - [ ] **Step 4:** Tests pass; commit `fix(create): re-assert owner-only mode on an existing .noir/.env`.
 
-### Task C2: Owner-only store database and directory
+### Task 16 (Workstream C): Owner-only store database and directory
 
 **Files:**
 - Modify: `packages/store/src/sqlite-store.ts` (database creation and the parent-directory creation)
 - Test: `packages/store/test/db-mode.test.ts`
 
 - [ ] **Step 1: Write failing tests:** after opening a store in a fresh directory, the database and its parent
-      directory are owner-only; an existing database at a wider mode is healed or reported, consistently with Task C1.
+      directory are owner-only; an existing database at a wider mode is healed or reported, consistently with Task 15.
 - [ ] **Step 2:** Run and confirm failure.
 - [ ] **Step 3:** Create the directory and the database with explicit owner-only modes, degrading to a no-op where
       unsupported.
 - [ ] **Step 4:** Tests pass; commit `fix(store): create the database and its directory owner-only`.
 
-### Task C3: Make the diagnostic honest
+### Task 17 (Workstream C): Make the diagnostic honest
 
 **Files:**
 - Modify: `packages/cli/src/doctor.ts` (the environment check)
@@ -361,7 +361,7 @@ to implement.
 - [ ] **Step 3:** Evaluate all permission bits, print the observed mode, and word the message by cause.
 - [ ] **Step 4:** Tests pass; commit `fix(cli): report the observed .noir/.env mode and its cause`.
 
-### Task C4: Correct the false umask claim
+### Task 18 (Workstream C): Correct the false umask claim
 
 **Files:**
 - Modify: `packages/cli/src/install-method.ts` (the comment above the atomic write) and any twin
@@ -375,7 +375,7 @@ to implement.
 
 ## Workstream D — Output hygiene system
 
-### Task D1: A tiered hygiene rule source
+### Task 19 (Workstream D): A tiered hygiene rule source
 
 **Files:**
 - Create: `packages/skills/src/hygiene.ts`
@@ -397,7 +397,7 @@ to implement.
       nothing that is forbidden today becomes allowed.
 - [ ] **Step 4:** Tests pass; commit `feat(skills): add a tiered output-hygiene rule source`.
 
-### Task D2: Enforce through the skills quality gate
+### Task 20 (Workstream D): Enforce through the skills quality gate
 
 **Files:**
 - Modify: `packages/skills/src/quality.ts`, `packages/cli/src/commands/skills.ts`
@@ -410,7 +410,7 @@ to implement.
       findings with the rule id, the line, the rationale and the fix.
 - [ ] **Step 4:** Tests pass; commit `feat(skills): gate skill bodies through the hygiene rules`.
 
-### Task D3: A doctor check with two tiers
+### Task 21 (Workstream D): A doctor check with two tiers
 
 **Files:**
 - Modify: `packages/cli/src/commands/doctor.ts`, `packages/cli/src/doctor.ts`
@@ -423,7 +423,7 @@ to implement.
       exemption list from the spec.
 - [ ] **Step 4:** Tests pass; commit `feat(cli): add a two-tier output-hygiene check to doctor`.
 
-### Task D4: A builtin skill carrying the guidance
+### Task 22 (Workstream D): A builtin skill carrying the guidance
 
 **Files:**
 - Create: `packages/skills/builtin/noir-code-hygiene/SKILL.md`
@@ -438,7 +438,7 @@ to implement.
 - [ ] **Step 3:** Test passes; confirm the skill count assertion elsewhere in the suite is updated.
 - [ ] **Step 4:** Commit `feat(skills): add the noir-code-hygiene builtin skill`.
 
-### Task D5: Make the rules seed host-neutral
+### Task 23 (Workstream D): Make the rules seed host-neutral
 
 **Files:**
 - Modify: the rules seed template under `packages/create/` and its rendering context
@@ -452,7 +452,7 @@ to implement.
       adapter's own emitted block.
 - [ ] **Step 4:** Tests pass; commit `fix(create): make the rules seed host-neutral`.
 
-### Task D6: Make the evals assert against real output
+### Task 24 (Workstream D): Make the evals assert against real output
 
 **Files:**
 - Modify: `packages/skills/evals/` (runner and a new suite for the hygiene skill)
@@ -465,7 +465,7 @@ to implement.
 - [ ] **Step 3:** Add a hygiene eval suite that fails on a slop-laden candidate and passes on a clean one.
 - [ ] **Step 4:** Commit `fix(skills): assert evals against real output, not only the expected file`.
 
-### Task D7: Fix the two latent gate bugs
+### Task 25 (Workstream D): Fix the two latent gate bugs
 
 **Files:**
 - Modify: `packages/skills/src/quality.ts`
@@ -478,7 +478,7 @@ to implement.
 - [ ] **Step 3:** Split frontmatter from body before measuring, and search for an example only inside the body.
 - [ ] **Step 4:** Tests pass; commit `fix(skills): measure the skill body and its examples, not the frontmatter`.
 
-### Task D8: Rules for this repository
+### Task 26 (Workstream D): Rules for this repository
 
 **Files:**
 - Modify: `CLAUDE.md`, `AGENTS.md`
@@ -489,7 +489,7 @@ to implement.
       deliberate and where its boundary sits.
 - [ ] **Step 3:** Commit `docs: add output-hygiene rules to the repository guidance`.
 
-### Task D9: Make the rules configuration block honest
+### Task 27 (Workstream D): Make the rules configuration block honest
 
 **Files:**
 - Modify: the core configuration schema, `packages/create/src/manifest.ts`, the seed registration
@@ -505,7 +505,7 @@ The block declares an enable switch that nothing reads, and its own description 
       text on the block and its fields.
 - [ ] **Step 4:** Commit `fix(core,create): make the rules block's switch and description accurate`.
 
-### Task D10: Write co-owned host files atomically
+### Task 28 (Workstream D): Write co-owned host files atomically
 
 **Files:**
 - Modify: `packages/create/src/writers.ts`, `packages/core/src/block-writer.ts`
@@ -525,7 +525,7 @@ truncating write, so an interrupted write can leave a user's file half-written.
 
 ## Workstream E — Repository sweep
 
-### Task E1: Sweep jargon from code comments
+### Task 29 (Workstream E): Sweep jargon from code comments
 
 **Files:**
 - Modify: `packages/*/src/**` and `packages/*/test/**` comment text (34 located candidates across 27 files)
@@ -535,10 +535,10 @@ truncating write, so an interrupted write can leave a user's file half-written.
 - [ ] **Step 2:** Rewrite each in self-contained plain language that keeps the original why-depth; never change
       executable code, identifiers, string literals or user-facing text. Delete shorthand that adds nothing rather
       than translating it.
-- [ ] **Step 3:** Run the new gate (Task D3) over the tree and confirm the code-comment findings are gone.
+- [ ] **Step 3:** Run the new gate (Task 21) over the tree and confirm the code-comment findings are gone.
 - [ ] **Step 4:** Commit `docs: remove internal planning shorthand from code comments`.
 
-### Task E2: Sweep the outward-facing documents
+### Task 30 (Workstream E): Sweep the outward-facing documents
 
 **Files:**
 - Modify: `README.md`, `CONTRIBUTING.md`, `docs/usage/**`, `docs/architecture/**`, `docs/how-to/**`,
@@ -551,7 +551,7 @@ truncating write, so an interrupted write can leave a user's file half-written.
 - [ ] **Step 3:** `pnpm docs:validate` clean.
 - [ ] **Step 4:** Commit `docs: remove internal planning shorthand from reader-facing documentation`.
 
-### Task E3: Wire the gate into continuous integration
+### Task 31 (Workstream E): Wire the gate into continuous integration
 
 **Files:**
 - Modify: the CI workflow that runs the gate (`.github/workflows/ci.yml`)
@@ -566,7 +566,7 @@ truncating write, so an interrupted write can leave a user's file half-written.
 
 ## Workstream F — Documentation accuracy and release choreography
 
-### Task F1: Record the two interface decisions
+### Task 32 (Workstream F): Record the two interface decisions
 
 **Files:**
 - Create: `docs/decisions/0013-workspace-transport-and-daemon-routing.md`
@@ -576,7 +576,7 @@ truncating write, so an interrupted write can leave a user's file half-written.
       misdirected workspace URL. State the alternatives, why each was rejected, and what would reverse the decision.
 - [ ] **Step 2:** Add it to the decisions index. Commit `docs(adr): record the workspace transport and routing decisions`.
 
-### Task F2: Rewrite the shared-workspaces guide
+### Task 33 (Workstream F): Rewrite the shared-workspaces guide
 
 **Files:**
 - Modify: `docs/how-to/shared-workspaces.md`
@@ -588,7 +588,7 @@ truncating write, so an interrupted write can leave a user's file half-written.
 - [ ] **Step 3:** Walk the document end to end against the shipped code and fix anything that does not match.
 - [ ] **Step 4:** Commit `docs: rewrite the shared-workspaces guide around the stdio bridge`.
 
-### Task F3: Regenerate and verify the reference documents
+### Task 34 (Workstream F): Regenerate and verify the reference documents
 
 **Files:**
 - Modify: the generated reference documents under `docs/reference/`
@@ -597,7 +597,7 @@ truncating write, so an interrupted write can leave a user's file half-written.
 - [ ] **Step 2:** Verify the counts the generator embeds (tool counts, flag lists) against the built binary.
 - [ ] **Step 3:** `pnpm docs:validate` clean; commit `docs: regenerate the reference documents`.
 
-### Task F4: Sync the roadmap and release documents
+### Task 35 (Workstream F): Sync the roadmap and release documents
 
 **Files:**
 - Modify: `CHANGELOG.md`, `docs/roadmap/releases.md`, `docs/roadmap/STATUS.md`, `docs/roadmap/backlog.md`,
@@ -609,7 +609,7 @@ truncating write, so an interrupted write can leave a user's file half-written.
       manifest note.
 - [ ] **Step 3:** Commit `docs: sync the roadmap and changelog with the shipped changes`.
 
-### Task F5: The full gate
+### Task 36 (Workstream F): The full gate
 
 - [ ] **Step 1:** Run `pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm docs:validate` and fix every
       failure. Do not claim completion on a partial pass.
@@ -621,7 +621,7 @@ truncating write, so an interrupted write can leave a user's file half-written.
 
 ## Resolved decision
 
-Task A1's dependency question is settled: **declare `string-width` directly.** The package is already present in
+Task 1's dependency question is settled: **declare `string-width` directly.** The package is already present in
 the install graph as a dependency of Ink (`ink` → `string-width@^8.2.0`, plus `slice-ansi@^9` and
 `cli-truncate@^6`), so declaring it adds no new package to the install — it only turns an already-installed
 transitive dependency into an explicit, relyable one. Pin the declared range to the same major Ink resolves so a
