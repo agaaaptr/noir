@@ -74,9 +74,17 @@ describe('evaluateSuite() — the candidate output decides the result', () => {
     }
   });
 
-  it('keeps asserting expected_output when the candidate source has no entry for an eval', () => {
+  it('fails an eval the candidate source has no entry for, rather than scoring the golden output', () => {
     const suite = oneCase([{ type: 'contains', value: 'failing test' }]);
-    expect(evaluateSuite(suite, { other: 'irrelevant' })[0]?.pass).toBe(true);
+    for (const candidates of [{ other: 'irrelevant' }, {}]) {
+      const [missing] = evaluateSuite(suite, candidates);
+      expect(missing?.pass).toBe(false);
+      expect(missing?.failures).toEqual(['no candidate output for eval "case"']);
+    }
+  });
+
+  it('keeps asserting expected_output when no candidate source is given (backward compatible)', () => {
+    const suite = oneCase([{ type: 'contains', value: 'failing test' }]);
     expect(evaluateSuite(suite)[0]?.pass).toBe(true);
   });
 });
@@ -105,17 +113,35 @@ describe('shipped noir-code-hygiene suite — fails on slop, passes on clean', (
       'Parse the config once at startup and cache it, because every request reads it.',
   };
 
+  // The exact failures each slop candidate must produce, in assertion order.
+  // A rule that silently stopped firing would shrink its list and fail here.
+  const SLOP_FAILURES: Record<string, string[]> = {
+    'no-machine-preamble': [
+      'expected NOT to contain "As an AI"',
+      'expected NOT to contain "Sure"',
+      'expected to contain "null"',
+      'expected to match /not[- ]?found|no such user/',
+    ],
+    'no-decorative-flourish': [
+      'expected NOT to contain "✅"',
+      'expected NOT to contain "🚀"',
+      'expected NOT to contain "----"',
+      'expected NOT to contain "Step 1"',
+      'expected to match /because|since|so that/',
+    ],
+  };
+
   it('ships the hygiene suite and passes it against a clean candidate', () => {
     const results = evaluateSuite(hygieneSuite(), CLEAN);
     for (const r of results) expect(r.pass, r.id).toBe(true);
   });
 
-  it('fails every hygiene eval against the slop-laden candidate', () => {
+  it('fails every hygiene eval against the slop-laden candidate, rule by rule', () => {
     const results = evaluateSuite(hygieneSuite(), SLOP);
-    expect(results.length).toBeGreaterThan(0);
+    expect(results.map((r) => r.id).sort()).toEqual(Object.keys(SLOP_FAILURES).sort());
     for (const r of results) {
       expect(r.pass, r.id).toBe(false);
-      expect(r.failures.length, r.id).toBeGreaterThan(0);
+      expect(r.failures, r.id).toEqual(SLOP_FAILURES[r.id]);
     }
   });
 

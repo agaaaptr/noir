@@ -16,8 +16,9 @@
 // a stub standing in for one actually produced), not only against the
 // self-declared `expected_output` — otherwise a suite can never fail for the
 // right reason. `evaluateSuite` therefore accepts an optional candidate-output
-// source; an eval without one falls back to `expected_output`, so suites that
-// predate candidate output keep working unchanged.
+// source. Passing no source keeps asserting `expected_output`, so suites that
+// predate candidate output work unchanged; passing a source makes an eval it
+// has no entry for a failure, so an unrecorded answer is never scored a pass.
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -47,8 +48,10 @@ export interface EvalSuite {
 /**
  * Candidate answers keyed by eval id — what a model (or a stub standing in for
  * one) actually produced. An id present here is the text the assertions run
- * against; an id absent falls back to `expected_output`, so a suite stays valid
- * with no candidate source and keeps asserting its declared directive.
+ * against. An id absent is a failure for that eval: the run recorded no answer,
+ * and asserting the golden `expected_output` instead would report a pass the
+ * harness cannot vouch for. Pass no source at all to assert `expected_output`,
+ * which is how suites that predate candidate output keep working.
  */
 export type CandidateOutputs = Record<string, string>;
 
@@ -180,16 +183,27 @@ export function loadEvalSuites(dir: string = EVALS_DIR): EvalSuite[] {
 }
 
 /** Evaluate one suite: for each eval, check its assertions against the
- *  candidate output supplied for that eval, falling back to `expected_output`
- *  (the directive the skill should produce) when none is. Returns pass/fail per
- *  eval with the assertion failures. This is the offline core the vitest
- *  runner drives. */
+ *  candidate output supplied for that eval. With no candidate source at all,
+ *  each eval is checked against `expected_output` (the directive the skill
+ *  should produce); with a source that omits an eval, that eval fails as
+ *  unrecorded. Returns pass/fail per eval with the assertion failures. This is
+ *  the offline core the vitest runner drives. */
 export function evaluateSuite(
   suite: EvalSuite,
   candidates?: CandidateOutputs,
 ): Array<{ id: string; pass: boolean; failures: string[] }> {
   return suite.evals.map((e) => {
-    const output = candidates?.[e.id] ?? e.expected_output;
+    // A supplied candidate source that has no entry for this eval means the
+    // run could not record an answer (a misspelled id, or a model call that
+    // never happened). Scoring the golden `expected_output` here would report
+    // the very pass this harness exists to prevent, so a missing entry is a
+    // failure — but only when a source was supplied at all. With no source, a
+    // suite that predates candidate output keeps asserting its declared
+    // directive (backward compatible).
+    if (candidates && !(e.id in candidates)) {
+      return { id: e.id, pass: false, failures: [`no candidate output for eval "${e.id}"`] };
+    }
+    const output = candidates ? (candidates[e.id] ?? e.expected_output) : e.expected_output;
     return {
       id: e.id,
       pass: e.assertions ? runAssertions(output, e.assertions).pass : true,
