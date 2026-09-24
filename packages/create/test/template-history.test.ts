@@ -52,13 +52,16 @@ describe('seed template history — snapshot fidelity', () => {
     expect(digest(v1_1_0.rulesSeed)).toBe(DIGEST_1_1_0.rulesSeed);
   });
 
-  it('records the 1.2.0 seeds byte-for-byte against the packaged templates', () => {
-    // Unlike 1.1.0 (whose bytes exist only as an embedded literal), the 1.2.0
-    // entry must equal what the templates render to today — otherwise the
-    // migration would refresh an already-current file into stale text. This is
-    // the tripwire against transcription drift in the new entry.
+  it('records the 1.2.0 seeds against the packaged templates where unchanged', () => {
+    // The env template did not change in the host-neutral rules-seed release, so
+    // 1.2.0's env bytes must still equal today's render — the tripwire against
+    // transcription drift. The rules seed DID change: 1.2.0 shipped the same
+    // text as 1.1.0 (both held by the digest-pinned RULES_SEED_1_1_0), and the
+    // current template now differs from it — which is the difference the seed
+    // refresh exists to bring forward for users who never edited the file.
     expect(v1_2_0.envExample).toBe(loadTemplate('env.example.tmpl'));
-    expect(v1_2_0.rulesSeed).toBe(loadTemplate('rules-seed.md.tmpl'));
+    expect(v1_2_0.rulesSeed).toBe(v1_1_0.rulesSeed);
+    expect(v1_2_0.rulesSeed).not.toBe(loadTemplate('rules-seed.md.tmpl'));
   });
 
   it('contains no `{{` token in any recorded template', () => {
