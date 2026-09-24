@@ -96,7 +96,7 @@ describe('skill emit reports what it wrote, not what it attempted', () => {
 
     expect(r.exitCode).toBe(EXIT.OK);
     // The written count reflects reality: the edited skill was not refreshed.
-    expect(r.stderr).toMatch(/Emitted 26 Noir skills to \.claude\/skills\/ \(target: claude\)\./);
+    expect(r.stderr).toMatch(/Emitted 27 Noir skills to \.claude\/skills\/ \(target: claude\)\./);
     // …and the stale one is named, with the one way to change the outcome.
     expect(r.stderr).toMatch(
       /1 skill\(s\) preserved as stale \(interactive TTY required to refresh\): noir-brainstorming/,
@@ -132,7 +132,7 @@ describe('skill emit reports what it wrote, not what it attempted', () => {
     const r = await parse(['init', '--json']);
 
     expect(r.exitCode).toBe(EXIT.OK);
-    expect(r.stderr).toMatch(/Emitted 27 Noir skills to \.claude\/skills\/ \(target: claude\)\./);
+    expect(r.stderr).toMatch(/Emitted 28 Noir skills to \.claude\/skills\/ \(target: claude\)\./);
     expect(r.stderr).not.toContain('preserved as stale');
 
     const envelope = envelopeOf(r.stdout);

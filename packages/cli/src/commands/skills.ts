@@ -36,7 +36,7 @@ export interface SkillsOptions extends CliOptions {}
 //
 // Skills ship no `category` frontmatter field (the skill contract is `{name,
 // description, references?}`), so the column is a PRESENTATION-layer grouping
-// derived from the skill name. The map covers the 26 builtins; an unknown name
+// derived from the skill name. The map covers the current builtins; an unknown name
 // falls back to its `noir-`-stripped segment so a newly authored skill still
 // gets a sensible cell instead of an empty one. This is display-only — the
 // `--json` payload carries `category` too (same derivation) for consistency.
@@ -68,6 +68,7 @@ const CATEGORY: Record<string, string> = {
   'noir-doctor': 'meta',
   'noir-writing-skills': 'meta',
   'noir-rules': 'meta',
+  'noir-code-hygiene': 'meta',
 };
 
 function categoryOf(name: string): string {
@@ -110,7 +111,7 @@ function toRow(s: BuiltinSkill, kind: 'builtin' | 'integration' = 'builtin'): Sk
 /**
  * `noir skills list`: discover the full shipped pack (builtins + integrations)
  * and render it. Consistent with `emitSkillsToDir` (which emits BOTH) — the
- * `noir-clickup` integration shows up here alongside the 26 builtins.
+ * `noir-clickup` integration shows up here alongside the builtins.
  *
  * `--json` emits `{ok:true, data:{count, skills: SkillRow[]}}` to stdout. A
  * discovery failure (the pack dir is unreadable) maps to exit 1 (ERROR) —
