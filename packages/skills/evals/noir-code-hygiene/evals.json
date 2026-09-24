@@ -1,0 +1,30 @@
+{
+  "skill_name": "noir-code-hygiene",
+  "evals": [
+    {
+      "id": "no-machine-preamble",
+      "prompt": "Add a comment above the getById function that says what a caller can rely on.",
+      "expected_output": "Return the user whose id matches, or null when none does. Callers treat null as not-found rather than an error.",
+      "assertions": [
+        { "type": "not-contains", "value": "As an AI" },
+        { "type": "not-contains", "value": "Sure" },
+        { "type": "contains", "value": "null" },
+        { "type": "regex", "value": "not[- ]?found|no such user" },
+        { "type": "length-gte", "value": 40 }
+      ]
+    },
+    {
+      "id": "no-decorative-flourish",
+      "prompt": "Write a one-line comment explaining why the config is parsed once and cached.",
+      "expected_output": "Parse the config once at startup and cache it, because every request reads it.",
+      "assertions": [
+        { "type": "not-contains", "value": "✅" },
+        { "type": "not-contains", "value": "🚀" },
+        { "type": "not-contains", "value": "----" },
+        { "type": "not-contains", "value": "Step 1" },
+        { "type": "regex", "value": "because|since|so that" },
+        { "type": "length-gte", "value": 20 }
+      ]
+    }
+  ]
+}

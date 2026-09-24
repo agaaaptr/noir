@@ -15,7 +15,7 @@ export {
   discoverIntegrations,
   INTEGRATIONS_DIR,
 } from './discover.js';
-export type { EvalAssertion, EvalSuite, SkillEval } from './evals.js';
+export type { CandidateOutputs, EvalAssertion, EvalSuite, SkillEval } from './evals.js';
 export {
   EVALS_DIR,
   evaluateSuite,

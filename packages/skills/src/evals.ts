@@ -11,6 +11,13 @@
 // simulated agent answer satisfies structural expectations. They are NOT
 // LLM-judge evals (not implemented yet); they are the CI-safe
 // baseline that catches regressions in the skill's core directives.
+//
+// Assertions must be able to run against a CANDIDATE answer (what a model or
+// a stub standing in for one actually produced), not only against the
+// self-declared `expected_output` — otherwise a suite can never fail for the
+// right reason. `evaluateSuite` therefore accepts an optional candidate-output
+// source; an eval without one falls back to `expected_output`, so suites that
+// predate candidate output keep working unchanged.
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -36,6 +43,14 @@ export interface EvalSuite {
   skill_name: string;
   evals: SkillEval[];
 }
+
+/**
+ * Candidate answers keyed by eval id — what a model (or a stub standing in for
+ * one) actually produced. An id present here is the text the assertions run
+ * against; an id absent falls back to `expected_output`, so a suite stays valid
+ * with no candidate source and keeps asserting its declared directive.
+ */
+export type CandidateOutputs = Record<string, string>;
 
 /** Validate an assertion's shape (fail-fast on a malformed evals.json). */
 function parseAssertion(a: unknown): EvalAssertion {
@@ -164,16 +179,21 @@ export function loadEvalSuites(dir: string = EVALS_DIR): EvalSuite[] {
   return suites;
 }
 
-/** Evaluate one suite: for each eval, check its assertions against
- *  `expected_output` (the directive the skill should produce). Returns pass/fail
- *  per eval with the assertion failures. This is the offline core the vitest
+/** Evaluate one suite: for each eval, check its assertions against the
+ *  candidate output supplied for that eval, falling back to `expected_output`
+ *  (the directive the skill should produce) when none is. Returns pass/fail per
+ *  eval with the assertion failures. This is the offline core the vitest
  *  runner drives. */
 export function evaluateSuite(
   suite: EvalSuite,
+  candidates?: CandidateOutputs,
 ): Array<{ id: string; pass: boolean; failures: string[] }> {
-  return suite.evals.map((e) => ({
-    id: e.id,
-    pass: e.assertions ? runAssertions(e.expected_output, e.assertions).pass : true,
-    failures: e.assertions ? runAssertions(e.expected_output, e.assertions).failures : [],
-  }));
+  return suite.evals.map((e) => {
+    const output = candidates?.[e.id] ?? e.expected_output;
+    return {
+      id: e.id,
+      pass: e.assertions ? runAssertions(output, e.assertions).pass : true,
+      failures: e.assertions ? runAssertions(output, e.assertions).failures : [],
+    };
+  });
 }
