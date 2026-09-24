@@ -69,7 +69,7 @@ noir init
 | `.noir/scaffold-version` | The scaffold-engine version stamp; `noir doctor` reports drift, `noir init --upgrade` runs migrations. |
 | `.mcp.json` | The MCP server entry Claude Code reads. |
 | `CLAUDE.md` | A managed `@import ".noir/NOIR.md"` block is inserted (existing content is preserved). |
-| `.claude/skills/noir-*` | The **27 native `noir-` skills** (26 builtins + 1 integration) are compiled and emitted here. |
+| `.claude/skills/noir-*` | The **28 native `noir-` skills** (27 builtins + 1 integration) are compiled and emitted here. |
 
 `.noir/store/` (the SQLite DB), `.noir/specs/`, `.noir/plans/`, `.noir/tasks/`, `.noir/decisions/`, and `.noir/audit/` are created on demand as you work.
 

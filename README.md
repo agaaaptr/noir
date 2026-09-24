@@ -43,7 +43,7 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/aga
 Then:
 
 ```bash
-noir init                        # scaffold .noir/ + 27 skills + host wiring
+noir init                        # scaffold .noir/ + 28 skills + host wiring
 noir                             # open the home menu (screenshot above)
 ```
 
@@ -59,7 +59,7 @@ An 11-package pnpm monorepo, all `@noir-ai/*`:
 | `@noir-ai/core` | Shared types, config schema, `.noir/` layout |
 | `@noir-ai/store` | Embedded SQLite + FTS5 + sqlite-vec |
 | `@noir-ai/workflow` | Spec-Driven Development (SDD) lifecycle FSM engine |
-| `@noir-ai/skills` | 26 native `noir-*` skills + integration + compiler with quality gate |
+| `@noir-ai/skills` | 27 native `noir-*` skills + integration + compiler with quality gate |
 | `@noir-ai/context` | Hybrid retrieval: BM25 + vector kNN + RRF |
 | `@noir-ai/memory` | Cross-session memory with governance |
 | `@noir-ai/model` | Optional single-shot completion layer |

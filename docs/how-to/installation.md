@@ -405,7 +405,7 @@ noir doctor          # config / store / embedder / native-deps / provider / inst
 Then, from the project you want Noir to manage:
 
 ```bash
-noir init            # scaffolds .noir/ + emits the 27 skills (26 builtins + 1 integration) + host wiring
+noir init            # scaffolds .noir/ + emits the 28 skills (27 builtins + 1 integration) + host wiring
 ```
 
 `noir init` is idempotent — see [getting-started.md](../getting-started.md) for the walkthrough.
