@@ -25,7 +25,7 @@ Before:
 // ====================== Users ===============================
 // ============================================================
 
-/** Loads a user, and says why the timeout exists. */
+/** Loads a user. The timeout bounds a hung request, not a healthy one. */
 export async function fetchUser(id: string): Promise<User> {
   return client.get(`/users/${id}`, { timeoutMs: 5000 });
 }
@@ -34,7 +34,7 @@ export async function fetchUser(id: string): Promise<User> {
 After:
 
 ```ts
-/** Loads a user, and says why the timeout exists. */
+/** Loads a user. The timeout bounds a hung request, not a healthy one. */
 export async function fetchUser(id: string): Promise<User> {
   return client.get(`/users/${id}`, { timeoutMs: 5000 });
 }

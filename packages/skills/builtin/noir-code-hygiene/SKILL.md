@@ -132,8 +132,9 @@ After:
 
 ```ts
 /**
- * Loads a user. The gateway resets idle connections after 30s, so the first
- * request after a pause pays a reconnect — that is what the timeout covers.
+ * Loads a user. A healthy gateway answers in well under a second, so five
+ * seconds is the point past which the request is a hang rather than a slow
+ * read — the caller hears about it instead of waiting on nothing.
  */
 export async function fetchUser(id: string): Promise<User> {
   return client.get(`/users/${id}`, { timeoutMs: 5000 });
@@ -150,7 +151,7 @@ and why it is this value — are all that is left. The codename went with them.
 Two commands run the same rules, so this guidance and the gate agree:
 
 - `noir skills lint` validates each shipped skill body. A fail-tier pattern is an error and exits non-zero; a warn-tier pattern is a warning and does not.
-- `noir doctor` scans the repository's own text — each package's `src` and `test` trees, `scripts/`, `docs/` outside the planning corpus, and the root documents — reporting fail-tier findings in a failing row and warn-tier findings in a warning row. It exits non-zero whenever a fail-tier finding is present, so a repository's continuous integration can call it as its gate.
+- `noir doctor` scans the repository's own text — the root documents, `docs/` outside the planning corpus, `.claude/skills`, each package's `src` and `test` trees, and `scripts/` — reporting fail-tier findings in a failing row and warn-tier findings in a warning row. It exits non-zero whenever a fail-tier finding is present, so a repository's continuous integration can call it as its gate.
 
 The rules themselves are one table in the skills package, and each entry carries its tier, the reason the shape is noise, and the fix. Read the table when a line's status is unclear rather than working from memory.
 
@@ -171,7 +172,7 @@ The rules themselves are one table in the skills package, and each entry carries
 
 ## Notes
 
-- The two tiers are not a matter of taste. A fail-tier pattern is mechanical and objectively wrong; a warn-tier one is a judgement call, so it asks a question about the line instead of forbidding it.
+- The tiers differ in what to do with a finding, not in whether the shape is real. A fail-tier pattern is never the right thing to write, so it is removed. A warn-tier one is a mechanical threshold too, but the shape is sometimes the right choice — a marker is sometimes the right note, a block sometimes the right length — so the tier asks a reviewer to look at the line rather than forbidding it.
 - Deleting is the most common fix. A file gets clearer by getting shorter, and a shorter file has fewer places to be wrong.
 - The standard covers what an agent reports back, not only what it writes into a file: a summary that narrates its own steps, or that repeats the request before answering it, is the same defect in a different medium.
 
