@@ -21,13 +21,18 @@
 //      starts glued to the tail of the status text. It then keeps quiet until
 //      stdout leaves the cursor at the start of a row again — which is what
 //      makes a carriage return safe to use, since anything else would drag the
-//      cursor back over what was just written.
+//      cursor back over what was just written. "One row" is a promise the line
+//      has to keep: text wider than the terminal is folded onto a second row by
+//      the terminal itself, so the line is clamped to the width, and what it
+//      clears is measured against that same width.
 //
 // Where stderr is not a terminal (CI logs, redirection) there is nothing to
 // redraw and no cursor to protect, so the line degrades to two plain markers:
 // one when the run starts, one when it ends.
 
 import { type NoirEvent, UsageReducer } from './orchestrator.js';
+import { terminalWidth } from './theme.js';
+import { displayWidth, truncateToWidth } from './width.js';
 
 /**
  * How many lines of the host's own stderr a failure message carries. Bounded
@@ -192,7 +197,7 @@ export class RunStatusLine {
       return;
     }
     if (!this.onRow || !this.cursorFree()) return;
-    this.write('\r\x1b[K');
+    this.write(this.erase(this.rendered));
     this.rendered = '';
     this.onRow = false;
   }
@@ -200,11 +205,37 @@ export class RunStatusLine {
   /** Rewrite the current row in place, skipping no-op rewrites and unsafe moments. */
   private draw(): void {
     if (!this.animated || !this.cursorFree()) return;
-    const text = this.render();
+    // The line promises to be one row, so it is clamped to the terminal: any
+    // wider and the terminal folds the overflow onto a row of its own, where
+    // this line neither drew it nor knows to clear it. The width is read per
+    // render, so a window resized mid-run is honored from the next redraw.
+    const text = truncateToWidth(this.render(), terminalWidth());
     if (text === this.rendered) return;
-    this.write(`\r\x1b[K${text}`);
+    this.write(`${this.erase(this.rendered)}${text}`);
     this.rendered = text;
     this.onRow = true;
+  }
+
+  /**
+   * The escape sequence that clears the status text currently on screen and
+   * leaves the cursor at the start of the row it began on — where the next
+   * render writes. An empty `previous` still clears the row, so a line that has
+   * drawn nothing yet starts from a known-blank one.
+   *
+   * The extent is measured against the terminal width as it is NOW, not as it
+   * was when the text was drawn. Nothing this line writes wraps, but text that
+   * fitted a wider terminal does not stop existing when the window narrows: the
+   * terminal folds it onto rows below, and clearing only the row the cursor
+   * ends on would leave the rest above as residue. So the sequence walks back
+   * up over every row the text occupies.
+   */
+  private erase(previous: string): string {
+    const rows = Math.max(1, Math.ceil(displayWidth(previous) / terminalWidth()));
+    let sequence = '\r\x1b[K';
+    for (let row = 1; row < rows; row++) {
+      sequence += '\x1b[1A\r\x1b[K';
+    }
+    return sequence;
   }
 
   /**

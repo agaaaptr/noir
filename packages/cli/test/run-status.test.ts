@@ -3,7 +3,7 @@
 // stream, its clock, and its TTY answers as inputs, so every branch — the
 // machine-output silence, the two-marker pipe form, the in-place redraw, and
 // the shared-cursor rule — is exercised deterministically here.
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   HOST_STDERR_TAIL_LINES,
   hostStderrTail,
@@ -11,6 +11,7 @@ import {
   RunStatusLine,
   type RunStatusOptions,
 } from '../src/run-status.js';
+import { displayWidth } from '../src/width.js';
 
 /** A status line writing into an array, with a hand-cranked clock. */
 function harness(over: Partial<RunStatusOptions> = {}) {
@@ -35,6 +36,12 @@ function harness(over: Partial<RunStatusOptions> = {}) {
 }
 
 const ESC = '\x1b';
+
+/** The erase of one row: back to its start, then clear it. */
+const ERASE_ONE_ROW = `\r${ESC}[K`;
+
+/** The erase of a two-row extent: that, then the same for the row above. */
+const ERASE_TWO_ROWS = `${ERASE_ONE_ROW}${ESC}[1A\r${ESC}[K`;
 
 describe('humanizeElapsed', () => {
   it('reads seconds under a minute, minutes and seconds above it', () => {
@@ -303,6 +310,111 @@ describe('RunStatusLine — the shared cursor', () => {
     expect(h.writes).toHaveLength(2);
     expect(h.text()).not.toContain(ESC);
     expect(h.text()).not.toContain('\r');
+  });
+});
+
+describe('RunStatusLine — fitting the terminal', () => {
+  // Long enough that "● <model> · <elapsed> · ↓…↑… tokens" overflows a
+  // terminal of ordinary width.
+  const LONG_MODEL = 'claude-sonnet-4-5-20250929';
+  const ROOMY = 120;
+  const NARROW = 40;
+
+  const setColumns = (columns: number): void => {
+    process.env.COLUMNS = String(columns);
+  };
+
+  // A line drawn at ROOMY columns, then a terminal narrowed to NARROW for the
+  // redraw under test.
+  function drawLongLineThenNarrow() {
+    setColumns(ROOMY);
+    const h = harness();
+    h.status.begin();
+    h.status.event({ kind: 'init', model: LONG_MODEL });
+    h.status.event({
+      kind: 'assistant',
+      messageId: 'm1',
+      usage: { inputTokens: 1_200, outputTokens: 340 },
+    });
+    const wide = (h.writes.at(-1) ?? '').slice(ERASE_ONE_ROW.length);
+    expect(displayWidth(wide)).toBeGreaterThan(NARROW); // it really overflows the new width
+    setColumns(NARROW);
+    h.advance(1_000);
+    return { h, wide };
+  }
+
+  afterEach(() => {
+    delete process.env.COLUMNS;
+  });
+
+  it('clamps the line to the terminal, so it never wraps onto a second row', () => {
+    setColumns(NARROW);
+    const h = harness();
+    h.status.begin();
+    h.status.event({ kind: 'init', model: LONG_MODEL });
+    h.status.event({
+      kind: 'assistant',
+      messageId: 'm1',
+      usage: { inputTokens: 1_200, outputTokens: 340 },
+    });
+
+    const line = h.writes.at(-1) ?? '';
+    // The unclamped line is 53 columns. Written to a 40-column terminal it
+    // wraps, and the next redraw's erase reaches only the row it wrapped onto.
+    expect(line.startsWith(ERASE_ONE_ROW)).toBe(true);
+    const text = line.slice(ERASE_ONE_ROW.length);
+    expect(displayWidth(text)).toBeLessThanOrEqual(NARROW);
+    expect(text.endsWith('…')).toBe(true);
+  });
+
+  it('erases the wrapped continuation of a line the terminal has since narrowed under', () => {
+    const { h, wide } = drawLongLineThenNarrow();
+    h.status.event({
+      kind: 'assistant',
+      messageId: 'm1',
+      usage: { inputTokens: 1_200, outputTokens: 341 },
+    });
+
+    // The text already on the row now occupies two rows at the narrower width,
+    // so the shorter line replacing it clears both.
+    const line = h.writes.at(-1) ?? '';
+    expect(line.startsWith(ERASE_TWO_ROWS)).toBe(true);
+    const text = line.slice(ERASE_TWO_ROWS.length);
+    expect(displayWidth(text)).toBeLessThanOrEqual(NARROW);
+    expect(displayWidth(text)).toBeLessThan(displayWidth(wide));
+  });
+
+  it('leaves only one row to erase while the terminal has not moved', () => {
+    setColumns(NARROW);
+    const h = harness();
+    h.status.begin();
+    h.status.event({ kind: 'init', model: 'm' });
+    h.advance(1_000);
+    h.status.event({ kind: 'assistant', messageId: 'm1', usage: { inputTokens: 3 } });
+
+    // Nothing wrapped, so the erase stays exactly what it has always been.
+    expect(h.writes.at(-1)).toBe(`${ERASE_ONE_ROW}● m · 1s · ↓3↑0 tokens`);
+    h.status.end();
+    expect(h.writes.at(-1)).toBe(`${ERASE_ONE_ROW}`);
+    expect(h.text()).not.toContain(`${ESC}[1A`);
+  });
+
+  it('leaves the piped markers whole — a log line has no row to fit', () => {
+    setColumns(NARROW);
+    const h = harness({ stderrIsTty: false });
+    h.status.begin();
+    h.status.event({ kind: 'init', model: LONG_MODEL });
+    h.status.event({
+      kind: 'assistant',
+      messageId: 'm1',
+      usage: { inputTokens: 1_200, outputTokens: 340 },
+    });
+    h.status.end();
+
+    // Nothing is drawn to a row here, so there is no width to cut to: a
+    // redirected log keeps the whole line.
+    expect(h.writes).toHaveLength(2);
+    expect(h.writes[1]).toBe(`● ${LONG_MODEL} · 0s · ↓1,200↑340 tokens\n`);
   });
 });
 
