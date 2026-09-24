@@ -33,7 +33,7 @@ import { type RunDeps, RunMode } from './modes/run.js';
 import { TranscriptPicker } from './modes/transcripts.js';
 import { OutputPane } from './OutputPane.js';
 import { ConfirmOverlay } from './overlays/ConfirmOverlay.js';
-import { Panel } from './Panel.js';
+import { Panel, panelTextWidth } from './Panel.js';
 import { type FuzzyMatcher, handRolledMatcher } from './palette/matcher.js';
 import { Palette } from './palette/Palette.js';
 import { buildPaletteRows, CORPORA, type Corpus } from './palette/rows.js';
@@ -683,7 +683,7 @@ export function App({
           <StatusBar payload={payload} loading={loading} />
         </Box>
         <Box paddingX={1}>
-          <Text>{divider()}</Text>
+          <Text>{divider(panelTextWidth(1))}</Text>
         </Box>
         <Box flexDirection="column" paddingX={1}>
           <OutputPane lines={paneLines} scrollOffset={scrollOffset} title={paneTitle} />

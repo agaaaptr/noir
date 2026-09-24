@@ -32,7 +32,7 @@ import { Header } from '../Header.js';
 import { RUN_CANCEL_HINT, RUN_HINT } from '../hints.js';
 import { OutputPane } from '../OutputPane.js';
 import { PostRunOverlay, type PostRunValueStep } from '../overlays/PostRunOverlay.js';
-import { Panel } from '../Panel.js';
+import { Panel, panelTextWidth } from '../Panel.js';
 import { RunStream, type RunStreamSnapshot } from '../run-stream.js';
 import { StatusBar } from '../StatusBar.js';
 import type { TranscriptStore } from '../transcripts.js';
@@ -471,7 +471,7 @@ export function RunMode({
           />
         </Box>
         <Box paddingX={1}>
-          <Text>{divider()}</Text>
+          <Text>{divider(panelTextWidth(1))}</Text>
         </Box>
         <Box flexDirection="column" paddingX={1}>
           <OutputPane

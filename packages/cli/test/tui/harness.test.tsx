@@ -74,14 +74,16 @@ describe('renderAtWidth — the terminal width is a parameter', () => {
     }
   });
 
-  it('lays renderAtWidth(<Footer />, 80) out for an 80-column terminal', () => {
-    // The footer hint is wider than 80 columns, so it cannot be drawn as one
-    // line there — a harness leaking the 100-column constant could not produce
-    // this wrap, and a wider terminal must produce a shorter frame.
+  it('lays a line wider than the terminal out for the width it is given', () => {
+    // A 105-column line cannot be drawn as one line in 80 columns — a harness
+    // leaking the 100-column constant could not produce this wrap, and a wider
+    // terminal must produce a shorter frame. The subject is the raw hint text:
+    // the Footer itself now cuts its copy to the width it has (asserted in
+    // layout-budget.test.tsx), so it no longer wraps on any terminal.
     expect(displayWidth(FOOTER_HINT)).toBeGreaterThan(80);
 
-    const narrow = renderAtWidth(<Footer />, 80);
-    const wide = renderAtWidth(<Footer />, 120);
+    const narrow = renderAtWidth(<Text>{FOOTER_HINT}</Text>, 80);
+    const wide = renderAtWidth(<Text>{FOOTER_HINT}</Text>, 120);
     try {
       const narrowLines = drawnLines(narrow.frame());
       expect(narrowLines.length).toBeGreaterThan(1);

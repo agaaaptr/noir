@@ -190,7 +190,12 @@ export function contentWidth(border = 2, padding = 2): number {
  * A horizontal divider line of `─` sized for the current content width. Used
  * inside bordered panels to separate regions (e.g. status bar ↔ output ↔ input)
  * without nesting Ink borders. Always dim so it reads as structure, not content.
+ *
+ * `width` defaults to a full-width panel's content width. A divider drawn inside
+ * a nested padded row must pass that row's budget instead: a dash run longer
+ * than the box it sits in is wrapped by Ink, which leaves a stub of dashes on a
+ * line of its own.
  */
-export function divider(): string {
-  return c.dim('─'.repeat(Math.max(1, contentWidth())));
+export function divider(width = contentWidth()): string {
+  return c.dim('─'.repeat(Math.max(1, width)));
 }

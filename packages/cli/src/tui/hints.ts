@@ -6,9 +6,17 @@
 // footer, the palette footer line, and the `help` corpus all render the same
 // text and cannot drift from the actual bindings (which live in App.tsx).
 
-/** The dashboard's idle footer hint (the App's keybinding manifest as text). */
+/**
+ * The dashboard's idle footer hint (the App's keybinding manifest as text).
+ *
+ * Order matters: the footer is cut to the terminal width, so what leads is what
+ * survives on a narrow terminal. The quit keys lead for that reason — they are
+ * the only place the dashboard says how to leave, and losing them at the
+ * commonest terminal width (80) would be worse than losing any of the prose
+ * that follows.
+ */
 export const FOOTER_HINT =
-  '?/h/Ctrl+K palette · Ctrl+F find · Ctrl+T transcripts · ↑/↓ scroll · Enter run · q/Esc quit · Ctrl+C exit';
+  'q/Esc quit · Ctrl+C exit · ?/h/Ctrl+K palette · Ctrl+F find · Ctrl+T transcripts · ↑/↓ scroll · Enter run';
 
 /** The hint shown while a dispatched command is in flight. */
 export const RUNNING_HINT = 'running… (Ctrl+C to force exit)';

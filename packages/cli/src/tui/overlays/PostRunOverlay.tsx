@@ -15,9 +15,14 @@ import { Box, Text } from 'ink';
 import type { ReactElement } from 'react';
 import type { PostRunMenuOption } from '../../run-actions.js';
 import { c } from '../../theme.js';
-import { Panel } from '../Panel.js';
+import { padToWidth, truncateToWidth } from '../../width.js';
+import { Panel, panelTextWidth } from '../Panel.js';
 
 const OVERLAY_WIDTH = 64;
+/** The `▸ `/`  ` marker that opens every row. */
+const ROW_MARKER_WIDTH = 2;
+/** The fixed label column, marker included; the hint column takes the rest. */
+const LABEL_COLUMN_WIDTH = 26;
 
 /** The value step: the question, what has been typed, and any one-line notice. */
 export interface PostRunValueStep {
@@ -39,11 +44,6 @@ export interface PostRunOverlayProps {
   readonly result?: { readonly ok: boolean; readonly message: string };
 }
 
-/** Truncate a label so a long one cannot wrap the two-column row. */
-function truncate(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, Math.max(1, max - 1))}…` : text;
-}
-
 export function PostRunOverlay({
   options,
   active,
@@ -54,6 +54,13 @@ export function PostRunOverlay({
   // A value step and a running action both take the keyboard away from the
   // list, so neither may leave a row looking selected.
   const listFocused = value === undefined && !working && result === undefined;
+  // Every cell in a row is measured against the panel's budget, never against a
+  // constant: a row that is one column too wide is wrapped by Ink onto a stray
+  // flush-left line and the two-column shape collapses. The label column gives
+  // way first on a terminal too narrow for it.
+  const rowWidth = panelTextWidth(1, OVERLAY_WIDTH);
+  const labelColumn = Math.max(0, Math.min(LABEL_COLUMN_WIDTH, rowWidth));
+  const hintColumn = Math.max(0, rowWidth - labelColumn);
   const elements: ReactElement[] = [
     <Box key="header" paddingX={1}>
       <Text>
@@ -67,16 +74,19 @@ export function PostRunOverlay({
     const row = options[i];
     if (!row) continue;
     const focused = listFocused && i === active;
+    const marker = focused || !listFocused ? '▸ ' : '  ';
     // Only the focused row shows its hint: the list is short, and one hint at a
-    // time keeps the overlay from reading as a wall of text.
+    // time keeps the overlay from reading as a wall of text. It is cut to the
+    // hint column so the row stays one line.
     const body = focused
-      ? `${truncate(row.label, 28).padEnd(30)}${truncate(row.hint, 30)}`
-      : truncate(row.label, 60);
+      ? padToWidth(
+          `${marker}${truncateToWidth(row.label, labelColumn - ROW_MARKER_WIDTH)}`,
+          labelColumn,
+        ) + truncateToWidth(row.hint, hintColumn)
+      : `${marker}${truncateToWidth(row.label, rowWidth - ROW_MARKER_WIDTH)}`;
     elements.push(
       <Box key={row.value} paddingX={1}>
-        <Text>
-          {focused ? c.inverse(`▸ ${body}`) : c.dim(listFocused ? `  ${body}` : `▸ ${body}`)}
-        </Text>
+        <Text>{focused ? c.inverse(body) : c.dim(body)}</Text>
       </Box>,
     );
   }
