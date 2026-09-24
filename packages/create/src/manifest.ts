@@ -16,6 +16,7 @@ import {
   NOIR_DIR,
   paths,
   RULES_BLOCK,
+  readWorkspaceMarker,
 } from '@noir-ai/core';
 import type { StackInfo } from './stack-detect.js';
 import type { SeedKind } from './template-history.js';
@@ -396,8 +397,10 @@ export interface BuildHostArtifactsContext {
  *      (default `<root>/.mcp.json` for claude), content from
  *      `adapter.emitMcpConfig(ctx, {transport,url})`. Claude KEEPS the template
  *      path (byte-identical parity with v1.1 + the .mcp.json parity test that
- *      compares against `claudeAdapter.emitMcpConfig`); other hosts use the
- *      adapter directly.
+ *      compares against `claudeAdapter.emitMcpConfig`) for a repo that has not
+ *      joined a workspace; a joined repo — one carrying a `.noir/workspace.json`
+ *      marker — gets the workspace entry instead, on every host, whatever
+ *      transport the run asked for (see the entry's own comment below).
  *
  * Skills are OUT OF SCOPE here — the cli composes `emitSkillsToDir` with
  * `adapter.skillsDir` + the host's `CompileTarget` (claude → `.claude/skills/`
@@ -485,11 +488,24 @@ export function buildHostArtifacts(
       break;
   }
 
-  // 3. Host MCP config. Claude keeps the template path (byte-identical parity
-  //    gate); other hosts use adapter.emitMcpConfig directly.
+  // 3. Host MCP config. Claude keeps the template path for a repo that has not
+  //    joined a workspace (byte-identical parity gate); every other case goes
+  //    through the adapter, so the entry is rendered by the same code the host's
+  //    own emitter uses.
+  //
+  //    A repo that has JOINED a workspace gets the workspace entry, and that
+  //    decision belongs to the marker — not to the transport this run asked for.
+  //    Membership is what decides how the host reaches the daemon (through the
+  //    stdio bridge, which reads the token itself), so re-scaffolding must never
+  //    drop a repo out of a workspace the marker still says it belongs to, nor
+  //    write an address into its config. Reading the marker HERE, where the entry
+  //    is chosen, means no caller can bypass it — `sync`, `init --force`,
+  //    `create --force` and the doctor's expectation check all follow membership
+  //    for free.
   const mcpAbs = adapter.mcpConfigPath?.(ectx) ?? join(ctx.root, '.mcp.json');
   const mcpRel = hostRel(mcpAbs, ctx.root);
-  if (host === 'claude') {
+  const workspace = readWorkspaceMarker(ctx.root);
+  if (host === 'claude' && workspace === null) {
     const mcpTemplate =
       ctx.transport === 'streamable-http' ? 'mcp.http.json.tmpl' : 'mcp.stdio.json.tmpl';
     entries.push({
@@ -500,17 +516,26 @@ export function buildHostArtifacts(
       description: 'host MCP server pointer',
     });
   } else {
-    const mcpContent = `${adapter.emitMcpConfig(ectx, {
-      transport: ctx.transport,
-      command: ctx.command,
-      ...(ctx.url !== undefined ? { url: ctx.url } : {}),
-    })}\n`;
+    const mcpContent = `${adapter.emitMcpConfig(
+      ectx,
+      workspace !== null
+        ? // Joined: stdio + the workspace name, whatever transport was asked for.
+          { transport: 'stdio', command: ctx.command, workspace }
+        : {
+            transport: ctx.transport,
+            command: ctx.command,
+            ...(ctx.url !== undefined ? { url: ctx.url } : {}),
+          },
+    )}\n`;
     entries.push({
       path: mcpRel,
       mode: 'regenerate',
       host,
       content: mcpContent,
-      description: `${host} MCP server pointer`,
+      description:
+        workspace !== null
+          ? `${host} MCP server pointer (workspace "${workspace}")`
+          : `${host} MCP server pointer`,
     });
   }
 

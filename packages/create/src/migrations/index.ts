@@ -1,5 +1,12 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
+import { type HostId, noirStdioArgs, resolveAdapter } from '@noir-ai/adapters';
+import {
+  atomicWriteFile,
+  loadProjectInfo,
+  readWorkspaceMarker,
+  resolveNoirCommand,
+} from '@noir-ai/core';
 import { render } from '../template.js';
 import { isStaleSeed, type SeedKind } from '../template-history.js';
 import { loadTemplate } from '../template-loader.js';
@@ -12,12 +19,14 @@ export type { MigrationContext, MigrationResult, MigrationScript } from './types
 /**
  * Migration registry — the linear history of scaffold-version upgrades.
  *
- * `CURRENT_SCAFFOLD_VERSION` is `1.2.0`; a project stamped at an older version
- * migrates through every entry whose window covers it. Three entries ship today:
+ * `CURRENT_SCAFFOLD_VERSION` is `1.3.0`; a project stamped at an older version
+ * migrates through every entry whose window covers it. Four entries ship today:
  * the synthetic `1.0.0 → 1.0.0` runner-proof, the first REAL migration
  * `1.0.0 → 1.1.0` (which performs the transformation `skipIfExists` cannot),
- * and `1.1.0 → 1.2.0`, which refreshes the doc-only seed whose text changed in
- * this release and carries the unchanged RULES.md seed forward for parity.
+ * `1.1.0 → 1.2.0`, which refreshes the doc-only seed whose text changed in
+ * that release and carries the unchanged RULES.md seed forward for parity, and
+ * `1.2.0 → 1.3.0`, which repairs the stale workspace pointer a repo that joined
+ * a workspace under the older flow still carries.
  *
  * Convention:
  *  - `from`/`to` are bare `x.y.z` (no `v` prefix, no pre-release); the runner
@@ -234,10 +243,140 @@ const envTemplates: MigrationScript = {
   },
 };
 
+// --- 1.2.0 → 1.3.0: put a joined repo's MCP entry back on the bridge -------
+
+/** The keys that say HOW a host reaches the Noir server — `command`/`args` for
+ *  stdio, `type`/`url` for the http endpoint. Rewriting the transport replaces
+ *  exactly these, so an entry never ends up describing two transports at once,
+ *  and everything else the entry carries (`env`, `headers`, `headersHelper`, …)
+ *  is the user's and is kept. */
+const TRANSPORT_KEYS: ReadonlySet<string> = new Set(['command', 'args', 'type', 'url']);
+
+/** Where this repo's host keeps its MCP config, repo-relative and POSIX, or
+ *  `null` when the file is not there. The host is read from `.noir/config.yml`
+ *  exactly as the scaffold reads it; an absent or unreadable config means the
+ *  default host (`claude`, whose config is the root `.mcp.json`). */
+function mcpConfigPath(root: string): { rel: string; abs: string } | null {
+  let host: HostId = 'claude';
+  try {
+    host = loadProjectInfo(root).config.host;
+  } catch {
+    // No readable project id/config — fall back to the default host rather than
+    // failing the migration. Its config path is the one the older join flow used.
+  }
+  const abs = resolveAdapter(host).mcpConfigPath?.({ root }) ?? join(root, '.mcp.json');
+  if (!existsSync(abs)) return null;
+  return { rel: relative(root, abs).split(sep).join('/'), abs };
+}
+
+/** `1.2.0 → 1.3.0`: rewrite the stale `http://…/mcp?p=<projectId>` pointer that
+ *  a repo which joined a workspace under the older flow still carries.
+ *
+ *  That entry named a daemon by address, which cannot survive a restart: the
+ *  workspace daemon binds an ephemeral port and mints a fresh token every start,
+ *  while the config was written once, at join time. The current flow writes a
+ *  stdio entry naming the workspace instead, so the host reaches the daemon
+ *  through the bridge, which resolves the address and reads the token itself.
+ *
+ *  No other command can repair this. `sync` re-emits the entry from the manifest
+ *  (so a re-scaffold keeps a joined repo joined) but leaves a file that differs
+ *  from the template alone unless it is forced, and the project's own
+ *  `.mcp.json` is not otherwise opened. The upgrade path is where a repair that
+ *  no emit can express belongs.
+ *
+ *  Two conditions gate the rewrite, and both matter. The repo must carry the
+ *  workspace marker — a repo that deliberately chose the http transport has an
+ *  http entry too, and rewriting it would be wrong. And the entry must be the
+ *  http one — a joined repo already on the bridge needs nothing, which is what
+ *  makes a second run a byte-level no-op. */
+const workspaceBridge: MigrationScript = {
+  from: '1.2.0',
+  to: '1.3.0',
+  description: "point a joined repo's MCP entry at the workspace bridge",
+  run: (ctx) => {
+    const result: MigrationResult = { changed: [], conflicts: [], notes: [] };
+    const name = readWorkspaceMarker(ctx.root);
+    if (name === null) {
+      result.notes.push('not joined to a workspace — nothing to rewrite');
+      return result;
+    }
+    const target = mcpConfigPath(ctx.root);
+    if (target === null) {
+      result.notes.push(`workspace "${name}": no MCP config file to migrate`);
+      return result;
+    }
+
+    let config: Record<string, unknown>;
+    try {
+      config = JSON.parse(readFileSync(target.abs, 'utf8')) as Record<string, unknown>;
+    } catch (err) {
+      // Unparseable (JSONC, a trailing comma, a directory). Non-throwing is the
+      // registry-wide contract: record and let the caller decide.
+      result.conflicts.push(target.rel);
+      result.notes.push(`${target.rel}: unreadable (${errorMessage(err)}) — left untouched`);
+      return result;
+    }
+
+    const servers = config.mcpServers;
+    if (typeof servers !== 'object' || servers === null || Array.isArray(servers)) {
+      result.notes.push(`${target.rel}: no mcpServers block — left untouched`);
+      return result;
+    }
+    const entry = (servers as Record<string, unknown>).noir;
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      result.notes.push(`${target.rel}: no noir entry — left untouched`);
+      return result;
+    }
+    if ((entry as Record<string, unknown>).type !== 'http') {
+      result.notes.push(`${target.rel}: already reaches Noir over stdio — left untouched`);
+      return result;
+    }
+    const kept = Object.entries(entry as Record<string, unknown>).filter(
+      ([key]) => !TRANSPORT_KEYS.has(key),
+    );
+
+    if (ctx.dryRun) {
+      result.changed.push(target.rel);
+      result.notes.push(`${target.rel}: would point the noir entry at workspace "${name}"`);
+      return result;
+    }
+
+    const next = {
+      ...config,
+      mcpServers: {
+        ...(servers as Record<string, unknown>),
+        noir: {
+          command: resolveNoirCommand(),
+          // The argv comes from the adapters' own helper, so this rewrite lands
+          // on exactly the entry a fresh join writes — the name is the whole
+          // address, and the bridge resolves the daemon (and reads its token)
+          // itself, so none of that is written into a committed config file.
+          args: noirStdioArgs(name),
+          ...Object.fromEntries(kept),
+        },
+      },
+    };
+    try {
+      atomicWriteFile(target.abs, `${JSON.stringify(next, null, 2)}\n`);
+    } catch (err) {
+      result.conflicts.push(target.rel);
+      result.notes.push(`${target.rel}: write failed (${errorMessage(err)}) — left untouched`);
+      return result;
+    }
+    result.changed.push(target.rel);
+    result.notes.push(`${target.rel}: noir entry now reaches workspace "${name}" over the bridge`);
+    return result;
+  },
+};
+
 /** The registry. The runner sorts the selected window by `to`, so declaration
  *  order is documentation only — oldest step first. */
-export const MIGRATIONS: readonly MigrationScript[] = [synthetic, envPointer, envTemplates];
-
+export const MIGRATIONS: readonly MigrationScript[] = [
+  synthetic,
+  envPointer,
+  envTemplates,
+  workspaceBridge,
+];
 /** `Error.message` for anything thrown, without assuming an Error. */
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);

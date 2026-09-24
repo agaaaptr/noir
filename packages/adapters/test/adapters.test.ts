@@ -329,6 +329,33 @@ describe('buildMcpServersJson — the shared {mcpServers} helper', () => {
     expect(claudeAdapter.emitMcpConfig(ctx, opts)).toBe(expected);
   });
 
+  it('a joined repo names its workspace on every host, spelled identically', () => {
+    // A repo that joined a workspace reaches the daemon through Noir's stdio
+    // bridge: the entry names the workspace instead of carrying an address or a
+    // token. Every host must spell that invocation the same way, or the same
+    // repo would work on one host and not another.
+    const bridge = ['mcp', 'serve', '--stdio', '--workspace', 'demo'];
+    const opts = { transport: 'stdio' as const, command: 'noir', workspace: 'demo' };
+
+    for (const adapter of [claudeAdapter, agentsMdAdapter, geminiAdapter, cursorAdapter]) {
+      const parsed = JSON.parse(adapter.emitMcpConfig(ctx, opts)) as {
+        mcpServers: Record<string, { command: string; args: string[] }>;
+      };
+      expect(parsed.mcpServers.noir.command).toBe('noir');
+      expect(parsed.mcpServers.noir.args).toEqual(bridge);
+    }
+    const oc = JSON.parse(opencodeAdapter.emitMcpConfig(ctx, opts)) as {
+      mcp: Record<string, { command: string[] }>;
+    };
+    expect(oc.mcp.noir.command).toEqual(['noir', ...bridge]);
+
+    // Unset, the entry is plain stdio — the byte-parity anchor above is the
+    // same code path, so this pins that adding the option changed nothing.
+    expect(buildMcpServersJson({ transport: 'stdio' })).toBe(
+      buildMcpServersJson({ transport: 'stdio', workspace: undefined }),
+    );
+  });
+
   it('integration merge parity across {mcpServers}-shape adapters', () => {
     const integration: IntegrationMcpEmission = {
       serverName: 'noir-github',

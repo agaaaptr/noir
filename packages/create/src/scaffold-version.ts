@@ -15,8 +15,11 @@ import { regenerate } from './writers.js';
  */
 
 /** The scaffold version this build of @noir-ai/create ships. Bumped atomically
- *  whenever a manifest entry, template, or migration changes shape. */
-export const CURRENT_SCAFFOLD_VERSION = '1.2.0';
+ *  whenever a manifest entry, template, or migration changes shape. 1.3.0 adds
+ *  the migration that points a joined repo's MCP entry back at the workspace
+ *  bridge — a repair only the upgrade path can perform, so projects stamped
+ *  1.2.0 and below need a window that starts at their version to reach it. */
+export const CURRENT_SCAFFOLD_VERSION = '1.3.0';
 
 const PREFIX = 'noir-scaffold=';
 

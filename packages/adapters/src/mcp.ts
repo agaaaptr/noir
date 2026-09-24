@@ -1,6 +1,20 @@
 import type { IntegrationMcpEmission, McpConfigOptions } from './types.js';
 
 /**
+ * The arguments that start Noir's MCP server over stdio. A repo that has joined
+ * a workspace names it here, so the host spawns the bridge, which resolves the
+ * workspace daemon and reads its token itself — the entry never has to carry an
+ * address or a secret. Shared by every host adapter (OpenCode carries the same
+ * argv in a single `command` array) and by the scaffold upgrade that rewrites a
+ * stale entry, so the invocation is spelled in exactly one place.
+ */
+export function noirStdioArgs(workspace?: string): string[] {
+  return workspace === undefined
+    ? ['mcp', 'serve', '--stdio']
+    : ['mcp', 'serve', '--stdio', '--workspace', workspace];
+}
+
+/**
  * Build the host MCP config JSON string — the `{mcpServers: {...}}` shape shared
  * by claude (`.mcp.json`), agents-md (`.mcp.json`), gemini (`.gemini/mcp.json`),
  * and cursor (`.cursor/mcp.json`). OpenCode uses a DIFFERENT shape (an `mcp`
@@ -33,7 +47,7 @@ export function buildMcpServersJson(
   // the user's shell PATH. See resolveNoirCommand() in @noir-ai/core.
   const noirServer =
     opts.transport === 'stdio'
-      ? { command: opts.command ?? 'noir', args: ['mcp', 'serve', '--stdio'] }
+      ? { command: opts.command ?? 'noir', args: noirStdioArgs(opts.workspace) }
       : { type: 'http', url: opts.url ?? 'http://127.0.0.1:0/mcp' };
 
   const mcpServers: Record<string, unknown> = { noir: noirServer };

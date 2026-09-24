@@ -15,7 +15,11 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runMigrations } from '../src/migrations/index.js';
 import { scaffold } from '../src/scaffold.js';
-import { readScaffoldVersion, writeScaffoldVersion } from '../src/scaffold-version.js';
+import {
+  CURRENT_SCAFFOLD_VERSION,
+  readScaffoldVersion,
+  writeScaffoldVersion,
+} from '../src/scaffold-version.js';
 import { SEED_TEMPLATE_HISTORY } from '../src/template-history.js';
 import { loadTemplate } from '../src/template-loader.js';
 
@@ -63,7 +67,7 @@ describe('migration 1.1.0 → 1.2.0 — the doc seeds', () => {
     // silently into the doc-seed `refreshed` set.
     expect(res.migrationChanged).toContain('.noir/.env.example');
     expect(readFileSync(examplePath(), 'utf8')).toBe(CURRENT_ENV_EXAMPLE);
-    expect(readScaffoldVersion(root)).toBe('1.2.0');
+    expect(readScaffoldVersion(root)).toBe(CURRENT_SCAFFOLD_VERSION);
   });
 
   it('refreshes the stale seed through the migration itself', () => {

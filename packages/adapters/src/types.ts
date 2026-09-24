@@ -29,6 +29,14 @@ export interface McpConfigOptions {
    *  Cursor) that don't read shell profiles can still spawn the server — see
    *  `resolveNoirCommand()` in @noir-ai/core. */
   command?: string;
+  /** The workspace this repo has joined, when it has joined one. A member repo
+   *  reaches the shared workspace daemon through Noir's stdio bridge, so the
+   *  server entry names the workspace on the command line rather than carrying
+   *  an address: `noir mcp serve --stdio --workspace <name>`. The bridge is what
+   *  resolves the daemon, proves it owns the record, and reads the token — none
+   *  of which can live in a committed config file. Absent ⇒ a plain stdio entry
+   *  that talks to a daemon scoped to this repo alone. */
+  workspace?: string;
 }
 
 /**

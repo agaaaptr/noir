@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { emitAgentsMd } from './agents-md.js';
+import { noirStdioArgs } from './mcp.js';
 import type {
   EmitContext,
   HostAdapter,
@@ -40,7 +41,9 @@ export const opencodeAdapter: HostAdapter = {
           ? // Thread opts.command like buildMcpServersJson does (mcp.ts:36) — the
             // absolute native shim when resolveNoirCommand() detects a native
             // install, so GUI MCP clients (no shell profile PATH) can spawn it.
-            { type: 'local', command: [opts.command ?? 'noir', 'mcp', 'serve', '--stdio'] }
+            // The argv itself comes from the shared helper, so a joined repo's
+            // `--workspace` flag is spelled identically on every host.
+            { type: 'local', command: [opts.command ?? 'noir', ...noirStdioArgs(opts.workspace)] }
           : { type: 'remote', url: opts.url ?? 'http://127.0.0.1:0/mcp' },
     };
     if (integration) {

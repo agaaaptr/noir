@@ -59,9 +59,10 @@ describe('migration 1.0.0 → 1.1.0 — the .noir/.env pointer on an existing co
     const res = await upgrade();
     // The migration is on the path from the fixture's stamp to current.
     expect(res.migrationsRan).toContain('1.0.0→1.1.0');
-    // R1: the literal assertion that pins THIS bump. `--upgrade` restamps, so a
-    // 1.0.0 project is 1.2.0 afterwards and doctor stops reporting drift.
-    expect(readScaffoldVersion(root)).toBe('1.2.0');
+    // R1: the literal assertion that pins where the chain lands. `--upgrade`
+    // restamps, so a 1.0.0 project is current afterwards and doctor stops
+    // reporting drift.
+    expect(readScaffoldVersion(root)).toBe('1.3.0');
 
     const once = configBody();
     expect(once).toMatch(/\.noir\/\.env/);
