@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   checkHygiene,
+  HYGIENE_EXEMPT_MARKERS,
   HYGIENE_RULES,
   type HygieneKind,
   type HygieneRule,
@@ -11,7 +12,11 @@ import { FORBIDDEN_RESIDUE, RESIDUE_RULES } from '../src/residue.js';
 
 // Fixtures are assembled rather than written out so this file does not itself
 // carry a banner, a narration comment or a decorative emoji: the hygiene rules
-// run over this repository's own sources, test files included.
+// run over this repository's own sources, test files included. The residue
+// fixtures are the exception — they name the forbidden tokens on purpose, to
+// assert that those tokens still fire — so this gate fixture carries the
+// exemption marker rather than keeping the tokens out of its own text.
+// noir-hygiene: exempt
 
 /** A one-line comment holding `body`, exactly as a person would write it. */
 const comment = (body: string): string => `// ${body}`;
@@ -20,8 +25,21 @@ const comment = (body: string): string => `// ${body}`;
  *  meant to catch. */
 const banner = (label: string): string => comment(`${'='.repeat(12)} ${label} ${'='.repeat(12)}`);
 
+/** The contents of a file in this repository, relative to this test file. */
+const readSource = (relative: string): string =>
+  readFileSync(new URL(relative, import.meta.url), 'utf8');
+
+/** `source` with the exemption marker line removed, so a check that should
+ *  prove cleanliness still sees the lines that matter. */
+function withoutMarker(source: string, kind: HygieneKind): string {
+  return source
+    .split('\n')
+    .filter((line) => line.trim() !== HYGIENE_EXEMPT_MARKERS[kind])
+    .join('\n');
+}
+
 function ids(text: string, kind: HygieneKind = 'code'): string[] {
-  return checkHygiene(text, kind).map((f) => f.ruleId);
+  return checkHygiene(text, kind).map((f) => f.id);
 }
 
 function ruleOrFail(id: string): HygieneRule {
@@ -71,7 +89,10 @@ describe('the rule table', () => {
   });
 
   it('is clean under its own rules', () => {
-    const source = readFileSync(new URL('../src/hygiene.ts', import.meta.url), 'utf8');
+    // The rule source carries the exemption marker because it defines the
+    // rules, so the marker line is removed first: what is asserted here is
+    // that every other line passes the rules the file declares.
+    const source = withoutMarker(readSource('../src/hygiene.ts'), 'code');
     expect(checkHygiene(source, 'code')).toEqual([]);
   });
 });
@@ -80,7 +101,7 @@ describe('fail tier: decorative banners', () => {
   it('flags a run of punctuation around a label, on the line it sits on', () => {
     const source = ['const cache = new Map();', banner('Fetch users'), 'export {}'].join('\n');
     const findings = checkHygiene(source, 'code');
-    expect(findings.map((f) => f.ruleId)).toEqual(['decorative-banner']);
+    expect(findings.map((f) => f.id)).toEqual(['decorative-banner']);
     expect(findings[0]?.tier).toBe('fail');
     expect(findings[0]?.line).toBe(2);
     expect(findings[0]?.text).toBe(banner('Fetch users'));
@@ -109,12 +130,18 @@ describe('fail tier: workflow narration', () => {
   it('flags narration on a block-comment line and reports that line', () => {
     const source = ['/*', ` * ${'Step 3: retry once'}`, ' */'].join('\n');
     const findings = checkHygiene(source, 'code');
-    expect(findings.map((f) => f.ruleId)).toEqual(['workflow-narration']);
+    expect(findings.map((f) => f.id)).toEqual(['workflow-narration']);
     expect(findings[0]?.line).toBe(2);
   });
 
   it('leaves an ordinal that describes a position rather than an order of work', () => {
     expect(checkHygiene(comment('first, which is all these assertions need'), 'code')).toEqual([]);
+  });
+
+  it('leaves an ordinal that states the reason the step exists', () => {
+    expect(
+      checkHygiene(comment('First, init to establish the project id so sync can read it'), 'code'),
+    ).toEqual([]);
   });
 });
 
@@ -131,6 +158,19 @@ describe('fail tier: decorative emoji', () => {
   it('flags a document line that opens with a decorative emoji', () => {
     expect(ids('## 🎯 Goals', 'markdown')).toContain('decorative-emoji-doc');
     expect(ids('- ✅ Ship the migration', 'markdown')).toContain('decorative-emoji-doc');
+  });
+
+  it('leaves a comment that quotes the glyph it describes', () => {
+    const themeBadgeComment =
+      '//   - `badge()` ALWAYS returns SYMBOL + TEXT LABEL (e.g. `⚠ warn`), so NO_COLOR';
+    expect(checkHygiene(themeBadgeComment, 'code')).toEqual([]);
+    expect(checkHygiene(comment('@example badge(\'warn\') → yellow "⚠ degraded"'), 'code')).toEqual(
+      [],
+    );
+  });
+
+  it('still flags a glyph the comment is using rather than quoting', () => {
+    expect(ids(comment('see ⚠ for the warning path'))).toContain('decorative-emoji-comment');
   });
 });
 
@@ -149,6 +189,18 @@ describe('fail tier: forbidden residue', () => {
     const token = FORBIDDEN_RESIDUE[0] ?? '';
     expect(ids(`const stale = '${token}';`)).toHaveLength(1);
   });
+
+  it("leaves the name of this repository's own workflow engine alone", () => {
+    const fixture = "const dir = mkdtempSync(join(tmpdir(), 'noir-workflow-engine-'));";
+    expect(checkHygiene(fixture, 'code')).toEqual([]);
+  });
+
+  it('still flags a longer compound that names the removed plugin', () => {
+    expect(ids('see plugins/noir-workflow/ for the old mode')).toContain(
+      'residue-plugins-noir-workflow',
+    );
+    expect(ids('the noir-workflow.mode flag is gone')).toContain('residue-noir-workflow-mode');
+  });
 });
 
 describe('warn tier: verbosity and unresolved markers', () => {
@@ -160,7 +212,7 @@ describe('warn tier: verbosity and unresolved markers', () => {
       `const x = 1;\n${block(MAX_COMMENT_BLOCK_LINES)}\nexport {}`,
       'code',
     );
-    expect(findings.map((f) => f.ruleId)).toEqual(['long-comment-block']);
+    expect(findings.map((f) => f.id)).toEqual(['long-comment-block']);
     expect(findings[0]?.tier).toBe('warn');
     expect(findings[0]?.line).toBe(2);
   });
@@ -250,12 +302,65 @@ describe('anchoring: ordinary writing does not fire', () => {
   });
 });
 
+describe('the exemption marker', () => {
+  it('returns no findings for a file that carries the marker above them', () => {
+    const source = [HYGIENE_EXEMPT_MARKERS.code, banner('Setup'), comment('Step 1: load')].join(
+      '\n',
+    );
+    expect(checkHygiene(source, 'code')).toEqual([]);
+  });
+
+  it('accepts an indented marker, and the markdown marker in a document', () => {
+    expect(
+      checkHygiene([`  ${HYGIENE_EXEMPT_MARKERS.code}`, banner('Setup')].join('\n'), 'code'),
+    ).toEqual([]);
+    expect(
+      checkHygiene([HYGIENE_EXEMPT_MARKERS.markdown, '## 🎯 Goals'].join('\n'), 'markdown'),
+    ).toEqual([]);
+  });
+
+  it('exempts nothing when the marker stands below the first finding', () => {
+    const source = [banner('Setup'), HYGIENE_EXEMPT_MARKERS.code].join('\n');
+    expect(ids(source)).toEqual(['decorative-banner']);
+  });
+
+  it('does not accept the marker of the other kind', () => {
+    expect(ids([HYGIENE_EXEMPT_MARKERS.markdown, banner('Setup')].join('\n'))).toEqual([
+      'decorative-banner',
+    ]);
+  });
+
+  it('is not matched by any rule', () => {
+    for (const marker of Object.values(HYGIENE_EXEMPT_MARKERS)) {
+      for (const rule of HYGIENE_RULES) {
+        expect(rule.pattern.test(marker), `${rule.id} flags the marker`).toBe(false);
+      }
+    }
+  });
+
+  it('is what the rule source itself carries', () => {
+    const source = readSource('../src/hygiene.ts');
+    expect(source.split('\n').some((line) => line.trim() === HYGIENE_EXEMPT_MARKERS.code)).toBe(
+      true,
+    );
+    expect(checkHygiene(source, 'code')).toEqual([]);
+  });
+
+  it('exempts the residue table that defines the forbidden tokens', () => {
+    const source = readSource('../src/residue.ts');
+    expect(source.split('\n').some((line) => line.trim() === HYGIENE_EXEMPT_MARKERS.code)).toBe(
+      true,
+    );
+    expect(checkHygiene(source, 'code')).toEqual([]);
+  });
+});
+
 describe('the checker', () => {
   it('reports the rule id, the tier, the line, the text, the rationale and the fix', () => {
     const findings = checkHygiene(['const a = 1;', banner('Setup')].join('\n'), 'code');
     expect(findings).toHaveLength(1);
     const finding = findings[0];
-    expect(finding?.ruleId).toBe('decorative-banner');
+    expect(finding?.id).toBe(ruleOrFail('decorative-banner').id);
     expect(finding?.tier).toBe('fail');
     expect(finding?.line).toBe(2);
     expect(finding?.text).toBe(banner('Setup'));
@@ -266,7 +371,7 @@ describe('the checker', () => {
   it('returns findings in reading order and repeats itself exactly', () => {
     const source = [comment('TODO'), banner('Setup'), comment('Step 1: load')].join('\n');
     const findings = checkHygiene(source, 'code');
-    expect(findings.map((f) => [f.line, f.ruleId])).toEqual([
+    expect(findings.map((f) => [f.line, f.id])).toEqual([
       [1, 'bare-todo'],
       [2, 'decorative-banner'],
       [3, 'workflow-narration'],

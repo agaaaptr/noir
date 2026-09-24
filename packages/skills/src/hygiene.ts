@@ -3,6 +3,13 @@
 // blocks, the reason it is noise, and what to write instead. Consumers are the
 // skills quality gate, the repository doctor check and continuous integration.
 
+// Self-exemption convention: the rule source, the token table it projects and
+// the gate's own fixtures are exempt from the rules they define, because they
+// must be able to name what they forbid. Any such file carries the exemption
+// marker below, so no consumer needs a path list of its own. This file declares
+// the rules, so it carries the marker:
+// noir-hygiene: exempt
+
 import { RESIDUE_RULES } from './residue.js';
 
 export type HygieneTier = 'fail' | 'warn';
@@ -23,7 +30,8 @@ export interface HygieneRule {
 }
 
 export interface HygieneFinding {
-  ruleId: string;
+  /** The id of the rule that matched, exactly as `HYGIENE_RULES` declares it. */
+  id: string;
   tier: HygieneTier;
   /** 1-based number of the line the pattern matched. */
   line: number;
@@ -32,6 +40,14 @@ export interface HygieneFinding {
   rationale: string;
   fix: string;
 }
+
+/** The line that exempts a file from every rule. A file that must keep what the
+ *  rules flag — the rule source, the token table, a document that states the
+ *  ban — carries the line matching its kind near the top. */
+export const HYGIENE_EXEMPT_MARKERS: Readonly<Record<HygieneKind, string>> = {
+  code: '// noir-hygiene: exempt',
+  markdown: '<!-- noir-hygiene: exempt -->',
+};
 
 /** A run of this many consecutive comment lines counts as a comment block. A
  *  blank comment line is a paragraph break and a divider is reported on its
@@ -55,6 +71,15 @@ const PICTOGRAPH = String.raw`[\u{1F300}-\u{1FAFF}]`;
 // tell a reader nothing they can act on. They are unambiguous on their own, so
 // they are flagged wherever they appear in a comment.
 const DECORATION_EMOJI = `[⚠✅🎉✨🔥🚀🧠💡🔧📌]${VARIATION_SELECTOR}?`;
+
+/** The backtick. It is named rather than written so the template literal that
+ *  builds the quote class below does not end early; see VARIATION_SELECTOR. */
+const BACKTICK = String.fromCharCode(0x60);
+
+/** A quote or a backtick. A comment may legitimately quote the glyph it
+ *  describes, as the badge documentation quotes its own `⚠ warn` output, so a
+ *  glyph wrapped in one of these is not decoration. */
+const QUOTE_OR_BACKTICK = `[${BACKTICK}'"]`;
 
 /** The markers a reader is expected to act on later. */
 const MARKER_WORDS = ['TODO', 'FIXME'];
@@ -88,14 +113,16 @@ const DECORATIVE_BANNER: HygieneRule = {
 };
 
 /** Narration that walks a reader through the code in the order it runs:
- *  `Step 1: load the config`, `First, …`, `Next, …`, `Finally, …`. An ordinal
- *  followed by a relative clause ("first, which is all the test needs") is
- *  describing a position rather than narrating a procedure. */
+ *  `Step 1: load the config`, `First, …`, `Next, …`, `Finally, …`. Two shapes
+ *  are exempt: an ordinal followed by a relative clause ("first, which is all
+ *  the test needs") describes a position rather than a procedure, and an
+ *  ordinal that goes on to give the reason ("first, init so sync can read it")
+ *  is the note this rule's own fix asks a reader to keep. */
 const WORKFLOW_NARRATION: HygieneRule = {
   id: 'workflow-narration',
   tier: 'fail',
   pattern: new RegExp(
-    String.raw`${MARKER}[ \t]*(?:step[ \t]*\d+[ \t]*[:.)]|(?:first|second|third|then|next|finally|lastly)[ \t]*[,:](?![ \t]*(?:which|that|who)\b))`,
+    String.raw`${MARKER}[ \t]*(?:step[ \t]*\d+[ \t]*[:.)]|(?:first|second|third|then|next|finally|lastly)[ \t]*[,:](?![ \t]*(?:which|that|who)\b)(?![^\n]*\b(?:so|because|since)\b))`,
     'im',
   ),
   rationale:
@@ -105,11 +132,17 @@ const WORKFLOW_NARRATION: HygieneRule = {
 };
 
 /** An emoji from the decoration set anywhere in a comment — the common flourish
- *  in generated comments, opening the comment or trailing it. */
+ *  in generated comments, opening the comment or trailing it. A glyph the
+ *  comment has put in quotes is being talked about rather than used, so it is
+ *  left alone; the trailing check allows for the presentation selector the
+ *  pattern may have consumed. */
 const DECORATIVE_EMOJI_IN_COMMENT: HygieneRule = {
   id: 'decorative-emoji-comment',
   tier: 'fail',
-  pattern: new RegExp(String.raw`${MARKER}[^\n]*${DECORATION_EMOJI}`, 'mu'),
+  pattern: new RegExp(
+    String.raw`${MARKER}[^\n]*(?<!${QUOTE_OR_BACKTICK})${DECORATION_EMOJI}(?!${VARIATION_SELECTOR}?${QUOTE_OR_BACKTICK})`,
+    'mu',
+  ),
   rationale:
     'A decorative emoji in a comment adds no information a reader needs, and it is the clearest single sign that the text was generated rather than written.',
   fix: 'Remove the emoji and let the sentence carry the emphasis. If it marked a state, name the state in a word.',
@@ -190,9 +223,26 @@ export const HYGIENE_RULES: readonly HygieneRule[] = [
 ];
 
 /** Checks `text` against every rule that applies to `kind`, and returns the
- *  findings in reading order: one per rule per line. Pure and deterministic —
- *  each pattern is recompiled per call, so no `lastIndex` state escapes. */
+ *  findings in reading order: one per rule per line.
+ *
+ *  A file is exempt from every rule when it carries the marker
+ *  `HYGIENE_EXEMPT_MARKERS` declares for its kind on a line above the first
+ *  finding — the rule source itself, the token table, and any guidance or
+ *  fixture file that has to name what the rules forbid. Such a file states its
+ *  own exemption, so no consumer keeps a list of paths to skip. A marker placed
+ *  at or below the first finding exempts nothing.
+ *
+ *  Pure and deterministic: each pattern is recompiled per call, so no
+ *  `lastIndex` state escapes and the same text always gives the same findings. */
 export function checkHygiene(text: string, kind: HygieneKind): HygieneFinding[] {
+  const findings = collectFindings(text, kind);
+  const exemptAt = exemptionLine(text, kind);
+  if (exemptAt !== 0 && exemptAt < (findings[0]?.line ?? Number.POSITIVE_INFINITY)) return [];
+  return findings;
+}
+
+/** Every finding `text` produces under `kind`, in reading order. */
+function collectFindings(text: string, kind: HygieneKind): HygieneFinding[] {
   const lineStarts = lineStartOffsets(text);
   const findings: HygieneFinding[] = [];
   for (const rule of HYGIENE_RULES) {
@@ -204,7 +254,7 @@ export function checkHygiene(text: string, kind: HygieneKind): HygieneFinding[] 
       if (line === reportedLine) continue;
       reportedLine = line;
       findings.push({
-        ruleId: rule.id,
+        id: rule.id,
         tier: rule.tier,
         line,
         text: lineTextAt(text, lineStarts, line),
@@ -216,6 +266,16 @@ export function checkHygiene(text: string, kind: HygieneKind): HygieneFinding[] 
   // Reading order; lines that share a number keep rule-table order, because
   // Array.prototype.sort is stable.
   return findings.sort((a, b) => a.line - b.line);
+}
+
+/** The 1-based line the exemption marker for `kind` sits on, or 0 when the text
+ *  carries none. The marker is recognised with surrounding whitespace ignored,
+ *  so an indented comment counts. */
+function exemptionLine(text: string, kind: HygieneKind): number {
+  const marker = HYGIENE_EXEMPT_MARKERS[kind];
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) if ((lines[i] ?? '').trim() === marker) return i + 1;
+  return 0;
 }
 
 /** The offset each line starts at, so a match offset maps to a line number

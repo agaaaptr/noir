@@ -2,6 +2,10 @@
 // rhetoric), each with the reason it is forbidden. The list is projected into
 // fail-tier hygiene rules, so a token is enforced by the gate and not only by a
 // test assertion.
+//
+// This file is the token table, so it is exempt from the rules it feeds: the
+// tokens must appear here to be forbidden anywhere.
+// noir-hygiene: exempt
 
 import type { HygieneRule } from './hygiene.js';
 
@@ -50,18 +54,21 @@ const RESIDUE: readonly ResidueToken[] = [
 /** The forbidden tokens, in the order they are declared. */
 export const FORBIDDEN_RESIDUE: readonly string[] = RESIDUE.map((entry) => entry.token);
 
-/** One fail-tier rule per forbidden token: a token matched only when it stands
- *  alone as a word, so `noir-workflow` does not fire on a longer identifier that
- *  merely contains it. A token that contains another (`noir-workflow.mode`) is
- *  reported by both rules, so the narrower token is never the only thing
- *  matching a line. */
+/** One fail-tier rule per forbidden token. A token matches only when it stands
+ *  alone — neither side is a word character or a hyphen — so `noir-workflow`
+ *  does not fire inside a longer identifier such as `noir-workflow-engine-`,
+ *  which names this repository's own workflow engine rather than the removed
+ *  plugin. It still fires on `plugins/noir-workflow/` and `noir-workflow.mode`,
+ *  which name the plugin itself; a token that contains another
+ *  (`noir-workflow.mode`) is reported by both rules, so the narrower token is
+ *  never the only thing matching a line. */
 export const RESIDUE_RULES: readonly HygieneRule[] = RESIDUE.map((entry) => ({
   id: `residue-${entry.token
     .replace(/[^a-z0-9]+/gi, '-')
     .replace(/^-|-$/g, '')
     .toLowerCase()}`,
   tier: 'fail' as const,
-  pattern: new RegExp(`(?<!\\w)${escapeForRegExp(entry.token)}(?!\\w)`),
+  pattern: new RegExp(`(?<![\\w-])${escapeForRegExp(entry.token)}(?![\\w-])`),
   rationale: entry.why,
   fix: 'Remove the reference. If it named a mechanism, name the mechanism that replaced it.',
   appliesTo: 'both' as const,
