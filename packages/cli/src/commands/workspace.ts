@@ -31,6 +31,7 @@ import {
   spawnDetachedWorkspaceDaemon,
 } from '@noir-ai/daemon';
 import { type CliOptions, EXIT, fail, info, log } from '../output.js';
+import { verifyWorkspaceDaemon, type WorkspaceDaemonHealth } from '../workspace-bridge.js';
 import { writeStdioEntry, writeWorkspaceEntry } from '../workspace-mcp.js';
 
 export interface WorkspaceStartOptions extends CliOptions {
@@ -177,19 +178,24 @@ export async function workspaceList(opts: CliOptions): Promise<void> {
   } catch {
     names = [];
   }
-  const rows = names.map((n) => {
-    const reg = readWorkspaceRegistry(n);
-    return {
-      name: n,
-      members: reg?.members.length ?? 0,
-      // A record file whose pid is dead (daemon killed without cleanup) must not
-      // read as "running" — mirror the pidAlive liveness `workspace status` uses.
-      running: (() => {
-        const rec = readWorkspaceDaemonRecord(n);
-        return rec !== null && pidAlive(rec.pid);
-      })(),
-    };
-  });
+  // Liveness is the daemon's own answer, never "the recorded pid is alive": a
+  // daemon that crashed without cleanup leaves a record whose pid a recycled
+  // process now holds, and trusting the pid alone would read that as running.
+  // Each probe is single-shot and bounded (see the shared verify helper).
+  const rows = await Promise.all(
+    names.map(async (n) => {
+      const reg = readWorkspaceRegistry(n);
+      const rec = readWorkspaceDaemonRecord(n);
+      const health = rec === null ? null : await verifyWorkspaceDaemon(rec, n);
+      const running = health?.kind === 'healthy';
+      return {
+        name: n,
+        members: reg?.members.length ?? 0,
+        running,
+        ...(rec !== null && !running ? { stale: true } : {}),
+      };
+    }),
+  );
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: { workspaces: rows } })}\n`);
     return;
@@ -199,7 +205,8 @@ export async function workspaceList(opts: CliOptions): Promise<void> {
     return;
   }
   for (const r of rows) {
-    log(`${r.name} — ${r.members} member(s)${r.running ? ', running' : ''}`, opts);
+    const state = r.running ? ', running' : r.stale ? ', not running (stale record)' : '';
+    log(`${r.name} — ${r.members} member(s)${state}`, opts);
   }
 }
 
@@ -214,21 +221,28 @@ export async function workspaceStatus(opts: WorkspaceStatusOptions): Promise<voi
   }
   const reg = readWorkspaceRegistry(name);
   const rec = readWorkspaceDaemonRecord(name);
-  const running = rec !== null && pidAlive(rec.pid);
+  // Liveness is the daemon's own answer, never "the recorded pid is alive": a
+  // recycled pid belongs to an unrelated process, so a record the probe cannot
+  // confirm reads as not running and is reported stale.
+  const health = rec === null ? null : await verifyWorkspaceDaemon(rec, name);
+  const running = health?.kind === 'healthy';
   const data = {
     name,
     members: reg?.members.map((m) => m.projectId) ?? [],
     running,
     ...(rec ? { pid: rec.pid, port: rec.port } : {}),
+    ...(rec !== null && !running ? { stale: true } : {}),
   };
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
     return;
   }
-  log(
-    `workspace ${name}: ${running ? `running (pid ${rec?.pid}, port ${rec?.port})` : 'not running'}`,
-    opts,
-  );
+  const state = running
+    ? `running (pid ${rec?.pid}, port ${rec?.port})`
+    : rec !== null
+      ? `not running (stale record for pid ${rec.pid})`
+      : 'not running';
+  log(`workspace ${name}: ${state}`, opts);
   for (const m of data.members) log(`  member: ${m}`, opts);
 }
 
@@ -276,6 +290,13 @@ export async function workspaceStop(opts: WorkspaceStatusOptions): Promise<void>
     info('workspace daemon is not running.', opts);
     return;
   }
+  // "The recorded pid is alive" is not proof it is this workspace's daemon: a
+  // recycled pid belongs to an unrelated process, and signalling it would kill
+  // that instead. Ask the recorded port to identify itself first.
+  const health = await verifyWorkspaceDaemon(rec, name);
+  if (health.kind !== 'healthy') {
+    fail(EXIT.ERROR, stopRefusal(name, rec, health), opts);
+  }
   try {
     process.kill(rec.pid, 'SIGTERM');
   } catch {
@@ -289,4 +310,27 @@ export async function workspaceStop(opts: WorkspaceStatusOptions): Promise<void>
     return;
   }
   info(`stopped workspace daemon (pid ${rec.pid}).`, opts);
+}
+
+/**
+ * Why a record was not proven to belong to this workspace's daemon, so `stop`
+ * must not signal it. A different workspace answering the recorded port is the
+ * sharper diagnosis — it names which record is the stale one — so it is reported
+ * on its own; any other failure to identify is the "silent" case.
+ */
+function stopRefusal(
+  name: string,
+  rec: { pid: number; port: number },
+  health: Extract<WorkspaceDaemonHealth, { kind: 'silent' | 'foreign' }>,
+): string {
+  if (health.kind === 'foreign') {
+    return (
+      `refusing to stop workspace ${name}: the daemon answering on port ${rec.port} serves ` +
+      `workspace ${health.workspace}, so the recorded pid ${rec.pid} is not this workspace's daemon.`
+    );
+  }
+  return (
+    `refusing to stop workspace ${name}: the process recorded for it (pid ${rec.pid}) does not ` +
+    `answer /health as this workspace, so it may be an unrelated process.`
+  );
 }

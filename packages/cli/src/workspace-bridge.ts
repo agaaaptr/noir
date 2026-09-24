@@ -8,6 +8,9 @@
 // and secret from disk, proves through `/health` that the process answering
 // really is that workspace's daemon (a recycled pid or a stale record must
 // never be trusted), and then relays JSON-RPC messages in both directions.
+// The same ownership rule is shared with the `workspace` commands through
+// `verifyWorkspaceDaemon`, so "is this record really this workspace's daemon"
+// is answered in exactly one place.
 //
 // Two properties shape the relay. It is transparent — the host performs the MCP
 // handshake and every call with the daemon directly, so there is no tool surface
@@ -51,11 +54,8 @@ export async function resolveWorkspaceDaemon(
   if (record === null) {
     return { error: `no daemon recorded for workspace ${name}` };
   }
-  if (!pidAlive(record.pid)) {
-    return { error: `record exists but the daemon is not answering (pid ${record.pid})` };
-  }
 
-  const health = await probeHealth(record.port, name, record.pid);
+  const health = await verifyWorkspaceDaemon(record, name);
   if (health.kind === 'foreign') {
     // A different workspace answering here is the sharper diagnosis, so name
     // both sides — it tells the reader which record is the stale one.
@@ -96,10 +96,32 @@ export async function resolveWorkspaceDaemon(
  * is not JSON, or a body that names a different process — because all of them
  * mean the same thing to the caller: this record cannot be used.
  */
-type HealthOutcome =
+export type WorkspaceDaemonHealth =
   | { kind: 'healthy' }
   | { kind: 'silent' }
   | { kind: 'foreign'; workspace: string };
+
+/**
+ * Verify that the process a workspace record points at really is that
+ * workspace's daemon, within a bounded window.
+ *
+ * A record goes stale in two ways, and both must be refused: its pid is dead
+ * (the daemon exited without cleaning up), or its pid is alive but belongs to
+ * something else — a recycled pid is a perfectly healthy process that has
+ * nothing to do with this workspace, and the caller must not act on the record.
+ * A dead pid is settled without a probe; a live one must echo BOTH the recorded
+ * pid and the workspace name back before it is trusted.
+ *
+ * Shared by the stdio bridge (which must not forward a host's traffic to a
+ * stranger) and by the `workspace` commands (which must not signal one).
+ */
+export async function verifyWorkspaceDaemon(
+  record: { pid: number; port: number },
+  name: string,
+): Promise<WorkspaceDaemonHealth> {
+  if (!pidAlive(record.pid)) return { kind: 'silent' };
+  return probeHealth(record.port, name, record.pid);
+}
 
 /**
  * Ask a recorded port who it is, within the bounded window.
@@ -108,7 +130,11 @@ type HealthOutcome =
  * be reused by an unrelated process that answers `/health` perfectly well, and
  * that process must not be handed this workspace's traffic.
  */
-async function probeHealth(port: number, name: string, pid: number): Promise<HealthOutcome> {
+async function probeHealth(
+  port: number,
+  name: string,
+  pid: number,
+): Promise<WorkspaceDaemonHealth> {
   try {
     const response = await fetch(`http://127.0.0.1:${port}/health`, {
       signal: AbortSignal.timeout(HEALTH_PROBE_TIMEOUT_MS),
