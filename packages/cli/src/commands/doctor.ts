@@ -357,7 +357,9 @@ const ENV_REFUSAL_PREFIX = '.noir/.env: refusing to load';
  * written, so the mode is the one the file was created with. Seeding this file
  * owner-only arrived in Noir 1.14.0, so a project carried over from an earlier
  * version (or a file created by hand, or one delivered by a clone) simply came
- * this way. The reader did nothing wrong.
+ * this way — and so does a file saved by a tool that replaces rather than
+ * rewrites it, since the replacement is a fresh inode. The reader did nothing
+ * wrong.
  *
  * `changed` — the mode was altered after the contents were last written: a
  * `chmod`, a `chown`, or a restore that re-applied metadata.
@@ -391,7 +393,7 @@ function octalMode(mode: number): string {
 function describeEnvMode(cause: EnvModeCause, mode: number): string {
   const lead = `is ${octalMode(mode)} — accessible to other accounts; run \`noir sync\` (or \`chmod 600 .noir/.env\`) to make it owner-only.`;
   return cause === 'legacy'
-    ? `${lead} Nothing has changed its mode since the file was written, so the file predates the owner-only contract (an older Noir seeded it, a clone delivered it, or it was created by hand) — this is not a change you made.`
+    ? `${lead} Nothing has changed its mode since the file was written, so the file predates the owner-only contract (an older Noir seeded it, a clone delivered it, it was created by hand, or it was saved by a tool that replaces the file) — this is not a change you made.`
     : `${lead} Its mode was changed after the file was written (a \`chmod\`, a \`chown\`, or a restore that re-applied metadata), so no older Noir left it this way.`;
 }
 

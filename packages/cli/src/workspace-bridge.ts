@@ -246,6 +246,11 @@ async function relay(host: StdioBridgeTransport, daemon: Transport): Promise<voi
     };
 
     const failStart = (error: Error): void => {
+      // `host.onerror` above takes no argument, so a failed start would
+      // otherwise leave no trace on stderr at all.
+      process.stderr.write(
+        `noir: workspace bridge: ${error instanceof Error ? error.message : String(error)}\n`,
+      );
       host.onerror?.(error);
       closeDaemon();
       settle();
