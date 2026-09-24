@@ -1,6 +1,6 @@
-// Slice E4 / task 11 — the FIRST REAL migration: `1.0.0 → 1.1.0`.
+// The first real scaffold migration: `1.0.0 → 1.1.0`.
 //
-// Why this migration exists at all (spec §11.2): `.noir/config.yml` is a
+// Why this migration exists at all: `.noir/config.yml` is a
 // `skipIfExists` seed — the manifest writes it once, at init, and then never
 // opens it again (it is user-owned). So when `CURRENT_SCAFFOLD_VERSION` moves
 // to 1.1.0, every project already on disk has a `config.yml` that predates the
