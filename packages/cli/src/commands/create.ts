@@ -35,7 +35,12 @@ import { type ScaffoldResult, scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 import { buildConflictOpts } from '../conflict.js';
 import { checkWritePathDedup } from '../dedup-write.js';
-import { assertTransportUrl, preservedStaleLine, reportPlannedWrites } from '../init.js';
+import {
+  assertTransportUrl,
+  preservedStaleLine,
+  reportEnvHeal,
+  reportPlannedWrites,
+} from '../init.js';
 import { resolveInteractive } from '../output.js';
 
 export interface CreateOptions {
@@ -103,6 +108,11 @@ export async function create(
     reportPlannedWrites(res);
     return res;
   }
+  // Report the permission heal BEFORE the already-initialized check, exactly as
+  // init does: `create --force` over an existing tree reaches a `.noir/.env`
+  // that an earlier version may have left group-readable, and a file fixed
+  // without a word is the silent drift the re-assert exists to end.
+  reportEnvHeal(res);
   // A no-op (already-initialized guard) must not re-emit skills.
   if (res.noop) return res;
 

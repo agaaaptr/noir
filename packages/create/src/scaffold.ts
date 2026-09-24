@@ -180,15 +180,16 @@ export interface ScaffoldResult {
    *  type (test stubs) stay valid; `scaffold()` always populates it. */
   fileModes?: Record<string, number>;
   /** What the run did to the permissions of `.noir/.env` — the outcome of
-   *  {@link ensureOwnerOnly}, which is called on every `init`/`sync` run
-   *  because the seeded file's 0600 mode is applied only when it is created.
+   *  {@link ensureOwnerOnly}, which is called on every run that may write, in
+   *  every mode, because the seeded file's 0600 mode is applied only when it is
+   *  created.
    *  `'healed'` means a group/world-readable file was tightened to 0600, so a
    *  caller can report the fix instead of leaving the user to notice it in a
    *  later diagnostic; `'unchanged'` and `'unsupported'` mean nothing needed
-   *  doing (or the platform has no POSIX mode bits). Absent on a dry run, which
-   *  must not touch disk, and for `create`, which writes the seed 0600 in the
-   *  same run. Optional so existing external constructors of this type stay
-   *  valid. */
+   *  doing (or the platform has no POSIX mode bits) — the `'unchanged'` a fresh
+   *  `create` reports, whose seed was written 0600 in the same run. Absent on a
+   *  dry run, which must not touch disk. Optional so existing external
+   *  constructors of this type stay valid. */
   envMode?: EnvMode;
 }
 
@@ -316,10 +317,18 @@ export function assertSafeRoot(root: string): void {
 }
 
 /** The outcome of re-asserting the owner-only mode on `.noir/.env` for this
- *  run, or `undefined` when the run must not touch disk (`dryRun`) or is a mode
- *  that does not re-assert. `init` and `sync` are the commands that reach the
- *  file and report what they did; `create` boots a tree whose seed is written
- *  0600 in the same run, so it has nothing to heal.
+ *  run, or `undefined` when the run must not touch disk (`dryRun`).
+ *
+ *  EVERY mode re-asserts, `create` included. The seeded file's 0600 is applied
+ *  by the writer only when the file is CREATED (`skipIfExists` never opens an
+ *  existing one), so the mode can only be trusted on a run that checks the file
+ *  as it finds it — and `create` reaches an existing tree too: `--force` (or a
+ *  plain re-run) over a project initialized earlier is the same `.noir/.env`
+ *  that `init` would find, and it can already be sitting at 0644. Gating the
+ *  heal to `init`/`sync` on the grounds that "create writes its seed 0600 in the
+ *  same run" holds only for a FRESH tree. Including `create` costs nothing on
+ *  that fresh tree — the file is absent or already 0600, so the heal is a no-op
+ *  — and closes the gap on a forced one.
  *
  *  Called from both exits — the already-initialized no-op and the end of the
  *  emit — because a bare `noir init` on an existing project re-emits nothing
@@ -327,7 +336,6 @@ export function assertSafeRoot(root: string): void {
  *  version. Only one of the two runs per invocation. */
 function envOwnerOnly(opts: ScaffoldOptions): EnvMode | undefined {
   if (opts.dryRun === true) return undefined;
-  if (opts.mode !== 'init' && opts.mode !== 'sync') return undefined;
   return ensureOwnerOnly(join(opts.root, '.noir', '.env'));
 }
 

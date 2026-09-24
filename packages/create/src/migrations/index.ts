@@ -300,9 +300,19 @@ function mcpConfigPath(root: string): { rel: string; abs: string } | null {
  *
  *  Two conditions gate the rewrite, and both matter. The repo must carry the
  *  workspace marker — a repo that deliberately chose the http transport has an
- *  http entry too, and rewriting it would be wrong. And the entry must be the
- *  http one — a joined repo already on the bridge needs nothing, which is what
- *  makes a second run a byte-level no-op. */
+ *  http entry too, and rewriting it would be wrong. And the entry must not
+ *  already be on the bridge: a joined repo whose entry names the workspace needs
+ *  nothing, which is what makes a second run a byte-level no-op.
+ *
+ *  "Not on the bridge" is deliberately wider than "is the http pointer". The
+ *  same downgrade appears in a second shape: a joined repo whose `noir` entry is
+ *  the plain repo-scoped stdio form (`command`/`args` with no `--workspace`),
+ *  which is what a re-scaffold under an earlier release rewrote a joined repo's
+ *  entry to — the marker and the config then disagree about the same repo. A
+ *  marker is proof of membership, so an entry that does not name the workspace
+ *  is stale whichever form it is in, and both are repaired here. An entry in
+ *  neither shape (no `command`, no `type: 'http'`) is left alone: it is not a
+ *  transport this migration owns. */
 const workspaceBridge: MigrationScript = {
   from: '1.2.0',
   to: '1.3.0',
@@ -341,13 +351,25 @@ const workspaceBridge: MigrationScript = {
       result.notes.push(`${target.rel}: no noir entry — left untouched`);
       return result;
     }
-    if ((entry as Record<string, unknown>).type !== 'http') {
-      result.notes.push(`${target.rel}: already reaches Noir over stdio — left untouched`);
+    // Which stale shape is this entry in? An http pointer names a daemon by
+    // address. A stdio entry that does NOT pass `--workspace` is the repo-scoped
+    // form — the downgrade a re-scaffold used to apply to a joined repo. An
+    // entry that already names the workspace is the bridge entry a fresh join
+    // writes, so there is nothing to repair (and a second run stays a no-op).
+    const entryObj = entry as Record<string, unknown>;
+    const args = entryObj.args;
+    const namesWorkspace = Array.isArray(args) && args.includes('--workspace');
+    const isHttpPointer = entryObj.type === 'http';
+    const isRepoScopedStdio = typeof entryObj.command === 'string' && !namesWorkspace;
+    if (!isHttpPointer && !isRepoScopedStdio) {
+      result.notes.push(
+        namesWorkspace
+          ? `${target.rel}: already reaches Noir over the bridge — left untouched`
+          : `${target.rel}: noir entry is not a transport this migration owns — left untouched`,
+      );
       return result;
     }
-    const kept = Object.entries(entry as Record<string, unknown>).filter(
-      ([key]) => !TRANSPORT_KEYS.has(key),
-    );
+    const kept = Object.entries(entryObj).filter(([key]) => !TRANSPORT_KEYS.has(key));
 
     if (ctx.dryRun) {
       result.changed.push(target.rel);

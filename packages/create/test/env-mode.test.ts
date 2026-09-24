@@ -114,6 +114,29 @@ describe('.noir/.env owner-only mode is re-asserted on every path', () => {
     expect(res.envMode).toBe('healed');
   });
 
+  posixIt('heals a pre-existing 0644 file on create --force', async () => {
+    // `create` over an EXISTING tree is the case the old gate missed: its
+    // rationale ("the seed is written 0600 in the same run") only holds for a
+    // fresh tree, so a forced re-scaffold left the pre-existing file at 0644.
+    seedInitializedProject(0o644);
+
+    const res = await scaffold({ root, mode: 'create', host: 'claude', force: true });
+
+    expect(res.noop).toBe(false);
+    expect(modeOf()).toBe(0o600);
+    expect(res.envMode).toBe('healed');
+  });
+
+  it('reports unchanged, not healed, for a fresh create — the writer already made it 0600', async () => {
+    // Including `create` in the heal must not change what a fresh tree looks
+    // like: the seed writer creates the file 0600, so the heal finds nothing to
+    // do and says so rather than claiming a fix it did not make.
+    const res = await scaffold({ root, mode: 'create', host: 'claude' });
+
+    expect(modeOf()).toBe(0o600);
+    expect(res.envMode).toBe('unchanged');
+  });
+
   posixIt('reports an already-0600 file as unchanged, not healed', async () => {
     seedInitializedProject(0o600);
 

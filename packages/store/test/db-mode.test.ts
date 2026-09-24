@@ -53,6 +53,13 @@ describe('owner-only store database and directory', () => {
     try {
       expect(modeOf(dbPath())).toBe(0o600);
       expect(modeOf(storeDir())).toBe(0o700);
+      // Deliberate, reviewed behaviour, locked in here so a refactor that
+      // quietly changes it fails: the RECURSIVE mkdir that creates
+      // `.noir/store/` also applies 0700 to the ancestors it creates, so
+      // `.noir/` itself lands owner-only on a tree where nothing else made it
+      // first. That is the intended blast radius — the directory holds the
+      // project's whole indexed context.
+      expect(modeOf(join(root, '.noir'))).toBe(0o700);
     } finally {
       await store.close();
     }

@@ -8,7 +8,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { noirHome } from './layout.js';
 
 export type InstallMethod =
@@ -96,6 +96,15 @@ export function resolveNoirCommand(): string {
  *  Never in-place overwrite (macOS code-sign inode-taint → SIGKILL; Windows
  *  locks).
  *
+ *  The temp sibling is DOT-PREFIXED (`.<basename>.tmp-<pid>-<ts>`) and removed
+ *  in the failure path, because an interrupted write must not leave a stray
+ *  copy of the destination next to it: a bare `CLAUDE.md.tmp-…` is plain
+ *  clutter in `git status` and is walked by the context indexer as a document
+ *  in its own right — a co-owned host file's half-written twin would be indexed
+ *  as garbage. The dot prefix keeps a leftover (only reachable through a
+ *  SIGKILL or a power loss, where no handler runs) out of the way, and the
+ *  unlink covers every failure the process can still observe.
+ *
  *  Mode preservation (defense vs the "noir update → permission denied" bug):
  *  `writeFileSync` on a fresh temp yields the umask default (0o644, NO exec
  *  bit). If `path` already exists, the temp's mode replaces the target's on
@@ -140,7 +149,9 @@ export function atomicWriteFile(path: string, data: string, opts: AtomicWriteOpt
   } catch {
     // Absent on first write — nothing to preserve; caller chmods if exec.
   }
-  const tmp = `${path}.tmp-${process.pid}-${Date.now()}`;
+  // Same directory as the target (a rename across filesystems would fail), and
+  // dot-prefixed so a leftover that no JS could clean up stays out of the way.
+  const tmp = join(dirname(path), `.${basename(path)}.tmp-${process.pid}-${Date.now()}`);
   // `opts.mode` is applied to the TEMP file, never to `path` after the rename:
   // a chmod-after-rename would leave a window in which the file exists at its
   // final path with the umask default (a credential readable by others). The
@@ -152,12 +163,26 @@ export function atomicWriteFile(path: string, data: string, opts: AtomicWriteOpt
   // bits, but an owner-stripping umask (say 0o200) narrows the owner bits too.
   // On Windows the argument is ignored (permissions are ACL-based), so callers
   // must not assert a POSIX mode there.
-  writeFileSync(
-    tmp,
-    data,
-    opts.mode !== undefined ? { encoding: 'utf8', mode: opts.mode } : 'utf8',
-  );
-  renameSync(tmp, path);
+  try {
+    writeFileSync(
+      tmp,
+      data,
+      opts.mode !== undefined ? { encoding: 'utf8', mode: opts.mode } : 'utf8',
+    );
+    renameSync(tmp, path);
+  } catch (err) {
+    // The PRIMARY guarantee is that the destination is untouched — it still
+    // holds the previous bytes (or is absent), which is what the caller and its
+    // user care about. Removing the staged temp is best-effort: it keeps a
+    // failed write from leaving a stray sibling, and a cleanup that itself
+    // fails (a read-only directory) must never mask the original error.
+    try {
+      rmSync(tmp, { force: true });
+    } catch {
+      // best-effort; the original error below is the one worth reporting.
+    }
+    throw err;
+  }
   // Restore the pre-existing mode ONLY when the caller requested none. The
   // restore exists to keep an EXISTING file's perms across a rewrite (the
   // exec-bit-preservation contract); when a mode WAS requested it would undo

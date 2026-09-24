@@ -279,7 +279,9 @@ export function reportPlannedWrites(res: ScaffoldResult): void {
  * `ScaffoldResult.envMode`. Only a real heal is worth a line — a file that was
  * already owner-only, or a platform with no POSIX mode bits, has nothing to
  * report, and the announcement must not repeat on runs that changed nothing.
- * Shared by `init` and `sync`, the two commands that reach the file.
+ * Shared by every command whose run can find the file already there — `init`,
+ * `sync` and `create` (whose `--force`/re-run over an existing tree reaches the
+ * same file `init` would).
  */
 export function reportEnvHeal(res: ScaffoldResult): void {
   if (res.envMode === 'healed') {

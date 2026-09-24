@@ -80,6 +80,19 @@ function seedLegacyJoinedRepo(): void {
   writeWorkspaceMarker(root, WORKSPACE);
 }
 
+/** A joined repo whose `noir` entry a re-scaffold under an earlier release
+ *  DOWNGRADED to the plain repo-scoped stdio form: the marker still says member,
+ *  the entry says nothing about the workspace. Same stamp as
+ *  {@link seedLegacyJoinedRepo}, so the bridge migration is asked to run. */
+function seedDowngradedJoinedRepo(): void {
+  mkdirSync(paths.noirDir(root), { recursive: true });
+  writeFileSync(paths.projectId(root), `${PROJECT_ID}\n`, 'utf8');
+  writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
+  writeFileSync(join(root, '.noir', 'scaffold-version'), `noir-scaffold=${PRE_UPGRADE}\n`, 'utf8');
+  seedMcp(STDIO, { otherapi: { command: 'other-mcp' } });
+  writeWorkspaceMarker(root, WORKSPACE);
+}
+
 describe('a joined repo keeps its workspace entry', () => {
   it('sync re-emits the workspace entry, leaving the file byte-identical', async () => {
     await init(root, { transport: 'stdio' });
@@ -161,6 +174,47 @@ describe('init --upgrade migrates a legacy http entry', () => {
     expect(readMcp()).toBe(migrated);
     // The migration really ran and declined — otherwise an empty `changed` list
     // could just mean the runner skipped it, and this would prove nothing.
+    expect(res?.migrationsRan).toContain('1.2.0→1.3.0');
+    expect(res?.migrationChanged).toEqual([]);
+  });
+});
+
+describe('init --upgrade migrates a joined repo downgraded to repo-scoped stdio', () => {
+  it('rewrites the plain stdio entry to the bridge entry, keeping the user servers', async () => {
+    seedDowngradedJoinedRepo();
+    // The state the downgrade left: marker present, entry silent about the
+    // workspace. "On the bridge" and "plain repo-scoped stdio" are not the same
+    // thing, and only the first one needs nothing.
+    expect(noirEntry()).toEqual(STDIO);
+
+    const res = await init(root, { transport: 'stdio', upgrade: true });
+
+    expect(noirEntry()).toEqual(BRIDGE);
+    expect(noirEntry().args).toEqual(['mcp', 'serve', '--stdio', '--workspace', WORKSPACE]);
+    expect(res?.migrationChanged).toContain(MCP);
+    // The migration edits ONE entry — the user's own server is not its business.
+    const cfg = JSON.parse(readMcp()) as { mcpServers: Record<string, unknown> };
+    expect(cfg.mcpServers.otherapi).toEqual({ command: 'other-mcp' });
+  });
+
+  it('is idempotent: a second upgrade leaves the file byte-identical', async () => {
+    seedDowngradedJoinedRepo();
+    await init(root, { transport: 'stdio', upgrade: true });
+    const migrated = readMcp();
+
+    // Re-stamp the pre-upgrade version so the migration is asked to run again
+    // rather than being skipped by the restamped project.
+    writeFileSync(
+      join(root, '.noir', 'scaffold-version'),
+      `noir-scaffold=${PRE_UPGRADE}\n`,
+      'utf8',
+    );
+    const res = await init(root, { transport: 'stdio', upgrade: true });
+
+    expect(readMcp()).toBe(migrated);
+    // It ran and declined: the rewrite landed the entry on the bridge, so the
+    // second run has nothing to do. Without the widened gate this assertion
+    // would pass for the wrong reason (the migration declining a stdio entry).
     expect(res?.migrationsRan).toContain('1.2.0→1.3.0');
     expect(res?.migrationChanged).toEqual([]);
   });

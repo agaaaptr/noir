@@ -83,6 +83,12 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     // has no group/other bits to mask, so it survives every umask that leaves
     // the owner their own access.
     const storeDir = dirname(dbPath);
+    // Blast radius: `recursive` also applies 0700 to the ancestors it CREATES —
+    // notably `.noir/` itself, and any missing parent of it. At creation time
+    // only (an existing directory keeps its mode; the heal below handles that).
+    // The design record's owner-only store decision names the database and its
+    // parent directory; recursion extends that to those ancestors, and the
+    // db-mode suite pins it.
     mkdirSync(storeDir, { recursive: true, mode: 0o700 });
     ensureOwnerOnlyDir(storeDir);
     // SQLite creates the database file itself and takes no creation mode, so
