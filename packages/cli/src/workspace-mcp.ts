@@ -1,7 +1,9 @@
 // `.mcp.json` rewrite/restore for workspace membership — the ONLY user-facing
-// file a join/leave touches. It rewrites just the `noir` server entry (preserving
-// every other server the user added) and refuses to clobber a config that does
-// not look Noir-emitted unless `--force` (never a silent overwrite).
+// file a join/leave touches. It rewrites just the `noir` server entry and refuses
+// to clobber a config that does not look Noir-emitted unless `--force` (never a
+// silent overwrite). Inside that entry it replaces only the transport (how a host
+// reaches the server): every other server in the file, and every other key on the
+// entry itself, is kept as the user left it.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type HostId, resolveAdapter } from '@noir-ai/adapters';
@@ -55,35 +57,71 @@ function isNoirEmitted(mcpServers: Record<string, unknown> | undefined): boolean
   return noir.type === 'http';
 }
 
-/** Point the repo's `noir` MCP entry at the workspace daemon (with the member `?p=` identity). */
-export function writeWorkspaceHttpEntry(
+/** The keys that say HOW a host reaches the server — `command`/`args` for stdio,
+ *  `type`/`url` for http. Rewriting the transport replaces exactly these, so an
+ *  entry never ends up describing two transports at once. */
+const TRANSPORT_KEYS: ReadonlySet<string> = new Set(['command', 'args', 'type', 'url']);
+
+/** The `noir` entry as a plain key/value record, or `{}` when there is none (or
+ *  it is not an object) — so a merge always has something to spread. */
+function noirEntry(mcpServers: Record<string, unknown> | undefined): Record<string, unknown> {
+  const noir = mcpServers?.noir;
+  if (typeof noir !== 'object' || noir === null || Array.isArray(noir)) return {};
+  return noir as Record<string, unknown>;
+}
+
+/** Write `transport` onto the repo's `noir` entry, keeping everything else: the
+ *  other keys that entry already carried (a user's `env`, `headers`,
+ *  `headersHelper`, …) and every other server in the file. */
+function writeNoirTransport(
   root: string,
   host: HostId,
-  url: string,
-  projectId: string,
+  transport: Record<string, unknown>,
   opts: CliOptions & { force?: boolean },
 ): void {
   const path = mcpPathFor(root, host);
   const existing = loadExisting(path, opts);
+  const kept = Object.fromEntries(
+    Object.entries(noirEntry(existing?.mcpServers)).filter(([key]) => !TRANSPORT_KEYS.has(key)),
+  );
   const next = {
     ...(existing ?? {}),
     mcpServers: {
       ...(existing?.mcpServers ?? {}),
-      noir: { type: 'http', url: `${url}?p=${projectId}` },
+      noir: { ...transport, ...kept },
     },
   };
   atomicWriteFile(path, `${JSON.stringify(next, null, 2)}\n`);
 }
 
-/** Restore the repo's `noir` MCP entry to stdio (used by `workspace leave`). */
+/** Point the repo's `noir` MCP entry at the workspace daemon. The entry stays on
+ *  stdio: `noir mcp serve --workspace <name>` resolves the daemon, proves it is
+ *  the one the record names, and relays to it with the daemon's own token — so
+ *  neither an address nor a secret is written into the repo's config. */
+export function writeWorkspaceEntry(
+  root: string,
+  host: HostId,
+  name: string,
+  opts: CliOptions & { force?: boolean },
+): void {
+  writeNoirTransport(
+    root,
+    host,
+    { command: resolveNoirCommand(), args: ['mcp', 'serve', '--stdio', '--workspace', name] },
+    opts,
+  );
+}
+
+/** Restore the repo's `noir` MCP entry to plain stdio (used by `workspace leave`). */
 export function writeStdioEntry(
   root: string,
   host: HostId,
   opts: CliOptions & { force?: boolean },
 ): void {
-  const path = mcpPathFor(root, host);
-  const existing = loadExisting(path, opts);
-  const noir = { command: resolveNoirCommand(), args: ['mcp', 'serve', '--stdio'] };
-  const next = { ...(existing ?? {}), mcpServers: { ...(existing?.mcpServers ?? {}), noir } };
-  atomicWriteFile(path, `${JSON.stringify(next, null, 2)}\n`);
+  writeNoirTransport(
+    root,
+    host,
+    { command: resolveNoirCommand(), args: ['mcp', 'serve', '--stdio'] },
+    opts,
+  );
 }

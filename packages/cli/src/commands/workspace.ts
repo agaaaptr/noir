@@ -4,9 +4,10 @@
 // founds/joins it from the current repo and starts the detached workspace daemon;
 // `daemon join <name>` joins it from another repo. `workspace list/status/leave/stop`
 // manage membership. Joining writes a `.noir/workspace.json` marker + rewrites the
-// repo's `.mcp.json` `noir` entry to the workspace daemon URL (`?p=<projectId>`);
-// leaving reverses both. Default transport (stdio) and project behavior are
-// untouched unless a repo explicitly joins.
+// repo's `.mcp.json` `noir` entry to a stdio entry naming the workspace (the host
+// then reaches the shared daemon through the bridge); leaving reverses both.
+// Default transport (stdio) and project behavior are untouched unless a repo
+// explicitly joins.
 import { readdirSync } from 'node:fs';
 import {
   clearWorkspaceMarker,
@@ -30,7 +31,7 @@ import {
   spawnDetachedWorkspaceDaemon,
 } from '@noir-ai/daemon';
 import { type CliOptions, EXIT, fail, info, log } from '../output.js';
-import { writeStdioEntry, writeWorkspaceHttpEntry } from '../workspace-mcp.js';
+import { writeStdioEntry, writeWorkspaceEntry } from '../workspace-mcp.js';
 
 export interface WorkspaceStartOptions extends CliOptions {
   name: string;
@@ -57,14 +58,16 @@ function loadProjectOrFail(opts: CliOptions): ProjectInfo {
   }
 }
 
+// Membership is recorded by the marker; the `noir` MCP entry stays on stdio and
+// names the workspace, so the host reaches the shared daemon through the bridge
+// without any address or token landing in the repo's config.
 function finishJoin(
   project: ProjectInfo,
   name: string,
-  url: string,
   opts: CliOptions & { force?: boolean },
 ): void {
   writeWorkspaceMarker(project.root, name);
-  writeWorkspaceHttpEntry(project.root, project.config.host, url, project.id, opts);
+  writeWorkspaceEntry(project.root, project.config.host, name, opts);
 }
 
 /** `noir daemon start --workspace <name>` — found a workspace + start its daemon. */
@@ -103,7 +106,7 @@ export async function daemonStartWorkspace(opts: WorkspaceStartOptions): Promise
   // --detach: fork a detached child; the parent writes the marker + .mcp.json.
   if (opts.detach === true) {
     const spawned = await spawnDetachedWorkspaceDaemon({ name: opts.name, project });
-    finishJoin(project, opts.name, `http://127.0.0.1:${spawned.port}/mcp`, opts);
+    finishJoin(project, opts.name, opts);
     if (opts.json === true) {
       process.stdout.write(
         `${JSON.stringify({ ok: true, data: { mode: 'detached', pid: spawned.pid, port: spawned.port } })}\n`,
@@ -123,7 +126,7 @@ export async function daemonStartWorkspace(opts: WorkspaceStartOptions): Promise
     project,
     idleTimeoutSec: project.config.workspace.idleTimeoutSec,
   });
-  finishJoin(project, opts.name, ensured.url, opts);
+  finishJoin(project, opts.name, opts);
   if (opts.json === true) {
     process.stdout.write(
       `${JSON.stringify({ ok: true, data: { url: ensured.url, port: ensured.port, reused: !ensured.started } })}\n`,
@@ -154,7 +157,7 @@ export async function daemonJoin(opts: WorkspaceJoinOptions): Promise<void> {
     idleTimeoutSec: project.config.workspace.idleTimeoutSec,
   });
   upsertWorkspaceMember(reg, { projectId: project.id, root: project.root, joinedAt: Date.now() });
-  finishJoin(project, opts.name, ensured.url, opts);
+  finishJoin(project, opts.name, opts);
   if (opts.json === true) {
     process.stdout.write(
       `${JSON.stringify({ ok: true, data: { joined: true, url: ensured.url, port: ensured.port } })}\n`,
