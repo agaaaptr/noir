@@ -31,7 +31,7 @@ import { type ScaffoldResult, scaffold } from '@noir-ai/create';
 import { type CompileTarget, emitSkillsToDir } from '@noir-ai/skills';
 import { buildConflictOpts } from './conflict.js';
 import { checkWritePathDedup } from './dedup-write.js';
-import { preservedStaleLine, reportPlannedWrites } from './init.js';
+import { preservedStaleLine, reportEnvHeal, reportPlannedWrites } from './init.js';
 import { resolveInteractive } from './output.js';
 
 export interface SyncOptions {
@@ -99,6 +99,11 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
     reportPlannedWrites(res);
     return res;
   }
+
+  // The scaffold re-asserts the 0600 mode on `.noir/.env` on every run; name
+  // the fix when it actually happened instead of leaving it to be discovered in
+  // a later diagnostic.
+  reportEnvHeal(res);
 
   // Surface the no-op so users see sync was a true no-op on disk (the
   // scaffold wrote nothing — every runtime file was content-hash identical).

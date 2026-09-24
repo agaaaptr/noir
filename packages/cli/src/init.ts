@@ -131,6 +131,11 @@ export async function init(root: string, opts: InitOptions): Promise<InitResult 
     reportPlannedWrites(res);
     return res;
   }
+  // Report the permission heal BEFORE the already-initialized check. A bare
+  // `noir init` on an existing project re-emits nothing, but it still
+  // re-asserts the 0600 mode on `.noir/.env` — and a file fixed without a word
+  // is exactly the silent drift this re-assert exists to end.
+  reportEnvHeal(res);
   // If the already-initialized guard no-op'd scaffold, stop — don't re-emit
   // skills or print "initialized" (scaffold already printed the no-op message).
   if (res.noop) return res;
@@ -263,6 +268,22 @@ export function reportPlannedWrites(res: ScaffoldResult): void {
   if (res.identical.length > 0) {
     log('Would rewrite (byte-identical, no-op):');
     for (const p of res.identical) log(`  ${p}`);
+  }
+}
+
+/**
+ * Say that `.noir/.env` had its permissions tightened, once per run.
+ *
+ * The seed writer applies the file's 0600 mode only when it CREATES it, so the
+ * scaffold re-asserts the mode on every run and records what it did on
+ * `ScaffoldResult.envMode`. Only a real heal is worth a line — a file that was
+ * already owner-only, or a platform with no POSIX mode bits, has nothing to
+ * report, and the announcement must not repeat on runs that changed nothing.
+ * Shared by `init` and `sync`, the two commands that reach the file.
+ */
+export function reportEnvHeal(res: ScaffoldResult): void {
+  if (res.envMode === 'healed') {
+    process.stderr.write('Tightened .noir/.env to 0600 (it was readable by group or others).\n');
   }
 }
 

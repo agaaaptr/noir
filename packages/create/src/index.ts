@@ -6,6 +6,7 @@
  *  - {@link buildManifest} + {@link ManifestEntry} — the declarative artifact table.
  *  - {@link regenerate} / {@link managedBlock} / {@link skipIfExists} — the
  *    three-mode writer (low-level; the orchestrator is the usual entry point).
+ *  - {@link ensureOwnerOnly} — re-assert 0600 on an existing credential file.
  *  - {@link render} — `{{var}}` template interpolation.
  *  - {@link isStaleSeed} / {@link SEED_TEMPLATE_HISTORY} — shipped seed bytes
  *    per past scaffold version, for deciding whether an upgrade may refresh a
@@ -75,6 +76,8 @@ export {
 export { loadTemplate, templatesDir } from './template-loader.js';
 export {
   buildRegion,
+  type EnvMode,
+  ensureOwnerOnly,
   managedBlock,
   regenerate,
   skipIfExists,

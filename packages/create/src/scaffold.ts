@@ -30,6 +30,8 @@ import { isStaleSeed, type SeedKind } from './template-history.js';
 import { loadTemplate } from './template-loader.js';
 import {
   buildRegion,
+  type EnvMode,
+  ensureOwnerOnly,
   managedBlock,
   managedBlocks,
   mergeJson,
@@ -176,6 +178,17 @@ export interface ScaffoldResult {
    *  mode is never changed. Optional so existing external constructors of this
    *  type (test stubs) stay valid; `scaffold()` always populates it. */
   fileModes?: Record<string, number>;
+  /** What the run did to the permissions of `.noir/.env` — the outcome of
+   *  {@link ensureOwnerOnly}, which is called on every `init`/`sync` run
+   *  because the seeded file's 0600 mode is applied only when it is created.
+   *  `'healed'` means a group/world-readable file was tightened to 0600, so a
+   *  caller can report the fix instead of leaving the user to notice it in a
+   *  later diagnostic; `'unchanged'` and `'unsupported'` mean nothing needed
+   *  doing (or the platform has no POSIX mode bits). Absent on a dry run, which
+   *  must not touch disk, and for `create`, which writes the seed 0600 in the
+   *  same run. Optional so existing external constructors of this type stay
+   *  valid. */
+  envMode?: EnvMode;
 }
 
 /** One entry in {@link ScaffoldResult.conflicts}. */
@@ -301,6 +314,22 @@ export function assertSafeRoot(root: string): void {
   }
 }
 
+/** The outcome of re-asserting the owner-only mode on `.noir/.env` for this
+ *  run, or `undefined` when the run must not touch disk (`dryRun`) or is a mode
+ *  that does not re-assert. `init` and `sync` are the commands that reach the
+ *  file and report what they did; `create` boots a tree whose seed is written
+ *  0600 in the same run, so it has nothing to heal.
+ *
+ *  Called from both exits — the already-initialized no-op and the end of the
+ *  emit — because a bare `noir init` on an existing project re-emits nothing
+ *  but must still fix a credential file left at a wider mode by an older
+ *  version. Only one of the two runs per invocation. */
+function envOwnerOnly(opts: ScaffoldOptions): EnvMode | undefined {
+  if (opts.dryRun === true) return undefined;
+  if (opts.mode !== 'init' && opts.mode !== 'sync') return undefined;
+  return ensureOwnerOnly(join(opts.root, '.noir', '.env'));
+}
+
 /** The configured host from an existing `.noir/config.yml`, or `'claude'`.
  *  A bare re-scaffold (`create --force`) must keep the host the project already
  *  chose; an absent or unreadable config degrades to the default. Mirrors
@@ -400,6 +429,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
       refreshed: [],
       conflicts: [],
       fileModes: {},
+      envMode: envOwnerOnly(opts),
       noop: true,
       migrationsRan: [],
       migrationConflicts: [],
@@ -778,6 +808,10 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     refreshed,
     conflicts: conflictRecords,
     fileModes,
+    // Re-asserted here, after the emit, so the mode on disk is the one this run
+    // leaves behind: the seed writer only applies 0600 at creation (see
+    // `envOwnerOnly`).
+    envMode: envOwnerOnly(opts),
     noop: false,
     migrationsRan,
     migrationConflicts,

@@ -111,18 +111,21 @@ describe('noir init — .noir/.env seed', () => {
     expect(text).not.toMatch(/sk-/);
   });
 
-  it('never overwrites an existing .noir/.env (or its mode) — skipIfExists', async () => {
+  it('never overwrites an existing .noir/.env — skipIfExists (only a lax mode is healed)', async () => {
     await scaffold({ root, mode: 'init', host: 'claude' });
     const edited = '# user-edited\nCLICKUP_API_TOKEN=pk_user_value\n';
     writeFileSync(envPath(), edited, 'utf8');
-    chmodSync(envPath(), 0o640); // the user's own choice — must stand
+    chmodSync(envPath(), 0o640); // a mode an older Noir, or a save-by-rename editor, left behind
 
     const res = await scaffold({ root, mode: 'init', host: 'claude', force: true });
     expect(res.written).not.toContain('.noir/.env');
     expect(res.skipped).toContain('.noir/.env');
     expect(readFileSync(envPath(), 'utf8')).toBe(edited);
-    // fileMode is a CREATION-only contract: an existing file is not even opened.
-    if (process.platform !== 'win32') expect(statSync(envPath()).mode & 0o777).toBe(0o640);
+    // fileMode is a CREATION-only contract: the writer never opens an existing
+    // file, so its bytes are untouched. The MODE is re-asserted on every run
+    // instead (env-mode.test.ts pins that contract in full): a group-readable
+    // credential is tightened to 0600 rather than left to leak.
+    if (process.platform !== 'win32') expect(statSync(envPath()).mode & 0o777).toBe(0o600);
   });
 
   it('reports the planned 0600 without writing anything under --dry-run', async () => {

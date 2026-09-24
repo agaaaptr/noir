@@ -124,7 +124,8 @@ describe('noir init --upgrade — skipIfExists backfill (spec §11.1, closes §1
   posixIt('applies the entry-declared mode to a BACKFILLED .noir/.env', async () => {
     // The fileMode contract reaches the upgrade path too: a `.noir/.env` the
     // upgrade creates is 0600 from the moment it exists (the manifest declares
-    // it), while an existing one keeps the user's own mode.
+    // it), while an existing one has its mode re-asserted by the heal that runs
+    // on every init/sync — see env-mode.test.ts.
     writeScaffoldVersion(root, '1.0.0');
     const res = await scaffold({ root, mode: 'init', host: 'claude', upgrade: true });
     expect(res.written).toContain('.noir/.env');

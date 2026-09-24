@@ -93,11 +93,12 @@ export interface ManifestEntry {
   /** One-line human description for `noir doctor` + logs. */
   description?: string;
   /** Permission for a NEWLY created file (e.g. `0o600` for a credential seed).
-   *  Applied only on creation; an existing file's mode is never changed — the
-   *  `skipIfExists` contract means an existing file is not even opened. The
-   *  orchestrator forwards this to the writer and reports it on the result as
-   *  {@link ScaffoldResult.fileModes}. Ignored by every other write mode, whose
-   *  targets are regenerated rather than seeded.
+   *  Applied only on creation — the `skipIfExists` contract means an existing
+   *  file is not even opened. The orchestrator forwards this to the writer and
+   *  reports it on the result as {@link ScaffoldResult.fileModes}; the mode of
+   *  an existing credential file is re-asserted separately (`ensureOwnerOnly`).
+   *  Ignored by every other write mode, whose targets are regenerated rather
+   *  than seeded.
    *  NOTE: POSIX-only. Windows permissions are ACL-based and ignore it. */
   fileMode?: number;
   /** Required for `mergeJson` mode: the JSON patch object (or a template that
@@ -255,8 +256,9 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
       // all-comment, so the file parses to an EMPTY overlay and creating it
       // changes no behaviour — it exists so the user never has to copy the
       // example by hand. `fileMode: 0o600` because the file holds tokens the
-      // moment the user edits it (set on creation only — skipIfExists never
-      // touches an existing file, so a user's own chmod stands).
+      // moment the user edits it. The mode is applied when the file is created;
+      // a copy that predates this contract (or that an editor saved by rename)
+      // has its mode re-asserted on every init/sync run — see `ensureOwnerOnly`.
       path: P.env,
       mode: 'skipIfExists',
       template: 'config.env.tmpl',

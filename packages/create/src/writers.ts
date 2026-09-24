@@ -1,10 +1,12 @@
 import {
+  chmodSync,
   closeSync,
   existsSync,
   openSync,
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
   writeSync,
 } from 'node:fs';
@@ -239,13 +241,58 @@ export function predictManagedBlocks(
  *  `writeFileSync`: a requested mode must land on the temp, and an interrupted
  *  seed write should not leave a half-written `.noir/.env` behind. Byte output
  *  is unchanged for every existing caller (same content, umask default 0o644
- *  when no mode is requested). */
+ *  when no mode is requested).
+ *
+ *  An EXISTING file keeps this writer's create-only contract, but its mode is
+ *  not left to drift: the orchestrator calls {@link ensureOwnerOnly} after the
+ *  emit, which tightens a group/world-readable credential to 0600. */
 export function skipIfExists(absPath: string, content: string, fileMode?: number): WriteOutcome {
   if (existsSync(absPath)) {
     return { path: absPath, mode: 'skipIfExists', written: false };
   }
   atomicWriteFile(absPath, content, fileMode !== undefined ? { mode: fileMode } : {});
   return { path: absPath, mode: 'skipIfExists', written: true };
+}
+
+/** What happened when the owner-only mode was re-asserted on a credential
+ *  file — see {@link ensureOwnerOnly}. */
+export type EnvMode = 'unchanged' | 'healed' | 'unsupported';
+
+/**
+ * Re-assert owner-only (0600) permissions on a credential file that already
+ * exists, returning what was done. Mirrors the install shim's re-assert: the
+ * shim's mode is applied at creation and preserved across rewrites, so
+ * `ensureShimExecutable` has to re-assert `0o755` after every install. A
+ * `.noir/.env` has the same shape — {@link skipIfExists} applies its 0600 only
+ * when it creates the file, and no writer ever opens an existing one — so a
+ * file seeded by an earlier Noir, or rewritten by an editor that saves by
+ * rename, keeps a lax mode indefinitely and makes the environment diagnostic
+ * warn on every command.
+ *
+ * `healed` means group/other read bits were present and the mode was tightened
+ * to 0600; `unchanged` means the file was already owner-only, or is absent or
+ * unreadable (nothing to heal); `unsupported` means the platform has no POSIX
+ * mode bits (Windows permissions are ACL-based), where this degrades to a
+ * no-op. Best-effort throughout — it never throws, because a permission it
+ * cannot fix must not fail the command that would otherwise have succeeded.
+ */
+export function ensureOwnerOnly(absPath: string): EnvMode {
+  if (process.platform === 'win32') return 'unsupported';
+  let mode: number;
+  try {
+    mode = statSync(absPath).mode & 0o777;
+  } catch {
+    return 'unchanged'; // absent or unreadable — nothing to heal
+  }
+  // Owner-only is the stated contract: any group or other bit is a credential
+  // readable by another account, which is exactly the state being healed.
+  if ((mode & 0o077) === 0) return 'unchanged';
+  try {
+    chmodSync(absPath, 0o600);
+  } catch {
+    return 'unchanged'; // best-effort; an unchangeable file stays as it was
+  }
+  return 'healed';
 }
 
 /** Overwrite an existing seed's bytes while keeping the permission bits it
