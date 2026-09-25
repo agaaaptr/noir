@@ -36,6 +36,9 @@ import { fileURLToPath } from 'node:url';
 import { type HostId, mcpConfigPathFor, resolveAdapter } from '@noir-ai/adapters';
 import {
   detectActiveMethod,
+  ensureOwnerOnly,
+  ensureOwnerOnlyDir,
+  type FileModeOutcome,
   type InstallMethod,
   type LoadedEnv,
   latestVersionFromCache,
@@ -95,6 +98,9 @@ export interface DoctorOptions extends CliOptions {
   /** `--dedup`: scan host-context + `.noir/` docs for semantic near-duplicates.
    *  Opt-in (loads the local embedder) so a default `noir doctor` stays fast. */
   dedup?: boolean;
+  /** `--fix`: re-assert owner-only permissions on `.noir/.env` and the store
+   *  DB + directory before the checks read them, and report what was healed. */
+  fix?: boolean;
 }
 
 type Severity = 'ok' | 'warn' | 'fail';
@@ -104,6 +110,12 @@ export interface CheckResult {
   name: string;
   status: Severity;
   detail: string;
+}
+
+/** One permission re-assert from `noir doctor --fix`, repo-relative path. */
+export interface DoctorFix {
+  path: string;
+  outcome: FileModeOutcome;
 }
 
 /** The `data` payload of `noir doctor --json`. */
@@ -151,6 +163,11 @@ export interface DoctorPayload {
     installedVersion: string | null;
     latestKnown: string | null;
   } | null;
+  /** Present only when `--fix` was passed: the permission re-asserts the fix
+   *  pass ran, each with what it did (`healed` = tightened to owner-only,
+   *  `unchanged` = already owner-only or absent, `unsupported` = no POSIX mode
+   *  bits). A clean tree lists `unchanged` entries only. */
+  fixes?: DoctorFix[];
 }
 
 // Small helpers
@@ -1248,6 +1265,17 @@ function renderHuman(payload: DoctorPayload, opts: CliOptions): void {
     ['Check', 'Status', 'Detail'],
     opts,
   );
+  if (payload.fixes) {
+    const healed = payload.fixes.filter((f) => f.outcome === 'healed');
+    if (healed.length > 0) {
+      log(
+        `fixed ${healed.length} permission${healed.length === 1 ? '' : 's'}: ${healed.map((f) => f.path).join(', ')}`,
+        opts,
+      );
+    } else {
+      log('nothing to fix — permissions already owner-only', opts);
+    }
+  }
   const { ok, warn: warnN, fail } = payload.summary;
   if (fail > 0) {
     err(
@@ -1259,6 +1287,28 @@ function renderHuman(payload: DoctorPayload, opts: CliOptions): void {
   } else {
     success(`all ${ok} check${ok === 1 ? '' : 's'} passed`, opts);
   }
+}
+
+/** The `--fix` pass: re-assert owner-only permissions on the files Noir keeps
+ *  private — `.noir/.env` (the credential seed) and, when the project is
+ *  initialized, the store DB and its directory (the indexed context + memory).
+ *  Each is tightened to 0600/0700 by {@link ensureOwnerOnly} /
+ *  {@link ensureOwnerOnlyDir}, which are best-effort no-ops on a missing file
+ *  or a platform without POSIX mode bits. Returns one entry per target so the
+ *  payload reports exactly what changed; a clean tree is all `unchanged`. */
+export function fixOwnerOnlyPermissions(
+  root: string,
+  project: ProjectInfo | undefined,
+): DoctorFix[] {
+  const fixes: DoctorFix[] = [
+    { path: '.noir/.env', outcome: ensureOwnerOnly(join(paths.noirDir(root), '.env')) },
+  ];
+  if (project) {
+    const dbRel = `.noir/store/${project.id}.db`;
+    fixes.push({ path: dbRel, outcome: ensureOwnerOnly(join(root, dbRel)) });
+    fixes.push({ path: '.noir/store', outcome: ensureOwnerOnlyDir(paths.storeDir(root)) });
+  }
+  return fixes;
 }
 
 /**
@@ -1275,6 +1325,11 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   await checkRuntime(checks);
   const { project, result: configResult } = checkConfig(root);
   checks.push(configResult);
+  // The permission heal (--fix) runs before the checks that read the healed
+  // files — the store DB is opened by checkStore next, and the .env mode is read
+  // by checkNoirEnv — so every row reports the post-heal state, and the payload
+  // carries what the pass did via `fixes`.
+  const fixes = opts.fix === true ? fixOwnerOnlyPermissions(root, project) : undefined;
   await checkDaemon(checks, project);
   const { vecOk } = await checkNativeDeps(checks);
   await checkStore(checks, project, root);
@@ -1318,6 +1373,7 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
       installedVersion: installCheck.installedVersion,
       latestKnown: installCheck.latestKnown,
     },
+    ...(fixes ? { fixes } : {}),
   };
 
   if (opts.json === true) {

@@ -16,6 +16,7 @@
 import { Box, Text } from 'ink';
 import type { ReactElement } from 'react';
 import { c } from '../../theme.js';
+import { displayWidth, padToWidth, truncateToWidth } from '../../width.js';
 import { LIST_NAV_HINT } from '../hints.js';
 import { Panel } from '../Panel.js';
 import { type Corpus, type PaletteRow, VISIBLE_ROWS } from './rows.js';
@@ -39,7 +40,7 @@ function wrap(text: string, width: number): string[] {
   let cur = '';
   for (const w of words) {
     if (cur.length === 0) cur = w;
-    else if (`${cur} ${w}`.length <= width) cur = `${cur} ${w}`;
+    else if (displayWidth(`${cur} ${w}`) <= width) cur = `${cur} ${w}`;
     else {
       lines.push(cur);
       cur = w;
@@ -52,7 +53,7 @@ function wrap(text: string, width: number): string[] {
 /** Truncate a label to fit the fixed label column. */
 function truncateLabel(label: string): string {
   const max = LABEL_WIDTH - 2;
-  return label.length > max ? `${label.slice(0, max - 1)}…` : label;
+  return truncateToWidth(label, max);
 }
 
 /** Placeholder hint for the query row, per corpus. */
@@ -158,14 +159,14 @@ export function Palette({ corpus, query, active, rows, arg }: PaletteProps): Rea
     const focused = isActive && arg === undefined;
     const prefix = focused ? '▸ ' : '  ';
     const label = truncateLabel(row.primary);
-    const labelCol = (prefix + label).padEnd(LABEL_WIDTH);
+    const labelCol = padToWidth(prefix + label, LABEL_WIDTH);
     // Hint (right column): the argv for command rows, prefixed with `/` so it
     // reads as "the command that runs on Enter" (matching the dashboard's
     // `/command` convention). Non-command rows use the secondary line. Clipped
     // to the hint column so a long keybinding description (help corpus) never
     // overflows the panel.
     const hintRaw = row.argv ? `/${row.argv.join(' ')}` : row.secondary;
-    const hint = hintRaw.length > HINT_WIDTH ? `${hintRaw.slice(0, HINT_WIDTH - 1)}…` : hintRaw;
+    const hint = truncateToWidth(hintRaw, HINT_WIDTH);
 
     if (focused) {
       // Reverse video highlights the whole row — no inner color needed.

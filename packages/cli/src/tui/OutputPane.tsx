@@ -9,6 +9,7 @@
 import { Text } from 'ink';
 import type { ReactElement } from 'react';
 import { c, contentWidth } from '../theme.js';
+import { displayWidth, truncateToWidth } from '../width.js';
 
 interface OutputPaneProps {
   lines: readonly string[];
@@ -79,8 +80,13 @@ export function OutputPane({
     <>
       {title !== undefined ? <Text wrap="truncate-end">{c.dim(`── ${title} ──`)}</Text> : null}
       {rows.map((row) => {
+        // Cut a too-wide line at the VISIBLE width, not the code-unit count:
+        // a wide CJK glyph or emoji occupies two columns, so a `.slice` would
+        // leave the row over budget. Lines that already fit pass through
+        // untouched (their ANSI colour is kept); a cut line is measured after
+        // stripping ANSI so the marker lands at the right column.
         const truncated =
-          row.text.length > width ? `${row.text.slice(0, Math.max(1, width - 1))}…` : row.text;
+          displayWidth(row.text) > width ? truncateToWidth(row.text, width) : row.text;
         // wrap="truncate-end" guarantees a long line never wraps inside the
         // bordered panel — the manual truncate above is the first line of
         // defense; this is the second (Ink will hard-truncate if the panel is

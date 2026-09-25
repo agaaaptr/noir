@@ -722,10 +722,17 @@ export function createProgram(): Command {
       '--dedup',
       'scan host-context + .noir/ docs for semantic near-duplicates (loads the local embedder)',
     )
+    .option('--fix', 're-assert owner-only permissions on .noir/.env and the store DB + directory')
     .action(async (...args: unknown[]) => {
       const g = actionGlobals(args);
-      const dedup = trailingCmd(args).opts().dedup === true;
-      await doctor({ ...toCliOptions(g), ...(dedup ? { dedup: true } : {}) });
+      const opts = trailingCmd(args).opts();
+      const dedup = opts.dedup === true;
+      const fix = opts.fix === true;
+      await doctor({
+        ...toCliOptions(g),
+        ...(dedup ? { dedup: true } : {}),
+        ...(fix ? { fix: true } : {}),
+      });
     });
 
   // New subcommand groups.
