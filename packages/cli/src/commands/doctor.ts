@@ -928,8 +928,6 @@ export function checkOutputHygiene(checks: CheckResult[], root: string): Hygiene
   return result;
 }
 
-// Deferred — semantic duplicate detection (`--dedup`; loads the embedder).
-
 /** Local embedder shape (@noir-ai/context's `EmbedFn`). */
 type EmbedLike = (text: string) => Promise<Float32Array>;
 

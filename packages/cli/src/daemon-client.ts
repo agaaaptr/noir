@@ -7,6 +7,14 @@
 // the CLI to that daemon — every command module calls {@link callDaemonTool} (or
 // the multi-call {@link withDaemon}) instead of importing the store directly.
 //
+// This module also owns the one exception: {@link withInProcessRead}, the
+// daemon-down READ fallback. When the probe confirms the daemon is down,
+// `context search`, `memory recall`, `memory sessions` and `task status` run
+// against engines built in-process over the project store opened READ-ONLY, so
+// the single-writer rule still holds and a write attempted on that handle
+// refuses with the daemon's read-only error. Writes keep the daemon-required
+// path (exit 4 when the daemon is unreachable).
+//
 // Flow: {@link ensureDaemonRunning} (from @noir-ai/daemon) reads THIS project's
 // daemon record (`~/.noir/daemons/<projectId>.json`, NOIR_DAEMON_DIR override
 // for tests) and STARTS a foreground daemon if no healthy one is present,

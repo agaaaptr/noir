@@ -737,10 +737,10 @@ export interface TaskResearchOptions extends TaskOptions {
 }
 
 export async function taskResearch(opts: TaskResearchOptions): Promise<void> {
-  // List findings by reading the active task's status (which carries history
-  // — the research records live in the engine's readResearch KV). For now,
-  // surface through the daemon: call workflow_status and report the task's
-  // Show status, then note that `noir task research record` writes findings.
+  // A status view rather than a listing: findings are written by
+  // `noir task research record` (appended to `research:<taskId>` in the engine's
+  // KV, and read back by the research grounder), so this command reports the
+  // active task's status through the daemon and names the record verb.
   const s = await fetchStatus(opts, opts.id);
   if (opts.json === true) {
     process.stdout.write(`${JSON.stringify({ ok: true, data: s })}\n`);

@@ -1,6 +1,7 @@
-// SP-C deferred — `noir doctor --dedup` semantic dedup (TDD). The embedder is
-// INJECTED (a deterministic one-hot fake) so candidate-collection + reporting
-// are tested without loading the real MiniLM/onnx embedder.
+// `noir doctor --dedup`: candidate collection and the semantic-dup row.
+// The embedder is INJECTED (a deterministic one-hot fake) so candidate
+// collection + reporting are tested without loading the real MiniLM/onnx
+// embedder.
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

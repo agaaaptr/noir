@@ -24,9 +24,12 @@
 //
 // Active commands (`context *`, `memory *`, `task *`) do real work and KEEP using
 // `withDaemon` (auto-start acceptable for commands that perform writes/reads with
-// side-effects); their daemon-down path is the same clean exit-4 envelope. Only
-// `status` is probe-only — in-process read fallback for the active commands is
-// deferred to v1.x.
+// side-effects). A daemon-down probe degrades their READS instead of failing
+// them: `context search`, `memory recall`, `memory sessions` and `task status`
+// run against a read-only in-process engine (`withInProcessRead`), which
+// preserves the daemon's single-writer discipline; only the write paths
+// (`context index`, `memory record`, …) keep the daemon-required exit-4
+// envelope. `status` itself stays probe-only and never opens the store.
 //
 // Stream discipline: `--json` emits the versioned `{ok,data}` envelope
 // to STDOUT (the only stdout write); the human table + banner go to STDERR via
