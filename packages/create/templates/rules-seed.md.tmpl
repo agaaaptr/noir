@@ -27,6 +27,9 @@
 - Keep every comment, summary, and document to what a reader can act on: no decorative banners
   or dividers, no step-by-step narration of the code, no decorative emoji or icons. The
   `noir-code-hygiene` skill carries the full set of defects and their fixes.
+- Write in the project's own language: a character from another script, or an invisible one
+  (a zero-width space, a byte-order mark, the replacement character a bad decode leaves),
+  means the text was not written for this codebase.
 - `noir doctor` enforces the same rules over this repository: fix every fail-tier finding, and
   read a warn-tier finding as a question about the line rather than a rule to satisfy.
 
