@@ -38,8 +38,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       # Validate documentation: broken links + anchors, stale version refs,
-      # half-generated reference stubs. (The release registry is validated
-      # separately by `pnpm release:validate`.)
+      # half-generated reference stubs. (The separate release registry has its
+      # own integrity check, `pnpm release:validate`, against npm + git tags —
+      # no workflow runs it, so invoke it by hand when a release entry changes.)
       - run: pnpm docs:validate
       # Output-hygiene gate: a FAIL-tier finding blocks the merge (non-zero
       # exit); WARN-tier findings are printed and do not block. The scope is

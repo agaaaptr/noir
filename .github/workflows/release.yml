@@ -4,7 +4,7 @@ name: Release
 # Auth = npm automation token (the NPM_TOKEN repo secret — a granular publish-only
 # token created once on npm). Every publish ALSO carries a SLSA provenance
 # attestation (--provenance), which uses GitHub OIDC (the `id-token: write`
-# permission) independent of the publish token. See docs/releasing.md §1.
+# permission) independent of the publish token. See docs/how-to/releasing.md §1.
 #
 # CHANNEL = version-string-based (NOT branch-based):
 #   - tag `vX.Y.Z` (plain SemVer) → dist-tag `latest` (stable).
@@ -27,7 +27,9 @@ on:
     tags:
       - "v*"
 
-# Never run two publishes for the same tag; a new tag push cancels the in-flight one.
+# One publish at a time per tag: a second run for the same tag waits for the
+# in-flight one instead of cancelling it, so a half-published release is never
+# aborted part-way (npm versions are immutable once accepted).
 concurrency:
   group: release-${{ github.ref_name }}
   cancel-in-progress: false
@@ -188,7 +190,7 @@ jobs:
         run: |
           set -e
           if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "NPM_TOKEN secret is not set — see docs/releasing.md §1"
+            echo "NPM_TOKEN secret is not set — see docs/how-to/releasing.md §1"
             exit 1
           fi
           echo "Publishing with npm dist-tag: $DIST_TAG"
@@ -200,7 +202,7 @@ jobs:
           done
         # Note: if this step fails mid-iteration (e.g. 5 of 11 packages published),
         # npm has already accepted the published versions and they cannot be overwritten.
-        # Recovery: bump to next beta iteration and re-publish all 11 (see docs/releasing.md §8).
+        # Recovery: bump to next beta iteration and re-publish all 11 (see docs/how-to/releasing.md §8).
 
       # ── 7b. Generate installer artifacts + SHA256SUMS + attestations ──
       # Pinned, versioned installers (Astral/uv model): copy the scripts to a
