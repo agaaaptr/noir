@@ -66,6 +66,11 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm docs:validate
+      # Runs the same scan `noir doctor` reports, so a fail-tier finding stops
+      # the tag before the publish job can reach npm. It reads the built scan
+      # module, so it comes after `pnpm build`.
+      - name: Output-hygiene gate (fail-tier blocks)
+        run: pnpm hygiene:gate
 
   publish:
     name: Publish @noir-ai/* (unified, provenance; version-string-based channel)
