@@ -214,6 +214,8 @@ const IRREGULAR_SCRIPT_SOURCES = [
   String.raw`\u{f900}-\u{faff}`, // CJK compatibility ideographs
   String.raw`\u{ff00}-\u{ffef}`, // Fullwidth and halfwidth forms
   String.raw`\u{200b}-\u{200f}`, // Zero-width space, joiners and the bidirectional marks
+  String.raw`\u{202a}-\u{202e}`, // Bidirectional embeddings and overrides
+  String.raw`\u{2066}-\u{2069}`, // Bidirectional isolates
   String.raw`\u{fffd}`, // the replacement character
   String.raw`\u{e000}-\u{f8ff}`, // Private use area
   String.raw`\u{f0000}-\u{ffffd}`, // Private use planes 15 and 16

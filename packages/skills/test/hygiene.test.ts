@@ -219,6 +219,16 @@ describe('fail tier: another script, or an invisible character', () => {
     expect(ids(`const broken = '${replacement}';`)).toContain('no-irregular-script');
   });
 
+  it('flags a bidirectional override or isolate, which reorders what is displayed', () => {
+    // A right-to-left override (U+202E) and a left-to-right isolate (U+2066)
+    // draw nothing themselves, but they reorder the characters around them, so
+    // the text a reader sees is not the text the file contains.
+    const rightToLeftOverride = String.fromCharCode(0x202e);
+    const leftToRightIsolate = String.fromCharCode(0x2066);
+    expect(ids(`const name = '${rightToLeftOverride}abc';`)).toContain('no-irregular-script');
+    expect(ids(`const name = '${leftToRightIsolate}abc';`)).toContain('no-irregular-script');
+  });
+
   it('reports the line the character sits on, in prose as well as in code', () => {
     const findings = checkHygiene(['# Title', '', 'the 汉 character'].join('\n'), 'markdown');
     expect(findings.map((f) => [f.line, f.id])).toEqual([[3, 'no-irregular-script']]);
