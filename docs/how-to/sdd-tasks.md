@@ -188,7 +188,7 @@ to run — the gate wants a real signal, not a rubber stamp.
 Findings are the raw material the spec gate looks for:
 
 ```bash
-noir task research                                 # list (shows the active task's status)
+noir task research                                 # show the active task's research status
 noir task research-record --type discovery \
   --text "The CSV writer already streams; no buffering needed." \
   --source src/export/writer.ts
