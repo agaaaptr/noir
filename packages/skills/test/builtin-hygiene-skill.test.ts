@@ -32,7 +32,7 @@ function body(): string {
   return bodyOf(loaded().skillMd);
 }
 
-/** The nine defects the guidance must cover, each identified by a word its
+/** The ten defects the guidance must cover, each identified by a word its
  *  section heading carries. */
 const REQUIRED_DEFECTS = [
   'separator', // decorative separators and banners
@@ -41,6 +41,7 @@ const REQUIRED_DEFECTS = [
   'empty label', // empty labels
   'stale', // stale comments
   'emoji', // decorative icons and emoji
+  'another script', // unexpected characters from another script
   'verbosity', // verbosity
   'jargon', // internal jargon
   'assumption', // unstated assumptions

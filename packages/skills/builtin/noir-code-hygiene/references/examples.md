@@ -145,6 +145,22 @@ export function read(id: string): User | undefined {
 }
 ```
 
+## Unexpected characters from another script
+
+Before:
+
+```ts
+// The retry 次数 is capped so a flapping upstream cannot hold the request open.
+const MAX_RETRIES = 3;
+```
+
+After:
+
+```ts
+// The retry count is capped so a flapping upstream cannot hold the request open.
+const MAX_RETRIES = 3;
+```
+
 ## Verbosity
 
 Before:
@@ -219,12 +235,13 @@ sudo systemctl restart api
 
 ## Which tier each shape lands in
 
-The divider, the ordinal narration and the decorative emoji are mechanical, and
-the gate fails on them — through `noir skills lint` for a skill body and through
-`noir doctor` for a repository. The marker with no owner and the long comment
-block are warnings instead: a marker is sometimes the right note and a block is
-sometimes the right length, so those rules ask whether the line earns its place
-rather than forbidding the shape.
+The divider, the ordinal narration, the decorative emoji and a character from
+another script are mechanical, and the gate fails on them — through
+`noir skills lint` for a skill body and through `noir doctor` for a repository.
+The marker with no owner and the long comment block are warnings instead: a
+marker is sometimes the right note and a block is sometimes the right length, so
+those rules ask whether the line earns its place rather than forbidding the
+shape.
 
 Restating, stale text, jargon and unstated assumptions have no pattern behind
 them at all, so only a reader catches them. That is why the skill covers them

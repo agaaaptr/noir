@@ -13,7 +13,7 @@ references:
 # noir-code-hygiene
 
 Text that reads as machine-generated fails in a small number of ways, and every
-one of them is a sentence a reader cannot act on. The nine defects below are
+one of them is a sentence a reader cannot act on. The ten defects below are
 those ways, each as a Tell (what it looks like), a Why (what it costs a reader)
 and a Fix (what to write instead). Four of them — restating, stale text, jargon,
 unstated assumptions — are judgements a person makes; the rest are mechanical
@@ -86,6 +86,24 @@ job is to sit above another heading.
 **Why:** the glyph takes attention and returns none of it, it renders differently or not at all across terminals and fonts, and it announces the text as generated. In output a screen reader reads aloud, it is noise in the middle of a sentence.
 
 **Fix:** remove it and let the words carry the meaning. A glyph that is part of a program's own output — a status badge, a CLI label — belongs inside the string that prints it, not in the text around the code.
+
+### Unexpected characters from another script
+
+**Tell:** a character from a writing system this project does not write in — Han,
+Kana, Hangul, Cyrillic, Greek, Arabic, Hebrew, Thai, Devanagari — or a fullwidth
+form, a zero-width space, a byte-order mark, or the replacement character a bad
+decode leaves behind. It turns up inside a word or a string, where no author
+would have typed it.
+
+**Why:** a model can leak a token from another script into generated text, and
+bytes that were decoded wrongly arrive as an invisible character or a
+replacement mark. Either way the reader is shown something nobody meant to
+write, and inside a string it can change what the code does.
+
+**Fix:** rewrite the text in the project's language and delete the invisible
+character; a deliberate fixture — a test that measures how a wide glyph is laid
+out, say — states its own exemption with the marker instead of the text keeping
+the character. `noir doctor`'s hygiene check reports these as failures.
 
 ### Verbosity
 
