@@ -13,8 +13,14 @@ import { defineConfig } from 'tsup';
 //      runtime `new URL('./tui/index.js', import.meta.url)` resolves. React
 //      and Ink are external (resolved from node_modules at runtime).
 //
-// `clean: true` only on the first config; the second writes into the already-
-// clean dist without wiping it (tsup runs array configs in order).
+// The output-hygiene scan (src/hygiene-scan.ts) is NOT in this array: it is
+// built by a SEPARATE tsup invocation (tsup.hygiene.config.ts, chained after
+// this one by the package's `build` script). tsup runs array configs in
+// PARALLEL, and config 1's `clean: true` wipes the shared dist/ — its d.ts
+// build deletes every `*.d.ts` in it — so a hygiene-scan entry here would race
+// that clean and lose its `dist/hygiene-scan.d.ts`, breaking the published
+// `./hygiene-scan` subpath export. Running the scan after the clean, in its own
+// invocation, is what keeps both `dist/hygiene-scan.js` and its d.ts present.
 export default defineConfig([
   {
     entry: ['src/index.ts', 'src/bin.ts'],
@@ -42,17 +48,5 @@ export default defineConfig([
     // package.json declares them as dependencies, so a global `npm i -g` lays
     // them down next to dist/). External keeps the dashboard chunk tiny.
     external: ['react', 'react/jsx-runtime', 'ink'],
-  },
-  // The output-hygiene scan, built as its own entry so the CI gate
-  // (scripts/hygiene-gate.mjs) can import it without pulling the whole CLI
-  // graph (commander, the daemon, the model layer). It keeps only
-  // `@noir-ai/skills` as a runtime dependency, so the gate never loads a native
-  // binding. No banner: this is an imported module, not an executable.
-  {
-    entry: ['src/hygiene-scan.ts'],
-    format: ['esm'],
-    dts: true,
-    sourcemap: true,
-    splitting: false,
   },
 ]);

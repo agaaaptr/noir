@@ -45,7 +45,8 @@ jobs:
       # exit); WARN-tier findings are printed and do not block. The scope is
       # `scanOutputHygiene` (packages/cli/src/hygiene-scan.ts), the same scan
       # `noir doctor` reports, so CI and the doctor check cannot drift. Runs
-      # after build so the gate imports the built dist/hygiene-scan.js.
+      # after build so the gate can import the declared `@noir-ai/cli/hygiene-scan`
+      # subpath (its dist/hygiene-scan.js is a build output).
       - name: Output-hygiene gate (fail-tier blocks)
         run: pnpm hygiene:gate
 

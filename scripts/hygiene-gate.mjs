@@ -7,15 +7,28 @@
 // packages/cli/src/hygiene-scan.ts, the same scan `noir doctor` reports, so CI
 // and the doctor check cannot drift apart. The exemption markers and the
 // planning-corpus exclusions are part of that scan, so this script honours them
-// without a list of its own.
+// without a list of its own. The summary line (including what the scan left
+// out) is `hygieneDetail` from the same module — this script re-derives none of
+// it.
 //
 // Offline and free: reads files under the repository only, no network, no key.
 
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { scanOutputHygiene } from '../packages/cli/dist/hygiene-scan.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+// Import the DECLARED subpath (@noir-ai/cli/hygiene-scan → dist/hygiene-scan.js)
+// rather than a dist-relative path, so the gate exercises the same entry a
+// consumer gets. On a fresh clone dist/ does not exist yet: fail with a clear
+// message instead of a module-not-found stack.
+if (!existsSync(join(root, 'packages', 'cli', 'dist', 'hygiene-scan.js'))) {
+  console.error('output hygiene: @noir-ai/cli is not built — run `pnpm build` first');
+  process.exit(1);
+}
+const { hygieneDetail, scanOutputHygiene } = await import('@noir-ai/cli/hygiene-scan');
+
 const result = scanOutputHygiene(root);
 
 for (const f of result.findings) {
@@ -23,19 +36,6 @@ for (const f of result.findings) {
   else console.log(`warn ${f.path}:${f.line} ${f.id}`);
 }
 
-const notes = [];
-if (result.skipped > 0) notes.push(`${result.skipped} over-size file(s) skipped`);
-if (result.truncated) notes.push('stopped at the file cap');
-const note = notes.length > 0 ? ` (${notes.join('; ')})` : '';
-
-if (result.scanned === 0) {
-  console.log(
-    'output hygiene: nothing to scan (no packages/*/src, packages/*/test, scripts/ or documents found)',
-  );
-} else {
-  console.log(
-    `output hygiene: ${result.fail} fail, ${result.warn} warn across ${result.scanned} file(s)${note}`,
-  );
-}
+console.log(`output hygiene: ${hygieneDetail(result)}`);
 
 if (result.fail > 0) process.exitCode = 1;

@@ -58,6 +58,15 @@ import { pidAlive, readProjectDaemonRecord } from '@noir-ai/daemon';
 import { resolveModelConfig } from '@noir-ai/model';
 import { PROBE_TIMEOUT_MS } from '../daemon-client.js';
 import {
+  HYGIENE_FINDING_CAP,
+  HYGIENE_MAX_FILE_BYTES,
+  HYGIENE_MAX_FILES,
+  type HygieneScanFinding,
+  type HygieneScanResult,
+  hygieneDetail,
+  scanOutputHygiene,
+} from '../hygiene-scan.js';
+import {
   type CliOptions,
   EXIT,
   error as err,
@@ -68,6 +77,18 @@ import {
   warn,
 } from '../output.js';
 import { type BadgeState, badge } from '../theme.js';
+
+// The output-hygiene constants and types are re-exported here so a consumer
+// that imports the doctor command gets the scan's public surface without a
+// second import; the scan itself stays the single source of truth in
+// ../hygiene-scan.ts (see the `doctor.ts` shim for the legacy path).
+export {
+  HYGIENE_FINDING_CAP,
+  HYGIENE_MAX_FILE_BYTES,
+  HYGIENE_MAX_FILES,
+  type HygieneScanFinding,
+  type HygieneScanResult,
+};
 
 /** Options accepted by `doctor`: the global flags + the opt-in `--dedup`. */
 export interface DoctorOptions extends CliOptions {
@@ -868,24 +889,6 @@ export function checkNestedNoir(
 // report row on top: a fail-tier finding makes the check CRITICAL (exit 1); a
 // warn-tier finding warns and never exit-1s, exactly as the daemon and provider
 // rows do not.
-
-import {
-  HYGIENE_FINDING_CAP,
-  HYGIENE_MAX_FILE_BYTES,
-  HYGIENE_MAX_FILES,
-  type HygieneScanFinding,
-  type HygieneScanResult,
-  hygieneDetail,
-  scanOutputHygiene,
-} from '../hygiene-scan.js';
-
-export {
-  HYGIENE_FINDING_CAP,
-  HYGIENE_MAX_FILE_BYTES,
-  HYGIENE_MAX_FILES,
-  type HygieneScanFinding,
-  type HygieneScanResult,
-};
 
 /**
  * Reads the repository's own source and documents through the shared scan and

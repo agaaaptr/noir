@@ -50,7 +50,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsup --config tsup.hygiene.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
