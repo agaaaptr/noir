@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
-import { type HostId, noirStdioArgs, resolveAdapter } from '@noir-ai/adapters';
+import { type HostId, mcpConfigPathFor, noirStdioArgs, TRANSPORT_KEYS } from '@noir-ai/adapters';
 import {
   atomicWriteFile,
   loadProjectInfo,
@@ -259,13 +259,6 @@ const envTemplates: MigrationScript = {
 
 // --- 1.2.0 → 1.3.0: put a joined repo's MCP entry back on the bridge -------
 
-/** The keys that say HOW a host reaches the Noir server — `command`/`args` for
- *  stdio, `type`/`url` for the http endpoint. Rewriting the transport replaces
- *  exactly these, so an entry never ends up describing two transports at once,
- *  and everything else the entry carries (`env`, `headers`, `headersHelper`, …)
- *  is the user's and is kept. */
-const TRANSPORT_KEYS: ReadonlySet<string> = new Set(['command', 'args', 'type', 'url']);
-
 /** Where this repo's host keeps its MCP config, repo-relative and POSIX, or
  *  `null` when the file is not there. The host is read from `.noir/config.yml`
  *  exactly as the scaffold reads it; an absent or unreadable config means the
@@ -278,7 +271,7 @@ function mcpConfigPath(root: string): { rel: string; abs: string } | null {
     // No readable project id/config — fall back to the default host rather than
     // failing the migration. Its config path is the one the older join flow used.
   }
-  const abs = resolveAdapter(host).mcpConfigPath?.({ root }) ?? join(root, '.mcp.json');
+  const abs = mcpConfigPathFor(host, root);
   if (!existsSync(abs)) return null;
   return { rel: relative(root, abs).split(sep).join('/'), abs };
 }

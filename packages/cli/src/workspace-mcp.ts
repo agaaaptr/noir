@@ -5,14 +5,9 @@
 // reaches the server): every other server in the file, and every other key on the
 // entry itself, is kept as the user left it.
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { type HostId, resolveAdapter } from '@noir-ai/adapters';
+import { type HostId, mcpConfigPathFor, noirStdioArgs, TRANSPORT_KEYS } from '@noir-ai/adapters';
 import { atomicWriteFile, resolveNoirCommand } from '@noir-ai/core';
 import { type CliOptions, EXIT, fail } from './output.js';
-
-function mcpPathFor(root: string, host: HostId): string {
-  return resolveAdapter(host).mcpConfigPath?.({ root }) ?? join(root, '.mcp.json');
-}
 
 /** Read + parse an existing host MCP config, or `null` when the file is absent. */
 function readJson(path: string): { mcpServers?: Record<string, unknown> } | null {
@@ -57,11 +52,6 @@ function isNoirEmitted(mcpServers: Record<string, unknown> | undefined): boolean
   return noir.type === 'http';
 }
 
-/** The keys that say HOW a host reaches the server — `command`/`args` for stdio,
- *  `type`/`url` for http. Rewriting the transport replaces exactly these, so an
- *  entry never ends up describing two transports at once. */
-const TRANSPORT_KEYS: ReadonlySet<string> = new Set(['command', 'args', 'type', 'url']);
-
 /** The `noir` entry as a plain key/value record, or `{}` when there is none (or
  *  it is not an object) — so a merge always has something to spread. */
 function noirEntry(mcpServers: Record<string, unknown> | undefined): Record<string, unknown> {
@@ -79,7 +69,7 @@ function writeNoirTransport(
   transport: Record<string, unknown>,
   opts: CliOptions & { force?: boolean },
 ): void {
-  const path = mcpPathFor(root, host);
+  const path = mcpConfigPathFor(host, root);
   const existing = loadExisting(path, opts);
   const kept = Object.fromEntries(
     Object.entries(noirEntry(existing?.mcpServers)).filter(([key]) => !TRANSPORT_KEYS.has(key)),
@@ -107,7 +97,7 @@ export function writeWorkspaceEntry(
   writeNoirTransport(
     root,
     host,
-    { command: resolveNoirCommand(), args: ['mcp', 'serve', '--stdio', '--workspace', name] },
+    { command: resolveNoirCommand(), args: noirStdioArgs(name) },
     opts,
   );
 }
@@ -118,10 +108,5 @@ export function writeStdioEntry(
   host: HostId,
   opts: CliOptions & { force?: boolean },
 ): void {
-  writeNoirTransport(
-    root,
-    host,
-    { command: resolveNoirCommand(), args: ['mcp', 'serve', '--stdio'] },
-    opts,
-  );
+  writeNoirTransport(root, host, { command: resolveNoirCommand(), args: noirStdioArgs() }, opts);
 }

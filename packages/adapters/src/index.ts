@@ -11,7 +11,12 @@ export { claudeAdapter } from './claude.js';
 export { cursorAdapter } from './cursor.js';
 export { geminiAdapter } from './gemini.js';
 export { defaultHandoffBlock, hostLaunchDirective } from './handoff.js';
-export { buildMcpServersJson, noirStdioArgs } from './mcp.js';
+export {
+  buildMcpServersJson,
+  mcpConfigPathFor,
+  noirStdioArgs,
+  TRANSPORT_KEYS,
+} from './mcp.js';
 export { opencodeAdapter } from './opencode.js';
 export type {
   EmitContext,

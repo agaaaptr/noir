@@ -1,4 +1,29 @@
-import type { IntegrationMcpEmission, McpConfigOptions } from './types.js';
+import { join } from 'node:path';
+import { resolveAdapter } from './index.js';
+import type { HostId, IntegrationMcpEmission, McpConfigOptions } from './types.js';
+
+/**
+ * The keys that say HOW a host reaches the Noir server — `command`/`args` for
+ * stdio, `type`/`url` for the http endpoint. Rewriting the transport replaces
+ * exactly these, so an entry never ends up describing two transports at once,
+ * and everything else the entry carries (`env`, `headers`, `headersHelper`, …)
+ * is the user's and is kept. Exported once here (beside `noirStdioArgs`) and
+ * shared by the cli's workspace rewrite and the create scaffold migration,
+ * which both strip these keys — the set must never be re-declared there.
+ */
+export const TRANSPORT_KEYS: ReadonlySet<string> = new Set(['command', 'args', 'type', 'url']);
+
+/**
+ * Where a host keeps its MCP config file (absolute), with the `.mcp.json`
+ * default a host that does not declare a path falls back to. This is the ONE
+ * spelling of the default fallback: the cli's workspace rewrite, the create
+ * manifest and its scaffold migration, and the doctor's host check all resolve
+ * the same way, so a host that relocates its config changes exactly one
+ * expression instead of four drifted copies.
+ */
+export function mcpConfigPathFor(host: HostId, root: string): string {
+  return resolveAdapter(host).mcpConfigPath?.({ root }) ?? join(root, '.mcp.json');
+}
 
 /**
  * The arguments that start Noir's MCP server over stdio. A repo that has joined

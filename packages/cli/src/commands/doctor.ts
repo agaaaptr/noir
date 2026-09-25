@@ -33,7 +33,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, type Stats, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { type HostId, resolveAdapter } from '@noir-ai/adapters';
+import { type HostId, mcpConfigPathFor, resolveAdapter } from '@noir-ai/adapters';
 import {
   detectActiveMethod,
   type InstallMethod,
@@ -808,7 +808,7 @@ function checkHostArtifacts(
   // prune in emitSkillsToDir deleted it on every noir init/create/sync).
   // Cursor's rules ride AGENTS.md's `@.noir/rules/RULES.md` import instead.
   // Host MCP config (fallback .mcp.json for claude/agents-md).
-  expected.push(relOr(adapter.mcpConfigPath?.(ectx) ?? '.mcp.json', root));
+  expected.push(relOr(mcpConfigPathFor(host, root), root));
 
   const missing = expected.filter((p) => !existsSync(joinRoot(root, p)));
   const status: Severity = missing.length === 0 ? 'ok' : 'warn';
