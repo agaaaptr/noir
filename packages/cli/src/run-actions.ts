@@ -4,7 +4,7 @@
 // continued, without leaving the terminal to re-open an editor or the host.
 //
 // Every action delegates to a command seam that already exists (`memory
-// capture`, `task research record`, `handoff`, a fresh host invocation, a file
+// capture`, `task research-record`, `handoff`, a fresh host invocation, a file
 // write) instead of talking to the daemon itself: the single-writer, privacy
 // and exit-code contracts keep living in one place per concern. "Continue this
 // session" is a NEW invocation of the same single-shot run path — the host is

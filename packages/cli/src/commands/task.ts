@@ -729,8 +729,8 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
   fail(EXIT.ERROR, `task verify: ${detail}`, opts);
 }
 
-// `noir task research [<id>]` — list research findings
-// `noir task research record --type <t> --text "..." [--source <ref>] [--task <id>]`
+// `noir task research [<id>]` — show research status
+// `noir task research-record --type <t> --text "..." [--source <ref>] [--task <id>]`
 //   → workflow_research_record
 export interface TaskResearchOptions extends TaskOptions {
   id?: string;
@@ -738,7 +738,7 @@ export interface TaskResearchOptions extends TaskOptions {
 
 export async function taskResearch(opts: TaskResearchOptions): Promise<void> {
   // A status view rather than a listing: findings are written by
-  // `noir task research record` (appended to `research:<taskId>` in the engine's
+  // `noir task research-record` (appended to `research:<taskId>` in the engine's
   // KV, and read back by the research grounder), so this command reports the
   // active task's status through the daemon and names the record verb.
   const s = await fetchStatus(opts, opts.id);
@@ -747,7 +747,7 @@ export async function taskResearch(opts: TaskResearchOptions): Promise<void> {
     return;
   }
   renderStatusRow(s, opts);
-  info('research findings are recorded via `noir task research record` (list + record)', opts);
+  info('this is a status view; record findings with `noir task research-record`', opts);
 }
 
 export interface TaskResearchRecordOptions extends TaskOptions {

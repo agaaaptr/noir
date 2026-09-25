@@ -1045,7 +1045,7 @@ export function createProgram(): Command {
     });
   taskGrp
     .command('research')
-    .description('list research findings for the active (or named) task')
+    .description('show research status for the active (or named) task')
     .argument('[id]', 'task id (defaults to active)')
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);

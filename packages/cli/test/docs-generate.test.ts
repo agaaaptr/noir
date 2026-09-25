@@ -232,6 +232,11 @@ describe('docs generator — CLI reference', () => {
     expect(cliReference).toContain('### noir task research-record');
     expect(cliReference).toContain('`--source <ref>`');
     expect(cliReference).toContain('noir install|migrate [options] [spec]');
+
+    // `noir task research` only reports status; findings are written by
+    // `noir task research-record`. The row used to promise a listing the
+    // command never printed, so the generated description is pinned here.
+    expect(cliReference).toContain('show research status for the active (or named) task');
   });
 });
 

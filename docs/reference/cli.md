@@ -442,7 +442,7 @@ run configured verify checks and submit evidence to the verify gate
 
 **Usage:** `noir task research [options] [id]`
 
-list research findings for the active (or named) task
+show research status for the active (or named) task
 
 ### noir task research-record
 
