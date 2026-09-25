@@ -11,7 +11,7 @@
 **Current beta:** `1.15.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.15.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-16T05:41:23.564Z*
+*Last auto-generated: 2026-09-25T03:12:00.897Z*
 <!-- /noir:doc:status -->
 
 ---
@@ -124,7 +124,7 @@ The GitHub Release body is **auto-generated**, so the upgrade steps cannot live 
 1. Detects **plain SemVer tag** → `channel=stable`, `dist-tag=latest`.
 2. Checks if version is already on npm (idempotency — skips if already published).
 3. **Injects the full version** into all `packages/*/package.json` files in the CI workspace.
-4. `pnpm lint` → `pnpm build` → `pnpm typecheck` → `pnpm test`.
+4. Runs the `verify` job: `pnpm lint` → `pnpm build` → `pnpm typecheck` → `pnpm test` → `pnpm docs:validate` → `pnpm hygiene:gate`. The `publish` job waits on it.
 5. `pnpm pack` (captures the injected version in tarballs).
 6. `npm publish --provenance --access public --tag latest` for each tarball.
 7. Updates `.noir/releases/` registry and pushes back to the repo.
@@ -392,7 +392,7 @@ The very first release (`1.0.0`) has extra gating. Do not cut it until every box
 - [ ] `release` environment created on GitHub **with a required reviewer** (`agaaaptr`) — the tag → `npm publish` approval gate.
 
 **Readiness (§2 / §4)**
-- [ ] `pnpm lint && pnpm build && pnpm typecheck && pnpm test` all green on `main` (target the same Node 22 the CI uses).
+- [ ] `pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm docs:validate && pnpm hygiene:gate` all green (the `verify` job of `.github/workflows/release.yml`, which runs them on every tag; target the same Node 22 the CI uses).
 - [ ] Every `packages/*/package.json` has `publishConfig: { access:"public", provenance:true }`, `engines.node >=22`, a one-line `description`, valid `repository`/`bugs`/`homepage`, and `files` including `dist` (+ `README.md`, and `builtin/` for skills).
 - [ ] `npm publish --dry-run` in `packages/cli` and at least one library package is sane (correct files, **no `src/`/tests/secrets**).
 - [ ] `CHANGELOG.md` (root) has a `1.0.0` entry.

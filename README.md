@@ -26,7 +26,7 @@ The `noir` grouped home menu — section picker + per-section action lists with 
 **Current beta:** `1.15.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.15.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-16T05:41:21.500Z*
+*Last auto-generated: 2026-09-25T03:11:59.287Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
@@ -81,7 +81,7 @@ Full inventory → [Package Reference](docs/reference/packages.md).
 | `noir status` | probe-only health (daemon-down safe) |
 | `noir doctor` | config / store / embedder / deps / install |
 | `noir env` | which configuration is in effect and where each value comes from |
-| `noir mcp serve [--stdio]` | MCP server control (stdio transport) |
+| `noir mcp serve [--stdio] [--workspace <name>]` | MCP server control (stdio transport; a named workspace bridges to its daemon) |
 | `noir daemon {start,stop,status,restart,token,join}` | persistent MCP server |
 | `noir workspace {list,status,stop,leave}` | shared cross-repo workspace |
 | `noir context {search,index,status}` | hybrid retrieval |

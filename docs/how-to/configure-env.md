@@ -256,9 +256,18 @@ still wins.
 
 - **Gitignored by the managed block.** `/.noir/.env` and `/.noir/.env.*` are
   ignored; `!/.noir/.env.example` keeps the example committable.
-- **`0600`.** `noir init` creates the file unreadable by others; `noir doctor`
-  warns (via the `noir-env` row) if it is group/world readable. Remedy:
-  `chmod 600 .noir/.env`.
+- **`0600`.** `noir init` creates the file unreadable by others, and the mode is
+  **re-asserted automatically** on every run that may write it — `noir init`
+  (including `--upgrade` and `--force`), `noir create`, and `noir sync`. A file
+  an older Noir seeded, a clone delivered, or a `chmod` widened is therefore
+  healed the next time one of those runs. Remedy if you would rather not wait
+  for one: run `noir sync` (or `noir doctor --fix`, which re-asserts the mode
+  before it reads anything). `noir doctor` warns through the `noir-env` row when
+  the file is group/world readable; the row names the mode it observed and
+  whether the file **predates** the owner-only contract (an older Noir seeded it,
+  a clone delivered it, it was created by hand, or a tool replaced it) or was
+  widened **after** it was written (a `chmod`, a `chown`, or a restore) — so a
+  file you never touched is not reported as your doing.
 - **A git-*tracked* `.noir/.env` is refused outright.** Noir never interprets
   it, so none of its keys are in effect, and the refusal names the remedy:
 

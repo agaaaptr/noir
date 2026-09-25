@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.15.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.15.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-16T05:41:22.096Z*
+*Last auto-generated: 2026-09-25T03:11:59.816Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -127,7 +127,7 @@ The daemon is a **long-lived** Noir server that multiple clients can share — t
 - Killing the daemon while the host is connected **breaks the connection** — there is **no auto-fallback to stdio**. Your data stays durable on disk, and reads have a degraded read-only fallback, but the live host link is severed until you restart the daemon.
 - The daemon is **foreground by default**; pass `--detach` to fork a detached child that persists after the parent exits (`noir daemon start --detach` reports the child's PID and port). Auto-restart daemons are not yet available.
 - Each project has its own daemon record (`~/.noir/daemons/<projectId>.json`), so running Noir concurrently in two projects no longer clobbers anything — both daemons coexist and neither is stopped by the other's activity.
-- The HTTP transport requires a bearer token, minted fresh on every daemon start and written at mode `0600` to `~/.noir/daemons/<projectId>.token`. `noir daemon token` prints it; a host that supports `headersHelper` should store the command rather than the secret. `/health` stays token-free, and the stdio transport is unaffected (no network surface).
+- The HTTP transport requires a bearer token, minted fresh on every daemon start and written at mode `0600` to `~/.noir/daemons/<projectId>.token` — a workspace daemon's token is named for the workspace instead (`<workspace-name>.token`). `noir daemon token` prints it; a host that supports `headersHelper` should store the command rather than the secret. `/health` stays token-free, and the stdio transport is unaffected (no network surface).
 
 Pick the daemon **only** if you need a persistent shared server across host sessions. Active terminal commands start a daemon when needed; otherwise, stdio is the simplest host transport. See [transports](explanation/sdd-workflow.md#transports) for the full comparison.
 
@@ -166,6 +166,7 @@ noir task status    # where the active task is in the lifecycle
 noir task resume    # cross-session resume: briefing + next action
 noir task verify    # run configured checks and submit evidence to the verify gate
 noir doctor         # config / store / embedder / native deps / provider / install / output-hygiene status
+noir doctor --fix   # the same check, re-asserting owner-only permissions on .noir/.env and the store first
 ```
 
 Driving that lifecycle yourself — `task new --class feature`, `advance --force`,

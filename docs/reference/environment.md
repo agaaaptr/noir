@@ -82,6 +82,7 @@ the **host** path; Noir's own model layer is configured in `config.yml` instead
 | `ANTHROPIC_DEFAULT_SONNET_MODEL` | — | no | Remaps the `sonnet` model alias to the id the gateway serves. Host-only: read by the host, never by Noir. |
 | `ANTHROPIC_DEFAULT_OPUS_MODEL` | — | no | Remaps the `opus` model alias to the id the gateway serves. Host-only: read by the host, never by Noir. |
 | `API_TIMEOUT_MS` | host default (Claude Code: `600000`) | no | Per-request timeout in milliseconds. A host variable passed through by inheritance — Noir never reads it. |
+| `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | host default | no | The token count at which the host auto-compacts a conversation (Claude Code accepts `100000` to `1000000`). A host variable passed through by inheritance — Noir never reads it; it travels in the `.noir/.env` templates beside the gateway rows above. |
 
 ## Shell bridge (`noir run --command`)
 
@@ -156,7 +157,7 @@ need them.
 | `NOIR_CHANNEL` | `latest` | no | npm dist-tag for `install.sh` / `install.ps1` (`beta` selects the beta channel). |
 | `NOIR_VERSION` | — | no | Pin an exact version for `install.sh` / `install.ps1` (overrides `NOIR_CHANNEL`). |
 | `NOIR_RUNTIME_DIR` | `~/.noir/runtime` | no | Overrides the managed runtime directory. |
-| `NOIR_DAEMON_DIR` | `~/.noir/daemons` | no | Overrides the directory holding the per-project daemon records (`<projectId>.json`) and their `0600` bearer tokens (`<projectId>.token`). Primary use is test isolation — a normal run never sets it, and it is **refused from `.noir/.env`** (redirecting it would point Noir at someone else's records). |
+| `NOIR_DAEMON_DIR` | `~/.noir/daemons` | no | Overrides the directory holding the per-project daemon records (`<projectId>.json`) and their `0600` bearer tokens (`<projectId>.token`; a workspace daemon's token is named for the workspace — `<workspace-name>.token`). Primary use is test isolation — a normal run never sets it, and it is **refused from `.noir/.env`** (redirecting it would point Noir at someone else's records). |
 | `NOIR_DAEMON_JSON` | `~/.noir/daemon.json` | no | **Legacy only** — the pre-1.14 single global daemon record. Read exactly once by the self-deleting migration (`retireLegacyDaemonRecord`) when it retires a daemon from a previous version, then the file is deleted and no code path reads this path again. It does **not** relocate the current per-project records; that is `NOIR_DAEMON_DIR`. |
 | `NOIR_INSTALL_JSON` | `~/.noir/install.json` | no | Overrides the install-record path. |
 | `NOIR_WORKSPACES_DIR` | `~/.noir/workspaces` | no | Overrides the user-global workspace root (the shared-workspace registry, store, and daemon record). |

@@ -41,7 +41,7 @@ pnpm build
 pnpm typecheck && pnpm lint && pnpm test
 ```
 
-The full test suite runs **offline and free** — it must never depend on a network call or a paid API key. Do not claim a change is done until all five gates (`lint`, `build`, `typecheck`, `test`, `docs:validate`) are green.
+The full test suite runs **offline and free** — it must never depend on a network call or a paid API key. Do not claim a change is done until all six gates (`lint`, `build`, `typecheck`, `test`, `docs:validate`, `hygiene:gate`) are green.
 
 > This repo is a **pnpm monorepo** of 11 `@noir-ai/*` packages. See [`AGENTS.md`](AGENTS.md) for the toolchain contract and [`docs/how-to/packaging.md`](docs/how-to/packaging.md) for how packages are structured.
 
@@ -68,16 +68,16 @@ This repo dogfoods **Spec-Driven Development (SDD)**: brainstorm → spec → pl
 
 ## Pull request process
 
-1. **Before opening a PR:** sync with `develop`, run the full gate (`pnpm build && pnpm typecheck && pnpm lint && pnpm test`), and `pnpm docs:validate`.
+1. **Before opening a PR:** sync with `develop`, run the full gate (`pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm docs:validate && pnpm hygiene:gate`).
 2. **Write a clear PR description** linking the issue (`Closes #123`).
 3. **Open as a draft** until it's ready for full review.
-4. **CI must pass** — the matrix runs lint → build → typecheck → test → docs:validate on ubuntu + macos (node 22).
+4. **CI must pass** — the matrix runs lint → build → typecheck → test → docs:validate → hygiene:gate on ubuntu + macos (node 22).
 5. **Respond to review feedback** — address or discuss each comment. Reviews are about making the change correct, not about winning an argument.
 6. **Tests:** add or update tests for your change. Unit + integration tests are expected; see [`AGENTS.md`](AGENTS.md) for the discipline.
 
 ### PR checklist
 
-- [ ] All five gates green locally (`lint`, `build`, `typecheck`, `test`, `docs:validate`)
+- [ ] All six gates green locally (`lint`, `build`, `typecheck`, `test`, `docs:validate`, `hygiene:gate`)
 - [ ] `pnpm docs:validate` passes
 - [ ] Tests added/updated for the change
 - [ ] Docs updated where behavior changed

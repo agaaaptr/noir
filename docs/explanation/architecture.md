@@ -51,7 +51,7 @@ The daemon is the **single writer** to the store; if it is down, reads (FTS/kNN/
 
 ## The `.noir/` portable store
 
-`.noir/` is the project's single source of truth, keyed by a **canonical `ProjectId` — never a filesystem path** (paths break across machines). It holds `config.yml`, `.env` (the gitignored `0600` project configuration/secrets file, read in-process and winning for every key it defines — see [configure-env.md](../how-to/configure-env.md)), `.env.example` (its committable, never-loaded documentation twin), `NOIR.md` (the canonical context file the host merely `@import`s), the ProjectId-keyed SQLite DB, and SDD artifacts (`intake/`, `specs/`, `plans/`, `tasks/`, `decisions/`, `audit/`, `CHANGELOG.md`). `~/.noir/` holds user-global concerns (the embedder model cache, the per-project daemon records at `daemons/<projectId>.json` + their `0600` bearer tokens, per the [per-project-daemon-records decision](../decisions/0010-per-project-daemon-records-and-http-auth.md), and — for shared cross-repo workspaces — `workspaces/<name>/` with a registry + shared store, per the [shared-workspaces decision](../decisions/0009-shared-workspaces.md)). Generated host artifacts are pointers/transforms of `.noir/`, never drifting copies.
+`.noir/` is the project's single source of truth, keyed by a **canonical `ProjectId` — never a filesystem path** (paths break across machines). It holds `config.yml`, `.env` (the gitignored `0600` project configuration/secrets file, read in-process and winning for every key it defines — see [configure-env.md](../how-to/configure-env.md)), `.env.example` (its committable, never-loaded documentation twin), `NOIR.md` (the canonical context file the host merely `@import`s), the ProjectId-keyed SQLite DB, and SDD artifacts (`intake/`, `specs/`, `plans/`, `tasks/`, `decisions/`, `audit/`, `CHANGELOG.md`). `~/.noir/` holds user-global concerns (the embedder model cache, the per-project daemon records at `daemons/<projectId>.json` + their `0600` bearer tokens, the workspace daemon's token sitting beside them as `daemons/<workspace-name>.token`, per the [per-project-daemon-records decision](../decisions/0010-per-project-daemon-records-and-http-auth.md), and — for shared cross-repo workspaces — `workspaces/<name>/` with a registry + shared store, per the [shared-workspaces decision](../decisions/0009-shared-workspaces.md)). Generated host artifacts are pointers/transforms of `.noir/`, never drifting copies.
 
 ## Workspaces (cross-repo sharing)
 
@@ -60,8 +60,12 @@ different repos (e.g. backend + frontend) share **decision memory** through one
 **workspace daemon**, localhost-only, without handoff documents. It is opt-in —
 `noir daemon start --workspace <name>` (founder) and `noir daemon join <name>`
 join a repo by writing a `.noir/workspace.json` marker and rewriting only the
-`noir` entry of the repo's host MCP config to
-`http://127.0.0.1:<port>/mcp?p=<projectId>`.
+`noir` entry of the repo's host MCP config into a **stdio bridge**: the entry
+names the workspace (`noir mcp serve --stdio --workspace <name>`) and the
+command the host spawns resolves the daemon's address and token at launch. No
+address and no secret are written into the repo's config, so nothing there can
+go stale or leak — see the
+[workspace transport and daemon-routing decision](../decisions/0013-workspace-transport-and-daemon-routing.md).
 
 The workspace daemon **multiplexes on the `?p=` project identity**:
 

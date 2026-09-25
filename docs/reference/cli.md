@@ -236,6 +236,7 @@ environment + project health
 | Flag | Description |
 |---|---|
 | `--dedup` | scan host-context + .noir/ docs for semantic near-duplicates (loads the local embedder) |
+| `--fix` | re-assert owner-only permissions on .noir/.env and the store DB + directory |
 
 ### noir status
 
