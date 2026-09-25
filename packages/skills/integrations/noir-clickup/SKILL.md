@@ -215,8 +215,8 @@ These are concrete gotchas that have caused real bugs in production. **Read ever
 | `GET /list/{list_id}/task` (list tasks) | `?subtasks=true` | `GET /list/123/task?subtasks=true` |
 | `GET /team/{team_id}/task` (workspace) | `?subtasks=true` | `GET /team/456/task?subtasks=true` |
 
-**❌ Wrong pattern:** Fetch task → see no subtasks → report "this task has no subtasks."
-**✅ Correct pattern:** Fetch task with `?include_subtasks=true` → check the response → if `subtasks` is still empty, then (and only then) conclude there are none. **The parameter goes on EVERY fetch. No exceptions. No shortcuts.**
+**Wrong pattern:** Fetch task → see no subtasks → report "this task has no subtasks."
+**Correct pattern:** Fetch task with `?include_subtasks=true` → check the response → if `subtasks` is still empty, then (and only then) conclude there are none. **The parameter goes on EVERY fetch. No exceptions. No shortcuts.**
 
 ---
 
@@ -247,8 +247,8 @@ This is expensive (N+1 calls) but necessary when custom fields or time data matt
 - For an existing task, its `status.status` field IS the current valid value.
 - If the status the user wants doesn't exist in the list, tell them — don't guess.
 
-**❌ Wrong:** `"set to done"` → PUT `{status: "done"}` → 400 error.
-**✅ Correct:** Read the list statuses → find `"Complete"` → PUT `{status: "Complete"}`.
+**Wrong:** `"set to done"` → PUT `{status: "done"}` → 400 error.
+**Correct:** Read the list statuses → find `"Complete"` → PUT `{status: "Complete"}`.
 
 ---
 
@@ -371,9 +371,9 @@ The response includes an `attachments` array when the task has attachments. Each
 
 | Endpoint | Returns attachments? |
 |---|---|
-| `GET /task/{task_id}` (single task) | ✅ Yes — full `attachments` array |
-| `GET /list/{list_id}/task` (list) | ❌ No — only custom-field-linked attachments |
-| `GET /team/{team_id}/task` (workspace) | ❌ No — same limitation |
+| `GET /task/{task_id}` (single task) | Yes — full `attachments` array |
+| `GET /list/{list_id}/task` (list) | No — only custom-field-linked attachments |
+| `GET /team/{team_id}/task` (workspace) | No — same limitation |
 
 **Workflow for getting attachments from multiple tasks:**
 1. Get task IDs from a list query (no attachments there).
