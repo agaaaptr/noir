@@ -13,7 +13,7 @@ afterEach(() => {
   delete process.env.OPENAI_BASE_URL;
 });
 
-describe('openai — the adapter’s pinned baseURL defeats ambient env', () => {
+describe("openai — the adapter's pinned baseURL defeats ambient env", () => {
   it('does not read the ambient OPENAI_BASE_URL when none is configured', () => {
     // Documents the hazard the pinning exists to avoid: with the option
     // OMITTED the SDK resolves it from process.env, so a base URL left out of

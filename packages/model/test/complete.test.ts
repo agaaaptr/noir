@@ -280,7 +280,7 @@ describe('complete() — credentials: apiKey and/or bearer token', () => {
     });
   });
 
-  it('forwards the provider block’s baseURL / authToken / timeoutMs onto the request', async () => {
+  it("forwards the provider block's baseURL / authToken / timeoutMs onto the request", async () => {
     const a = fakeAdapter('anthropic', () => ({ ok: true, text: 'ok' }));
     registerProviderAdapter('anthropic', a);
     await withEnv('NOIR_TEST_TOKEN', 'tk-forwarded', async () => {

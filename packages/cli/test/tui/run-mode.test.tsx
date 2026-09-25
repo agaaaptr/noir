@@ -472,7 +472,7 @@ describe('run screen — live render', () => {
     expect(m.host.child().signals).toEqual(['SIGTERM']);
   });
 
-  it('keeps the cancelled run’s raw stream for the transcript picker', async () => {
+  it("keeps the cancelled run's raw stream for the transcript picker", async () => {
     const host = fakeHost();
     const transcripts = memoryTranscripts();
     const exit = vi.fn();
@@ -651,7 +651,7 @@ describe('dashboard entry into the run screen', () => {
     m.instance.unmount();
   });
 
-  it('opens the run screen from the palette’s run row', async () => {
+  it("opens the run screen from the palette's run row", async () => {
     const host = fakeHost();
     const m = mountApp(runDepsOver(host));
     await flush(60);
@@ -746,7 +746,7 @@ describe('the stdout writer', () => {
   });
 });
 
-describe('the dashboard’s Ctrl+C', () => {
+describe("the dashboard's Ctrl+C", () => {
   /** An exited app stops rendering: nothing typed after it can change a frame. */
   async function rendersNothingMore(m: MountedApp): Promise<boolean> {
     const settled = m.instance.lastFrame() ?? '';

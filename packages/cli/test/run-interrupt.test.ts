@@ -255,7 +255,7 @@ describe('RunInterrupt — terminal signals', () => {
     }
   });
 
-  it('puts the process’s own handling back when the run is over', () => {
+  it("puts the process's own handling back when the run is over", () => {
     const before = {
       SIGINT: process.listenerCount('SIGINT'),
       SIGTERM: process.listenerCount('SIGTERM'),

@@ -33,7 +33,7 @@ afterEach(() => {
   for (const k of Object.keys(AMBIENT)) delete process.env[k];
 });
 
-describe('@anthropic-ai/sdk — the adapter’s pinned options defeat ambient env', () => {
+describe("@anthropic-ai/sdk — the adapter's pinned options defeat ambient env", () => {
   it('keeps the ambient key out when only a bearer token is configured', async () => {
     await withAmbient(() => {
       const client = new Anthropic({
