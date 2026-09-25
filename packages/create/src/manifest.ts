@@ -6,7 +6,6 @@ import {
   emitAgentsMd,
   type HostAdapter,
   type HostId,
-  mcpConfigPathFor,
   resolveAdapter,
 } from '@noir-ai/adapters';
 import {
@@ -572,7 +571,7 @@ export function buildHostArtifacts(
   //    is chosen, means no caller can bypass it — `sync`, `init --force`,
   //    `create --force` and the doctor's expectation check all follow membership
   //    for free.
-  const mcpAbs = mcpConfigPathFor(host, ctx.root);
+  const mcpAbs = adapter.mcpConfigPath?.(ectx) ?? join(ctx.root, '.mcp.json');
   const mcpRel = hostRel(mcpAbs, ctx.root);
   const workspace = readWorkspaceMarker(ctx.root);
   if (host === 'claude' && workspace === null) {
