@@ -13,7 +13,7 @@ The internal platform-engineering layer of Noir itself: a pnpm monorepo with uni
 - **TypeScript strict ESM** — `NodeNext`, `ES2022`, `strict`, `noUncheckedIndexedAccess`, declarations. Source: [`tsconfig.base.json`](../../tsconfig.base.json).
 - **Biome lint + format** (preset `recommended`). Source: [`biome.json`](../../biome.json).
 - **Vitest 3 test suite** with source aliases for all 11 packages. Source: [`vitest.config.ts`](../../vitest.config.ts).
-- **CI matrix** — ubuntu + macos on node 22; gate = lint → build → typecheck → test → `docs:validate`. Source: [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml).
+- **CI matrix** — ubuntu + macos on node 22; gate = lint → build → typecheck → test → `docs:validate` → `hygiene:gate`. Source: [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml).
 - **Release pipeline** — tag-triggered, verify-then-publish, `npm publish --provenance` (SLSA via GitHub OIDC), version-string-based channel (beta vs stable). Source: [`.github/workflows/release.yml`](../../.github/workflows/release.yml).
 - **Release registry + unified version tooling** — `bump-version.mjs`, `compute-version.mjs`, `release-registry.mjs`, `release-tag.mjs`. Source: [`scripts/`](../../scripts/).
 - **Docs automation** — `scripts/docs-generate.mjs` with `generate|validate|registry|index` subcommands. Source: [`scripts/docs-generate.mjs`](../../scripts/docs-generate.mjs).

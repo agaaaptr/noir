@@ -57,7 +57,7 @@ Governance is a capability of its own — see [`capability-07-engineering-govern
 
 - **Architecture decisions** are recorded as ADRs in `docs/decisions/` (append-only; supersede, never rewrite).
 - **Specs and plans** live in `docs/internal/{specs,plans}` (dogfooded on this repo).
-- **CI gates** (lint/build/typecheck/test/docs:validate) run on every push/PR.
+- **CI gates** (lint, build, typecheck, test, `docs:validate`, and the output-hygiene gate) run on every push/PR.
 - **Releases** follow the runbook in `docs/how-to/releasing.md` (two channels, SLSA provenance, idempotent).
 
 ---

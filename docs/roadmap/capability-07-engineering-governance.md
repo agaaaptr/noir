@@ -10,7 +10,7 @@ The governance ruleset that makes Noir a "project operating system": an ADR seri
 
 - **ADR series established** — ADR-0001..0013 plus an index `docs/decisions/README.md` with an append-only convention: superseded ADRs are marked, never deleted.
 - **Spec-driven process dogfooded** — 34 dated design specs under `docs/internal/specs/` and 27 dated implementation plans + acceptance checklists under `docs/internal/plans/`.
-- **CI quality gates on every push/PR** — `.github/workflows/ci.yml` runs Biome lint, build, typecheck, Vitest tests, and `docs:validate` on ubuntu + macos with Node 22.
+- **CI quality gates on every push/PR** — `.github/workflows/ci.yml` runs Biome lint, build, typecheck, Vitest tests, `docs:validate`, and the output-hygiene gate on ubuntu + macos with Node 22.
 - **Release governance shipped and used** — `.github/workflows/release.yml`: unified versioning, version-string channels, SLSA provenance, idempotent publish.
 - **Docs governance** — `docs:validate` broken-link/stale-version checks; `docs:generate` auto-writes reference docs and managed blocks (package.json scripts).
 - **Root `AGENTS.md` governance** — immutable toolchain contract, Conventional Commits, local-only commits, privacy/provider-explicit rules, plus the SDD workflow spec/plan paths.
@@ -20,7 +20,7 @@ The governance ruleset that makes Noir a "project operating system": an ADR seri
 ## Gap / roadmap delta
 
 - Root `CONTRIBUTING.md` (code-contribution guide) — added 2026-08 as part of the docs restructure.
-- Specification-validation gate in CI — gates currently stop at lint/build/typecheck/test/`docs:validate`.
+- Specification-validation gate in CI — gates currently stop at lint, build, typecheck, test, `docs:validate`, and the output-hygiene gate.
 - Technical-debt registry artifact (identifier / kategori / penyebab / prioritas / estimasi / rencana).
 - Engineering/project-health metrics — test coverage, stale-doc automation, release frequency, CI stability.
 - Durable checkpoint registry (`docs/checkpoints/` or a manifest entry).
@@ -30,7 +30,7 @@ The governance ruleset that makes Noir a "project operating system": an ADR seri
 
 - MET — Any architectural decision is recorded in `docs/decisions/` as an ADR; superseded ADRs are marked, never deleted.
 - MET — New slices land only after a dated spec in `docs/internal/specs/` and an implementation plan in `docs/internal/plans/`, with the acceptance checklist closed out.
-- MET — Every push/PR passes lint, build, typecheck, tests, and `docs:validate` on ubuntu and macos (Node 22).
+- MET — Every push/PR passes lint, build, typecheck, tests, `docs:validate`, and the output-hygiene gate on ubuntu and macos (Node 22).
 - MET — Releases publish idempotently from `.github/workflows/release.yml` with unified versioning and SLSA provenance.
 - MET — `docs:generate` runs clean and `docs:validate` reports zero broken links / stale versions.
 - GAP — CI runs a spec-validation gate in addition to the current gates.
