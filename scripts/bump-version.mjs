@@ -17,7 +17,7 @@
 //
 // The `--no-git-tag-version` flag is accepted (for npm-version-parity muscle
 // memory) and is a no-op — this script NEVER creates a git tag or commit by
-// itself. Tagging is a separate, deliberate release step (see docs/releasing.md).
+// itself. Tagging is a separate, deliberate release step (see docs/how-to/releasing.md).
 //
 // Exits non-zero if no/invalid version is given or no package.json is found.
 
@@ -94,6 +94,6 @@ if (DRY_RUN) {
 } else {
   console.log(`---\nWrote version ${version} to ${changed} package.json file(s).`);
   if (changed > 0) {
-    console.log('Next (manual): review the diff, commit, then tag — see docs/releasing.md.');
+    console.log('Next (manual): review the diff, commit, then tag — see docs/how-to/releasing.md.');
   }
 }
