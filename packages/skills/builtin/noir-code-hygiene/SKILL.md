@@ -91,9 +91,9 @@ job is to sit above another heading.
 
 **Tell:** a character from a writing system this project does not write in — Han,
 Kana, Hangul, Cyrillic, Greek, Arabic, Hebrew, Thai, Devanagari — or a fullwidth
-form, a zero-width space, a byte-order mark, or the replacement character a bad
-decode leaves behind. It turns up inside a word or a string, where no author
-would have typed it.
+form, a zero-width space, a byte-order mark, a bidirectional override, or the
+replacement character a bad decode leaves behind. It turns up inside a word or a
+string, where no author would have typed it.
 
 **Why:** a model can leak a token from another script into generated text, and
 bytes that were decoded wrongly arrive as an invisible character or a
