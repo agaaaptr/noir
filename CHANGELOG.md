@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (on `develop`, pending next publish) — display integrity + workspace stdio transport + permission contract + output hygiene
+## 1.16.0 (2026-09-25) — display integrity + workspace stdio transport + permission contract + output hygiene
 
 ### Changed
 - **BREAKING for joined repositories — the host reaches a workspace daemon through the stdio bridge, not a URL.** A joined repo's `.mcp.json` `noir` entry now names the workspace and points at the stdio entry (`noir mcp serve --stdio --workspace <name>`) instead of a `type: 'http'` URL carrying a `?p=` query string and no credential. The bridge resolves the workspace daemon, verifies through `/health` that it owns the workspace, reads the `0600` token, and relays both directions to `/mcp?p=<caller projectId>`. The committed config file carries no secret and no URL, which retires the stale-port class: a workspace daemon binds an ephemeral port and mints a fresh token on every start, so the URL written once at join time pointed nowhere on the next start. A repo joined by an older version therefore **must run `noir init --upgrade`** (the `1.2.0 → 1.3.0` scaffold migration rewrites the legacy http entry); `noir sync` and `noir init --force` no longer downgrade a joined repo, because the workspace marker now drives the entry. See ADR-0013.
