@@ -15,9 +15,9 @@
 //
 // Finally it must go quiet once the file is owner-only: the loader re-checks the
 // mode on EVERY command, so a row that kept warning after a heal would repeat
-// forever. The heal is performed by the scaffold (`init`, `sync`, `init
-// --upgrade`, `init --force`); this suite runs the real scaffold path and then
-// asserts the row and the loader are both silent.
+// forever. The heal is performed by the scaffold (`init`, `sync`, `create`,
+// `init --upgrade`, `init --force`); this suite runs the real scaffold path and
+// then asserts the row and the loader are both silent.
 //
 // Offline/free: no network, no API key, no embedder.
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
