@@ -10,9 +10,11 @@ import { fileURLToPath } from 'node:url';
  * Path resolution must work identically in three layouts:
  *  - source (vitest, tsx): this file at `packages/create/src/template-loader.ts`
  *    → `../templates/<name>`.
- *  - built (tsup): this file at `packages/create/dist/template-loader.js` →
- *    `../templates/<name>` (same relative offset — `dist/` and `src/` are both
- *    direct children of the package root, so `../templates` lands correctly).
+ *  - built (tsup): this module is inlined into the package's single bundle at
+ *    `packages/create/dist/index.js` → `../templates/<name>`. `dist/` and
+ *    `src/` are both direct children of the package root, so the relative
+ *    offset is unchanged and `import.meta.url` — which points at the bundle,
+ *    not at a `template-loader.js` — still resolves correctly.
  *  - packed (npm tarball): `templates/` is included per `files`, dist/ layout
  *    preserved → same as built.
  *
