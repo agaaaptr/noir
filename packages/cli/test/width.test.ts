@@ -10,6 +10,11 @@
 import { describe, expect, it } from 'vitest';
 import { displayWidth, padToWidth, truncateMiddle, truncateToWidth } from '../src/width.js';
 
+// Wide CJK glyphs are fixtures here on purpose: they are the case a code-unit
+// measurement gets wrong, so this file states its own exemption from the
+// irregular-script rule rather than the rule carrying a CJK allowance.
+// noir-hygiene: exempt
+
 /** True when `s` contains a high surrogate with no low one after it, or vice versa. */
 function hasLoneSurrogate(s: string): boolean {
   return /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(s);

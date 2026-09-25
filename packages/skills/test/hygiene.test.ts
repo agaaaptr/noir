@@ -203,6 +203,56 @@ describe('fail tier: forbidden residue', () => {
   });
 });
 
+describe('fail tier: another script, or an invisible character', () => {
+  it('flags a character from another writing system', () => {
+    expect(ids(comment('return the 汉 name'))).toContain('no-irregular-script');
+    expect(ids(comment('Привет is Russian for hello'))).toContain('no-irregular-script');
+    expect(ids('const label = "ＡＢＣ";')).toContain('no-irregular-script');
+  });
+
+  it('flags a code point that draws nothing, or one a bad decode produced', () => {
+    const zeroWidthSpace = String.fromCharCode(0x200b);
+    const byteOrderMark = String.fromCharCode(0xfeff);
+    const replacement = String.fromCharCode(0xfffd);
+    expect(ids(`const sep = 'a${zeroWidthSpace}b';`)).toContain('no-irregular-script');
+    expect(ids(`const bom = '${byteOrderMark}';`)).toContain('no-irregular-script');
+    expect(ids(`const broken = '${replacement}';`)).toContain('no-irregular-script');
+  });
+
+  it('reports the line the character sits on, in prose as well as in code', () => {
+    const findings = checkHygiene(['# Title', '', 'the 汉 character'].join('\n'), 'markdown');
+    expect(findings.map((f) => [f.line, f.id])).toEqual([[3, 'no-irregular-script']]);
+    expect(findings[0]?.tier).toBe('fail');
+  });
+
+  it('leaves the typography, the symbols and the badges this project writes alone', () => {
+    const typography =
+      'Diátaxis and Büttcher — an en dash – an ellipsis … a section § a middle dot · a degree ° “quoted” ‘single’';
+    expect(checkHygiene(typography, 'markdown')).toEqual([]);
+    expect(checkHygiene(typography, 'code')).toEqual([]);
+
+    const symbols = 'x ≥ y ≤ z ≈ w ≠ v ∈ S ∪ T ⇒ a − b ↑ ↓ ↔ ↳ →';
+    expect(checkHygiene(symbols, 'markdown')).toEqual([]);
+    expect(checkHygiene(comment(symbols), 'code')).toEqual([]);
+
+    const boxDrawing = comment('┌─────┬─────┐ │ ✓ ✗ ℹ ● ▶ ◆ ⚙ │ └─────┴─────┘');
+    expect(checkHygiene(boxDrawing, 'code')).toEqual([]);
+    expect(checkHygiene('const marks = "✓ ✗ ℹ ● ▶ ◆ ⚙";', 'code')).toEqual([]);
+  });
+
+  it('leaves the emoji the decoration rules own to those rules', () => {
+    expect(ids('const route = "🚀 ship it 🎯 now";')).toEqual([]);
+    expect(checkHygiene('## ✅ Ship the migration', 'markdown')).toEqual([
+      expect.objectContaining({ id: 'decorative-emoji-doc' }),
+    ]);
+  });
+
+  it('is exempted by the marker, so a deliberate fixture may carry the character', () => {
+    const source = [HYGIENE_EXEMPT_MARKERS.code, comment('a 汉 fixture')].join('\n');
+    expect(checkHygiene(source, 'code')).toEqual([]);
+  });
+});
+
 describe('warn tier: verbosity and unresolved markers', () => {
   const block = (lines: number): string =>
     Array.from({ length: lines }, (_, i) => comment(`filler line ${i}`)).join('\n');

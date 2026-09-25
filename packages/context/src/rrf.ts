@@ -8,6 +8,12 @@
 // only that list's term — no penalty, no normalization — and the raw BM25 and
 // cosine scores are NEVER summed.
 //
+// The formula below is written with the Greek capital sigma, which is the
+// conventional summation sign and the one character from another script this
+// project means to keep, so this file states its own exemption from the
+// irregular-script rule rather than the rule carrying a Greek allowance:
+// noir-hygiene: exempt
+//
 // Reference: Cormack, Clarke, Büttcher — Reciprocal Rank Fusion (SIGIR 2009).
 //   score(d) = Σ_i  w_i / (k + rank_i(d))      (1-based ranks, default k = 60)
 

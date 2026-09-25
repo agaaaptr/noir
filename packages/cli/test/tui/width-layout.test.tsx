@@ -5,6 +5,12 @@
 // element (or overflows the panel).
 //
 // Offline and free: renders components in memory, no network, no key.
+//
+// A wide CJK glyph is a fixture here on purpose: it is the case a code-unit
+// measurement gets wrong, so this file states its own exemption from the
+// irregular-script rule rather than the rule carrying a CJK allowance.
+// noir-hygiene: exempt
+
 import { render } from 'ink-testing-library';
 import type { ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';

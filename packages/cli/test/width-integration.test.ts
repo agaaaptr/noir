@@ -12,6 +12,11 @@
 // cli-table3 is mocked so the column widths and the cell text `table()` hands
 // to it can be inspected directly — the real renderer's own index-based
 // truncation would otherwise hide whether OUR measurement was right.
+//
+// A wide CJK glyph is a fixture here on purpose: it is the case a code-unit
+// measurement gets wrong, so this file states its own exemption from the
+// irregular-script rule rather than the rule carrying a CJK allowance.
+// noir-hygiene: exempt
 import stripAnsi from 'strip-ansi';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 

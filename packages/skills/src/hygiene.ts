@@ -181,6 +181,65 @@ const DECORATIVE_EMOJI_IN_PROSE: HygieneRule = {
   appliesTo: 'markdown',
 };
 
+// The code point ranges that no file in this project has a reason to carry.
+// Each one is either a character from another writing system, or a code point
+// that draws nothing at all. Both arrive the same way: text generation can leak
+// a token from a foreign script into the output, and a mis-decoded byte becomes
+// a replacement character or an invisible formatting mark. They are listed as
+// ranges rather than as an allowlist so that ordinary writing in the project's
+// own language is never at risk of being flagged.
+const IRREGULAR_SCRIPT_SOURCES = [
+  String.raw`\u{0370}-\u{03ff}`, // Greek
+  String.raw`\u{1f00}-\u{1fff}`, // Greek extended
+  String.raw`\u{0400}-\u{052f}`, // Cyrillic and its supplement
+  String.raw`\u{2de0}-\u{2dff}`, // Cyrillic extended A
+  String.raw`\u{a640}-\u{a69f}`, // Cyrillic extended B
+  String.raw`\u{0590}-\u{05ff}`, // Hebrew
+  String.raw`\u{0600}-\u{06ff}`, // Arabic
+  String.raw`\u{0750}-\u{077f}`, // Arabic supplement
+  String.raw`\u{fb1d}-\u{fb4f}`, // Hebrew presentation forms
+  String.raw`\u{fb50}-\u{fdff}`, // Arabic presentation forms A
+  String.raw`\u{fe70}-\u{feff}`, // Arabic presentation forms B, and the byte-order mark
+  String.raw`\u{0900}-\u{097f}`, // Devanagari
+  String.raw`\u{0e00}-\u{0e7f}`, // Thai
+  String.raw`\u{1100}-\u{11ff}`, // Hangul Jamo
+  String.raw`\u{2e80}-\u{2fdf}`, // CJK radicals
+  String.raw`\u{3000}-\u{30ff}`, // CJK symbols and punctuation, Hiragana, Katakana
+  String.raw`\u{3100}-\u{318f}`, // Bopomofo, Hangul compatibility Jamo
+  String.raw`\u{31c0}-\u{31ef}`, // CJK strokes and Katakana extensions
+  String.raw`\u{3200}-\u{33ff}`, // Enclosed and compatibility CJK
+  String.raw`\u{3400}-\u{4dbf}`, // CJK unified ideographs extension A
+  String.raw`\u{4e00}-\u{9fff}`, // CJK unified ideographs
+  String.raw`\u{ac00}-\u{d7af}`, // Hangul syllables
+  String.raw`\u{f900}-\u{faff}`, // CJK compatibility ideographs
+  String.raw`\u{ff00}-\u{ffef}`, // Fullwidth and halfwidth forms
+  String.raw`\u{200b}-\u{200f}`, // Zero-width space, joiners and the bidirectional marks
+  String.raw`\u{fffd}`, // the replacement character
+  String.raw`\u{e000}-\u{f8ff}`, // Private use area
+  String.raw`\u{f0000}-\u{ffffd}`, // Private use planes 15 and 16
+  String.raw`\u{100000}-\u{10fffd}`, // Private use plane 17
+];
+
+/** A character from another writing system, or one that draws nothing. */
+const IRREGULAR_SCRIPT = `[${IRREGULAR_SCRIPT_SOURCES.join('')}]`;
+
+/** A character from another writing system, or an invisible one, anywhere in a
+ *  line. The project writes in its own language, so a character from a foreign
+ *  script is a leak rather than a word, and an invisible code point (a
+ *  zero-width space, a byte-order mark, a replacement character) is a decoding
+ *  accident. A fixture that has to carry one — a test that measures how a wide
+ *  glyph is laid out, say — states its own exemption with the marker above
+ *  rather than teaching this rule which characters to allow. */
+const IRREGULAR_SCRIPT_IN_TEXT: HygieneRule = {
+  id: 'no-irregular-script',
+  tier: 'fail',
+  pattern: new RegExp(IRREGULAR_SCRIPT, 'u'),
+  rationale:
+    'Generated text can leak a token from another script, or carry the bytes a mis-decoding turned into a replacement or invisible character. Either way the reader is shown something the writer never meant to say.',
+  fix: 'Rewrite the text in the project language, and delete the invisible character. Keep a character from another script only in a deliberate fixture, which states its own exemption with the marker above.',
+  appliesTo: 'both',
+};
+
 /** Consecutive comment lines long enough to be narration rather than a note. */
 const LONG_COMMENT_BLOCK: HygieneRule = {
   id: 'long-comment-block',
@@ -217,6 +276,7 @@ export const HYGIENE_RULES: readonly HygieneRule[] = [
   DECORATIVE_EMOJI_IN_COMMENT,
   DECORATIVE_PICTOGRAPH,
   DECORATIVE_EMOJI_IN_PROSE,
+  IRREGULAR_SCRIPT_IN_TEXT,
   LONG_COMMENT_BLOCK,
   BARE_TODO,
   ...RESIDUE_RULES,
