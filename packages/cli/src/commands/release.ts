@@ -35,7 +35,7 @@ function describe(step: Step, who: 'noir' | 'human'): string {
   const m: Record<Step, string> = {
     preflight: 'check clean tree, on develop, HEAD pushed, gate green, no version collision',
     bump: 'run bump-version.mjs + update CHANGELOG + roadmap docs',
-    gate: 're-run the full gate (lint/build/typecheck/test/docs:validate)',
+    gate: 're-run the full six-step gate (lint/build/typecheck/test/docs:validate/hygiene:gate)',
     commit: 'commit chore(release) + push develop',
     'ci-develop': 'wait for CI on develop → green',
     'beta-tag': 'pnpm release:tag → beta tag + push',
@@ -107,11 +107,14 @@ export async function release(opts: ReleaseOptions): Promise<void> {
 
     // 3. Gate
     info(`[3/13] gate: ${describe('gate', 'noir')}`, opts);
-    execSync('pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm docs:validate', {
-      encoding: 'utf8',
-      stdio: 'inherit',
-    });
-    success('gate: ✓ full gate green', opts);
+    execSync(
+      'pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm docs:validate && pnpm hygiene:gate',
+      {
+        encoding: 'utf8',
+        stdio: 'inherit',
+      },
+    );
+    success('gate: ✓ all six gates green', opts);
 
     // 4. Commit (spawnSync — no shell, no injection).
     info(`[4/13] commit/push: ${describe('commit', 'noir')}`, opts);
