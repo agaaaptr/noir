@@ -8,8 +8,8 @@ The governance ruleset that makes Noir a "project operating system": an ADR seri
 
 ## Shipped today
 
-- **ADR series established** — ADR-0001..0012 plus an index `docs/decisions/README.md` with an append-only convention: superseded ADRs are marked, never deleted.
-- **Spec-driven process dogfooded** — 33 dated design specs under `docs/internal/specs/` and 26 dated implementation plans + acceptance checklists under `docs/internal/plans/`.
+- **ADR series established** — ADR-0001..0013 plus an index `docs/decisions/README.md` with an append-only convention: superseded ADRs are marked, never deleted.
+- **Spec-driven process dogfooded** — 34 dated design specs under `docs/internal/specs/` and 27 dated implementation plans + acceptance checklists under `docs/internal/plans/`.
 - **CI quality gates on every push/PR** — `.github/workflows/ci.yml` runs Biome lint, build, typecheck, Vitest tests, and `docs:validate` on ubuntu + macos with Node 22.
 - **Release governance shipped and used** — `.github/workflows/release.yml`: unified versioning, version-string channels, SLSA provenance, idempotent publish.
 - **Docs governance** — `docs:validate` broken-link/stale-version checks; `docs:generate` auto-writes reference docs and managed blocks (package.json scripts).

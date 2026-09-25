@@ -16,7 +16,7 @@ Noir's documentation is a Diátaxis-structured, auto-generated knowledge system:
 - **Managed blocks** — `<!-- noir:doc:* -->` regions in tracked files; root `README.md` status block live (lines 24–30).
 - **Generated reference docs** — `docs/reference/packages.md`, `skills.md`, `cli.md`, `config.md`, `mcp-tools.md`.
 - **Auto-generated index** — `docs/README.md` Diátaxis index with `[ARCHIVED]` labels on superseded internal docs.
-- **ADR series** — `docs/decisions/0001..0012` + `docs/decisions/README.md`.
+- **ADR series** — `docs/decisions/0001..0013` + `docs/decisions/README.md`.
 
 ## Gap / roadmap delta
 

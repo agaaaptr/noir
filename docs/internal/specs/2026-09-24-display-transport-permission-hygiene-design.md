@@ -90,8 +90,9 @@ rules seed template is emitted to *every* host but its body is Claude-specific a
 ### 5. Documentation accuracy obligation
 
 Every behaviour above is described somewhere in `docs/`, and several descriptions are already wrong (the
-`rules:` block comment is stale; `docs/how-to/shared-workspaces.md:73-76` describes header-forwarding behaviour
-that the new transport makes irrelevant). Documentation must reflect shipped reality at the same checkpoint.
+`rules:` block comment is stale; the transport section of `docs/how-to/shared-workspaces.md` described
+header-forwarding behaviour that the new transport makes irrelevant). Documentation must reflect shipped
+reality at the same checkpoint.
 
 ## Decisions
 

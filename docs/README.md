@@ -1,7 +1,7 @@
 # Documentation
 
 > Auto-generated documentation index.
-> Last updated: 2026-09-16T05:41:29.891Z
+> Last updated: 2026-09-25T03:12:07.313Z
 
 ## Getting Started
 
@@ -60,6 +60,7 @@
 - [**ADR-0010 — Per-project daemon records, a real `daemon.port`, and HTTP-only auth**](decisions/0010-per-project-daemon-records-and-http-auth.md) — 
 - [**ADR-0011 — `.noir/.env` precedence, provenance, and the configuration doctrine**](decisions/0011-noir-env-precedence-and-doctrine.md) — 
 - [**ADR-0012: Provider transport fields + ambient-env neutralization**](decisions/0012-provider-transport-fields-and-ambient-env-neutralization.md) — 
+- [**ADR-0013 — Workspace transport via the stdio bridge, and 400 for a misdirected workspace URL**](decisions/0013-workspace-transport-and-daemon-routing.md) — 
 - [**Architecture Decision Records**](decisions/README.md) — 
 
 ## Roadmap
@@ -113,6 +114,7 @@
 - [**Shared Workspace Context Implementation Plan**](internal/plans/2026-09-09-shared-workspace-context.md) — [ARCHIVED]
 - [**Daemon Hardening + Init Completeness + `.noir/.env` Consolidation — Implementation Plan**](internal/plans/2026-09-11-daemon-hardening-init-completeness.md) — [ARCHIVED]
 - [**Env Templates + Upgrade Completeness + Provider Gateways + `noir run` UX — Implementation Plan**](internal/plans/2026-09-14-env-templates-upgrade-provider-run-ux.md) — [ARCHIVED]
+- [**Display integrity, workspace transport, permission contract, and output hygiene — implementation plan**](internal/plans/2026-09-24-display-transport-permission-hygiene.md) — [ARCHIVED]
 - [**Noir — AI Toolkit Design Blueprint**](internal/specs/2026-07-23-noir-toolkit-design.md) — [ARCHIVED]
 - [**Noir — Walking Skeleton Design (S0 → S2 → S3)**](internal/specs/2026-07-23-noir-walking-skeleton-design.md) — [ARCHIVED]
 - [**Noir — S1 Stores Design (`@noir-ai/store`)**](internal/specs/2026-07-23-s1-stores-design.md) — [ARCHIVED]
@@ -146,4 +148,5 @@
 - [**Shared Workspace Context — Design**](internal/specs/2026-09-09-shared-workspace-context-design.md) — [ARCHIVED]
 - [**Daemon Hardening + Init Completeness — Design**](internal/specs/2026-09-11-daemon-hardening-init-completeness-design.md) — [ARCHIVED]
 - [**Env Templates + Upgrade Completeness + Provider Gateways + `noir run` UX — Design**](internal/specs/2026-09-14-env-templates-upgrade-provider-run-ux-design.md) — [ARCHIVED]
+- [**Display integrity, workspace transport, permission contract, and output hygiene — design**](internal/specs/2026-09-24-display-transport-permission-hygiene-design.md) — [ARCHIVED]
 

@@ -364,7 +364,7 @@ to implement.
 ### Task 18 (Workstream C): Correct the false umask claim
 
 **Files:**
-- Modify: `packages/cli/src/install-method.ts` (the comment above the atomic write) and any twin
+- Modify: `packages/core/src/install-method.ts` (the comment above the atomic write) and any twin
 - Test: none (comment-only change; the behaviour is already correct)
 
 - [ ] **Step 1:** Rewrite the comment to state accurately that a `writeFileSync` mode is masked by the process
