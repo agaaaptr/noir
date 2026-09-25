@@ -7,11 +7,11 @@
 > **Note:** All version numbers in this runbook (e.g. `1.4.0`, `1.5.0`) are **examples** — substitute your actual version. Current published versions (run `pnpm docs:generate` to refresh):
 
 <!-- noir:doc:status -->
-**Latest stable:** `1.15.0` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.15.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Latest stable:** `1.16.0` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.16.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.16.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-25T05:53:15.843Z*
+*Last auto-generated: 2026-09-25T06:41:50.043Z*
 <!-- /noir:doc:status -->
 
 ---
@@ -213,7 +213,7 @@ git push origin v1.5.0-beta.1
 After the `release.yml` job goes green:
 
 ```bash
-npm view @noir-ai/cli dist-tags.beta   # → 1.15.0-beta.1 (the current beta pointer)
+npm view @noir-ai/cli dist-tags.beta   # → 1.16.0-beta.1 (the current beta pointer)
 npx @noir-ai/cli@beta init             # smoke test the published beta
 pnpm release:history                   # view the updated release registry
 ```

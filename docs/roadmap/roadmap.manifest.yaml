@@ -4,7 +4,7 @@ current_phase: shipped
 
 active_capability: null
 
-active_slice: null  # display-transport-permission-hygiene shipped as 1.16.0 (2026-09-25, beta, ADR-0013)
+active_slice: null  # display-transport-permission-hygiene shipped as 1.16.0 (2026-09-25, ADR-0013)
 
 roadmap:
   - id: C1
