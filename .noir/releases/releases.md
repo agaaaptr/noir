@@ -1,14 +1,14 @@
 # Noir Release Registry
 
 > Auto-generated on every successful release from npm registry + git tags.
-> Last updated: 2026-09-16T05:35:32.894Z
+> Last updated: 2026-09-25T06:09:40.116Z
 
 ## Current
 
-- **Base Version:** `1.15.0`
+- **Base Version:** `1.16.0`
 - **Latest Stable:** `1.15.0`
-- **Latest Beta:** `1.15.0-beta.1`
-- **Next Beta:** `1.15.0-beta.2`
+- **Latest Beta:** `1.16.0-beta.1`
+- **Next Beta:** `1.16.0-beta.2`
 
 ## Stable Releases
 
@@ -40,6 +40,7 @@
 
 | Version | Base | Iteration | Date | Git Tag | Commit |
 |---|---|---|---|---|---|
+| 1.16.0-beta.1 | 1.16.0 | 1 | 2026-09-25 | v1.16.0-beta.1 | 909eb06b1b217e44718e472903d782348e49719c |
 | 1.15.0-beta.1 | 1.15.0 | 1 | 2026-09-16 | v1.15.0-beta.1 | afe838902202f546a6baf9fdfca663a4339659e4 |
 | 1.14.0-beta.1 | 1.14.0 | 1 | 2026-09-11 | v1.14.0-beta.1 | df5bc0f4dd349e67c9bdb3ef12284ce69b0aa27f |
 | 1.13.0-beta.1 | 1.13.0 | 1 | 2026-09-10 | v1.13.0-beta.1 | 8e33780a9fd3f86470c1b598fd136dd7eea046e8 |
