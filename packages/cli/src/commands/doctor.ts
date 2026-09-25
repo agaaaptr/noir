@@ -8,9 +8,10 @@
 //   - ok   — healthy.
 //   - warn — degraded but usable (daemon down, onnx missing, provider key
 //            missing, project not initialized). NEVER triggers exit 1.
-//   - fail — CRITICAL: the product is broken on this host. Only `config` (parse
-//            error), `native deps` (better-sqlite3 / sqlite-vec will not load),
-//            and `store` (open fails) can fail. Exit 1 if any fail.
+//   - fail — CRITICAL. `config` (parse error), `native deps` (better-sqlite3 /
+//            sqlite-vec will not load), and `store` (open fails) mean the product
+//            is broken on this host; `output hygiene` fails when the repository's
+//            own text carries a fail-tier hygiene finding. Exit 1 if any fail.
 //
 // Honesty rules: provider status uses `resolveModelConfig` — a PURE projection
 // of the user's config + env-var NAME presence; it makes NO live call.
@@ -80,6 +81,7 @@ import {
   warn,
 } from '../output.js';
 import { type BadgeState, badge } from '../theme.js';
+import { truncateToWidth } from '../width.js';
 
 // The output-hygiene constants and types are re-exported here so a consumer
 // that imports the doctor command gets the scan's public surface without a
@@ -193,7 +195,9 @@ function describeOnnx(o: { ok: boolean; reason: string }): string {
   if (/Cannot find (module|package)/i.test(o.reason)) {
     return 'not resolvable from CLI probe (best-effort)';
   }
-  const r = o.reason.length > 60 ? `${o.reason.slice(0, 59)}…` : o.reason;
+  // Truncate at the visible width, not the code-unit count: a reason carrying a
+  // wide glyph or emoji would otherwise be measured short and cut mid-character.
+  const r = truncateToWidth(o.reason, 60);
   return `probe failed: ${r}`;
 }
 

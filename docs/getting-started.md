@@ -165,7 +165,7 @@ noir status         # probe-only health; works even with the daemon down
 noir task status    # where the active task is in the lifecycle
 noir task resume    # cross-session resume: briefing + next action
 noir task verify    # run configured checks and submit evidence to the verify gate
-noir doctor         # config / store / embedder / native deps / provider / install status
+noir doctor         # config / store / embedder / native deps / provider / install / output-hygiene status
 ```
 
 Driving that lifecycle yourself — `task new --class feature`, `advance --force`,

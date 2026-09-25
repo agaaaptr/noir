@@ -1,6 +1,6 @@
 // The workspace transport, proven end to end across two repositories.
 //
-// This is the capstone proof for the cross-repo workspace workstream: two
+// This is the capstone proof for the cross-repo workspace support: two
 // temporary git repositories join ONE workspace daemon, and the stdio bridge
 // (`noir mcp serve --stdio --workspace <name>`) relays a real MCP session to
 // that daemon for BOTH members, then refuses a third, non-member repository
