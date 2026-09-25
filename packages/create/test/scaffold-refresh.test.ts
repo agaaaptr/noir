@@ -183,7 +183,7 @@ describe('upgrade — a seed nobody edited is refreshed', () => {
     expect(res.refreshed).toEqual([]);
   });
 
-  posixIt('keeps the refreshed file’s permission bits', async () => {
+  posixIt("keeps the refreshed file's permission bits", async () => {
     // A refresh is a content change only. The seed's mode is whatever it was
     // created with (or whatever the user later set).
     seedInitializedProject({ envExample: recorded.envExample });

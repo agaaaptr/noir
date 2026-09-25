@@ -133,7 +133,7 @@ describe('rules seed — carries the core hygiene rules', () => {
 
 describe('rules seed — stays inside the doctor budget', () => {
   it.each([...SUPPORTED_HOSTS])(
-    'is within the doctor’s byte/line budget for host %s',
+    "is within the doctor's byte/line budget for host %s",
     async (host) => {
       const seed = await seedFor(host, join(root, host));
       // Same measurement `checkRulesMdBudget` applies: UTF-8 byte length for the
@@ -147,7 +147,7 @@ describe('rules seed — stays inside the doctor budget', () => {
 });
 
 describe('rules seed — the importer pointer lives in the host adapter', () => {
-  it('is emitted by the Claude adapter’s own rules block, not by the seed', () => {
+  it("is emitted by the Claude adapter's own rules block, not by the seed", () => {
     const block = claudeAdapter.emitRules?.({ root }) ?? '';
     expect(block).toContain('@import ".noir/rules/RULES.md"');
   });

@@ -151,7 +151,7 @@ describe('isStaleSeed — .noir/rules/RULES.md', () => {
 });
 
 describe('isStaleSeed — a comparison stays inside its own seed', () => {
-  it('does NOT match the OTHER seed’s recorded bytes', () => {
+  it("does NOT match the OTHER seed's recorded bytes", () => {
     // Each history entry records both seeds. The caller overwrites the file
     // when this returns true, so the working-rules bytes sitting in
     // `.noir/.env.example` must NOT read as a stale env seed (and the reverse).
@@ -160,7 +160,7 @@ describe('isStaleSeed — a comparison stays inside its own seed', () => {
     expect(isStaleSeed('rulesSeed', v1_1_0.envExample, currentRulesSeed)).toBe(false);
   });
 
-  it('does NOT report the other seed’s CURRENT render as stale either', () => {
+  it("does NOT report the other seed's CURRENT render as stale either", () => {
     expect(isStaleSeed('envExample', currentRulesSeed, currentEnvExample)).toBe(false);
     expect(isStaleSeed('rulesSeed', currentEnvExample, currentRulesSeed)).toBe(false);
   });
