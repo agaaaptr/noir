@@ -8,8 +8,9 @@
 // and the doctor check cannot drift apart. The exemption markers and the
 // planning-corpus exclusions are part of that scan, so this script honours them
 // without a list of its own. The summary line (including what the scan left
-// out) is `hygieneDetail` from the same module — this script re-derives none of
-// it.
+// out) is `hygieneCounts` from the same module — this script re-derives none of
+// it, and reaches for the counts rather than `hygieneDetail` because every
+// finding is already printed on its own line above.
 //
 // Offline and free: reads files under the repository only, no network, no key.
 
@@ -27,7 +28,7 @@ if (!existsSync(join(root, 'packages', 'cli', 'dist', 'hygiene-scan.js'))) {
   console.error('output hygiene: @noir-ai/cli is not built — run `pnpm build` first');
   process.exit(1);
 }
-const { hygieneDetail, scanOutputHygiene } = await import('@noir-ai/cli/hygiene-scan');
+const { hygieneCounts, scanOutputHygiene } = await import('@noir-ai/cli/hygiene-scan');
 
 const result = scanOutputHygiene(root);
 
@@ -36,6 +37,6 @@ for (const f of result.findings) {
   else console.log(`warn ${f.path}:${f.line} ${f.id}`);
 }
 
-console.log(`output hygiene: ${hygieneDetail(result)}`);
+console.log(`output hygiene: ${hygieneCounts(result)}`);
 
 if (result.fail > 0) process.exitCode = 1;

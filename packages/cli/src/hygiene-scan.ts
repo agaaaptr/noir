@@ -218,10 +218,11 @@ function hygieneOmissions(result: HygieneScanResult): string {
   return notes.length > 0 ? ` (${notes.join('; ')})` : '';
 }
 
-/** The report line: the counts, the locations that carry them, how many the cap
- *  left out, and what the scan itself omitted. Failures are named before
- *  warnings, so a truncated list still shows what blocks. */
-export function hygieneDetail(result: HygieneScanResult): string {
+/** The counts line: how many findings of each tier, in how many files, and what
+ *  the scan itself omitted. It names no location, so a caller that prints every
+ *  finding on a line of its own pairs this with those lines instead of printing
+ *  the same findings twice. */
+export function hygieneCounts(result: HygieneScanResult): string {
   const omitted = hygieneOmissions(result);
   if (result.scanned === 0) {
     return `nothing to scan (no packages/*/src, packages/*/test, scripts/ or documents found)${omitted}`;
@@ -230,10 +231,19 @@ export function hygieneDetail(result: HygieneScanResult): string {
     return `clean — ${result.scanned} file${result.scanned === 1 ? '' : 's'} scanned${omitted}`;
   }
   const files = new Set(result.findings.map((f) => f.path)).size;
+  return `${result.fail} fail, ${result.warn} warn in ${files} file${files === 1 ? '' : 's'}${omitted}`;
+}
+
+/** The counts line followed by the locations that carry them, up to the cap.
+ *  Failures are named before warnings, so a truncated list still shows what
+ *  blocks. This is the doctor row, which has one line to work with. */
+export function hygieneDetail(result: HygieneScanResult): string {
+  const counts = hygieneCounts(result);
+  if (result.scanned === 0 || result.findings.length === 0) return counts;
   const named = result.findings.slice(0, HYGIENE_FINDING_CAP);
   const hidden = result.findings.length - named.length;
   const where = named.map((f) => `${f.path}:${f.line} ${f.id}`).join('; ');
-  return `${result.fail} fail, ${result.warn} warn in ${files} file${files === 1 ? '' : 's'} — ${where}${hidden > 0 ? ` (+${hidden} more)` : ''}${omitted}`;
+  return `${counts} — ${where}${hidden > 0 ? ` (+${hidden} more)` : ''}`;
 }
 
 /**
