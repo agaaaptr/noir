@@ -214,6 +214,31 @@ function flush(ms = 40): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Wait until the rendered frame contains `needle`, polling instead of sleeping
+ * a fixed budget.
+ *
+ * Anything the screen writes on a timer — the elapsed-time cell is the case
+ * here — is drawn by an interval tick, so a single sleep races that timer: on a
+ * loaded machine the sleep can resolve before the tick fires and the test fails
+ * on a screen that is behaving correctly. Polling ends as soon as the tick
+ * lands, and only a frame that never shows `needle` runs out the deadline,
+ * which is then a real failure rather than a slow machine.
+ */
+async function waitForFrame(
+  instance: ReturnType<typeof render>,
+  needle: string,
+  timeoutMs = 2000,
+): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  let frame = instance.lastFrame() ?? '';
+  while (!frame.includes(needle) && Date.now() < deadline) {
+    await flush(10);
+    frame = instance.lastFrame() ?? '';
+  }
+  return frame;
+}
+
 describe('run screen — live render', () => {
   it('shows assistant text as it streams, then commits it once the host confirms', async () => {
     const m = mountRun();
@@ -275,10 +300,9 @@ describe('run screen — live render', () => {
       text: 'done',
       usage: { inputTokens: 120, outputTokens: 34 },
     });
-    // The clock is only read on a tick, so let a couple land before reading.
-    await flush(80);
-
-    const frame = m.instance.lastFrame() ?? '';
+    // The clock is only read on a tick, so wait for one to land rather than
+    // sleeping through a window a starved timer can miss.
+    const frame = await waitForFrame(m.instance, '1m 08s');
     expect(frame).toContain('1m 08s');
     expect(frame).toContain('↓120↑34 tokens');
     m.instance.unmount();
