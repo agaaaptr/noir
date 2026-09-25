@@ -86,7 +86,7 @@ import { truncateToWidth } from '../width.js';
 // The output-hygiene constants and types are re-exported here so a consumer
 // that imports the doctor command gets the scan's public surface without a
 // second import; the scan itself stays the single source of truth in
-// ../hygiene-scan.ts (see the `doctor.ts` shim for the legacy path).
+// ../hygiene-scan.ts, and this module is the only doctor entry point.
 export {
   HYGIENE_FINDING_CAP,
   HYGIENE_MAX_FILE_BYTES,
@@ -1299,11 +1299,10 @@ function renderHuman(payload: DoctorPayload, opts: CliOptions): void {
  *  Each is tightened to 0600/0700 by {@link ensureOwnerOnly} /
  *  {@link ensureOwnerOnlyDir}, which are best-effort no-ops on a missing file
  *  or a platform without POSIX mode bits. Returns one entry per target so the
- *  payload reports exactly what changed; a clean tree is all `unchanged`. */
-export function fixOwnerOnlyPermissions(
-  root: string,
-  project: ProjectInfo | undefined,
-): DoctorFix[] {
+ *  payload reports exactly what changed; a clean tree is all `unchanged`.
+ *  Private to this module: `doctor` is the only caller, and `--fix` is reached
+ *  through the command rather than the helper. */
+function fixOwnerOnlyPermissions(root: string, project: ProjectInfo | undefined): DoctorFix[] {
   const fixes: DoctorFix[] = [
     { path: '.noir/.env', outcome: ensureOwnerOnly(join(paths.noirDir(root), '.env')) },
   ];
