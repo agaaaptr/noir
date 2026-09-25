@@ -1319,7 +1319,11 @@ function cmdIndex() {
       if (doc.lifecycle === 'archived') parts.push('[ARCHIVED]');
       if (doc.category === 'root') parts.push('Project overview');
       const suffix = parts.join(' ');
-      lines.push(`- [**${doc.title}**](${relativePath}) — ${suffix}`);
+      // The separator belongs to the suffix: most documents carry no label at
+      // all (neither archived nor the root README), and appending it
+      // unconditionally left those rows ending in a dangling dash.
+      const detail = suffix ? ` — ${suffix}` : '';
+      lines.push(`- [**${doc.title}**](${relativePath})${detail}`);
     }
     lines.push('');
   }

@@ -9,79 +9,79 @@
 
 ## Tutorial
 
-- [**Getting started**](getting-started.md) — 
+- [**Getting started**](getting-started.md)
 
 ## How-To Guides
 
-- [**Using the ClickUp integration (noir-clickup)**](how-to/clickup.md) — 
-- [**Configuring a project with `.noir/.env`**](how-to/configure-env.md) — 
-- [**How to search your codebase and hand off a session**](how-to/context-and-handoff.md) — 
-- [**Connecting through a gateway**](how-to/gateways.md) — 
-- [**Running with multiple host profiles**](how-to/host-profiles.md) — 
-- [**Installing Noir**](how-to/installation.md) — 
-- [**How to use cross-session memory**](how-to/memory.md) — 
-- [**Adding a package**](how-to/packaging.md) — 
-- [**Releasing Noir**](how-to/releasing.md) — 
-- [**How to run the host agent headless**](how-to/running-the-host.md) — 
-- [**How to run a spec-driven task end to end**](how-to/sdd-tasks.md) — 
-- [**Sharing memory across repositories (workspaces)**](how-to/shared-workspaces.md) — 
+- [**Using the ClickUp integration (noir-clickup)**](how-to/clickup.md)
+- [**Configuring a project with `.noir/.env`**](how-to/configure-env.md)
+- [**How to search your codebase and hand off a session**](how-to/context-and-handoff.md)
+- [**Connecting through a gateway**](how-to/gateways.md)
+- [**Running with multiple host profiles**](how-to/host-profiles.md)
+- [**Installing Noir**](how-to/installation.md)
+- [**How to use cross-session memory**](how-to/memory.md)
+- [**Adding a package**](how-to/packaging.md)
+- [**Releasing Noir**](how-to/releasing.md)
+- [**How to run the host agent headless**](how-to/running-the-host.md)
+- [**How to run a spec-driven task end to end**](how-to/sdd-tasks.md)
+- [**Sharing memory across repositories (workspaces)**](how-to/shared-workspaces.md)
 
 ## Reference
 
-- [**Generated-artifact format & naming standard**](reference/artifact-format.md) — 
-- [**CLI Command Reference**](reference/cli.md) — 
-- [**Configuration Reference**](reference/config.md) — 
-- [**Environment Variables**](reference/environment.md) — 
-- [**MCP Tools Reference**](reference/mcp-tools.md) — 
-- [**Package Inventory**](reference/packages.md) — 
-- [**Builtin Skills**](reference/skills.md) — 
+- [**Generated-artifact format & naming standard**](reference/artifact-format.md)
+- [**CLI Command Reference**](reference/cli.md)
+- [**Configuration Reference**](reference/config.md)
+- [**Environment Variables**](reference/environment.md)
+- [**MCP Tools Reference**](reference/mcp-tools.md)
+- [**Package Inventory**](reference/packages.md)
+- [**Builtin Skills**](reference/skills.md)
 
 ## Explanation
 
-- [**Architecture**](explanation/architecture.md) — 
-- [**Privacy & Security**](explanation/privacy.md) — 
-- [**Spec-Driven Development Workflow**](explanation/sdd-workflow.md) — 
+- [**Architecture**](explanation/architecture.md)
+- [**Privacy & Security**](explanation/privacy.md)
+- [**Spec-Driven Development Workflow**](explanation/sdd-workflow.md)
 
 ## Records
 
-- [**Changelog**](../CHANGELOG.md) — 
+- [**Changelog**](../CHANGELOG.md)
 
 ## Architecture Decision Records
 
-- [**ADR-0001: Documentation layout and spec/plan paths**](decisions/0001-doc-layout-and-spec-plan-paths.md) — 
-- [**ADR-0002: Native skills only — plugin + marketplace removed**](decisions/0002-native-skills-only-plugin-removed.md) — 
-- [**ADR-0003: v1.x capabilities — keystone refactor + five extensions**](decisions/0003-v1x-capabilities.md) — 
-- [**ADR-0004: Multi-host adapters — the `resolveAdapter(host)` registry + AGENTS.md universal**](decisions/0004-multi-host-adapters.md) — 
-- [**ADR-0005: Native installer is managed-Node, not a single binary**](decisions/0005-native-installer-managed-node.md) — 
-- [**ADR-0006: C2 TUI command palette + daemon `--detach` (and the deferred v2 orchestrator TUI)**](decisions/0006-c2-tui-and-daemon-detach.md) — 
-- [**ADR-0007: C3 generated-artifact standard — type codes, frontmatter, per-type outlines**](decisions/0007-generated-artifact-standard.md) — 
-- [**ADR-0008: v2 orchestrator TUI — single-surface consolidation + `noir run` headless host-driving**](decisions/0008-v2-orchestrator-tui.md) — 
-- [**ADR-0009 — Shared cross-repo workspaces**](decisions/0009-shared-workspaces.md) — 
-- [**ADR-0010 — Per-project daemon records, a real `daemon.port`, and HTTP-only auth**](decisions/0010-per-project-daemon-records-and-http-auth.md) — 
-- [**ADR-0011 — `.noir/.env` precedence, provenance, and the configuration doctrine**](decisions/0011-noir-env-precedence-and-doctrine.md) — 
-- [**ADR-0012: Provider transport fields + ambient-env neutralization**](decisions/0012-provider-transport-fields-and-ambient-env-neutralization.md) — 
-- [**ADR-0013 — Workspace transport via the stdio bridge, and 400 for a misdirected workspace URL**](decisions/0013-workspace-transport-and-daemon-routing.md) — 
-- [**Architecture Decision Records**](decisions/README.md) — 
+- [**ADR-0001: Documentation layout and spec/plan paths**](decisions/0001-doc-layout-and-spec-plan-paths.md)
+- [**ADR-0002: Native skills only — plugin + marketplace removed**](decisions/0002-native-skills-only-plugin-removed.md)
+- [**ADR-0003: v1.x capabilities — keystone refactor + five extensions**](decisions/0003-v1x-capabilities.md)
+- [**ADR-0004: Multi-host adapters — the `resolveAdapter(host)` registry + AGENTS.md universal**](decisions/0004-multi-host-adapters.md)
+- [**ADR-0005: Native installer is managed-Node, not a single binary**](decisions/0005-native-installer-managed-node.md)
+- [**ADR-0006: C2 TUI command palette + daemon `--detach` (and the deferred v2 orchestrator TUI)**](decisions/0006-c2-tui-and-daemon-detach.md)
+- [**ADR-0007: C3 generated-artifact standard — type codes, frontmatter, per-type outlines**](decisions/0007-generated-artifact-standard.md)
+- [**ADR-0008: v2 orchestrator TUI — single-surface consolidation + `noir run` headless host-driving**](decisions/0008-v2-orchestrator-tui.md)
+- [**ADR-0009 — Shared cross-repo workspaces**](decisions/0009-shared-workspaces.md)
+- [**ADR-0010 — Per-project daemon records, a real `daemon.port`, and HTTP-only auth**](decisions/0010-per-project-daemon-records-and-http-auth.md)
+- [**ADR-0011 — `.noir/.env` precedence, provenance, and the configuration doctrine**](decisions/0011-noir-env-precedence-and-doctrine.md)
+- [**ADR-0012: Provider transport fields + ambient-env neutralization**](decisions/0012-provider-transport-fields-and-ambient-env-neutralization.md)
+- [**ADR-0013 — Workspace transport via the stdio bridge, and 400 for a misdirected workspace URL**](decisions/0013-workspace-transport-and-daemon-routing.md)
+- [**Architecture Decision Records**](decisions/README.md)
 
 ## Roadmap
 
-- [**Backlog**](roadmap/backlog.md) — 
-- [**Capability 1 — Package Distribution & Release Management**](roadmap/capability-01-package-distribution.md) — 
-- [**Capability 2 — CLI Runtime & User Experience**](roadmap/capability-02-cli-runtime.md) — 
-- [**Capability 3 — Built-in Skill System**](roadmap/capability-03-builtin-skill-system.md) — 
-- [**Capability 4 — End-to-End AI Development Workflow**](roadmap/capability-04-ai-development-workflow.md) — 
-- [**Capability 5.5 — Host Abstraction Layer (HAL)**](roadmap/capability-05-5-host-abstraction-layer.md) — 
-- [**Capability 5 — Runtime Infrastructure & Local Daemon**](roadmap/capability-05-runtime-infrastructure.md) — 
-- [**Capability 6 — Documentation & Knowledge System**](roadmap/capability-06-documentation-knowledge-system.md) — 
-- [**Capability 7 — Engineering Governance & Project Operating System**](roadmap/capability-07-engineering-governance.md) — 
-- [**Capability 8 — Platform Engineering & Developer Experience (DX)**](roadmap/capability-08-platform-engineering-dx.md) — 
-- [**Capability 9 — AI Platform Evolution & Long-Term Vision**](roadmap/capability-09-platform-evolution.md) — 
-- [**Roadmap Changelog**](roadmap/CHANGELOG.md) — 
-- [**Contributing to the Noir Roadmap**](roadmap/CONTRIBUTING.md) — 
-- [**Noir Roadmap**](roadmap/README.md) — 
-- [**Releases & Version Targets**](roadmap/releases.md) — 
-- [**Noir Master Development Roadmap**](roadmap/ROADMAP.md) — 
-- [**Noir Roadmap Status**](roadmap/STATUS.md) — 
+- [**Backlog**](roadmap/backlog.md)
+- [**Capability 1 — Package Distribution & Release Management**](roadmap/capability-01-package-distribution.md)
+- [**Capability 2 — CLI Runtime & User Experience**](roadmap/capability-02-cli-runtime.md)
+- [**Capability 3 — Built-in Skill System**](roadmap/capability-03-builtin-skill-system.md)
+- [**Capability 4 — End-to-End AI Development Workflow**](roadmap/capability-04-ai-development-workflow.md)
+- [**Capability 5.5 — Host Abstraction Layer (HAL)**](roadmap/capability-05-5-host-abstraction-layer.md)
+- [**Capability 5 — Runtime Infrastructure & Local Daemon**](roadmap/capability-05-runtime-infrastructure.md)
+- [**Capability 6 — Documentation & Knowledge System**](roadmap/capability-06-documentation-knowledge-system.md)
+- [**Capability 7 — Engineering Governance & Project Operating System**](roadmap/capability-07-engineering-governance.md)
+- [**Capability 8 — Platform Engineering & Developer Experience (DX)**](roadmap/capability-08-platform-engineering-dx.md)
+- [**Capability 9 — AI Platform Evolution & Long-Term Vision**](roadmap/capability-09-platform-evolution.md)
+- [**Roadmap Changelog**](roadmap/CHANGELOG.md)
+- [**Contributing to the Noir Roadmap**](roadmap/CONTRIBUTING.md)
+- [**Noir Roadmap**](roadmap/README.md)
+- [**Releases & Version Targets**](roadmap/releases.md)
+- [**Noir Master Development Roadmap**](roadmap/ROADMAP.md)
+- [**Noir Roadmap Status**](roadmap/STATUS.md)
 
 ## Internal (SDD History)
 
