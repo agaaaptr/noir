@@ -277,7 +277,7 @@ describeVec(describeLabel, () => {
     }
   });
 
-  // §9 hard rule — the consent boundary is `memory.consolidation.enabled`,
+  // The hard rule — the consent boundary is `memory.consolidation.enabled`,
   // NOT `model.defaultProvider`. The `memory:` block is the user's master switch;
   // the `model:` block only provides the provider+key the bound S8 `complete`
   // uses once the switch is ON. Two cases:
@@ -290,7 +290,7 @@ describeVec(describeLabel, () => {
   //      line against the Agent-Memory "silent paid consolidation" leak — the
   //      exact bug this test replaces (the prior green encoded the bypass: it
   //      registered the tool from `model:` alone, ignoring the absent `memory:`
-  //      consent, which is blueprint §9's anti-pattern).
+  //      consent, which is the anti-pattern this rule exists to prevent).
   it('gates memory_consolidate on memory.consolidation.enabled — no silent paid call', async () => {
     // Provider block reused across both cases: an anthropic block whose key env
     // is intentionally unset (a name nothing in the test env provides).
@@ -341,7 +341,7 @@ describeVec(describeLabel, () => {
     }
 
     // --- (b) inverse: enabled:false + model.defaultProvider set ---
-    // The blueprint §9 leak: a user who set `model.defaultProvider:'anthropic'`
+    // The leak this guards: a user who set `model.defaultProvider:'anthropic'`
     // for summarize/title/draft but opted OUT of memory consolidation
     // (`enabled:false`) must NOT get a paid Anthropic consolidation call. The
     // model-derived derivation alone WOULD resolve a provider (the bug vector) —

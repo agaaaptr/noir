@@ -484,9 +484,9 @@ describe('WorkflowEngine', () => {
     });
   });
 
-  // Debt-batch A — collapse the dual source of truth. The audit:<id> KV is
-  // AUTHORITATIVE (§11 OQ-5); task.history is a DERIVED view regenerated
-  // from it on every advance and every status() read. No drift, one timestamp.
+  // The audit:<id> KV is the AUTHORITATIVE record; task.history is a DERIVED
+  // view regenerated from it on every advance and every status() read, so the
+  // two cannot drift and there is one timestamp.
   describe('history is derived from the authoritative audit KV', () => {
     it('advance mirrors the audit KV exactly (single timestamp, no drift)', async () => {
       const store = await openStore({ projectId, root });
@@ -816,7 +816,7 @@ describe('WorkflowEngine', () => {
   // <taskId>.json` (writeAuditExport) so the public MCP tool leaves a real
   // cross-tool artifact, not just a timestamp bump.
   describe('checkpoint flushes the audit JSON export to disk', () => {
-    it('writes .noir/audit/<taskId>.json containing the audit KV (§11 OQ-5)', async () => {
+    it('writes .noir/audit/<taskId>.json containing the audit KV', async () => {
       const store = await openStore({ projectId, root });
       try {
         const engine = new WorkflowEngine(store, root, projectId);

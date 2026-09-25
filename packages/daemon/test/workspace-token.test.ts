@@ -1,4 +1,4 @@
-// Workspace-daemon transport auth (spec 6.1 + §6.3) — the workspace parity of
+// Workspace-daemon transport auth — the workspace parity of
 // the project daemon's bearer token, asserted in http.test.ts.
 //
 // The scope key is the workspace NAME (a projectId is meaningless for a daemon
