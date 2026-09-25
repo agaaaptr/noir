@@ -717,9 +717,12 @@ function genMcpTools() {
     '',
   ];
 
-  // MCP tools are registered in packages/daemon/src/*.ts — grep for registration patterns
+  // MCP tools are registered in packages/daemon/src/*.ts — grep for registration patterns.
+  // Every registration lives in one file (server.ts), so the table is flat: a
+  // grouping by source file would put all of them in one bucket, and inventing
+  // one from the tool name would be a second naming scheme to keep in step.
   const daemonDir = join(ROOT, 'packages', 'daemon', 'src');
-  const tools = new Map(); // name → { category, description }
+  const tools = new Map(); // name → description
 
   if (existsSync(daemonDir)) {
     for (const file of readdirSync(daemonDir)) {
@@ -744,51 +747,19 @@ function genMcpTools() {
           ) ?? null;
         const desc = descMatch ? (descMatch[1] ?? descMatch[2] ?? '') : '';
 
-        // Determine category from file name
-        let category = 'general';
-        if (file.includes('workflow')) category = 'workflow';
-        else if (file.includes('context')) category = 'context';
-        else if (file.includes('memory')) category = 'memory';
-        else if (file.includes('store')) category = 'store';
-        else if (file.includes('host')) category = 'host';
-        else if (file.includes('integration') || file.includes('clickup'))
-          category = 'integrations';
-
         if (!tools.has(name)) {
-          tools.set(name, { category, description: desc });
+          tools.set(name, { description: desc });
         }
       }
     }
   }
 
-  // Group by category
-  const byCategory = {};
+  lines.push('| Tool | Description |');
+  lines.push('|---|---|');
   for (const [name, info] of tools) {
-    if (!byCategory[info.category]) byCategory[info.category] = [];
-    byCategory[info.category].push({ name, ...info });
+    lines.push(`| \`${name}\` | ${info.description || '—'} |`);
   }
-
-  const categoryOrder = [
-    'host',
-    'store',
-    'workflow',
-    'context',
-    'memory',
-    'integrations',
-    'general',
-  ];
-  for (const cat of categoryOrder) {
-    if (!byCategory[cat]) continue;
-    const entries = byCategory[cat];
-    lines.push(`### ${cat.charAt(0).toUpperCase() + cat.slice(1)}`);
-    lines.push('');
-    lines.push('| Tool | Description |');
-    lines.push('|---|---|');
-    for (const t of entries) {
-      lines.push(`| \`${t.name}\` | ${t.description || '—'} |`);
-    }
-    lines.push('');
-  }
+  lines.push('');
 
   return lines.join('\n');
 }

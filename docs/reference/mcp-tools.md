@@ -2,8 +2,6 @@
 
 > Auto-generated from daemon tool registrations.
 
-### General
-
 | Tool | Description |
 |---|---|
 | `host_status` | Report Noir's runtime status: project id/name, host CLI, transport, and daemon state. |
