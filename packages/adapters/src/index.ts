@@ -14,6 +14,7 @@ export { defaultHandoffBlock, hostLaunchDirective } from './handoff.js';
 export {
   buildMcpServersJson,
   mcpConfigPathFor,
+  mcpConfigPathForAdapter,
   noirStdioArgs,
   TRANSPORT_KEYS,
 } from './mcp.js';

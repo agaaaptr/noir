@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { resolveAdapter } from './index.js';
-import type { HostId, IntegrationMcpEmission, McpConfigOptions } from './types.js';
+import type { HostAdapter, HostId, IntegrationMcpEmission, McpConfigOptions } from './types.js';
 
 /**
  * The keys that say HOW a host reaches the Noir server — `command`/`args` for
@@ -15,14 +15,22 @@ export const TRANSPORT_KEYS: ReadonlySet<string> = new Set(['command', 'args', '
 
 /**
  * Where a host keeps its MCP config file (absolute), with the `.mcp.json`
- * default a host that does not declare a path falls back to. This is the ONE
- * spelling of the default fallback: the cli's workspace rewrite, the create
- * manifest and its scaffold migration, and the doctor's host check all resolve
- * the same way, so a host that relocates its config changes exactly one
- * expression instead of four drifted copies.
+ * default a host that does not declare a path falls back to. Every adapter's
+ * `mcpConfigPath` reads `root` and nothing else from its context, so a caller
+ * that holds no adapter object asks by host id and this is where the fallback
+ * lives — one expression, not one per caller.
  */
+export function mcpConfigPathForAdapter(adapter: HostAdapter, root: string): string {
+  return adapter.mcpConfigPath?.({ root }) ?? join(root, '.mcp.json');
+}
+
+/** {@link mcpConfigPathForAdapter} for a caller that has the host id rather than
+ *  the adapter object — it resolves the adapter first. The cli's workspace
+ *  rewrite, its `doctor` expectation check, and the create scaffold migration
+ *  all come through here; the create manifest, which already holds the adapter,
+ *  calls the adapter form directly. Either way the fallback is spelled once. */
 export function mcpConfigPathFor(host: HostId, root: string): string {
-  return resolveAdapter(host).mcpConfigPath?.({ root }) ?? join(root, '.mcp.json');
+  return mcpConfigPathForAdapter(resolveAdapter(host), root);
 }
 
 /**
