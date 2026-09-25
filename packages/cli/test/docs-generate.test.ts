@@ -234,3 +234,22 @@ describe('docs generator — CLI reference', () => {
     expect(cliReference).toContain('noir install|migrate [options] [spec]');
   });
 });
+
+describe('docs generator — index', () => {
+  // The index row built its label as ` — ${suffix}` unconditionally, so a
+  // document carrying no label at all (neither archived nor the root README —
+  // the large majority of them) ended in a dangling separator.
+  const indexPath = join(repoRoot(), 'docs', 'README.md');
+  const index = existsSync(indexPath) ? readFileSync(indexPath, 'utf8') : '';
+
+  it('leaves no dangling separator on a row with nothing to label', () => {
+    const dangling = index.split('\n').filter((line) => line.trimEnd().endsWith('—'));
+    expect(dangling, `rows ending in a dangling separator:\n${dangling.join('\n')}`).toEqual([]);
+  });
+
+  it('still labels the one row that always carries a label', () => {
+    // The root README is two levels up from docs/README.md, and is the only
+    // document the generator labels unconditionally.
+    expect(index).toContain('](../README.md) — Project overview');
+  });
+});
