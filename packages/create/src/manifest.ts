@@ -296,7 +296,7 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
       // example by hand. `fileMode: 0o600` because the file holds tokens the
       // moment the user edits it. The mode is applied when the file is created;
       // a copy that predates this contract (or that an editor saved by rename)
-      // has its mode re-asserted on every init/sync run — see `ensureOwnerOnly`.
+      // has its mode re-asserted on every init/sync/create run — see `ensureOwnerOnly`.
       path: P.env,
       mode: 'skipIfExists',
       template: 'config.env.tmpl',

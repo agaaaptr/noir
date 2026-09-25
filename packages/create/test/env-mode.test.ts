@@ -10,9 +10,9 @@
 // executable bit, and records the outcome so the command can say what it did.
 //
 // This suite pins that contract: the mode is healed on init, on sync, on
-// `init --upgrade` and on `init --force`; a file that is already owner-only is
-// reported unchanged rather than healed; and a platform with no POSIX mode bits
-// degrades to a no-op instead of throwing.
+// `create` and on `init --upgrade` / `init --force`; a file that is already
+// owner-only is reported unchanged rather than healed; and a platform with no
+// POSIX mode bits degrades to a no-op instead of throwing.
 //
 // Offline/free: no network, no API key, no embedder.
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
