@@ -1,7 +1,6 @@
-// SP-C (deferred slice) — findSemanticDuplicates + findNearestDuplicate (TDD).
-// A deterministic fake embedder maps each text to a hand-set unit vector so
-// cosine + threshold + ordering are tested without loading the real MiniLM
-// embedder.
+// `findSemanticDuplicates` + `findNearestDuplicate`: cosine, threshold and
+// ordering. A deterministic fake embedder maps each text to a hand-set unit
+// vector so the maths is tested without loading the real MiniLM embedder.
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_DUP_THRESHOLD,

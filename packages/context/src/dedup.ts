@@ -1,4 +1,10 @@
-// Semantic duplicate detection (not wired into the engine yet).
+// Semantic duplicate detection: a library surface, not part of ContextEngine.
+//
+// The engine never calls into this module. Its two consumers are the write-path
+// hook (`findNearestDuplicate`, run by `init`/`sync`/`create` after a
+// host-context file is emitted, comparing it against the others) and the
+// `noir doctor --dedup` check (`findSemanticDuplicates` over the candidate set
+// the doctor collects).
 //
 // Embeds file contents via an injected EmbedFn (the local embedder in
 // production; a deterministic fake in tests) and finds near-duplicate pairs by
