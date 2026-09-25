@@ -5,7 +5,7 @@
 
 ## Context
 
-C3 (Built-in Skill System) ships 26 `noir-` skills, many of which tell the host to **generate a file** (spec, plan, PRD, task, analysis, decision record, bug report, subagent brief/report, handoff, intake, clarification). An audit found **29 file-generating surfaces** with three conflicting naming families and no shared contract:
+C3 (Built-in Skill System) ships 26 `noir-` skills (the count at the time of writing; the pack has grown since), many of which tell the host to **generate a file** (spec, plan, PRD, task, analysis, decision record, bug report, subagent brief/report, handoff, intake, clarification). An audit found **29 file-generating surfaces** with three conflicting naming families and no shared contract:
 
 1. **Naming drift** — the engine writes `.noir/specs/<taskId>-<slug>.md`, but `noir-planning` prescribes `.noir/plans/<date>-<slug>.md`, `noir-spec` prescribes `.noir/specs/<id>-<slug>.md`, and `noir-subagent` invents `.noir/sdd/task-N-brief.md` (a directory absent from `layout.ts`).
 2. **No frontmatter / no provenance** — generated and hand-authored files are indistinguishable; the decision stub carries status as an HTML comment (`<!-- Status: pending -->`).
