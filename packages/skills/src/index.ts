@@ -54,6 +54,14 @@ export {
 export type { SkillRegistryEntry } from './registry.js';
 export { buildRegistry, NOIR_NAMESPACE, registryByCategory } from './registry.js';
 export { FORBIDDEN_RESIDUE, RESIDUE_RULES } from './residue.js';
+export {
+  CLUSTER_WORDS,
+  FILLER_PHRASES,
+  KILL_ON_SIGHT,
+  SLOP_ALLOWLIST,
+  SLOP_TRIGRAMS,
+  slopFindings,
+} from './slop.js';
 export type {
   BuiltinReference,
   BuiltinSkill,
