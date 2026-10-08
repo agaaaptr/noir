@@ -1,6 +1,6 @@
 ---
 name: noir-debt
-description: Use when the user asks "what did we defer", "list the shortcuts", "debt ledger", or mentions noir-debt. Grep the repo for the noir-debt markers, then group them by file into a ledger that names each marker's ceiling and upgrade trigger. Do NOT use to fix the debt (the owning task does that), or as a whole-repo audit (noir-codebase-audit owns that pass).
+description: Use when the user asks "what did we defer", "list the shortcuts", "debt ledger", or mentions noir-debt. Grep the repo for the noir-debt markers, then group them by file into a ledger that names each marker's ceiling and upgrade trigger. Do NOT use to fix the debt (the owning task does that), for a general read-only codebase search (noir-exploring), or as a whole-repo audit (noir-codebase-audit owns that pass).
 metadata:
   category: meta
   version: 1.0.0
@@ -16,7 +16,7 @@ Harvest every `noir-debt:` marker in the repository into a ledger grouped by fil
 
 - The user asks "what did we defer", "list the shortcuts", "debt ledger", or mentions noir-debt.
 - Before changing a file, to see which markers inside it have a trigger that has already arrived.
-- **Do NOT use** to fix the debt itself; the owning task pays it. For the whole-repo over-engineering and prose pass, use `noir-codebase-audit`.
+- **Do NOT use** to fix the debt itself; the owning task pays it. For a general read-only codebase search, use `noir-exploring`; this skill only greps `noir-debt:` markers and builds the ledger. For the whole-repo over-engineering and prose pass, use `noir-codebase-audit`.
 
 ## Procedure
 

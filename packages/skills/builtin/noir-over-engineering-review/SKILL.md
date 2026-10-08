@@ -1,6 +1,6 @@
 ---
 name: noir-over-engineering-review
-description: Use when the user says "review for over-engineering", "what can we delete", "is this over-engineered", or "simplify". Review the current diff for reinvented stdlib, unneeded dependencies, speculative abstractions, and dead flexibility, one line per finding. Do NOT use for a correctness or security review (noir-verifying or noir-security), a read-only search (noir-exploring), or a whole-repo audit (noir-codebase-audit).
+description: Use when the user says "review for over-engineering", "what can we delete", "is this over-engineered", or "simplify". Review the current diff for reinvented stdlib, unneeded dependencies, speculative abstractions, and dead flexibility, one line per finding. Do NOT use for a correctness or security review (noir-verifying or noir-security), a read-only codebase search (noir-exploring), a project-health diagnostic (noir-doctor), or a whole-repo audit (noir-codebase-audit).
 metadata:
   category: meta
   version: 1.0.0
@@ -16,7 +16,7 @@ Review the current diff for complexity that does not earn its place: code that r
 
 - The user says "review for over-engineering", "what can we delete", "is this over-engineered", or "simplify".
 - A diff has grown and the reviewer wants a deletion-first pass before the correctness pass.
-- **Do NOT use** for a correctness or security review (`noir-verifying`, `noir-security`), a read-only codebase search (`noir-exploring`), or the whole-repo audit (`noir-codebase-audit`).
+- **Do NOT use** for a correctness or security review (`noir-verifying`, `noir-security`), a read-only codebase search (`noir-exploring`), a project-health diagnostic (`noir-doctor`), or the whole-repo audit (`noir-codebase-audit`).
 
 ## Procedure
 
