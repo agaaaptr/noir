@@ -108,11 +108,26 @@ describe('builtin pack: stubs + totals', () => {
     const stubCount = skills.filter((s) => s.skillMd.includes('> **Stub:**')).length;
     expect(stubCount).toBe(0);
   });
-  it('pack total is 30, all valid (C3 curation + the hygiene skill — zero stubs)', () => {
-    expect(skills.length).toBe(30);
+  it('pack total is 31, all valid (C3 curation + the hygiene skill — zero stubs)', () => {
+    expect(skills.length).toBe(31);
     const stubCount = skills.filter((s) => s.skillMd.includes('> **Stub:**')).length;
     expect(stubCount).toBe(0);
-    expect(skills.length - stubCount).toBe(30);
+    expect(skills.length - stubCount).toBe(31);
     for (const s of skills) expect(validateSkill(s).ok, `${s.name} invalid`).toBe(true);
+  });
+});
+
+describe('builtin pack: design skills', () => {
+  it('ships noir-design + noir-design-reference and drops noir-frontend', () => {
+    const names = skills.map((s) => s.name);
+    expect(names).toContain('noir-design');
+    expect(names).toContain('noir-design-reference');
+    expect(names).not.toContain('noir-frontend');
+    const ref = getOrFail('noir-design-reference');
+    expect(ref.references.map((r) => r.name)).toContain('design.md');
+    const design = ref.references.find((r) => r.name === 'design.md');
+    expect(design?.content).toContain('neobrutalism');
+    expect(design?.content).toContain('glassmorphism');
+    expect(design?.content).toContain('neumorphism');
   });
 });

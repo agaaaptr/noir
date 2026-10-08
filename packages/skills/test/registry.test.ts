@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { buildRegistry, NOIR_NAMESPACE, registryByCategory } from '../src/registry.js';
 
 describe('buildRegistry() — runtime-derived skill registry', () => {
-  it('returns 31 entries (30 builtins + 1 integration), sorted by name', () => {
+  it('returns 32 entries (31 builtins + 1 integration), sorted by name', () => {
     const reg = buildRegistry();
-    expect(reg.length).toBe(31); // 30 builtins + noir-clickup
+    expect(reg.length).toBe(32); // 31 builtins + noir-clickup
     const names = reg.map((r) => r.name);
     expect([...names].sort()).toEqual(names); // sorted
     expect(names).toContain('noir-clickup');
