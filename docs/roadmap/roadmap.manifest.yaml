@@ -4,7 +4,7 @@ current_phase: shipped
 
 active_capability: null
 
-active_slice: null  # display-transport-permission-hygiene shipped as 1.16.0 (2026-09-25, ADR-0013)
+active_slice: null  # anti-slop-humanizer-design-taste shipped as 1.17.0 (2026-10-08)
 
 roadmap:
   - id: C1
@@ -23,7 +23,7 @@ roadmap:
     title: Built-in Skill System
     status: completed
     priority: high
-    note: "C3 completed 2026-08-10: 26 curated builtins + 1 integration all full playbooks (zero stubs), runtime-derived registry, structural quality gate with lintSkill CLI, offline evals harness (evals.json + vitest runner, shipped example evals), ClickUp integration with auth gate + 14 API pitfalls + verb dispatch + attachment handling, SessionStart hook bootstrap at noir init, NOIR.md skill amplifier. 2026-08-13: generated-artifact standard — <CODE>-<NNNN>-<taskId>-<slug>.md naming + canonical frontmatter + per-type outlines + artifactPathDrift gate (ADR-0007). 2026-09-25 (1.16.0): a tiered output-hygiene rule source now drives noir skills lint + a noir doctor check + a CI gate (pnpm hygiene:gate); a new noir-code-hygiene builtin (27 builtins + 1 integration = 28 skills); a host-neutral rules seed; rules.enabled now gates emission, host import and migration refresh; and the skill evals assert real output."
+    note: "C3 completed 2026-08-10: 26 curated builtins + 1 integration all full playbooks (zero stubs), runtime-derived registry, structural quality gate with lintSkill CLI, offline evals harness (evals.json + vitest runner, shipped example evals), ClickUp integration with auth gate + 14 API pitfalls + verb dispatch + attachment handling, SessionStart hook bootstrap at noir init, NOIR.md skill amplifier. 2026-08-13: generated-artifact standard — <CODE>-<NNNN>-<taskId>-<slug>.md naming + canonical frontmatter + per-type outlines + artifactPathDrift gate (ADR-0007). 2026-09-25 (1.16.0): a tiered output-hygiene rule source now drives noir skills lint + a noir doctor check + a CI gate (pnpm hygiene:gate); a new noir-code-hygiene builtin (27 builtins + 1 integration = 28 skills); a host-neutral rules seed; rules.enabled now gates emission, host import and migration refresh; and the skill evals assert real output. 2026-10-08 (1.17.0): noir-code-hygiene renamed noir-codebase-audit (merged audit+debt+anti-slop+humanizer); six new builtins (noir-lazy, noir-debt, noir-over-engineering-review, noir-design, noir-design-reference, noir-dataviz); noir-frontend folded into noir-design; the pack is 32 builtins + 1 integration."
 
   - id: C4
     title: End-to-End AI Development Workflow

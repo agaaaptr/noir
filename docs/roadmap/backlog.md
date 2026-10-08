@@ -6,6 +6,17 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 
 ---
 
+## Anti-slop + humanizer + design-taste adoption (2026-10-08 → 1.17.0)
+
+> **Shipped 2026-10-08 as 1.17.0 (latest + beta).** Spec `2026-10-08-anti-slop-humanizer-design-taste-design.md`. Full gate green (2589 tests); upgrade notes in `CHANGELOG.md`.
+
+- ✅ **Agent output reads machine-generated** — RESOLVED: three warn-tier prose lint finders (lexical anti-slop, humanizer tells, `noir-debt:` marker) are wired into `noir doctor` and `pnpm hygiene:gate`, and an always-on anti-slop block reaches every host through the `RULES.md` seed plus a full `.noir/rules/anti-slop.md` injected by the claude SessionStart + SubagentStart hook, gated by `rules.enabled`.
+- ✅ **No skill covers over-engineering or deliberate debt** — RESOLVED: `noir-codebase-audit` (renamed from `noir-code-hygiene`) merges audit + debt + anti-slop + humanizer, plus the new `noir-lazy`, `noir-debt`, and `noir-over-engineering-review` builtins.
+- ✅ **No design taste in the pack** — RESOLVED: `noir-design` (direction), `noir-design-reference` (a `references/design.md` inventory), and `noir-dataviz` (chart rules); `noir-frontend` is folded into `noir-design`.
+- ✅ **SessionStart hook runner is non-executable** — RESOLVED: the runner is emitted `0o755` (healed on sync) after being written at `0644` since 1.9.4.
+- **Repo-wide prose sweep** — OPEN: ~114 warn-tier hygiene findings (50 pre-existing `long-comment-block` + ~64 anti-slop/humanizer self-findings) remain for a separate cleanup pass.
+- **Shared `text-scan.ts` extraction** — OPEN: ~35 duplicated helper lines across `slop.ts`/`humanizer.ts`; extract when a third consumer appears.
+
 ## Display integrity + workspace transport + permission contract + output hygiene (2026-09-24 → 1.16.0)
 
 > **Shipped 2026-09-25 as 1.16.0 (latest + beta).** Spec `2026-09-24-display-transport-permission-hygiene-design.md`; ADR-0013 (workspace transport via the stdio bridge + `400` for a misdirected workspace URL). Full gate green (2565 tests); upgrade notes are in `CHANGELOG.md`.

@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.17.0 (2026-10-08) — anti-slop + humanizer + design-taste adoption
+
+### Changed
+- **BREAKING (narrow) — `noir-code-hygiene` is renamed `noir-codebase-audit`.** The merged body now covers over-engineering audit, deliberate-debt harvest (`noir-debt:` markers), anti-slop de-sloping, and humanizer tells, on top of the former comment-hygiene guidance. The skill pack is now **32 builtins + 1 integration = 33 skills**. A host dir from an older emit (`noir-code-hygiene`) is pruned on the next `noir sync` (the emit path prunes `noir-*` dirs not in the current set).
+- **Always-on anti-slop rules reach every session.** A short anti-slop block is appended to the `RULES.md` seed, so all five hosts carry it through the existing static `@import`; the claude hook (SessionStart **and** the new SubagentStart entry) additionally injects a full `.noir/rules/anti-slop.md` ruleset as `additionalContext`. `rules.enabled: false` disables both the seed block and the hook-injected ruleset; the router contract is unaffected (it is discovery, not rules).
+- **The repo scan and hygiene gate now catch prose slop and humanizer tells.** `@noir-ai/skills` gains three finders — lexical anti-slop (banned words, cluster words, filler phrases and slop trigrams), humanizer tells (em-dash density, hedging, not-X-but-Y), and a `noir-debt:` marker rule (a marker must name a ceiling and an upgrade trigger) — wired into `noir doctor` and `pnpm hygiene:gate`. All three are warn-tier: they report, never block.
+
+### Added
+- **Six new builtin skills** — `noir-lazy` (the laziness ladder), `noir-debt` (harvest `noir-debt:` markers into a ledger), `noir-over-engineering-review` (diff-scoped complexity review), `noir-design` (design direction + anti-template), `noir-design-reference` (a `references/design.md` style inventory: 14 styles, the 16-token palette, the 10-rung UX ladder, font pairing and motion), and `noir-dataviz` (chart form, color jobs, and mark grammar). `noir-frontend` is folded into `noir-design` (its ui-patterns content is migrated, not dropped).
+- **A final comprehensive verification gate.** `docs/verification-gate.md` documents the SCAN → IDENTIFY → FIX → RESCAN → VERIFY → REPEAT gate that now runs before every beta and stable publish (wired into CLAUDE.md's release flow).
+
+### Fixed
+- **The SessionStart hook runner was emitted without the exec bit.** `regenerate()` wrote the runner at the umask default (`0644`), so `/bin/sh` failed it with "permission denied" on every session start since 1.9.4. The manifest entry now declares `fileMode: 0o755`, threaded through `writeWithConflict`/`regenerate()`, and the byte-identical skip path heals an existing non-executable runner on the next `noir sync`.
+
+### Upgrade steps
+1. **Run `noir sync` (or `noir init --upgrade`).** It re-emits the runner at `0o755`, adds `.noir/rules/anti-slop.md`, prunes the renamed `noir-code-hygiene` host dir, and appends the anti-slop block to the rules seed. The `settings.local.json` SessionStart entry is write-once, so an install created before this release gains the SubagentStart entry only on `noir init --force` / re-init — the SessionStart injection is unaffected.
+2. **Nothing else to do.** The prose lint rules are warn-tier and apply to Noir's own repository, not to arbitrary user prose.
+
+---
+
 ## 1.16.0 (2026-09-25) — display integrity + workspace stdio transport + permission contract + output hygiene
 
 ### Changed
