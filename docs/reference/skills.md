@@ -2,7 +2,7 @@
 
 > Auto-generated from `packages/skills/builtin/*/SKILL.md` and `packages/skills/integrations/*/SKILL.md`.
 
-**32 skills** (31 builtins + 1 integration)
+**33 skills** (32 builtins + 1 integration)
 
 | Skill | Type | Category | Description |
 |---|---|---|---|
@@ -12,6 +12,7 @@
 | `noir-clickup` | integration | integration | Use when interacting with ClickUp — reading tasks, updating statuses, creating subtasks, posting comments, or batch-creating tasks from markdown lists. Writes route through the noir_clickup_write gated proxy (dry-run → confirm); reads use host fetch with the pk_ token resolved by integrations_auth. |
 | `noir-codebase-audit` | builtin | meta | Use when auditing a codebase, a diff, or a report for what to cut and what reads machine-written — name over-engineering to delete, harvest deliberate debt, and de-slop the prose. Use when the user says "audit this", "what should I cut", or asks for a comment sweep. Do NOT use for layout, formatting, or linting; this is about what to cut and what the text says. |
 | `noir-context` | builtin | context | Use when a question spans more files than fit in context — query Noir's hybrid retrieval index (BM25 + kNN) for windowed snippets. Use when the user says "index this", "search the codebase", or "find where X is used". Do NOT use for a single-file lookup. |
+| `noir-dataviz` | builtin | domain | Use when the user asks for a chart, graph, plot, dashboard, or any data visualization — pick the chart form before the palette, apply the four color jobs and the legibility floors, then set mark sizes and ship a text alternative for every chart. Do NOT use for general UI design (noir-design) or picking a visual style (noir-design-reference). |
 | `noir-debt` | builtin | meta | Use when the user asks "what did we defer", "list the shortcuts", "debt ledger", or mentions noir-debt. Grep the repo for the noir-debt markers, then group them by file into a ledger that names each marker's ceiling and upgrade trigger. Do NOT use to fix the debt (the owning task does that), for a general read-only codebase search (noir-exploring), or as a whole-repo audit (noir-codebase-audit owns that pass). |
 | `noir-design` | builtin | domain | Use when the user says "design this", "style this", "make it look good", or "frontend design" — commit to one bold aesthetic, run the anti-template checks, and resolve the precedence ladder before any styling code. Do NOT use for token system mechanics (noir-design-reference) or charts and data visualization (noir-dataviz). |
 | `noir-design-reference` | builtin | domain | Use when the user asks "what style should I use", names a style like "neobrutalism" or "glassmorphism", says "pick a style", or needs a design reference — consult references/design.md and return the matching style's tokens, cost, and accessibility floor. Do NOT use for generating assets or for general layout questions. |

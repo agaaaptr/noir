@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.16.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.16.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-10-08T06:27:50.933Z*
+*Last auto-generated: 2026-10-08T07:51:07.001Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -69,7 +69,7 @@ noir init
 | `.noir/scaffold-version` | The scaffold-engine version stamp; `noir doctor` reports drift, `noir init --upgrade` runs migrations. |
 | `.mcp.json` | The MCP server entry Claude Code reads. |
 | `CLAUDE.md` | A managed `@import ".noir/NOIR.md"` block is inserted (existing content is preserved). |
-| `.claude/skills/noir-*` | The **28 native `noir-` skills** (27 builtins + 1 integration) are compiled and emitted here. |
+| `.claude/skills/noir-*` | The **33 native `noir-` skills** (32 builtins + 1 integration) are compiled and emitted here. |
 
 `.noir/store/` (the SQLite DB), `.noir/specs/`, `.noir/plans/`, `.noir/tasks/`, `.noir/decisions/`, and `.noir/audit/` are created on demand as you work.
 

@@ -20,7 +20,7 @@
 **Current beta:** `1.16.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.16.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-10-08T06:27:51.469Z*
+*Last auto-generated: 2026-10-08T07:51:07.522Z*
 <!-- /noir:doc:status -->
 
 ---
@@ -405,7 +405,7 @@ noir doctor          # config / store / embedder / native-deps / provider / inst
 Then, from the project you want Noir to manage:
 
 ```bash
-noir init            # scaffolds .noir/ + emits the 28 skills (27 builtins + 1 integration) + host wiring
+noir init            # scaffolds .noir/ + emits the 33 skills (32 builtins + 1 integration) + host wiring
 ```
 
 `noir init` is idempotent — see [getting-started.md](../getting-started.md) for the walkthrough.
