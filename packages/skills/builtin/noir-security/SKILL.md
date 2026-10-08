@@ -1,6 +1,6 @@
 ---
 name: noir-security
-description: Use when reviewing code for security vulnerabilities — injection, auth, SSRF, data exposure, and supply chain risks. Use when the user says "security review" or "audit this for security"; before shipping a feature that handles user input, auth, or sensitive data.
+description: Use when reviewing code for security vulnerabilities — injection, auth, SSRF, data exposure, and supply chain risks. Use when the user says "security review" or "audit this for security"; before shipping a feature that handles user input, auth, or sensitive data. Do NOT use for general code review or style; use noir-codebase-audit.
 metadata:
   category: verify
   version: 1.0.0

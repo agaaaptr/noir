@@ -1,6 +1,6 @@
 ---
 name: noir-worktree
-description: Use when creating an isolated git workspace for feature work — keeping the main checkout clean. Use when the user says "worktree" or "isolate this work".
+description: Use when creating an isolated git workspace for feature work — keeping the main checkout clean. Use when the user says "worktree" or "isolate this work". Do NOT use for a plain branch switch or commit; use git directly.
 metadata:
   category: git
   version: 1.0.0

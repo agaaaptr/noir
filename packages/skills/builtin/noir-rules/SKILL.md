@@ -1,6 +1,6 @@
 ---
 name: noir-rules
-description: Use when reviewing or editing the project's AI working-rules (.noir/rules/RULES.md) — decide whether a directive belongs in the always-on contract vs a skill, a memory, or an ADR. Use when the user says "update the rules" or "add a rule".
+description: Use when reviewing or editing the project's AI working-rules (.noir/rules/RULES.md) — decide whether a directive belongs in the always-on contract vs a skill, a memory, or an ADR. Use when the user says "update the rules" or "add a rule". Do NOT use for a directive that applies only sometimes; that belongs in a skill or memory, not the always-on contract.
 metadata:
   category: meta
   version: 1.0.0

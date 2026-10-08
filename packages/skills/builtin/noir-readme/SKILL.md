@@ -1,6 +1,6 @@
 ---
 name: noir-readme
-description: Use when generating or updating a project README or documentation from the codebase — keeping docs accurate. Use when the user says "write a README" or "update the docs"; when a new feature ships.
+description: Use when generating or updating a project README or documentation from the codebase — keeping docs accurate. Use when the user says "write a README" or "update the docs"; when a new feature ships. Do NOT use for the code or spec itself; that work belongs to noir-executing-plans or noir-spec.
 metadata:
   category: document
   version: 1.0.0
