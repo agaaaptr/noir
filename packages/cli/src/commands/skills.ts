@@ -66,7 +66,7 @@ const CATEGORY: Record<string, string> = {
   'noir-doctor': 'meta',
   'noir-writing-skills': 'meta',
   'noir-rules': 'meta',
-  'noir-code-hygiene': 'meta',
+  'noir-codebase-audit': 'meta',
 };
 
 function categoryOf(name: string): string {

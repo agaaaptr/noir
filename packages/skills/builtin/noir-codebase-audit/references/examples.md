@@ -1,4 +1,4 @@
-<!-- Worked examples for the noir-code-hygiene skill.
+<!-- Worked examples for the noir-codebase-audit skill.
 
      This file exists to show the shapes the rules forbid, so it must contain
      them. It therefore declares the exemption the rules honour with the marker

@@ -11,7 +11,7 @@ import { type EvalAssertion, evaluateSuite, loadEvalSuites, parseEvalSuite } fro
  *  the self-referential path always passes; only the candidate decides. */
 function oneCase(assertions: EvalAssertion[]) {
   return parseEvalSuite({
-    skill_name: 'noir-code-hygiene',
+    skill_name: 'noir-codebase-audit',
     evals: [
       {
         id: 'case',
@@ -89,10 +89,10 @@ describe('evaluateSuite() — the candidate output decides the result', () => {
   });
 });
 
-describe('shipped noir-code-hygiene suite — fails on slop, passes on clean', () => {
+describe('shipped noir-codebase-audit suite — fails on slop, passes on clean', () => {
   const hygieneSuite = () => {
-    const suite = loadEvalSuites().find((s) => s.skill_name === 'noir-code-hygiene');
-    if (!suite) throw new Error('noir-code-hygiene eval suite not shipped');
+    const suite = loadEvalSuites().find((s) => s.skill_name === 'noir-codebase-audit');
+    if (!suite) throw new Error('noir-codebase-audit eval suite not shipped');
     return suite;
   };
 

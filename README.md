@@ -26,7 +26,7 @@ The `noir` grouped home menu — section picker + per-section action lists with 
 **Current beta:** `1.16.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.16.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-09-25T06:41:47.978Z*
+*Last auto-generated: 2026-10-08T06:27:50.268Z*
 <!-- /noir:doc:status -->
 
 ## Quick start

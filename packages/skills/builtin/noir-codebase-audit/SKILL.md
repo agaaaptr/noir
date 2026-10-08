@@ -1,6 +1,6 @@
 ---
-name: noir-code-hygiene
-description: Use when writing or reviewing comments, docstrings, summaries, or documents — keep every line carrying something a reader can act on. Use when the user says "clean this up", "this reads like machine output", or asks for a comment sweep. Do NOT use for layout (indentation, quoting, line length); this is about what the text says.
+name: noir-codebase-audit
+description: Use when auditing a codebase, a diff, or a report for what to cut and what reads machine-written — name over-engineering to delete, harvest deliberate debt, and de-slop the prose. Use when the user says "audit this", "what should I cut", or asks for a comment sweep. Do NOT use for layout, formatting, or linting; this is about what to cut and what the text says.
 metadata:
   category: meta
   version: 1.0.0
@@ -10,32 +10,84 @@ references:
   - examples.md
 ---
 
-# noir-code-hygiene
+# noir-codebase-audit
 
-Text that reads as machine-generated fails in a small number of ways, and every
-one of them is a sentence a reader cannot act on. The ten defects below are
-those ways, each as a Tell (what it looks like), a Why (what it costs a reader)
-and a Fix (what to write instead). Four of them — restating, stale text, jargon,
-unstated assumptions — are judgements a person makes; the rest are mechanical
-enough that the quality gate checks them itself.
+An audit finds what a reader pays to understand twice. It runs in four passes
+over the same code: over-engineering to delete, deliberate debt to record,
+prose to de-slop, and the mechanical defects that make text read as generated.
+The last pass is also enforced by the quality gate, so this guidance and the
+gate agree on what counts as noise.
 
 ## When to use
 
-- Writing or reviewing a comment, docstring, summary, or document that a reader will meet without the context its author had.
-- Sweeping a file, a diff, or a report for text that reads as generated.
-- The user says "clean this up", "this reads like machine output", or asks for a comment sweep.
+- Auditing a codebase, a diff, or a report for what can be deleted.
+- Harvesting deliberate debt markers into a ledger a later change can read.
+- Sweeping comments, summaries, or documents that a reader will meet without the context their author had.
+- The user says "audit this", "what should I cut", "this reads like machine output", or asks for a comment sweep.
 - Reviewing your own output before handing it back: comments and summaries are where these defects concentrate.
-- **Do NOT use:** for layout (indentation, quoting, line length), or as a substitute for a formatter or a type checker. This is about what the text says, not how it is drawn.
+- **Do NOT use:** for layout (indentation, quoting, line length), for linting or formatting, or as a substitute for a type checker. This is about what to cut and what the text says, not how it is drawn.
 
 ## Procedure
 
-1. **Read the text as somebody who did not write it.** For each sentence, ask what a reader learns that the code, the diff, or the line above does not already say. A sentence that teaches nothing is the one to delete.
-2. **Delete before rewriting.** Most defects end at deletion: a divider, a restated line, an empty label, a fact that is no longer true. Rewriting a comment that should not exist only makes the noise longer.
-3. **Keep what the code cannot say.** The reason a value is what it is, the invariant a caller depends on, the condition that would break the order, the precondition. When only a restatement would be left, the comment is finished.
+1. **Run the four passes in order.** Delete over-engineering first, record deliberate debt, de-slop the prose, then sweep the mechanical defects. Deletion first shrinks the surface the later passes have to read.
+2. **Delete before rewriting.** Most findings end at deletion: a wrapper, a restated line, a fact that is no longer true. Rewriting a thing that should not exist only makes the noise longer.
+3. **Keep what the code cannot say.** The reason a value is what it is, the invariant a caller depends on, the ceiling a shortcut accepted and the trigger that retires it. When only a restatement would be left, the comment is finished.
 4. **Name things in the reader's terms.** Replace a codename, or a shorthand that resolves only against a planning document, with the mechanism it stood for. State the path, the command, or the precondition instead of assuming the reader knows it.
 5. **Run the gate.** `noir skills lint` over a skill body, `noir doctor` over a repository. Fix every fail-tier finding; read a warn-tier one as a question about the line rather than a rule to satisfy.
 
-## Tell / Why / Fix
+## Over-engineering audit
+
+One finding per line: name the thing, then delete it. When a finding needs a
+second sentence to explain, the deletion was not obvious enough to do today.
+
+- A wrapper around one standard-library call that adds nothing — delete the wrapper.
+- An interface with one implementation — delete the interface until a second one exists.
+- A factory that builds one product — delete the factory.
+- A configuration knob nobody has changed and nobody will — delete the knob.
+- A branch, flag, or parameter written "for later" with no caller — delete it; later can write it.
+- A dependency pulled in for something a few lines would have covered — drop the dependency.
+- A test that asserts the implementation rather than the behavior — rewrite it against the behavior, or delete it.
+
+## Deliberate debt
+
+A shortcut that cuts a real corner and names its ceiling is debt a later reader
+can pay off; a shortcut that names nothing is a slow bug wearing a comment. The
+`noir-debt:` marker records the first kind.
+
+Write the marker as a source comment with both halves, the ceiling and the
+condition that justifies the upgrade: `noir-debt: global lock; per-account locks
+once throughput matters`. The second half is not optional: `noir-debt: global
+lock` names the ceiling but no trigger, so nobody knows when to pay it.
+
+Harvest the markers into a ledger grouped by file, one line per marker, with
+the ceiling, the trigger, and the file it sits in. Read the ledger before the
+next change in that file. A marker whose trigger has arrived is not debt to
+keep; it is the work to do now.
+
+## Anti-slop
+
+De-sloping removes the vocabulary a generator reaches for first. Three lists,
+three treatments.
+
+- **Banned** — delete on sight, replace with a plain verb or noun: delve, utilize, leverage, facilitate, elucidate, embark, endeavor, encompass, multifaceted, tapestry, testament, paradigm, synergy, holistic, catalyze, juxtapose, realm, landscape, myriad, plethora.
+- **Rationed** — at most one per paragraph, and only when it names something concrete: robust, comprehensive, seamless, cutting-edge, innovative, streamline, empower, foster, enhance, elevate, optimize, scalable, pivotal, intricate, profound, resonate, underscore, navigate, cultivate, bolster, galvanize, cornerstone, game-changer.
+- **Filler** — delete the frame, write the claim: "it is important to note that", "needless to say", "a testament to", "in the realm of", "serves as a".
+
+## Humanizer tells
+
+Three prose tells mark a writer trying to sound human rather than be useful.
+
+- **Em-dash density.** More than two em-dashes in one paragraph is a tell; the em-dash is the punctuation a generator leans on when a period would do. Split the sentence, or use a parenthetical.
+- **Hedging openers.** "It is worth mentioning", "it should be noted", "it goes without saying" frame a claim before making it. Delete the frame and make the claim.
+- **The not-X-but-Y contrast.** "This is not a bug but a feature" reads written because the first clause exists only to set up the second. State the second clause alone.
+
+## The mechanical defects
+
+The ten defects below are the shapes a generator produces, each as a Tell (what
+it looks like), a Why (what it costs a reader) and a Fix (what to write
+instead). Four of them — restating, stale text, jargon, unstated assumptions —
+are judgements a person makes; the rest are mechanical enough that the quality
+gate checks them itself.
 
 ### Decorative separators and banners
 
@@ -181,11 +233,11 @@ The rules themselves are one table in the skills package, and each entry carries
 
 ## Verification
 
-- [ ] Every sentence kept carries something the code, the diff, or the line above does not.
+- [ ] Every line kept carries something the code, the diff, or the line above does not.
+- [ ] Every finding of the over-engineering pass names one thing to delete, and it is gone.
+- [ ] Every `noir-debt:` marker names a ceiling and a trigger, and the ledger lists them.
 - [ ] No divider, no restatement, no ordinal marker, no empty label survives the pass.
 - [ ] Every fact stated beside the code is true of the code as it stands now.
-- [ ] Every codename or shorthand is replaced by the mechanism it stood for.
-- [ ] The path, the command, and the precondition are stated rather than assumed.
 - [ ] `noir skills lint` (skill body) or `noir doctor` (repository) reports no fail-tier finding.
 
 ## Notes

@@ -1,4 +1,6 @@
-// The `noir-code-hygiene` skill: the pack's own guidance on output hygiene.
+// The `noir-codebase-audit` skill: the pack's own guidance on auditing a
+// codebase — over-engineering to delete, deliberate debt to harvest, prose to
+// de-slop, and the mechanical defects the quality gate enforces.
 //
 // The skill teaches the rules the quality gate enforces, so its body has to
 // pass that gate itself — a guidance file its own rules would reject teaches
@@ -18,12 +20,12 @@ import {
 import { HYGIENE_EXEMPT_MARKERS } from '../src/hygiene.js';
 import { hygieneFindings, isWhatWhenDescription } from '../src/quality.js';
 
-const skill = discoverBuiltin().find((s) => s.name === 'noir-code-hygiene');
+const skill = discoverBuiltin().find((s) => s.name === 'noir-codebase-audit');
 
 /** The skill under test — thrown for rather than asserted, so a missing skill
  *  fails with the reason instead of leaving every later assertion optional. */
 function loaded() {
-  if (!skill) throw new Error('the shipped pack has no noir-code-hygiene skill');
+  if (!skill) throw new Error('the shipped pack has no noir-codebase-audit skill');
   return skill;
 }
 
@@ -52,7 +54,15 @@ function entrySections(): string[] {
   return body().split(/^### /m).slice(1);
 }
 
-describe('noir-code-hygiene: it passes the gate it documents', () => {
+describe('noir-codebase-audit: the rename is complete', () => {
+  it('ships under the new name and not the old one', () => {
+    const names = discoverBuiltin().map((b) => b.name);
+    expect(names).toContain('noir-codebase-audit');
+    expect(names).not.toContain('noir-code-hygiene');
+  });
+});
+
+describe('noir-codebase-audit: it passes the gate it documents', () => {
   it('validates with no errors through the real loader', () => {
     const res = validateSkill(loaded());
     expect(res.errors, res.errors.join('; ')).toEqual([]);
@@ -60,8 +70,6 @@ describe('noir-code-hygiene: it passes the gate it documents', () => {
   });
 
   it('carries no lint warnings — the advisory tier included', () => {
-    // The warn tier is what a body gets for a long comment block or a marker
-    // nobody can act on; guidance about those defects cannot carry them.
     expect(lintSkill(loaded()).warnings).toEqual([]);
   });
 
@@ -87,11 +95,20 @@ describe('noir-code-hygiene: it passes the gate it documents', () => {
     expect(looksLikeWhenDescription(description)).toBe(true);
     expect(isWhatWhenDescription(description)).toBe(true);
     // The trigger has to name the subject, or the host cannot route to it.
-    expect(description.toLowerCase()).toContain('comment');
+    expect(description.toLowerCase()).toContain('audit');
   });
 });
 
-describe('noir-code-hygiene: the guidance itself', () => {
+describe('noir-codebase-audit: the merged playbook', () => {
+  it('carries the four audit lenses in the body', () => {
+    const text = body();
+    expect(text).toContain('Over-engineering');
+    expect(text).toContain('noir-debt:');
+    expect(text).toContain('delve'); // a banned word, named so it can be removed
+    expect(text).toContain('em-dash');
+    expect(text).toContain('not-X-but-Y');
+  });
+
   it('carries a worked before/after pair', () => {
     const text = body();
     expect(text).toMatch(/^Before:$/m);

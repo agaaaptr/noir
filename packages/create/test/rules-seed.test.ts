@@ -116,7 +116,7 @@ describe('rules seed — host-neutral text (every supported host)', () => {
 describe('rules seed — carries the core hygiene rules', () => {
   it.each([...SUPPORTED_HOSTS])('names the skill and the two tiers for host %s', async (host) => {
     const seed = await seedFor(host, join(root, host));
-    expect(seed).toContain('noir-code-hygiene');
+    expect(seed).toContain('noir-codebase-audit');
     expect(seed).toContain('noir doctor');
     // The tiers are what make a finding actionable: fail means remove it,
     // warn means look at it. Both have to be named for that to land.
