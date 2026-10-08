@@ -36,7 +36,7 @@ Charts in one surface should hold together as a single system: pick the parts in
    - Sequential: one hue stepped from its 100 to its 700, where a larger value is a darker step.
    - Diverging: two hues that meet at a neutral midpoint; the midpoint is the meaningful center (zero, the mean, a threshold), and both sides darken away from it.
 
-3. Check the legibility floors before rendering. Each pair of series colors needs enough separation to read as different data: hold at least a delta-E of 15 between any two series, and at least 3:1 luminance contrast between any data element and its background (text stays at 4.5:1). Keep the separation color-vision-safe: never let red versus green be the only difference between two series — add a shape, dash, label, or lightness step instead.
+3. Check the legibility floors before rendering. Each pair of series colors needs enough separation to read as different data: hold at least a delta-E of 15 between any two series, and at least 3:1 luminance contrast between any data element and its background (text stays at 4.5:1). Keep the separation color-vision-safe: never let red versus green be the only difference between two series — add a shape, dash, label, or lightness step instead. Keep categorical hues inside OKLCH lightness 0.45 to 0.75 on light surfaces and 0.50 to 0.70 on dark surfaces, with chroma no lower than 0.08, so a hue that reads on white still reads on near-black.
 
 4. Set the mark grammar. Minimums keep marks visible and clickable at any size:
    - Bars: at least 8 px wide, with a gap smaller than the bar itself.

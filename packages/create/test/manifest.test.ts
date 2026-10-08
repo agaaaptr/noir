@@ -338,6 +338,8 @@ describe('buildHostArtifacts — emission contract per adapter (S10)', () => {
       // claude/gemini keep their context import; only the rules block is gone.
       if (h === 'claude') {
         expect(e.filter((x) => x.path === 'CLAUDE.md')).toHaveLength(1);
+        // The hook-injected anti-slop ruleset is rules too — withheld as well.
+        expect(e.filter((x) => x.path === '.noir/rules/anti-slop.md')).toHaveLength(0);
       }
       if (h === 'gemini') {
         expect(e.filter((x) => x.path === 'GEMINI.md')).toHaveLength(1);

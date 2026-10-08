@@ -677,13 +677,15 @@ export function buildHostArtifacts(
       template: 'router.md.tmpl',
       description: 'skill router contract (co-owned managed block)',
     });
-    entries.push({
-      path: '.noir/rules/anti-slop.md',
-      mode: 'regenerate',
-      host,
-      template: 'anti-slop.md.tmpl',
-      description: 'always-on anti-slop + laziness ruleset (hook-injected, not @imported)',
-    });
+    if (rulesEnabled) {
+      entries.push({
+        path: '.noir/rules/anti-slop.md',
+        mode: 'regenerate',
+        host,
+        template: 'anti-slop.md.tmpl',
+        description: 'always-on anti-slop + laziness ruleset (hook-injected, not @imported)',
+      });
+    }
   }
 
   return entries;

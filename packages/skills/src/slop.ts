@@ -73,8 +73,8 @@ export const SLOP_TRIGRAMS = [
   'plays a crucial',
 ] as const;
 
-// Legitimate technical uses of the words above; a word here is never flagged.
-export const SLOP_ALLOWLIST: readonly string[] = ['harness', 'unlock', 'elevated', 'journey'];
+// `harness` is a legitimate technical term (e.g. "test harness"); it is never flagged.
+export const SLOP_ALLOWLIST: readonly string[] = ['harness'];
 
 // Strip fenced code so prose rules never read inside ``` blocks.
 function proseOnly(text: string): string {
