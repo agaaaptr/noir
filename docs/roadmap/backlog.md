@@ -14,7 +14,7 @@ This backlog is the consolidation of the former `docs/roadmap/` "v1.x backlog" p
 - ✅ **No skill covers over-engineering or deliberate debt** — RESOLVED: `noir-codebase-audit` (renamed from `noir-code-hygiene`) merges audit + debt + anti-slop + humanizer, plus the new `noir-lazy`, `noir-debt`, and `noir-over-engineering-review` builtins.
 - ✅ **No design taste in the pack** — RESOLVED: `noir-design` (direction), `noir-design-reference` (a `references/design.md` inventory), and `noir-dataviz` (chart rules); `noir-frontend` is folded into `noir-design`.
 - ✅ **SessionStart hook runner is non-executable** — RESOLVED: the runner is emitted `0o755` (healed on sync) after being written at `0644` since 1.9.4.
-- **Repo-wide prose sweep** — OPEN: ~114 warn-tier hygiene findings (50 pre-existing `long-comment-block` + ~64 anti-slop/humanizer self-findings) remain for a separate cleanup pass.
+- **Repo-wide prose sweep** — OPEN: ~64 anti-slop/humanizer self-findings remain for a separate cleanup pass (the finders correctly flag Noir's own prose; the sweep is scoped to these, NOT the 50 accepted `long-comment-block` from 1.16.0 which stay accepted).
 - **Shared `text-scan.ts` extraction** — OPEN: ~35 duplicated helper lines across `slop.ts`/`humanizer.ts`; extract when a third consumer appears.
 
 ## Display integrity + workspace transport + permission contract + output hygiene (2026-09-24 → 1.16.0)
