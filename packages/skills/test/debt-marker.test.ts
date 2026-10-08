@@ -13,6 +13,9 @@ describe('noir-debt marker', () => {
       false,
     );
   });
+  it('flags a ceiling-only marker (ceiling is not a trigger)', () => {
+    expect(flag('// noir-debt: global lock; ceiling 1k rows')).toBe(true);
+  });
   it('stays off ordinary prose', () => {
     expect(flag('the noir-debt ledger was full')).toBe(false);
   });

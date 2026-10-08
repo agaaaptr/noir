@@ -33,6 +33,9 @@ Set one committed aesthetic before any styling code, and spend the boldness in a
 3. Resolve the precedence ladder, in this order: the user's instruction and brand guide first, the project's existing design system second, the accessibility floor third, and the brief's own suggestions last. When two levels conflict, the higher one wins.
 4. First pass: define tokens before code. Name the colors, spacing, radius, and type scale as variables before writing a component. Reuse the project's existing tokens when they exist; do not invent a parallel system. For example, a landing page might commit to editorial type with one oversized headline, and keep every other element quiet. noir-design-reference carries the 16-token semantic palette when no system exists.
 5. Build component-first, responsive by default, and accessible. One component, one file, one job. Mobile layout first, wider breakpoints after. Semantic elements, keyboard reachability, a visible focus indicator, and a label on every input.
+   - Wide tables and code blocks scroll inside their own container (`overflow-x: auto`); the page body never scrolls horizontally.
+   - Buttons and links are real `<button>` and `<a>` elements, never a `<div onClick>`.
+   - Optimistic updates feel faster, but they roll back on failure; a failed action must undo itself visibly.
 6. Second pass: review against the brief. Read the original request again and check that every visible choice answers it. Cut anything that exists only because it looked good.
 
 ## Verification

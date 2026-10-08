@@ -719,6 +719,12 @@ describe('scaffold — C3 SessionStart hook bootstrap', () => {
     const entry = settings.hooks.SessionStart[0]?.hooks?.[0];
     expect(entry?.type).toBe('command');
     expect(entry?.command).toContain('noir-session-start');
+    // SubagentStart rides the same idempotent runner so the injected ruleset
+    // carries into subagents.
+    expect(settings.hooks.SubagentStart).toBeDefined();
+    const subEntry = settings.hooks.SubagentStart[0]?.hooks?.[0];
+    expect(subEntry?.type).toBe('command');
+    expect(subEntry?.command).toContain('noir-session-start');
     // Hook runner emitted (Noir-owned, regenerate).
     expect(existsSync(join(root, '.noir', 'hooks', 'noir-session-start.mjs'))).toBe(true);
     // Router contract emitted as a managed block (user edits outside markers survive).

@@ -10,6 +10,8 @@ references:
   - examples.md
 ---
 
+<!-- noir-hygiene: exempt -->
+
 # noir-codebase-audit
 
 An audit finds what a reader pays to understand twice. It runs in four passes

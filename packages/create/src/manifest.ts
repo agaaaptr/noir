@@ -609,9 +609,9 @@ export function buildHostArtifacts(
     });
   }
 
-  // 4. SessionStart hook bootstrap (claude only). Four artifacts, three
-  //    ownerships (research-validated "both + split" design):
-  //      a. `.claude/settings.local.json` SessionStart entry — user-owned,
+  // 4. SessionStart + SubagentStart hook bootstrap (claude only). Four
+  //    artifacts, three ownerships (research-validated "both + split" design):
+  //      a. `.claude/settings.local.json` SessionStart + SubagentStart entries — user-owned,
   //         written ONCE via mergeJson (init/create only, deduped by command
   //         substring). NEVER re-written by sync or `init --upgrade` (a
   //         re-emit would resurrect a hook the user removed); preserves
@@ -625,9 +625,23 @@ export function buildHostArtifacts(
   //         regenerate (init + sync), read by the hook (not @-imported).
   if (host === 'claude') {
     const HOOK_DEDUP = 'noir-session-start';
+    // The runner is idempotent and emits the same context for either event, so
+    // both hooks share the one command entry. SubagentStart rides the session's
+    // injected ruleset into subagents; UserPromptSubmit is deliberately absent —
+    // Noir has no per-prompt mode-tracking concept to re-inject.
     const hookEntry = {
       hooks: {
         SessionStart: [
+          {
+            hooks: [
+              {
+                type: 'command',
+                command: `"${ctx.root}/.noir/hooks/noir-session-start.mjs"`,
+              },
+            ],
+          },
+        ],
+        SubagentStart: [
           {
             hooks: [
               {
@@ -645,7 +659,7 @@ export function buildHostArtifacts(
       host,
       content: JSON.stringify(hookEntry, null, 2),
       dedupSubstring: HOOK_DEDUP,
-      description: 'SessionStart hook entry (user-owned, written once)',
+      description: 'SessionStart + SubagentStart hook entry (user-owned, written once)',
     });
     entries.push({
       path: '.noir/hooks/noir-session-start.mjs',

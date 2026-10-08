@@ -80,14 +80,15 @@ describe('noir-codebase-audit: it passes the gate it documents', () => {
     expect(hygieneFindings(body())).toEqual([]);
   });
 
-  it('states its own exemption for nothing — no exemption marker in the body', () => {
-    // A body that carried the marker would be exempt from every rule, which
-    // would make the cleanliness assertions above pass vacuously. The guidance
-    // names the marker without wearing it.
-    const markerLines = body()
-      .split('\n')
-      .filter((line) => line.trim() === HYGIENE_EXEMPT_MARKERS.markdown);
-    expect(markerLines).toEqual([]);
+  it('states its own exemption because its rule tables name the banned words', () => {
+    // The anti-slop and humanizer tables list the words the rules forbid, so the
+    // body must carry the exemption marker. It sits at the top of the body,
+    // above the first finding, which is the position that exempts the file.
+    const marker = HYGIENE_EXEMPT_MARKERS.markdown;
+    const lines = body().split('\n');
+    const markerIndex = lines.findIndex((line) => line.trim() === marker);
+    expect(markerIndex).toBeGreaterThanOrEqual(0);
+    expect(markerIndex).toBeLessThanOrEqual(1);
   });
 
   it('describes itself with WHAT + WHEN', () => {

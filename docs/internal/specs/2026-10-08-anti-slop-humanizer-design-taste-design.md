@@ -41,8 +41,11 @@ Three enforcement tiers, one idea per tier:
    with a hook bootstrap today, so extend the existing `.noir/hooks/noir-session-start.mjs`
    runner (regenerate mode, re-emitted on sync) to also emit the full ruleset as
    `hookSpecificOutput.additionalContext`, mirroring ponytail's SessionStart + SubagentStart
-   pattern. Because the runner is regenerate-mode, existing installs pick this up on the next
-   `noir sync` without touching the write-once `settings.local.json` hook entry.
+   pattern. UserPromptSubmit is out of scope — Noir has no per-prompt mode-tracking concept;
+   the ruleset injected at SessionStart rides the whole session. Because the runner is
+   regenerate-mode, existing installs pick up the runner itself on the next `noir sync`; the
+   SubagentStart settings entry is write-once, so an existing install gains it on re-init
+   (`init --force`), not on sync.
 
 3. **On-demand skills and references (all hosts).** The large design-taste inventory and the
    playbooks live in skills and their `references/`, loaded when building UI or reviewing
@@ -52,7 +55,7 @@ Three enforcement tiers, one idea per tier:
 
 | Host | Static rules | Hook (always-on, full ruleset) | Notes |
 |------|--------------|-------------------------------|-------|
-| claude | CLAUDE.md RULES block | extend `noir-session-start.mjs` (SessionStart; add SubagentStart + UserPromptSubmit entries) | only host with a hook bootstrap |
+| claude | CLAUDE.md RULES block | extend `noir-session-start.mjs` (SessionStart + SubagentStart) | only host with a hook bootstrap |
 | agents-md | AGENTS.md `@.noir/rules/RULES.md` | none (no native hook concept) | static only |
 | gemini | GEMINI.md RULES block | none today (native `hooks/hooks.json` exists, unused by Noir) | static only |
 | cursor | AGENTS.md `@` import | none today (native `hooks.json` sessionStart/beforeSubmitPrompt exists) | static only |
@@ -162,8 +165,8 @@ freshness SLA) are adopted as a *pattern*, not imported as rows.
   never rewritten.
 - Dataviz and the frontend-design mirror carry licensing cautions (proprietary / missing
   top-level LICENSE), so they are ideas-only.
-- Every rule and every new/renamed skill ships a regression test and an eval (repo rule:
-  every fix = a test).
+- Skills with concrete assertable behavior (the meta skills) ship an eval; every other
+  skill ships a regression test (presence + description, via builtin-hygiene).
 
 ## Non-goals
 
@@ -176,7 +179,7 @@ freshness SLA) are adopted as a *pattern*, not imported as rows.
 1. `rules-engine` — lexical + humanizer + debt-marker rules, frequency pass, allowlist,
    regression tests.
 2. `always-on-injection` — RULES.md seed block (all hosts) + claude hook extension
-   (SessionStart/SubagentStart/UserPromptSubmit), respecting the budget and rules.enabled.
+   (SessionStart + SubagentStart), respecting the budget and rules.enabled.
 3. `skill-rename-rework` — rename `noir-codebase-audit`, rework all 27 bodies, update
    router/seed/docs/evals/tests.
 4. `new-skills` — noir-lazy, noir-debt, noir-over-engineering-review.

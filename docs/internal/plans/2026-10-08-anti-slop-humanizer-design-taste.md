@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - New and renamed skills keep the `noir-<kebab>` noun canon and the `dir == frontmatter.name` compiler invariant.
-- Every rule and every new/renamed skill ships a regression test and an eval (repo rule: every fix = a test).
+- Skills with concrete assertable behavior (the meta skills) ship an eval; every other skill ships a regression test (presence + description, via builtin-hygiene).
 - Always-on rules respect `rules.enabled`; the static block stays under the 150-line / `lengthBudgetKb` budget.
 - No third-party text is shipped; dataviz and the frontend-design mirror are ideas-only.
 - Conventional commits, one scope per commit; commits stay local.

@@ -10,7 +10,7 @@ compatibility: claude · agents-md · gemini · cursor · opencode
 
 # noir-dataviz
 
-A chart reads as one system when its parts are chosen in a fixed order: form first, color last, marks between. Color is the last decision, not the first, because a chart that works in grayscale still works, and a chart that leans on color alone falls apart the moment the hue is removed.
+Charts in one surface should hold together as a single system: pick the parts in a fixed order — form first, color last, marks between. Color is the last decision, not the first, because a chart that works in grayscale still works, and a chart that leans on color alone falls apart the moment the hue is removed.
 
 ## When to use
 
