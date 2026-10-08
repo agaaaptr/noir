@@ -1,10 +1,12 @@
 import {
   appendFileSync,
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -721,6 +723,20 @@ describe('scaffold — C3 SessionStart hook bootstrap', () => {
     // Router contract emitted as a managed block (user edits outside markers survive).
     expect(existsSync(join(root, '.noir', 'router.md'))).toBe(true);
     expect(readFileSync(join(root, '.noir', 'router.md'), 'utf8')).toContain('# Noir skill router');
+  });
+
+  it('emits the hook runner executable (0755) — the settings entry runs it directly', async () => {
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
+    const hookPath = join(root, '.noir', 'hooks', 'noir-session-start.mjs');
+    expect(statSync(hookPath).mode & 0o777).toBe(0o755);
+  });
+
+  it('sync heals a byte-identical hook left non-executable by an older emit', async () => {
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
+    const hookPath = join(root, '.noir', 'hooks', 'noir-session-start.mjs');
+    chmodSync(hookPath, 0o644);
+    await scaffold({ root, mode: 'sync', transport: 'stdio', host: 'claude' });
+    expect(statSync(hookPath).mode & 0o777).toBe(0o755);
   });
 
   it('mergeJson preserves existing settings (permissions) when appending the hook', async () => {

@@ -51,8 +51,14 @@ export interface WriteOutcome {
  *
  *  Parent directories are NOT created here — the orchestrator does that once
  *  for the whole manifest so a missing dir is a single, attributable failure
- *  rather than N silent ones inside the writer. */
-export function regenerate(absPath: string, content: string): WriteOutcome {
+ *  rather than N silent ones inside the writer.
+ *
+ *  `mode` applies to the temp file at creation and rides the rename onto the
+ *  target, so an entry executed directly (the SessionStart hook runner) lands
+ *  with its exec bit on a first write and a rewrite alike. As with core's
+ *  `atomicWriteFile`, the requested bits are an upper bound (the process umask
+ *  can narrow them) and Windows ignores them (ACL-based permissions). */
+export function regenerate(absPath: string, content: string, mode?: number): WriteOutcome {
   const dir = dirname(absPath);
   const tmp = join(
     dir,
@@ -70,7 +76,7 @@ export function regenerate(absPath: string, content: string): WriteOutcome {
   // both.
   let fd: number | undefined;
   try {
-    fd = openSync(tmp, 'w');
+    fd = openSync(tmp, 'w', mode);
     writeSync(fd, content, 0, 'utf8');
     closeSync(fd);
     fd = undefined; // closed cleanly — don't re-close in finally

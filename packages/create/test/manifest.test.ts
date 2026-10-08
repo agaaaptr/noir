@@ -71,17 +71,20 @@ describe('buildManifest', () => {
     ]);
   });
 
-  it('the .noir/.env seed declares fileMode 0600; no other entry declares one', () => {
-    // Slice E plumbing contract: the permission rides on the manifest entry
-    // (ManifestEntry has no other permission field) and only the credential
-    // seed asks for one.
+  it('credential seed declares 0600; the hook runner declares 0755; nothing else declares one', () => {
+    // The permission rides on the manifest entry (ManifestEntry has no other
+    // permission field). Exactly two entries ask for a mode: the credential
+    // seed (0600) and the SessionStart hook runner (0755, executed directly).
     const envEntry = m.find((e) => e.path === '.noir/.env');
     expect(envEntry?.mode).toBe('skipIfExists');
     expect(envEntry?.fileMode).toBe(0o600);
     expect(envEntry?.template).toBe('config.env.tmpl');
     // Both files coexist: the example stays the committable documentation.
     expect(m.find((e) => e.path === '.noir/.env.example')?.template).toBe('env.example.tmpl');
-    expect(m.filter((e) => e.fileMode !== undefined).map((e) => e.path)).toEqual(['.noir/.env']);
+    expect(m.filter((e) => e.fileMode !== undefined).map((e) => e.path)).toEqual([
+      '.noir/.env',
+      '.noir/hooks/noir-session-start.mjs',
+    ]);
   });
 
   it('the .noir/README.md map is a host-agnostic managed block, not a seed', () => {

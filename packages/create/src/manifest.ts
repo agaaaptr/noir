@@ -647,6 +647,7 @@ export function buildHostArtifacts(
     entries.push({
       path: '.noir/hooks/noir-session-start.mjs',
       mode: 'regenerate',
+      fileMode: 0o755,
       host,
       content: SESSION_START_HOOK_SCRIPT,
       description: 'SessionStart hook runner (Noir-owned, re-emitted)',
