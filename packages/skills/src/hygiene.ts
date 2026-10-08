@@ -10,6 +10,7 @@
 // the rules, so it carries the marker:
 // noir-hygiene: exempt
 
+import { DEBT_MARKER_RULE } from './debt-marker.js';
 import { RESIDUE_RULES } from './residue.js';
 
 export type HygieneTier = 'fail' | 'warn';
@@ -281,6 +282,7 @@ export const HYGIENE_RULES: readonly HygieneRule[] = [
   IRREGULAR_SCRIPT_IN_TEXT,
   LONG_COMMENT_BLOCK,
   BARE_TODO,
+  DEBT_MARKER_RULE,
   ...RESIDUE_RULES,
 ];
 
