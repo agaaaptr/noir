@@ -98,7 +98,8 @@ git push origin develop
 # 3. WAIT FOR CI (develop push → ci.yml must go green)
 gh run list --branch develop --limit 1  # wait: completed success
 
-# 4. BETA TAG → TRIGGERS release.yml → USER MUST APPROVE publish job
+# 4. FINAL VERIFICATION GATE → BETA TAG → release.yml → USER MUST APPROVE publish job
+# Run docs/verification-gate.md to completion (SCAN → FIX → RESCAN → VERIFY, zero findings).
 pnpm release:tag    # creates vX.Y.Z-beta.1 (auto-computes beta number from npm)
 git push origin vX.Y.Z-beta.1
 # Open GitHub Actions → approve "Review deployments → Approve and deploy"
@@ -110,7 +111,8 @@ git checkout main && git merge --ff-only develop && git push origin main
 
 # 6. WAIT FOR CI (main push → ci.yml must go green)
 
-# 7. STABLE TAG → TRIGGERS release.yml → USER MUST APPROVE again
+# 7. FINAL VERIFICATION GATE → STABLE TAG → release.yml → USER MUST APPROVE again
+# Run docs/verification-gate.md to completion (SCAN → FIX → RESCAN → VERIFY, zero findings).
 pnpm release:tag    # creates vX.Y.Z (plain, no suffix)
 git push origin vX.Y.Z
 # Approve → wait → verify: npm view @noir-ai/cli dist-tags latest = X.Y.Z
@@ -132,3 +134,4 @@ git checkout develop && git merge --ff-only main && git push origin develop
 - **Docs sync with every patch.** CHANGELOG, releases.md, STATUS.md, backlog.md, and manifest.yaml must reflect shipped reality — no documentation drift.
 - **Both branches end at the same SHA.** After the Homebrew+Scoop bump + sync, `develop` and `main` must be identical.
 - **All 11 packages move together.** One version, one tag, one release.
+- **Never publish without the final comprehensive verification gate passing clean.** `docs/verification-gate.md` is the mandatory pre-publish gate (SCAN → IDENTIFY → FIX → RESCAN → VERIFY, repeat until zero findings); it runs before the beta tag and again before the stable tag.
