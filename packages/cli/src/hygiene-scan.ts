@@ -29,11 +29,11 @@ import { type Dirent, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   checkHygiene,
+  type HygieneKind,
+  type HygieneTier,
   hasHygieneExemption,
   humanizerFindings,
   slopFindings,
-  type HygieneKind,
-  type HygieneTier,
 } from '@noir-ai/skills';
 
 /** How many findings the detail cell names before it reports the rest as a

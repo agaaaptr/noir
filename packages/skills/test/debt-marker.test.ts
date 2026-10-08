@@ -9,12 +9,18 @@ describe('noir-debt marker', () => {
     expect(flag('// noir-debt: global lock')).toBe(true);
   });
   it('does not flag a marker that names a trigger', () => {
-    expect(flag('// noir-debt: global lock, per-account locks when throughput matters')).toBe(false);
+    expect(flag('// noir-debt: global lock, per-account locks when throughput matters')).toBe(
+      false,
+    );
   });
   it('stays off ordinary prose', () => {
     expect(flag('the noir-debt ledger was full')).toBe(false);
   });
   it('flags a column-0 marker on a later line through checkHygiene', () => {
-    expect(checkHygiene('import x;\n// noir-debt: global lock', 'code').some((f) => f.id === 'noir-debt')).toBe(true);
+    expect(
+      checkHygiene('import x;\n// noir-debt: global lock', 'code').some(
+        (f) => f.id === 'noir-debt',
+      ),
+    ).toBe(true);
   });
 });

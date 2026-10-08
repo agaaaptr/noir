@@ -23,18 +23,18 @@ export {
   parseEvalSuite,
   runAssertions,
 } from './evals.js';
+export { humanizerFindings } from './humanizer.js';
 export {
   checkHygiene,
-  hasHygieneExemption,
   HYGIENE_EXEMPT_MARKERS,
   HYGIENE_RULES,
   type HygieneFinding,
   type HygieneKind,
   type HygieneRule,
   type HygieneTier,
+  hasHygieneExemption,
   MAX_COMMENT_BLOCK_LINES,
 } from './hygiene.js';
-export { humanizerFindings } from './humanizer.js';
 export {
   IntegrationAuthSchema,
   IntegrationDeclarationSchema,
