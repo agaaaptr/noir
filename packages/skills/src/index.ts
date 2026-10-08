@@ -33,6 +33,7 @@ export {
   type HygieneTier,
   MAX_COMMENT_BLOCK_LINES,
 } from './hygiene.js';
+export { humanizerFindings } from './humanizer.js';
 export {
   IntegrationAuthSchema,
   IntegrationDeclarationSchema,
