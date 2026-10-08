@@ -68,6 +68,12 @@ describe('buildManifest', () => {
         hasBlock: false,
       },
       { path: '.noir/router.md', mode: 'managedBlock', host: 'claude', hasBlock: true },
+      {
+        path: '.noir/rules/anti-slop.md',
+        mode: 'regenerate',
+        host: 'claude',
+        hasBlock: false,
+      },
     ]);
   });
 

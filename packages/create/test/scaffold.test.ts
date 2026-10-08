@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import {
   appendFileSync,
   chmodSync,
@@ -767,5 +768,28 @@ describe('scaffold — C3 SessionStart hook bootstrap', () => {
   it('non-claude hosts do NOT emit the claude settings hook', async () => {
     await scaffold({ root, mode: 'init', transport: 'stdio', host: 'gemini' });
     expect(existsSync(join(root, '.claude', 'settings.local.json'))).toBe(false);
+  });
+
+  it('emits .noir/rules/anti-slop.md and the hook runner injects it', async () => {
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
+    expect(existsSync(join(root, '.noir', 'rules', 'anti-slop.md'))).toBe(true);
+    const out = execSync(
+      `node "${join(root, '.noir', 'hooks', 'noir-session-start.mjs')}"`,
+    ).toString();
+    const parsed = JSON.parse(out);
+    // `noir-debt` is unique to anti-slop.md (lowercase); `skill router` comes
+    // from the router contract — both must ride the hook's additionalContext.
+    expect(parsed.hookSpecificOutput.additionalContext).toContain('noir-debt');
+    expect(parsed.hookSpecificOutput.additionalContext).toContain('skill router');
+  });
+
+  it('still emits {hookSpecificOutput:{}} when neither contract file exists', async () => {
+    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
+    rmSync(join(root, '.noir', 'router.md'), { force: true });
+    rmSync(join(root, '.noir', 'rules', 'anti-slop.md'), { force: true });
+    const out = execSync(
+      `node "${join(root, '.noir', 'hooks', 'noir-session-start.mjs')}"`,
+    ).toString();
+    expect(JSON.parse(out)).toEqual({ hookSpecificOutput: {} });
   });
 });
