@@ -5,6 +5,7 @@ import { claudeAdapter, resolveAdapter, SUPPORTED_HOSTS } from '@noir-ai/adapter
 import { NoirConfigSchema, paths } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { scaffold } from '../src/scaffold.js';
+import { loadTemplate } from '../src/template-loader.js';
 
 /**
  * The working-rules seed (`.noir/rules/RULES.md`) is a HOST-AGNOSTIC manifest
@@ -128,6 +129,14 @@ describe('rules seed — carries the core hygiene rules', () => {
     for (const defect of NAMED_DEFECTS) {
       expect(seed, `seed must name the "${defect}" defect`).toContain(defect);
     }
+  });
+});
+
+describe('rules seed — carries the always-on anti-slop block', () => {
+  it('ships the short anti-slop rules with the seed', () => {
+    const seed = loadTemplate('rules-seed.md.tmpl');
+    expect(seed).toContain('## Anti-slop');
+    expect(seed).toContain('not-X-but-Y');
   });
 });
 
