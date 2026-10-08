@@ -33,6 +33,7 @@ import {
   HYGIENE_MAX_FILE_BYTES,
   HYGIENE_MAX_FILES,
 } from '../src/commands/doctor.js';
+import { scanOutputHygiene } from '../src/hygiene-scan.js';
 
 /** A divider drawn in punctuation around `label` — a fail-tier banner. */
 const banner = (label: string): string => `// ${'='.repeat(10)} ${label} ${'='.repeat(10)}\n`;
@@ -212,6 +213,15 @@ describe('checkOutputHygiene', () => {
     write('scripts/notes.env', residue('noir-workflow'));
     const { row } = run();
     expect(row.status).toBe('ok');
+  });
+
+  it('reports a prose slop finding and a humanizer finding', () => {
+    write('docs/x.md', 'We will leverage a robust seamless scalable platform — and — and —.\n');
+    const res = scanOutputHygiene(root);
+    const ids = res.findings.map((f) => f.id);
+    expect(ids).toContain('slop-kill');
+    expect(ids).toContain('slop-cluster');
+    expect(ids).toContain('humanizer-em-dash');
   });
 });
 

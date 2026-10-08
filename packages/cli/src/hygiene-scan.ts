@@ -27,7 +27,13 @@
 
 import { type Dirent, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { checkHygiene, type HygieneKind, type HygieneTier } from '@noir-ai/skills';
+import {
+  checkHygiene,
+  humanizerFindings,
+  slopFindings,
+  type HygieneKind,
+  type HygieneTier,
+} from '@noir-ai/skills';
 
 /** How many findings the detail cell names before it reports the rest as a
  *  count. A tree that has drifted can carry hundreds, and the row is a signal
@@ -290,6 +296,11 @@ export function scanOutputHygiene(root: string): HygieneScanResult {
       scanned++;
       for (const found of checkHygiene(text, file.kind)) {
         findings.push({ path: file.path, line: found.line, id: found.id, tier: found.tier });
+      }
+      if (file.kind === 'markdown') {
+        for (const found of [...slopFindings(text), ...humanizerFindings(text)]) {
+          findings.push({ path: file.path, line: found.line, id: found.id, tier: found.tier });
+        }
       }
     } catch {
       // An unreadable path says nothing about hygiene — the store check owns
