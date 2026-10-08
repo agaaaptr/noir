@@ -305,6 +305,19 @@ export function checkHygiene(text: string, kind: HygieneKind): HygieneFinding[] 
   return findings;
 }
 
+/** Whether `text` carries the exemption marker for `kind` above the first
+ *  finding the hygiene rules report, so every rule — the prose finders
+ *  included — leaves the file alone. The prose finders run outside
+ *  `checkHygiene`, so consumers that run them gate the file on this predicate
+ *  rather than on `checkHygiene`'s findings. A marker placed at or below the
+ *  first finding exempts nothing. */
+export function hasHygieneExemption(text: string, kind: HygieneKind): boolean {
+  const exemptAt = exemptionLine(text, kind);
+  if (exemptAt === 0) return false;
+  const firstFinding = collectFindings(text, kind)[0];
+  return exemptAt < (firstFinding?.line ?? Number.POSITIVE_INFINITY);
+}
+
 /** Every finding `text` produces under `kind`, in reading order. */
 function collectFindings(text: string, kind: HygieneKind): HygieneFinding[] {
   const lineStarts = lineStartOffsets(text);

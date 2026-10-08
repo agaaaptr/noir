@@ -223,6 +223,21 @@ describe('checkOutputHygiene', () => {
     expect(ids).toContain('slop-cluster');
     expect(ids).toContain('humanizer-em-dash');
   });
+
+  it('passes a markdown file that carries the exemption marker, even when the prose finders would flag it', () => {
+    write('docs/exempt.md', '<!-- noir-hygiene: exempt -->\nWe use em-dashes — and — and —.\n');
+    const res = scanOutputHygiene(root);
+    const ids = res.findings.map((f) => f.id);
+    expect(ids).not.toContain('humanizer-em-dash');
+  });
+
+  it('does not run the prose finders over code files', () => {
+    write('packages/a/src/notes.ts', '// We leverage a robust seamless scalable platform.\n');
+    const res = scanOutputHygiene(root);
+    const ids = res.findings.map((f) => f.id);
+    expect(ids).not.toContain('slop-kill');
+    expect(ids).not.toContain('slop-cluster');
+  });
 });
 
 interface DoctorData {

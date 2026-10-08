@@ -25,6 +25,7 @@ export {
 } from './evals.js';
 export {
   checkHygiene,
+  hasHygieneExemption,
   HYGIENE_EXEMPT_MARKERS,
   HYGIENE_RULES,
   type HygieneFinding,

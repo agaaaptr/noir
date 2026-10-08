@@ -29,6 +29,7 @@ import { type Dirent, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   checkHygiene,
+  hasHygieneExemption,
   humanizerFindings,
   slopFindings,
   type HygieneKind,
@@ -297,7 +298,7 @@ export function scanOutputHygiene(root: string): HygieneScanResult {
       for (const found of checkHygiene(text, file.kind)) {
         findings.push({ path: file.path, line: found.line, id: found.id, tier: found.tier });
       }
-      if (file.kind === 'markdown') {
+      if (file.kind === 'markdown' && !hasHygieneExemption(text, file.kind)) {
         for (const found of [...slopFindings(text), ...humanizerFindings(text)]) {
           findings.push({ path: file.path, line: found.line, id: found.id, tier: found.tier });
         }
