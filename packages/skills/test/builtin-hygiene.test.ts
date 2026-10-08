@@ -108,11 +108,11 @@ describe('builtin pack: stubs + totals', () => {
     const stubCount = skills.filter((s) => s.skillMd.includes('> **Stub:**')).length;
     expect(stubCount).toBe(0);
   });
-  it('pack total is 27, all valid (C3 curation + the hygiene skill — zero stubs)', () => {
-    expect(skills.length).toBe(27);
+  it('pack total is 30, all valid (C3 curation + the hygiene skill — zero stubs)', () => {
+    expect(skills.length).toBe(30);
     const stubCount = skills.filter((s) => s.skillMd.includes('> **Stub:**')).length;
     expect(stubCount).toBe(0);
-    expect(skills.length - stubCount).toBe(27);
+    expect(skills.length - stubCount).toBe(30);
     for (const s of skills) expect(validateSkill(s).ok, `${s.name} invalid`).toBe(true);
   });
 });
