@@ -16,7 +16,7 @@ Noir ships skills as a native, first-party capability: a compiler that validates
 - **Multi-host compilation**: `claude`/`agents-md`/`gemini`/`opencode` → verbatim `SKILL.md` + `references/`; `cursor` → flat `.mdc` rule.
 - **Emission wired into CLI** — `noir init` / `sync` / `create` / `skills sync` / `skills list` / `skills lint` / `skills registry`. Idempotent, prunes stale `noir-*` entries, guards user-authored `noir-*` dirs via `assertNotUserOwned`.
 - **Integration seam** (`integration.json` + daemon `integrations_auth` + `noir_clickup_write` gated-write-proxy).
-- **`docs/reference/skills.md`** auto-generated covering 28 skills (27 builtin + 1 integration).
+- **`docs/reference/skills.md`** auto-generated covering 33 skills (32 builtins + 1 integration).
 - **Spec:** `docs/internal/specs/2026-08-10-c3-skills-enhancement-design.md`; **Plan:** `docs/internal/plans/2026-08-10-c3-skills-enhancement.md`.
 
 ## Gap / roadmap delta (resolved)
