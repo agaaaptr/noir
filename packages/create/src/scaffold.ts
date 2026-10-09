@@ -1,12 +1,4 @@
-import {
-  chmodSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  statSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import {
   createProjectId,
@@ -693,7 +685,6 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
         const out = await writeWithConflict(abs, entry.path, body, opts, {
           memory: conflictMemory,
           record: recordConflict,
-          mode: entry.fileMode,
         });
         written.push(...out.written);
         skipped.push(...out.skipped);
@@ -1127,12 +1118,6 @@ async function writeWithConflict(
      *  owns passes `'preserve'`, so an unattended run (no TTY, `--no-input`,
      *  CI) leaves their bytes alone. */
     defaultResolution?: ConflictResolution;
-    /** Mode the entry must hold on disk (e.g. the hook runner's 0o755). Applied
-     *  on every write, and healed on the byte-identical skip path — a file
-     *  whose bytes never changed but whose permissions predate the contract
-     *  (the 0644 hook) must not stay broken just because a rewrite would be a
-     *  no-op. */
-    mode?: number;
   },
 ): Promise<{ written: string[]; skipped: string[]; identical: string[] }> {
   let existing: string | undefined;
@@ -1142,15 +1127,11 @@ async function writeWithConflict(
     existing = undefined;
   }
   if (existing === undefined) {
-    regenerate(abs, proposed, internals.mode);
+    regenerate(abs, proposed);
     return { written: [relPath], skipped: [], identical: [] };
   }
   if (existing === proposed) {
     // content-hash dedup: byte-identical → skip the rewrite entirely (no disk IO).
-    if (internals.mode !== undefined && (statSync(abs).mode & 0o777) !== internals.mode) {
-      chmodSync(abs, internals.mode);
-      return { written: [relPath], skipped: [], identical: [] };
-    }
     return { written: [], skipped: [], identical: [relPath] };
   }
   // Apply-to-all memory: files of one class share a single decision across the
@@ -1179,14 +1160,14 @@ async function writeWithConflict(
   internals.record(relPath, MODE, existing, proposed, resolution, sim);
   switch (resolution) {
     case 'replace':
-      regenerate(abs, proposed, internals.mode);
+      regenerate(abs, proposed);
       return { written: [relPath], skipped: [], identical: [] };
     case 'merge': {
       // `merge` is only meaningful when ctx.mergedWithMarkers was populated
       // (managed-region path). For a bare regenerate conflict without markers
       // the resolver should not pick `merge`; defensively fall back to replace
       // (better than dropping the user's bytes).
-      regenerate(abs, proposed, internals.mode);
+      regenerate(abs, proposed);
       return { written: [relPath], skipped: [], identical: [] };
     }
     case 'rename': {
@@ -1198,14 +1179,14 @@ async function writeWithConflict(
       // `.local` (then `.local.1`, …) so the move is always safe.
       const aside = uniqueAside(abs, relPath, '.local');
       renameSync(abs, aside.abs);
-      regenerate(abs, proposed, internals.mode);
+      regenerate(abs, proposed);
       return { written: [relPath], skipped: [aside.rel], identical: [] };
     }
     case 'duplicate': {
       // Write the template ALONGSIDE at a unique path; keep the user's file
       // untouched. (Same unique-suffix safeguard as `rename`.)
       const aside = uniqueAside(abs, relPath, '.noir');
-      regenerate(aside.abs, proposed, internals.mode);
+      regenerate(aside.abs, proposed);
       return { written: [aside.rel], skipped: [relPath], identical: [] };
     }
     case 'preserve':

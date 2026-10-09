@@ -102,6 +102,14 @@ function requiredArgLabel(cmd: Command): string | undefined {
 }
 
 /**
+ * Leaf commands that are internal host contracts, not user-facing actions.
+ * `hook` is the SessionStart/SubagentStart runner the scaffold invokes; it
+ * reads JSON from stdin and must never be dispatched from the palette (a user
+ * picking it would hang waiting on stdin).
+ */
+const INTERNAL_LEAF_COMMANDS = new Set(['hook']);
+
+/**
  * Walk `cmd`'s subtree depth-first, appending one {@link PaletteCommand} per
  * leaf (has an action handler AND no child commands). `path` accumulates the
  * argv tokens excluding the program root name; the caller seeds it as `[]` so
@@ -113,6 +121,7 @@ function collectLeaves(cmd: Command, path: string[], out: PaletteCommand[]): voi
 
   if (isLeaf) {
     const argv = path;
+    if (INTERNAL_LEAF_COMMANDS.has(argv.join(' '))) return;
     const id = argv.join(' ');
     const description = cmd.description() || argv.join(' ');
     out.push({

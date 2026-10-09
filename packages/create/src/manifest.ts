@@ -609,26 +609,29 @@ export function buildHostArtifacts(
     });
   }
 
-  // 4. SessionStart + SubagentStart hook bootstrap (claude only). Four
-  //    artifacts, three ownerships (research-validated "both + split" design):
+  // 4. SessionStart + SubagentStart hook bootstrap (claude only). Three
+  //    artifacts, two ownerships (research-validated "both + split" design):
   //      a. `.claude/settings.local.json` SessionStart + SubagentStart entries — user-owned,
   //         written ONCE via mergeJson (init/create only, deduped by command
   //         substring). NEVER re-written by sync or `init --upgrade` (a
   //         re-emit would resurrect a hook the user removed); preserves
-  //         permissions/env.
-  //      b. `.noir/hooks/noir-session-start.mjs` — Noir-owned runner,
-  //         regenerate (init + sync), emits additionalContext from router.md
-  //         + the anti-slop ruleset.
-  //      c. `.noir/router.md` — co-owned mutable router contract, managedBlock
+  //         permissions/env. The command is `"<noir shim>" hook` — the CLI owns
+  //         the injection (see `noir hook`), so the entry carries no fragile
+  //         `.mjs` path, exec bit, or `node`-on-PATH assumption.
+  //      b. `.noir/router.md` — co-owned mutable router contract, managedBlock
   //         (init + sync), user edits outside markers survive.
-  //      d. `.noir/rules/anti-slop.md` — Noir-owned always-on ruleset,
+  //      c. `.noir/rules/anti-slop.md` — Noir-owned always-on ruleset,
   //         regenerate (init + sync), read by the hook (not @-imported).
   if (host === 'claude') {
-    const HOOK_DEDUP = 'noir-session-start';
-    // The runner is idempotent and emits the same context for either event, so
-    // both hooks share the one command entry. SubagentStart rides the session's
-    // injected ruleset into subagents; UserPromptSubmit is deliberately absent —
-    // Noir has no per-prompt mode-tracking concept to re-inject.
+    // ` hook` (leading space) is the dedup marker: an existing entry whose
+    // command ends in the `hook` subcommand is already wired and must not be
+    // re-added on a re-emit.
+    const HOOK_DEDUP = ' hook';
+    // Both events share the one command entry: the runner reads its event name
+    // from stdin and emits the same context for either. SubagentStart rides the
+    // session's injected ruleset into subagents; UserPromptSubmit is
+    // deliberately absent — Noir has no per-prompt mode-tracking concept to
+    // re-inject.
     const hookEntry = {
       hooks: {
         SessionStart: [
@@ -636,7 +639,7 @@ export function buildHostArtifacts(
             hooks: [
               {
                 type: 'command',
-                command: `"${ctx.root}/.noir/hooks/noir-session-start.mjs"`,
+                command: `"${ctx.command}" hook`,
               },
             ],
           },
@@ -646,7 +649,7 @@ export function buildHostArtifacts(
             hooks: [
               {
                 type: 'command',
-                command: `"${ctx.root}/.noir/hooks/noir-session-start.mjs"`,
+                command: `"${ctx.command}" hook`,
               },
             ],
           },
@@ -660,14 +663,6 @@ export function buildHostArtifacts(
       content: JSON.stringify(hookEntry, null, 2),
       dedupSubstring: HOOK_DEDUP,
       description: 'SessionStart + SubagentStart hook entry (user-owned, written once)',
-    });
-    entries.push({
-      path: '.noir/hooks/noir-session-start.mjs',
-      mode: 'regenerate',
-      fileMode: 0o755,
-      host,
-      content: SESSION_START_HOOK_SCRIPT,
-      description: 'SessionStart hook runner (Noir-owned, re-emitted)',
     });
     entries.push({
       path: '.noir/router.md',
@@ -690,49 +685,6 @@ export function buildHostArtifacts(
 
   return entries;
 }
-
-/** The SessionStart hook runner. Reads `.noir/router.md` (the co-owned
- *  router contract) and `.noir/rules/anti-slop.md` (the always-on ruleset) and
- *  emits them — joined by a blank line, a missing file contributing nothing —
- *  as `hookSpecificOutput.additionalContext` so Claude Code wraps them in a
- *  system reminder at the start of every session: deterministic, NOT in the
- *  skill-listing 1% budget. Kept small (<10k chars) so Claude never file-izes
- *  it. With neither file present the hook still emits `{hookSpecificOutput:{}}`
- *  (the original silent no-op). */
-const SESSION_START_HOOK_SCRIPT = `#!/usr/bin/env node
-// Noir SessionStart hook — injects the skill router contract + anti-slop ruleset
-// at session start. The mutable contract lives in .noir/router.md (a Noir
-// managed block, so user edits outside the markers survive noir sync) and the
-// ruleset in .noir/rules/anti-slop.md (regenerated). This script is a pure runner.
-import { readFileSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, '..', '..');
-const ROUTER = join(ROOT, '.noir', 'router.md');
-const RULES = join(ROOT, '.noir', 'rules', 'anti-slop.md');
-
-function readIfPresent(path) {
-  if (!existsSync(path)) return '';
-  return readFileSync(path, 'utf8').trim();
-}
-
-function main() {
-  const parts = [readIfPresent(ROUTER), readIfPresent(RULES)].filter((part) => part !== '');
-  if (parts.length === 0) {
-    // Neither contract present (project not initialized / both removed) — silent.
-    process.stdout.write(JSON.stringify({ hookSpecificOutput: {} }));
-    process.exit(0);
-  }
-  const context = parts.join('\\n\\n');
-  process.stdout.write(
-    JSON.stringify({ hookSpecificOutput: { additionalContext: context } }),
-  );
-}
-
-main();
-`;
 
 /** Convert an absolute path under `root` to a repo-relative POSIX string (the
  *  manifest's path shape). Throws if `abs` is NOT under `root` so a future

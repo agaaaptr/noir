@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { type HostId, mcpConfigPathFor, noirStdioArgs, TRANSPORT_KEYS } from '@noir-ai/adapters';
 import {
@@ -398,6 +398,125 @@ const workspaceBridge: MigrationScript = {
   },
 };
 
+// --- 1.3.0 → 1.4.0: route the SessionStart hook through `noir hook` ---------
+
+/** The old hook command this migration rewrites. The `.mjs` runner was emitted
+ *  directly-executable and named in the command, so its filename is the reliable
+ *  marker of "this entry is the old Noir hook". */
+const OLD_HOOK_MARKER = 'noir-session-start';
+
+/** `1.3.0 → 1.4.0`: rewrite the SessionStart + SubagentStart hook command from
+ *  the directly-executed `.noir/hooks/noir-session-start.mjs` runner to
+ *  `"<noir>" hook`, and remove the now-orphaned runner file.
+ *
+ *  The `.mjs` runner depended on the file's exec bit and on `node` being on the
+ *  spawn PATH; `noir hook` routes through the shim, which resolves the managed
+ *  Node by absolute path and is kept executable by the installer. The command
+ *  lives in `.claude/settings.local.json`, which the manifest deliberately never
+ *  re-emits (the user may have removed the hook), so only the upgrade path can
+ *  repair an existing project's entry — which is what this migration is for.
+ *
+ *  Idempotent: a command already routed through ` hook` is left alone, and the
+ *  runner-file removal is `force: true`, so a second run is a byte-level no-op.
+ */
+const hookCommand: MigrationScript = {
+  from: '1.3.0',
+  to: '1.4.0',
+  description: 'route the SessionStart hook through `noir hook` (drop the .mjs runner)',
+  run: (ctx) => {
+    const result: MigrationResult = { changed: [], conflicts: [], notes: [] };
+    const settingsRel = '.claude/settings.local.json';
+    const settingsPath = join(ctx.root, '.claude', 'settings.local.json');
+
+    // 1. Rewrite the hook command(s) in settings.local.json, when present.
+    if (existsSync(settingsPath)) {
+      let settings: Record<string, unknown>;
+      try {
+        settings = JSON.parse(readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
+      } catch (err) {
+        result.conflicts.push(settingsRel);
+        result.notes.push(
+          `${settingsRel}: unreadable (${errorMessage(err)}) — command left untouched`,
+        );
+        settings = {}; // still remove the orphaned runner below
+      }
+
+      let rewritten = false;
+      const hooks = settings.hooks;
+      if (typeof hooks === 'object' && hooks !== null && !Array.isArray(hooks)) {
+        for (const eventEntries of Object.values(hooks as Record<string, unknown>)) {
+          if (!Array.isArray(eventEntries)) continue;
+          for (const group of eventEntries) {
+            if (typeof group !== 'object' || group === null) continue;
+            const inner = (group as Record<string, unknown>).hooks;
+            if (!Array.isArray(inner)) continue;
+            for (const entry of inner) {
+              if (typeof entry !== 'object' || entry === null) continue;
+              const hookObj = entry as Record<string, unknown>;
+              if (
+                typeof hookObj.command === 'string' &&
+                hookObj.command.includes(OLD_HOOK_MARKER)
+              ) {
+                hookObj.command = `"${resolveNoirCommand()}" hook`;
+                rewritten = true;
+              }
+            }
+          }
+        }
+      }
+
+      if (!rewritten) {
+        result.notes.push(`${settingsRel}: no .mjs hook command to migrate`);
+      } else if (ctx.dryRun) {
+        result.changed.push(settingsRel);
+        result.notes.push(`${settingsRel}: would route the hook through \`noir hook\``);
+      } else {
+        try {
+          atomicWriteFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
+          result.changed.push(settingsRel);
+          result.notes.push(`${settingsRel}: hook now routes through \`noir hook\``);
+        } catch (err) {
+          result.conflicts.push(settingsRel);
+          result.notes.push(`${settingsRel}: write failed (${errorMessage(err)}) — left untouched`);
+        }
+      }
+    } else {
+      result.notes.push(`${settingsRel}: absent — nothing to migrate`);
+    }
+
+    // 2. Remove the orphaned runner. Its command no longer points at it, so the
+    //    file is dead weight in a project that had the old hook emitted.
+    const runnerRel = '.noir/hooks/noir-session-start.mjs';
+    const runnerPath = join(ctx.root, '.noir', 'hooks', 'noir-session-start.mjs');
+    if (!existsSync(runnerPath)) {
+      return result;
+    }
+    if (ctx.dryRun) {
+      result.changed.push(runnerRel);
+      result.notes.push(`${runnerRel}: would remove the orphaned runner`);
+      return result;
+    }
+    try {
+      rmSync(runnerPath, { force: true });
+    } catch (err) {
+      result.conflicts.push(runnerRel);
+      result.notes.push(`${runnerRel}: remove failed (${errorMessage(err)})`);
+      return result;
+    }
+    result.changed.push(runnerRel);
+    result.notes.push(`${runnerRel}: removed (orphaned runner)`);
+    // Drop the now-empty hooks directory so no stale `.noir/hooks/` lingers.
+    // Best-effort: a non-empty or already-gone directory is fine either way.
+    const hooksDir = join(ctx.root, '.noir', 'hooks');
+    try {
+      if (readdirSync(hooksDir).length === 0) rmdirSync(hooksDir);
+    } catch {
+      // best-effort cleanup
+    }
+    return result;
+  },
+};
+
 /** The registry. The runner sorts the selected window by `to`, so declaration
  *  order is documentation only — oldest step first. */
 export const MIGRATIONS: readonly MigrationScript[] = [
@@ -405,6 +524,7 @@ export const MIGRATIONS: readonly MigrationScript[] = [
   envPointer,
   envTemplates,
   workspaceBridge,
+  hookCommand,
 ];
 /** `Error.message` for anything thrown, without assuming an Error. */
 function errorMessage(err: unknown): string {

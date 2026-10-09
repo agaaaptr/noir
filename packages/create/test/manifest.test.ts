@@ -61,12 +61,6 @@ describe('buildManifest', () => {
       { path: '.mcp.json', mode: 'regenerate', host: 'claude', hasBlock: false },
       // --- C3 SessionStart hook bootstrap (claude only) ---
       { path: '.claude/settings.local.json', mode: 'mergeJson', host: 'claude', hasBlock: false },
-      {
-        path: '.noir/hooks/noir-session-start.mjs',
-        mode: 'regenerate',
-        host: 'claude',
-        hasBlock: false,
-      },
       { path: '.noir/router.md', mode: 'managedBlock', host: 'claude', hasBlock: true },
       {
         path: '.noir/rules/anti-slop.md',
@@ -77,20 +71,18 @@ describe('buildManifest', () => {
     ]);
   });
 
-  it('credential seed declares 0600; the hook runner declares 0755; nothing else declares one', () => {
+  it('credential seed declares 0600; nothing else declares a mode', () => {
     // The permission rides on the manifest entry (ManifestEntry has no other
-    // permission field). Exactly two entries ask for a mode: the credential
-    // seed (0600) and the SessionStart hook runner (0755, executed directly).
+    // permission field). Exactly one entry asks for a mode: the credential seed
+    // (0600). The hook no longer needs a file mode — it routes through the CLI
+    // shim, which the installer keeps executable.
     const envEntry = m.find((e) => e.path === '.noir/.env');
     expect(envEntry?.mode).toBe('skipIfExists');
     expect(envEntry?.fileMode).toBe(0o600);
     expect(envEntry?.template).toBe('config.env.tmpl');
     // Both files coexist: the example stays the committable documentation.
     expect(m.find((e) => e.path === '.noir/.env.example')?.template).toBe('env.example.tmpl');
-    expect(m.filter((e) => e.fileMode !== undefined).map((e) => e.path)).toEqual([
-      '.noir/.env',
-      '.noir/hooks/noir-session-start.mjs',
-    ]);
+    expect(m.filter((e) => e.fileMode !== undefined).map((e) => e.path)).toEqual(['.noir/.env']);
   });
 
   it('the .noir/README.md map is a host-agnostic managed block, not a seed', () => {

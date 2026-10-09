@@ -26,6 +26,7 @@ import { doctor } from './commands/doctor.js';
 import { captureAmbientEnv, env } from './commands/env.js';
 import { type HandoffOptions, handoff } from './commands/handoff.js';
 import { type HomeDeps, home } from './commands/home.js';
+import { hook } from './commands/hook.js';
 import {
   memoryCapture,
   memoryConsolidate,
@@ -756,6 +757,17 @@ export function createProgram(): Command {
     .description('which configuration is in effect and where each value comes from')
     .action(async (...args: unknown[]) => {
       await env(toCliOptions(actionGlobals(args)));
+    });
+
+  // `noir hook` — the host-invoked SessionStart / SubagentStart runner. Reads
+  // the hook input from stdin and emits `hookSpecificOutput` on stdout. Hidden
+  // from `--help` and the command palette: it is the scaffold's internal
+  // contract with the host, not a user command (see commands/hook.ts).
+  program
+    .command('hook', { hidden: true })
+    .description('host hook runner (SessionStart / SubagentStart context injection)')
+    .action(async () => {
+      await hook();
     });
 
   const contextGrp = program.command('context').description('context engine');

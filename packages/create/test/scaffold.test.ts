@@ -1,13 +1,10 @@
-import { execSync } from 'node:child_process';
 import {
   appendFileSync,
-  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -710,7 +707,7 @@ describe('scaffold — host-parametric (--host <id>)', () => {
 });
 
 describe('scaffold — C3 SessionStart hook bootstrap', () => {
-  it('claude init emits settings.local.json + hook script + router.md', async () => {
+  it('claude init emits settings.local.json hook + router.md, no .mjs runner', async () => {
     await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
     // settings.local.json: merge-aware, contains the SessionStart hook entry.
     expect(existsSync(join(root, '.claude', 'settings.local.json'))).toBe(true);
@@ -718,32 +715,19 @@ describe('scaffold — C3 SessionStart hook bootstrap', () => {
     expect(settings.hooks.SessionStart).toBeDefined();
     const entry = settings.hooks.SessionStart[0]?.hooks?.[0];
     expect(entry?.type).toBe('command');
-    expect(entry?.command).toContain('noir-session-start');
-    // SubagentStart rides the same idempotent runner so the injected ruleset
-    // carries into subagents.
+    // The hook routes through the CLI (`noir hook`), not a directly-executed .mjs.
+    expect(entry?.command).toContain(' hook');
+    // SubagentStart rides the same runner so the injected ruleset carries into
+    // subagents.
     expect(settings.hooks.SubagentStart).toBeDefined();
     const subEntry = settings.hooks.SubagentStart[0]?.hooks?.[0];
     expect(subEntry?.type).toBe('command');
-    expect(subEntry?.command).toContain('noir-session-start');
-    // Hook runner emitted (Noir-owned, regenerate).
-    expect(existsSync(join(root, '.noir', 'hooks', 'noir-session-start.mjs'))).toBe(true);
+    expect(subEntry?.command).toContain(' hook');
+    // No .mjs runner is emitted — the CLI owns the injection now.
+    expect(existsSync(join(root, '.noir', 'hooks', 'noir-session-start.mjs'))).toBe(false);
     // Router contract emitted as a managed block (user edits outside markers survive).
     expect(existsSync(join(root, '.noir', 'router.md'))).toBe(true);
     expect(readFileSync(join(root, '.noir', 'router.md'), 'utf8')).toContain('# Noir skill router');
-  });
-
-  it('emits the hook runner executable (0755) — the settings entry runs it directly', async () => {
-    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
-    const hookPath = join(root, '.noir', 'hooks', 'noir-session-start.mjs');
-    expect(statSync(hookPath).mode & 0o777).toBe(0o755);
-  });
-
-  it('sync heals a byte-identical hook left non-executable by an older emit', async () => {
-    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
-    const hookPath = join(root, '.noir', 'hooks', 'noir-session-start.mjs');
-    chmodSync(hookPath, 0o644);
-    await scaffold({ root, mode: 'sync', transport: 'stdio', host: 'claude' });
-    expect(statSync(hookPath).mode & 0o777).toBe(0o755);
   });
 
   it('mergeJson preserves existing settings (permissions) when appending the hook', async () => {
@@ -760,7 +744,7 @@ describe('scaffold — C3 SessionStart hook bootstrap', () => {
     // User's permissions survived the merge.
     expect(settings.permissions).toEqual({ allow: ['Bash(git *)'] });
     // Hook appended.
-    expect(settings.hooks.SessionStart[0]?.hooks?.[0]?.command).toContain('noir-session-start');
+    expect(settings.hooks.SessionStart[0]?.hooks?.[0]?.command).toContain(' hook');
   });
 
   it('is deduped — re-init does not append a second hook entry', async () => {
@@ -776,26 +760,8 @@ describe('scaffold — C3 SessionStart hook bootstrap', () => {
     expect(existsSync(join(root, '.claude', 'settings.local.json'))).toBe(false);
   });
 
-  it('emits .noir/rules/anti-slop.md and the hook runner injects it', async () => {
+  it('emits .noir/rules/anti-slop.md for the hook to inject', async () => {
     await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
     expect(existsSync(join(root, '.noir', 'rules', 'anti-slop.md'))).toBe(true);
-    const out = execSync(
-      `node "${join(root, '.noir', 'hooks', 'noir-session-start.mjs')}"`,
-    ).toString();
-    const parsed = JSON.parse(out);
-    // `noir-debt` is unique to anti-slop.md (lowercase); `skill router` comes
-    // from the router contract — both must ride the hook's additionalContext.
-    expect(parsed.hookSpecificOutput.additionalContext).toContain('noir-debt');
-    expect(parsed.hookSpecificOutput.additionalContext).toContain('skill router');
-  });
-
-  it('still emits {hookSpecificOutput:{}} when neither contract file exists', async () => {
-    await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
-    rmSync(join(root, '.noir', 'router.md'), { force: true });
-    rmSync(join(root, '.noir', 'rules', 'anti-slop.md'), { force: true });
-    const out = execSync(
-      `node "${join(root, '.noir', 'hooks', 'noir-session-start.mjs')}"`,
-    ).toString();
-    expect(JSON.parse(out)).toEqual({ hookSpecificOutput: {} });
   });
 });

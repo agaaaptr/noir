@@ -250,7 +250,7 @@ describe('ScaffoldResult gap close — init/sync/create emit ScaffoldResult unde
       },
       projectId: 'p-test',
       fromVersion: null,
-      toVersion: '1.3.0',
+      toVersion: '1.4.0',
       host: 'claude',
       conflicts: [
         {
@@ -292,7 +292,7 @@ describe('ScaffoldResult gap close — init/sync/create emit ScaffoldResult unde
       },
       projectId: 'p-create',
       fromVersion: null,
-      toVersion: '1.3.0',
+      toVersion: '1.4.0',
       host: 'claude',
       conflicts: [],
     });
@@ -327,7 +327,7 @@ describe('ScaffoldResult gap close — init/sync/create emit ScaffoldResult unde
       },
       projectId: 'p',
       fromVersion: null,
-      toVersion: '1.3.0',
+      toVersion: '1.4.0',
       host: 'claude',
       conflicts: [],
     });

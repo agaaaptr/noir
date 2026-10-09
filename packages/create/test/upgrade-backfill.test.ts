@@ -169,7 +169,7 @@ describe('noir init --upgrade — mergeJson stays init/create-only', () => {
     const res = await scaffold({ root, mode: 'init', host: 'claude' });
 
     const settings = JSON.parse(readFileSync(settingsPath(), 'utf8'));
-    expect(settings.hooks.SessionStart[0]?.hooks?.[0]?.command).toContain('noir-session-start');
+    expect(settings.hooks.SessionStart[0]?.hooks?.[0]?.command).toContain(' hook');
     expect(settings.permissions).toEqual({ allow: ['Bash(git *)'] }); // user content preserved
     expect(res.written).toContain(settingsRel);
   });

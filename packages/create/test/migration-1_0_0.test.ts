@@ -65,7 +65,7 @@ describe('migration 1.0.0 → 1.1.0 — the .noir/.env pointer on an existing co
     // The literal assertion that pins where the chain lands. `--upgrade`
     // restamps, so a 1.0.0 project is current afterwards and doctor stops
     // reporting drift.
-    expect(readScaffoldVersion(root)).toBe('1.3.0');
+    expect(readScaffoldVersion(root)).toBe(CURRENT_SCAFFOLD_VERSION);
 
     const once = configBody();
     expect(once).toMatch(/\.noir\/\.env/);
