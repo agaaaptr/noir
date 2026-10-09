@@ -10,8 +10,8 @@ Scope: **`.noir/` generated artifacts only**. Human-authored repo docs (`docs/in
 <CODE>-<NNNN>-<taskId>-<slug>.md
 ```
 
-- **`CODE`** — a 2-letter type code (or the natural acronyms `PRD`/`ADR`). See the registry below.
-- **`NNNN`** — a **per-type** monotonic sequence, zero-padded to 4 digits, never reused. Computed by scanning the type directory and taking `max+1`.
+- **`CODE`**: a 2-letter type code (or the natural acronyms `PRD`/`ADR`). See the registry below.
+- **`NNNN`**: a **per-type** monotonic sequence, zero-padded to 4 digits, never reused. Computed by scanning the type directory and taking `max+1`.
 - **`taskId`** — the store key the artifact belongs to (omitted for kinds not tied to a task).
 - **`slug`** — kebab-case, ASCII, hyphens-not-underscores (omitted for `intake`/`handoff`).
 

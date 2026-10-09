@@ -165,19 +165,19 @@ vars, never config keys — see
 
 ## Conditional requirements
 
-- `model.providers.<name>.apiKeyEnv` — required only when the provider is remote
+- `model.providers.<name>.apiKeyEnv`: required only when the provider is remote
   (anonymous local providers like Ollama omit it).
-- `integrations.<name>.{teamId,listId,spaceId}` — required only when the matching
+- `integrations.<name>.{teamId,listId,spaceId}`: required only when the matching
   ClickUp flow needs workspace binding (see [ClickUp setup](../how-to/clickup.md)).
-- `context.embedder.provider` / `context.embedder.model` / `context.embedder.baseURL` —
+- `context.embedder.provider` / `context.embedder.model` / `context.embedder.baseURL`:
   `provider` is only meaningful when `kind` is `remote`; `baseURL` when `kind` is
   `ollama`; `model` applies to all three (a HuggingFace repo id for `local`).
-- `memory.consolidation.*` — only meaningful when `memory.consolidation.enabled` is true.
+- `memory.consolidation.*`: only meaningful when `memory.consolidation.enabled` is true.
 
 ## Secrets policy
 
-`.noir/config.yml` is **committable project state** — never paste a token value into it.
-`apiKeyEnv` stores a variable **NAME**, never an interpolation — write
+`.noir/config.yml` is **committable project state**. Never paste a token value into it.
+`apiKeyEnv` stores a variable **NAME**, never an interpolation: write
 `apiKeyEnv: ANTHROPIC_API_KEY`, never `apiKeyEnv: ${ANTHROPIC_API_KEY}`. The
 same rule covers `authTokenEnv`: a NAME, never the bearer-token value. The
 model layer reads `process.env[<that name>]`, so the dollar-brace form resolves to

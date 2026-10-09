@@ -73,6 +73,21 @@ const HYGIENE_EXCLUDED_DIRS = new Set(['docs/internal', 'docs/decisions', 'docs/
  *  single source of truth and `docs/CHANGELOG.md` is a pointer to it. */
 const HYGIENE_EXCLUDED_FILES = new Set(['CHANGELOG.md']);
 
+/** Generated documentation, excluded by path: the reference pages and the
+ *  `docs/README.md` index are regenerated from schemas, skill descriptions and
+ *  tool definitions, so their prose is not the hand-written text the rules are
+ *  written for. A rule finding there reflects the source, not a slop slip, and
+ *  an edit would be overwritten by the next `pnpm docs:generate`. Root-relative
+ *  POSIX paths. */
+const HYGIENE_EXCLUDED_PATHS = new Set([
+  'docs/README.md',
+  'docs/reference/cli.md',
+  'docs/reference/config.md',
+  'docs/reference/mcp-tools.md',
+  'docs/reference/packages.md',
+  'docs/reference/skills.md',
+]);
+
 /** A file the scan will read, with the kind of text it holds. */
 interface HygieneScanFile {
   /** Root-relative POSIX path. */
@@ -155,7 +170,8 @@ function hasScannableLayout(root: string): boolean {
  *  truncation instead of adding more. */
 function addHygieneFile(rel: string, walk: HygieneWalk): void {
   const name = rel.slice(rel.lastIndexOf('/') + 1);
-  if (name.startsWith('.') || HYGIENE_EXCLUDED_FILES.has(name)) return;
+  if (name.startsWith('.') || HYGIENE_EXCLUDED_FILES.has(name) || HYGIENE_EXCLUDED_PATHS.has(rel))
+    return;
   const kind = hygieneKindOf(rel);
   if (kind === null) return;
   if (walk.files.length >= HYGIENE_MAX_FILES) {

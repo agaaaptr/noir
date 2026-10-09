@@ -16,16 +16,16 @@ single reference — feature pages link here instead of restating defaults.
 > A machine-global export therefore **cannot shadow** `.noir/.env`. There is no
 > `VAR=value noir …` prefix level: a one-shot prefix arrives in `process.env`
 > indistinguishably from the inherited environment, so it *is* level 3, not an
-> override above the file — use a `run.profiles.<n>.env` entry when you need a
+> override above the file; use a `run.profiles.<n>.env` entry when you need a
 > real per-invocation value. Two further consequences worth knowing: a
 > git-*tracked* `.noir/.env` is refused outright (none of its keys are in
 > effect), and `noir env` shows which source won for each key. This is a
-> deliberate departure from the 12-factor convention — the project file
+> deliberate departure from the 12-factor convention: the project file
 > describes the project, so it outranks the ambient environment.
 >
 > **Changed in 1.14.0.** This order is the *inverse* of what 1.12.0/1.13.0
 > shipped, where the file filled only unset keys ("real env wins"). If the same
-> key is set in both places, you now get the **file's** value — and the loader
+> key is set in both places, you now get the **file's** value. The loader
 > prints one line naming that key the first time it loads the file, so the change
 > announces itself rather than being discovered. Run `noir env` to see the winner
 > for every key. Nothing is rewritten automatically.
@@ -33,7 +33,7 @@ single reference — feature pages link here instead of restating defaults.
 > **Where env vars come from.** Level 3 *is* the environment the CLI and daemon
 > inherit from the process that launched them. From an interactive terminal,
 > exports in `~/.zshrc` / `~/.bashrc` work. From a GUI-launched host (VS Code, a
-> desktop MCP client), CI, or launchd, shell rc files are **not** sourced — the
+> desktop MCP client), CI, or launchd, shell rc files are **not** sourced; the
 > machine-global fallbacks there are the `env` block in
 > `~/.claude/settings.json` and `~/.zshenv`. The project-local `.noir/.env`
 > (level 2) is the one placement that works in every launch mode, which is why
@@ -48,7 +48,7 @@ single reference — feature pages link here instead of restating defaults.
 
 | Variable | Default | Required | Description |
 |---|---|---|---|
-| `CLICKUP_API_TOKEN` | — | conditional — required only when the **noir-clickup** integration is enabled (see [ClickUp how-to](../how-to/clickup.md)) | ClickUp personal token (`pk_...`). Resolved by the daemon at call time. Put it in `.noir/.env` — the recommended project-scoped home, and the winner for every key it defines. Machine-global fallbacks: the `env` block of `~/.claude/settings.json`, or `~/.zshenv` (NOT `.zshrc` — non-interactive shells skip it). **Restart the daemon after changing it.** |
+| `CLICKUP_API_TOKEN` | — | conditional: required only when the **noir-clickup** integration is enabled (see [ClickUp how-to](../how-to/clickup.md)) | ClickUp personal token (`pk_...`). Resolved by the daemon at call time. Put it in `.noir/.env`, the recommended project-scoped home, and the winner for every key it defines. Machine-global fallbacks: the `env` block of `~/.claude/settings.json`, or `~/.zshenv` (NOT `.zshrc` — non-interactive shells skip it). **Restart the daemon after changing it.** |
 
 > **`CLICKUP_TEAM_ID` is NOT an env var** — Noir never reads it. Workspace
 > binding (team/list/space ids) is configured as config.yml keys:
@@ -69,26 +69,26 @@ the real environment) reaches the host process, which is what actually reads
 these values. When a run fails to log in, Noir's advice **names** the three
 credential variables in effect together with the source that won;
 `API_TIMEOUT_MS` is passed through and never read. These variables configure
-the **host** path; Noir's own model layer is configured in `config.yml` instead
-— see [Connecting through a gateway](../how-to/gateways.md) and
+the **host** path; Noir's own model layer is configured in `config.yml` instead.
+See [Connecting through a gateway](../how-to/gateways.md) and
 [Configuration](config.md).
 
 | Variable | Default | Required | Description |
 |---|---|---|---|
-| `ANTHROPIC_BASE_URL` | — | no | Base URL of an Anthropic-shaped gateway. Host-only: give the origin without the message path — the host appends it. Read by the host, never by Noir. |
-| `ANTHROPIC_AUTH_TOKEN` | — | no | The gateway credential, sent as `Authorization: Bearer`. Do not set it together with `ANTHROPIC_API_KEY` (sent as `x-api-key`) — the host treats both set at once as an auth conflict. |
-| `ANTHROPIC_API_KEY` | — | no | The other credential shape, sent as `x-api-key`. Do not set it together with `ANTHROPIC_AUTH_TOKEN` (sent as `Authorization: Bearer`) — the host treats both set at once as an auth conflict. |
-| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | — | no | Remaps the `haiku` model alias to the id the gateway serves. Host-only: read by the host, never by Noir. |
-| `ANTHROPIC_DEFAULT_SONNET_MODEL` | — | no | Remaps the `sonnet` model alias to the id the gateway serves. Host-only: read by the host, never by Noir. |
-| `ANTHROPIC_DEFAULT_OPUS_MODEL` | — | no | Remaps the `opus` model alias to the id the gateway serves. Host-only: read by the host, never by Noir. |
-| `API_TIMEOUT_MS` | host default (Claude Code: `600000`) | no | Per-request timeout in milliseconds. A host variable passed through by inheritance — Noir never reads it. |
+| `ANTHROPIC_BASE_URL` | - | no | Base URL of an Anthropic-shaped gateway. Host-only: give the origin without the message path; the host appends it. Read by the host, never by Noir. |
+| `ANTHROPIC_AUTH_TOKEN` | - | no | The gateway credential, sent as `Authorization: Bearer`. Do not set it together with `ANTHROPIC_API_KEY` (sent as `x-api-key`); the host treats both set at once as an auth conflict. |
+| `ANTHROPIC_API_KEY` | - | no | The other credential shape, sent as `x-api-key`. Do not set it together with `ANTHROPIC_AUTH_TOKEN` (sent as `Authorization: Bearer`) — the host treats both set at once as an auth conflict. |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | - | no | Remaps the `haiku` model alias to the id the gateway serves. Host-only: read by the host, never by Noir. |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | - | no | Remaps the `sonnet` model alias to the id the gateway serves. Host-only: read by the host, never by Noir. |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | - | no | Remaps the `opus` model alias to the id the gateway serves. Host-only: read by the host, never by Noir. |
+| `API_TIMEOUT_MS` | host default (Claude Code: `600000`) | no | Per-request timeout in milliseconds. A host variable passed through by inheritance; Noir never reads it. |
 | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | host default | no | The token count at which the host auto-compacts a conversation (Claude Code accepts `100000` to `1000000`). A host variable passed through by inheritance — Noir never reads it; it travels in the `.noir/.env` templates beside the gateway rows above. |
 
 ## Shell bridge (`noir run --command`)
 
 | Variable | Default | Required | Description |
 |---|---|---|---|
-| `SHELL` | — (unset) | no | The user's interactive shell, read by the `noir run --command <name>` fallback when the named binary cannot be spawned directly. Only `zsh`, `bash`, and `fish` are eligible: the fallback resolves the name through that shell, so command aliases and functions — invisible to a plain spawn — still work. Disabled entirely on Windows. |
+| `SHELL` | — (unset) | no | The user's interactive shell, read by the `noir run --command <name>` fallback when the named binary cannot be spawned directly. Only `zsh`, `bash`, and `fish` are eligible: the fallback resolves the name through that shell, so command aliases and functions (invisible to a plain spawn) still work. Disabled entirely on Windows. |
 
 ## Model provider + embedder keys
 
@@ -111,9 +111,9 @@ Remote embedders read their key by provider name (only when
 
 | Variable | Default | Required | Description |
 |---|---|---|---|
-| `OPENAI_API_KEY` | — | conditional — `context.embedder.kind: remote` + `provider: openai` | OpenAI embedder key. |
-| `VOYAGE_API_KEY` | — | conditional — `provider: voyage` | Voyage embedder key. |
-| `COHERE_API_KEY` | — | conditional — `provider: cohere` | Cohere embedder key. |
+| `OPENAI_API_KEY` | - | conditional: `context.embedder.kind: remote` + `provider: openai` | OpenAI embedder key. |
+| `VOYAGE_API_KEY` | - | conditional: `provider: voyage` | Voyage embedder key. |
+| `COHERE_API_KEY` | - | conditional: `provider: cohere` | Cohere embedder key. |
 
 The local Ollama embedder (`context.embedder.kind: ollama`) reads its base URL
 from config (`context.embedder.baseURL`), falling back to this variable (empty
@@ -134,15 +134,15 @@ unset means "baseURL required"):
 
 | Variable | Default | Required | Description |
 |---|---|---|---|
-| `NO_COLOR` | — | no | Present **and non-empty** disables color AND interactive prompts (the NO_COLOR spec). |
-| `CLICOLOR_FORCE` | — (unset; auto) | no | Set to `1` to force color on even under a pipe or `CI` — the escape hatch for CI/log captures. |
-| `CI` | — | no | Forces color off + non-interactive behavior. Set `CI=0` or `CI=false` to opt out of the detection. |
+| `NO_COLOR` | - | no | Present **and non-empty** disables color AND interactive prompts (the NO_COLOR spec). |
+| `CLICOLOR_FORCE` | - (unset; auto) | no | Set to `1` to force color on even under a pipe or `CI`; the escape hatch for CI/log captures. |
+| `CI` | - | no | Forces color off + non-interactive behavior. Set `CI=0` or `CI=false` to opt out of the detection. |
 | `COLUMNS` | 80 (floored at 20) | no | Terminal-width override used by responsive tables and the TUI width budget. |
-| `NOIR_NO_BANNER` | — | no | Non-empty suppresses the startup banner even in an interactive terminal. |
-| `NOIR_ACCESSIBLE` | — | no | Non-empty swaps the banner gradient for a solid accent (accessibility). |
+| `NOIR_NO_BANNER` | - | no | Non-empty suppresses the startup banner even in an interactive terminal. |
+| `NOIR_ACCESSIBLE` | - | no | Non-empty swaps the banner gradient for a solid accent (accessibility). |
 | `NOIR_NON_INTERACTIVE` | set by `--json` / `--no-input` | no | Propagates the "no prompts" decision into engines that never read `process.env` themselves. It is an output, not an input: the CLI deletes any ambient value it finds for an invocation that is not `--json` / `--no-input`, so exporting it by hand has no effect. |
 | `NOIR_QUIET` | set by `--quiet` | no | Propagates the "no decoration" decision to the colour authority (`theme.useColor`), which never sees the parsed options. An output, not an input, like `NOIR_NON_INTERACTIVE`: the CLI deletes any ambient value it finds for an invocation that is not `--quiet`, so exporting it by hand has no effect. |
-| `NOIR_DISABLE_TUI_HISTORY` | — | no | Non-empty makes palette recents in-memory only (no `~/.noir/<projectId>/tui-history.json`). |
+| `NOIR_DISABLE_TUI_HISTORY` | - | no | Non-empty makes palette recents in-memory only (no `~/.noir/<projectId>/tui-history.json`). |
 
 ## Advanced / test-only seams
 
@@ -152,20 +152,20 @@ need them.
 | Variable | Default | Required | Description |
 |---|---|---|---|
 | `NOIR_NODE_DIST_URL` | `https://nodejs.org/dist/` | no | Node dist mirror URL for the native installer's managed-Node provisioning. |
-| `NOIR_SYSTEM_NODE_BIN` | — | no | Hard override for the system-Node probe (managed-Node fallback in the native installer / `provisionManagedNode`). |
-| `NOIR_SKIP_NODE_PROVISION` | — | no | Set **and non-empty** makes the native installer (`install.sh` / `install.ps1`) skip managed-Node provisioning and use system Node ≥ 22 only. Also the remedy the installer prints when `npm install` fails. |
+| `NOIR_SYSTEM_NODE_BIN` | - | no | Hard override for the system-Node probe (managed-Node fallback in the native installer / `provisionManagedNode`). |
+| `NOIR_SKIP_NODE_PROVISION` | - | no | Set **and non-empty** makes the native installer (`install.sh` / `install.ps1`) skip managed-Node provisioning and use system Node ≥ 22 only. Also the remedy the installer prints when `npm install` fails. |
 | `NOIR_CHANNEL` | `latest` | no | npm dist-tag for `install.sh` / `install.ps1` (`beta` selects the beta channel). |
-| `NOIR_VERSION` | — | no | Pin an exact version for `install.sh` / `install.ps1` (overrides `NOIR_CHANNEL`). |
+| `NOIR_VERSION` | - | no | Pin an exact version for `install.sh` / `install.ps1` (overrides `NOIR_CHANNEL`). |
 | `NOIR_RUNTIME_DIR` | `~/.noir/runtime` | no | Overrides the managed runtime directory. |
-| `NOIR_DAEMON_DIR` | `~/.noir/daemons` | no | Overrides the directory holding the per-project daemon records (`<projectId>.json`) and their `0600` bearer tokens (`<projectId>.token`; a workspace daemon's token is named for the workspace — `<workspace-name>.token`). Primary use is test isolation — a normal run never sets it, and it is **refused from `.noir/.env`** (redirecting it would point Noir at someone else's records). |
-| `NOIR_DAEMON_JSON` | `~/.noir/daemon.json` | no | **Legacy only** — the pre-1.14 single global daemon record. Read exactly once by the self-deleting migration (`retireLegacyDaemonRecord`) when it retires a daemon from a previous version, then the file is deleted and no code path reads this path again. It does **not** relocate the current per-project records; that is `NOIR_DAEMON_DIR`. |
+| `NOIR_DAEMON_DIR` | `~/.noir/daemons` | no | Overrides the directory holding the per-project daemon records (`<projectId>.json`) and their `0600` bearer tokens (`<projectId>.token`; a workspace daemon's token is named for the workspace: `<workspace-name>.token`). Primary use is test isolation: a normal run never sets it, and it is **refused from `.noir/.env`** (redirecting it would point Noir at someone else's records). |
+| `NOIR_DAEMON_JSON` | `~/.noir/daemon.json` | no | **Legacy only**: the pre-1.14 single global daemon record. Read exactly once by the self-deleting migration (`retireLegacyDaemonRecord`) when it retires a daemon from a previous version, then the file is deleted and no code path reads this path again. It does **not** relocate the current per-project records; that is `NOIR_DAEMON_DIR`. |
 | `NOIR_INSTALL_JSON` | `~/.noir/install.json` | no | Overrides the install-record path. |
 | `NOIR_WORKSPACES_DIR` | `~/.noir/workspaces` | no | Overrides the user-global workspace root (the shared-workspace registry, store, and daemon record). |
 | `NOIR_UPDATE_CACHE_JSON` | `~/.noir/update-cache.json` | no | Overrides the update-cache path. |
-| `NOIR_MCP_COMMAND` | — | no | Overrides the command written into `.mcp.json`. **Test seam** — not a supported user knob. |
-| `NOIR_DAEMON_MODE` | — | no | Internal — the `--detach` daemon child sets it to `detached` so the daemon record self-reports its mode. Not a user knob. |
-| `NOIR_TEMPLATES_DIR` | — | no | Overrides the scaffold template directory (downstream packs). |
-| `NOIR_TEST_FORCE_CONFLICT` | — | no | Forces scaffold conflict behavior (test seam). |
+| `NOIR_MCP_COMMAND` | - | no | Overrides the command written into `.mcp.json`. **Test seam**: not a supported user knob. |
+| `NOIR_DAEMON_MODE` | - | no | Internal: the `--detach` daemon child sets it to `detached` so the daemon record self-reports its mode. Not a user knob. |
+| `NOIR_TEMPLATES_DIR` | - | no | Overrides the scaffold template directory (downstream packs). |
+| `NOIR_TEST_FORCE_CONFLICT` | - | no | Forces scaffold conflict behavior (test seam). |
 
 ### Keys refused from `.noir/.env`
 
@@ -288,7 +288,7 @@ learn that the file was not applied.
   (for GUI-launched daemons) and `~/.zshenv` (non-interactive shells);
   `~/.zshrc` is the least reliable (interactive only).
 - Keep `.noir/.env` private (`chmod 600`); `noir doctor` warns if it is
-  group/world-readable, and warns — naming the remedy — if it is tracked by
+  group/world-readable, and warns, naming the remedy, if it is tracked by
   git.
 - Never pass tokens as CLI arguments (they are visible in process lists).
 - Use clearly fake placeholders in docs and examples (`pk_...`, `sk-...`).

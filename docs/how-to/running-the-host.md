@@ -269,15 +269,15 @@ subscription or key. Avoiding a *paid* call is a different question — see
 
 ## See also
 
-- [host-profiles.md](host-profiles.md) — defining run profiles and the `${VAR}`
+- [host-profiles.md](host-profiles.md): defining run profiles and the `${VAR}`
   interpolation their `env` supports.
-- [gateways.md](gateways.md) — routing `noir run` (and the host) through a
+- [gateways.md](gateways.md): routing `noir run` (and the host) through a
   gateway or a non-Anthropic endpoint.
-- [memory.md](memory.md) — what "Save answer to memory" writes, and how to get
+- [memory.md](memory.md): what "Save answer to memory" writes, and how to get
   it back.
-- [context-and-handoff.md](context-and-handoff.md) — the handoff artifact the
+- [context-and-handoff.md](context-and-handoff.md): the handoff artifact the
   post-run menu can write.
-- [configure-env.md](configure-env.md) — `.noir/.env`, precedence, and
+- [configure-env.md](configure-env.md): `.noir/.env`, precedence, and
   `noir env`.
-- [getting-started.md](../getting-started.md) — the first-use walkthrough,
+- [getting-started.md](../getting-started.md): the first-use walkthrough,
   including where `noir run` sits in it.

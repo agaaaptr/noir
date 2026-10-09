@@ -11,20 +11,20 @@
 **Current beta:** `1.17.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.17.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-10-08T09:41:46.863Z*
+*Last auto-generated: 2026-10-09T04:43:39.076Z*
 <!-- /noir:doc:status -->
 
 ---
 
 ## 0. Model (read once)
 
-- **Scope:** `@noir-ai/{core, store, workflow, skills, daemon, adapters, cli, context, model, memory, create}` — 11 packages.
+- **Scope:** `@noir-ai/{core, store, workflow, skills, daemon, adapters, cli, context, model, memory, create}` (11 packages).
 - **Unified versioning:** every release moves all 11 published packages to the same version in lockstep. There are no per-package releases; the private workspace-root `package.json` version is outside that release set.
 - **Clean source, CI suffix.** Source code (all `packages/*/package.json`) contains ONLY plain SemVer (`X.Y.Z`). The `-beta.N` prerelease suffix is NEVER stored in source — it is computed and injected at publish time by CI. This means the same source version (`1.4.0`) can produce both a beta (`1.4.0-beta.2`) and a stable (`1.4.0`) release depending on which tag is pushed.
-- **Two channels (version-string-based).** A tag `vX.Y.Z-beta.N` → npm dist-tag **`beta`** (beta). A tag `vX.Y.Z` (plain, no suffix) → npm dist-tag **`latest`** (stable). The CI detects the channel from the tag name pattern, NOT from which branch the tag is on. This means you create the tag that matches what you want to publish — no need to change `package.json` between beta and stable.
+- **Two channels (version-string-based).** A tag `vX.Y.Z-beta.N` → npm dist-tag **`beta`** (beta). A tag `vX.Y.Z` (plain, no suffix) → npm dist-tag **`latest`** (stable). The CI detects the channel from the tag name pattern, NOT from which branch the tag is on. This means you create the tag that matches what you want to publish; no need to change `package.json` between beta and stable.
 - **Trigger:** pushing a `vX.Y.Z` or `vX.Y.Z-beta.N` git tag runs `.github/workflows/release.yml`, which injects the full version, builds, and publishes all 11 packages to the npm registry.
 - **Auth = npm automation token (Path A).** A granular npm access token scoped to `@noir-ai/*` (read + write) is stored as the `NPM_TOKEN` GitHub repo secret. **OIDC Trusted Publishing is the target alternative** — see [§1e](#1e-alternative-path--oidc-trusted-publishing-later).
-- **Provenance:** every publish runs `npm publish --provenance`, which attaches a signed SLSA build-time attestation. Provenance uses the GitHub OIDC token from `permissions: id-token: write` — **independent of the npm token**.
+- **Provenance:** every publish runs `npm publish --provenance`, which attaches a signed SLSA build-time attestation. Provenance uses the GitHub OIDC token from `permissions: id-token: write`, **independent of the npm token**.
 - **Release Registry:** every successful publish generates/updates `.noir/releases/releases.json` + `releases.md` automatically. Run `pnpm release:history` to view, `pnpm release:rebuild` to recover from npm + git tags.
 - **Access:** scoped packages (`@noir-ai/*`) are **private by default**. `publishConfig: { access: "public" }` in every `package.json` overrides that.
 
@@ -50,7 +50,7 @@ These are done once, by the npm org owner, before the first release. v1 uses **P
 
 1. **Make the repo public** (`agaaaptr/noir`) — provenance requires a public source repo. If you keep it private, drop `--provenance` and accept weaker attestations.
 2. **Add the `NPM_TOKEN` secret** (Repo settings → **Secrets and variables** → **Actions** → **New repository secret**): name `NPM_TOKEN`, value = the token from §1a step 3. The publish job reads it via `${{ secrets.NPM_TOKEN }}`.
-3. **Create the `release` environment** (Repo settings → **Environments** → **New environment** → `release`) **with a required reviewer** (currently `agaaaptr`). This gate is **required**, not optional: every tag push pauses the `publish` job until that reviewer approves it in the GitHub Actions UI — nothing reaches `npm publish` without human approval. For tighter blast-radius control, put the `NPM_TOKEN` secret on the `release` **environment** (instead of the repo) so it is only available after that approval — recommended.
+3. **Create the `release` environment** (Repo settings → **Environments** → **New environment** → `release`) **with a required reviewer** (currently `agaaaptr`). This gate is **required**, not optional: every tag push pauses the `publish` job until that reviewer approves it in the GitHub Actions UI; nothing reaches `npm publish` without human approval. For tighter blast-radius control, put the `NPM_TOKEN` secret on the `release` **environment** (instead of the repo) so it is only available after that approval — recommended.
 
 ### 1c. Local machine
 
@@ -437,12 +437,12 @@ Gotchas encountered during releases. Each is one line: symptom → fix.
 
 ### Common issues
 
-1. **`pnpm release:tag` fails with "not clean"** — you have uncommitted changes. Commit or stash first. Use `--force` to skip.
-2. **`pnpm release:tag` fails with "unpushed commits"** — your local branch is ahead of origin. Push first.
-3. **"Version already published on npm"** — the version already exists. Wait for the next beta number if this is a re-run, or bump the base version. For partial-publish recovery, bump the iteration and republish all 11.
-4. **npm view timeout** — the npm registry may be down. Retry; the `compute-version.mjs` script retries with backoff.
-5. **CI fails on "version already published"** — expected on workflow re-runs. The idempotency check skips re-publishing safely.
-6. **Registry out of sync** — run `pnpm release:validate` to detect issues, then `pnpm release:rebuild` to fix.
+1. **`pnpm release:tag` fails with "not clean"**: you have uncommitted changes. Commit or stash first. Use `--force` to skip.
+2. **`pnpm release:tag` fails with "unpushed commits"**: your local branch is ahead of origin. Push first.
+3. **"Version already published on npm"**: the version already exists. Wait for the next beta number if this is a re-run, or bump the base version. For partial-publish recovery, bump the iteration and republish all 11.
+4. **npm view timeout**: the npm registry may be down. Retry; the `compute-version.mjs` script retries with backoff.
+5. **CI fails on "version already published"**: expected on workflow re-runs. The idempotency check skips re-publishing safely.
+6. **Registry out of sync**: run `pnpm release:validate` to detect issues, then `pnpm release:rebuild` to fix.
 
 ### Partial publish recovery
 

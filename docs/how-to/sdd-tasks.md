@@ -107,8 +107,8 @@ back through it.
 tells you where you landed. Two things it does implicitly when you land at
 `done`: it appends a changelog entry and a pending decision-record stub (pass
 `--no-artifacts` to skip), and it never clobbers an existing file — the artifact
-writes use a preserve-on-conflict policy. When you name `verify` explicitly —
-`noir task advance --to verify` — it also prints one hint, ``run `noir handoff`
+writes use a preserve-on-conflict policy. When you name `verify` explicitly
+(`noir task advance --to verify`), it also prints one hint, ``run `noir handoff`
 for a ready-to-paste host prompt``, because that is the moment work leaves
 Noir's planning and enters the host's execution.
 
@@ -290,12 +290,12 @@ Use a distinct slug for a distinct piece of work.
 
 ## See also
 
-- [Spec-Driven Development Workflow](../explanation/sdd-workflow.md) — the why:
+- [Spec-Driven Development Workflow](../explanation/sdd-workflow.md): the why:
   the full ladder, the state machine, the gate semantics.
-- [context-and-handoff.md](context-and-handoff.md) — hand a task over to the
+- [context-and-handoff.md](context-and-handoff.md): hand a task over to the
   host, and search the codebase while you work it.
-- [memory.md](memory.md) — the cross-session memory that survives a task.
-- [config.md](../reference/config.md) — `workflow.gate.verify.checks` and the
+- [memory.md](memory.md): the cross-session memory that survives a task.
+- [config.md](../reference/config.md): `workflow.gate.verify.checks` and the
   research/PRD settings.
-- [artifact-format.md](../reference/artifact-format.md) — how generated
+- [artifact-format.md](../reference/artifact-format.md): how generated
   artifacts are named and structured.

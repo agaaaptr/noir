@@ -250,9 +250,9 @@ is the diagnosis; match it to the fix:
 
 | Message from the bridge | What it means | What to do |
 |---|---|---|
-| `no daemon recorded for workspace <name>` | There is no daemon record — the daemon has not been started, or a stop cleared the record. | Start it: `noir daemon start --workspace <name> --detach`. |
+| `no daemon recorded for workspace <name>` | There is no daemon record; the daemon has not been started, or a stop cleared the record. | Start it: `noir daemon start --workspace <name> --detach`. |
 | `record exists but the daemon is not answering (pid <pid>)` | A record exists but nothing healthy answers on its port — the process crashed without cleaning up. | Start it again; the fresh start overwrites the stale record. |
-| `workspace <name> is recorded on port <port>, but the daemon answering there serves workspace <other>` | The record is stale and the port has been taken over by a different workspace's daemon. | Start this workspace again — the fresh start binds a new ephemeral port and rewrites its own record only. |
+| `workspace <name> is recorded on port <port>, but the daemon answering there serves workspace <other>` | The record is stale and the port has been taken over by a different workspace's daemon. | Start this workspace again; the fresh start binds a new ephemeral port and rewrites its own record only. |
 | `workspace <name> daemon is answering but its token is unreadable at <path>` | The daemon is up but its `0600` token file is missing or unreadable. | Restart the daemon to mint a fresh token, and check the file's permissions. |
 | ``no project identity in <root> — run `noir init` before serving a workspace from here`` | This repo has no `.noir/` identity to authorize as a member. | Run `noir init` here, then reconnect. |
 
@@ -271,9 +271,9 @@ bridge entry.
   byte-for-byte unchanged.
 - **`noir daemon status` is misleading** in a joined repo — see the note in
   "Verify it works".
-- A workspace daemon defaults to never idling out (`workspace.idleTimeoutSec: 0`
-  — set a positive value under `workspace:` in `.noir/config.yml` to auto-stop it
-  after N idle seconds). Stop it explicitly with `noir workspace stop`.
+- A workspace daemon defaults to never idling out (`workspace.idleTimeoutSec: 0`).
+  Set a positive value under `workspace:` in `.noir/config.yml` to auto-stop it
+  after N idle seconds. Stop it explicitly with `noir workspace stop`.
 - In a joined repo, `noir memory recall|save|capture|sessions|forget` route to
   the workspace daemon; `context`/`workflow`/`task` commands keep the project
   daemon. `noir memory consolidate` is **not supported** on a shared workspace

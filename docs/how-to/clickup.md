@@ -29,7 +29,7 @@ daemon afterward**: `noir daemon restart`.
    # .noir/.env  (gitignored — never commit)
    CLICKUP_API_TOKEN=pk_your_token_here
    ```
-2. **Real environment — a CI secret store, or an export in `~/.zshenv`.** This
+2. **Real environment: a CI secret store, or an export in `~/.zshenv`.** This
    is the fallback level: it applies only to keys `.noir/.env` leaves unset, so
    any key the file defines wins over the ambient value. `~/.zshenv` works for
    non-interactive shells; a CI job exports the token from its secret store.

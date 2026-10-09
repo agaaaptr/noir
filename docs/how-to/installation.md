@@ -20,7 +20,7 @@
 **Current beta:** `1.17.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.17.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-10-08T09:41:46.320Z*
+*Last auto-generated: 2026-10-09T04:43:38.628Z*
 <!-- /noir:doc:status -->
 
 ---
@@ -529,16 +529,16 @@ npm install -g @noir-ai/cli@beta    # reinstall the one you want
 
 A couple of warnings may appear during `npm install -g @noir-ai/cli` — most are harmless and none come from Noir directly.
 
-- **`prebuild-install` deprecation** — gone from `1.4.0-beta.1+`: Noir moved to `better-sqlite3@13` (an N-API rewrite) which removes `prebuild-install` entirely. If you still see it, you're on an older beta — upgrade.
-- **`boolean@3.2.0` deprecation** — a harmless transitive dependency (`@huggingface/transformers` → `onnxruntime-node` → `global-agent` → `boolean`). There is no released upstream fix yet (tracked in [transformers.js#1730](https://github.com/huggingface/transformers.js/pull/1730)); it will disappear with the next `transformers` release that bumps `onnxruntime-node`. It is muted in Noir's own monorepo via `allowedDeprecatedVersions`.
-- **`Unknown user config "python"`** — this comes from YOUR `~/.npmrc` (a legacy `python=` line for node-gyp), surfaced by pnpm 10's strict-config validation. It is not from Noir. With `better-sqlite3@13`'s N-API prebuilts, `python`/`node-gyp` are largely unnecessary; remove that line from `~/.npmrc`, or scope it to a project-local `.npmrc` if you genuinely need a source-compile fallback.
-- **A native build (`node-gyp`/`make`) for `better-sqlite3`** — `better-sqlite3@13` is brand-new (2026-07-21); on the very newest Node a matching prebuilt may not be published yet, so it may compile from source (needs a C/C++ toolchain, and on macOS the Xcode Command Line Tools). The build succeeding is fine; prebuilt coverage will fill in.
+- **`prebuild-install` deprecation**: gone from `1.4.0-beta.1+`: Noir moved to `better-sqlite3@13` (an N-API rewrite) which removes `prebuild-install` entirely. If you still see it, you're on an older beta; upgrade.
+- **`boolean@3.2.0` deprecation**: a harmless transitive dependency (`@huggingface/transformers` → `onnxruntime-node` → `global-agent` → `boolean`). There is no released upstream fix yet (tracked in [transformers.js#1730](https://github.com/huggingface/transformers.js/pull/1730)); it will disappear with the next `transformers` release that bumps `onnxruntime-node`. It is muted in Noir's own monorepo via `allowedDeprecatedVersions`.
+- **`Unknown user config "python"`**: this comes from YOUR `~/.npmrc` (a legacy `python=` line for node-gyp), surfaced by pnpm 10's strict-config validation. It is not from Noir. With `better-sqlite3@13`'s N-API prebuilts, `python`/`node-gyp` are largely unnecessary; remove that line from `~/.npmrc`, or scope it to a project-local `.npmrc` if you genuinely need a source-compile fallback.
+- **A native build (`node-gyp`/`make`) for `better-sqlite3`**: `better-sqlite3@13` is brand-new (2026-07-21); on the very newest Node a matching prebuilt may not be published yet, so it may compile from source (needs a C/C++ toolchain, and on macOS the Xcode Command Line Tools). The build succeeding is fine; prebuilt coverage will fill in.
 
 ---
 
 ## See also
 
-- [getting-started.md](../getting-started.md) — the post-install walkthrough: `noir init`, transports, your first session, switching full/quick SDD modes.
-- [cli.md](../reference/cli.md) — the full CLI reference (auto-generated from `noir --help`), incl. `install`, `migrate`, `update`.
-- [config.md](../reference/config.md) — the configuration reference, incl. the `update:` block.
-- [releasing.md](releasing.md) — how releases are cut, the beta-vs-stable channel model, and how CI generates installer artifacts + checksums + attestation.
+- [getting-started.md](../getting-started.md): the post-install walkthrough: `noir init`, transports, your first session, switching full/quick SDD modes.
+- [cli.md](../reference/cli.md): the full CLI reference (auto-generated from `noir --help`), incl. `install`, `migrate`, `update`.
+- [config.md](../reference/config.md): the configuration reference, incl. the `update:` block.
+- [releasing.md](releasing.md): how releases are cut, the beta-vs-stable channel model, and how CI generates installer artifacts + checksums + attestation.

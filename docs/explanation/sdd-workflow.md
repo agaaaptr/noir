@@ -10,11 +10,11 @@ intake → clarify → spec → plan → execute → verify → document
 
 | Phase | Artifact | Purpose |
 |---|---|---|
-| **Intake** | `.noir/intake/IN-<NNNN>-<taskId>.md` | What & why — user story, scope, constraints |
+| **Intake** | `.noir/intake/IN-<NNNN>-<taskId>.md` | What & why: user story, scope, constraints |
 | **Clarify** | `.noir/clarifications/CL-<NNNN>-<taskId>-<slug>.md` | Resolve ambiguities before committing to a spec |
-| **Spec** | `.noir/specs/SP-<NNNN>-<taskId>-<slug>.md` | Technical specification — architecture, data model, API contract |
-| **Plan** | `.noir/plans/PL-<NNNN>-<taskId>-<slug>.md` | Implementation plan — steps, dependencies, risk assessment |
-| **Execute** | `.noir/tasks/TS-<NNNN>-<taskId>-<slug>.md` | Build it — code, tests, documentation |
+| **Spec** | `.noir/specs/SP-<NNNN>-<taskId>-<slug>.md` | Technical specification: architecture, data model, API contract |
+| **Plan** | `.noir/plans/PL-<NNNN>-<taskId>-<slug>.md` | Implementation plan: steps, dependencies, risk assessment |
+| **Execute** | `.noir/tasks/TS-<NNNN>-<taskId>-<slug>.md` | Build it: code, tests, documentation |
 | **Verify** | (gated) | Run tests, validate against spec acceptance criteria |
 | **Document** | (gated) | Finalize changelog, decisions, cleanup |
 
@@ -71,16 +71,16 @@ Noir's MCP server runs in one of two modes. Independent of the SDD mode above.
 ## Engine API
 
 The `WorkflowEngine` class (`@noir-ai/workflow`) exposes:
-- `startTask(taskId, slug, mode, taskClass?)` — create task at draft/intake
-- `advance(taskId, opts?)` — advance phase or jump with `opts.to`, evaluate gates (spec/plan/verify), record evidence, soft-check PRD + research grounding
-- `status(taskId)` — read persisted TaskState
-- `activeTaskId()` — current active task
-- `checkpoint(taskId)` — flush state + write audit export
-- `setBlocked(taskId, reason?)` — mark task blocked (resumable; FSM edges to every in-flight phase)
-- `abandon(taskId)` — terminal state
-- `recordResearch(taskId, entry)` — append a research finding (source-required, text-capped)
-- `readResearch(taskId)` — read research findings
-- `setOpenQuestions(taskId, questions)` — set open questions (clarify gating)
+- `startTask(taskId, slug, mode, taskClass?)`: create task at draft/intake
+- `advance(taskId, opts?)`: advance phase or jump with `opts.to`, evaluate gates (spec/plan/verify), record evidence, soft-check PRD + research grounding
+- `status(taskId)`: read persisted TaskState
+- `activeTaskId()`: current active task
+- `checkpoint(taskId)`: flush state + write audit export
+- `setBlocked(taskId, reason?)`: mark task blocked (resumable; FSM edges to every in-flight phase)
+- `abandon(taskId)`: terminal state
+- `recordResearch(taskId, entry)`: append a research finding (source-required, text-capped)
+- `readResearch(taskId)`: read research findings
+- `setOpenQuestions(taskId, questions)`: set open questions (clarify gating)
 
 ## Artifact layout
 

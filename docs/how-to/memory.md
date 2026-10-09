@@ -242,11 +242,11 @@ you have to switch on — see [privacy.md](../explanation/privacy.md).
 
 ## See also
 
-- [shared-workspaces.md](shared-workspaces.md) — share decision memory across
+- [shared-workspaces.md](shared-workspaces.md): share decision memory across
   two repositories through one workspace daemon.
-- [context-and-handoff.md](context-and-handoff.md) — index and search the
+- [context-and-handoff.md](context-and-handoff.md): index and search the
   codebase, and hand a session over cleanly.
-- [sdd-tasks.md](sdd-tasks.md) — the task lifecycle memory usually feeds.
-- [privacy.md](../explanation/privacy.md) — what leaves your machine, and when.
-- [mcp-tools.md](../reference/mcp-tools.md) — the `memory_*` tools the host
+- [sdd-tasks.md](sdd-tasks.md): the task lifecycle memory usually feeds.
+- [privacy.md](../explanation/privacy.md): what leaves your machine, and when.
+- [mcp-tools.md](../reference/mcp-tools.md): the `memory_*` tools the host
   calls.

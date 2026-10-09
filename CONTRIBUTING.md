@@ -100,7 +100,7 @@ If you use AI coding tools (Claude Code, Cursor, Copilot, …) to produce change
 
 - **Code-related docs:** update the relevant `docs/` file in the same change. Docs must reflect the shipped reality — no documentation drift.
 - **Roadmap:** the roadmap is a living document under [`docs/roadmap/`](docs/roadmap/). To change it, follow [`docs/roadmap/CONTRIBUTING.md`](docs/roadmap/CONTRIBUTING.md) — the roadmap has its own contribution rules (research-first, ADRs for architecture changes). **This file (root CONTRIBUTING) is for code + general repo contributions; the roadmap has its own scope.**
-- **ADRs:** architecture decisions are recorded in `docs/decisions/` (append-only — supersede, never rewrite).
+- **ADRs:** architecture decisions are recorded in `docs/decisions/` (append-only: supersede, never rewrite).
 
 ## License
 

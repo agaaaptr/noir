@@ -27,9 +27,9 @@ Noir is a **host-agnostic orchestration layer** — not an LLM runtime. The host
 
 | Package | Responsibility |
 |---|---|
-| `@noir-ai/core` | Domain types, the `NoirConfigSchema` (zod/v4), `.noir/` path/layout, artifact helpers. No store or network I/O — pure types plus local filesystem helpers. |
-| `@noir-ai/store` | Embedded storage — `better-sqlite3` (SQLite) + FTS5 (BM25, window snippets) + `sqlite-vec` (384-dim kNN). Single writer = the daemon; read-only FS-fallback when the daemon is down. |
-| `@noir-ai/workflow` | The SDD lifecycle engine — a hand-rolled FSM (Intake→Clarify→Spec→Plan→Execute→Verify→Document) with observable, escapable gates; Full/Quick modes plus cross-session resume; state persists in the store so work survives daemon restarts and new sessions. |
+| `@noir-ai/core` | Domain types, the `NoirConfigSchema` (zod/v4), `.noir/` path/layout, artifact helpers. No store or network I/O: pure types plus local filesystem helpers. |
+| `@noir-ai/store` | Embedded storage: `better-sqlite3` (SQLite) + FTS5 (BM25, window snippets) + `sqlite-vec` (384-dim kNN). Single writer = the daemon; read-only FS-fallback when the daemon is down. |
+| `@noir-ai/workflow` | The SDD lifecycle engine: a hand-rolled FSM (Intake→Clarify→Spec→Plan→Execute→Verify→Document) with observable, escapable gates; Full/Quick modes plus cross-session resume; state persists in the store so work survives daemon restarts and new sessions. |
 | `@noir-ai/skills` | The native builtin skill pack (32 builtins + 1 integration = 33 skills) + a copy-and-validate compiler with a structural quality gate. Emits host-shaped `noir-*` artifacts: Claude `SKILL.md` files or Cursor `.mdc` rules. |
 | `@noir-ai/context` | Hybrid retrieval: local in-process embeddings (all-MiniLM-L6-v2), markdown/line-token chunker, SHA-256 incremental indexer, BM25 ∪ kNN → Reciprocal Rank Fusion → token-budget fill, windowed snippets (never truncated). |
 | `@noir-ai/memory` | Cross-session memory layered on the store (no schema migration): save / recall / search / sessions / forget / consolidate; append-only consolidation; governance (audit). |
@@ -45,13 +45,13 @@ A host connects to Noir the same way every host will — over **MCP**:
 
 1. `noir init` scaffolds `.noir/` (config, store, the `0600` gitignored `.noir/.env` + its committable `.env.example`) and emits the native skill pack + host wiring (for Claude Code: a `.mcp.json` pointing at `noir mcp serve --stdio`, plus a managed `CLAUDE.md` `@import` of `.noir/NOIR.md`).
 2. The host spawns `noir mcp serve --stdio` (or talks to the long-lived daemon over HTTP). It receives a curated tool surface: `host_status`, `store_status`, `workflow_*`, `checkpoint`, `context_*`, `memory_*`, the shared-workspace feed tools `changes_since` / `await_changes`, and — when an integration is configured — `integrations_auth` / `noir_clickup_write`.
-3. The host agent then calls those tools as it works — `context_search` for focused snippets, `memory_save`/`memory_recall` for cross-session continuity, `workflow_*`/`checkpoint` for lifecycle state.
+3. The host agent then calls those tools as it works: `context_search` for focused snippets, `memory_save`/`memory_recall` for cross-session continuity, `workflow_*`/`checkpoint` for lifecycle state.
 
 The daemon is the **single writer** to the store; if it is down, reads (FTS/kNN/counts/state) keep working in read-only FS-fallback and `noir status` reports `degraded` honestly.
 
 ## The `.noir/` portable store
 
-`.noir/` is the project's single source of truth, keyed by a **canonical `ProjectId` — never a filesystem path** (paths break across machines). It holds `config.yml`, `.env` (the gitignored `0600` project configuration/secrets file, read in-process and winning for every key it defines — see [configure-env.md](../how-to/configure-env.md)), `.env.example` (its committable, never-loaded documentation twin), `NOIR.md` (the canonical context file the host merely `@import`s), the ProjectId-keyed SQLite DB, and SDD artifacts (`intake/`, `specs/`, `plans/`, `tasks/`, `decisions/`, `audit/`, `CHANGELOG.md`). `~/.noir/` holds user-global concerns (the embedder model cache, the per-project daemon records at `daemons/<projectId>.json` + their `0600` bearer tokens, the workspace daemon's token sitting beside them as `daemons/<workspace-name>.token`, per the [per-project-daemon-records decision](../decisions/0010-per-project-daemon-records-and-http-auth.md), and — for shared cross-repo workspaces — `workspaces/<name>/` with a registry + shared store, per the [shared-workspaces decision](../decisions/0009-shared-workspaces.md)). Generated host artifacts are pointers/transforms of `.noir/`, never drifting copies.
+`.noir/` is the project's single source of truth, keyed by a **canonical `ProjectId`, never a filesystem path** (paths break across machines). It holds `config.yml`, `.env` (the gitignored `0600` project configuration/secrets file, read in-process and winning for every key it defines; see [configure-env.md](../how-to/configure-env.md)), `.env.example` (its committable, never-loaded documentation twin), `NOIR.md` (the canonical context file the host merely `@import`s), the ProjectId-keyed SQLite DB, and SDD artifacts (`intake/`, `specs/`, `plans/`, `tasks/`, `decisions/`, `audit/`, `CHANGELOG.md`). `~/.noir/` holds user-global concerns (the embedder model cache, the per-project daemon records at `daemons/<projectId>.json` + their `0600` bearer tokens, the workspace daemon's token sitting beside them as `daemons/<workspace-name>.token`, per the [per-project-daemon-records decision](../decisions/0010-per-project-daemon-records-and-http-auth.md), and — for shared cross-repo workspaces — `workspaces/<name>/` with a registry + shared store, per the [shared-workspaces decision](../decisions/0009-shared-workspaces.md)). Generated host artifacts are pointers/transforms of `.noir/`, never drifting copies.
 
 ## Workspaces (cross-repo sharing)
 
@@ -90,8 +90,8 @@ remains a v2.0 item.
 
 ## Governing principles
 
-1. **One CLI-agnostic core; hosts are thin targets** — never fork logic per host.
-2. **`.noir/` is the single source of truth** — generated artifacts are pointers/transforms, never copies that drift.
+1. **One CLI-agnostic core; hosts are thin targets**: never fork logic per host.
+2. **`.noir/` is the single source of truth**: generated artifacts are pointers/transforms, never copies that drift.
 3. **The daemon is the runtime authority** — the CLI and hosts are clients.
 4. **MCP = dynamic intelligence; static artifacts = declarative context/skills.**
 5. **Graceful degradation everywhere** — no key → pure orchestration; daemon down → read-only store; host lacks a feature → emulate.

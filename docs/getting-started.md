@@ -30,7 +30,7 @@ Two channels ship in parallel:
 **Current beta:** `1.17.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.17.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-10-08T09:41:45.816Z*
+*Last auto-generated: 2026-10-09T04:43:38.088Z*
 <!-- /noir:doc:status -->
 
 - **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
@@ -124,7 +124,7 @@ The daemon is a **long-lived** Noir server that multiple clients can share — t
 
 **Caveats:**
 
-- Killing the daemon while the host is connected **breaks the connection** — there is **no auto-fallback to stdio**. Your data stays durable on disk, and reads have a degraded read-only fallback, but the live host link is severed until you restart the daemon.
+- Killing the daemon while the host is connected **breaks the connection**: there is **no auto-fallback to stdio**. Your data stays durable on disk, and reads have a degraded read-only fallback, but the live host link is severed until you restart the daemon.
 - The daemon is **foreground by default**; pass `--detach` to fork a detached child that persists after the parent exits (`noir daemon start --detach` reports the child's PID and port). Auto-restart daemons are not yet available.
 - Each project has its own daemon record (`~/.noir/daemons/<projectId>.json`), so running Noir concurrently in two projects no longer clobbers anything — both daemons coexist and neither is stopped by the other's activity.
 - The HTTP transport requires a bearer token, minted fresh on every daemon start and written at mode `0600` to `~/.noir/daemons/<projectId>.token` — a workspace daemon's token is named for the workspace instead (`<workspace-name>.token`). `noir daemon token` prints it; a host that supports `headersHelper` should store the command rather than the secret. `/health` stays token-free, and the stdio transport is unaffected (no network surface).
@@ -184,7 +184,7 @@ That's the whole loop. You don't drive the gates by hand — you talk to the hos
 
 You don't need to memorize every subcommand:
 
-- **Bare `noir`** (no arguments) opens a **grouped home menu** — a section picker (Status &amp; context / Memory / Workflow / Setup &amp; maintenance / Dashboard (full-screen)) then per-section action lists with hints and destructive-action confirmation. Use `↑/↓` to move and `Enter` to select; `Esc` steps back / cancels.
+- **Bare `noir`** (no arguments) opens a **grouped home menu**: a section picker (Status &amp; context / Memory / Workflow / Setup &amp; maintenance / Dashboard (full-screen)) then per-section action lists with hints and destructive-action confirmation. Use `↑/↓` to move and `Enter` to select; `Esc` steps back / cancels.
 - **`noir tui`** opens the **Ink dashboard** — live status, `/command` input, and one command surface (the palette): `Ctrl+K` all commands, `h` quick actions, `?` keybindings, `Ctrl+F` find-in-output, `Ctrl+T` recent transcripts, `Tab` to switch the palette view. A `/run <prompt>` runs the host **live in the pane** instead of headless (see below).
 - **`noir palette`** opens the fuzzy command palette directly (type to filter, `↑/↓` to choose, `Enter` to run). A command that cannot run without a value (`context search`, `daemon join`, `run`, …) asks for it on the same input line — type it and press `Enter`, or `Esc` to go back to the filter.
 
@@ -199,7 +199,7 @@ noir task new --slug csv-export --mode quick
 ```
 
 - **full** — spec + plan are authored **and reviewed** (gates), then execute, then verify (tests/build). Use this for real features and risky changes. This is the default.
-- **quick** — spec + plan are **skipped** (a `<quick-mode stub spec>` is written, and the spec/plan gates are recorded as `skipped`), execute runs, and the **verify gate still fires**. Use this for small, trivial, or spike tasks. It is not a free-for-all — it only skips formal planning, not verification.
+- **quick** — spec + plan are **skipped** (a `<quick-mode stub spec>` is written, and the spec/plan gates are recorded as `skipped`), execute runs, and the **verify gate still fires**. Use this for small, trivial, or spike tasks. It is not a free-for-all: it only skips formal planning, not verification.
 
 The host picks up the configured mode via the `noir-brainstorming` skill / the `workflow_start` MCP tool (which falls back to the configured `mode`). See [Spec-Driven modes](explanation/sdd-workflow.md#modes) for the details.
 
@@ -219,39 +219,39 @@ noir run --json "…"                 # one {ok,data} envelope on stdout
 A raw stream-json transcript is always persisted to `.noir/transcripts/`.
 
 - If the host fails (e.g. not logged in), `noir run` exits non-zero with an
-  actionable message — `claude /login` in a terminal (interactive-only), or
+  actionable message: `claude /login` in a terminal (interactive-only), or
   `--command` / a profile for another binary.
 - On an **authentication** failure the message also names every credential or
   gateway variable in effect (`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`,
-  `ANTHROPIC_BASE_URL`) and where each came from — `.noir/.env` or the
-  environment — so "unset it" points at the file that actually supplies it.
+  `ANTHROPIC_BASE_URL`) and where each came from (`.noir/.env` or the
+  environment), so "unset it" points at the file that actually supplies it.
   No variable *value* is ever printed.
 - `noir run` works **outside an initialized project**, but with no `.noir/.env`
   there are no project credentials; it says so once on stderr and points at
-  `noir init`. Informational only — never a failure, and absent under `--json`.
+  `noir init`. Informational only: never a failure, and absent under `--json`.
 - **Multiple host setups?** Define **run profiles** in `.noir/config.yml`
-  (`run.profiles.<name>.binary` + optional `env`/`args`, and `run.defaultProfile`)
-  — see [Run profiles](how-to/host-profiles.md). Shell **aliases do not work**
+  (`run.profiles.<name>.binary` + optional `env`/`args`, and `run.defaultProfile`).
+  See [Run profiles](how-to/host-profiles.md). Shell **aliases do not work**
   as `--command` values; use an executable, a launcher script, or a profile.
 - **Progress while it works.** On a terminal the run keeps a live status line on
-  stderr — host, model once known, elapsed time, and running token totals — so the
+  stderr (host, model once known, elapsed time, and running token totals), so the
   wait before the first token is never silence. `--json` and `--quiet` emit none
   of it, and when stderr is not a terminal it becomes two plain markers (one at
   the start, one at the end) instead of an animated line.
-- **Stopping a run.** `Ctrl+C` stops the **host** — politely first, forcefully
-  after five seconds — and Noir leaves with the conventional `128 + signal` code
+- **Stopping a run.** `Ctrl+C` stops the **host** (politely first, forcefully
+  after five seconds), and Noir leaves with the conventional `128 + signal` code
   (`130` for `SIGINT`, `143` for `SIGTERM`). What the host had already produced
   is written to the transcript first. A **second** `Ctrl+C` leaves immediately.
   An interrupted run is **not** a failure: no `failed` line, no token summary.
 - **After the answer.** On an interactive terminal a successful run asks what to
-  do with the answer — save it to memory, record it as task research, write a
+  do with the answer: save it to memory, record it as task research, write a
   handoff artifact, write it to a file, or continue the session with a follow-up
   prompt, with **Dismiss** as the default. Everywhere else (a pipe, `--json`,
   `--no-input`, CI, `NO_COLOR`) it is offered nothing, and no choice changes the
   run's exit code.
 - **Reading a failure.** The failure message quotes the last 20 lines of the
   host's own stderr alongside its error, and names every credential variable in
-  effect and where it came from — never a value. That tail is a human diagnostic
+  effect and where it came from, never a value. That tail is a human diagnostic
   and never enters the `--json` envelope.
 - **In the dashboard.** `noir tui`'s `/run <prompt>` opens a **live run screen**
   rather than a headless one: the answer streams into the pane, tool calls are
@@ -283,12 +283,12 @@ which value is in effect (`noir env`) —
 
 ## Where to go next
 
-- [installation.md](how-to/installation.md) — the full install reference (every path, troubleshooting, the channel model, and what `noir init --upgrade` does to a project).
+- [installation.md](how-to/installation.md): the full install reference (every path, troubleshooting, the channel model, and what `noir init --upgrade` does to a project).
 - [running-the-host.md](how-to/running-the-host.md) — driving the host headless: `--json`, profiles, the interrupt ladder, the post-run menu, the live run screen.
 - [sdd-tasks.md](how-to/sdd-tasks.md) — the task lifecycle from a terminal: start, advance, escape a gate, verify, resume.
-- [memory.md](how-to/memory.md) — save, recall, capture, consolidate, forget.
-- [context-and-handoff.md](how-to/context-and-handoff.md) — index and search the codebase, and hand a session over (`noir handoff` / `noir wrap`).
-- [shared-workspaces.md](how-to/shared-workspaces.md) — share decision memory across repositories (BE ↔ FE) through one workspace daemon.
-- [CLI Reference](reference/cli.md) — every command (auto-generated from `noir --help`). The `.noir/config.yml` schema is in [config.md](reference/config.md).
-- [Architecture](explanation/architecture.md) — how the 11 packages fit together.
-- [roadmap/](roadmap/) — project direction, capability index, releases & version targets.
+- [memory.md](how-to/memory.md): save, recall, capture, consolidate, forget.
+- [context-and-handoff.md](how-to/context-and-handoff.md): index and search the codebase, and hand a session over (`noir handoff` / `noir wrap`).
+- [shared-workspaces.md](how-to/shared-workspaces.md): share decision memory across repositories (BE ↔ FE) through one workspace daemon.
+- [CLI Reference](reference/cli.md): every command (auto-generated from `noir --help`). The `.noir/config.yml` schema is in [config.md](reference/config.md).
+- [Architecture](explanation/architecture.md): how the 11 packages fit together.
+- [roadmap/](roadmap/): project direction, capability index, releases & version targets.

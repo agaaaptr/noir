@@ -164,10 +164,10 @@ implies the other.
 
 ## See also
 
-- [environment.md](../reference/environment.md) — every variable Noir reads,
+- [environment.md](../reference/environment.md): every variable Noir reads,
   the precedence chain, and the deny-list.
-- [config.md](../reference/config.md) — the `model.providers` schema.
-- [configure-env.md](configure-env.md) — what belongs in `.noir/.env`, and
+- [config.md](../reference/config.md): the `model.providers` schema.
+- [configure-env.md](configure-env.md): what belongs in `.noir/.env`, and
   `noir env`.
-- [host-profiles.md](host-profiles.md) — per-invocation overrides via run
+- [host-profiles.md](host-profiles.md): per-invocation overrides via run
   profiles.

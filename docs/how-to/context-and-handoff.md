@@ -93,7 +93,7 @@ The header names the **mode** the search actually ran in — `hybrid` when both
 passes contributed, `bm25-only` when the vectors were unavailable. Two suffixes
 can follow:
 
-- `degraded: BM25-only` — the daemon was unreachable, so Noir fell back to a
+- `degraded: BM25-only` means the daemon was unreachable, so Noir fell back to a
   **read-only** in-process search over the same store. Keyword matching only;
   nothing was written. Start the daemon and re-run for the full ranking.
 - `(budget hit — results truncated)` — more hits were ranked than fit the
@@ -221,12 +221,12 @@ edited out of `.noir/handoff/` — it is a generated artifact, not a source file
 
 ## See also
 
-- [memory.md](memory.md) — the cross-session memory the handoff seeds from.
-- [sdd-tasks.md](sdd-tasks.md) — the task whose phase and next skill the
+- [memory.md](memory.md): the cross-session memory the handoff seeds from.
+- [sdd-tasks.md](sdd-tasks.md): the task whose phase and next skill the
   handoff reports.
-- [config.md](../reference/config.md) — `context.roots` and
+- [config.md](../reference/config.md): `context.roots` and
   `context.embedder`.
-- [configure-env.md](configure-env.md) — remote embedder keys and the local
+- [configure-env.md](configure-env.md): remote embedder keys and the local
   default.
-- [architecture.md](../explanation/architecture.md) — how the context and
+- [architecture.md](../explanation/architecture.md): how the context and
   memory engines sit on the store.

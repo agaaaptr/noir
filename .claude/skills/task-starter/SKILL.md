@@ -24,13 +24,13 @@ If the user described the task in the prompt, skip Step 0.
 ## Step 1 — Understand the request
 
 Identify clearly, without assuming:
-- **Objective** — what outcome is wanted.
-- **Scope** — what is in / out of scope.
-- **Target output** — deliverable shape (code, doc, spec, plan).
-- **Constraints** — technical, time, architectural.
-- **Dependencies** — on packages, capabilities, other tasks.
-- **Affected codebase areas** — which packages/dirs.
-- **Related roadmap capability** — which C# in `docs/roadmap/README.md`.
+- **Objective**: what outcome is wanted.
+- **Scope**: what is in / out of scope.
+- **Target output**: deliverable shape (code, doc, spec, plan).
+- **Constraints**: technical, time, architectural.
+- **Dependencies**: on packages, capabilities, other tasks.
+- **Affected codebase areas**: which packages/dirs.
+- **Related roadmap capability**: which C# in `docs/roadmap/README.md`.
 
 If anything is ambiguous, **collect all clarifying questions in ONE batch** and resolve them before continuing. Do not ask one-by-one.
 

@@ -13,7 +13,7 @@ The `noir` grouped home menu — section picker + per-section action lists with 
 
 **Noir** is a host-agnostic orchestration layer that makes an agentic CLI behave like a disciplined spec-driven engineer. **Claude Code is the default host; Gemini, Cursor, OpenCode, and AGENTS.md are one `--host` flag away** (bring-your-own-agent). It wires three capabilities every long-running agent loses without help:
 
-1. **Spec-driven workflow** — an escapable, observable lifecycle (idea → spec → plan → implement → verify → document) where every gate decision is recorded.
+1. **Spec-driven workflow**: an escapable, observable lifecycle (idea → spec → plan → implement → verify → document) where every gate decision is recorded.
 2. **Native working-context** — a hybrid retrieval engine (BM25 + vector kNN + Reciprocal Rank Fusion) so the host queries small ranked snippets instead of re-reading whole files.
 3. **Cross-session memory** — typed, searchable, governable long-term memory; save an insight in one session and recall it in another.
 
@@ -26,7 +26,7 @@ The `noir` grouped home menu — section picker + per-section action lists with 
 **Current beta:** `1.17.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.17.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-10-08T09:41:45.278Z*
+*Last auto-generated: 2026-10-09T04:43:37.591Z*
 <!-- /noir:doc:status -->
 
 ## Quick start

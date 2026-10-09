@@ -148,7 +148,7 @@ being loaded" is information, not a failure.
 `noir doctor` reports the same provenance in its check list:
 
 - `noir-env:<KEY>` — `from .noir/.env` for every key the file defines.
-- `noir-env` — the file's permissions; a **warn** when it is group/world
+- `noir-env`: the file's permissions; a **warn** when it is group/world
   readable, and a **warn** naming the remedy when the file is tracked by git.
 - `provider` — per configured provider, `key present (from .noir/.env)` when the
   winning source for that provider's `apiKeyEnv` is the file.
@@ -301,7 +301,7 @@ still wins.
 **"I edited `.noir/.env` and nothing changed."**
 
 Run `noir env` and read the `SOURCE` column. `environment` means the file is not
-defining that key — usually a typo, a line still commented out, or a malformed
+defining that key: usually a typo, a line still commented out, or a malformed
 line (the loader writes `.noir/.env:<line>: <reason> — skipped` to stderr). If
 the key *is* in the file and your shell also had it, the row reads
 `.noir/.env (shadows environment)` — the file is winning, and the stderr
@@ -330,10 +330,10 @@ provider key, confirm `apiKeyEnv` in `config.yml` names the variable you set
 
 ## See also
 
-- [environment.md](../reference/environment.md) — every environment variable
+- [environment.md](../reference/environment.md): every environment variable
   Noir reads, and the secrets policy.
-- [config.md](../reference/config.md) — the `.noir/config.yml` schema.
-- [clickup.md](clickup.md) — the ClickUp integration end to end.
+- [config.md](../reference/config.md): the `.noir/config.yml` schema.
+- [clickup.md](clickup.md): the ClickUp integration end to end.
 - [host-profiles.md](host-profiles.md) — run profiles and the `${VAR}`
   interpolation they support.
 - [privacy.md](../explanation/privacy.md) — what leaves your machine, and when.
