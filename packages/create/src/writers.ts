@@ -345,9 +345,6 @@ export function mergeJson(
   return { path: absPath, mode: 'mergeJson', written: true };
 }
 
-/** Deep-merge `patch` into `existing`. `hooks.*` arrays append-with-dedup
- *  (an entry whose command contains `dedupSubstring` is kept as-is, not
- *  re-added); other arrays replace only when present in the patch. */
 /** True when a `hooks.<Event>` entry carries the dedup marker — either as its
  *  own `command` or inside the matcher group's inner `hooks` array, the shape
  *  Claude Code stores (`{hooks:[{type:'command',command:'…'}]}`). Checking only
@@ -365,6 +362,9 @@ function entryHasCommand(entry: unknown, marker: string): boolean {
   });
 }
 
+/** Deep-merge `patch` into `existing`. `hooks.*` arrays append-with-dedup
+ *  (an entry whose command contains `dedupSubstring` is kept as-is, not
+ *  re-added); other arrays replace only when present in the patch. */
 function deepMergePreservingHooks(
   existing: Record<string, unknown>,
   patch: Record<string, unknown>,
