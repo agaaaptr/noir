@@ -3,6 +3,7 @@
 // `humanizerFindings` is a pure scan of a text that has had fenced code
 // stripped, so the rules never read inside ``` blocks.
 import type { HygieneFinding } from './hygiene.js';
+import { firstMatch, lineOf, paragraphsOf, proseOnly } from './text-scan.js';
 
 const HEDGES = [
   'it is worth mentioning',
@@ -13,45 +14,6 @@ const HEDGES = [
 
 // More em-dashes than this in one paragraph is the tell the finder reports.
 const EM_DASH_PER_PARAGRAPH = 2;
-
-// Strip fenced code so prose rules never read inside ``` blocks.
-function proseOnly(text: string): string {
-  return text.replace(/```[\s\S]*?```/g, '');
-}
-
-/** The 1-based line of the character at `index`: one plus the count of newlines
- *  before it. */
-function lineOf(text: string, index: number): number {
-  let line = 1;
-  for (let i = 0; i < index; i++) if (text[i] === '\n') line++;
-  return line;
-}
-
-/** The index of the first match, or -1 when the pattern matches nothing. */
-function firstMatch(text: string, re: RegExp): number {
-  const match = re.exec(text);
-  return match ? match.index : -1;
-}
-
-/** Yields each paragraph with the 1-based line it starts on. An empty line ends
- *  a paragraph, so a single line break continues the paragraph. */
-function* paragraphsOf(text: string): Generator<{ text: string; line: number }> {
-  let paragraph = '';
-  let startLine = 1;
-  let line = 1;
-  for (const raw of text.split('\n')) {
-    if (raw.trim() === '') {
-      if (paragraph.trim() !== '') yield { text: paragraph, line: startLine };
-      paragraph = '';
-      startLine = line + 1;
-    } else {
-      if (paragraph === '') startLine = line;
-      paragraph += (paragraph === '' ? '' : '\n') + raw;
-    }
-    line++;
-  }
-  if (paragraph.trim() !== '') yield { text: paragraph, line: startLine };
-}
 
 export function humanizerFindings(text: string): HygieneFinding[] {
   const prose = proseOnly(text);

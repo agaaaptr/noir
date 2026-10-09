@@ -25,4 +25,26 @@ describe('humanizerFindings', () => {
     expect(f.find((x) => x.id === 'humanizer-hedge')?.line).toBe(5);
     expect(f.find((x) => x.id === 'humanizer-contrast')?.line).toBe(7);
   });
+
+  it('does not count em-dashes inside a markdown table', () => {
+    const table = [
+      '| Package | Description | Binary |',
+      '|---|---|---|',
+      '| `a` | one — two | — |',
+      '| `b` | three — four | — |',
+      '| `c` | five — six | — |',
+    ].join('\n');
+    expect(humanizerFindings(table)).toEqual([]);
+  });
+
+  it('keeps line numbers past a blanked table', () => {
+    const text = [
+      '| Package | Description |',
+      '|---|---|',
+      '| `a` | one — two |',
+      '',
+      'Three — four — five — six.',
+    ].join('\n');
+    expect(humanizerFindings(text).find((x) => x.id === 'humanizer-em-dash')?.line).toBe(5);
+  });
 });
