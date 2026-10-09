@@ -21,8 +21,9 @@ the feature named beside it.
 Host-side pointers sit at the repository root, not here: `CLAUDE.md` (claude),
 `AGENTS.md` (agents-md / cursor / opencode) or `GEMINI.md` (gemini), plus that
 host's MCP config (`.mcp.json`, `.gemini/mcp.json`, `.cursor/mcp.json`,
-`opencode.json`). With `--host claude`, `router.md` and `hooks/` (the
-SessionStart contract and its runner) live here too.
+`opencode.json`). With `--host claude`, `router.md` (the skill router contract)
+lives here too; the SessionStart + SubagentStart hook is a
+`.claude/settings.local.json` entry that runs `noir hook`.
 
 ## What appears later
 

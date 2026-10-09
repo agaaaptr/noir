@@ -1,18 +1,18 @@
 # Capability 3 — Built-in Skill System
 
-> **Status:** Completed — 27 builtins + 1 integration, all full playbooks; runtime-derived registry; structural quality gate; offline evals harness. C3 → Completed (2026-08-10).
+> **Status:** Completed — 32 builtins + 1 integration, all full playbooks; runtime-derived registry; structural quality gate; offline evals harness. C3 → Completed (2026-08-10).
 
 ## Overview
 
-Noir ships skills as a native, first-party capability: a compiler that validates and emits `noir-` builtin skills into any supported host, a shipped pack of 27 builtins (26 curated from 34 via merge+rename, plus `noir-code-hygiene`) plus one integration, and a daemon seam for gated integrations. There is no plugin system and no marketplace (see ADR-0002).
+Noir ships skills as a native, first-party capability: a compiler that validates and emits `noir-` builtin skills into any supported host, a shipped pack of 32 builtins plus one integration, and a daemon seam for gated integrations. There is no plugin system and no marketplace (see ADR-0002).
 
 ## Shipped today
 
-- **27 builtin skills** in `packages/skills/builtin/` (26 curated from 34 via 5 merges + gerund renames, plus `noir-code-hygiene`), **all full playbooks** (zero stubs), plus **1 integration** (`noir-clickup` with auth gate, API pitfalls, verb dispatch).
+- **32 builtin skills** in `packages/skills/builtin/`, **all full playbooks** (zero stubs), plus **1 integration** (`noir-clickup` with auth gate, API pitfalls, verb dispatch).
 - **Copy-and-validate compiler** at `packages/skills/src/compiler.ts`: `parseFrontmatter` → `validateSkill` (structural gate: metadata, required sections, line budget, one-level refs, WHAT+WHEN descriptions) → `lintSkill` (warnings) → `compileSkill` → `emitSkillsToDir`.
 - **Quality gate** at `packages/skills/src/quality.ts`: `missingSections`, `withinLineBudget`, `chainedReferences`, `isWhatWhenDescription`, `lintWarnings`. `noir skills lint` CLI surfaces errors + warnings per skill.
 - **Runtime-derived skill registry** at `packages/skills/src/registry.ts`: `buildRegistry()` from `discoverAll()`; `noir skills registry --json` queries it. No committed file — frontmatter is the single source of truth.
-- **Offline evals harness** at `packages/skills/src/evals.ts` + `evals/**/evals.json` (agentskills.io format) + vitest runner in `test/evals.test.ts`. 3 shipped examples: `noir-test-driven-development`, `noir-systematic-debugging`, `noir-code-hygiene`.
+- **Offline evals harness** at `packages/skills/src/evals.ts` + `evals/**/evals.json` (agentskills.io format) + vitest runner in `test/evals.test.ts`. 3 shipped examples: `noir-test-driven-development`, `noir-systematic-debugging`, `noir-codebase-audit`.
 - **Multi-host compilation**: `claude`/`agents-md`/`gemini`/`opencode` → verbatim `SKILL.md` + `references/`; `cursor` → flat `.mdc` rule.
 - **Emission wired into CLI** — `noir init` / `sync` / `create` / `skills sync` / `skills list` / `skills lint` / `skills registry`. Idempotent, prunes stale `noir-*` entries, guards user-authored `noir-*` dirs via `assertNotUserOwned`.
 - **Integration seam** (`integration.json` + daemon `integrations_auth` + `noir_clickup_write` gated-write-proxy).

@@ -19,14 +19,15 @@ export type { MigrationContext, MigrationResult, MigrationScript } from './types
 /**
  * Migration registry — the linear history of scaffold-version upgrades.
  *
- * `CURRENT_SCAFFOLD_VERSION` is `1.3.0`; a project stamped at an older version
- * migrates through every entry whose window covers it. Four entries ship today:
+ * `CURRENT_SCAFFOLD_VERSION` is `1.4.0`; a project stamped at an older version
+ * migrates through every entry whose window covers it. Five entries ship today:
  * the synthetic `1.0.0 → 1.0.0` runner-proof, the first REAL migration
  * `1.0.0 → 1.1.0` (which performs the transformation `skipIfExists` cannot),
  * `1.1.0 → 1.2.0`, which refreshes the doc-only seed whose text changed in
- * that release and carries the unchanged RULES.md seed forward for parity, and
+ * that release and carries the unchanged RULES.md seed forward for parity,
  * `1.2.0 → 1.3.0`, which repairs the stale workspace pointer a repo that joined
- * a workspace under the older flow still carries.
+ * a workspace under the older flow still carries, and `1.3.0 → 1.4.0`, which
+ * moves the SessionStart hook command onto `noir hook`.
  *
  * Convention:
  *  - `from`/`to` are bare `x.y.z` (no `v` prefix, no pre-release); the runner
