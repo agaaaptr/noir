@@ -4,7 +4,7 @@ current_phase: shipped
 
 active_capability: null
 
-active_slice: null  # anti-slop-humanizer-design-taste shipped as 1.17.0 (2026-10-08)
+active_slice: null  # SessionStart hook re-architecture + prose sweep shipped as 1.18.0 (2026-10-09)
 
 roadmap:
   - id: C1

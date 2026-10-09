@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.18.0 (2026-10-09) — SessionStart hook re-architecture + prose sweep
+
+### Changed
+- **The SessionStart + SubagentStart hook now runs through `noir hook`.** The scaffold writes the hook command as `"<noir shim>" hook` instead of a directly-executed `.noir/hooks/noir-session-start.mjs` runner. The shim resolves the managed Node by absolute path and stays executable across updates, so the hook no longer depends on the exec bit of a gitignored file or on `node` being on PATH. The `.mjs` runner is gone.
+- **BREAKING (narrow) — `@noir-ai/create` `regenerate()` dropped its `mode` argument.** That argument existed only to give the old runner its exec bit; with the runner gone, `regenerate(absPath, content, mode)` is back to `regenerate(absPath, content)`, so a caller passing a third argument now fails to typecheck.
+- **The prose scan skips tables and generated docs.** `proseOnly` blanks markdown table rows (a table is layout, not prose), and the generated reference pages plus the `docs/README.md` index are excluded from the scan. `pnpm hygiene:gate` now reports only hand-written prose, so the 63 em-dash self-findings stay cleared across `pnpm docs:generate`.
+
+### Added
+- **`noir hook`** — the host-invoked SessionStart/SubagentStart runner. It reads the event name and cwd from the hook input on stdin, walks up to the project that owns `.noir/`, and emits the `hookSpecificOutput` envelope with the required `hookEventName` as single-line JSON. Hidden from `--help` and the command palette.
+- **Scaffold migration `1.3.0 → 1.4.0`** (`CURRENT_SCAFFOLD_VERSION` bumped): rewrites an existing project's `.claude/settings.local.json` hook command to `"<noir>" hook` and removes the orphaned `.noir/hooks/noir-session-start.mjs`.
+- **Skill router coverage** for the six new builtins (`noir-lazy`, `noir-debt`, `noir-over-engineering-review`, `noir-design`, `noir-design-reference`, `noir-dataviz`) and the `noir-codebase-audit` rename.
+
+### Fixed
+- **The SessionStart hook surfaced a new failure with each partial fix.** Written `0644` it failed "permission denied"; made executable it failed Claude Code's JSON validation, because `hookSpecificOutput` must carry `hookEventName` and the runner never emitted it. `noir hook` emits the complete envelope in one place, covered by contract tests.
+- **`init --force` appended a duplicate hook entry.** The mergeJson dedup read `command` off each hook entry, but Claude Code stores entries as matcher groups (`{hooks:[{command}]}`), so the dedup never matched and a re-emit added a second `SessionStart` entry. The dedup now reads the nested command.
+- **63 em-dash self-findings** (paragraphs holding more than two em-dashes) were rewritten across the hand-written docs.
+
+### Upgrade steps
+1. **Run `noir init --upgrade`.** It runs the `1.3.0 → 1.4.0` migration, which rewrites the hook command and removes the orphaned runner. No manual step is needed for the hook itself.
+
 ## 1.17.0 (2026-10-08) — anti-slop + humanizer + design-taste adoption
 
 ### Changed
