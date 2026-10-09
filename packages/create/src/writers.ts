@@ -348,6 +348,23 @@ export function mergeJson(
 /** Deep-merge `patch` into `existing`. `hooks.*` arrays append-with-dedup
  *  (an entry whose command contains `dedupSubstring` is kept as-is, not
  *  re-added); other arrays replace only when present in the patch. */
+/** True when a `hooks.<Event>` entry carries the dedup marker — either as its
+ *  own `command` or inside the matcher group's inner `hooks` array, the shape
+ *  Claude Code stores (`{hooks:[{type:'command',command:'…'}]}`). Checking only
+ *  the top level never matched that shape, so a re-emit (init `--force`)
+ *  appended a second copy of the hook. */
+function entryHasCommand(entry: unknown, marker: string): boolean {
+  if (typeof entry !== 'object' || entry === null) return false;
+  const obj = entry as { command?: unknown; hooks?: unknown };
+  if (typeof obj.command === 'string' && obj.command.includes(marker)) return true;
+  if (!Array.isArray(obj.hooks)) return false;
+  return obj.hooks.some((h) => {
+    if (typeof h !== 'object' || h === null) return false;
+    const command = (h as { command?: unknown }).command;
+    return typeof command === 'string' && command.includes(marker);
+  });
+}
+
 function deepMergePreservingHooks(
   existing: Record<string, unknown>,
   patch: Record<string, unknown>,
@@ -369,9 +386,7 @@ function deepMergePreservingHooks(
         // missing is still added (caller bug, but non-fatal).
         const alreadyRegistered =
           dedupSubstring !== undefined &&
-          existingEntries.some(
-            (x) => (x as { command?: string })?.command?.includes(dedupSubstring) ?? false,
-          );
+          existingEntries.some((x) => entryHasCommand(x, dedupSubstring));
         const toAdd = alreadyRegistered ? [] : patchEntries;
         mergedHooks[event] = [...existingEntries, ...toAdd];
       }

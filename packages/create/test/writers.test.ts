@@ -7,6 +7,7 @@ import {
   buildRegion,
   managedBlocks,
   managedBlock as managedWrite,
+  mergeJson,
   predictManagedBlock,
   predictManagedBlocks,
   regenerate,
@@ -195,5 +196,36 @@ describe('skipIfExists', () => {
     const f = join(dir, 'nested', 'ok.md');
     expect(() => skipIfExists(f, 'OK')).not.toThrow();
     expect(existsSync(f)).toBe(true);
+  });
+});
+
+describe('mergeJson', () => {
+  it('does not re-add a hook already registered (group-shape dedup)', () => {
+    const f = join(dir, 'settings.local.json');
+    // Claude Code stores hook entries as matcher groups: {hooks:[{command}]}.
+    const patch = {
+      hooks: {
+        SessionStart: [{ hooks: [{ type: 'command', command: '"noir" hook' }] }],
+      },
+    };
+    mergeJson(f, patch, ' hook');
+    mergeJson(f, patch, ' hook');
+
+    const merged = JSON.parse(readFileSync(f, 'utf8'));
+    expect(merged.hooks.SessionStart.length).toBe(1);
+  });
+
+  it('preserves a user permission key across the hook merge', () => {
+    const f = join(dir, 'settings.local.json');
+    writeFileSync(f, JSON.stringify({ permissions: { allow: ['Bash(git *)'] } }), 'utf8');
+    mergeJson(
+      f,
+      { hooks: { SessionStart: [{ hooks: [{ type: 'command', command: 'noir hook' }] }] } },
+      ' hook',
+    );
+
+    const merged = JSON.parse(readFileSync(f, 'utf8'));
+    expect(merged.permissions).toEqual({ allow: ['Bash(git *)'] });
+    expect(merged.hooks.SessionStart.length).toBe(1);
   });
 });
