@@ -8,7 +8,7 @@ Implementation status of every Noir capability. **Updated at every checkpoint** 
 |------------|----------|---------------|-------------|
 | C1 Package Distribution | 🟩 Completed | Ship | 2026-08-04 |
 | C2 CLI Runtime & UX | 🟩 Completed — `noir run` status line, palette args, TUI run mode, post-run actions, display integrity | Ship | 2026-09-25 |
-| C3 Built-in Skill System | 🟩 Completed — 27 builtins + registry + quality gate + evals + hygiene rules | Ship | 2026-09-25 |
+| C3 Built-in Skill System | 🟩 Completed — 32 builtins + registry + quality gate + evals + hygiene rules | Ship | 2026-10-09 |
 | C4 AI Development Workflow | 🟩 Completed — shipped core + all 6 deltas implemented (2026-08-11) | Ship | 2026-08-11 |
 | C5 Runtime Infrastructure & Daemon | 🟩 Shipped — per-project records + configured port + HTTP auth + stdio workspace bridge | Ship + Research (socket activation/workers) | 2026-09-25 |
 | C5.5 Host Abstraction Layer | 🟦 Partial — 5 adapters shipped | Ship + Research (negotiation/certification) | 2026-08-03 |
