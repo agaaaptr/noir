@@ -104,7 +104,7 @@ per-host envelope builders `claudeDeny`, `geminiDeny`, `cursorDeny`, `compileBri
 
 **Files:** `packages/adapters/src/types.ts`, `claude.ts`, `gemini.ts`, `cursor.ts`, `opencode.ts`, `agents-md-adapter.ts`, `packages/create/src/manifest.ts`, `scaffold-version.ts`, `migrations/index.ts`, tests.
 
-- [ ] **Step 1: failing tests** — each adapter's `emitHooks` returns the correct file + shape; claude has SessionStart/SubagentStart/PreToolUse/Stop; gemini has SessionStart/BeforeTool; cursor has sessionStart/preToolUse/stop; opencode/agents-md return none.
+- [ ] **Step 1: failing tests** — each adapter's `emitHooks` returns the correct file + shape; claude has SessionStart/SubagentStart/PreToolUse/Stop; gemini has SessionStart/BeforeTool; cursor has sessionStart/preToolUse; opencode/agents-md return none.
 - [ ] **Step 2: implement** the seam and per-host emitters; wire manifest to emit per host.
 - [ ] **Step 3: add** the `1.4.0 → 1.5.0` migration to append the new events to existing claude installs without duplicating.
 
