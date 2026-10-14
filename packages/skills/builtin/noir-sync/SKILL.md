@@ -28,6 +28,7 @@ Load the project context AND route to the right skill. This is the entry point f
    - Feature/idea → `noir-brainstorming` → `noir-spec` → `noir-planning` → `noir-executing-plans`
    - Bug/crash → `noir-systematic-debugging`
    - Implement with TDD → `noir-test-driven-development`
+   - E2E/UI/browser test, QA, bug bash → `noir-e2e`
    - Verify/PR → `noir-verifying`
    - Ship/integrate → `noir-shipping`
    - Close session → `noir-wrap`
