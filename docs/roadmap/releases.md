@@ -121,7 +121,7 @@ These are intentionally out of v1 to keep scope sharp. Each has a target version
 | Team / multi-user | v2.0 | Requires shared stores, identity, permissions. |
 | First-class Noir-native skill registry/distribution | v2.0 | v1 ships its native builtins via `noir init`/`sync` with no install step. |
 | Programmatic host-driving — multi-step orchestration from the TUI | v2.0 | Single-shot headless driving shipped as `noir run` in 1.11.0; multi-step TUI orchestration remains. |
-| Agent-loop hooks — steer and enforce the host agent during the session (`UserPromptSubmit` / `PreToolUse` / `Stop`) | v2.0 | Prerequisite shipped in 1.18.0 (the hook runs through the `noir` binary); needs a spec-first design pass. |
+| Agent-loop hooks — steer and enforce the host agent during the session (`UserPromptSubmit` / `PreToolUse` / `Stop`) | v2.0 | v1 enforcement shipped on `develop` (2026-10-14, spec `2026-10-14-host-governance-design.md`): a `noir hook` dispatcher with a `PreToolUse` deny-list + opt-in `Stop` gate, a `HostAdapter.emitHooks` seam (claude/gemini/cursor), and baseline priming. Remaining: the OpenCode plugin surface, fail-closed `onFailure` version probes, and non-Claude Stop enforcement. |
 | Full theming + plugin SDK | v1.x / v2.0 | Polish/en extensibility after core is solid. |
 
 ---

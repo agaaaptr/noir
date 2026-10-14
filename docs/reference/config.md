@@ -162,6 +162,15 @@ vars, never config keys — see
 | `workspace` | `object` | no | {"idleTimeoutSec":0} | Shared workspace settings |
 | `workspace.idleTimeoutSec` | `number` | no | 0 | Idle timeout before a workspace daemon auto-stops (seconds; 0 = never) |
 
+### enforcement
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `enforcement` | `object` | no | {"enabled":true,"deny":[],"stopGate":false} | Agent-loop enforcement (pre-tool deny + opt-in Stop gate) |
+| `enforcement.enabled` | `boolean` | no | true | Emit the pre-tool deny hook and evaluate the deny-list |
+| `enforcement.deny` | `array` | no | [] | Extra deny rules (the built-in .noir/.env + .noir/store/ guards always apply) |
+| `enforcement.stopGate` | `boolean` | no | false | Block Stop while the active workflow task has verification pending |
+
 
 ## Conditional requirements
 

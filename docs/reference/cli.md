@@ -117,6 +117,7 @@ re-emit Noir managed files (.mcp.json, CLAUDE.md blocks, NOIR.md brief, ignores)
 | `--merge` | three-way merge managed regions (default since 1.3.0; flag kept for compatibility) |
 | `--dry-run` | report planned writes without writing anything |
 | `--preview` | alias for --dry-run |
+| `--check` | exit non-zero when a managed file would change (CI drift gate) |
 | `--no-merge-regions` | strip-replace managed regions (discard hand-edits inside <!-- noir:* --> markers) |
 | `--host <id>` | override the configured host (advanced; default reads .noir/config.yml) (choices: "claude", "agents-md", "gemini", "cursor", "opencode") |
 

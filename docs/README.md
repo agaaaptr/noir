@@ -1,7 +1,7 @@
 # Documentation
 
 > Auto-generated documentation index.
-> Last updated: 2026-10-09T06:33:08.796Z
+> Last updated: 2026-10-14T04:42:26.778Z
 
 ## Getting Started
 
@@ -116,6 +116,7 @@
 - [**Env Templates + Upgrade Completeness + Provider Gateways + `noir run` UX — Implementation Plan**](internal/plans/2026-09-14-env-templates-upgrade-provider-run-ux.md) — [ARCHIVED]
 - [**Display integrity, workspace transport, permission contract, and output hygiene — implementation plan**](internal/plans/2026-09-24-display-transport-permission-hygiene.md) — [ARCHIVED]
 - [**Anti-slop + humanizer + design-taste adoption — Implementation Plan**](internal/plans/2026-10-08-anti-slop-humanizer-design-taste.md) — [ARCHIVED]
+- [**Host governance — Implementation Plan**](internal/plans/2026-10-14-host-governance.md) — [ARCHIVED]
 - [**Noir — AI Toolkit Design Blueprint**](internal/specs/2026-07-23-noir-toolkit-design.md) — [ARCHIVED]
 - [**Noir — Walking Skeleton Design (S0 → S2 → S3)**](internal/specs/2026-07-23-noir-walking-skeleton-design.md) — [ARCHIVED]
 - [**Noir — S1 Stores Design (`@noir-ai/store`)**](internal/specs/2026-07-23-s1-stores-design.md) — [ARCHIVED]
@@ -151,5 +152,6 @@
 - [**Env Templates + Upgrade Completeness + Provider Gateways + `noir run` UX — Design**](internal/specs/2026-09-14-env-templates-upgrade-provider-run-ux-design.md) — [ARCHIVED]
 - [**Display integrity, workspace transport, permission contract, and output hygiene — design**](internal/specs/2026-09-24-display-transport-permission-hygiene-design.md) — [ARCHIVED]
 - [**Anti-slop + humanizer + design-taste adoption**](internal/specs/2026-10-08-anti-slop-humanizer-design-taste-design.md) — [ARCHIVED]
+- [**Host governance: project-context priming + agent-loop enforcement**](internal/specs/2026-10-14-host-governance-design.md) — [ARCHIVED]
 - [**Final Comprehensive Verification & Publish Gate**](verification-gate.md)
 
