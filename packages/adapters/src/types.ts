@@ -82,6 +82,31 @@ export interface HandoffPayload {
   } | null;
 }
 
+/** Context passed to {@link HostAdapter.emitHooks}: the resolved `noir` command
+ *  the host should invoke (the absolute native shim when a native install is
+ *  detected, else `'noir'`). */
+export interface EmitHooksContext {
+  command: string;
+}
+
+/** One host lifecycle-hook config entry the scaffold writes. All policy lives in
+ *  the shared `noir hook` dispatcher; the adapter returns only the thin per-host
+ *  wiring that calls it with a `--host` dialect. */
+export interface HookEmission {
+  /** Repo-relative path of the host's hook config file. */
+  path: string;
+  /** `mergeJson` = merge into a user-owned file (written once, deduped);
+   *  `regenerate` = write the full content verbatim. */
+  mode: 'mergeJson' | 'regenerate';
+  /** The hook config fragment (JSON-serializable) merged or written verbatim. */
+  content: Record<string, unknown>;
+  /** For `mergeJson`: an existing entry whose command contains this substring
+   *  is not re-added. */
+  dedupSubstring?: string;
+  /** One-line description recorded on the manifest entry. */
+  description: string;
+}
+
 export interface HostAdapter {
   /** The host identifier — must match a `HostId` registry key. Typed as
    *  `HostId` (never a bare `string`) so the registry is type-safe end-to-end. */
@@ -131,4 +156,8 @@ export interface HostAdapter {
    *  context file or skill dir) implements this. TEXT ONLY — never launches the
    *  host (doctrine: Noir never spawns the host; the directive is pasteable text). */
   emitHandoff?(ctx: EmitContext, payload: HandoffPayload): string;
+  /** Per-host lifecycle-hook wiring that invokes `noir hook`. Returns the config
+   *  entries to write, or `null`/absent when the host has no hook surface
+   *  (agents-md is context-only; opencode's plugin surface is unverified). */
+  emitHooks?(ctx: EmitHooksContext): HookEmission[] | null;
 }

@@ -3,6 +3,8 @@ import { CONTEXT_BLOCK_BEGIN, CONTEXT_BLOCK_END, RULES_BLOCK } from '@noir-ai/co
 import { buildMcpServersJson } from './mcp.js';
 import type {
   EmitContext,
+  EmitHooksContext,
+  HookEmission,
   HostAdapter,
   IntegrationMcpEmission,
   McpConfigOptions,
@@ -44,5 +46,30 @@ export const geminiAdapter: HostAdapter = {
   },
   agentsMdPath(ctx: EmitContext): string {
     return join(ctx.root, 'AGENTS.md');
+  },
+  emitHooks(ctx: EmitHooksContext): HookEmission[] {
+    // Gemini CLI hooks land in `.gemini/settings.json` under a top-level
+    // `hooks` key. SessionStart injects the brief (the dispatcher emits
+    // hookSpecificOutput.additionalContext); BeforeTool evaluates the deny-list
+    // (the dispatcher exits 2 with the reason on stderr — the verified
+    // reason-carrying block path). The `.*` matcher is a best-effort
+    // catch-all for tool events; Gemini's exact matcher semantics are
+    // unverified and tuned on real CLI runs if it proves to over/under-match.
+    const command = `"${ctx.command}" hook --host gemini`;
+    const hooks = {
+      hooks: {
+        SessionStart: [{ hooks: [{ type: 'command', command }] }],
+        BeforeTool: [{ matcher: '.*', hooks: [{ type: 'command', command }] }],
+      },
+    };
+    return [
+      {
+        path: '.gemini/settings.json',
+        mode: 'mergeJson',
+        content: hooks,
+        dedupSubstring: ' hook',
+        description: 'SessionStart + BeforeTool hook entry (gemini)',
+      },
+    ];
   },
 };

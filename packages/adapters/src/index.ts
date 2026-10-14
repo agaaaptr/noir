@@ -21,7 +21,9 @@ export {
 export { opencodeAdapter } from './opencode.js';
 export type {
   EmitContext,
+  EmitHooksContext,
   HandoffPayload,
+  HookEmission,
   HostAdapter,
   HostId,
   IntegrationMcpEmission,

@@ -3,6 +3,8 @@ import { emitAgentsMd } from './agents-md.js';
 import { buildMcpServersJson } from './mcp.js';
 import type {
   EmitContext,
+  EmitHooksContext,
+  HookEmission,
   HostAdapter,
   IntegrationMcpEmission,
   McpConfigOptions,
@@ -42,5 +44,29 @@ export const cursorAdapter: HostAdapter = {
   },
   agentsMdPath(ctx: EmitContext): string {
     return join(ctx.root, 'AGENTS.md');
+  },
+  emitHooks(ctx: EmitHooksContext): HookEmission[] {
+    // Cursor hooks land in a standalone `.cursor/hooks.json` (version 1).
+    // sessionStart injects the brief (the dispatcher emits `additional_context`);
+    // preToolUse evaluates the deny-list (the dispatcher exits 2 with the reason
+    // on stderr — the verified "matches Claude Code behavior" block path), with
+    // failClosed so a timing-out hook denies rather than silently allowing.
+    const command = `"${ctx.command}" hook --host cursor`;
+    const content = {
+      version: 1,
+      hooks: {
+        sessionStart: [{ command }],
+        preToolUse: [{ command, failClosed: true }],
+        stop: [{ command }],
+      },
+    };
+    return [
+      {
+        path: '.cursor/hooks.json',
+        mode: 'regenerate',
+        content,
+        description: 'sessionStart + preToolUse + stop hooks (cursor)',
+      },
+    ];
   },
 };
