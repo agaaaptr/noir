@@ -610,6 +610,13 @@ const hookEvents: MigrationScript = {
     const result: MigrationResult = { changed: [], conflicts: [], notes: [] };
     const host = readProjectConfig(ctx.root)?.host ?? 'claude';
 
+    if (host !== 'claude' && host !== 'gemini') {
+      result.notes.push(
+        `${host}: no hook migration needed (cursor is regenerate-mode; opencode/agents-md have no hook surface)`,
+      );
+      return result;
+    }
+
     const rel = host === 'gemini' ? '.gemini/settings.json' : '.claude/settings.local.json';
     const abs = join(ctx.root, ...rel.split('/'));
     const command =

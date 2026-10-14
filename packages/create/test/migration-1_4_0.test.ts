@@ -124,4 +124,26 @@ describe('migration 1.4.0 → 1.5.0 — the gemini hook backfill', () => {
     expect(settings.hooks.SessionStart).toBeDefined();
     expect(settings.hooks.BeforeTool).toBeDefined();
   });
+
+  it('no-ops for a cursor host even when a stale claude settings file exists', () => {
+    mkdirSync(join(root, '.noir'), { recursive: true });
+    mkdirSync(join(root, '.claude'), { recursive: true });
+    writeFileSync(join(root, '.noir', 'config.yml'), 'host: cursor\nmode: full\n', 'utf8');
+    writeFileSync(
+      join(root, '.claude', 'settings.local.json'),
+      JSON.stringify(
+        { hooks: { SessionStart: [{ hooks: [{ type: 'command', command: '"noir" hook' }] }] } },
+        null,
+        2,
+      ),
+      'utf8',
+    );
+    writeScaffoldVersion(root, '1.4.0');
+    const before = readFileSync(join(root, '.claude', 'settings.local.json'), 'utf8');
+
+    const res = runMigrations(root, '1.4.0', '1.5.0');
+
+    expect(res.changed).toEqual([]);
+    expect(readFileSync(join(root, '.claude', 'settings.local.json'), 'utf8')).toBe(before);
+  });
 });
