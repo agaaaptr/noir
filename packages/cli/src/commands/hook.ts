@@ -74,13 +74,14 @@ function readNoirFile(noirRoot: string, rel: string): string {
   }
 }
 
-/** The compiled, budgeted session brief: router + always-on rules + the project
- *  baseline (`.noir/NOIR.md`). Truncates under the host's injection cap. */
+/** The compiled, budgeted session brief: the router + the always-on rules — the
+ *  two `.noir/` files no host context file `@import`s. The project baseline
+ *  lives in `.noir/NOIR.md`, which every host already loads via its context
+ *  file, so it is not re-injected here. Truncates under the injection cap. */
 export function compileBrief(noirRoot: string): string {
   const parts = [
     readNoirFile(noirRoot, '.noir/router.md'),
     readNoirFile(noirRoot, '.noir/rules/anti-slop.md'),
-    readNoirFile(noirRoot, '.noir/NOIR.md'),
   ].filter((text) => text !== '');
   const brief = parts.join('\n\n');
   return brief.length <= BRIEF_BUDGET

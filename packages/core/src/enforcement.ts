@@ -14,9 +14,11 @@
  * Everything here is pure and offline: no host process, no daemon, no I/O.
  */
 
+import { posix } from 'node:path';
+
 export interface DenyRule {
-  /** Restrict the rule to one tool name (`Write`, `Bash`, ...). Absent (or `*`)
-   *  means the rule applies to every tool. */
+  /** Restrict the rule to one tool name (`Write`, `Bash`, ...). Absent means the
+   *  rule applies to every tool. */
   tool?: string;
   /** Literal substring matched against the tool input's candidate strings. */
   pattern: string;
@@ -43,22 +45,15 @@ const BUILTIN_GUARDS: ReadonlyArray<{ target: string; reason: string }> = [
   },
 ];
 
-/** Collapse duplicate separators and "." segments so `.noir/./.env` and
- *  `.noir//.env` resolve to `.noir/.env` before matching. Never resolves ".."
- *  (an upward traversal is not a spelling of the protected path). */
-function normalizePath(p: string): string {
-  return p
-    .split('/')
-    .filter((seg) => seg !== '' && seg !== '.')
-    .join('/');
-}
-
 /** True when `candidate` is the path, a path under it, or any ancestor spelling
  *  of it (relative or absolute). `target` with a trailing slash means "this
- *  directory and everything inside it". A plain target means "this exact file". */
+ *  directory and everything inside it". A plain target means "this exact file".
+ *  `posix.normalize` collapses `.` and duplicate separators (and resolves `..`)
+ *  so `.noir/./.env`, `.noir//.env`, and `.noir/../.noir/.env` all resolve to
+ *  the protected path instead of evading the guard. */
 function pathUnder(candidate: string, target: string): boolean {
-  const c = normalizePath(candidate);
-  const t = normalizePath(target);
+  const c = posix.normalize(candidate);
+  const t = posix.normalize(target).replace(/\/+$/, '');
   if (c === t) return true;
   if (c.endsWith(`/${t}`)) return true;
   if (c.startsWith(`${t}/`)) return true;
@@ -126,7 +121,7 @@ export function evaluateDeny(
   }
 
   for (const rule of rules) {
-    if (rule.tool && rule.tool !== '*' && rule.tool !== toolName) continue;
+    if (rule.tool && rule.tool !== toolName) continue;
     for (const candidate of candidates) {
       if (candidate.includes(rule.pattern)) return { denied: true, reason: rule.reason };
     }

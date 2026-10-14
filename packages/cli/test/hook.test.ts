@@ -33,7 +33,6 @@ function seed(): void {
   mkdirSync(join(root, '.noir', 'rules'), { recursive: true });
   writeFileSync(join(root, '.noir', 'router.md'), '# Noir skill router\n', 'utf8');
   writeFileSync(join(root, '.noir', 'rules', 'anti-slop.md'), 'noir-debt: be lazy\n', 'utf8');
-  writeFileSync(join(root, '.noir', 'NOIR.md'), '# Baseline\ntypescript\n', 'utf8');
 }
 
 describe('noir hook dispatch', () => {
@@ -44,7 +43,6 @@ describe('noir hook dispatch', () => {
     expect(parsed.hookSpecificOutput.hookEventName).toBe('SessionStart');
     expect(parsed.hookSpecificOutput.additionalContext).toContain('# Noir skill router');
     expect(parsed.hookSpecificOutput.additionalContext).toContain('noir-debt: be lazy');
-    expect(parsed.hookSpecificOutput.additionalContext).toContain('# Baseline');
   });
 
   it('omits additionalContext when no files exist', () => {
@@ -58,7 +56,7 @@ describe('noir hook dispatch', () => {
     seed();
     const out = dispatch({ hook_event_name: 'SessionStart', cwd: root }, 'cursor', ENFORCED, null);
     const parsed = JSON.parse(out.stdout ?? '') as { additional_context: string };
-    expect(parsed.additional_context).toContain('# Baseline');
+    expect(parsed.additional_context).toContain('# Noir skill router');
   });
 
   it('finds .noir/ walking up from a subdirectory', () => {
@@ -124,7 +122,7 @@ describe('noir hook dispatch', () => {
     seed();
     const out = dispatch({ hook_event_name: 'sessionStart', cwd: root }, 'cursor', ENFORCED, null);
     const parsed = JSON.parse(out.stdout ?? '') as { additional_context: string };
-    expect(parsed.additional_context).toContain('# Baseline');
+    expect(parsed.additional_context).toContain('# Noir skill router');
   });
 
   it('passes a normal source write', () => {

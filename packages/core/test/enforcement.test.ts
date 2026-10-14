@@ -42,11 +42,6 @@ describe('evaluateDeny', () => {
     expect(evaluateDeny(rules, 'Bash', { command: 'echo secret' })?.denied).toBe(true);
   });
 
-  it('treats tool "*" as any-tool', () => {
-    const rules: DenyRule[] = [{ tool: '*', pattern: 'forbidden', reason: 'nope' }];
-    expect(evaluateDeny(rules, 'Write', { file_path: 'forbidden.md' })?.denied).toBe(true);
-  });
-
   it('never throws on an unfamiliar tool input', () => {
     expect(evaluateDeny([], 'Read', { file_path: 'README.md' })).toBeNull();
     expect(evaluateDeny([], 'SomeTool', null)).toBeNull();
