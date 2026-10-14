@@ -48,7 +48,7 @@
 - Modify `packages/adapters/src/types.ts` — add `emitHooks` seam + `HookEmission`.
 - Modify `packages/adapters/src/claude.ts`, `gemini.ts`, `cursor.ts` — per-host hook wiring; `opencode.ts`/`agents-md-adapter.ts` return none.
 - Modify `packages/create/src/manifest.ts` — replace claude-only hook entry with per-host `emitHooks`.
-- Modify `packages/create/src/scaffold-version.ts` + `migrations/index.ts` — `1.4.0 → 1.5.0` adds the new events to existing claude installs.
+- Modify `packages/create/src/scaffold-version.ts` + `migrations/index.ts` — `1.4.0 → 1.5.0` adds the new events to existing claude installs and backfills the gemini hook.
 
 **Slice 5 — `noir sync --check` (`@noir-ai/cli`):**
 - Modify `packages/cli/src/sync.ts` — `--check` regenerates and exits non-zero on drift.
@@ -105,7 +105,7 @@ per-host envelope builders `claudeDeny`, `geminiDeny`, `cursorDeny`, `compileBri
 
 - [ ] **Step 1: failing tests** — each adapter's `emitHooks` returns the correct file + shape; claude has SessionStart/SubagentStart/PreToolUse/Stop; gemini has SessionStart/BeforeTool; cursor has sessionStart/preToolUse; opencode/agents-md return none.
 - [ ] **Step 2: implement** the seam and per-host emitters; wire manifest to emit per host.
-- [ ] **Step 3: add** the `1.4.0 → 1.5.0` migration to append the new events to existing claude installs without duplicating.
+- [ ] **Step 3: add** the `1.4.0 → 1.5.0` migration to append the new events to existing claude installs and backfill the gemini hook without duplicating.
 
 ## Slice 5 — `noir sync --check`
 
