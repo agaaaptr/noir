@@ -1312,13 +1312,6 @@ function fixOwnerOnlyPermissions(root: string, project: ProjectInfo | undefined)
   return fixes;
 }
 
-/**
- * `noir doctor`: run all checks, render, and exit.
- *
- * Under `--json` writes `{ok:true, data: DoctorPayload}` to stdout (always —
- * the command produced a diagnosis). The exit code carries health: 0 when no
- * check failed, 1 when any CRITICAL (`fail`) check is unhealthy.
- */
 /** The honest per-host enforcement coverage: which gates are ENFORCED vs
  *  advisory-only, and the resolved fail-mode. Never `fail` — it is a report of
  *  what the chosen host can actually do, not a defect. */
@@ -1357,6 +1350,13 @@ function checkEnforcementCoverage(checks: CheckResult[], project: ProjectInfo | 
   checks.push({ name: 'enforcement', status: coverage.status, detail: coverage.detail });
 }
 
+/**
+ * `noir doctor`: run all checks, render, and exit.
+ *
+ * Under `--json` writes `{ok:true, data: DoctorPayload}` to stdout (always —
+ * the command produced a diagnosis). The exit code carries health: 0 when no
+ * check failed, 1 when any CRITICAL (`fail`) check is unhealthy.
+ */
 export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   const root = process.cwd();
   const checks: CheckResult[] = [];

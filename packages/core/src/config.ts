@@ -509,7 +509,9 @@ export const NoirConfigSchema = z.object({
       enabled: z
         .boolean()
         .default(true)
-        .describe('Emit the pre-tool deny hook and evaluate the deny-list + built-in guards'),
+        .describe(
+          'Evaluate the deny-list + built-in guards (the hook is emitted regardless and exits 0 when disabled)',
+        ),
       deny: z
         .array(
           z
