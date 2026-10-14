@@ -88,3 +88,40 @@ describe('migration 1.4.0 → 1.5.0 — the enforcement hook events', () => {
     expect(res.changed).toEqual([]);
   });
 });
+
+describe('migration 1.4.0 → 1.5.0 — the gemini hook backfill', () => {
+  function seedGemini(): void {
+    mkdirSync(join(root, '.noir'), { recursive: true });
+    writeFileSync(join(root, '.noir', 'config.yml'), 'host: gemini\nmode: full\n', 'utf8');
+    writeScaffoldVersion(root, '1.4.0');
+  }
+
+  it('creates the gemini hook when the settings file is absent', () => {
+    seedGemini();
+    const res = runMigrations(root, '1.4.0', '1.5.0');
+
+    expect(res.ran).toContain('1.4.0→1.5.0');
+    expect(res.changed).toContain('.gemini/settings.json');
+
+    const settings = JSON.parse(readFileSync(join(root, '.gemini', 'settings.json'), 'utf8'));
+    expect(settings.hooks.SessionStart[0].hooks[0].command).toBe('"noir" hook --host gemini');
+    expect(settings.hooks.BeforeTool[0].matcher).toBe('.*');
+  });
+
+  it('preserves existing gemini settings while appending the hooks', () => {
+    seedGemini();
+    mkdirSync(join(root, '.gemini'), { recursive: true });
+    writeFileSync(
+      join(root, '.gemini', 'settings.json'),
+      JSON.stringify({ model: { name: 'gemini-pro' } }, null, 2),
+      'utf8',
+    );
+
+    runMigrations(root, '1.4.0', '1.5.0');
+
+    const settings = JSON.parse(readFileSync(join(root, '.gemini', 'settings.json'), 'utf8'));
+    expect(settings.model).toEqual({ name: 'gemini-pro' });
+    expect(settings.hooks.SessionStart).toBeDefined();
+    expect(settings.hooks.BeforeTool).toBeDefined();
+  });
+});

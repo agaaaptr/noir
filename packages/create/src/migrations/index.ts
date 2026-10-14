@@ -4,6 +4,7 @@ import { type HostId, mcpConfigPathFor, noirStdioArgs, TRANSPORT_KEYS } from '@n
 import {
   atomicWriteFile,
   loadProjectInfo,
+  readProjectConfig,
   readWorkspaceMarker,
   resolveNoirCommand,
 } from '@noir-ai/core';
@@ -11,7 +12,7 @@ import { render } from '../template.js';
 import { isStaleSeed, type SeedKind } from '../template-history.js';
 import { loadTemplate } from '../template-loader.js';
 import { refreshSeed } from '../writers.js';
-import type { MigrationResult, MigrationScript } from './types.js';
+import type { MigrationContext, MigrationResult, MigrationScript } from './types.js';
 
 export { runMigrations } from './runner.js';
 export type { MigrationContext, MigrationResult, MigrationScript } from './types.js';
@@ -519,69 +520,116 @@ const hookCommand: MigrationScript = {
   },
 };
 
-// --- 1.4.0 → 1.5.0: append the PreToolUse + Stop enforcement events ----------
+// --- 1.4.0 → 1.5.0: append the enforcement hook events ----------------------
 
-/** `1.4.0 → 1.5.0`: add the PreToolUse (deny-list) and Stop (verify gate) events
- *  to an existing claude hook. The hook entry is write-once — the manifest never
- *  re-emits it after init — so an install created before enforcement shipped has
- *  SessionStart + SubagentStart but not the two enforcement events. This
- *  migration appends them under the same `"<noir>" hook` command. Idempotent: an
- *  event key already present is left alone. */
+/** A hook event the migration appends to an existing host hook file, shaped for
+ *  that host's config (claude `{hooks:[{type,command}]}`, gemini adds a
+ *  `matcher` for the BeforeTool deny event). */
+type HookEventPatch = Array<Record<string, unknown>>;
+
+/** Append a set of hook events to a host's hook config file. Idempotent: an
+ *  event key already present is left alone. `createIfMissing` controls whether
+ *  an absent file (or a file with no `hooks` object) is created — true for a
+ *  host whose hook is brand new (gemini), false for a host where an absent file
+ *  means the user removed the hook and it must not be resurrected (claude). */
+function applyHookEvents(
+  ctx: MigrationContext,
+  rel: string,
+  abs: string,
+  events: Record<string, HookEventPatch>,
+  createIfMissing: boolean,
+): { note: string; changed: boolean; conflict: boolean } {
+  let settings: Record<string, unknown>;
+  if (!existsSync(abs)) {
+    if (!createIfMissing) {
+      return { note: `${rel}: absent — nothing to migrate`, changed: false, conflict: false };
+    }
+    settings = {};
+  } else {
+    try {
+      settings = JSON.parse(readFileSync(abs, 'utf8')) as Record<string, unknown>;
+    } catch (err) {
+      return {
+        note: `${rel}: unreadable (${errorMessage(err)}) — left untouched`,
+        changed: false,
+        conflict: true,
+      };
+    }
+  }
+
+  const existing = settings.hooks;
+  if (typeof existing !== 'object' || existing === null || Array.isArray(existing)) {
+    if (!createIfMissing) {
+      return {
+        note: `${rel}: no hooks object — nothing to migrate`,
+        changed: false,
+        conflict: false,
+      };
+    }
+    settings.hooks = {};
+  }
+  const hooksObj = settings.hooks as Record<string, unknown>;
+
+  let added = false;
+  for (const [event, patch] of Object.entries(events)) {
+    if (hooksObj[event] === undefined) {
+      hooksObj[event] = patch;
+      added = true;
+    }
+  }
+  if (!added) {
+    return { note: `${rel}: enforcement events already present`, changed: false, conflict: false };
+  }
+  if (ctx.dryRun) {
+    return { note: `${rel}: would append enforcement events`, changed: true, conflict: false };
+  }
+  try {
+    atomicWriteFile(abs, `${JSON.stringify(settings, null, 2)}\n`);
+    return { note: `${rel}: appended enforcement events`, changed: true, conflict: false };
+  } catch (err) {
+    return {
+      note: `${rel}: write failed (${errorMessage(err)}) — left untouched`,
+      changed: false,
+      conflict: true,
+    };
+  }
+}
+
+/** `1.4.0 → 1.5.0`: append the enforcement events to an existing claude or
+ *  gemini hook. The hook entry is write-once — the manifest never re-emits it
+ *  after init — so an install created before enforcement shipped has no (or a
+ *  partial) hook. claude gains PreToolUse + Stop; gemini gains SessionStart +
+ *  BeforeTool. cursor is a regenerate-mode file, so sync re-emits it with no
+ *  migration. Idempotent: an event key already present is left alone. */
 const hookEvents: MigrationScript = {
   from: '1.4.0',
   to: '1.5.0',
-  description: 'append PreToolUse + Stop enforcement events to the claude hook',
+  description: 'append the enforcement hook events to the claude or gemini hook',
   run: (ctx) => {
     const result: MigrationResult = { changed: [], conflicts: [], notes: [] };
-    const settingsRel = '.claude/settings.local.json';
-    const settingsPath = join(ctx.root, '.claude', 'settings.local.json');
-    if (!existsSync(settingsPath)) {
-      result.notes.push(`${settingsRel}: absent — nothing to migrate`);
-      return result;
-    }
+    const host = readProjectConfig(ctx.root)?.host ?? 'claude';
 
-    let settings: Record<string, unknown>;
-    try {
-      settings = JSON.parse(readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
-    } catch (err) {
-      result.conflicts.push(settingsRel);
-      result.notes.push(`${settingsRel}: unreadable (${errorMessage(err)}) — left untouched`);
-      return result;
-    }
+    const rel = host === 'gemini' ? '.gemini/settings.json' : '.claude/settings.local.json';
+    const abs = join(ctx.root, ...rel.split('/'));
+    const command =
+      host === 'gemini'
+        ? `"${resolveNoirCommand()}" hook --host gemini`
+        : `"${resolveNoirCommand()}" hook`;
+    const events: Record<string, HookEventPatch> =
+      host === 'gemini'
+        ? {
+            SessionStart: [{ hooks: [{ type: 'command', command }] }],
+            BeforeTool: [{ matcher: '.*', hooks: [{ type: 'command', command }] }],
+          }
+        : {
+            PreToolUse: [{ hooks: [{ type: 'command', command }] }],
+            Stop: [{ hooks: [{ type: 'command', command }] }],
+          };
 
-    const hooks = settings.hooks;
-    if (typeof hooks !== 'object' || hooks === null || Array.isArray(hooks)) {
-      result.notes.push(`${settingsRel}: no hooks object — nothing to migrate`);
-      return result;
-    }
-    const hooksObj = hooks as Record<string, unknown>;
-    const command = `"${resolveNoirCommand()}" hook`;
-
-    let added = false;
-    for (const event of ['PreToolUse', 'Stop']) {
-      if (hooksObj[event] === undefined) {
-        hooksObj[event] = [{ hooks: [{ type: 'command', command }] }];
-        added = true;
-      }
-    }
-
-    if (!added) {
-      result.notes.push(`${settingsRel}: enforcement events already present`);
-      return result;
-    }
-    if (ctx.dryRun) {
-      result.changed.push(settingsRel);
-      result.notes.push(`${settingsRel}: would append PreToolUse + Stop`);
-      return result;
-    }
-    try {
-      atomicWriteFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
-      result.changed.push(settingsRel);
-      result.notes.push(`${settingsRel}: appended PreToolUse + Stop enforcement events`);
-    } catch (err) {
-      result.conflicts.push(settingsRel);
-      result.notes.push(`${settingsRel}: write failed (${errorMessage(err)}) — left untouched`);
-    }
+    const out = applyHookEvents(ctx, rel, abs, events, host === 'gemini');
+    if (out.conflict) result.conflicts.push(rel);
+    else if (out.changed) result.changed.push(rel);
+    result.notes.push(out.note);
     return result;
   },
 };

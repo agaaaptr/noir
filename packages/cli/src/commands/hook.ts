@@ -19,7 +19,9 @@ import { WorkflowEngine } from '@noir-ai/workflow';
  * the host's own decision dialect:
  *
  *  - `SessionStart`/`SubagentStart` — inject a compiled, budgeted brief
- *    (router + always-on rules + the project baseline) as `additionalContext`.
+ *    (router + always-on rules) as `additionalContext`. The project baseline
+ *    reaches the model through the host's own `@import` of `.noir/NOIR.md`, so
+ *    it is not re-injected here.
  *  - `PreToolUse` — evaluate the deny-list and deny a violating call.
  *  - `Stop` — block stopping while the active task's verification is pending
  *    (opt-in via `enforcement.stopGate`).
