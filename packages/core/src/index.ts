@@ -22,6 +22,7 @@ export {
   type ConflictResolverReturn,
   uniqueAsideSync,
 } from './conflict.js';
+export { type DenyDecision, type DenyRule, evaluateDeny } from './enforcement.js';
 export {
   applyNoirEnv,
   type EnvFileParseResult,

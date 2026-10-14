@@ -497,6 +497,46 @@ export const NoirConfigSchema = z.object({
     })
     .default({ idleTimeoutSec: 0 })
     .describe('Shared workspace settings'),
+  // `enforcement:` block for the agent-loop hook layer. The `noir hook`
+  // dispatcher reads this to decide whether to emit the pre-tool deny hooks and
+  // evaluate the deny-list. Additive: an absent block resolves to enabled with an
+  // empty deny-list and no stop gate. The always-on protection of Noir's own
+  // invariants (the `.noir/.env` secrets file and the single-writer store) is a
+  // built-in guard in @noir-ai/core's enforcement module and applies regardless
+  // of these config rules.
+  enforcement: z
+    .object({
+      enabled: z
+        .boolean()
+        .default(true)
+        .describe('Emit the pre-tool deny hook and evaluate the deny-list'),
+      deny: z
+        .array(
+          z
+            .object({
+              tool: z
+                .string()
+                .optional()
+                .describe(
+                  'Restrict the rule to one tool name (Write, Bash, ...); absent = every tool',
+                ),
+              pattern: z
+                .string()
+                .min(1)
+                .describe('Literal substring matched against the tool input'),
+              reason: z.string().min(1).describe('Deny reason the agent sees'),
+            })
+            .describe('A deny rule'),
+        )
+        .default([])
+        .describe('Extra deny rules (the built-in .noir/.env + .noir/store/ guards always apply)'),
+      stopGate: z
+        .boolean()
+        .default(false)
+        .describe('Block Stop while the active workflow task has verification pending'),
+    })
+    .default({ enabled: true, deny: [], stopGate: false })
+    .describe('Agent-loop enforcement (pre-tool deny + opt-in Stop gate)'),
 });
 
 export type NoirConfig = z.infer<typeof NoirConfigSchema>;
