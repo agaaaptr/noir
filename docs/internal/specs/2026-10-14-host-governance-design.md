@@ -84,11 +84,14 @@ already walks up to find.
 
 ### Awareness (SessionStart / SubagentStart)
 
-The injected brief is the existing `.noir/router.md` plus `.noir/rules/anti-slop.md`
-plus a new compiled project baseline (stack, package manager, CI, canonical
-commands, entry points). The compiler self-truncates to a budget below the
-10,000-character cap and prefers pointers into `.noir/` over inlining. The full
-doctrine stays in `AGENTS.md`/`CLAUDE.md`, which every host reads.
+The injected brief is `.noir/router.md` plus `.noir/rules/anti-slop.md` — the two
+`.noir/` files no host context file imports. The compiled project baseline
+(stack, package manager, CI, canonical commands, entry points) is serialized
+into `.noir/NOIR.md` and reaches the model through the host's existing
+`@import` of that file, so it is not re-injected by the hook. The compiler
+self-truncates to a budget below the 10,000-character cap and prefers pointers
+into `.noir/` over inlining. The full doctrine stays in
+`AGENTS.md`/`CLAUDE.md`, which every host reads.
 
 ### Enforcement (PreToolUse deny)
 

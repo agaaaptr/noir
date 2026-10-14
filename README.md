@@ -26,7 +26,7 @@ The `noir` grouped home menu — section picker + per-section action lists with 
 **Current beta:** `1.18.0-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.18.0` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-10-14T06:35:53.651Z*
+*Last auto-generated: 2026-10-14T08:04:53.846Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
@@ -43,7 +43,7 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/aga
 Then:
 
 ```bash
-noir init                        # scaffold .noir/ + 33 skills + host wiring
+noir init                        # scaffold .noir/ + 34 skills + host wiring
 noir                             # open the home menu (screenshot above)
 ```
 
@@ -59,7 +59,7 @@ An 11-package pnpm monorepo, all `@noir-ai/*`:
 | `@noir-ai/core` | Shared types, config schema, `.noir/` layout |
 | `@noir-ai/store` | Embedded SQLite + FTS5 + sqlite-vec |
 | `@noir-ai/workflow` | Spec-Driven Development (SDD) lifecycle FSM engine |
-| `@noir-ai/skills` | 32 native `noir-*` skills + integration + compiler with quality gate |
+| `@noir-ai/skills` | 33 native `noir-*` skills + integration + compiler with quality gate |
 | `@noir-ai/context` | Hybrid retrieval: BM25 + vector kNN + RRF |
 | `@noir-ai/memory` | Cross-session memory with governance |
 | `@noir-ai/model` | Optional single-shot completion layer |

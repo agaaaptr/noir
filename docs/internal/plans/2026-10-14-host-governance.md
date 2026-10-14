@@ -84,7 +84,7 @@
 **Interfaces:** `dispatch(input, host) → { stdout?: string; exitCode: number }` (testable),
 per-host envelope builders `claudeDeny`, `geminiDeny`, `cursorDeny`, `compileBrief`.
 
-- [ ] **Step 1: failing tests** — PreToolUse deny envelope per host; SessionStart brief includes the baseline; unknown event exits 0 empty; brief truncates under budget.
+- [ ] **Step 1: failing tests** — PreToolUse deny per host (claude JSON deny, gemini/cursor exit 2 + stderr reason); SessionStart brief = router + anti-slop; unknown event exits 0 empty; brief truncates under budget.
 - [ ] **Step 2: implement** the switch on `hook_event_name`, `--host` parsing, config load, deny eval, stop-gate read, and the budgeted compiler.
 - [ ] **Step 3: keep** the existing `hookOutput` contract for SessionStart/SubagentStart.
 
