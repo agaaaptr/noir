@@ -1346,6 +1346,15 @@ function checkEnforcementCoverage(checks: CheckResult[], project: ProjectInfo | 
     checks.push({ name: 'enforcement', status: 'ok', detail: 'skipped — not initialized' });
     return;
   }
+  if (project.config.enforcement.enabled === false) {
+    checks.push({
+      name: 'enforcement',
+      status: 'warn',
+      detail:
+        'disabled — enforcement.enabled is false in .noir/config.yml (the hook is emitted but exits 0 on every event)',
+    });
+    return;
+  }
   const coverage = ENFORCEMENT_COVERAGE[project.config.host];
   checks.push({ name: 'enforcement', status: coverage.status, detail: coverage.detail });
 }

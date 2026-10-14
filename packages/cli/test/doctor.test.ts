@@ -622,6 +622,22 @@ describe('enforcement coverage', () => {
     expect(row.status).toBe('warn');
     expect(row.detail).toMatch(/context-only/);
   });
+
+  it('reports disabled (warn) when enforcement.enabled is false', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-enf-off\n', 'utf8');
+    writeFileSync(
+      paths.config(root),
+      'host: claude\nmode: full\nenforcement:\n  enabled: false\n',
+      'utf8',
+    );
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    const row = findCheck(env.data.checks, 'enforcement');
+    expect(row.status).toBe('warn');
+    expect(row.detail).toMatch(/disabled — enforcement\.enabled is false/);
+  });
 });
 
 // C1 — doctor install row (advisory; ok/warn only, never fail, never network).
