@@ -2,7 +2,7 @@
 
 > Auto-generated from `packages/skills/builtin/*/SKILL.md` and `packages/skills/integrations/*/SKILL.md`.
 
-**33 skills** (32 builtins + 1 integration)
+**34 skills** (33 builtins + 1 integration)
 
 | Skill | Type | Category | Description |
 |---|---|---|---|
@@ -17,6 +17,7 @@
 | `noir-design` | builtin | domain | Use when the user says "design this", "style this", "make it look good", or "frontend design" — commit to one bold aesthetic, run the anti-template checks, and resolve the precedence ladder before any styling code. Do NOT use for token system mechanics (noir-design-reference) or charts and data visualization (noir-dataviz). |
 | `noir-design-reference` | builtin | domain | Use when the user asks "what style should I use", names a style like "neobrutalism" or "glassmorphism", says "pick a style", or needs a design reference — consult references/design.md and return the matching style's tokens, cost, and accessibility floor. Do NOT use for generating assets or for general layout questions. |
 | `noir-doctor` | builtin | meta | Use when diagnosing environment or project health — dependencies, config, runtime, toolchain, and Noir store integrity. Do NOT use for routine status checks — use noir-sync or noir-checkpoint. |
+| `noir-e2e` | builtin | verify | Use when writing, running, or debugging end-to-end / UI tests, when asked to QA or bug-bash an app, or when the verify gate needs user-visible evidence — author tests that pair a natural-language goal the host agent drives with deterministic locator assertions, then register the run as a verify-gate check. |
 | `noir-executing-plans` | builtin | execute | Use when you have a written implementation plan and are ready to code — drive it task by task with a disciplined implement-test-commit loop. Use when the user says "implement this" or "start building". Do NOT use when there is no plan; run noir-planning first. |
 | `noir-exploring` | builtin | discovery | Use when answering means sweeping many files, directories, or naming conventions — fan out read-only search and return the conclusion, not the dumps. Use when the user says "find all places where X", "what uses Y", or "audit the codebase for Z". Do NOT use for a targeted single-file read. |
 | `noir-lazy` | builtin | execute | Use when the user says "be lazy", "simplest solution", "do less", "yagni", "shortest path", or "minimal solution". Climb the laziness ladder before writing code, and record each deliberate shortcut with a ceiling and a trigger. Do NOT use for non-coding requests, a read-only codebase search (noir-exploring), a project-health diagnostic (noir-doctor), a correctness or security review (noir-verifying or noir-security), or a whole-repo audit (noir-codebase-audit). |
