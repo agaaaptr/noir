@@ -53,6 +53,7 @@ const CATEGORY: Record<string, string> = {
   'noir-subagent': 'execute',
   'noir-parallel': 'execute',
   'noir-verifying': 'verify',
+  'noir-e2e': 'verify',
   'noir-security': 'verify',
   'noir-wrap': 'document',
   'noir-readme': 'document',
