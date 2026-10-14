@@ -23,7 +23,7 @@
 ## Review Focus
 
 - **Deny never over-blocks** — a normal Write to a source file must pass; only `.noir/.env` and `.noir/store/` are denied by default.
-- **Envelope exactness** — each host's deny shape is byte-pinned: claude `permissionDecision:"deny"`, gemini `{"decision":"deny"}`, cursor `{"permission":"deny"}`.
+- **Envelope exactness** — each host's deny shape is byte-pinned: claude `permissionDecision:"deny"` (JSON), gemini/cursor exit 2 + stderr reason.
 - **Fail-open on unknown** — an unrecognized event or an unreadable store must exit 0 with no decision, never block.
 - **Budget** — the compiled brief self-truncates under the 10,000-character cap and never throws when files are missing.
 - **No regression on the injector** — SessionStart still emits `hookSpecificOutput.hookEventName` + `additionalContext` exactly as today when enforcement is off.
