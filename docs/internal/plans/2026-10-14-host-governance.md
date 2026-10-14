@@ -41,8 +41,7 @@
 - Modify `packages/cli/test/hook.test.ts` + new fixtures.
 
 **Slice 3 — baseline (`@noir-ai/create`):**
-- Modify `packages/create/src/stack-detect.ts` — add canonical commands + entry points.
-- Create `packages/create/src/baseline.ts` — compile the baseline markdown.
+- Create `packages/create/src/baseline.ts` — canonical commands + entry points + the baseline renderer.
 - Modify `packages/create/templates/noir.md.tmpl` + `manifest.ts` — serialize the baseline into the NOIR.md brief block.
 
 **Slice 4 — adapter seam (`@noir-ai/adapters` + `@noir-ai/create`):**
@@ -92,7 +91,7 @@ per-host envelope builders `claudeDeny`, `geminiDeny`, `cursorDeny`, `compileBri
 
 ### Task 3: canonical commands + entry points + serialization
 
-**Files:** `packages/create/src/stack-detect.ts`, `packages/create/src/baseline.ts` (new), `packages/create/templates/noir.md.tmpl`, `packages/create/src/manifest.ts`, tests.
+**Files:** `packages/create/src/baseline.ts` (new), `packages/create/templates/noir.md.tmpl`, `packages/create/src/manifest.ts`, tests.
 
 - [ ] **Step 1: failing tests** — `detectCommands` finds `build`/`test`/`lint`/`typecheck` scripts; `compileBaseline` renders stack + commands + entry points without throwing on an empty dir.
 - [ ] **Step 2: implement** the detectors and `compileBaseline`.

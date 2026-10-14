@@ -167,8 +167,8 @@ vars, never config keys — see
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `enforcement` | `object` | no | {"enabled":true,"deny":[],"stopGate":false} | Agent-loop enforcement (pre-tool deny + opt-in Stop gate) |
-| `enforcement.enabled` | `boolean` | no | true | Emit the pre-tool deny hook and evaluate the deny-list + built-in guards |
-| `enforcement.deny` | `array` | no | [] | Extra deny rules; the built-in .noir/.env + .noir/store/ guards apply whenever enforcement.enabled is true |
+| `enforcement.enabled` | `boolean` | no | true | Evaluate the deny-list + built-in guards (the hook is emitted regardless and exits 0 when disabled) |
+| `enforcement.deny` | `array` | no | [] | Extra deny rules, each of the form { tool?, pattern, reason }; the built-in .noir/.env + .noir/store/ guards apply whenever enforcement.enabled is true |
 | `enforcement.stopGate` | `boolean` | no | false | Block Stop (claude) while the active workflow task has verification pending |
 
 

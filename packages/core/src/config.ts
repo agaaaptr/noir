@@ -532,7 +532,7 @@ export const NoirConfigSchema = z.object({
         )
         .default([])
         .describe(
-          'Extra deny rules; the built-in .noir/.env + .noir/store/ guards apply whenever enforcement.enabled is true',
+          'Extra deny rules, each of the form { tool?, pattern, reason }; the built-in .noir/.env + .noir/store/ guards apply whenever enforcement.enabled is true',
         ),
       stopGate: z
         .boolean()
