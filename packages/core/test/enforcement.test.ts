@@ -58,6 +58,8 @@ describe('evaluateDeny', () => {
     expect(evaluateDeny([], 'Bash', { command: 'cat .noir/.env' })?.denied).toBe(true);
     expect(evaluateDeny([], 'Bash', { command: 'rm -rf .noir/store' })?.denied).toBe(true);
     expect(evaluateDeny([], 'Bash', { command: 'echo x > .noir/.env' })?.denied).toBe(true);
+    expect(evaluateDeny([], 'Bash', { command: 'cat .noir/./.env' })?.denied).toBe(true);
+    expect(evaluateDeny([], 'Bash', { command: 'rm -rf .noir//store' })?.denied).toBe(true);
   });
 
   it('does not deny a Bash command that names a sibling path', () => {

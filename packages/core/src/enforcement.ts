@@ -63,11 +63,14 @@ function pathUnder(candidate: string, target: string): boolean {
 /** True when a shell command names the protected path as a shell word: the
  *  path is followed by a boundary (whitespace, quote, redirection, separator,
  *  a `/` for the directory form, or end). `.noir/.env.example` does not match
- *  `.noir/.env` because the next character is a filename byte, not a boundary. */
+ *  `.noir/.env` because the next character is a filename byte, not a boundary.
+ *  The command is normalized first so `.noir/./.env` and `.noir//.env`
+ *  spellings collapse to the protected path the same way `pathUnder` does. */
 function commandTouches(command: string, target: string): boolean {
   const clean = target.replace(/\/+$/, '');
   const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`${escaped}(?=[\\s"'$;&|><\`/]|$)`).test(command);
+  const normalized = posix.normalize(command);
+  return new RegExp(`${escaped}(?=[\\s"'$;&|><\`/]|$)`).test(normalized);
 }
 
 /** Pull path-like strings out of a tool input (the fields the file tools use:

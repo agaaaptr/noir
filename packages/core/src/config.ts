@@ -500,16 +500,16 @@ export const NoirConfigSchema = z.object({
   // `enforcement:` block for the agent-loop hook layer. The `noir hook`
   // dispatcher reads this to decide whether to emit the pre-tool deny hooks and
   // evaluate the deny-list. Additive: an absent block resolves to enabled with an
-  // empty deny-list and no stop gate. The always-on protection of Noir's own
-  // invariants (the `.noir/.env` secrets file and the single-writer store) is a
-  // built-in guard in @noir-ai/core's enforcement module and applies regardless
-  // of these config rules.
+  // empty deny-list and no stop gate. The protection of Noir's own invariants
+  // (the `.noir/.env` secrets file and the single-writer store) is a built-in
+  // guard in @noir-ai/core's enforcement module and runs whenever `enabled` is
+  // true (the default), independent of the `deny` array.
   enforcement: z
     .object({
       enabled: z
         .boolean()
         .default(true)
-        .describe('Emit the pre-tool deny hook and evaluate the deny-list'),
+        .describe('Emit the pre-tool deny hook and evaluate the deny-list + built-in guards'),
       deny: z
         .array(
           z
@@ -526,10 +526,12 @@ export const NoirConfigSchema = z.object({
                 .describe('Literal substring matched against the tool input'),
               reason: z.string().min(1).describe('Deny reason the agent sees'),
             })
-            .describe('A deny rule'),
+            .describe('A deny rule of the form { tool?, pattern, reason }'),
         )
         .default([])
-        .describe('Extra deny rules (the built-in .noir/.env + .noir/store/ guards always apply)'),
+        .describe(
+          'Extra deny rules; the built-in .noir/.env + .noir/store/ guards apply whenever enforcement.enabled is true',
+        ),
       stopGate: z
         .boolean()
         .default(false)
