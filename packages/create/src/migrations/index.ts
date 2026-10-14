@@ -19,15 +19,16 @@ export type { MigrationContext, MigrationResult, MigrationScript } from './types
 /**
  * Migration registry — the linear history of scaffold-version upgrades.
  *
- * `CURRENT_SCAFFOLD_VERSION` is `1.4.0`; a project stamped at an older version
- * migrates through every entry whose window covers it. Five entries ship today:
+ * `CURRENT_SCAFFOLD_VERSION` is `1.5.0`; a project stamped at an older version
+ * migrates through every entry whose window covers it. Six entries ship today:
  * the synthetic `1.0.0 → 1.0.0` runner-proof, the first REAL migration
  * `1.0.0 → 1.1.0` (which performs the transformation `skipIfExists` cannot),
  * `1.1.0 → 1.2.0`, which refreshes the doc-only seed whose text changed in
  * that release and carries the unchanged RULES.md seed forward for parity,
  * `1.2.0 → 1.3.0`, which repairs the stale workspace pointer a repo that joined
- * a workspace under the older flow still carries, and `1.3.0 → 1.4.0`, which
- * moves the SessionStart hook command onto `noir hook`.
+ * a workspace under the older flow still carries, `1.3.0 → 1.4.0`, which moves
+ * the SessionStart hook command onto `noir hook`, and `1.4.0 → 1.5.0`, which
+ * appends the PreToolUse + Stop enforcement events to the claude hook.
  *
  * Convention:
  *  - `from`/`to` are bare `x.y.z` (no `v` prefix, no pre-release); the runner
@@ -518,6 +519,73 @@ const hookCommand: MigrationScript = {
   },
 };
 
+// --- 1.4.0 → 1.5.0: append the PreToolUse + Stop enforcement events ----------
+
+/** `1.4.0 → 1.5.0`: add the PreToolUse (deny-list) and Stop (verify gate) events
+ *  to an existing claude hook. The hook entry is write-once — the manifest never
+ *  re-emits it after init — so an install created before enforcement shipped has
+ *  SessionStart + SubagentStart but not the two enforcement events. This
+ *  migration appends them under the same `"<noir>" hook` command. Idempotent: an
+ *  event key already present is left alone. */
+const hookEvents: MigrationScript = {
+  from: '1.4.0',
+  to: '1.5.0',
+  description: 'append PreToolUse + Stop enforcement events to the claude hook',
+  run: (ctx) => {
+    const result: MigrationResult = { changed: [], conflicts: [], notes: [] };
+    const settingsRel = '.claude/settings.local.json';
+    const settingsPath = join(ctx.root, '.claude', 'settings.local.json');
+    if (!existsSync(settingsPath)) {
+      result.notes.push(`${settingsRel}: absent — nothing to migrate`);
+      return result;
+    }
+
+    let settings: Record<string, unknown>;
+    try {
+      settings = JSON.parse(readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
+    } catch (err) {
+      result.conflicts.push(settingsRel);
+      result.notes.push(`${settingsRel}: unreadable (${errorMessage(err)}) — left untouched`);
+      return result;
+    }
+
+    const hooks = settings.hooks;
+    if (typeof hooks !== 'object' || hooks === null || Array.isArray(hooks)) {
+      result.notes.push(`${settingsRel}: no hooks object — nothing to migrate`);
+      return result;
+    }
+    const hooksObj = hooks as Record<string, unknown>;
+    const command = `"${resolveNoirCommand()}" hook`;
+
+    let added = false;
+    for (const event of ['PreToolUse', 'Stop']) {
+      if (hooksObj[event] === undefined) {
+        hooksObj[event] = [{ hooks: [{ type: 'command', command }] }];
+        added = true;
+      }
+    }
+
+    if (!added) {
+      result.notes.push(`${settingsRel}: enforcement events already present`);
+      return result;
+    }
+    if (ctx.dryRun) {
+      result.changed.push(settingsRel);
+      result.notes.push(`${settingsRel}: would append PreToolUse + Stop`);
+      return result;
+    }
+    try {
+      atomicWriteFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
+      result.changed.push(settingsRel);
+      result.notes.push(`${settingsRel}: appended PreToolUse + Stop enforcement events`);
+    } catch (err) {
+      result.conflicts.push(settingsRel);
+      result.notes.push(`${settingsRel}: write failed (${errorMessage(err)}) — left untouched`);
+    }
+    return result;
+  },
+};
+
 /** The registry. The runner sorts the selected window by `to`, so declaration
  *  order is documentation only — oldest step first. */
 export const MIGRATIONS: readonly MigrationScript[] = [
@@ -526,6 +594,7 @@ export const MIGRATIONS: readonly MigrationScript[] = [
   envTemplates,
   workspaceBridge,
   hookCommand,
+  hookEvents,
 ];
 /** `Error.message` for anything thrown, without assuming an Error. */
 function errorMessage(err: unknown): string {

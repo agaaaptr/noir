@@ -11,6 +11,7 @@ import {
   sha256Hex12,
 } from '@noir-ai/core';
 import { readAncestors, writeAncestors } from './ancestors.js';
+import { detectCommands, detectEntryPoints, renderBaseline } from './baseline.js';
 import {
   type BuildManifestContext,
   buildManifest,
@@ -93,6 +94,9 @@ export interface ScaffoldOptions {
   /** Preview: compute the same written/skipped/migrated lists without touching
    *    disk. `noir doctor`/CI use this to report drift. */
   dryRun?: boolean;
+  /** Drift check: a dry-run that reports only what would CHANGE (byte comparison,
+   *  not the full planned-emit list). Used by `noir sync --check`. */
+  check?: boolean;
   /** Policy for a `regenerate` file that exists and DIFFERS from the
    *    template, when no {@link onConflict} callback is provided. Default
    *    `'overwrite'` is byte-backward-compatible. `'preserve'` keeps the user's
@@ -411,6 +415,9 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   // 3. Stack detect (read-only, never throws). Always populated so callers
   //    (TUI, doctor) get a single source of truth regardless of mode.
   const stack = detectStack(opts.root);
+  //    Compile the derivable baseline (stack + canonical commands + entry
+  //    points) into the markdown the `.noir/NOIR.md` brief block renders.
+  const baseline = renderBaseline(stack, detectCommands(opts.root), detectEntryPoints(opts.root));
 
   // Ancestor snapshot is read + captured UNCONDITIONALLY (not just under
   // --merge) so the first merge run — now the DEFAULT — always has a base. The
@@ -539,6 +546,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     transport,
     url: opts.url,
     command,
+    baseline,
   };
 
   const written: string[] = [];
@@ -585,6 +593,25 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     if (managed.length >= 2) {
       // Multi-managed-block file: ONE atomic write of all regions.
       if (opts.dryRun) {
+        if (opts.check === true) {
+          // Drift check: compare the would-be merged bytes without writing.
+          const onDisk = readOptional(abs);
+          const regions = managed.map((e) => {
+            const block = e.block;
+            if (!block) {
+              throw new Error(`manifest entry ${e.path}: managedBlock mode missing 'block'`);
+            }
+            const theirs = buildRegion(block, renderEntry(e, vars));
+            const merged = mergeManagedRegions
+              ? mergeManagedRegion(abs, e.path, block, theirs, ancestors)
+              : { text: theirs, conflict: false, cleanTheirs: theirs };
+            return { block, regionText: merged.text };
+          });
+          const predicted = predictManagedBlocks(onDisk ?? '', regions);
+          if (onDisk !== undefined && predicted === onDisk) identical.push(relPath);
+          else written.push(relPath);
+          continue;
+        }
         written.push(relPath);
         continue;
       }
@@ -647,6 +674,28 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     if (!opts.dryRun) mkdirSync(dirname(abs), { recursive: true });
     for (const entry of entries) {
       if (opts.dryRun) {
+        if (opts.check === true && (entry.mode === 'regenerate' || entry.mode === 'managedBlock')) {
+          // Drift check: compare the would-be bytes without writing.
+          const body = renderEntry(entry, vars);
+          const onDisk = readOptional(abs);
+          if (entry.mode === 'regenerate') {
+            if (onDisk === undefined || onDisk !== body) written.push(entry.path);
+            else identical.push(entry.path);
+          } else {
+            const block = entry.block;
+            if (!block) {
+              throw new Error(`manifest entry ${entry.path}: managedBlock mode missing 'block'`);
+            }
+            const theirs = buildRegion(block, body);
+            const merged = mergeManagedRegions
+              ? mergeManagedRegion(abs, entry.path, block, theirs, ancestors)
+              : { text: theirs, conflict: false, cleanTheirs: theirs };
+            const predicted = predictManagedBlock(onDisk ?? '', block, merged.text);
+            if (onDisk !== undefined && predicted === onDisk) identical.push(entry.path);
+            else written.push(entry.path);
+          }
+          continue;
+        }
         if (entry.mode !== 'skipIfExists') {
           written.push(entry.path);
           continue;

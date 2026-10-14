@@ -62,6 +62,7 @@ describe('upgrade — a stamp-less legacy project runs the full migration chain'
       '1.1.0→1.2.0',
       '1.2.0→1.3.0',
       '1.3.0→1.4.0',
+      '1.4.0→1.5.0',
     ]);
     expect(res.migrationConflicts).toEqual([]);
 

@@ -135,6 +135,9 @@ export type BuildManifestContext = {
    *  .prettierignore only for JS; .dockerignore only when a Dockerfile is
    *  present; an unknown/empty stack ⇒ all four, for backward compat). */
   stack?: StackInfo;
+  /** Compiled project baseline (stack + canonical commands + entry points),
+   *  rendered into the `.noir/NOIR.md` brief block as `{{baseline}}`. */
+  baseline?: string;
   /** The `rules.enabled` switch from the project's `.noir/config.yml`. False
    *  drops the working-rules seed from the manifest, so no command emits or
    *  backfills `.noir/rules/RULES.md` for a project that opted out. Undefined
@@ -609,61 +612,14 @@ export function buildHostArtifacts(
     });
   }
 
-  // 4. SessionStart + SubagentStart hook bootstrap (claude only). Three
-  //    artifacts, two ownerships (research-validated "both + split" design):
-  //      a. `.claude/settings.local.json` SessionStart + SubagentStart entries — user-owned,
-  //         written ONCE via mergeJson (init/create only, deduped by command
-  //         substring). NEVER re-written by sync or `init --upgrade` (a
-  //         re-emit would resurrect a hook the user removed); preserves
-  //         permissions/env. The command is `"<noir shim>" hook` — the CLI owns
-  //         the injection (see `noir hook`), so the entry carries no fragile
-  //         `.mjs` path, exec bit, or `node`-on-PATH assumption.
-  //      b. `.noir/router.md` — co-owned mutable router contract, managedBlock
-  //         (init + sync), user edits outside markers survive.
-  //      c. `.noir/rules/anti-slop.md` — Noir-owned always-on ruleset,
-  //         regenerate (init + sync), read by the hook (not @-imported).
-  if (host === 'claude') {
-    // ` hook` (leading space) is the dedup marker: an existing entry whose
-    // command ends in the `hook` subcommand is already wired and must not be
-    // re-added on a re-emit.
-    const HOOK_DEDUP = ' hook';
-    // Both events share the one command entry: the runner reads its event name
-    // from stdin and emits the same context for either. SubagentStart rides the
-    // session's injected ruleset into subagents; UserPromptSubmit is
-    // deliberately absent — Noir has no per-prompt mode-tracking concept to
-    // re-inject.
-    const hookEntry = {
-      hooks: {
-        SessionStart: [
-          {
-            hooks: [
-              {
-                type: 'command',
-                command: `"${ctx.command}" hook`,
-              },
-            ],
-          },
-        ],
-        SubagentStart: [
-          {
-            hooks: [
-              {
-                type: 'command',
-                command: `"${ctx.command}" hook`,
-              },
-            ],
-          },
-        ],
-      },
-    };
-    entries.push({
-      path: '.claude/settings.local.json',
-      mode: 'mergeJson',
-      host,
-      content: JSON.stringify(hookEntry, null, 2),
-      dedupSubstring: HOOK_DEDUP,
-      description: 'SessionStart + SubagentStart hook entry (user-owned, written once)',
-    });
+  // 4. Lifecycle hooks — per host, via the adapter seam. The shared `noir hook`
+  //    dispatcher carries all policy (brief injection, deny-list, Stop gate);
+  //    each adapter returns only the thin per-host config that invokes it with a
+  //    `--host` dialect. Hosts with no hook surface (agents-md, opencode) return
+  //    none. The `.noir/router.md` + `.noir/rules/anti-slop.md` sources feed the
+  //    hook's compiled brief, so they are emitted for any host that emits hooks.
+  const hookEmissions = adapter.emitHooks?.({ command: ctx.command }) ?? null;
+  if (hookEmissions !== null) {
     entries.push({
       path: '.noir/router.md',
       mode: 'managedBlock',
@@ -679,6 +635,19 @@ export function buildHostArtifacts(
         host,
         template: 'anti-slop.md.tmpl',
         description: 'always-on anti-slop + laziness ruleset (hook-injected, not @imported)',
+      });
+    }
+    for (const emission of hookEmissions) {
+      const json = JSON.stringify(emission.content, null, 2);
+      entries.push({
+        path: emission.path,
+        mode: emission.mode,
+        host,
+        content: emission.mode === 'regenerate' ? `${json}\n` : json,
+        ...(emission.dedupSubstring !== undefined
+          ? { dedupSubstring: emission.dedupSubstring }
+          : {}),
+        description: emission.description,
       });
     }
   }

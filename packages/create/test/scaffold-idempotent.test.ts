@@ -154,6 +154,7 @@ describe('pre-1.3.0 legacy project (project.id present, no scaffold-version) no-
       '1.1.0→1.2.0',
       '1.2.0→1.3.0',
       '1.3.0→1.4.0',
+      '1.4.0→1.5.0',
     ]);
     // The upgrade restamps current, so doctor stops reporting this project.
     expect(readScaffoldVersion(root)).toBe(CURRENT_SCAFFOLD_VERSION);

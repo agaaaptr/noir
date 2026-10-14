@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { claudeAdapter, emitAgentsMd } from '@noir-ai/adapters';
 import { CONTEXT_BLOCK, paths, RULES_BLOCK, readManagedBlock, syncIgnores } from '@noir-ai/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { detectCommands, detectEntryPoints, renderBaseline } from '../src/baseline.js';
 import { BRIEF_BLOCK } from '../src/manifest.js';
 import { MIGRATIONS } from '../src/migrations/index.js';
 import { scaffold } from '../src/scaffold.js';
@@ -20,6 +21,7 @@ import {
   readScaffoldVersion,
   writeScaffoldVersion,
 } from '../src/scaffold-version.js';
+import { detectStack } from '../src/stack-detect.js';
 import { render } from '../src/template.js';
 import { loadTemplate } from '../src/template-loader.js';
 import { buildRegion } from '../src/writers.js';
@@ -401,6 +403,7 @@ describe('scaffold — parity: additive only, .env.example the one permitted cha
       host: 'claude',
       transport: 'stdio',
       command: 'noir',
+      baseline: renderBaseline(detectStack(root), detectCommands(root), detectEntryPoints(root)),
     };
     // The skipIfExists seeds are the template bytes, verbatim — no post-write
     // transform. A change to any pre-existing seed's content fails here.
