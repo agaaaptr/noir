@@ -52,4 +52,21 @@ describe('evaluateDeny', () => {
     expect(evaluateDeny([], 'SomeTool', null)).toBeNull();
     expect(evaluateDeny([], 'SomeTool', 42)).toBeNull();
   });
+
+  it('normalizes . and duplicate separators before matching', () => {
+    expect(evaluateDeny([], 'Write', { file_path: '.noir/./.env' })?.denied).toBe(true);
+    expect(evaluateDeny([], 'Write', { file_path: '.noir//.env' })?.denied).toBe(true);
+    expect(evaluateDeny([], 'Edit', { file_path: '.noir/./store/db.sqlite' })?.denied).toBe(true);
+  });
+
+  it('denies a Bash command that touches a protected path', () => {
+    expect(evaluateDeny([], 'Bash', { command: 'cat .noir/.env' })?.denied).toBe(true);
+    expect(evaluateDeny([], 'Bash', { command: 'rm -rf .noir/store' })?.denied).toBe(true);
+    expect(evaluateDeny([], 'Bash', { command: 'echo x > .noir/.env' })?.denied).toBe(true);
+  });
+
+  it('does not deny a Bash command that names a sibling path', () => {
+    expect(evaluateDeny([], 'Bash', { command: 'cat .noir/.env.example' })).toBeNull();
+    expect(evaluateDeny([], 'Bash', { command: 'pnpm test' })).toBeNull();
+  });
 });

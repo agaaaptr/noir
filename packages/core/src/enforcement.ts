@@ -3,9 +3,10 @@
  * dispatcher evaluates at a host's pre-tool event. Two layers:
  *
  *  - Built-in guards protect Noir's own invariants (the 0600 `.noir/.env`
- *    secrets file and the single-writer `.noir/store/` database). These use
- *    precise path matching so they never over-block a sibling path like
- *    `.noir/.env.example`.
+ *    secrets file and the single-writer `.noir/store/` database). They match a
+ *    protected path in a file tool's path field, or, for a Bash-like tool, a
+ *    boundary-delimited mention of it in the command, and they normalize `.` /
+ *    duplicate separator segments so `.noir/./.env` is not an escape.
  *  - Config rules (`enforcement.deny` in `.noir/config.yml`) are literal
  *    substring matches over the tool input's candidate strings, scoped
  *    optionally to one tool name.
@@ -42,15 +43,36 @@ const BUILTIN_GUARDS: ReadonlyArray<{ target: string; reason: string }> = [
   },
 ];
 
+/** Collapse duplicate separators and "." segments so `.noir/./.env` and
+ *  `.noir//.env` resolve to `.noir/.env` before matching. Never resolves ".."
+ *  (an upward traversal is not a spelling of the protected path). */
+function normalizePath(p: string): string {
+  return p
+    .split('/')
+    .filter((seg) => seg !== '' && seg !== '.')
+    .join('/');
+}
+
 /** True when `candidate` is the path, a path under it, or any ancestor spelling
  *  of it (relative or absolute). `target` with a trailing slash means "this
  *  directory and everything inside it". A plain target means "this exact file". */
 function pathUnder(candidate: string, target: string): boolean {
+  const c = normalizePath(candidate);
+  const t = normalizePath(target);
+  if (c === t) return true;
+  if (c.endsWith(`/${t}`)) return true;
+  if (c.startsWith(`${t}/`)) return true;
+  return c.includes(`/${t}/`);
+}
+
+/** True when a shell command names the protected path as a shell word: the
+ *  path is followed by a boundary (whitespace, quote, redirection, separator,
+ *  a `/` for the directory form, or end). `.noir/.env.example` does not match
+ *  `.noir/.env` because the next character is a filename byte, not a boundary. */
+function commandTouches(command: string, target: string): boolean {
   const clean = target.replace(/\/+$/, '');
-  if (candidate === clean) return true;
-  if (candidate.endsWith(`/${clean}`)) return true;
-  if (candidate.startsWith(`${clean}/`)) return true;
-  return candidate.includes(`/${clean}/`);
+  const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`${escaped}(?=[\\s"'$;&|><\`/]|$)`).test(command);
 }
 
 /** Pull path-like strings out of a tool input (the fields the file tools use:
@@ -89,6 +111,9 @@ export function evaluateDeny(
   for (const guard of BUILTIN_GUARDS) {
     for (const path of paths) {
       if (pathUnder(path, guard.target)) return { denied: true, reason: guard.reason };
+    }
+    if (command !== undefined && commandTouches(command, guard.target)) {
+      return { denied: true, reason: guard.reason };
     }
   }
 
