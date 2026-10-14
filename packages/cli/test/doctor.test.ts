@@ -597,6 +597,33 @@ describe('noir doctor — host artifacts (S10)', () => {
   });
 });
 
+// Host governance — the per-host enforcement coverage row (honest, never fail).
+describe('enforcement coverage', () => {
+  it('reports ENFORCED (ok) for claude', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-enf-claude\n', 'utf8');
+    writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    const row = findCheck(env.data.checks, 'enforcement');
+    expect(row.status).toBe('ok');
+    expect(row.detail).toMatch(/PreToolUse/);
+  });
+
+  it('reports context-only (warn) for agents-md', async () => {
+    mkdirSync(paths.noirDir(root), { recursive: true });
+    writeFileSync(paths.projectId(root), 'doctor-enf-agents\n', 'utf8');
+    writeFileSync(paths.config(root), 'host: agents-md\nmode: full\n', 'utf8');
+
+    const r = await run(() => doctor({ json: true }));
+    const env = JSON.parse(r.stdout);
+    const row = findCheck(env.data.checks, 'enforcement');
+    expect(row.status).toBe('warn');
+    expect(row.detail).toMatch(/context-only/);
+  });
+});
+
 // C1 — doctor install row (advisory; ok/warn only, never fail, never network).
 describe('buildInstallCheck (pure)', () => {
   // Import the function + the param type via dynamic import (tree-shaken by the

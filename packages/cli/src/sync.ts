@@ -58,6 +58,9 @@ export interface SyncOptions {
   /** Alias for `--dry-run`. Kept on the options bag so direct callers can
    *  pass either spelling; the bin collapses both flags before dispatch. */
   preview?: boolean;
+  /** `--check` — a dry-run that exits non-zero when any managed artifact would
+   *  change (the CI drift gate). Never writes. */
+  check?: boolean;
 }
 
 export async function sync(root: string, opts: SyncOptions = {}): Promise<ScaffoldResult> {
@@ -77,8 +80,9 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
     projectInfo = undefined;
   }
 
-  // --dry-run/--preview collapse to a single dryRun boolean.
-  const dryRun = opts.dryRun === true || opts.preview === true;
+  // --dry-run/--preview/--check collapse to a single dryRun boolean. `--check`
+  // is a dry-run that also flips the exit code on drift (see below).
+  const dryRun = opts.dryRun === true || opts.preview === true || opts.check === true;
 
   const res = await scaffold({
     root,
@@ -86,6 +90,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
     host,
     interactive,
     ...(dryRun ? { dryRun: true } : {}),
+    ...(opts.check === true ? { check: true } : {}),
     ...conflictOpts,
     // Merge defaults TRUE inside scaffold; only forward an explicit opt-out.
     ...(opts.mergeManagedRegions === false ? { mergeManagedRegions: false } : {}),
@@ -95,8 +100,20 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
   // dedup (both would touch disk / load the embedder). The engine still throws
   // its "not initialized" gate when `.noir/project.id` is missing, so a dry-run
   // sync on an uninitialized project is a clean error (not a misleading no-op).
+  // `--check` is the same dry-run plus a non-zero exit when anything would
+  // change — the CI drift gate.
   if (dryRun) {
-    reportPlannedWrites(res);
+    if (opts.check === true) {
+      const drift = res.written.length;
+      if (drift > 0) {
+        process.stderr.write(
+          `${drift} Noir-managed file${drift === 1 ? '' : 's'} would change; run \`noir sync\` to refresh.\n`,
+        );
+        process.exitCode = 1;
+      }
+    } else {
+      reportPlannedWrites(res);
+    }
     return res;
   }
 

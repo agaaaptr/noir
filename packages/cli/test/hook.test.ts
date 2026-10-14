@@ -1,15 +1,23 @@
-// The `noir hook` output contract. Claude Code validates `hookSpecificOutput`
-// strictly: `hookEventName` is REQUIRED and `additionalContext` is the field
-// that injects the router + anti-slop text. This pins both, plus the empty
-// case and the upward `.noir/` search — the exact schema whose absence broke
-// SessionStart with "missing required field hookEventName".
-//
-// Offline/free: no network, no API key, no daemon.
+// The `noir hook` dispatch contract: host-dialect envelopes, the compiled
+// budgeted brief, the deny-list, and the opt-in Stop gate. Offline/free — no
+// network, no API key, no live host; behavior is pinned with stdin-JSON fixtures.
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { openStore } from '@noir-ai/store';
+import { WorkflowEngine } from '@noir-ai/workflow';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { hookOutput } from '../src/commands/hook.js';
+import {
+  compileBrief,
+  dispatch,
+  type EnforcementConfig,
+  findNoirRoot,
+  stopGateDecision,
+} from '../src/commands/hook.js';
+
+const ENFORCED: EnforcementConfig = { enabled: true, deny: [], stopGate: false };
+const OFF: EnforcementConfig = { enabled: false, deny: [], stopGate: false };
+const PID = '11111111-2222-4333-8444-555555555555';
 
 let root: string;
 
@@ -21,49 +29,155 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-describe('noir hook output', () => {
-  it('emits hookEventName + additionalContext when both files are present', () => {
-    mkdirSync(join(root, '.noir', 'rules'), { recursive: true });
-    writeFileSync(join(root, '.noir', 'router.md'), '# Noir skill router\n', 'utf8');
-    writeFileSync(join(root, '.noir', 'rules', 'anti-slop.md'), 'noir-debt: be lazy\n', 'utf8');
+function seed(): void {
+  mkdirSync(join(root, '.noir', 'rules'), { recursive: true });
+  writeFileSync(join(root, '.noir', 'router.md'), '# Noir skill router\n', 'utf8');
+  writeFileSync(join(root, '.noir', 'rules', 'anti-slop.md'), 'noir-debt: be lazy\n', 'utf8');
+  writeFileSync(join(root, '.noir', 'NOIR.md'), '# Baseline\ntypescript\n', 'utf8');
+}
 
-    const out = hookOutput('SessionStart', root);
+describe('noir hook dispatch', () => {
+  it('injects the compiled brief on SessionStart', () => {
+    seed();
+    const out = dispatch({ hook_event_name: 'SessionStart', cwd: root }, 'claude', ENFORCED, null);
+    const parsed = JSON.parse(out.stdout ?? '') as { hookSpecificOutput: Record<string, string> };
+    expect(parsed.hookSpecificOutput.hookEventName).toBe('SessionStart');
+    expect(parsed.hookSpecificOutput.additionalContext).toContain('# Noir skill router');
+    expect(parsed.hookSpecificOutput.additionalContext).toContain('noir-debt: be lazy');
+    expect(parsed.hookSpecificOutput.additionalContext).toContain('# Baseline');
+  });
 
-    expect(out).toEqual({
-      hookSpecificOutput: {
-        hookEventName: 'SessionStart',
-        additionalContext: '# Noir skill router\n\nnoir-debt: be lazy',
-      },
+  it('omits additionalContext when no files exist', () => {
+    const out = dispatch({ hook_event_name: 'SessionStart', cwd: root }, 'claude', ENFORCED, null);
+    expect(JSON.parse(out.stdout ?? '')).toEqual({
+      hookSpecificOutput: { hookEventName: 'SessionStart' },
     });
   });
 
-  it('echoes the SubagentStart event name through', () => {
-    mkdirSync(join(root, '.noir'), { recursive: true });
-    writeFileSync(join(root, '.noir', 'router.md'), 'route me', 'utf8');
-
-    const out = hookOutput('SubagentStart', root);
-
-    expect((out.hookSpecificOutput as { hookEventName: string }).hookEventName).toBe(
-      'SubagentStart',
-    );
+  it('emits cursor additional_context on SessionStart', () => {
+    seed();
+    const out = dispatch({ hook_event_name: 'SessionStart', cwd: root }, 'cursor', ENFORCED, null);
+    const parsed = JSON.parse(out.stdout ?? '') as { additional_context: string };
+    expect(parsed.additional_context).toContain('# Baseline');
   });
 
-  it('keeps hookEventName but omits additionalContext when no files exist', () => {
-    const out = hookOutput('SessionStart', root);
-
-    expect(out).toEqual({ hookSpecificOutput: { hookEventName: 'SessionStart' } });
-  });
-
-  it('finds .noir/ by walking up from a subdirectory', () => {
-    mkdirSync(join(root, '.noir'), { recursive: true });
-    writeFileSync(join(root, '.noir', 'router.md'), 'from root', 'utf8');
+  it('finds .noir/ walking up from a subdirectory', () => {
+    seed();
     const sub = join(root, 'a', 'b');
     mkdirSync(sub, { recursive: true });
+    expect(findNoirRoot(sub)).toBe(root);
+  });
 
-    const out = hookOutput('SessionStart', sub);
-
-    expect((out.hookSpecificOutput as { additionalContext: string }).additionalContext).toContain(
-      'from root',
+  it('denies a protected write on claude with a reason', () => {
+    seed();
+    const out = dispatch(
+      {
+        hook_event_name: 'PreToolUse',
+        cwd: root,
+        tool_name: 'Write',
+        tool_input: { file_path: '.noir/.env' },
+      },
+      'claude',
+      ENFORCED,
+      null,
     );
+    const parsed = JSON.parse(out.stdout ?? '') as { hookSpecificOutput: Record<string, string> };
+    expect(parsed.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(parsed.hookSpecificOutput.permissionDecisionReason).toContain('.noir/.env');
+  });
+
+  it('denies on gemini via exit 2 + stderr reason', () => {
+    seed();
+    const out = dispatch(
+      {
+        hook_event_name: 'PreToolUse',
+        cwd: root,
+        tool_name: 'Write',
+        tool_input: { file_path: '.noir/.env' },
+      },
+      'gemini',
+      ENFORCED,
+      null,
+    );
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain('.noir/.env');
+  });
+
+  it('passes a normal source write', () => {
+    const out = dispatch(
+      {
+        hook_event_name: 'PreToolUse',
+        cwd: root,
+        tool_name: 'Write',
+        tool_input: { file_path: 'src/index.ts' },
+      },
+      'claude',
+      ENFORCED,
+      null,
+    );
+    expect(out.exitCode).toBe(0);
+    expect(out.stdout).toBeUndefined();
+  });
+
+  it('passes when enforcement is disabled', () => {
+    const out = dispatch(
+      {
+        hook_event_name: 'PreToolUse',
+        cwd: root,
+        tool_name: 'Write',
+        tool_input: { file_path: '.noir/.env' },
+      },
+      'claude',
+      OFF,
+      null,
+    );
+    expect(out.exitCode).toBe(0);
+  });
+
+  it('blocks Stop when the gate decision is a block', () => {
+    const out = dispatch(
+      { hook_event_name: 'Stop', cwd: root },
+      'claude',
+      { enabled: true, deny: [], stopGate: true },
+      { block: true, reason: 'verify pending' },
+    );
+    expect(JSON.parse(out.stdout ?? '')).toEqual({ decision: 'block', reason: 'verify pending' });
+  });
+
+  it('passes Stop with no gate decision', () => {
+    const out = dispatch({ hook_event_name: 'Stop', cwd: root }, 'claude', ENFORCED, null);
+    expect(out.exitCode).toBe(0);
+    expect(out.stdout).toBeUndefined();
+  });
+
+  it('passes an unknown event', () => {
+    const out = dispatch({ hook_event_name: 'Notification', cwd: root }, 'claude', ENFORCED, null);
+    expect(out.exitCode).toBe(0);
+    expect(out.stdout).toBeUndefined();
+  });
+});
+
+describe('compileBrief', () => {
+  it('truncates under the budget', () => {
+    mkdirSync(join(root, '.noir'), { recursive: true });
+    writeFileSync(join(root, '.noir', 'router.md'), 'x'.repeat(12000), 'utf8');
+    const brief = compileBrief(root);
+    expect(brief.length).toBeLessThanOrEqual(9200);
+    expect(brief).toContain('context truncated');
+  });
+});
+
+describe('stopGateDecision', () => {
+  it('fails open with no store', async () => {
+    expect(await stopGateDecision(root)).toBeNull();
+  });
+
+  it('does not block a fresh intake task', async () => {
+    mkdirSync(join(root, '.noir'), { recursive: true });
+    writeFileSync(join(root, '.noir', 'project.id'), PID, 'utf8');
+    const store = await openStore({ projectId: PID, root });
+    const engine = new WorkflowEngine(store, root, PID);
+    await engine.startTask('t1', 'demo', 'full');
+    expect(await stopGateDecision(root)).toBeNull();
   });
 });

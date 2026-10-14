@@ -1319,6 +1319,44 @@ function fixOwnerOnlyPermissions(root: string, project: ProjectInfo | undefined)
  * the command produced a diagnosis). The exit code carries health: 0 when no
  * check failed, 1 when any CRITICAL (`fail`) check is unhealthy.
  */
+/** The honest per-host enforcement coverage: which gates are ENFORCED vs
+ *  advisory-only, and the resolved fail-mode. Never `fail` — it is a report of
+ *  what the chosen host can actually do, not a defect. */
+const ENFORCEMENT_COVERAGE: Record<HostId, { status: Severity; detail: string }> = {
+  claude: {
+    status: 'ok',
+    detail:
+      'deny ENFORCED via PreToolUse (survives bypassPermissions); Stop gate opt-in; fail-open by default (onFailure:"block" needs Claude Code v2.1.295+)',
+  },
+  gemini: {
+    status: 'ok',
+    detail: 'deny ENFORCED via BeforeTool (the turn continues after a deny); fail-open by default',
+  },
+  cursor: {
+    status: 'ok',
+    detail:
+      'deny ENFORCED via preToolUse (failClosed); session-start context injection is fire-and-forget',
+  },
+  opencode: {
+    status: 'warn',
+    detail: 'context-only — the plugin hook surface is unverified, so no deny hook is emitted',
+  },
+  'agents-md': {
+    status: 'warn',
+    detail: 'context-only — AGENTS.md is advisory and has no hook surface, so nothing is enforced',
+  },
+};
+
+/** One row: the enforcement coverage for the resolved host. */
+function checkEnforcementCoverage(checks: CheckResult[], project: ProjectInfo | undefined): void {
+  if (project === undefined) {
+    checks.push({ name: 'enforcement', status: 'ok', detail: 'skipped — not initialized' });
+    return;
+  }
+  const coverage = ENFORCEMENT_COVERAGE[project.config.host];
+  checks.push({ name: 'enforcement', status: coverage.status, detail: coverage.detail });
+}
+
 export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   const root = process.cwd();
   const checks: CheckResult[] = [];
@@ -1347,6 +1385,7 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   const host = checkHostArtifacts(checks, root, project);
   checkNestedNoir(checks, root);
   checkOutputHygiene(checks, root);
+  checkEnforcementCoverage(checks, project);
   if (opts.dedup === true) {
     await checkSemanticDupDoctor(checks, root, project);
   }

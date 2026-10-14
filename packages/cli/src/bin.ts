@@ -484,6 +484,7 @@ export function createProgram(): Command {
     )
     .option('--dry-run', 'report planned writes without writing anything')
     .option('--preview', 'alias for --dry-run')
+    .option('--check', 'exit non-zero when a managed file would change (CI drift gate)')
     .addOption(
       // Opt OUT of managed-region merge (restore strip-replace). Commander
       // stores `--no-merge-regions` under `mergeRegions` (default true; flag →
@@ -511,6 +512,7 @@ export function createProgram(): Command {
           mergeRegions?: boolean;
           dryRun?: boolean;
           preview?: boolean;
+          check?: boolean;
         },
         cmd: Command,
       ) => {
@@ -523,12 +525,13 @@ export function createProgram(): Command {
         const noMergeRegions = opts.mergeRegions === false;
         // --dry-run/--preview collapse to a single dryRun boolean.
         const dryRun = opts.dryRun === true || opts.preview === true;
+        const check = opts.check === true;
         // Single-positional regression anchor: when no `--host`/`--force`/`--merge`/
-        // `--no-merge-regions`/`--dry-run` is given, call `sync(cwd)` exactly
-        // (bin.test.ts pins this). Only spread the opts bag when a flag was
+        // `--no-merge-regions`/`--dry-run`/`--check` is given, call `sync(cwd)`
+        // exactly (bin.test.ts pins this). Only spread the opts bag when a flag was
         // explicit so the default-args snapshot stays green.
         const result =
-          host === undefined && !force && !merge && !noMergeRegions && !dryRun
+          host === undefined && !force && !merge && !noMergeRegions && !dryRun && !check
             ? await sync(process.cwd())
             : await sync(process.cwd(), {
                 ...(host !== undefined ? { host } : {}),
@@ -536,6 +539,7 @@ export function createProgram(): Command {
                 ...(merge ? { merge } : {}),
                 ...(noMergeRegions ? { mergeManagedRegions: false } : {}),
                 ...(dryRun ? { dryRun } : {}),
+                ...(check ? { check } : {}),
               });
         // ScaffoldResult gap close: surface the structured ScaffoldResult (with
         // `conflicts[]`) on stdout under `--json`, wrapped in the `{ok, data}`
@@ -765,9 +769,14 @@ export function createProgram(): Command {
   // contract with the host, not a user command (see commands/hook.ts).
   program
     .command('hook', { hidden: true })
-    .description('host hook runner (SessionStart / SubagentStart context injection)')
-    .action(async () => {
-      await hook();
+    .description('host hook runner (lifecycle injection + enforcement)')
+    .option(
+      '--host <id>',
+      'host whose decision dialect to emit (claude | gemini | cursor)',
+      'claude',
+    )
+    .action(async (opts: { host?: string }) => {
+      await hook(opts.host);
     });
 
   const contextGrp = program.command('context').description('context engine');
