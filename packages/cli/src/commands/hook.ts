@@ -97,6 +97,19 @@ function resolveEnforcement(cfg: NoirConfig | undefined): EnforcementConfig {
   };
 }
 
+/** Map a host's event spelling to a canonical kind. Each host names its events
+ *  differently (claude: SessionStart/PreToolUse/Stop; gemini: SessionStart/
+ *  BeforeTool; cursor: sessionStart/preToolUse/stop), but they mean the same
+ *  three behaviors. Case-insensitive so cursor's lowercase names match. */
+function canonicalEvent(event: string): 'inject' | 'subagent' | 'pre-tool' | 'stop' | 'unknown' {
+  const e = event.toLowerCase();
+  if (e === 'sessionstart') return 'inject';
+  if (e === 'subagentstart') return 'subagent';
+  if (e === 'pretooluse' || e === 'beforetool') return 'pre-tool';
+  if (e === 'stop') return 'stop';
+  return 'unknown';
+}
+
 /**
  * The pure, testable dispatch. Given the parsed hook input, the host dialect,
  * the resolved enforcement config, and a precomputed Stop-gate decision (from
@@ -109,8 +122,9 @@ export function dispatch(
   stopGate: { block: true; reason: string } | null,
 ): HookDispatchResult {
   const event = input.hook_event_name ?? 'SessionStart';
+  const kind = canonicalEvent(event);
 
-  if (event === 'SessionStart' || event === 'SubagentStart') {
+  if (kind === 'inject' || kind === 'subagent') {
     const brief = compileBrief(findNoirRoot(input.cwd ?? process.cwd()) ?? process.cwd());
     if (host === 'cursor') {
       return brief === ''
@@ -122,7 +136,7 @@ export function dispatch(
     return { exitCode: 0, stdout: JSON.stringify({ hookSpecificOutput: envelope }) };
   }
 
-  if (event === 'PreToolUse') {
+  if (kind === 'pre-tool') {
     if (!enforcement.enabled) return { exitCode: 0 };
     const denied = evaluateDeny(enforcement.deny, input.tool_name ?? '', input.tool_input);
     if (!denied) return { exitCode: 0 };
@@ -142,7 +156,7 @@ export function dispatch(
     return { exitCode: 2, stderr: denied.reason };
   }
 
-  if (event === 'Stop') {
+  if (kind === 'stop') {
     if (enforcement.stopGate && stopGate && host === 'claude') {
       return {
         exitCode: 0,
@@ -175,7 +189,14 @@ export async function stopGateDecision(
     if (task.state === 'done' || task.state === 'abandoned' || task.state === 'blocked') {
       return null;
     }
-    if (task.phase === 'execute' || task.phase === 'verify') {
+    if (task.phase === 'execute') {
+      return {
+        block: true,
+        reason:
+          'implementation is in progress — finish it and run `noir task verify` before stopping',
+      };
+    }
+    if (task.phase === 'verify') {
       return {
         block: true,
         reason: 'verification is pending — run `noir task verify` before stopping',

@@ -86,11 +86,11 @@ describe('noir hook dispatch', () => {
     expect(parsed.hookSpecificOutput.permissionDecisionReason).toContain('.noir/.env');
   });
 
-  it('denies on gemini via exit 2 + stderr reason', () => {
+  it('denies on gemini via exit 2 + stderr reason (BeforeTool event)', () => {
     seed();
     const out = dispatch(
       {
-        hook_event_name: 'PreToolUse',
+        hook_event_name: 'BeforeTool',
         cwd: root,
         tool_name: 'Write',
         tool_input: { file_path: '.noir/.env' },
@@ -101,6 +101,30 @@ describe('noir hook dispatch', () => {
     );
     expect(out.exitCode).toBe(2);
     expect(out.stderr).toContain('.noir/.env');
+  });
+
+  it('denies on cursor via exit 2 + stderr reason (preToolUse event)', () => {
+    seed();
+    const out = dispatch(
+      {
+        hook_event_name: 'preToolUse',
+        cwd: root,
+        tool_name: 'Write',
+        tool_input: { file_path: '.noir/.env' },
+      },
+      'cursor',
+      ENFORCED,
+      null,
+    );
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain('.noir/.env');
+  });
+
+  it('injects the brief on cursor sessionStart', () => {
+    seed();
+    const out = dispatch({ hook_event_name: 'sessionStart', cwd: root }, 'cursor', ENFORCED, null);
+    const parsed = JSON.parse(out.stdout ?? '') as { additional_context: string };
+    expect(parsed.additional_context).toContain('# Baseline');
   });
 
   it('passes a normal source write', () => {
