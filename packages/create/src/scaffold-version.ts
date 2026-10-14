@@ -19,8 +19,8 @@ import { regenerate } from './writers.js';
  *  the migration that points a joined repo's MCP entry back at the workspace
  *  bridge; 1.4.0 adds the migration that moves the SessionStart hook command off
  *  the `.mjs` runner and onto `noir hook`; 1.5.0 adds the migration that appends
- *  the PreToolUse + Stop enforcement events to an existing claude hook (see
- *  migrations/index.ts). */
+ *  the enforcement events to an existing claude hook and backfills the gemini
+ *  hook (see migrations/index.ts). */
 export const CURRENT_SCAFFOLD_VERSION = '1.5.0';
 
 const PREFIX = 'noir-scaffold=';

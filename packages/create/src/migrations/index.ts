@@ -29,7 +29,8 @@ export type { MigrationContext, MigrationResult, MigrationScript } from './types
  * `1.2.0 → 1.3.0`, which repairs the stale workspace pointer a repo that joined
  * a workspace under the older flow still carries, `1.3.0 → 1.4.0`, which moves
  * the SessionStart hook command onto `noir hook`, and `1.4.0 → 1.5.0`, which
- * appends the PreToolUse + Stop enforcement events to the claude hook.
+ * appends the enforcement events to the claude hook and backfills the gemini
+ * hook.
  *
  * Convention:
  *  - `from`/`to` are bare `x.y.z` (no `v` prefix, no pre-release); the runner

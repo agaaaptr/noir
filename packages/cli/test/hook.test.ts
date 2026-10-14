@@ -166,6 +166,17 @@ describe('noir hook dispatch', () => {
     expect(JSON.parse(out.stdout ?? '')).toEqual({ decision: 'block', reason: 'verify pending' });
   });
 
+  it('does not block Stop when enforcement is disabled', () => {
+    const out = dispatch(
+      { hook_event_name: 'Stop', cwd: root },
+      'claude',
+      { enabled: false, deny: [], stopGate: true },
+      { block: true, reason: 'verify pending' },
+    );
+    expect(out.exitCode).toBe(0);
+    expect(out.stdout).toBeUndefined();
+  });
+
   it('passes Stop with no gate decision', () => {
     const out = dispatch({ hook_event_name: 'Stop', cwd: root }, 'claude', ENFORCED, null);
     expect(out.exitCode).toBe(0);

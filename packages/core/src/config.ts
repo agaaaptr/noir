@@ -510,7 +510,7 @@ export const NoirConfigSchema = z.object({
         .boolean()
         .default(true)
         .describe(
-          'Evaluate the deny-list + built-in guards (the hook is emitted regardless and exits 0 when disabled)',
+          'Master switch: the deny-list, the built-in guards, and the opt-in Stop gate all stop when this is false (the hook is emitted regardless and exits 0 when disabled)',
         ),
       deny: z
         .array(

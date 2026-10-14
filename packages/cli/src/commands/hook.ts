@@ -160,7 +160,7 @@ export function dispatch(
   }
 
   if (kind === 'stop') {
-    if (enforcement.stopGate && stopGate && host === 'claude') {
+    if (enforcement.enabled && enforcement.stopGate && stopGate && host === 'claude') {
       return {
         exitCode: 0,
         stdout: JSON.stringify({ decision: 'block', reason: stopGate.reason }),
@@ -231,7 +231,11 @@ export async function hook(hostArg?: string): Promise<void> {
   const enforcement = resolveEnforcement(readProjectConfig(root));
 
   let stopGate: { block: true; reason: string } | null = null;
-  if (canonicalEvent(input.hook_event_name ?? '') === 'stop' && enforcement.stopGate) {
+  if (
+    enforcement.enabled &&
+    canonicalEvent(input.hook_event_name ?? '') === 'stop' &&
+    enforcement.stopGate
+  ) {
     stopGate = await stopGateDecision(root);
   }
 
