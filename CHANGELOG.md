@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.19.0 (2026-10-14) — host governance + noir-e2e
+
+### Added
+- **`noir hook` is now an event dispatcher, not just a SessionStart injector.** `SessionStart`/`SubagentStart` inject a budgeted brief (the router + the always-on rules; the project baseline reaches the model via the host's own `@import` of `.noir/NOIR.md`). `PreToolUse` evaluates a deny-list; `Stop` gates verification (opt-in). The dispatcher emits each host's own decision dialect: claude gets a JSON `permissionDecision:"deny"`, gemini/cursor get exit 2 + a stderr reason.
+- **A per-host hook seam (`HostAdapter.emitHooks`).** claude wires SessionStart + SubagentStart + PreToolUse + Stop; gemini wires SessionStart + BeforeTool; cursor wires sessionStart + preToolUse. opencode/agents-md emit nothing (their hook surface is unverified or absent), and `noir doctor` reports that honestly.
+- **A built-in deny guard** protects `.noir/.env` (secrets) and `.noir/store/` (the single-writer DB) against file writes and Bash commands, with path normalization so `.noir/./.env` is not an escape. Config rules extend it via `enforcement.deny` (`{ tool?, pattern, reason }`).
+- **Project baseline priming.** The derivable facts (stack, package manager, CI, canonical commands, entry points) are serialized into the `.noir/NOIR.md` brief block instead of being discarded.
+- **`noir sync --check`** — a compare-only drift gate that exits non-zero when a managed artifact would change.
+- **`noir doctor` enforcement coverage** — a per-host row stating whether gates are enforced or context-only, and whether enforcement is disabled.
+- **`noir-e2e` builtin skill** (33 builtins + 1 integration = 34 skills). It adopts the hybrid e2e doctrine: a natural-language goal the host agent drives, pinned by deterministic locator assertions, framework-agnostic (Playwright/Cypress/vitest, no new dependency), with references for authoring, running, debugging, explore, bug-bash, and registering the run as a verify-gate check.
+
+### Changed
+- **Scaffold migration `1.4.0 → 1.5.0`** (`CURRENT_SCAFFOLD_VERSION` bumped): appends the `PreToolUse` + `Stop` events to an existing claude hook and backfills the gemini hook (`SessionStart` + `BeforeTool`). cursor needs no migration (its hook file is regenerate-mode and re-emitted on sync).
+- **`enforcement.enabled` is the master switch.** It gates the deny-list, the built-in guards, and the opt-in Stop gate together; the hook is still emitted when disabled but exits 0 on every event.
+
+### Upgrade steps
+1. **Run `noir init --upgrade`.** It runs the `1.4.0 → 1.5.0` migration, which appends the enforcement events to an existing claude hook and backfills the gemini hook. cursor's `.cursor/hooks.json` is refreshed by a plain `noir sync`.
+
 ## 1.18.0 (2026-10-09) — SessionStart hook re-architecture + prose sweep
 
 ### Changed
