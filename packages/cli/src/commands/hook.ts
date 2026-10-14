@@ -229,7 +229,7 @@ export async function hook(hostArg?: string): Promise<void> {
   const enforcement = resolveEnforcement(readProjectConfig(root));
 
   let stopGate: { block: true; reason: string } | null = null;
-  if (input.hook_event_name === 'Stop' && enforcement.stopGate) {
+  if (canonicalEvent(input.hook_event_name ?? '') === 'stop' && enforcement.stopGate) {
     stopGate = await stopGateDecision(root);
   }
 

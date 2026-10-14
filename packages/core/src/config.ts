@@ -535,7 +535,7 @@ export const NoirConfigSchema = z.object({
       stopGate: z
         .boolean()
         .default(false)
-        .describe('Block Stop while the active workflow task has verification pending'),
+        .describe('Block Stop (claude) while the active workflow task has verification pending'),
     })
     .default({ enabled: true, deny: [], stopGate: false })
     .describe('Agent-loop enforcement (pre-tool deny + opt-in Stop gate)'),

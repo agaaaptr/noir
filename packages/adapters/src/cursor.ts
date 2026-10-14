@@ -51,13 +51,14 @@ export const cursorAdapter: HostAdapter = {
     // preToolUse evaluates the deny-list (the dispatcher exits 2 with the reason
     // on stderr — the verified "matches Claude Code behavior" block path), with
     // failClosed so a timing-out hook denies rather than silently allowing.
+    // No `stop` entry: the Stop gate is claude-only today, so a cursor stop hook
+    // would only spawn a process that always exits 0.
     const command = `"${ctx.command}" hook --host cursor`;
     const content = {
       version: 1,
       hooks: {
         sessionStart: [{ command }],
         preToolUse: [{ command, failClosed: true }],
-        stop: [{ command }],
       },
     };
     return [
@@ -65,7 +66,7 @@ export const cursorAdapter: HostAdapter = {
         path: '.cursor/hooks.json',
         mode: 'regenerate',
         content,
-        description: 'sessionStart + preToolUse + stop hooks (cursor)',
+        description: 'sessionStart + preToolUse hooks (cursor)',
       },
     ];
   },

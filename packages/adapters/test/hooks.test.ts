@@ -54,7 +54,7 @@ describe('emitHooks seam', () => {
       hooks: Record<string, Array<Record<string, unknown>>>;
     };
     expect(content.version).toBe(1);
-    expect(Object.keys(content.hooks).sort()).toEqual(['preToolUse', 'sessionStart', 'stop']);
+    expect(Object.keys(content.hooks).sort()).toEqual(['preToolUse', 'sessionStart']);
     expect(content.hooks.preToolUse[0].failClosed).toBe(true);
   });
 
