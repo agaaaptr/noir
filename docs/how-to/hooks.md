@@ -6,6 +6,12 @@ injects the project brief at session start and enforces the deny-list and Stop
 gate you configure under `enforcement` in `.noir/config.yml`. This page is about
 where that hook lives, when it stops being there, and how to put it back.
 
+> **`noir hook` (singular) is not a command for you.** It is the hidden, internal
+> dispatcher your host invokes with a JSON event on stdin — it is excluded from
+> `noir --help` and the command palette. The command you can run is the plural
+> one: `noir hooks sync` below. A one-letter mix-up between them is caught with a
+> "did you mean" hint rather than silently running the dispatcher.
+
 ## Where the hook lives
 
 | Host | File | Managed how |

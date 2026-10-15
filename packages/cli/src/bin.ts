@@ -76,6 +76,7 @@ import {
 } from './output.js';
 import { listProfiles, loadRunConfig } from './run-profiles.js';
 import { serve } from './serve.js';
+import { closestCommands } from './suggest.js';
 import { buildPaletteCommands } from './tui/commands/registry.js';
 import type { PaletteCommand } from './tui/palette/types.js';
 
@@ -244,6 +245,20 @@ export function emitDeprecationHintsFor(cmd: Command, opts: CliOptions): void {
   }
 }
 
+/** Top-level command names (plus aliases) for a "did you mean" hint on an
+ *  unknown command. Hidden commands are excluded — the `hook` dispatcher is the
+ *  host's internal contract, not a user command, and suggesting it would only
+ *  route the user into its own guard. */
+function topLevelCommandNames(program: Command): string[] {
+  const names: string[] = [];
+  for (const sub of program.commands) {
+    if ((sub as unknown as { _hidden?: boolean })._hidden === true) continue;
+    names.push(sub.name());
+    names.push(...sub.aliases());
+  }
+  return names;
+}
+
 export function createProgram(): Command {
   const program = new Command();
 
@@ -289,7 +304,12 @@ export function createProgram(): Command {
       // version to stdout does not conflict with --json payloads.
       writeOut: (str) => process.stdout.write(str),
       writeErr: (str) => process.stderr.write(str),
-    });
+    })
+    // "Did you mean …?" for a mistyped OPTION (e.g. `--forc` → `--force`).
+    // Unknown COMMANDS are handled by the program-level fallback action below
+    // (commander's own unknown-command suggestion never fires once an action is
+    // registered), so that path computes its own hint via `closestCommands`.
+    .showSuggestionAfterError();
 
   // --cwd: chdir before the action runs so the existing modules (which read
   // process.cwd()) honor it. actionCmd.optsWithGlobals() works on whichever
@@ -776,8 +796,21 @@ export function createProgram(): Command {
       'host whose decision dialect to emit (claude | gemini | cursor)',
       'claude',
     )
-    .action(async (opts: { host?: string }) => {
-      await hook(opts.host);
+    .action(async (...args: unknown[]) => {
+      const cmd = trailingCmd(args);
+      // The hidden dispatcher takes no positional arguments. A positional here
+      // is a human typo — most often `noir hooks sync` (plural). Fail with the
+      // hint instead of running the SessionStart injection (the empty/non-JSON
+      // stdin default), which would silently dump the brief as JSON.
+      if (cmd.args.length > 0) {
+        fail(
+          EXIT.USAGE,
+          '`noir hook` is the host-invoked lifecycle dispatcher and takes no arguments. Did you mean `noir hooks sync`?',
+          toCliOptions(cmd.optsWithGlobals()),
+        );
+      }
+      const g = cmd.optsWithGlobals();
+      await hook(typeof g.host === 'string' ? g.host : undefined);
     });
 
   const contextGrp = program.command('context').description('context engine');
@@ -1398,9 +1431,13 @@ export function createProgram(): Command {
     // silently routing the typo through home (which would exit 0).
     const leftovers = cmd.args;
     if (leftovers.length > 0) {
+      const unknown = String(leftovers[0]);
+      const suggestions = closestCommands(unknown, topLevelCommandNames(cmd));
+      const hint =
+        suggestions.length > 0 ? ` Did you mean \`noir ${suggestions.join('`, `')}\`?` : '';
       fail(
         EXIT.NOT_FOUND,
-        `unknown command '${leftovers[0]}' (no such subcommand). Run \`noir --help\` for the list.`,
+        `unknown command '${unknown}' (no such subcommand).${hint} Run \`noir --help\` for the list.`,
         toCliOptions(cmd.optsWithGlobals()),
       );
     }

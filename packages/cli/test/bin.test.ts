@@ -161,6 +161,18 @@ describe('commander migration — exit codes + stream discipline', () => {
     expect(r.exitCode).toBe(EXIT.NOT_FOUND);
   });
 
+  it('unknown command near a real command → "did you mean" hint', async () => {
+    const r = await parse(['statsu']);
+    expect(r.exitCode).toBe(EXIT.NOT_FOUND);
+    expect(r.stderr).toMatch(/Did you mean `noir status`\?/);
+  });
+
+  it('`noir hook sync` (singular typo) → usage hint, never runs the dispatcher', async () => {
+    const r = await parse(['hook', 'sync']);
+    expect(r.exitCode).toBe(EXIT.USAGE);
+    expect(r.stderr).toMatch(/Did you mean `noir hooks sync`\?/);
+  });
+
   it('bare `noir` (non-TTY) → routes through home(), exit 0', async () => {
     // The test env is non-TTY (stdin/stdout not TTY) → home's non-interactive
     // arm runs (dispatches to `status`). home is mocked → no-op; the wiring

@@ -9,6 +9,7 @@ import {
 } from '@noir-ai/core';
 import { openStore } from '@noir-ai/store';
 import { WorkflowEngine } from '@noir-ai/workflow';
+import { EXIT } from '../output.js';
 
 /**
  * `noir hook` — the host-invoked lifecycle-hook dispatcher.
@@ -219,6 +220,17 @@ function resolveHost(hostArg: string | undefined): DialectHost {
 
 /** The async entry point `bin.ts` wires to `noir hook`. */
 export async function hook(hostArg?: string): Promise<void> {
+  // The host always pipes a JSON event on stdin, so an interactive TTY stdin
+  // means a human ran `noir hook` directly — it would otherwise block waiting on
+  // stdin, or (when stdin is empty and non-TTY) silently default to a
+  // SessionStart injection. Point at the real user-facing command instead.
+  if (process.stdin.isTTY) {
+    process.stderr.write(
+      '`noir hook` is the host-invoked lifecycle dispatcher, not a user command. Did you mean `noir hooks sync`?\n',
+    );
+    process.exitCode = EXIT.USAGE;
+    return;
+  }
   const host = resolveHost(hostArg);
   let input: HookInput = {};
   try {
