@@ -228,4 +228,33 @@ describe('mergeJson', () => {
     expect(merged.permissions).toEqual({ allow: ['Bash(git *)'] });
     expect(merged.hooks.SessionStart.length).toBe(1);
   });
+
+  it('force drops a drifted Noir-owned entry and keeps a user hook', () => {
+    const f = join(dir, 'settings.local.json');
+    writeFileSync(
+      f,
+      JSON.stringify({
+        permissions: { allow: ['Bash(git *)'] },
+        hooks: {
+          SessionStart: [
+            { hooks: [{ type: 'command', command: '"noir" hook' }] },
+            { hooks: [{ type: 'command', command: 'my-own-notifier' }] },
+          ],
+        },
+      }),
+      'utf8',
+    );
+    const patch = {
+      hooks: { SessionStart: [{ hooks: [{ type: 'command', command: '"/shim/noir" hook' }] }] },
+    };
+    mergeJson(f, patch, ' hook', true);
+
+    const merged = JSON.parse(readFileSync(f, 'utf8'));
+    expect(merged.permissions).toEqual({ allow: ['Bash(git *)'] });
+    // The drifted Noir entry was replaced by the patch, the user's own hook stays.
+    expect(merged.hooks.SessionStart).toEqual([
+      { hooks: [{ type: 'command', command: 'my-own-notifier' }] },
+      { hooks: [{ type: 'command', command: '"/shim/noir" hook' }] },
+    ]);
+  });
 });

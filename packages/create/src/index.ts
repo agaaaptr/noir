@@ -23,6 +23,11 @@
 // --- Ancestor store (three-way managed-region merge; opt-in) ---
 export { ancestorsPath, readAncestors, writeAncestors } from './ancestors.js';
 export {
+  type EmitHooksResult,
+  emitHooksToFile,
+  type HookEmitOutcome,
+} from './hooks.js';
+export {
   BRIEF_BLOCK,
   type BuildHostArtifactsContext,
   type BuildManifestContext,

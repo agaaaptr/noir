@@ -315,6 +315,7 @@ export function mergeJson(
   absPath: string,
   patch: Record<string, unknown>,
   dedupSubstring?: string,
+  force?: boolean,
 ): WriteOutcome {
   let existing: Record<string, unknown> = {};
   if (existsSync(absPath)) {
@@ -327,7 +328,7 @@ export function mergeJson(
     }
   }
 
-  const merged = deepMergePreservingHooks(existing, patch, dedupSubstring);
+  const merged = deepMergePreservingHooks(existing, patch, dedupSubstring, force);
   const content = `${JSON.stringify(merged, null, 2)}\n`;
 
   // Content-hash dedup — a no-op sync writes nothing.
@@ -364,11 +365,15 @@ function entryHasCommand(entry: unknown, marker: string): boolean {
 
 /** Deep-merge `patch` into `existing`. `hooks.*` arrays append-with-dedup
  *  (an entry whose command contains `dedupSubstring` is kept as-is, not
- *  re-added); other arrays replace only when present in the patch. */
+ *  re-added); other arrays replace only when present in the patch. With
+ *  `force`, an existing entry whose command carries the marker is DROPPED
+ *  before the patch entries are appended, so a drifted Noir-owned entry is
+ *  refreshed in place while entries the user added stay untouched. */
 function deepMergePreservingHooks(
   existing: Record<string, unknown>,
   patch: Record<string, unknown>,
   dedupSubstring?: string,
+  force?: boolean,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = { ...existing };
   for (const [key, value] of Object.entries(patch)) {
@@ -380,15 +385,18 @@ function deepMergePreservingHooks(
           ? (mergedHooks[event] as unknown[])
           : [];
         const patchEntries = Array.isArray(entries) ? entries : [];
+        const hasMarker = (x: unknown): boolean =>
+          dedupSubstring !== undefined && entryHasCommand(x, dedupSubstring);
         // Append-only with dedup: only add patch entries whose command does NOT
         // already contain the dedup marker (the Noir hook was registered before —
         // write-once, never clobbered). A patch entry whose command itself is
-        // missing is still added (caller bug, but non-fatal).
-        const alreadyRegistered =
-          dedupSubstring !== undefined &&
-          existingEntries.some((x) => entryHasCommand(x, dedupSubstring));
+        // missing is still added (caller bug, but non-fatal). `force` instead
+        // drops every marker-carrying entry first, then re-adds the patch.
+        const keptEntries =
+          force === true ? existingEntries.filter((x) => !hasMarker(x)) : existingEntries;
+        const alreadyRegistered = force !== true && existingEntries.some(hasMarker);
         const toAdd = alreadyRegistered ? [] : patchEntries;
-        mergedHooks[event] = [...existingEntries, ...toAdd];
+        mergedHooks[event] = [...keptEntries, ...toAdd];
       }
       out.hooks = mergedHooks;
     } else {

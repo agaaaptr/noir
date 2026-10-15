@@ -27,6 +27,7 @@ import { captureAmbientEnv, env } from './commands/env.js';
 import { type HandoffOptions, handoff } from './commands/handoff.js';
 import { type HomeDeps, home } from './commands/home.js';
 import { hook } from './commands/hook.js';
+import { hooksSync } from './commands/hooks.js';
 import {
   memoryCapture,
   memoryConsolidate,
@@ -965,6 +966,24 @@ export function createProgram(): Command {
     });
   skillsGrp.action(() => {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir skills list|sync|lint|registry');
+  });
+
+  // `hooks` group — the explicit restore path for a host lifecycle hook that was
+  // removed (or never written). In-process: the hook entry is a host config file,
+  // not daemon state. The hidden `noir hook` command above is the dispatcher the
+  // host invokes; this group manages the wiring that points at it.
+  const hooksGrp = program.command('hooks').description('host lifecycle hooks');
+  hooksGrp
+    .command('sync')
+    .description('re-emit the host hook entry (restore a removed hook)')
+    .option('--force', 'rewrite the existing Noir hook entry to the current command')
+    .action(async (...args: unknown[]) => {
+      const g = actionGlobals(args);
+      const force = g.force === true;
+      await hooksSync({ ...toCliOptions(g), ...(force ? { force } : {}) });
+    });
+  hooksGrp.action(() => {
+    throw new NoirCliError(EXIT.USAGE, 'Usage: noir hooks sync');
   });
 
   const taskGrp = program.command('task').description('workflow task control');

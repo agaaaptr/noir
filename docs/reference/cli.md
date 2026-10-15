@@ -42,6 +42,7 @@ Commands:
   context                           context engine
   memory                            memory engine
   skills                            builtin skills
+  hooks                             host lifecycle hooks
   task                              workflow task control
   install|migrate [options] [spec]  install Noir via the native managed-Node
                                     path (or migrate from another install
@@ -375,6 +376,22 @@ structural quality gate over the shipped pack
 **Usage:** `noir skills registry [options]`
 
 emit the runtime-derived skill registry
+
+### noir hooks
+
+**Usage:** `noir hooks [options] [command]`
+
+host lifecycle hooks
+
+### noir hooks sync
+
+**Usage:** `noir hooks sync [options]`
+
+re-emit the host hook entry (restore a removed hook)
+
+| Flag | Description |
+|---|---|
+| `--force` | rewrite the existing Noir hook entry to the current command |
 
 ### noir task
 
