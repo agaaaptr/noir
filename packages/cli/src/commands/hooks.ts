@@ -41,9 +41,7 @@ export async function hooksSync(opts: HooksOptions): Promise<void> {
     fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
   }
 
-  const result = emitHooksToFile(root, project.config.host, {
-    ...(opts.force === true ? { force: true } : {}),
-  });
+  const result = emitHooksToFile(root, project.config.host, { force: opts.force === true });
 
   if (result.outcomes.length === 0) {
     const data = { host: project.config.host, outcomes: [], reason: 'no-hook-emitter' };
