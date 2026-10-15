@@ -66,6 +66,8 @@ noir init
 | `.noir/NOIR.md` | The canonical context file. The host merely `@import`s it. |
 | `.noir/README.md` | The co-owned `.noir/` runtime map — a self-documenting map of what lives in `.noir/` and what appears later. Noir keeps the managed block current; your own notes outside it survive. |
 | `.noir/rules/RULES.md` | The Noir-curated rules seed; wired into the host context file via a managed `RULES_BLOCK`. |
+| `.noir/rules/anti-slop.md` | The always-on writing rules (anti-slop + concision), injected into each session brief by the lifecycle hook — not `@import`ed into the host context. |
+| `.noir/router.md` | The session brief's routing guide, injected by the hook alongside the rules above. |
 | `.noir/scaffold-version` | The scaffold-engine version stamp; `noir doctor` reports drift, `noir init --upgrade` runs migrations. |
 | `.mcp.json` | The MCP server entry Claude Code reads. |
 | `CLAUDE.md` | A managed `@import ".noir/NOIR.md"` block is inserted (existing content is preserved). |
@@ -289,6 +291,7 @@ which value is in effect (`noir env`) —
 - [memory.md](how-to/memory.md): save, recall, capture, consolidate, forget.
 - [context-and-handoff.md](how-to/context-and-handoff.md): index and search the codebase, and hand a session over (`noir handoff` / `noir wrap`).
 - [shared-workspaces.md](how-to/shared-workspaces.md): share decision memory across repositories (BE ↔ FE) through one workspace daemon.
+- [hooks.md](how-to/hooks.md): restore the host lifecycle hook (`noir hooks sync`) after you remove it.
 - [CLI Reference](reference/cli.md): every command (auto-generated from `noir --help`). The `.noir/config.yml` schema is in [config.md](reference/config.md).
 - [Architecture](explanation/architecture.md): how the 11 packages fit together.
 - [roadmap/](roadmap/): project direction, capability index, releases & version targets.
