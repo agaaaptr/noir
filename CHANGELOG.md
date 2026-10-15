@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.19.2 (2026-10-15) — typo suggestions + hook-command guard
+
+### Added
+- **"Did you mean" hints for mistyped commands and options.** An unknown command now suggests the closest real command (stdlib-only Levenshtein, ≤3 edits, up to 3 candidates) instead of a bare "unknown command" — `noir statsu` → `Did you mean 'noir status'?`. Mistyped options get the same treatment through commander's built-in `.showSuggestionAfterError()` — `noir sync --forc` → `--force`.
+
+### Fixed
+- **`noir hook sync` (a one-letter typo of `noir hooks sync`) silently ran the internal dispatcher and dumped the SessionStart brief as JSON.** The hidden `noir hook` command swallowed the excess positional and defaulted an empty stdin to a SessionStart injection. It now rejects positional arguments with a "did you mean `noir hooks sync`?" hint (exit 2), and a bare `noir hook` on an interactive terminal also errors instead of blocking on stdin or injecting the brief. The write-once hook contract is unchanged.
+
+### Upgrade steps
+1. **Nothing to do.** This release changes only the CLI's own typo handling; no scaffold migration, no config change, no re-init.
+
 ## 1.19.1 (2026-10-15) — `noir hooks sync` (host hook restore)
 
 ### Added
