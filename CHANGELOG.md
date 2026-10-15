@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.19.1 (2026-10-15) — `noir hooks sync` (host hook restore)
+
+### Added
+- **`noir hooks sync`** — the explicit restore path for a removed lifecycle hook. The claude/gemini hook entry is write-once (`mergeJson` — the file is user-owned, and a re-emit would resurrect a hook the user deliberately removed), so once removed nothing could restore it. The new command re-emits the entry through the same `adapter.emitHooks` seam the scaffold uses: a missing entry is re-added, an already-present one is a no-op, and every other key in the file (permissions, env, the user's own hooks) is preserved. `--force` additionally rewrites Noir-owned entries (those carrying the dedup marker) to the currently resolved command, so a drifted command (npm-global `noir` vs the native shim) is refreshed without touching the user's own hooks. In-process (no daemon), non-interactive, scriptable under `--json`. cursor needs no restore (its hook file is regenerate-mode, refreshed by `noir sync`); the command rewrites it honestly and idempotently anyway. `noir init --upgrade` and `noir sync` still never touch `mergeJson` files — the write-once default is unchanged.
+- **A how-to for hook management** (`docs/how-to/hooks.md`): where the hook lives per host, when it goes missing, and how to restore it. The getting-started `.noir/` layout table now lists the two hook-injected files (`rules/anti-slop.md`, `router.md`), and the related-guides list points at the new page. ADR-0014 records the write-once contract, the gap, and the decision.
+
+### Changed
+- **`@noir-ai/create` `mergeJson` gained an optional `force` parameter** (backwards compatible; existing call sites unchanged): with `force`, an existing entry whose command carries the dedup marker is dropped before the patch entries are appended, so Noir-owned entries refresh in place while entries the user added stay untouched. A new engine function `emitHooksToFile(root, host, { force })` composes `resolveAdapter(host).emitHooks()` with the writers — the primitive behind the new command.
+
+### Upgrade steps
+1. **Nothing is rewritten automatically.** If you removed the hook from `.claude/settings.local.json` (claude) or `.gemini/settings.json` (gemini) and want it back, run `noir hooks sync`. Projects that never removed it need no step.
+
 ## 1.19.0 (2026-10-14) — host governance + noir-e2e
 
 ### Added

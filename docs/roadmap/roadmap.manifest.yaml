@@ -4,7 +4,7 @@ current_phase: shipped
 
 active_capability: null
 
-active_slice: null  # SessionStart hook re-architecture + prose sweep shipped as 1.18.0 (2026-10-09)
+active_slice: null  # host governance + noir-e2e shipped as 1.19.0; noir hooks sync shipped as 1.19.1 (2026-10-15)
 
 roadmap:
   - id: C1
@@ -41,6 +41,7 @@ roadmap:
     title: Host Abstraction Layer
     status: partial
     priority: high
+    note: "2026-10-15 (1.19.1): `noir hooks sync` restores a removed host lifecycle hook — the claude/gemini hook entry is write-once (`mergeJson`), so the command re-emits it through the `adapter.emitHooks` seam (`--force` refreshes a drifted command). `@noir-ai/create` gains a `mergeJson` `force` variant + `emitHooksToFile`; ADR-0014 records the write-once contract."
 
   - id: C6
     title: Documentation & Knowledge System
