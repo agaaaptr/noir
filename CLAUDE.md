@@ -104,6 +104,9 @@ pnpm release:tag    # creates vX.Y.Z-beta.1 (auto-computes beta number from npm)
 git push origin vX.Y.Z-beta.1
 # Open GitHub Actions → approve "Review deployments → Approve and deploy"
 # Wait: completed success → verify: npm view @noir-ai/cli dist-tags beta = X.Y.Z-beta.1
+# NOTE: npm replication lags per package (larger packages like @noir-ai/cli propagate last). Poll
+#   `npm view @noir-ai/cli dist-tags beta` until it returns X.Y.Z-beta.1 before proceeding; one package
+#   still 404 while another already shows the new version is normal propagation delay, not a failed publish.
 
 # 5. MERGE develop → main + PUSH
 git checkout develop && git pull --ff-only   # CI pushes registry back
@@ -115,7 +118,7 @@ git checkout main && git merge --ff-only develop && git push origin main
 # Run docs/verification-gate.md to completion (SCAN → FIX → RESCAN → VERIFY, zero findings).
 pnpm release:tag    # creates vX.Y.Z (plain, no suffix)
 git push origin vX.Y.Z
-# Approve → wait → verify: npm view @noir-ai/cli dist-tags latest = X.Y.Z
+# Approve → wait → verify: npm view @noir-ai/cli dist-tags latest = X.Y.Z  (same propagation note as step 4)
 
 # 8. BUMP Homebrew + Scoop then SYNC branches
 # Edit packaging/homebrew/noir.rb: url/sha256/version from npm
@@ -125,6 +128,14 @@ git add packaging/ && git commit -m "chore(dist): bump Homebrew + Scoop to X.Y.Z
 git push origin main
 git checkout develop && git merge --ff-only main && git push origin develop
 # Verify: git ls-remote origin develop main → both same SHA
+
+# 9. FINAL DOCS SWEEP (post-publish: the managed version blocks now see the new npm latest/beta)
+pnpm docs:generate    # refresh noir:doc:status blocks + generated reference docs to the new version
+pnpm docs:validate
+# grep for stale "X.Y.Z-1 is the latest published" refs (capability-09 + any capability doc), fix any, then:
+git add -A && git commit -m "docs: final sweep — sync latest=X.Y.Z + stale refs"
+git push origin develop && git checkout main && git merge --ff-only develop && git push origin main
+# Verify: git ls-remote origin develop main → both same SHA; git status clean
 ```
 
 ### Key invariants
