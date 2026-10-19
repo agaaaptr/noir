@@ -58,14 +58,13 @@ Key invariants to respect:
 
 - **[`AGENTS.md`](AGENTS.md)** is the authoritative operational manual for developing Noir: toolchain contract, adding a package, the native-skills mechanism, privacy rules, commit discipline. **Read it for any code contribution.**
 - **`docs/roadmap/`** is the single source of truth for direction (capability index, status, releases, backlog).
-- **Project skills** in `.claude/skills/`: load **session-starter** at the start of a session (global project context: roadmap + memory + knowledge base), and **task-starter** before a task (task-level context). These use the mature plugins (agentmemory, context-mode) as references; Noir itself is not yet initialized in this repo.
+- **Noir is dogfooded in this repo.** `noir init` scaffolded `.noir/`, `.mcp.json`, and the 34 `noir-*` skills. Load **noir-sync** at session start (routes to the matching skill); `noir task`/`noir status` drive the SDD workflow, `noir context`/`noir memory` handle retrieval.
 
 ## Do not
 
 - Don't reintroduce a plugin / marketplace / `noir-workflow` surface: it was removed on purpose, because Noir ships only native `noir-` builtin skills and never an installed plugin/marketplace (see ADR-0002).
-- Don't commit secrets (API keys, npm tokens) or `.superpowers/` (local session scratch; gitignored).
+- Don't commit secrets (API keys, npm tokens).
 - Don't push to `main` without explicit go-ahead.
-- Don't require `noir init` to have been run in this repo: Noir is not yet mature/initialized here; the plugin stack (agentmemory, context-mode, superpowers) is the current context layer.
 - Don't write internal jargon: slice/task codes, roadmap codenames, or bare spec/plan/ADR section citations: in comments or docs; explain the why in self-contained plain language.
 - Don't dress comments and docs in decoration: banners drawn in punctuation, step-by-step narration, decorative emoji/icons, bare TODO/FIXME, or long unbroken comment blocks; write the reason instead. Enforced by `noir doctor`'s output-hygiene check and `noir skills lint` (see AGENTS.md).
 
@@ -146,3 +145,11 @@ git push origin develop && git checkout main && git merge --ff-only develop && g
 - **Both branches end at the same SHA.** After the Homebrew+Scoop bump + sync, `develop` and `main` must be identical.
 - **All 11 packages move together.** One version, one tag, one release.
 - **Never publish without the final comprehensive verification gate passing clean.** `docs/verification-gate.md` is the mandatory pre-publish gate (SCAN → IDENTIFY → FIX → RESCAN → VERIFY, repeat until zero findings); it runs before the beta tag and again before the stable tag.
+
+<!-- noir:context begin -->
+@import ".noir/NOIR.md"
+<!-- noir:context end -->
+
+<!-- noir:rules begin -->
+@import ".noir/rules/RULES.md"
+<!-- noir:rules end -->

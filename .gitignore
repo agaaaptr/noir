@@ -1,6 +1,3 @@
-# Local SDD / superpowers scratch (session planning state, not source)
-.superpowers/
-
 # Node-provision / test-run temp files+dirs (names derive from process.pid +
 # Date.now(), so they can never be a stable match otherwise — safety net against
 # `git add -A`). No trailing slash: node-provision writes `.archive-<pid>-<ts>.tmp`
@@ -21,16 +18,15 @@ coverage/
 # Release pack output (pnpm pack --pack-destination)
 artifacts/
 
-# Noir local runtime data (the SQLite store; .noir/config.yml, .noir/NOIR.md,
-# .noir/specs, .noir/plans, etc. are project state and may be committed).
-.noir/store/
-# Dogfooding secrets — a dev's local .noir/.env must never be committed.
-.noir/.env
-.noir/.env.*
-!.noir/.env.example
-# `noir run` transcripts contain raw host prompts/output (may include secrets).
-.noir/transcripts/
-# `noir handoff --write` prompts (session-local) + integration write-audit logs
-# (machine runtime data) — not reviewed source.
-.noir/handoff/
-.noir/audit/integration-*.jsonl
+# Noir runtime embedding/dedup cache — pending the 1.19.4 core gitignore fix.
+.noir/dedup-cache.json
+
+# >>> noir:ignore >>>
+/.noir/store/
+/.noir/handoff/
+/.noir/.env
+/.noir/.env.*
+!/.noir/.env.example
+/.noir/transcripts/
+/.noir/audit/integration-*.jsonl
+# <<< noir:ignore <<<

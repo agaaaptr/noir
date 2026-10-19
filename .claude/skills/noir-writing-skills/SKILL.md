@@ -1,0 +1,47 @@
+---
+name: noir-writing-skills
+description: Use when authoring or revising a Noir skill — ensure it is valid, WHEN+WHAT-described, structurally complete, and genuinely useful when invoked. Use when the user says "write a skill" or "update a skill". Do NOT use for general documentation.
+metadata:
+  category: meta
+  version: 1.0.0
+license: MIT
+compatibility: claude · agents-md · gemini · cursor · opencode
+---
+
+# noir-writing-skills
+
+The pack's authoring manual. Every skill must be: valid (passes `validateSkill`), structural (required sections), and genuinely useful (has concrete guidance the model doesn't already know). The meta-gate: `noir skills lint` reports pass/fail per skill.
+
+## When to use
+
+- Creating a new `noir-*` skill.
+- Revising an existing skill's body, description, or metadata.
+- The user says "write a skill", "update the skill", "add a skill for X."
+- Verifying the pack — `noir skills lint`.
+
+## Procedure
+
+1. **Check the boundary.** Search the pack for a sibling that already covers the trigger. Extend it, or sharpen its `description`, rather than adding a near-duplicate.
+2. **Write the frontmatter, then the body** against the rules below.
+3. **Add evals.** `evals/<skill>/evals.json` with offline assertions that exercise the skill's directives.
+4. **Lint the pack.** `noir skills lint` — zero errors before you call it done.
+
+## Skill writing rules
+
+1. **Frontmatter.** `name` = dir name (`noir-<kebab>`); `description` = WHAT+WHEN, ≤1024 chars, trigger-first, keyword-rich, with boundary ("Do NOT use for..."). Add `metadata.{category,version}`, `license`, `compatibility`. For args-taking skills, add `argument-hint`.
+2. **Body.** Overview → When to use → Procedure (numbered) → Verification (`- [ ]` checklist) → Notes → "When done → next skill" footer.
+3. **Quality gate.** `noir skills lint` checks: metadata presence, required sections, line budget (<500), one-level references, WHAT clause, thin-body warnings, no-example warnings. A skill that fails `validateSkill` cannot be emitted.
+4. **Test it.** Every skill's directives must survive a real prompt. Write `evals/<skill>/evals.json` with offline assertions.
+5. **No assumptions.** A skill that says "the user knows the project layout" is a broken skill. State the path, name the tool, give the command.
+6. **Config placement.** When a skill tells the user to set a variable, state the place in precedence order: `.noir/.env` first (project-scoped, gitignored, created by `noir init` at mode 0600 — it WINS for the keys it defines), then the real environment for CI, and only then the machine-global files (`~/.claude/settings.json` `env`, `~/.zshenv`) — explicitly labelled **fallbacks that cannot shadow `.noir/.env`**. Never sell a `VAR=value noir …` prefix as an override (it is the real-environment level) — the one per-invocation level is `run.profiles.<n>.env`. Never present a machine-global file as the primary fix, and never write a provider key as `${VAR}`: `apiKeyEnv: ANTHROPIC_API_KEY` is a NAME that Noir looks up, while `${ANTHROPIC_API_KEY}` resolves to nothing and silently disables the provider (only `run.profiles.<name>.env` interpolates). Point the user at `docs/how-to/configure-env.md` and at `noir env` to confirm which source won.
+
+## Verification
+
+- [ ] `validateSkill` passes (frontmatter + sections + budget).
+- [ ] `noir skills lint` reports zero errors.
+- [ ] The "When to use" and boundary are mutually-exclusive with sibling skills.
+- [ ] The skill has a "When done → next skill" footer.
+
+## When done → next skill
+
+→ `noir skills lint` to verify the pack. Or continue authoring.

@@ -43,7 +43,6 @@ This repo dogfoods Noir's own Spec-Driven Development flow: **brainstorm → spe
 - **Implementation plans** (+ acceptance) → `docs/internal/plans/YYYY-MM-DD-<topic>.md`.
 - The single top-level **design document** lives at `docs/internal/specs/2026-07-23-noir-toolkit-design.md` (dated, status: implemented: see `docs/internal/specs/` for the full set of capability design specs).
 - **Architecture Decision Records** → `docs/decisions/NNNN-<slug>.md` (append-only: supersede, never rewrite).
-- `.superpowers/` is gitignored local session scratch; never commit it.
 
 ## No internal jargon in comments or docs
 
@@ -75,7 +74,7 @@ Where the gate runs: `noir doctor` has an **output hygiene** check over the repo
 
 A file that has to name what the rules forbid: the rule table, its token list, its fixtures: cannot itself be clean. Such a file declares the exemption with a marker on a line above its first finding: `<!-- noir-hygiene: exempt -->` in a document, `// noir-hygiene: exempt` in source. The marker speaks for the whole file, so it belongs only where the prohibited shape is quoted deliberately, and it must sit at the top: below the first finding it exempts nothing.
 
-The planning corpus is excluded from the sweep by decision, not by oversight: `docs/internal/**`, `docs/decisions/**`, and `docs/roadmap/**` are working notes where decisions are recorded in the maintainer's own shorthand, and `CHANGELOG.md` is a release log. `.superpowers/**` is gitignored session scratch, and the sweep skips dot-directories along with build output and dependencies. Everything else the sweep reads is fair game: if a file outside that list trips the check, fix the file rather than reaching for the marker.
+The planning corpus is excluded from the sweep by decision, not by oversight: `docs/internal/**`, `docs/decisions/**`, and `docs/roadmap/**` are working notes where decisions are recorded in the maintainer's own shorthand, and `CHANGELOG.md` is a release log. The sweep skips dot-directories along with build output and dependencies. Everything else the sweep reads is fair game: if a file outside that list trips the check, fix the file rather than reaching for the marker.
 
 ## Native skills: the only skill mechanism
 
@@ -108,7 +107,6 @@ There is **no plugin and no marketplace**. Skills are native `noir-` builtins, a
 
 ## Do not
 
-- Don't commit `.superpowers/` (local session scratch; gitignored).
 - Don't commit secrets (API keys, npm tokens, etc.).
 - Don't push to `main` without the user's explicit go-ahead.
 - Don't reintroduce a plugin / marketplace / `noir-workflow` surface: it was removed on purpose, because Noir ships only native `noir-` builtin skills and never an installed plugin/marketplace (see ADR-0002).

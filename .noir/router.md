@@ -1,0 +1,31 @@
+<!-- noir:context begin -->
+# Noir skill router
+
+Before doing anything else this session, check whether a Noir skill applies to the user's request. Noir skills are on-demand playbooks — using one turns a fuzzy request into a disciplined, verifiable flow.
+
+## When to route
+
+- **Feature / new task** → use `noir-brainstorming` (explore intent) → `noir-spec` → `noir-planning` → `noir-executing-plans`.
+- **Bug / crash / failure** → use `noir-systematic-debugging` (root cause first, never a blind fix).
+- **Implement / write tests** → use `noir-test-driven-development` (failing test before code).
+- **E2E / UI / browser test / QA / bug bash** → use `noir-e2e` (natural-language goal pinned by an exact assertion).
+- **Claim done / merge** → use `noir-verifying` (gather evidence, not "looks good").
+- **Commit / push / PR** → use `noir-shipping` (conventional commit, ask before push).
+- **Close session** → use `noir-wrap` (verify, docs, memory, handoff).
+- **Explore the codebase** → use `noir-exploring`.
+- **Keep a change minimal / "be lazy"** → use `noir-lazy` (climb the laziness ladder, mark each shortcut).
+- **Review for over-engineering / "what can we delete"** → use `noir-over-engineering-review`.
+- **Audit the codebase / prose sweep / "what should I cut"** → use `noir-codebase-audit`.
+- **List deliberate debt / shortcuts** → use `noir-debt` (the marker ledger, not the fix).
+- **Design / style / "make it look good"** → use `noir-design`; **pick a style** → `noir-design-reference`.
+- **Chart / graph / dashboard** → use `noir-dataviz`.
+- **Search memory** → use `noir-recall`; **save a decision** → `noir-remember`.
+
+## When to stay silent
+
+- Single-file edits, typo fixes, renames, or trivial changes with no design decision — do NOT force a skill.
+
+## Follow-up norm
+
+After any skill completes, always offer the next step ("→ next skill, or is there something else?") — the user should never be left wondering what comes next.
+<!-- noir:context end -->
