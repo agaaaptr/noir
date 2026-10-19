@@ -129,7 +129,8 @@ export function dispatch(
   const kind = canonicalEvent(event);
 
   if (kind === 'inject' || kind === 'subagent') {
-    const brief = compileBrief(findNoirRoot(input.cwd ?? process.cwd()) ?? process.cwd());
+    const cwd = input.cwd ?? process.cwd();
+    const brief = compileBrief(findNoirRoot(cwd) ?? cwd);
     if (host === 'cursor') {
       return brief === ''
         ? { exitCode: 0 }
@@ -239,7 +240,8 @@ export async function hook(hostArg?: string): Promise<void> {
     // No stdin or not JSON: the host always sends it, but never crash here.
   }
 
-  const root = findNoirRoot(input.cwd ?? process.cwd()) ?? process.cwd();
+  const cwd = input.cwd ?? process.cwd();
+  const root = findNoirRoot(cwd) ?? cwd;
   const enforcement = resolveEnforcement(readProjectConfig(root));
 
   let stopGate: { block: true; reason: string } | null = null;
