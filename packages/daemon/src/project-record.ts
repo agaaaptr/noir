@@ -1,9 +1,9 @@
-// Per-project daemon record — the project-scoped counterpart to
+// Per-project daemon record: the project-scoped counterpart to
 // `~/.noir/daemon.json`. Mirrors `workspace-record.ts`: one file per identity,
 // so no code path can read, adopt, or clear another project's record.
 // That is what removes the `wrongProject` guards in ensure.ts / commands/daemon.ts
 // (which is why the `wrongProject` guards in ensure.ts / commands/daemon.ts are
-// gone) — the bug was structural, so the fix is structural.
+// gone): the bug was structural, so the fix is structural.
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { atomicWriteFile, noirHome } from '@noir-ai/core';
@@ -51,13 +51,13 @@ export function clearProjectDaemonRecord(projectId: string): void {
   if (existsSync(p)) rmSync(p, { force: true });
 }
 
-/** Every project record on this machine — for `noir daemon status --all` + doctor. */
+/** Every project record on this machine: for `noir daemon status --all` + doctor. */
 export function listProjectDaemonRecords(): Array<{ projectId: string; rec: ProjectDaemonRecord }> {
   let names: string[];
   try {
     names = readdirSync(projectRecordDir());
   } catch {
-    return []; // dir absent — no daemon has ever run
+    return []; // dir absent: no daemon has ever run
   }
   const out: Array<{ projectId: string; rec: ProjectDaemonRecord }> = [];
   for (const name of names) {

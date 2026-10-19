@@ -1,4 +1,4 @@
-// Task 6 (spec 6.1) — `noir daemon token`: the one-line data channel a host's
+// Task 6 (spec 6.1): `noir daemon token`: the one-line data channel a host's
 // MCP `headersHelper` runs at connect time, so no secret lives in a config file.
 //
 // The command resolves the caller's project from process.cwd(), reads that
@@ -27,7 +27,7 @@ process.env.NOIR_DAEMON_DIR = tmpRoot;
 
 const PROJECT_ID = 'daemon-token-project';
 const OTHER_PROJECT_ID = 'daemon-token-other';
-/** Seeded test credential — never a real token (the real one is 43 base64url). */
+/** Seeded test credential: never a real token (the real one is 43 base64url). */
 const TOKEN = 'seeded-test-token-not-a-credential';
 
 let root: string;
@@ -36,7 +36,7 @@ let healthServer: Server | null = null;
 
 /**
  * A live `/health` on the fixed record port answering for THIS project with THIS
- * pid — the shape a real daemon leaves. `noir daemon token` must now PROVE the
+ * pid: the shape a real daemon leaves. `noir daemon token` must now PROVE the
  * daemon is healthy, so the success paths need a genuine /health endpoint.
  */
 function startHealthServer(): Promise<void> {
@@ -91,7 +91,7 @@ function deadPid(): number {
 /**
  * The exact pair the daemon itself leaves on disk for a live daemon: a record
  * (which is what tells a client a token is worth reading) + the 0600 token file
- * beside it. The pid is THIS process — the liveness check must see it alive.
+ * beside it. The pid is THIS process: the liveness check must see it alive.
  */
 function seedLiveDaemon(id: string, token = TOKEN): void {
   writeProjectDaemonRecord(id, {
@@ -152,7 +152,7 @@ describe('noir daemon token', () => {
   it('reads the token at CALL time: a rotated token is what is printed', async () => {
     seedLiveDaemon(PROJECT_ID, 'first-token');
     expect((await run(() => daemonToken({}))).stdout).toBe('first-token\n');
-    // The daemon regenerates its token on every start — a cached copy would 401.
+    // The daemon regenerates its token on every start: a cached copy would 401.
     writeDaemonToken(PROJECT_ID, 'rotated-token');
     expect((await run(() => daemonToken({}))).stdout).toBe('rotated-token\n');
   });
@@ -191,7 +191,7 @@ describe('noir daemon token', () => {
   it('a RECYCLED pid (alive, but /health answers for a foreign process) → exit 4, no token', async () => {
     // The hazard the liveness-only check missed: the recorded pid is alive
     // because an unrelated process recycled it. `/health` here answers with a
-    // DIFFERENT pid, so the record must be refused — printing its token would
+    // DIFFERENT pid, so the record must be refused: printing its token would
     // authenticate nothing while looking like success.
     const foreign: Server = createServer((req, res) => {
       if (req.url === '/health') {
@@ -209,7 +209,7 @@ describe('noir daemon token', () => {
     });
     try {
       writeProjectDaemonRecord(PROJECT_ID, {
-        pid: process.pid, // alive — the liveness-only check would have passed
+        pid: process.pid, // alive: the liveness-only check would have passed
         port,
         startedAt: Date.now(),
         projectId: PROJECT_ID,
@@ -226,7 +226,7 @@ describe('noir daemon token', () => {
 
   it('a live pid whose /health is unreachable (nothing listening) → exit 4, no token', async () => {
     // pidAlive() is true but no daemon answers: the token is for a daemon that
-    // is not there. Port 1 is closed/privileged — nothing to connect to.
+    // is not there. Port 1 is closed/privileged: nothing to connect to.
     writeProjectDaemonRecord(PROJECT_ID, {
       pid: process.pid,
       port: 1,
@@ -254,7 +254,7 @@ describe('noir daemon token', () => {
 
   it("never prints another project's token (the record IS the scope)", async () => {
     // A live daemon for a DIFFERENT project: this project has no record of its
-    // own, so there is no token to print — and the other project's secret must
+    // own, so there is no token to print: and the other project's secret must
     // not leak into stdout or stderr.
     seedLiveDaemon(OTHER_PROJECT_ID, 'other-project-secret');
     const r = await run(() => daemonToken({}));

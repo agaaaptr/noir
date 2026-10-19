@@ -14,7 +14,7 @@ They are configured separately on purpose. The host has its own credential
 model and its own variable names; Noir's model layer is provider-explicit and
 reads only its config. Setting one does not set the other.
 
-## The host path — `noir run` and `.noir/.env`
+## The host path: `noir run` and `.noir/.env`
 
 `noir run` spawns the host as a child process and passes its environment
 through by inheritance. Every value the file is allowed to define is therefore
@@ -38,7 +38,7 @@ lines when you want your normal account back.
 
 `ANTHROPIC_AUTH_TOKEN` becomes a `Bearer` header, `ANTHROPIC_API_KEY` becomes
 `x-api-key`. Setting **both** is an auth conflict, and the symptom is an
-authentication failure that looks like a stale key. Pick one — `AUTH_TOKEN` for
+authentication failure that looks like a stale key. Pick one: `AUTH_TOKEN` for
 a gateway that expects a Bearer token, `API_KEY` for one that expects the
 Anthropic header. If your shell already exports one of them, make the file's
 intent explicit (see the OpenRouter example below).
@@ -83,8 +83,8 @@ ANTHROPIC_API_KEY=
 
 ### Checking what the host will get
 
-`noir env` reports each key's winning source — `.noir/.env` when the file
-defines it, `environment` when it does not — and never prints a value:
+`noir env` reports each key's winning source: `.noir/.env` when the file
+defines it, `environment` when it does not: and never prints a value:
 
 ```bash
 noir env
@@ -94,7 +94,7 @@ If a run still fails to authenticate, Noir's error message names every
 credential variable in effect *and* the side that supplied it, so "unset it"
 points at the right place rather than being a guess.
 
-## The model path — `model.providers` in `config.yml`
+## The model path: `model.providers` in `config.yml`
 
 Noir's own model layer (used by memory consolidation) is pointed at a gateway
 through config, not the environment. The provider block takes the transport
@@ -124,7 +124,7 @@ memory:
     enabled: true
 ```
 
-The provider block's **name is a wire-format selector**, not a free label — that
+The provider block's **name is a wire-format selector**, not a free label: that
 is why the example above is called `anthropic`:
 
 - `anthropic` is driven by the Anthropic adapter, which is the one that speaks
@@ -146,11 +146,11 @@ ZAI_AUTH_TOKEN=replace-with-your-zai-token
 ```
 
 Consolidation runs inside the daemon, and the daemon's environment is a
-snapshot taken when it spawned — after adding the token to `.noir/.env`, run
+snapshot taken when it spawned: after adding the token to `.noir/.env`, run
 `noir daemon restart`, or the change takes effect only on its next start.
 
 `authTokenEnv` is the Bearer variant; `apiKeyEnv` is the `x-api-key` variant.
-Both store the variable's **name** — `authTokenEnv: ZAI_AUTH_TOKEN` reads
+Both store the variable's **name**: `authTokenEnv: ZAI_AUTH_TOKEN` reads
 `$ZAI_AUTH_TOKEN`, while `authTokenEnv: ${ZAI_AUTH_TOKEN}` resolves to nothing
 and leaves the provider keyless, silently.
 
@@ -158,7 +158,7 @@ Noir's model layer reads only this config. It does **not** fall back to
 `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, or `ANTHROPIC_API_KEY` from the
 environment, so a request can never be routed somewhere the config did not
 choose. A provider that names `apiKeyEnv` or `authTokenEnv` and finds neither
-set is treated as keyless and degrades to templates — never a silent paid call.
+set is treated as keyless and degrades to templates: never a silent paid call.
 That is why the two paths above are configured separately and neither one
 implies the other.
 

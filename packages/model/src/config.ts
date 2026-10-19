@@ -6,28 +6,28 @@
 // the user-facing schema, model owns this mapper + the runtime types. The
 // fully-resolved zod output is structurally assignable to
 // the permissive {@link ModelUserConfig} mirror below, so the mapper accepts a
-// `NoirConfig['model']` directly — callers pass `resolveModelConfig(cfg.model)`.
+// `NoirConfig['model']` directly: callers pass `resolveModelConfig(cfg.model)`.
 //
 // Provider-EXPLICIT, never silent paid: this mapper is a PURE projection
-// of what the user wrote — it never selects a provider from env-var presence.
+// of what the user wrote: it never selects a provider from env-var presence.
 // Whether a configured provider is actually USABLE (key present) is reported as
 // `hasKey` for inspection (`noir doctor`); it does NOT change the provider set.
 // The first-class `null`-degradation decision lives in `complete()`, which reads
-// the same env at call time — both readings are idempotent and stay in-process.
+// the same env at call time: both readings are idempotent and stay in-process.
 //
 // Secrets stay in env: `apiKeyEnv` is the env-var NAME (passthrough, safe
 // to print); `apiKey` is the VALUE resolved here from `process.env[apiKeyEnv]`,
 // materialized so doctor / direct consumers can branch without each re-reading
 // env. The value never touches disk via Noir and is never logged with usage.
-// `authTokenEnv` travels through as a NAME only — whether it is set feeds
+// `authTokenEnv` travels through as a NAME only: whether it is set feeds
 // `hasKey` (a boolean, never the value); the value itself is read at call
 // time in `complete()`, alongside the key it already resolves there.
 
 /**
- * User-facing model config shape — mirrors `NoirConfig['model']` (the zod block
+ * User-facing model config shape: mirrors `NoirConfig['model']` (the zod block
  * @noir-ai/core ships). Declared LOCALLY with every field optional so
  * this module type-checks WITHOUT a forward dependency on a core type (core
- * never imports model — no cycle; @noir-ai/model is not even in this package's
+ * never imports model: no cycle; @noir-ai/model is not even in this package's
  * node_modules), AND so a config with no `model:` block (or a partial one) maps
  * cleanly to a fully-degraded runtime config. The fully-resolved zod output is
  * structurally assignable to this permissive shape, so the mapper accepts
@@ -48,7 +48,7 @@ export interface ModelUserConfig {
 }
 
 /**
- * One user-facing provider block — mirrors a `model.providers[name]` entry in
+ * One user-facing provider block: mirrors a `model.providers[name]` entry in
  * `.noir/config.yml`. `model` is optional HERE (the mirror is permissive) even
  * though the zod schema requires it, so hand-built configs in tests type-check;
  * `resolveModelConfig` passes `model` straight through when present.
@@ -69,7 +69,7 @@ export interface ModelProviderEntry {
 /**
  * A provider block with its key RESOLVED from the environment. Superset of the
  * runtime `ProviderConfig` (`@noir-ai/model`'s `complete()` consumes), so a
- * {@link ResolvedModelConfig} drops cleanly into `complete(req, cfg)` — the extra
+ * {@link ResolvedModelConfig} drops cleanly into `complete(req, cfg)`: the extra
  * `apiKey` / `hasKey` fields are ignored by `complete()` (which re-reads env at
  * call time, idempotently) and exist for `noir doctor` + direct consumers.
  */
@@ -78,7 +78,7 @@ export interface ResolvedProviderConfig {
   model?: string;
   /** Base URL passthrough (openai-compatible endpoints). */
   baseURL?: string;
-  /** Env-var NAME passthrough — doctor prints this, NEVER the value. */
+  /** Env-var NAME passthrough: doctor prints this, NEVER the value. */
   apiKeyEnv?: string;
   /** Env-var NAME passthrough for the bearer token (same rule as apiKeyEnv). */
   authTokenEnv?: string;
@@ -89,7 +89,7 @@ export interface ResolvedProviderConfig {
   /**
    * Readiness signal for `noir doctor`: whether a keyed provider has at least
    * one of its named credential env vars set (`apiKeyEnv` and/or `authTokenEnv`);
-   * an ANONYMOUS provider (neither named) is always `true` — no credential is
+   * an ANONYMOUS provider (neither named) is always `true`: no credential is
    * required, so nothing is missing. Carries a boolean ONLY, never the value.
    */
   hasKey: boolean;
@@ -107,7 +107,7 @@ export interface ResolvedTiers {
 }
 
 /**
- * The resolved model-layer config — the runtime shape `complete()` consumes and
+ * The resolved model-layer config: the runtime shape `complete()` consumes and
  * `noir doctor` inspects. `providers` is always present (possibly `{}`); each
  * entry carries its resolved key. Assignable to `ModelConfig` (`complete()`'s
  * param type), so `complete(req, resolveModelConfig(cfg.model))` type-checks.
@@ -126,18 +126,18 @@ export interface ResolvedModelConfig {
  * {@link ResolvedModelConfig}.
  *
  * - `undefined` / missing block ⇒ `{ tiers: {}, providers: {} }` (full
- *   degradation — `complete()` will then return `null` for every call, the
+ *   degradation: `complete()` will then return `null` for every call, the
  *   always-available offline path).
  * - Each provider's API key is materialized from `process.env[apiKeyEnv]` into
  *   `apiKey`; `hasKey` is `true` when a keyed provider has at least one of its
  *   named credential env vars set (doctor surfaces a miss; `complete()` returns
  *   `null`).
  * - Anonymous providers (neither `apiKeyEnv` nor `authTokenEnv`) keep
- *   `apiKey: undefined` but report `hasKey: true` (ready — no key needed, e.g.
+ *   `apiKey: undefined` but report `hasKey: true` (ready: no key needed, e.g.
  *   local Ollama).
  *
  * This mapper NEVER infers a provider from env-var presence and NEVER
- * mutates `raw` or `process.env` — it only READS env to resolve keys. It never
+ * mutates `raw` or `process.env`: it only READS env to resolve keys. It never
  * throws; an unusable config degrades to empty, not an exception.
  */
 export function resolveModelConfig(raw?: ModelUserConfig): ResolvedModelConfig {
@@ -152,7 +152,7 @@ export function resolveModelConfig(raw?: ModelUserConfig): ResolvedModelConfig {
       const apiKeyEnv = entry.apiKeyEnv;
       const authTokenEnv = entry.authTokenEnv;
       // A keyed provider names at least one credential env var. It is ready
-      // when AT LEAST ONE of those vars holds a value — the model layer sends
+      // when AT LEAST ONE of those vars holds a value: the model layer sends
       // whichever resolved. Anonymous providers (neither named) need no
       // credential, so they are ready by default.
       const apiKey = apiKeyEnv ? process.env[apiKeyEnv] : undefined;

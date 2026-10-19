@@ -7,7 +7,7 @@ gate you configure under `enforcement` in `.noir/config.yml`. This page is about
 where that hook lives, when it stops being there, and how to put it back.
 
 > **`noir hook` (singular) is not a command for you.** It is the hidden, internal
-> dispatcher your host invokes with a JSON event on stdin — it is excluded from
+> dispatcher your host invokes with a JSON event on stdin: it is excluded from
 > `noir --help` and the command palette. The command you can run is the plural
 > one: `noir hooks sync` below. A one-letter mix-up between them is caught with a
 > "did you mean" hint rather than silently running the dispatcher.
@@ -23,7 +23,7 @@ where that hook lives, when it stops being there, and how to put it back.
 For claude and gemini the file is **user-owned**: it also holds your
 `permissions`, `env`, and other host settings, so Noir never rewrites it. It
 merges the hook in once at `noir init` / `noir create` and then stays out of the
-file for good — `noir init --upgrade` and `noir sync` deliberately do not touch
+file for good: `noir init --upgrade` and `noir sync` deliberately do not touch
 it, so a hook you removed on purpose is not quietly put back.
 
 ## When the hook is missing
@@ -48,9 +48,9 @@ it is fine in CI or a script.
 
 ## Refreshing a stale hook
 
-If the hook is present but points at the wrong command — for example you moved
+If the hook is present but points at the wrong command: for example you moved
 from an npm install to the native installer, which changes the resolved `noir`
-path — the default sync leaves the existing entry alone. Force a rewrite of just
+path: the default sync leaves the existing entry alone. Force a rewrite of just
 Noir's own entries (your other hooks are kept):
 
 ```bash

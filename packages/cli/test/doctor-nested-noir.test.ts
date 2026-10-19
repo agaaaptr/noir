@@ -1,4 +1,4 @@
-// SP-A — `noir doctor` nested-`.noir` detection (TDD). Fast unit tests of the
+// SP-A: `noir doctor` nested-`.noir` detection (TDD). Fast unit tests of the
 // check function in isolation (no subprocess).
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';

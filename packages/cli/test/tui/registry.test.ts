@@ -1,10 +1,10 @@
-// A1 — palette command derivation from a commander program.
+// A1: palette command derivation from a commander program.
 //
 // `buildPaletteCommands(program)` walks the commander tree and collects LEAF
 // commands only (an action handler AND no child commands), skipping bare groups
 // (which carry a usage-throwing fallback action but own children). These tests
 // drive a FRESH `new Command()` program (not `createProgram`) so the registry is
-// exercised in isolation — the real `noir` tree shape is irrelevant here; what
+// exercised in isolation: the real `noir` tree shape is irrelevant here; what
 // matters is that the walker honors the leaf/destructive/group contract.
 
 import { Command } from 'commander';
@@ -17,7 +17,7 @@ import type { PaletteCommand } from '../../src/tui/palette/types.js';
 function sampleProgram(): Command {
   const program = new Command();
 
-  // `noir context {search,index,status}` — a group with three leaves.
+  // `noir context {search,index,status}`: a group with three leaves.
   const contextGrp = program.command('context').description('context engine (S6)');
   contextGrp
     .command('search')
@@ -38,7 +38,7 @@ function sampleProgram(): Command {
     throw new Error('Usage: noir context search|index|status');
   });
 
-  // `noir memory recall` — a leaf under a group, non-destructive.
+  // `noir memory recall`: a leaf under a group, non-destructive.
   const memoryGrp = program.command('memory').description('memory engine');
   memoryGrp
     .command('recall')
@@ -56,7 +56,7 @@ function sampleProgram(): Command {
   // A bare top-level leaf with no description (falls back to argv label).
   program.command('doctor').action(() => {});
 
-  // A bare group with children but NO action handler at all — still skipped
+  // A bare group with children but NO action handler at all: still skipped
   // (it owns children, so it is not a leaf regardless of its action state).
   const taskGrp = program.command('task').description('workflow task control');
   taskGrp
@@ -88,7 +88,7 @@ describe('buildPaletteCommands', () => {
       'task status',
     ]);
 
-    // Groups (context, memory, task) are NOT leaves — they own children — so
+    // Groups (context, memory, task) are NOT leaves: they own children: so
     // they must never appear, even though context/memory carry a fallback action.
     expect(cmds.find((c) => c.id === 'context')).toBeUndefined();
     expect(cmds.find((c) => c.id === 'memory')).toBeUndefined();
@@ -134,7 +134,7 @@ describe('buildPaletteCommands', () => {
 
     // `task` is a bare group: it has children and no fallback action, yet it is
     // still excluded because it owns children (not a leaf). The same applies to
-    // `context` and `memory` which DO have a fallback action — owning children
+    // `context` and `memory` which DO have a fallback action: owning children
     // disqualifies a node regardless of its action handler.
     expect(ids).not.toContain('task');
     expect(ids).not.toContain('context');
@@ -165,11 +165,11 @@ function argProgram(): Command {
   return program;
 }
 
-describe('buildPaletteCommands — argument requirements', () => {
+describe('buildPaletteCommands: argument requirements', () => {
   it('marks a required argument and leaves optional/argless commands unset', () => {
     const byId = new Map(buildPaletteCommands(argProgram()).map((c) => [c.id, c]));
 
-    // `<query>` must be supplied — the label is the argument name, without the
+    // `<query>` must be supplied: the label is the argument name, without the
     // angle brackets.
     expect((byId.get('query') as PaletteCommand).needsArg).toBe('query');
     // A variadic `<ids...>` still needs at least one value, and its label drops
@@ -189,7 +189,7 @@ describe('buildPaletteCommands — argument requirements', () => {
 
     // Every leaf whose argument is declared `<...>` in the CLI. Selected commands
     // that fail without a value but declare it as optional in commander (e.g.
-    // `run`, which also takes flag-only invocations) are out of reach here — the
+    // `run`, which also takes flag-only invocations) are out of reach here: the
     // curated quick actions declare those instead.
     expect(required).toEqual([
       'context search=query',

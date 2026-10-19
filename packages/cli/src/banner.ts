@@ -1,10 +1,10 @@
 // Noir banner.
 //
 // Pre-rendered "noir" ASCII wordmark (figlet "ANSI Shadow", generated offline
-// and VERIFIED letter-by-letter to read N-O-I-R — an earlier hand-rolled
+// and VERIFIED letter-by-letter to read N-O-I-R: an earlier hand-rolled
 // version had a malformed R that rendered as "NOHA") with a SMOOTH gradient via
 // gradient-string. (A per-row rainbow was garish; a smooth vertical gradient is
-// the modern look — cf. the GitHub Copilot CLI banner engineering post.)
+// the modern look: cf. the GitHub Copilot CLI banner engineering post.)
 //
 // Guardrails: only the interactive home arm calls this (isInteractive already
 // gates TTY/CI/NO_COLOR/--json/--no-input); shouldShowBanner additionally
@@ -15,8 +15,8 @@ import type { CliOptions } from './output.js';
 import { accessibleMode, c, useColor } from './theme.js';
 import { displayWidth } from './width.js';
 
-// figlet "ANSI Shadow" — regenerated 2026-07-26 from the standard per-letter
-// glyphs and verified (N, O, I, R) to read "NOIR". Do NOT hand-edit — regenerate
+// figlet "ANSI Shadow": regenerated 2026-07-26 from the standard per-letter
+// glyphs and verified (N, O, I, R) to read "NOIR". Do NOT hand-edit: regenerate
 // via `figlet -f "ANSI Shadow" NOIR` if a glyph changes.
 const NOIR_BLOCK = [
   '███╗   ██╗  ██████╗  ██╗ ██████╗ ',
@@ -27,7 +27,7 @@ const NOIR_BLOCK = [
   '╚═╝  ╚═══╝  ╚═════╝  ╚═╝ ╚═╝  ╚═╝',
 ];
 
-// "noir" aesthetic — Midnight Cobalt: a smooth gradient-string gradient (dark
+// "noir" aesthetic: Midnight Cobalt: a smooth gradient-string gradient (dark
 // cobalt → bright blue → sky) applied per-character across the wordmark
 // (vertical, top → bottom). All stops are bright enough to read on a dark
 // terminal; the deep-blue start evokes "midnight" without disappearing.
@@ -37,7 +37,7 @@ const NOIR_GRADIENT = gradient('#2c5282', '#3b82f6', '#7dd3fc');
 export const NOIR_TAGLINE = 'discipline, context, and memory layer for agentic CLIs';
 
 /**
- * The block wordmark's own width, in display columns — the widest line of the
+ * The block wordmark's own width, in display columns: the widest line of the
  * art. Measured rather than assumed so a regenerated wordmark cannot silently
  * become wider than the terminals it is drawn into (a hand-copied constant would
  * drift the moment the glyphs are regenerated).
@@ -46,7 +46,7 @@ const BLOCK_WIDTH = NOIR_BLOCK.reduce((max, line) => Math.max(max, displayWidth(
 
 /**
  * The narrowest terminal the block wordmark reads well in. It is the art's own
- * width plus seventeen columns of margin — enough to keep the wordmark off the
+ * width plus seventeen columns of margin: enough to keep the wordmark off the
  * terminal edges and give the tagline under it room to breathe. Below this the
  * compact `◆ noir` mark is used instead, because the full block would collide
  * with the terminal's right edge.
@@ -66,7 +66,7 @@ interface BannerOptions {
  *
  * Color gating: decoration is on only when the caller did not pass
  * `color:false` AND `useColor()` agrees (honoring NO_COLOR / CLICOLOR_FORCE /
- * TTY uniformly via the theme — the single color authority). Under
+ * TTY uniformly via the theme: the single color authority). Under
  * `NOIR_ACCESSIBLE` the gradient is replaced with a solid accent render
  * (maximum legibility); the wordmark stays recognizable either way.
  */

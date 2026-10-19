@@ -3,8 +3,8 @@
 // The stretch between spawning the host and its first token of output is the
 // one part of a run with no feedback at all, and it has no upper bound: a slow
 // gateway, a queued model, or a host quietly retrying all read as a hang. This
-// line names what is happening — which host, which model, how long, how many
-// tokens so far — so that stretch is never silent.
+// line names what is happening: which host, which model, how long, how many
+// tokens so far: so that stretch is never silent.
 //
 // Three design constraints shape it:
 //
@@ -19,7 +19,7 @@
 //      rewrites in place. The moment anything else is about to be written to
 //      that row it finishes the row with a newline first, so the answer never
 //      starts glued to the tail of the status text. It then keeps quiet until
-//      stdout leaves the cursor at the start of a row again — which is what
+//      stdout leaves the cursor at the start of a row again: which is what
 //      makes a carriage return safe to use, since anything else would drag the
 //      cursor back over what was just written. "One row" is a promise the line
 //      has to keep: text wider than the terminal is folded onto a second row by
@@ -55,7 +55,7 @@ export interface RunStatusOptions {
    * answer can land on the row the status line is holding, so the line must
    * yield first. When stdout is redirected or piped it is not on the terminal
    * at all, and the status line can keep its row for the whole run. Defaults to
-   * true — the conservative answer when the caller does not say.
+   * true: the conservative answer when the caller does not say.
    */
   readonly stdoutSharesCursor?: boolean;
   /** Where the line is written (defaults to stderr). */
@@ -99,7 +99,7 @@ export class RunStatusLine {
   private ended = false;
   /** True while the status text is sitting on the row the cursor is currently at. */
   private onRow = false;
-  /** True when the last stdout write ended a line — the only safe moment to move the cursor. */
+  /** True when the last stdout write ended a line: the only safe moment to move the cursor. */
   private stdoutAtRowStart = true;
   /** The text currently on the row (empty when the row is not ours). */
   private rendered = '';
@@ -141,7 +141,7 @@ export class RunStatusLine {
       if (e.model !== undefined) this.model = e.model;
     } else if (e.kind === 'assistant' || e.kind === 'tool') {
       // A tool call is output: the host is working, so the line stops saying it
-      // is still waiting — and a tool-only message carries that message's
+      // is still waiting: and a tool-only message carries that message's
       // tokens, which the shared accumulator folds in by the same rule.
       this.streaming = true;
       this.usage.add(e);
@@ -155,7 +155,7 @@ export class RunStatusLine {
   }
 
   /**
-   * Announce the chunk the caller is about to write to STDOUT — before writing
+   * Announce the chunk the caller is about to write to STDOUT: before writing
    * it. Warning the line first lets it finish its row: the answer would
    * otherwise start glued to the tail of the status text. It also records
    * whether that write ended a line, which is the only moment the cursor can be
@@ -166,7 +166,7 @@ export class RunStatusLine {
     if (this.animated && this.sharesCursor && this.onRow) {
       this.write('\n');
       // The row is abandoned. What was drawn on it is no longer above the
-      // cursor — the answer now stands between the two — so the text is
+      // cursor: the answer now stands between the two: so the text is
       // forgotten with it. Keeping it would let the next redraw reach back up
       // over a row of the answer.
       this.onRow = false;
@@ -180,7 +180,7 @@ export class RunStatusLine {
    * a half-written answer reads as part of the answer, so a caller about to
    * report a failure asks for the row to be terminated first. A no-op unless
    * this line is drawing on a terminal stdout also writes to and the answer
-   * stopped mid-line — the only state where the cursor is inside the answer.
+   * stopped mid-line: the only state where the cursor is inside the answer.
    */
   finishRow(): void {
     if (!this.animated || !this.sharesCursor || this.stdoutAtRowStart) return;
@@ -190,7 +190,7 @@ export class RunStatusLine {
 
   /**
    * Close the line out. On a terminal the line is erased so the run summary
-   * takes its place — unless the answer has since moved the cursor off it, in
+   * takes its place: unless the answer has since moved the cursor off it, in
    * which case the text stays as the record of how long the wait was. On a pipe
    * it becomes the final marker. Safe to call twice.
    */
@@ -225,7 +225,7 @@ export class RunStatusLine {
 
   /**
    * The escape sequence that clears the status text currently on screen and
-   * leaves the cursor at the start of the row it began on — where the next
+   * leaves the cursor at the start of the row it began on: where the next
    * render writes. An empty `previous` still clears the row, so a line that has
    * drawn nothing yet starts from a known-blank one.
    *
@@ -261,8 +261,8 @@ export class RunStatusLine {
 
   /**
    * `final` marks the line the run ends on: a run that never got past the spawn
-   * is over, so saying it is still waiting — directly above whatever the run
-   * reported — would be a lie.
+   * is over, so saying it is still waiting: directly above whatever the run
+   * reported: would be a lie.
    */
   private render(final = false): string {
     const parts: string[] = [];
@@ -291,7 +291,7 @@ export class RunStatusLine {
  * The last `maxLines` lines of the host's own stderr. A failing host narrates
  * its progress and its errors there and Noir otherwise reads none of it, which
  * leaves a failure reportable only by whatever single sentence the host put in
- * its stream — the run is unauditable without the rest. Bounded so a
+ * its stream: the run is unauditable without the rest. Bounded so a
  * pathological host cannot flood the terminal, and surfaced VERBATIM: it is the
  * host's own output, never Noir's environment, so there is nothing here to
  * redact and no value of Noir's to leak.

@@ -11,7 +11,7 @@
 //     roughly `overlap` tokens of trailing lines so retrieval has continuity.
 //
 // `id = \`${sha256(path)}#chunk-${n}\`` and `meta.parentDocId = sha256(path)`
-// are stable across re-indexing — same path + content always yields the same
+// are stable across re-indexing: same path + content always yields the same
 // chunk ids, which is what makes the indexer's content-hash skip/delete exact
 // (ids depend only on path + content, never on index state or time).
 //
@@ -19,7 +19,7 @@
 // `meta.sha256` (post-identifier-explosion, per the ChunkMeta contract): the
 // indexer appends the same explosion stream to chunk content before
 // `indexDoc`/`upsertVec` so camelCase/snake_case identifier queries get a BM25
-// signal under the existing `porter unicode61` tokenizer — with NO schema
+// signal under the existing `porter unicode61` tokenizer: with NO schema
 // migration (trigram tokenization is deferred). `withIdentifierExplosion` is the
 // single canonical form of that append, so the chunker's hash and the
 // indexer's stored content stay byte-identical.
@@ -118,7 +118,7 @@ export function explodeIdentifiers(text: string): string {
  * match the `ChunkMeta.sha256` contract ("post-identifier-explosion").
  *
  * `chunk.content` itself stays CLEAN (no explosion) so FTS5 window-extracted
- * snippets read naturally — explosion is index-time-only.
+ * snippets read naturally: explosion is index-time-only.
  */
 export function withIdentifierExplosion(content: string): string {
   const exploded = explodeIdentifiers(content);
@@ -202,7 +202,7 @@ function defaultSource(path: string, language?: string): SourceKind {
 
 // Hashing
 
-/** `parentDocId` + `chunkId` root — `sha256(path)`, stable across re-index. */
+/** `parentDocId` + `chunkId` root: `sha256(path)`, stable across re-index. */
 function parentDocIdOf(path: string): string {
   return sha256Hex(path);
 }
@@ -225,7 +225,7 @@ const FENCE_OPEN = /^\s*(`{3,}|~{3,})/;
  * Split markdown into one section per ATX heading. Each section's body is the
  * heading line + its non-heading lines. `#`-comment lines inside a `` ` `` or
  * `~~~` code fence are NOT treated as headings (common in docs with code
- * samples — guards against false splits). A non-empty preamble before the
+ * samples: guards against false splits). A non-empty preamble before the
  * first heading becomes its own section.
  */
 function markdownSections(content: string): string[] {
@@ -276,7 +276,7 @@ function markdownSections(content: string): string[] {
  * windows.
  *
  * Properties:
- *   • Windows never split a line mid-line — a single line that alone exceeds
+ *   • Windows never split a line mid-line: a single line that alone exceeds
  *     `maxTokens` is emitted as its own chunk (rather than being dropped).
  *   • Consecutive multi-line windows always overlap by at least one line, so a
  *     retrieval hit near a boundary isn't lost (and the overlap is observable).
@@ -352,7 +352,7 @@ function codeWindows(content: string, maxTokens: number, overlap: number): strin
 export function chunkFile(opts: ChunkOptions): Chunk[] {
   const { path, content } = opts;
   // Reject empty AND whitespace-only content (whitespace has length > 0 but
-  // carries no chunk signal — would otherwise yield a spurious blank chunk).
+  // carries no chunk signal: would otherwise yield a spurious blank chunk).
   if (content.trim().length === 0) return [];
 
   const language = opts.language ?? inferLanguage(path);

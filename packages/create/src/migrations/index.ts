@@ -18,7 +18,7 @@ export { runMigrations } from './runner.js';
 export type { MigrationContext, MigrationResult, MigrationScript } from './types.js';
 
 /**
- * Migration registry — the linear history of scaffold-version upgrades.
+ * Migration registry: the linear history of scaffold-version upgrades.
  *
  * `CURRENT_SCAFFOLD_VERSION` is `1.5.0`; a project stamped at an older version
  * migrates through every entry whose window covers it. Six entries ship today:
@@ -37,7 +37,7 @@ export type { MigrationContext, MigrationResult, MigrationScript } from './types
  *    compares them numerically.
  *  - Every `run` MUST be idempotent and non-throwing (capture failures into
  *    `result.conflicts`). See {@link types.ts}.
- *  - Conflict resolution writes git-style markers inline — see
+ *  - Conflict resolution writes git-style markers inline: see
  *    {@link applyWithConflict} for the canonical helper.
  *  - Paths in `changed`/`conflicts` are repo-relative and POSIX-separated, like
  *    every other path the engine reports.
@@ -77,9 +77,9 @@ const synthetic: MigrationScript = {
 // --- 1.0.0 → 1.1.0: the first real migration -------------------------------
 
 /** Marker line that guards the `.noir/.env` pointer block in `config.yml`.
- *  Its presence means the block is already on disk — emitted by
+ *  Its presence means the block is already on disk: emitted by
  *  `config.yml.tmpl` for a new project, or appended by an earlier run of this
- *  migration — so the append is skipped. That guard is what makes the
+ *  migration: so the append is skipped. That guard is what makes the
  *  migration idempotent.
  *
  *  `config.yml.tmpl` carries the same literal (a template cannot import a
@@ -89,7 +89,7 @@ export const ENV_POINTER_MARKER = '# noir:env-pointer';
 
 /** The comment block appended to an EXISTING `.noir/config.yml`. It states the
  *  two things a reader of that file needs: it is committable, and secrets go in
- *  `.noir/.env`. Deliberately comment-only — appending YAML keys would change
+ *  `.noir/.env`. Deliberately comment-only: appending YAML keys would change
  *  the parsed config, which a migration must never do. */
 const ENV_POINTER_BLOCK = [
   ENV_POINTER_MARKER,
@@ -112,7 +112,7 @@ function appendSeparated(prev: string, block: string): string {
  *
  *  Scoped to the one transformation `skipIfExists` structurally cannot perform.
  *  `config.yml` is a user-owned seed written once at init, so the manifest
- *  never opens an existing one — a project initialized before this migration
+ *  never opens an existing one: a project initialized before this migration
  *  existed would therefore never learn where secrets belong. Everything else
  *  this version adds is *creation* (a `skipIfExists` backfill) or *managed
  *  blocks* (`managedBlock` re-emission); the migration duplicates neither. */
@@ -126,10 +126,10 @@ const envPointer: MigrationScript = {
     const abs = join(ctx.root, '.noir', 'config.yml');
 
     // Absent: nothing to transform, and creating it is NOT this migration's
-    // job — an absent `config.yml` is backfilled from the template (which
+    // job: an absent `config.yml` is backfilled from the template (which
     // already carries the pointer) by the `skipIfExists` emit phase.
     if (!existsSync(abs)) {
-      result.notes.push(`${rel}: absent — the template seed carries the pointer`);
+      result.notes.push(`${rel}: absent: the template seed carries the pointer`);
       return result;
     }
 
@@ -140,12 +140,12 @@ const envPointer: MigrationScript = {
       // Unreadable (a directory, a permission wall). Non-throwing is the
       // registry-wide contract: record and let the caller decide.
       result.conflicts.push(rel);
-      result.notes.push(`${rel}: unreadable (${errorMessage(err)}) — left untouched`);
+      result.notes.push(`${rel}: unreadable (${errorMessage(err)}): left untouched`);
       return result;
     }
 
     // The idempotency guard: a second run (or a file the template already
-    // stamped) sees the marker and writes nothing at all — byte-level no-op.
+    // stamped) sees the marker and writes nothing at all: byte-level no-op.
     if (prev.includes(ENV_POINTER_MARKER)) {
       result.notes.push(`${rel}: already carries ${ENV_POINTER_MARKER}`);
       return result;
@@ -161,7 +161,7 @@ const envPointer: MigrationScript = {
       writeFileSync(abs, appendSeparated(prev, ENV_POINTER_BLOCK), 'utf8');
     } catch (err) {
       result.conflicts.push(rel);
-      result.notes.push(`${rel}: write failed (${errorMessage(err)}) — left untouched`);
+      result.notes.push(`${rel}: write failed (${errorMessage(err)}): left untouched`);
       return result;
     }
     result.changed.push(rel);
@@ -177,7 +177,7 @@ const envPointer: MigrationScript = {
  *  bytes. Only these two are tracked: they are written once at init and never
  *  opened again by the manifest. `.env.example` changed in this release, so an
  *  unedited older copy must be brought forward. RULES.md is carried in the same
- *  loop although its text did NOT change here — its current render equals the
+ *  loop although its text did NOT change here: its current render equals the
  *  recorded bytes, so the refresh decision leaves it alone today, and a future
  *  release that does change it is already handled. It is skipped entirely for a
  *  project that switched the working rules off; see {@link envTemplates}. */
@@ -197,8 +197,8 @@ const DOC_SEEDS: ReadonlyArray<{ rel: string; kind: SeedKind; template: string }
  *
  *  The working-rules seed is skipped outright when the project switched it off.
  *  That switch says this project has no working rules for Noir to maintain, and
- *  the refresh's evidence — "these bytes are a seed Noir shipped, so nobody
- *  edited them" — is exactly the case the switch must not act on: it would
+ *  the refresh's evidence: "these bytes are a seed Noir shipped, so nobody
+ *  edited them": is exactly the case the switch must not act on: it would
  *  rewrite the rules text of a project that has opted out of having any, on the
  *  strength of a comparison the user never asked for. `.env.example` is a
  *  different file with a different owner (pure documentation, no switch), so it
@@ -211,16 +211,16 @@ const envTemplates: MigrationScript = {
     const result: MigrationResult = { changed: [], conflicts: [], notes: [] };
     for (const seed of DOC_SEEDS) {
       if (seed.kind === 'rulesSeed' && ctx.rulesEnabled === false) {
-        result.notes.push(`${seed.rel}: skipped — the working-rules switch is off`);
+        result.notes.push(`${seed.rel}: skipped: the working-rules switch is off`);
         continue;
       }
       const abs = join(ctx.root, seed.rel);
 
       // Absent: nothing to refresh, and creating it is NOT this migration's
-      // job — the upgrade's `skipIfExists` emit phase seeds it from the
+      // job: the upgrade's `skipIfExists` emit phase seeds it from the
       // template, which already carries the current text.
       if (!existsSync(abs)) {
-        result.notes.push(`${seed.rel}: absent — nothing to refresh`);
+        result.notes.push(`${seed.rel}: absent: nothing to refresh`);
         continue;
       }
 
@@ -231,13 +231,13 @@ const envTemplates: MigrationScript = {
         // Unreadable (a directory, a permission wall). Non-throwing is the
         // registry-wide contract: record and let the caller decide.
         result.conflicts.push(seed.rel);
-        result.notes.push(`${seed.rel}: unreadable (${errorMessage(err)}) — left untouched`);
+        result.notes.push(`${seed.rel}: unreadable (${errorMessage(err)}): left untouched`);
         continue;
       }
 
       const current = render(loadTemplate(seed.template), {});
       if (!isStaleSeed(seed.kind, prev, current)) {
-        result.notes.push(`${seed.rel}: user-owned or already current — left untouched`);
+        result.notes.push(`${seed.rel}: user-owned or already current: left untouched`);
         continue;
       }
 
@@ -251,7 +251,7 @@ const envTemplates: MigrationScript = {
         refreshSeed(abs, current);
       } catch (err) {
         result.conflicts.push(seed.rel);
-        result.notes.push(`${seed.rel}: refresh failed (${errorMessage(err)}) — left untouched`);
+        result.notes.push(`${seed.rel}: refresh failed (${errorMessage(err)}): left untouched`);
         continue;
       }
       result.changed.push(seed.rel);
@@ -272,7 +272,7 @@ function mcpConfigPath(root: string): { rel: string; abs: string } | null {
   try {
     host = loadProjectInfo(root).config.host;
   } catch {
-    // No readable project id/config — fall back to the default host rather than
+    // No readable project id/config: fall back to the default host rather than
     // failing the migration. Its config path is the one the older join flow used.
   }
   const abs = mcpConfigPathFor(host, root);
@@ -296,7 +296,7 @@ function mcpConfigPath(root: string): { rel: string; abs: string } | null {
  *  no emit can express belongs.
  *
  *  Two conditions gate the rewrite, and both matter. The repo must carry the
- *  workspace marker — a repo that deliberately chose the http transport has an
+ *  workspace marker: a repo that deliberately chose the http transport has an
  *  http entry too, and rewriting it would be wrong. And the entry must not
  *  already be on the bridge: a joined repo whose entry names the workspace needs
  *  nothing, which is what makes a second run a byte-level no-op.
@@ -305,7 +305,7 @@ function mcpConfigPath(root: string): { rel: string; abs: string } | null {
  *  same downgrade appears in a second shape: a joined repo whose `noir` entry is
  *  the plain repo-scoped stdio form (`command`/`args` with no `--workspace`),
  *  which is what a re-scaffold under an earlier release rewrote a joined repo's
- *  entry to — the marker and the config then disagree about the same repo. A
+ *  entry to: the marker and the config then disagree about the same repo. A
  *  marker is proof of membership, so an entry that does not name the workspace
  *  is stale whichever form it is in, and both are repaired here. An entry in
  *  neither shape (no `command`, no `type: 'http'`) is left alone: it is not a
@@ -318,7 +318,7 @@ const workspaceBridge: MigrationScript = {
     const result: MigrationResult = { changed: [], conflicts: [], notes: [] };
     const name = readWorkspaceMarker(ctx.root);
     if (name === null) {
-      result.notes.push('not joined to a workspace — nothing to rewrite');
+      result.notes.push('not joined to a workspace: nothing to rewrite');
       return result;
     }
     const target = mcpConfigPath(ctx.root);
@@ -334,23 +334,23 @@ const workspaceBridge: MigrationScript = {
       // Unparseable (JSONC, a trailing comma, a directory). Non-throwing is the
       // registry-wide contract: record and let the caller decide.
       result.conflicts.push(target.rel);
-      result.notes.push(`${target.rel}: unreadable (${errorMessage(err)}) — left untouched`);
+      result.notes.push(`${target.rel}: unreadable (${errorMessage(err)}): left untouched`);
       return result;
     }
 
     const servers = config.mcpServers;
     if (typeof servers !== 'object' || servers === null || Array.isArray(servers)) {
-      result.notes.push(`${target.rel}: no mcpServers block — left untouched`);
+      result.notes.push(`${target.rel}: no mcpServers block: left untouched`);
       return result;
     }
     const entry = (servers as Record<string, unknown>).noir;
     if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
-      result.notes.push(`${target.rel}: no noir entry — left untouched`);
+      result.notes.push(`${target.rel}: no noir entry: left untouched`);
       return result;
     }
     // Which stale shape is this entry in? An http pointer names a daemon by
     // address. A stdio entry that does NOT pass `--workspace` is the repo-scoped
-    // form — the downgrade a re-scaffold used to apply to a joined repo. An
+    // form: the downgrade a re-scaffold used to apply to a joined repo. An
     // entry that already names the workspace is the bridge entry a fresh join
     // writes, so there is nothing to repair (and a second run stays a no-op).
     const entryObj = entry as Record<string, unknown>;
@@ -361,8 +361,8 @@ const workspaceBridge: MigrationScript = {
     if (!isHttpPointer && !isRepoScopedStdio) {
       result.notes.push(
         namesWorkspace
-          ? `${target.rel}: already reaches Noir over the bridge — left untouched`
-          : `${target.rel}: noir entry is not a transport this migration owns — left untouched`,
+          ? `${target.rel}: already reaches Noir over the bridge: left untouched`
+          : `${target.rel}: noir entry is not a transport this migration owns: left untouched`,
       );
       return result;
     }
@@ -381,7 +381,7 @@ const workspaceBridge: MigrationScript = {
         noir: {
           command: resolveNoirCommand(),
           // The argv comes from the adapters' own helper, so this rewrite lands
-          // on exactly the entry a fresh join writes — the name is the whole
+          // on exactly the entry a fresh join writes: the name is the whole
           // address, and the bridge resolves the daemon (and reads its token)
           // itself, so none of that is written into a committed config file.
           args: noirStdioArgs(name),
@@ -393,7 +393,7 @@ const workspaceBridge: MigrationScript = {
       atomicWriteFile(target.abs, `${JSON.stringify(next, null, 2)}\n`);
     } catch (err) {
       result.conflicts.push(target.rel);
-      result.notes.push(`${target.rel}: write failed (${errorMessage(err)}) — left untouched`);
+      result.notes.push(`${target.rel}: write failed (${errorMessage(err)}): left untouched`);
       return result;
     }
     result.changed.push(target.rel);
@@ -418,7 +418,7 @@ const OLD_HOOK_MARKER = 'noir-session-start';
  *  Node by absolute path and is kept executable by the installer. The command
  *  lives in `.claude/settings.local.json`, which the manifest deliberately never
  *  re-emits (the user may have removed the hook), so only the upgrade path can
- *  repair an existing project's entry — which is what this migration is for.
+ *  repair an existing project's entry: which is what this migration is for.
  *
  *  Idempotent: a command already routed through ` hook` is left alone, and the
  *  runner-file removal is `force: true`, so a second run is a byte-level no-op.
@@ -440,7 +440,7 @@ const hookCommand: MigrationScript = {
       } catch (err) {
         result.conflicts.push(settingsRel);
         result.notes.push(
-          `${settingsRel}: unreadable (${errorMessage(err)}) — command left untouched`,
+          `${settingsRel}: unreadable (${errorMessage(err)}): command left untouched`,
         );
         settings = {}; // still remove the orphaned runner below
       }
@@ -481,11 +481,11 @@ const hookCommand: MigrationScript = {
           result.notes.push(`${settingsRel}: hook now routes through \`noir hook\``);
         } catch (err) {
           result.conflicts.push(settingsRel);
-          result.notes.push(`${settingsRel}: write failed (${errorMessage(err)}) — left untouched`);
+          result.notes.push(`${settingsRel}: write failed (${errorMessage(err)}): left untouched`);
         }
       }
     } else {
-      result.notes.push(`${settingsRel}: absent — nothing to migrate`);
+      result.notes.push(`${settingsRel}: absent: nothing to migrate`);
     }
 
     // 2. Remove the orphaned runner. Its command no longer points at it, so the
@@ -530,7 +530,7 @@ type HookEventPatch = Array<Record<string, unknown>>;
 
 /** Append a set of hook events to a host's hook config file. Idempotent: an
  *  event key already present is left alone. `createIfMissing` controls whether
- *  an absent file (or a file with no `hooks` object) is created — true for a
+ *  an absent file (or a file with no `hooks` object) is created: true for a
  *  host whose hook is brand new (gemini), false for a host where an absent file
  *  means the user removed the hook and it must not be resurrected (claude). */
 function applyHookEvents(
@@ -543,7 +543,7 @@ function applyHookEvents(
   let settings: Record<string, unknown>;
   if (!existsSync(abs)) {
     if (!createIfMissing) {
-      return { note: `${rel}: absent — nothing to migrate`, changed: false, conflict: false };
+      return { note: `${rel}: absent: nothing to migrate`, changed: false, conflict: false };
     }
     settings = {};
   } else {
@@ -551,7 +551,7 @@ function applyHookEvents(
       settings = JSON.parse(readFileSync(abs, 'utf8')) as Record<string, unknown>;
     } catch (err) {
       return {
-        note: `${rel}: unreadable (${errorMessage(err)}) — left untouched`,
+        note: `${rel}: unreadable (${errorMessage(err)}): left untouched`,
         changed: false,
         conflict: true,
       };
@@ -562,7 +562,7 @@ function applyHookEvents(
   if (typeof existing !== 'object' || existing === null || Array.isArray(existing)) {
     if (!createIfMissing) {
       return {
-        note: `${rel}: no hooks object — nothing to migrate`,
+        note: `${rel}: no hooks object: nothing to migrate`,
         changed: false,
         conflict: false,
       };
@@ -589,7 +589,7 @@ function applyHookEvents(
     return { note: `${rel}: appended enforcement events`, changed: true, conflict: false };
   } catch (err) {
     return {
-      note: `${rel}: write failed (${errorMessage(err)}) — left untouched`,
+      note: `${rel}: write failed (${errorMessage(err)}): left untouched`,
       changed: false,
       conflict: true,
     };
@@ -597,8 +597,8 @@ function applyHookEvents(
 }
 
 /** `1.4.0 → 1.5.0`: append the enforcement events to an existing claude or
- *  gemini hook. The hook entry is write-once — the manifest never re-emits it
- *  after init — so an install created before enforcement shipped has no (or a
+ *  gemini hook. The hook entry is write-once: the manifest never re-emits it
+ *  after init: so an install created before enforcement shipped has no (or a
  *  partial) hook. claude gains PreToolUse + Stop; gemini gains SessionStart +
  *  BeforeTool. cursor is a regenerate-mode file, so sync re-emits it with no
  *  migration. Idempotent: an event key already present is left alone. */
@@ -643,7 +643,7 @@ const hookEvents: MigrationScript = {
 };
 
 /** The registry. The runner sorts the selected window by `to`, so declaration
- *  order is documentation only — oldest step first. */
+ *  order is documentation only: oldest step first. */
 export const MIGRATIONS: readonly MigrationScript[] = [
   synthetic,
   envPointer,
@@ -674,7 +674,7 @@ export function applyInlineConflict(
 /** Apply `(ours, theirs)` to a region: if they're equal, return `ours` (no
  *  conflict); otherwise emit inline markers. Migration authors should prefer
  *  this over {@link applyInlineConflict} when the "no change needed" case is
- *  common — it keeps re-runs truly idempotent (no spurious markers on a clean
+ *  common: it keeps re-runs truly idempotent (no spurious markers on a clean
  *  tree). */
 export function applyWithConflict(
   ours: string,

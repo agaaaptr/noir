@@ -44,7 +44,7 @@ const { callerHolder, probeHolder, projectHolder } = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/daemon-client.js', () => ({
-  // probe-only — never starts a daemon; withRunningDaemon reuses the probe.
+  // probe-only: never starts a daemon; withRunningDaemon reuses the probe.
   probeDaemon: vi.fn(async () => probeHolder.current),
   withRunningDaemon: vi.fn(async (_opts: unknown, fn: (c: unknown) => Promise<unknown>) =>
     fn(callerHolder.current),
@@ -171,15 +171,15 @@ function captureStreams(): { capture: () => Captured; restore: () => void } {
 
 const base: HandoffOptions = { json: false };
 
-describe('noir handoff — default markdown to STDOUT', () => {
+describe('noir handoff: default markdown to STDOUT', () => {
   it('emits the structured markdown block to stdout with the key sections', async () => {
     const { capture, restore } = captureStreams();
     try {
       await handoff({ ...base });
       const c = capture();
       // STDOUT carries the artifact; STDERR is empty (no diagnostics in default mode).
-      expect(c.out).toContain('# Noir handoff — noir-demo (proj-abc)');
-      expect(c.out).toContain('**Phase:** plan — next gate: execute');
+      expect(c.out).toContain('# Noir handoff: noir-demo (proj-abc)');
+      expect(c.out).toContain('**Phase:** plan: next gate: execute');
       expect(c.out).toContain('## Open host');
       expect(c.out).toContain('## Next step');
       expect(c.out).toContain('`noir-executing-plans`'); // next gate's skill
@@ -222,14 +222,14 @@ describe('noir handoff — default markdown to STDOUT', () => {
       await handoff({ ...base });
       const c = capture();
       expect(c.out).toContain('Open `gemini`');
-      expect(c.out).toContain('# Noir handoff — gem-proj (proj-g)');
+      expect(c.out).toContain('# Noir handoff: gem-proj (proj-g)');
     } finally {
       restore();
     }
   });
 });
 
-describe('noir handoff --json — structured payload', () => {
+describe('noir handoff --json: structured payload', () => {
   it('emits the {ok,data} envelope to stdout (not markdown)', async () => {
     const { capture, restore } = captureStreams();
     try {
@@ -254,7 +254,7 @@ describe('noir handoff --json — structured payload', () => {
   });
 });
 
-describe('noir handoff --write — persists under .noir/handoff/ (gitignored)', () => {
+describe('noir handoff --write: persists under .noir/handoff/ (gitignored)', () => {
   let root: string;
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'noir-handoff-write-'));
@@ -281,7 +281,7 @@ describe('noir handoff --write — persists under .noir/handoff/ (gitignored)', 
       expect(c.err).toContain(expected);
       expect(existsSync(expected)).toBe(true);
       const md = readFileSync(expected, 'utf8');
-      expect(md).toContain('# Noir handoff — write-demo (proj-write)');
+      expect(md).toContain('# Noir handoff: write-demo (proj-write)');
       expect(md).toContain('## Open host');
     } finally {
       restore();
@@ -315,20 +315,20 @@ describe('noir handoff --write — persists under .noir/handoff/ (gitignored)', 
   });
 });
 
-describe('noir handoff — graceful degradation', () => {
+describe('noir handoff: graceful degradation', () => {
   it('daemon-down: artifact still renders with the "start daemon" note, exit 0', async () => {
     probeHolder.current = { running: false };
     const { capture, restore } = captureStreams();
     try {
-      // Does not throw — renders from in-process project info + a note.
+      // Does not throw: renders from in-process project info + a note.
       await handoff({ ...base });
       const c = capture();
-      expect(c.out).toContain('# Noir handoff — noir-demo (proj-abc)');
+      expect(c.out).toContain('# Noir handoff: noir-demo (proj-abc)');
       expect(c.out).toContain('daemon not running');
       expect(c.out).toContain('start `noir daemon start`');
-      // No task section (workflow_status wasn't fetched — daemon down).
+      // No task section (workflow_status wasn't fetched: daemon down).
       expect(c.out).toContain('**Phase:** no active task');
-      // Exit 0 — the command returned without throwing.
+      // Exit 0: the command returned without throwing.
     } finally {
       restore();
     }
@@ -347,7 +347,7 @@ describe('noir handoff — graceful degradation', () => {
       await handoff({ ...base });
       const c = capture();
       // Artifact still renders; the seed degrades to the embedder note.
-      expect(c.out).toContain('# Noir handoff — noir-demo (proj-abc)');
+      expect(c.out).toContain('# Noir handoff: noir-demo (proj-abc)');
       expect(c.out).toContain('Embedder unavailable');
       // Memory seed may still have hits (it doesn't depend on the embedder).
       expect(c.out).toContain('Use JWT for auth sessions.');

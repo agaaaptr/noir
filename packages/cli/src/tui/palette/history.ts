@@ -2,20 +2,20 @@
 //
 // The palette shows the user's recently-run commands above the full list on an
 // empty query. That recency data lives on disk so it survives sessions. The file
-// is keyed by canonical ProjectId — `~/.noir/<projectId>/tui-history.json` (NOT a
-// filesystem path) — so it respects the `.noir/` single-source-of-truth invariant
+// is keyed by canonical ProjectId: `~/.noir/<projectId>/tui-history.json` (NOT a
+// filesystem path): so it respects the `.noir/` single-source-of-truth invariant
 // (CLAUDE.md): a project's recents are isolated from every other project. The
 // file is a simple newest-first JSON array of `{ argv, id }` (id is the
-// space-joined argv — the same stable dispatch key the registry uses).
+// space-joined argv: the same stable dispatch key the registry uses).
 //
 // Opt-out: set `NOIR_DISABLE_TUI_HISTORY=1` to make persistence in-memory only
 // (loadRecent/recordRecent become no-ops). Useful for ephemeral/CI shells.
 //
 // Bounds: `MAX_ENTRIES` (50) caps the file so it never grows without bound, and
-// every write is atomic via the shared `atomicWriteFile` (@noir-ai/core — the
+// every write is atomic via the shared `atomicWriteFile` (@noir-ai/core: the
 // same helper daemon/lifecycle.ts and update-check.ts use) so a crash mid-write
 // never leaves a half-written JSON blob. A corrupt file (manual edit, truncated
-// write from an older build) degrades to `[]` rather than throwing — recency is
+// write from an older build) degrades to `[]` rather than throwing: recency is
 // a nice-to-have, never a crash.
 //
 // Test seam: `__setNoirHome` overrides the home dir so the offline suite can
@@ -30,11 +30,11 @@ import { atomicWriteFile } from '@noir-ai/core';
 export interface RecentEntry {
   /** The raw argv the user selected (e.g. `['context','search','foo']`). */
   readonly argv: readonly string[];
-  /** Space-joined argv — the stable dispatch key (e.g. `context search foo`). */
+  /** Space-joined argv: the stable dispatch key (e.g. `context search foo`). */
   readonly id: string;
 }
 
-/** Bounded history size — the palette only needs a handful of recents. */
+/** Bounded history size: the palette only needs a handful of recents. */
 const MAX_ENTRIES = 50;
 
 /** The env var that disables palette-history persistence (in-memory only). */
@@ -75,7 +75,7 @@ export function isHistoryEnabled(): boolean {
 
 /**
  * Load the persisted recent commands for `projectId`, newest first. Returns `[]`
- * when persistence is disabled, the file is missing/empty/corrupt — recency is
+ * when persistence is disabled, the file is missing/empty/corrupt: recency is
  * best-effort and must never throw.
  */
 export function loadRecent(projectId: string): RecentEntry[] {
@@ -107,7 +107,7 @@ export function loadRecent(projectId: string): RecentEntry[] {
  * entry); re-running a command from deeper in the list moves it to the front.
  * The persisted list is capped at {@link MAX_ENTRIES}. No-op when persistence is
  * disabled. Best-effort: a failed write is swallowed (recency is a nice-to-have
- * — a read-only home or a full disk must not break command dispatch).
+ *: a read-only home or a full disk must not break command dispatch).
  */
 export function recordRecent(projectId: string, argv: readonly string[]): void {
   if (argv.length === 0) return;
@@ -120,7 +120,7 @@ export function recordRecent(projectId: string, argv: readonly string[]): void {
     mkdirSync(dir, { recursive: true });
     atomicWriteFile(historyFile(projectId), `${JSON.stringify(next, null, 2)}\n`);
   } catch {
-    // Recency is a nice-to-have — a read-only home (or a full disk) must not
+    // Recency is a nice-to-have: a read-only home (or a full disk) must not
     // break command dispatch.
   }
 }

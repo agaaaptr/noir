@@ -18,7 +18,7 @@
 import type { EmbedFn } from '../types.js';
 import { EMBED_DIM, l2normalize } from './normalize.js';
 
-/** Default bound on the Ollama embedding POST — a remote Ollama that accepts
+/** Default bound on the Ollama embedding POST: a remote Ollama that accepts
  *  TCP but never answers must not hang search/recall/index. 60s is generous for
  *  embedding latency (incl. a first-request model warm-up). */
 const OLLAMA_FETCH_TIMEOUT_MS = 60_000;

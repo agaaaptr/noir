@@ -5,8 +5,8 @@ Status: proposed · 2026-10-08
 ## Purpose
 
 Harden Noir's always-on rules and skill pack by natively reimplementing the ideas of
-trusted repositories — the ponytail laziness ladder, anti-slop / humanizer prose
-standards, and design-taste references — so that a Noir-managed host agent produces
+trusted repositories: the ponytail laziness ladder, anti-slop / humanizer prose
+standards, and design-taste references: so that a Noir-managed host agent produces
 less machine-generated output and carries real design taste. No third-party text is
 shipped (Noir adopts ideas, not copies; ADR-0002 forbids a plugin/marketplace surface).
 
@@ -17,7 +17,7 @@ shipped (Noir adopts ideas, not copies; ADR-0002 forbids a plugin/marketplace su
   therefore ideas-only; ui-ux-pro-max and refero are MIT and their *structure* (taxonomy,
   schemas, rule ladders) is fair to mirror, their prose is not copied.
 - Enforcement channel: **always-on injected rules**, on **all five hosts**.
-- Posture: **split** — fail tier for decorative/narration/emoji, warn tier for
+- Posture: **split**: fail tier for decorative/narration/emoji, warn tier for
   vocabulary and prose.
 - Rename: **hard rename** `noir-code-hygiene` to `noir-codebase-audit`; keep the
   `noir-<kebab>` noun canon and the `dir == frontmatter.name` compiler invariant.
@@ -41,7 +41,7 @@ Three enforcement tiers, one idea per tier:
    with a hook bootstrap today, so extend the existing `.noir/hooks/noir-session-start.mjs`
    runner (regenerate mode, re-emitted on sync) to also emit the full ruleset as
    `hookSpecificOutput.additionalContext`, mirroring ponytail's SessionStart + SubagentStart
-   pattern. UserPromptSubmit is out of scope — Noir has no per-prompt mode-tracking concept;
+   pattern. UserPromptSubmit is out of scope: Noir has no per-prompt mode-tracking concept;
    the ruleset injected at SessionStart rides the whole session. Because the runner is
    regenerate-mode, existing installs pick up the runner itself on the next `noir sync`; the
    SubagentStart settings entry is write-once, so an existing install gains it on re-init
@@ -113,15 +113,15 @@ false positives. This is the "both regex and frequency" requirement.
 
 ### New skills
 
-- `noir-lazy` — the laziness ladder and YAGNI stance as an on-demand playbook
+- `noir-lazy`: the laziness ladder and YAGNI stance as an on-demand playbook
   (triggers: "be lazy", "simplest solution", "do less", "yagni").
-- `noir-debt` — harvest `noir-debt:` markers into a debt ledger (stdout or `.noir/`
+- `noir-debt`: harvest `noir-debt:` markers into a debt ledger (stdout or `.noir/`
   artifact), mirroring ponytail-debt.
-- `noir-over-engineering-review` — diff-scoped complexity review (ponytail-review).
-- `noir-design` — design direction: commit to one bold aesthetic, anti-template cliché
+- `noir-over-engineering-review`: diff-scoped complexity review (ponytail-review).
+- `noir-design`: design direction: commit to one bold aesthetic, anti-template cliché
   list, precedence ladder (adopting the frontend-design and frontend-stack ideas).
-- `noir-design-reference` — the style inventory below, as `references/design.md`.
-- `noir-dataviz` — chart form/color/marks rules (dataviz ideas re-expressed as original
+- `noir-design-reference`: the style inventory below, as `references/design.md`.
+- `noir-dataviz`: chart form/color/marks rules (dataviz ideas re-expressed as original
   rules; no copied text).
 
 `noir-frontend` is folded into `noir-design` (its `references/ui-patterns.md` is the
@@ -138,18 +138,18 @@ with descriptions tightened to a WHEN cue. This is a content pass, not a rename 
 
 Original content mirroring the structure (not the text) of the trusted sources:
 
-- **Style taxonomy** — neobrutalism, glassmorphism, neumorphism, claymorphism,
+- **Style taxonomy**: neobrutalism, glassmorphism, neumorphism, claymorphism,
   skeuomorphism, minimalism, brutalism, bento grid, editorial, luxury, and the
   long-tail from the ui-ux-pro-max styles catalog, each with: era, keywords, cost,
   accessibility floor, and deprecated→replacement redirect.
-- **Palette schema** — a 16-token semantic set (primary/on-primary/secondary/on-secondary/
+- **Palette schema**: a 16-token semantic set (primary/on-primary/secondary/on-secondary/
   accent/on-accent/background/foreground/card/card-foreground/muted/muted-foreground/
   border/destructive/on-destructive/ring), shadcn/Tailwind-shaped.
-- **UX rule ladder** — the 10-category priority order (accessibility, touch, performance,
+- **UX rule ladder**: the 10-category priority order (accessibility, touch, performance,
   style, layout, typography, animation, forms, navigation, charts) with concrete
   thresholds (4.5:1 contrast, 44×44 touch, 8px spacing, 16px body, reduced-motion).
 - **Font pairing and motion** guidance (headings/body pairing, GSAP-free motion tiers).
-- **Dataviz** — categorical/ordinal/sequential/diverging color jobs, OKLCH light/dark
+- **Dataviz**: categorical/ordinal/sequential/diverging color jobs, OKLCH light/dark
   ranges, CVD delta-E floor, mark grammar.
 
 Big binary assets (54 fonts, 1512 icons, Google Fonts table) are **not** vendored: Noir is
@@ -176,16 +176,16 @@ freshness SLA) are adopted as a *pattern*, not imported as rows.
 
 ## Decomposition (slices)
 
-1. `rules-engine` — lexical + humanizer + debt-marker rules, frequency pass, allowlist,
+1. `rules-engine`: lexical + humanizer + debt-marker rules, frequency pass, allowlist,
    regression tests.
-2. `always-on-injection` — RULES.md seed block (all hosts) + claude hook extension
+2. `always-on-injection`: RULES.md seed block (all hosts) + claude hook extension
    (SessionStart + SubagentStart), respecting the budget and rules.enabled.
-3. `skill-rename-rework` — rename `noir-codebase-audit`, rework all 27 bodies, update
+3. `skill-rename-rework`: rename `noir-codebase-audit`, rework all 27 bodies, update
    router/seed/docs/evals/tests.
-4. `new-skills` — noir-lazy, noir-debt, noir-over-engineering-review.
-5. `design-skills` — noir-design, noir-design-reference (`references/design.md`),
+4. `new-skills`: noir-lazy, noir-debt, noir-over-engineering-review.
+5. `design-skills`: noir-design, noir-design-reference (`references/design.md`),
    noir-dataviz; fold noir-frontend.
-6. `gate-and-evals` — hygiene:gate wiring, evals for new/renamed skills, docs sync.
+6. `gate-and-evals`: hygiene:gate wiring, evals for new/renamed skills, docs sync.
 
 ## Risks
 

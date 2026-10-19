@@ -9,7 +9,7 @@
 // Embeds file contents via an injected EmbedFn (the local embedder in
 // production; a deterministic fake in tests) and finds near-duplicate pairs by
 // cosine similarity. This is the ONLY mechanism that catches cross-file
-// SEMANTIC overlap (e.g. a hand-mirrored CLAUDE.md ≈ AGENTS.md) — exact
+// SEMANTIC overlap (e.g. a hand-mirrored CLAUDE.md ≈ AGENTS.md): exact
 // content-hash cannot, because the two files differ byte-wise.
 
 import { l2normalize } from './embedders/normalize.js';
@@ -44,7 +44,7 @@ export const NEAREST_DUP_DEFAULT_THRESHOLD = 0.85;
  * Find near-duplicate file pairs by cosine similarity over embedded contents.
  * `embed` is expected to return an L2-normalized vector (the local/remote
  * embedders do); vectors are re-normalized defensively so cosine = dot product.
- * Complexity is O(n²) in the file count — fine for the small candidate set a
+ * Complexity is O(n²) in the file count: fine for the small candidate set a
  * dedup scan feeds (host context files + `.noir/` docs). Empty-text files are
  * skipped. Returns pairs with similarity ≥ `threshold`, sorted desc, each
  * unordered pair once.

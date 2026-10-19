@@ -19,7 +19,7 @@ export interface EnsureResult {
   stop: () => Promise<void>;
 }
 
-/** Bounded `/health` probe timeout — a stale record whose port is held by a
+/** Bounded `/health` probe timeout: a stale record whose port is held by a
  *  blackhole socket (accepts TCP, never answers) must not hang every write
  *  command indefinitely. Matches `@noir-ai/cli`'s `PROBE_TIMEOUT_MS`. */
 const HEALTH_PROBE_TIMEOUT_MS = 1500;
@@ -36,7 +36,7 @@ async function isHealthy(
     if (res.status !== 200) return false;
     if (expectedPid === undefined) return true;
     // PID-reuse guard (mirrors daemon.ts): on the reuse path, require the
-    // responding daemon's OWN pid to match the recorded one — a foreign process
+    // responding daemon's OWN pid to match the recorded one: a foreign process
     // that recycled the pid and serves HTTP 200 must not be treated as OUR daemon.
     const body = (await res.json()) as { ok?: boolean; pid?: number; projectId?: string };
     if (body.ok !== true || body.pid !== expectedPid) return false;
@@ -76,7 +76,7 @@ export async function ensureDaemonRunning(opts: {
       },
     };
   }
-  if (rec) clearProjectDaemonRecord(project.id); // stale — pid dead or /health failed
+  if (rec) clearProjectDaemonRecord(project.id); // stale: pid dead or /health failed
 
   const running = await startHttpServer({
     project: opts.project,

@@ -15,7 +15,7 @@
 //
 // `status` / `next` (reads) map the daemon's logical-failure envelopes
 // (`{ok:false,error:'no active task'}` / `{ok:false,error:'unknown task'}`)
-// onto exit 3 (NOT_FOUND) — a focused task read reporting absence is a
+// onto exit 3 (NOT_FOUND): a focused task read reporting absence is a
 // not-found condition, not an error (the broader `noir status` folds the same
 // envelope to `null` and stays exit 0).
 
@@ -81,7 +81,7 @@ interface WorkflowNotFound {
   taskId?: string;
 }
 
-/** `workflow_resume` payload — a WorkflowStatus + a resumable flag. */
+/** `workflow_resume` payload: a WorkflowStatus + a resumable flag. */
 interface WorkflowResumeResult {
   ok: boolean;
   resumable?: boolean;
@@ -101,7 +101,7 @@ interface WorkflowResumeResult {
 // Phase → skill suggestion (grounded in the real @noir-ai/skills builtin pack;
 // each phase maps to a shipped noir-* skill the host can invoke next).
 // Exported so `noir handoff` reuses the SAME phase→skill map when naming
-// the next gate's skill in the handoff artifact — single source.
+// the next gate's skill in the handoff artifact: single source.
 export const PHASE_SKILL: Readonly<Record<string, string>> = {
   // Skill curation: intake+clarify merged into brainstorming;
   // execute → executing-plans; verify → verifying; document → wrap.
@@ -138,7 +138,7 @@ function writeDoneArtifacts(opts: CliOptions, taskId: string): void {
     const nextN = nextArtifactSequence(project.root, 'adr');
     writeDecisionStub(project.root, nextN, taskId, undefined, conflict);
   } catch {
-    // Artifact writes are best-effort — a failure must never mask the advance
+    // Artifact writes are best-effort: a failure must never mask the advance
     // result. Surface a tip so the user knows the artifacts didn't land.
     tip('document-phase artifacts could not be written (use --no-artifacts to skip)', opts);
   }
@@ -149,7 +149,7 @@ function writeDoneArtifacts(opts: CliOptions, taskId: string): void {
 /**
  * Call `workflow_status` (active task when `taskId` is absent). Returns the
  * success payload or throws exit 3 (NOT_FOUND) for a logical-failure envelope
- * (no active task / unknown task) — a focused task read's "absent" is a
+ * (no active task / unknown task): a focused task read's "absent" is a
  * not-found condition.
  */
 async function fetchStatus(opts: TaskOptions, taskId?: string): Promise<WorkflowStatusResult> {
@@ -174,7 +174,7 @@ function formatStamp(ms?: number): string {
 
 function renderStatusRow(s: WorkflowStatusResult, opts: CliOptions): void {
   const flag = s.degraded === true ? `  ${badge('warn', 'degraded')}` : '';
-  log(`task status — ${s.taskId}${flag}`, opts);
+  log(`task status: ${s.taskId}${flag}`, opts);
   const rows: { label: string; value: string }[] = [
     { label: 'Task', value: s.taskId },
     { label: 'Phase', value: s.phase },
@@ -289,7 +289,7 @@ export async function taskNext(opts: TaskOptions): Promise<void> {
     return;
   }
   const flag = data.degraded ? `  ${badge('warn', 'degraded')}` : '';
-  log(`task next — ${s.taskId} · phase ${s.phase} (${s.state}, ${s.mode})${flag}`, opts);
+  log(`task next: ${s.taskId} · phase ${s.phase} (${s.state}, ${s.mode})${flag}`, opts);
   if (s.nextGate) {
     info(`next gate: ${s.nextGate}`, opts);
   } else {
@@ -306,7 +306,7 @@ export async function taskNext(opts: TaskOptions): Promise<void> {
 export interface TaskNewOptions extends TaskOptions {
   slug: string;
   mode?: string;
-  /** Task class — drives the soft PRD gate (prd.mandatoryFor). */
+  /** Task class: drives the soft PRD gate (prd.mandatoryFor). */
   taskClass?: string;
 }
 
@@ -332,7 +332,7 @@ export async function taskNew(opts: TaskNewOptions): Promise<void> {
     }
     taskClass = opts.taskClass as TaskClass;
   }
-  // The CLI surface only takes a slug, so it doubles as the stable taskId — the
+  // The CLI surface only takes a slug, so it doubles as the stable taskId: the
   // engine's taskId/slug distinction collapses to the slug here. Re-starting the
   // same slug overwrites (the KV is the source of truth, not a journal).
   const res = await callDaemonTool<WorkflowStatusResult | WorkflowNotFound>(
@@ -370,7 +370,7 @@ export interface TaskAdvanceOptions extends TaskOptions {
 export async function taskAdvance(opts: TaskAdvanceOptions): Promise<void> {
   const args: Record<string, unknown> = {};
   if (typeof opts.to === 'string' && opts.to.length > 0) {
-    // Validate the target phase client-side (exit 2 on a typo) — PHASE_SKILL's
+    // Validate the target phase client-side (exit 2 on a typo): PHASE_SKILL's
     // keys ARE the valid phases, so reuse them rather than a second literal.
     if (!Object.keys(PHASE_SKILL).includes(opts.to)) {
       fail(EXIT.USAGE, `task advance: invalid phase '${opts.to}'`, opts);
@@ -426,7 +426,7 @@ export interface TaskResumeOptions extends TaskOptions {
 /** Render a resume briefing: state, phase, next action + skill hint + artifacts. */
 function renderResumeBriefing(r: WorkflowResumeResult, opts: CliOptions): void {
   const flag = r.degraded === true ? `  ${badge('warn', 'degraded')}` : '';
-  log(`resume — ${r.taskId} (${r.state}, ${r.mode})${flag}`, opts);
+  log(`resume: ${r.taskId} (${r.state}, ${r.mode})${flag}`, opts);
   const rows: { label: string; value: string }[] = [
     { label: 'Task', value: String(r.taskId) },
     { label: 'Phase', value: String(r.phase) },
@@ -458,14 +458,14 @@ export async function taskResume(opts: TaskResumeOptions): Promise<void> {
   const res = await callDaemonTool<WorkflowResumeResult>(opts, 'workflow_resume', args);
   // resume is a read; the "nothing to resume" envelope is exit 1 (not a crash).
   // Route through fail() in BOTH branches so --json also exits 1 (fail emits the
-  // canonical {ok:false,error} envelope on stdout) — previously --json wrote a
+  // canonical {ok:false,error} envelope on stdout): previously --json wrote a
   // non-canonical shape and exited 0.
   if (res.resumable !== true) {
     const detail =
       typeof res.error === 'string' && res.error.length > 0 ? res.error : 'nothing to resume';
     fail(EXIT.ERROR, `task resume: ${detail}`, opts);
   }
-  // `--prompt` records a resume intent (additive KV, observable — not an FSM
+  // `--prompt` records a resume intent (additive KV, observable: not an FSM
   // state change). Surface it in the briefing so the host sees the continue note.
   if (typeof opts.prompt === 'string' && opts.prompt.length > 0) {
     info(`resume prompt: ${opts.prompt}`, opts);
@@ -512,7 +512,7 @@ export interface TaskAbandonOptions extends TaskOptions {
 }
 
 export async function taskAbandon(opts: TaskAbandonOptions): Promise<void> {
-  // Abandonment is terminal — confirm in interactive mode (mirrors the in-TUI
+  // Abandonment is terminal: confirm in interactive mode (mirrors the in-TUI
   // destructive-confirm pattern). --no-input / --json / CI skip the prompt.
   if (isInteractive(opts)) {
     const clack = await import('@clack/prompts');
@@ -580,7 +580,7 @@ interface WorkflowAdvanceResult {
 
 /** Run one shell command and capture {exitCode, outputDigest}. */
 function runCheck(cmd: string): { exitCode: number; digest: string } {
-  // The CLI (user-invoked) owns shell access — the engine never shells out.
+  // The CLI (user-invoked) owns shell access: the engine never shells out.
   // Synchronous spawn keeps `noir task verify` a single atomic step; failures
   // surface as non-zero exit codes (the evidence), never a thrown crash.
   try {
@@ -605,7 +605,7 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
   // Resolve the check set from the project config (workflow.gate.verify.checks).
   // No checks resolvable → exit 2 (USAGE) rather than inventing commands.
   // A throw from loadProjectInfo on an uninitialized project must route through
-  // fail() — otherwise under --json stdout stays EMPTY (the raw error only
+  // fail(): otherwise under --json stdout stays EMPTY (the raw error only
   // reaches stderr), violating the `{ok:false}` envelope contract.
   let project: ProjectInfo;
   try {
@@ -663,7 +663,7 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
   const res = await callDaemonTool<WorkflowAdvanceResult>(opts, 'workflow_advance', { evidence });
   if (res.ok === true) {
     if (opts.json === true) {
-      // `{ok:true, data}` — evidence nests INSIDE the payload (no ad-hoc
+      // `{ok:true, data}`: evidence nests INSIDE the payload (no ad-hoc
       // top-level sibling keys), matching every other command's envelope shape.
       process.stdout.write(`${JSON.stringify({ ok: true, data: { ...res, evidence } })}\n`);
       return;
@@ -673,10 +673,10 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
     // evidence guard was added), be honest about it rather than claiming success.
     const landed = (res as WorkflowStatusResult).state;
     if (landed === 'done') {
-      success(`verify — ${evidence.summary} → gate approved`, opts);
+      success(`verify: ${evidence.summary} → gate approved`, opts);
     } else {
       info(
-        `verify — ${evidence.summary} → advanced to ${landed} (the verify gate fires at \`done\`; run \`noir task verify\` again when there)`,
+        `verify: ${evidence.summary} → advanced to ${landed} (the verify gate fires at \`done\`; run \`noir task verify\` again when there)`,
         opts,
       );
     }
@@ -693,7 +693,7 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
       `${JSON.stringify({
         ok: false,
         error: { code: EXIT.ERROR, message: `task verify: ${detail}` },
-        // `{ok:false, error}` + a payload — recovery context + evidence nest
+        // `{ok:false, error}` + a payload: recovery context + evidence nest
         // under `data`, not as top-level siblings (same envelope shape as the
         // success path; consumers read `data` for the full picture).
         data: {
@@ -729,7 +729,7 @@ export async function taskVerify(opts: TaskVerifyOptions): Promise<void> {
   fail(EXIT.ERROR, `task verify: ${detail}`, opts);
 }
 
-// `noir task research [<id>]` — show research status
+// `noir task research [<id>]`: show research status
 // `noir task research-record --type <t> --text "..." [--source <ref>] [--task <id>]`
 //   → workflow_research_record
 export interface TaskResearchOptions extends TaskOptions {
@@ -796,16 +796,16 @@ export async function taskDecompose(opts: TaskDecomposeOptions): Promise<void> {
   const cap = opts.capability.trim();
   if (cap.length === 0) fail(EXIT.USAGE, 'task decompose: <capability-id> is required', opts);
 
-  // Template SlicePlan (offline — mirrors draftPrd: single-shot, no provider
+  // Template SlicePlan (offline: mirrors draftPrd: single-shot, no provider
   // needed for a template, null/empty on no-provider). A provider-backed drafting
   // pass would fill richer fields; the offline template gives a valid skeleton.
   const plan = {
     capabilityId: cap,
-    intent: `Capability ${cap} — offline template (run with a provider for an LLM-drafted plan)`,
+    intent: `Capability ${cap}: offline template (run with a provider for an LLM-drafted plan)`,
     slices: [
       {
         id: 's1-walking-skeleton',
-        title: 'Walking skeleton — thinnest end-to-end',
+        title: 'Walking skeleton: thinnest end-to-end',
         type: 'feature' as const,
         rationale: `The first slice for capability ${cap}.`,
         scopeIn: 'End-to-end path linking the main architecture.',
@@ -820,7 +820,7 @@ export async function taskDecompose(opts: TaskDecomposeOptions): Promise<void> {
     status: { 's1-walking-skeleton': 'planned' as const },
   };
 
-  // `--out <path>`: persist the plan JSON (a silent no-op before — the flag was
+  // `--out <path>`: persist the plan JSON (a silent no-op before: the flag was
   // declared + forwarded but never acted on).
   if (typeof opts.out === 'string' && opts.out.length > 0) {
     try {
@@ -839,9 +839,9 @@ export async function taskDecompose(opts: TaskDecomposeOptions): Promise<void> {
     process.stdout.write(`${JSON.stringify({ ok: true, data: plan })}\n`);
     return;
   }
-  log(`decompose — ${cap}`, opts);
+  log(`decompose: ${cap}`, opts);
   for (const s of plan.slices) {
-    info(`${s.id}: ${s.title} (${s.type}) — rationale: ${s.rationale}`, opts);
+    info(`${s.id}: ${s.title} (${s.type}): rationale: ${s.rationale}`, opts);
   }
   tip('each piece enters the existing clarify→spec→plan→execute→verify→document workflow', opts);
 }

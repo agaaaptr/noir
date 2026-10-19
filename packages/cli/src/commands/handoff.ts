@@ -10,13 +10,13 @@
 // DOCTRINE (hard constraint): Noir NEVER launches the host and NEVER writes the
 // artifact into CLAUDE.md/AGENTS.md (claude byte-parity risk + the double-`@`-
 // import hazard the manifest already fixed). The host-launch directive is TEXT
-// ONLY — `hostLaunchDirective(host)` / `HostAdapter.emitHandoff` produce the
+// ONLY: `hostLaunchDirective(host)` / `HostAdapter.emitHandoff` produce the
 // "Open `<host>` …" wording; `noir handoff` never spawns anything.
 //
 // Graceful degradation (mirrors `status.ts`): a down daemon is reported with an
 // honest note ("start `noir daemon start` for live task/memory") and the
 // artifact still renders from in-process `.noir/` reads (project info + a
-// workflow snapshot if locally available) — exit 0. A missing embedder during
+// workflow snapshot if locally available): exit 0. A missing embedder during
 // the bounded extraction folds to `null` (via `tryTool`); the seed section
 // renders a "degraded" note instead of failing.
 //
@@ -24,7 +24,7 @@
 // stdout write under the default path); `--json` emits the structured payload
 // via the versioned `{ok,data}` envelope instead; ALL diagnostics (the
 // "wrote <path>" confirmation, the daemon-down note) → STDERR via `info()`.
-// `--write` persists to `.noir/handoff/HO-<NNNN>-<id>.md` (gitignored — see
+// `--write` persists to `.noir/handoff/HO-<NNNN>-<id>.md` (gitignored: see
 // `@noir-ai/core` `syncIgnores`); the path is reported on stderr, never stdout.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -54,10 +54,10 @@ export interface HandoffOptions extends CliOptions, DaemonClientOptions {
   write?: boolean;
 }
 
-/** Bounded extraction limits — small enough to seed a prompt, never a dump. */
+/** Bounded extraction limits: small enough to seed a prompt, never a dump. */
 const SEED_LIMIT = 5;
 
-// Wire result shapes (slices of the daemon payloads; local types — the CLI
+// Wire result shapes (slices of the daemon payloads; local types: the CLI
 // depends only on the MCP wire contract, mirrors status.ts / context.ts).
 interface ContextSearchHit {
   path?: string;
@@ -103,7 +103,7 @@ export interface HandoffPayloadFull {
   project: { id: string; name: string };
   host: HostId;
   /** Host-launch directive text (single source: `hostLaunchDirective` or the
-   *  adapter's `emitHandoff` override). TEXT ONLY — never a spawn. */
+   *  adapter's `emitHandoff` override). TEXT ONLY: never a spawn. */
   directive: string;
   task: {
     taskId: string;
@@ -123,15 +123,15 @@ export interface HandoffPayloadFull {
   };
 }
 
-// Rendering — the markdown artifact (STDOUT) + the structured payload (--json).
+// Rendering: the markdown artifact (STDOUT) + the structured payload (--json).
 
-/** Heading line: `# Noir handoff — <name> (<id>)`. */
+/** Heading line: `# Noir handoff: <name> (<id>)`. */
 function heading(name: string, id: string): string {
-  return `# Noir handoff — ${name} (${id})`;
+  return `# Noir handoff: ${name} (${id})`;
 }
 
 /** Render the markdown artifact from the structured payload. STDOUT-safe (no
- *  ANSI — the artifact is pasteable text; `--no-color` honored by virtue of
+ *  ANSI: the artifact is pasteable text; `--no-color` honored by virtue of
  *  never coloring). */
 function renderMarkdown(p: HandoffPayloadFull): string {
   const lines: string[] = [];
@@ -141,7 +141,7 @@ function renderMarkdown(p: HandoffPayloadFull): string {
   // Phase / gate line.
   if (p.task) {
     const gate = p.task.nextGate ?? '—';
-    lines.push(`**Phase:** ${p.task.phase} — next gate: ${gate}`);
+    lines.push(`**Phase:** ${p.task.phase}: next gate: ${gate}`);
   } else {
     lines.push('**Phase:** no active task');
   }
@@ -155,7 +155,7 @@ function renderMarkdown(p: HandoffPayloadFull): string {
   lines.push('');
   lines.push('## Next step');
   if (p.task?.nextSkill) {
-    lines.push(`Run \`${p.task.nextSkill}\` — the host's next gate skill.`);
+    lines.push(`Run \`${p.task.nextSkill}\`: the host's next gate skill.`);
   } else {
     lines.push('No further gate ahead (past verify, or no active task).');
   }
@@ -171,7 +171,7 @@ function renderMarkdown(p: HandoffPayloadFull): string {
     }
   } else if (p.degraded.embedderMissing) {
     lines.push(
-      '_Embedder unavailable — degraded to BM25-only or no hits. Start `noir daemon start` for live context._',
+      '_Embedder unavailable: degraded to BM25-only or no hits. Start `noir daemon start` for live context._',
     );
   } else {
     lines.push('_No context hits (or daemon down). Start `noir daemon start` for live context._');
@@ -182,7 +182,7 @@ function renderMarkdown(p: HandoffPayloadFull): string {
   lines.push('## Extracted memory (seed)');
   if (p.memorySeed && p.memorySeed.length > 0) {
     for (const m of p.memorySeed) {
-      lines.push(`- \`${m.id}\` — ${m.summary}`);
+      lines.push(`- \`${m.id}\`: ${m.summary}`);
     }
   } else {
     lines.push(
@@ -192,13 +192,13 @@ function renderMarkdown(p: HandoffPayloadFull): string {
 
   // Live data pointer.
   lines.push('');
-  lines.push('## Live data — call these from the host (already wired via the host MCP config)');
+  lines.push('## Live data: call these from the host (already wired via the host MCP config)');
   lines.push('- `noir.workflow_status` · `noir.context_search` · `noir.memory_recall`');
 
   // Daemon-down note (honest degradation, mirrors status.ts).
   if (p.degraded.daemonDown) {
     lines.push('');
-    lines.push('> **Note:** daemon not running — start `noir daemon start` for live task/memory.');
+    lines.push('> **Note:** daemon not running: start `noir daemon start` for live task/memory.');
   }
 
   lines.push('');
@@ -250,7 +250,7 @@ function toHostPayload(p: HandoffPayloadFull): HandoffPayload {
 
 /** Resolve the directive text: the adapter's `emitHandoff` override if present,
  *  else the shared `defaultHandoffBlock` (which composes `hostLaunchDirective`).
- *  Routes via `resolveAdapter` (no CLI branching — adding a host needs no CLI
+ *  Routes via `resolveAdapter` (no CLI branching: adding a host needs no CLI
  *  edit, mirroring the host-adapter seam). */
 function resolveDirective(root: string, p: HandoffPayloadFull): string {
   const ctx: EmitContext = { root };
@@ -271,8 +271,8 @@ function handoffFilePath(root: string, taskId: string | undefined, projectId: st
   return resolveArtifactPath(root, 'handoff', { taskId: id });
 }
 
-// Bounded extraction — `context_search` + `memory_recall` for the active task's
-// domain. Uses `withRunningDaemon` (probe-only — NEVER starts a daemon) so a
+// Bounded extraction: `context_search` + `memory_recall` for the active task's
+// domain. Uses `withRunningDaemon` (probe-only: NEVER starts a daemon) so a
 // down daemon degrades to `null` (exit 0) instead of exit 4. A missing embedder
 // throws inside the tool call → `tryTool` folds to `null` → "degraded" note.
 
@@ -286,7 +286,7 @@ async function extractSeeds(
   query: string,
 ): Promise<{ context: HandoffContextHit[] | null; memory: HandoffMemoryHit[] | null }> {
   // Guard: if the probe already said down, skip the connection entirely (the
-  // artifact renders with a "start daemon" note — exit 0).
+  // artifact renders with a "start daemon" note: exit 0).
   if (!probe.running) return { context: null, memory: null };
 
   let context: HandoffContextHit[] | null = null;
@@ -296,7 +296,7 @@ async function extractSeeds(
     opts,
     async (caller): Promise<void> => {
       // BOUNDED: small `limit` + a bounded `query` (the task id / project name)
-      // on both tools — a seed, never a dump. tryTool folds ANY failure (missing
+      // on both tools: a seed, never a dump. tryTool folds ANY failure (missing
       // engine, embedder throw, transport hiccup) to null so the artifact never
       // hard-fails on extraction.
       const ctxRes = await tryTool<ContextSearchResult>(caller, 'context_search', {
@@ -326,10 +326,10 @@ async function extractSeeds(
   return { context, memory };
 }
 
-/** Probe helper — re-probe (gatherStatusPayload already probed once, but we need
+/** Probe helper: re-probe (gatherStatusPayload already probed once, but we need
  *  the probe object here for the bounded extraction). Mirrors status.ts: never
  *  starts a daemon, returns `{running:false}` on any miss. Static import matches
- *  status.ts — vi.mock hoisting makes the mock apply to static imports too, so a
+ *  status.ts: vi.mock hoisting makes the mock apply to static imports too, so a
  *  dynamic import is unnecessary (and it would trigger tsup code-splitting, which
  *  re-chunks the CLI bin entry and breaks its `isMainModule` guard). */
 async function probeOnly(opts: HandoffOptions): Promise<DaemonProbe> {
@@ -346,11 +346,11 @@ async function probeOnly(opts: HandoffOptions): Promise<DaemonProbe> {
  * - `--write`: persist to `.noir/handoff/HO-<NNNN>-<id>.md` (gitignored); confirm on stderr.
  * - `--json`: emit the structured `{ok:true, data: HandoffPayloadFull}` envelope.
  *
- * Never hard-fails on a down daemon or a missing embedder — degrades to a note
+ * Never hard-fails on a down daemon or a missing embedder: degrades to a note
  * (mirrors `status.ts`). Uninitialized project → exit 1 from `loadProjectInfo`.
  */
 export async function handoff(opts: HandoffOptions): Promise<void> {
-  // In-process project info — no daemon round-trip. Uninitialized → exit 1
+  // In-process project info: no daemon round-trip. Uninitialized → exit 1
   // (same as status / every other command). Route through fail() so --json
   // emits the canonical {ok:false,error} envelope (not empty stdout).
   let project: ProjectInfo;
@@ -361,13 +361,13 @@ export async function handoff(opts: HandoffOptions): Promise<void> {
   }
   const host = project.config.host;
 
-  // Snapshot — the SAME path `noir status` uses (single source). gatherStatusPayload
+  // Snapshot: the SAME path `noir status` uses (single source). gatherStatusPayload
   // probes + folds every optional engine to null. We re-probe here for the extraction
-  // step (the probe is cheap — one GET /health).
+  // step (the probe is cheap: one GET /health).
   const snapshot = await gatherStatusPayload(opts);
   const probe = await probeOnly(opts);
 
-  // Active task + next-skill (reuse task.ts's PHASE_SKILL — single source).
+  // Active task + next-skill (reuse task.ts's PHASE_SKILL: single source).
   const task = snapshot.workflow
     ? {
         taskId: snapshot.workflow.taskId,
@@ -377,7 +377,7 @@ export async function handoff(opts: HandoffOptions): Promise<void> {
       }
     : null;
 
-  // Bounded extraction — the query is the task id (the task's domain), else the
+  // Bounded extraction: the query is the task id (the task's domain), else the
   // project name as a stable fallback.
   const query = task?.taskId ?? project.name;
   const { context, memory } = await extractSeeds(opts, probe, query);
@@ -413,10 +413,10 @@ export async function handoff(opts: HandoffOptions): Promise<void> {
     return;
   }
 
-  // Default: markdown → STDOUT ONLY (pasteability — the user pipes this into a
+  // Default: markdown → STDOUT ONLY (pasteability: the user pipes this into a
   // file or straight into the host). No trailing diagnostics on stdout. When
   // --write was set (and not --json), the file is already persisted and its
-  // path reported to stderr — do not ALSO dump the artifact to stdout.
+  // path reported to stderr: do not ALSO dump the artifact to stdout.
   if (opts.write !== true) process.stdout.write(renderMarkdown(full));
 }
 

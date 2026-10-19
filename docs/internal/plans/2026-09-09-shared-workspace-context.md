@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Let ≥2 agent sessions in different repos (e.g. a backend repo and a frontend repo) on one machine share decision memory through one workspace daemon (foreground by default, or `--detach`) — `noir daemon start --workspace <name>` / `noir daemon join <name>` — with provenance-stamped entries and a change feed (`changes_since` + long-poll `await_changes`). Default transport stays stdio; sharing is explicit per-repo.
+**Goal:** Let ≥2 agent sessions in different repos (e.g. a backend repo and a frontend repo) on one machine share decision memory through one workspace daemon (foreground by default, or `--detach`): `noir daemon start --workspace <name>` / `noir daemon join <name>`: with provenance-stamped entries and a change feed (`changes_since` + long-poll `await_changes`). Default transport stays stdio; sharing is explicit per-repo.
 
 **Architecture:** A **workspace** is a named cross-repo unit under `~/.noir/workspaces/<name>/` (registry.json + store.db + its own daemon record). One daemon serves it over Streamable HTTP; each member repo's `.mcp.json` points at `http://127.0.0.1:<port>/mcp?p=<its-own-projectId>`. The daemon routes `memory_*` + feed tools to the **workspace store** and `context_*`/`workflow_*`/`task_*` to the **requesting member's own project store** (lazily opened). A `.noir/workspace.json` join marker in a member repo makes CLI `memory`/`capture` commands route to the workspace daemon. Supersede is append-only (target marked `superseded`); forget is soft (`forgotten`) in workspace stores. Feed = monotonic cursor in KV + in-process long-poll waiters (content push is an anti-pattern per spec §2).
 
 **Tech Stack:** TypeScript, pnpm monorepo, vitest (single root config), zod config, commander CLI, `@modelcontextprotocol/{client,server}` Streamable HTTP, better-sqlite3 store (`getState`/`setState` KV, FTS5, sqlite-vec).
 
-**Spec:** [`docs/internal/specs/2026-09-09-shared-workspace-context-design.md`](../specs/2026-09-09-shared-workspace-context-design.md) — the plan argues from the spec; executors read both. Slice labels W1–W6 map to spec §14.
+**Spec:** [`docs/internal/specs/2026-09-09-shared-workspace-context-design.md`](../specs/2026-09-09-shared-workspace-context-design.md): the plan argues from the spec; executors read both. Slice labels W1–W6 map to spec §14.
 
 ## Global Constraints
 
@@ -21,11 +21,11 @@
 - **Every behavior ships with a regression test** (standing rule). Each task ends green.
 - Full gate before claiming done: `pnpm lint → build → typecheck → test → docs:validate`.
 - Run one test file from repo root: `pnpm vitest run packages/<pkg>/test/<file>.test.ts` (optionally `--testTimeout=40000`).
-- Exact record/KV/fact anchors (verified 2026-09-09): daemon record file `~/.noir/daemon.json` via `packages/daemon/src/lifecycle.ts` (`daemonJsonPath`, `readDaemonRecord`, `writeDaemonRecord`, `clearDaemonRecord`, `pidAlive`, `DaemonRecord {pid,port,startedAt,mode?,projectId?}`); `Store` KV is `getState<T>(key): T|null` / `setState<T>(key, value)` (`packages/store/src/types.ts:56`); memory engine methods at `packages/memory/src/engine.ts`; obs KV helpers at `packages/memory/src/store.ts` (`getObservation`, `setObservation`, `obsKey`). Env-override precedent: `NOIR_DAEMON_JSON`, `NOIR_RUNTIME_DIR` — new `NOIR_WORKSPACES_DIR` follows the same shape AND joins the `.env` deny-list regex in `packages/core/src/env-file.ts`.
+- Exact record/KV/fact anchors (verified 2026-09-09): daemon record file `~/.noir/daemon.json` via `packages/daemon/src/lifecycle.ts` (`daemonJsonPath`, `readDaemonRecord`, `writeDaemonRecord`, `clearDaemonRecord`, `pidAlive`, `DaemonRecord {pid,port,startedAt,mode?,projectId?}`); `Store` KV is `getState<T>(key): T|null` / `setState<T>(key, value)` (`packages/store/src/types.ts:56`); memory engine methods at `packages/memory/src/engine.ts`; obs KV helpers at `packages/memory/src/store.ts` (`getObservation`, `setObservation`, `obsKey`). Env-override precedent: `NOIR_DAEMON_JSON`, `NOIR_RUNTIME_DIR`: new `NOIR_WORKSPACES_DIR` follows the same shape AND joins the `.env` deny-list regex in `packages/core/src/env-file.ts`.
 
 ---
 
-### Task 1: Store — optional `dbPath` override (W2 dependency)
+### Task 1: Store: optional `dbPath` override (W2 dependency)
 
 **Files:**
 - Modify: `packages/store/src/types.ts` (OpenOptions)
@@ -34,7 +34,7 @@
 
 **Interfaces:**
 - Consumes: `openStore(opts: OpenOptions)` current behavior (`dbPath = paths.storeDb(opts.root, projectId)` at `sqlite-store.ts`).
-- Produces: `OpenOptions.dbPath?: string` — when set, the DB is opened at that exact path (dir auto-created); when absent, the existing `<root>/.noir/store/<projectId>.db` behavior is unchanged. This lets a workspace store live at `~/.noir/workspaces/<name>/store.db`.
+- Produces: `OpenOptions.dbPath?: string`: when set, the DB is opened at that exact path (dir auto-created); when absent, the existing `<root>/.noir/store/<projectId>.db` behavior is unchanged. This lets a workspace store live at `~/.noir/workspaces/<name>/store.db`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -66,11 +66,11 @@ describe('openStore dbPath override', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/store/test/dbpath.test.ts`
-Expected: FAIL — `OpenOptions` has no `dbPath` (type error), and the store opened at the default path.
+Expected: FAIL: `OpenOptions` has no `dbPath` (type error), and the store opened at the default path.
 
 - [ ] **Step 3: Extend OpenOptions**
 
-`packages/store/src/types.ts` — add to the existing `OpenOptions` interface:
+`packages/store/src/types.ts`: add to the existing `OpenOptions` interface:
 
 ```ts
 /** Open the database at this exact path (default: <root>/.noir/store/<projectId>.db). */
@@ -79,7 +79,7 @@ dbPath?: string;
 
 - [ ] **Step 4: Honor dbPath in openStore**
 
-`packages/store/src/sqlite-store.ts` — in `openStore`, replace the db-path derivation + mkdir:
+`packages/store/src/sqlite-store.ts`: in `openStore`, replace the db-path derivation + mkdir:
 
 ```ts
 export async function openStore(opts: OpenOptions): Promise<Store & { __db: Database.Database }> {
@@ -108,7 +108,7 @@ git commit -m "feat(store): optional dbPath override for openStore"
 
 ---
 
-### Task 2: Core — workspace home, registry, join marker, env deny-list (W1)
+### Task 2: Core: workspace home, registry, join marker, env deny-list (W1)
 
 **Files:**
 - Create: `packages/core/src/workspace.ts`
@@ -120,12 +120,12 @@ git commit -m "feat(store): optional dbPath override for openStore"
 **Interfaces:**
 - Consumes: `noirHome()` from `packages/core/src/layout.ts`; `ProjectId`, `isValidProjectId` from `project-id.ts`; fs primitives.
 - Produces (re-exported from `@noir-ai/core`):
-  - `workspaceHomeDir(): string` — `process.env.NOIR_WORKSPACES_DIR ?? join(noirHome(), 'workspaces')`
-  - `workspaceDir(name: string): string` — `join(workspaceHomeDir(), name)`
-  - `workspaceRegistryPath(name): string` — `join(workspaceDir(name), 'registry.json')`
-  - `workspaceStoreDbPath(name): string` — `join(workspaceDir(name), 'store.db')`
-  - `workspaceMarkerPath(root): string` — `join(root, '.noir', 'workspace.json')`
-  - `isValidWorkspaceName(name): boolean` — `/^[a-z0-9][a-z0-9-]{0,63}$/`
+  - `workspaceHomeDir(): string`: `process.env.NOIR_WORKSPACES_DIR ?? join(noirHome(), 'workspaces')`
+  - `workspaceDir(name: string): string`: `join(workspaceHomeDir(), name)`
+  - `workspaceRegistryPath(name): string`: `join(workspaceDir(name), 'registry.json')`
+  - `workspaceStoreDbPath(name): string`: `join(workspaceDir(name), 'store.db')`
+  - `workspaceMarkerPath(root): string`: `join(root, '.noir', 'workspace.json')`
+  - `isValidWorkspaceName(name): boolean`: `/^[a-z0-9][a-z0-9-]{0,63}$/`
   - `interface WorkspaceMember { projectId: ProjectId; root: string; joinedAt: number }`
   - `interface WorkspaceRegistry { name: string; createdAt: number; members: WorkspaceMember[] }`
   - `readWorkspaceRegistry(name): WorkspaceRegistry | null`
@@ -185,7 +185,7 @@ describe('workspace registry', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/core/test/workspace.test.ts`
-Expected: FAIL — module `../src/workspace.js` not found.
+Expected: FAIL: module `../src/workspace.js` not found.
 
 - [ ] **Step 3: Implement the module**
 
@@ -276,17 +276,17 @@ export function clearWorkspaceMarker(root: string): void {
 }
 ```
 
-Note: keep `noirHome()` from `layout.ts` as the canonical home; `workspaceHomeDir()` here defaults to `join(noirHome(), 'workspaces')` when `NOIR_WORKSPACES_DIR` is unset. To avoid importing `layout.ts` (which is fine — same package), use `join(noirHome(), 'workspaces')` and add `import { noirHome } from './layout.js';`.
+Note: keep `noirHome()` from `layout.ts` as the canonical home; `workspaceHomeDir()` here defaults to `join(noirHome(), 'workspaces')` when `NOIR_WORKSPACES_DIR` is unset. To avoid importing `layout.ts` (which is fine: same package), use `join(noirHome(), 'workspaces')` and add `import { noirHome } from './layout.js';`.
 
 - [ ] **Step 4: Re-export from the barrel**
 
-`packages/core/src/index.ts` — add: `export * from './workspace.js';` (verify the file uses `export *` per existing style; if it re-exports selectively, add the symbols above).
+`packages/core/src/index.ts`: add: `export * from './workspace.js';` (verify the file uses `export *` per existing style; if it re-exports selectively, add the symbols above).
 
 - [ ] **Step 5: Add NOIR_WORKSPACES_DIR to the .env deny-list + test**
 
-`packages/core/src/env-file.ts` — add `NOIR_WORKSPACES_DIR` to the `PROCESS_INJECTION_ENV_RE` alternation (next to `NOIR_RUNTIME_DIR`).
+`packages/core/src/env-file.ts`: add `NOIR_WORKSPACES_DIR` to the `PROCESS_INJECTION_ENV_RE` alternation (next to `NOIR_RUNTIME_DIR`).
 
-`packages/core/test/env-file.test.ts` — add one assertion that a `.env` containing `NOIR_WORKSPACES_DIR=...` yields a refusal warning and does not land in the overlay (mirror the existing `NOIR_DAEMON_JSON` case).
+`packages/core/test/env-file.test.ts`: add one assertion that a `.env` containing `NOIR_WORKSPACES_DIR=...` yields a refusal warning and does not land in the overlay (mirror the existing `NOIR_DAEMON_JSON` case).
 
 - [ ] **Step 6: Run tests**
 
@@ -302,7 +302,7 @@ git commit -m "feat(core): workspace home + registry + join marker (NOIR_WORKSPA
 
 ---
 
-### Task 3: Memory — provenance fields + soft lifecycle on the engine (W2/W3)
+### Task 3: Memory: provenance fields + soft lifecycle on the engine (W2/W3)
 
 **Files:**
 - Modify: `packages/memory/src/types.ts`
@@ -313,15 +313,15 @@ git commit -m "feat(core): workspace home + registry + join marker (NOIR_WORKSPA
 
 **Interfaces:**
 - Consumes: existing `Observation`, `SaveInput`, `MemoryEngineOptions`, `forget()` (currently hard-deletes), `recall`/`search` hydration via `getObservation` (authoritative KV).
-- Produces (additive, optional — legacy rows stay valid):
+- Produces (additive, optional: legacy rows stay valid):
   - `type ObservationStatus = 'active' | 'superseded' | 'forgotten'`
   - On `Observation` (optional): `repo?: string; status?: ObservationStatus; cursor?: number; supersedes?: string;`
   - On `SaveInput` (optional): `repo?: string; status?: ObservationStatus; supersedes?: string;`
   - On `MemoryHit` (optional): `status?: ObservationStatus; repo?: string; cursor?: number;`
-  - `MemoryEngineOptions.softForget?: boolean` (default false — workspace stores soft-forget; project stores keep today's hard-delete)
+  - `MemoryEngineOptions.softForget?: boolean` (default false: workspace stores soft-forget; project stores keep today's hard-delete)
   - `MemoryEngine.softForget(): boolean`
-  - `MemoryEngine.recall(query, { includeInactive?: boolean })` / `search` — drop hits whose hydrated status is `superseded`/`forgotten` unless `includeInactive` (legacy undefined status = active)
-  - `MemoryEngine.markStatus(id, status): void` — flips the authoritative KV row + re-indexes the FTS meta projection (used by supersede/forget flows)
+  - `MemoryEngine.recall(query, { includeInactive?: boolean })` / `search`: drop hits whose hydrated status is `superseded`/`forgotten` unless `includeInactive` (legacy undefined status = active)
+  - `MemoryEngine.markStatus(id, status): void`: flips the authoritative KV row + re-indexes the FTS meta projection (used by supersede/forget flows)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -380,7 +380,7 @@ Note: `engine.get(id)` exists on the class (`engine.ts:300`); if the instance ty
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/memory/test/engine-status.test.ts`
-Expected: FAIL — `repo`/`supersedes`/`includeInactive`/`softForget` don't exist yet; `forget` deletes (get returns null).
+Expected: FAIL: `repo`/`supersedes`/`includeInactive`/`softForget` don't exist yet; `forget` deletes (get returns null).
 
 - [ ] **Step 3: Extend types**
 
@@ -394,7 +394,7 @@ Expected: FAIL — `repo`/`supersedes`/`includeInactive`/`softForget` don't exis
 - [ ] **Step 4: Stamp + soft lifecycle in the engine**
 
 `packages/memory/src/engine.ts`:
-- `MemoryEngineOptions` — add `softForget?: boolean`.
+- `MemoryEngineOptions`: add `softForget?: boolean`.
 - In `saveInternal`, when building `observation`, copy the new optional fields (absent stays absent; do NOT invent `status: 'active'` defaults so legacy projections are unchanged):
 
 ```ts
@@ -446,9 +446,9 @@ if (obs === null) continue;
 if (obs.status !== undefined && obs.status !== 'active' && opts?.includeInactive !== true) continue;
 ```
 
-(recall.ts and engine.ts each have their own hydrate loop — apply the same guard in both; `recall.ts` already takes options with filters.)
+(recall.ts and engine.ts each have their own hydrate loop: apply the same guard in both; `recall.ts` already takes options with filters.)
 
-- `forget(ids)` — branch on `softForget`:
+- `forget(ids)`: branch on `softForget`:
 
 ```ts
 forget(ids: string[]): ForgetResult {
@@ -484,7 +484,7 @@ forget(ids: string[]): ForgetResult {
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `pnpm vitest run packages/memory/test/engine-status.test.ts packages/memory/test/engine.test.ts`
-Expected: PASS (and existing engine tests unaffected — hard-delete default unchanged).
+Expected: PASS (and existing engine tests unaffected: hard-delete default unchanged).
 
 - [ ] **Step 6: Commit**
 
@@ -495,11 +495,11 @@ git commit -m "feat(memory): provenance (repo/status/cursor/supersedes) + soft-f
 
 ---
 
-### Task 4: Daemon — workspace record + reuse/ensure + spawn (W1/W4)
+### Task 4: Daemon: workspace record + reuse/ensure + spawn (W1/W4)
 
 **Files:**
 - Create: `packages/daemon/src/workspace-record.ts`
-- Modify: `packages/daemon/src/ensure.ts` (workspace-aware ensure) — or new `packages/daemon/src/workspace-ensure.ts`
+- Modify: `packages/daemon/src/ensure.ts` (workspace-aware ensure): or new `packages/daemon/src/workspace-ensure.ts`
 - Modify: `packages/daemon/src/spawn.ts` (workspace-aware detached spawn)
 - Modify: `packages/daemon/src/index.ts` (re-exports)
 - Test: Create `packages/daemon/test/workspace-record.test.ts`
@@ -508,11 +508,11 @@ git commit -m "feat(memory): provenance (repo/status/cursor/supersedes) + soft-f
 - Consumes: `workspaceDir`, `workspaceRegistryPath` from `@noir-ai/core`; `pidAlive` from `lifecycle.js`; existing `startHttpServer` (extended in Task 6).
 - Produces:
   - `interface WorkspaceDaemonRecord { pid: number; port: number; startedAt: number; workspace: string; }`
-  - `workspaceRecordPath(name): string` — `join(workspaceDir(name), 'daemon.json')`
+  - `workspaceRecordPath(name): string`: `join(workspaceDir(name), 'daemon.json')`
   - `readWorkspaceDaemonRecord(name): WorkspaceDaemonRecord | null`
   - `writeWorkspaceDaemonRecord(name, rec): void`
   - `clearWorkspaceDaemonRecord(name): void`
-  - `ensureWorkspaceDaemonRunning(opts: { name; registry; founderRoot; idleTimeoutSec }): Promise<EnsureResult>` — reuse-or-start keyed on the workspace record (pid alive + `/health` returns the same workspace name)
+  - `ensureWorkspaceDaemonRunning(opts: { name; registry; founderRoot; idleTimeoutSec }): Promise<EnsureResult>`: reuse-or-start keyed on the workspace record (pid alive + `/health` returns the same workspace name)
   - `spawnDetachedWorkspaceDaemon(opts: { name; registry; founderRoot }): Promise<{ pid: number; port: number }>`
 
 - [ ] **Step 1: Write the failing test**
@@ -548,7 +548,7 @@ describe('workspace daemon record', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/daemon/test/workspace-record.test.ts`
-Expected: FAIL — module `../src/workspace-record.js` not found.
+Expected: FAIL: module `../src/workspace-record.js` not found.
 
 - [ ] **Step 3: Implement the module**
 
@@ -585,7 +585,7 @@ export function clearWorkspaceDaemonRecord(name: string): void {
 }
 ```
 
-Note: the record file is deliberately a **different file** from `~/.noir/daemon.json` (project record) so `noir daemon stop`/`ensureDaemonRunning` never touch a workspace daemon. `readWorkspaceDaemonRecord` reads the members' registry membership too (via `readWorkspaceRegistry`) — Task 6 re-reads the registry per request for membership freshness.
+Note: the record file is deliberately a **different file** from `~/.noir/daemon.json` (project record) so `noir daemon stop`/`ensureDaemonRunning` never touch a workspace daemon. `readWorkspaceDaemonRecord` reads the members' registry membership too (via `readWorkspaceRegistry`): Task 6 re-reads the registry per request for membership freshness.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -601,7 +601,7 @@ git commit -m "feat(daemon): workspace daemon record (isolated from project reco
 
 ---
 
-### Task 5: Daemon — HTTP transport parses `?p=` and binds a per-workspace context (W2, the multiplexer)
+### Task 5: Daemon: HTTP transport parses `?p=` and binds a per-workspace context (W2, the multiplexer)
 
 **Files:**
 - Modify: `packages/daemon/src/http.ts`
@@ -612,8 +612,8 @@ git commit -m "feat(daemon): workspace daemon record (isolated from project reco
 **Interfaces:**
 - Consumes: `startHttpServer(opts: StartHttpOptions)` per-request `createNoirServer(ctx)`; `openStore` dbPath override (Task 1); `openStoreForDaemon`; `createMemoryEngine` + embedder resolution (already in http.ts); workspace core helpers (Task 2); `loadProjectInfo`.
 - Produces:
-  - `StartHttpOptions.workspace?: { name: string; founderRoot: string }` — when set, this daemon serves a **workspace** (not a single project): it opens the workspace store once (memory + feed), opens member project stores lazily per `?p=`, and writes a `WorkspaceDaemonRecord`.
-  - `ServerContext.workspace?: { name: string; repo: string }` — set per request; `memory_*` tools use the workspace memory engine; context/workflow tools use the requesting member's project store.
+  - `StartHttpOptions.workspace?: { name: string; founderRoot: string }`: when set, this daemon serves a **workspace** (not a single project): it opens the workspace store once (memory + feed), opens member project stores lazily per `?p=`, and writes a `WorkspaceDaemonRecord`.
+  - `ServerContext.workspace?: { name: string; repo: string }`: set per request; `memory_*` tools use the workspace memory engine; context/workflow tools use the requesting member's project store.
   - Workspace `ServerContext.memory` = the **workspace** engine (project stores do not get their own memory engine here).
   - `/health` in workspace mode returns `{ ok, pid, workspace: name, projectId: repo, uptimeSec }` (projectId = the `?p=` of the request, if any; workspace name always).
   - Non-member or missing `?p=` in workspace mode → an `{ ok:false, error }` envelope on a `tools/call`/health request; tool registration refuses.
@@ -621,7 +621,7 @@ git commit -m "feat(daemon): workspace daemon record (isolated from project reco
 Implementation notes (verified anchors):
 - `http.ts` opens one store per lifecycle today and builds one memory engine. For workspace mode, branch in `startHttpServer`: open `openStore({ projectId: name, root: workspaceDir(name), dbPath: workspaceStoreDbPath(name) })` for the workspace; build ONE workspace memory engine (reuse the existing embedder resolution block).
 - Member project context (context/workflow engines) is built **per member lazily** inside the per-request branch, cached in a `Map<repo, {project, store, context, engine}>`. On each request, re-read the registry (`readWorkspaceRegistry(name)`) for membership freshness; add newly-joined members on demand; drop members that left.
-- Project tools only: when building the per-member cache, use `openStoreForDaemon(projectId, root)` and the same engine builders `http.ts` already uses (`buildWorkflowEngine`, `buildContextEngine`) — mirror http.ts lines 60-110 with the member's `project` (`loadProjectInfo(member.root)`).
+- Project tools only: when building the per-member cache, use `openStoreForDaemon(projectId, root)` and the same engine builders `http.ts` already uses (`buildWorkflowEngine`, `buildContextEngine`): mirror http.ts lines 60-110 with the member's `project` (`loadProjectInfo(member.root)`).
 
 - [ ] **Step 1: Write the failing routing test**
 
@@ -705,7 +705,7 @@ The `memory_save` handler must stamp `repo` from `?p=` (see Task 7 server wiring
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/daemon/test/workspace-routing.test.ts`
-Expected: FAIL — `workspace` not in `StartHttpOptions`; `?p=` unparsed; non-member not refused.
+Expected: FAIL: `workspace` not in `StartHttpOptions`; `?p=` unparsed; non-member not refused.
 
 - [ ] **Step 3: Extend StartHttpOptions + request identity parsing**
 
@@ -757,7 +757,7 @@ git commit -m "feat(daemon): workspace http multiplexer (?p= member routing, sha
 
 ---
 
-### Task 6: Feed — cursor KV + changes_since + await_changes long-poll (W3)
+### Task 6: Feed: cursor KV + changes_since + await_changes long-poll (W3)
 
 **Files:**
 - Create: `packages/daemon/src/feed.ts` (KV cursor helpers + waiter registry)
@@ -770,8 +770,8 @@ git commit -m "feat(daemon): workspace http multiplexer (?p= member routing, sha
 - Produces:
   - `const CURSOR_KEY = 'workspace:cursor'`, `const FEED_KEY = 'workspace:feed'`
   - `interface FeedEntry { cursor: number; kind: 'save'|'supersede'|'forget'; id: string; repo: string; type: string; summary: string; ts: number; }`
-  - `bumpCursor(store): number` — RMW `workspace:cursor` +1, returns new value (atomic via sync store)
-  - `appendFeed(store, entry: Omit<FeedEntry,'cursor'>): FeedEntry` — stamps cursor via `bumpCursor`, appends to `workspace:feed` array (ring, keep last 500)
+  - `bumpCursor(store): number`: RMW `workspace:cursor` +1, returns new value (atomic via sync store)
+  - `appendFeed(store, entry: Omit<FeedEntry,'cursor'>): FeedEntry`: stamps cursor via `bumpCursor`, appends to `workspace:feed` array (ring, keep last 500)
   - `changesSince(store, cursor): { cursor: number; changes: FeedEntry[] }`
   - `interface FeedWaiter { resolve(): void }` + module-level `registerWaiter()/wakeFeedWaiters()` used by `await_changes` (single-writer daemon ⇒ in-process only)
 
@@ -811,7 +811,7 @@ describe('workspace feed', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/daemon/test/workspace-feed.test.ts`
-Expected: FAIL — module `../src/feed.js` not found.
+Expected: FAIL: module `../src/feed.js` not found.
 
 - [ ] **Step 3: Implement the feed module**
 
@@ -870,7 +870,7 @@ export function waitForFeedChange(store: Store, cursor: number, timeoutMs: numbe
 }
 ```
 
-(Trim the helper so each waiter resolves exactly once — `release` clears the timer and resolves.)
+(Trim the helper so each waiter resolves exactly once: `release` clears the timer and resolves.)
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -894,7 +894,7 @@ server.registerTool('memory_save', { /* ... existing schema + optional repo/supe
       importance: input.importance,
       sessionId: input.sessionId,
       supersedes: input.supersedes,
-      repo: wsRepo,           // stamped from ?p= — NEVER from caller
+      repo: wsRepo,           // stamped from ?p=: NEVER from caller
       status: 'active',
     });
     appendFeed(wsStore, { kind: 'save', id: obs.id, repo: wsRepo, type: String(obs.type), summary: summarize(obs.content), ts: Date.now() });
@@ -917,7 +917,7 @@ server.registerTool('await_changes', { description: 'Long-poll: resolve as soon 
   });
 ```
 
-Guard so these are ONLY registered in workspace mode; add the server `instructions` string in workspace mode telling agents to call `changes_since`/`await_changes` at turn boundaries (server instructions live in the `McpServer` options — set it when constructing the workspace server).
+Guard so these are ONLY registered in workspace mode; add the server `instructions` string in workspace mode telling agents to call `changes_since`/`await_changes` at turn boundaries (server instructions live in the `McpServer` options: set it when constructing the workspace server).
 
 - [ ] **Step 6: Run feed + routing tests together**
 
@@ -933,7 +933,7 @@ git commit -m "feat(daemon): workspace change feed (cursor, changes_since, await
 
 ---
 
-### Task 7: CLI — workspace commands + `.mcp.json` rewrite/restore + memory routing (W4)
+### Task 7: CLI: workspace commands + `.mcp.json` rewrite/restore + memory routing (W4)
 
 **Files:**
 - Create: `packages/cli/src/commands/workspace.ts`
@@ -947,8 +947,8 @@ git commit -m "feat(daemon): workspace change feed (cursor, changes_since, await
 **Interfaces:**
 - Consumes: core workspace helpers (Task 2), daemon workspace record/ensure/spawn (Task 4), adapter `emitMcpConfig`/`mcpConfigPath`, `resolveAdapter`, `resolveNoirCommand`, `assertLocalhostUrl` (init.ts:235), `CliOptions`, `fail`/`EXIT`, conflict seam via `buildConflictOpts` in `packages/cli/src/conflict.ts`.
 - Produces:
-  - `daemonStart(opts & { workspace?: string })` — when `workspace` set: ensure workspace registry exists, upsert founding member (current project), start/ensure the workspace daemon, write the join marker, rewrite `.mcp.json`.
-  - `daemonJoin(opts & { name: string })` — registry must exist (else fail with guidance to `start --workspace` from the founder), upsert current project as member, ensure the workspace daemon, write marker, rewrite `.mcp.json`.
+  - `daemonStart(opts & { workspace?: string })`: when `workspace` set: ensure workspace registry exists, upsert founding member (current project), start/ensure the workspace daemon, write the join marker, rewrite `.mcp.json`.
+  - `daemonJoin(opts & { name: string })`: registry must exist (else fail with guidance to `start --workspace` from the founder), upsert current project as member, ensure the workspace daemon, write marker, rewrite `.mcp.json`.
   - `workspaceList()`, `workspaceStatus(name?)`, `workspaceLeave()`, `workspaceStop(name?)` handlers.
   - `.mcp.json` rewrite helper: `writeWorkspaceHttpEntry(root, host, url, projectId)` → `{ mcpServers: { ...existing, noir: { type:'http', url: `${url}?p=${projectId}` } } }`; restore helper `writeStdioEntry(root, host, command)`; both reuse `buildMcpServersJson` + preserve the user's other servers, and refuse to clobber a `.mcp.json` that does not look Noir-emitted unless `--force`.
   - Marker-aware memory routing: when `readWorkspaceMarker(cwd)` is present, `memory save|recall|search|sessions|forget|capture` target the workspace daemon URL (`/mcp?p=<projectId>`), and the daemon-down read fallback opens the workspace store read-only (`dbPath` override, Task 1).
@@ -1003,12 +1003,12 @@ describe('noir daemon join', () => {
 });
 ```
 
-Follow the repo's CLI test pattern (`run()` capture helper, `vi.mock('@noir-ai/daemon', ...)` stubbing `ensureWorkspaceDaemonRunning`/`spawnDetachedWorkspaceDaemon` — mirror `status.test.ts`'s `vi.mock` usage) so the command under test does not really spawn a detached process. Where `daemonJoin` needs the workspace daemon to exist (for the URL), have the mocked ensure return `{ url: 'http://127.0.0.1:0/mcp', port: 0, started: true, stop: async () => {} }`.
+Follow the repo's CLI test pattern (`run()` capture helper, `vi.mock('@noir-ai/daemon', ...)` stubbing `ensureWorkspaceDaemonRunning`/`spawnDetachedWorkspaceDaemon`: mirror `status.test.ts`'s `vi.mock` usage) so the command under test does not really spawn a detached process. Where `daemonJoin` needs the workspace daemon to exist (for the URL), have the mocked ensure return `{ url: 'http://127.0.0.1:0/mcp', port: 0, started: true, stop: async () => {} }`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/cli/test/workspace-commands.test.ts`
-Expected: FAIL — `daemonJoin` not exported / `workspace` handling missing.
+Expected: FAIL: `daemonJoin` not exported / `workspace` handling missing.
 
 - [ ] **Step 3: Implement the .mcp.json rewrite module**
 
@@ -1070,7 +1070,7 @@ Note: use `resolveAdapter`/`HostId` from `@noir-ai/adapters` and assert localhos
 
 - [ ] **Step 4: Add the CLI command handlers + wire bin.ts**
 
-`packages/cli/src/commands/daemon.ts` — add `workspace?: string` to `DaemonStartOptions`; branch in `daemonStart`:
+`packages/cli/src/commands/daemon.ts`: add `workspace?: string` to `DaemonStartOptions`; branch in `daemonStart`:
 
 ```ts
 if (opts.workspace !== undefined) {
@@ -1081,13 +1081,13 @@ if (opts.workspace !== undefined) {
 Add `daemonStartWorkspace`, `daemonJoin` (in `commands/daemon.ts` or `commands/workspace.ts`), plus `workspaceList/workspaceStatus/workspaceLeave/workspaceStop` in `packages/cli/src/commands/workspace.ts`. Each calls core registry helpers + `ensureWorkspaceDaemonRunning`/`spawnDetachedWorkspaceDaemon` from `@noir-ai/daemon`, writes/clears the marker (`writeWorkspaceMarker`/`clearWorkspaceMarker`), and calls the rewrite helpers above. Follow the existing `daemonStart` output envelope shape (`{ ok:true, data:{ mode, pid?, port?, url?, reused? } }`), human output via `info/log/spinner`, JSON via stdout.
 
 `packages/cli/src/bin.ts`:
-- `daemonGrp.command('start')` — add `.option('--workspace <name>', 'start a shared workspace daemon (cross-repo context)')`, thread `workspace` into the action's conditional spread.
-- `daemonGrp.command('join')` — `.argument('<name>', 'workspace name')` → `daemonJoin({ ...toCliOptions(g), name })`.
+- `daemonGrp.command('start')`: add `.option('--workspace <name>', 'start a shared workspace daemon (cross-repo context)')`, thread `workspace` into the action's conditional spread.
+- `daemonGrp.command('join')`: `.argument('<name>', 'workspace name')` → `daemonJoin({ ...toCliOptions(g), name })`.
 - New `workspaceGrp = program.command('workspace')` with `list|status|leave|stop` (mirror the memory group pattern), fallthrough usage action.
 
 - [ ] **Step 5: Marker-aware memory routing**
 
-`packages/cli/src/daemon-client.ts` — add a helper the memory commands use: when `readWorkspaceMarker(cwd)` is present and the repo is a member, resolve the **workspace** daemon (its own record file, Task 4), connect to `/mcp?p=<projectId>`, and on daemon-down fall back to an in-process **read-only** workspace store open (`openStore({ projectId, root, dbPath, readonly:true })`). Implement as `withWorkspaceDaemon<T>(opts, fn)` + a read fallback `withWorkspaceRead<T>(fn)` (mirror `withDaemon`/`withInProcessRead`). `commands/memory.ts`: each handler, when `readWorkspaceMarker(process.cwd()) !== null`, calls the workspace variants; otherwise today's project paths (unchanged). Expose a tiny helper `workspaceRoutingTarget(root)` returning `{ name, projectId } | null`.
+`packages/cli/src/daemon-client.ts`: add a helper the memory commands use: when `readWorkspaceMarker(cwd)` is present and the repo is a member, resolve the **workspace** daemon (its own record file, Task 4), connect to `/mcp?p=<projectId>`, and on daemon-down fall back to an in-process **read-only** workspace store open (`openStore({ projectId, root, dbPath, readonly:true })`). Implement as `withWorkspaceDaemon<T>(opts, fn)` + a read fallback `withWorkspaceRead<T>(fn)` (mirror `withDaemon`/`withInProcessRead`). `commands/memory.ts`: each handler, when `readWorkspaceMarker(process.cwd()) !== null`, calls the workspace variants; otherwise today's project paths (unchanged). Expose a tiny helper `workspaceRoutingTarget(root)` returning `{ name, projectId } | null`.
 
 - [ ] **Step 6: Run tests**
 
@@ -1105,7 +1105,7 @@ git commit -m "feat(cli): workspace commands (start/join/list/status/leave/stop)
 
 ---
 
-### Task 8: Capture — engine `saveCaptured` + `noir memory capture` CLI + `memory_capture` daemon tool (W5)
+### Task 8: Capture: engine `saveCaptured` + `noir memory capture` CLI + `memory_capture` daemon tool (W5)
 
 **Files:**
 - Modify: `packages/memory/src/engine.ts` + `types.ts` + `index.ts` (saveCaptured source override)
@@ -1117,9 +1117,9 @@ git commit -m "feat(cli): workspace commands (start/join/list/status/leave/stop)
 **Interfaces:**
 - Consumes: capture mapper `toSaveInput`, `CaptureEvent`, `captureSource` from `@noir-ai/memory`; engine.save.
 - Produces:
-  - `MemoryEngine.saveCaptured(input: SaveInput, eventType: CaptureEventType): Promise<Observation>` — same write path as `save` but stamps `source: captureSource(eventType)` instead of `'explicit'`. (Adds the provenance seam `capture.ts` header promised for "a dedicated noir memory capture command (S9)".)
+  - `MemoryEngine.saveCaptured(input: SaveInput, eventType: CaptureEventType): Promise<Observation>`: same write path as `save` but stamps `source: captureSource(eventType)` instead of `'explicit'`. (Adds the provenance seam `capture.ts` header promised for "a dedicated noir memory capture command (S9)".)
   - daemon MCP tool `memory_capture` `{ content: string; eventType?: string }` → calls `memory.saveCaptured` with `source = captureSource(eventType ?? 'Stop')`.
-  - CLI `noir memory capture [file]` — read transcript file (or stdin), distill to a `{ summary }` payload, call the daemon `memory_capture` tool; in a joined repo it routes via the workspace daemon (Task 7). Never installs hooks; manual only.
+  - CLI `noir memory capture [file]`: read transcript file (or stdin), distill to a `{ summary }` payload, call the daemon `memory_capture` tool; in a joined repo it routes via the workspace daemon (Task 7). Never installs hooks; manual only.
 
 - [ ] **Step 1: Write the failing engine test**
 
@@ -1152,7 +1152,7 @@ describe('saveCaptured', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/memory/test/engine-capture.test.ts`
-Expected: FAIL — `saveCaptured` missing.
+Expected: FAIL: `saveCaptured` missing.
 
 - [ ] **Step 3: Implement `saveCaptured`**
 
@@ -1184,7 +1184,7 @@ In `packages/daemon/src/server.ts`, inside the `if (ctx.memory)` block add `memo
 
 ```ts
 server.registerTool('memory_capture', {
-  description: 'Distill a transcript/notes payload into a cross-session memory observation with auto capture provenance (manual only — never auto-installed hooks).',
+  description: 'Distill a transcript/notes payload into a cross-session memory observation with auto capture provenance (manual only: never auto-installed hooks).',
   inputSchema: {
     content: z.string().min(1).describe('Distilled content to remember (a decision, non-obvious conclusion, or correction).'),
     eventType: z.string().optional().describe('Capture hook label; defaults to Stop.'),
@@ -1200,7 +1200,7 @@ server.registerTool('memory_capture', {
 });
 ```
 
-CLI (`commands/memory.ts` or a new file): `memoryCapture(opts & { file?: string; content?: string })` — resolve content from `--file <path>` (read file) or stdin when piped (`!process.stdin.isTTY`), else interactive `clack.text` (mirror `resolveContent` in memory.ts:274); non-interactive + no source → `fail(EXIT.USAGE, 'memory capture requires --file <path> or piped stdin')`. Then route (workspace-aware when a marker is present, else project daemon) and call `memory_capture`.
+CLI (`commands/memory.ts` or a new file): `memoryCapture(opts & { file?: string; content?: string })`: resolve content from `--file <path>` (read file) or stdin when piped (`!process.stdin.isTTY`), else interactive `clack.text` (mirror `resolveContent` in memory.ts:274); non-interactive + no source → `fail(EXIT.USAGE, 'memory capture requires --file <path> or piped stdin')`. Then route (workspace-aware when a marker is present, else project daemon) and call `memory_capture`.
 
 `bin.ts` memory group: add `.command('capture').argument('[file]', 'transcript/notes file (or pipe stdin)').option('--content <text>', 'inline distilled content')`.
 
@@ -1218,7 +1218,7 @@ git commit -m "feat(memory,daemon,cli): saveCaptured source seam + memory_captur
 
 ---
 
-### Task 9: Concurrency suite — two clients, one daemon (W6 hardening)
+### Task 9: Concurrency suite: two clients, one daemon (W6 hardening)
 
 **Files:**
 - Create: `packages/daemon/test/workspace-concurrency.test.ts`
@@ -1301,24 +1301,24 @@ git commit -m "test(daemon): two-client concurrency + cross-client await_changes
 - Create: `docs/how-to/shared-workspaces.md`
 - Modify: `docs/getting-started.md`
 - Modify: `docs/reference/cli.md`
-- Modify: `docs/reference/config.md` (regenerate — config.md is `.describe()`-driven)
-- Modify: `docs/reference/mcp-tools.md` (regenerate — tool list incl. `changes_since`, `await_changes`, `memory_capture`)
+- Modify: `docs/reference/config.md` (regenerate: config.md is `.describe()`-driven)
+- Modify: `docs/reference/mcp-tools.md` (regenerate: tool list incl. `changes_since`, `await_changes`, `memory_capture`)
 - Modify: `docs/explanation/architecture.md`
 - Modify: `docs/decisions/0009-shared-workspaces.md` (create ADR)
 - Modify: `docs/roadmap/STATUS.md`, `docs/roadmap/releases.md`, `docs/roadmap/backlog.md`, `docs/roadmap/capability-09-platform-evolution.md`
-- Modify: `CHANGELOG.md` (root) — add the 1.13.0 section at release time; this task adds the entry.
+- Modify: `CHANGELOG.md` (root): add the 1.13.0 section at release time; this task adds the entry.
 
 **Steps**
 
 - [ ] **Step 1: New how-to guide**
 
-`docs/how-to/shared-workspaces.md` — exact user-facing commands (must match shipped reality):
+`docs/how-to/shared-workspaces.md`: exact user-facing commands (must match shipped reality):
 
 ```markdown
 # Sharing context across repositories (workspaces)
 
 Two sessions in DIFFERENT repos can share decision memory through one detached
-daemon — no handoff documents. Default transport stays stdio; sharing is
+daemon: no handoff documents. Default transport stays stdio; sharing is
 explicit.
 
 ## 1. Start a workspace (from the backend repo)
@@ -1355,7 +1355,7 @@ Create `docs/decisions/0009-shared-workspaces.md` recording (extract spec §16):
 - [ ] **Step 4: Roadmap sync**
 
 - `docs/roadmap/STATUS.md`: set Active capability/slice to the shared-workspace slice under C5 (add to the status table `C5` row's current-phase note) and fill "Next milestone" with the shared-workspace spec link.
-- `docs/roadmap/releases.md`: version target v1.13.0 + a release-sequence note (1.13.0 shared workspaces; `1.12.0` stable was superseded — it shipped beta-only as `1.12.0-beta.1`).
+- `docs/roadmap/releases.md`: version target v1.13.0 + a release-sequence note (1.13.0 shared workspaces; `1.12.0` stable was superseded: it shipped beta-only as `1.12.0-beta.1`).
 - `docs/roadmap/backlog.md`: resolve/annotate the event-bus item → `await_changes` long-poll shipped in 1.13; close the `memory capture` gap line; add a resolved-history entry.
 - `docs/roadmap/capability-09-platform-evolution.md`: mark the auto-capture slice's CLI portion done (DONE line) and note the workspace slice in C5.
 - `docs/roadmap/roadmap.manifest.yaml`: bump the package note / active fields.
@@ -1397,13 +1397,13 @@ git commit -m "docs(workspace): shared-workspaces how-to + ADR-0009 + roadmap/re
 - §14 slices W1–W6: Task 2 (W1), 4 (W1/W4), 3/5 (W2), 6 (W3), 7 (W4), 8 (W5), 9/10 (W6) ✓
 
 **Known deltas vs spec (flagged deliberately):**
-1. Feed lives in `@noir-ai/daemon` (daemon-side KV + waiters), not `@noir-ai/memory` — the feed is a daemon concern over the shared workspace store handle; memory stays host-agnostic. Consistent with spec §7.2 ("daemon is one process… in-process waiters").
+1. Feed lives in `@noir-ai/daemon` (daemon-side KV + waiters), not `@noir-ai/memory`: the feed is a daemon concern over the shared workspace store handle; memory stays host-agnostic. Consistent with spec §7.2 ("daemon is one process… in-process waiters").
 2. `memory_forget` soft-forget is engine-flagged (`softForget`) rather than a store-wide semantic change, so project-store forget semantics are untouched (backward compatibility).
 3. Supersede/uniqueness: Task 5 `memory_save` passes `status:'active'` + `supersedes` so the engine flips the target to `superseded` and the hydration filter hides it by default (spec §8.1).
-4. `repo` provenance is a **plain string** (the canonical `projectId`), not spec §7.1's `{ projectId, root? }` object. The project invariant is "canonical ProjectId — never a filesystem path", so `root` provenance is deliberately dropped (portable, no absolute paths in the shared store).
+4. `repo` provenance is a **plain string** (the canonical `projectId`), not spec §7.1's `{ projectId, root? }` object. The project invariant is "canonical ProjectId: never a filesystem path", so `root` provenance is deliberately dropped (portable, no absolute paths in the shared store).
 5. `noir memory capture` reads raw file/stdin text and calls the `memory_capture` tool directly (which stamps `captureSource`); it does **not** run the pure `toSaveInput` mapper (spec §9). The capture-provenance requirement is met; the structured-event mapping step was relaxed for the manual CLI path.
-6. If a member's own project store fails to open, the workspace daemon returns HTTP 500 and the CLI maps it to exit 4 "daemon not reachable" — the specific "could not open the store for member X" body is lost (the MCP handshake has no tool-result channel for it). Accepted as a known edge-case limitation; surfacing the 500 body would require changes to the shared daemon-client.
+6. If a member's own project store fails to open, the workspace daemon returns HTTP 500 and the CLI maps it to exit 4 "daemon not reachable": the specific "could not open the store for member X" body is lost (the MCP handshake has no tool-result channel for it). Accepted as a known edge-case limitation; surfacing the 500 body would require changes to the shared daemon-client.
 
-**Placeholder scan:** no TBD/TODO/“handle edge cases”; every code step carries real code or an exact file:line anchor. Two steps reference “mirror existing file X” only where the executor must copy an existing seam verbatim (embedded to reduce duplication risk) — the surrounding code is concrete.
+**Placeholder scan:** no TBD/TODO/“handle edge cases”; every code step carries real code or an exact file:line anchor. Two steps reference “mirror existing file X” only where the executor must copy an existing seam verbatim (embedded to reduce duplication risk): the surrounding code is concrete.
 
 **Type consistency:** `WorkspaceRegistry`/`WorkspaceMember` (Task 2) reused in Task 4/5/7; `FeedEntry` (Task 6) matches `changes_since`/`await_changes` result shapes used in Task 9; `saveCaptured`/`memory_capture` names consistent Task 8; `ObservationStatus` consistent Task 3/5/6. No name drift found.

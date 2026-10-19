@@ -1,17 +1,17 @@
-# C3 Generated Artifact Standard — implementation plan
+# C3 Generated Artifact Standard: implementation plan
 
 > Implements [`2026-08-13-c3-generated-artifact-standard-design.md`](../specs/2026-08-13-c3-generated-artifact-standard-design.md). Pure additive + drift-correction; no store schema change, forward-only naming, `.noir/`-scoped.
 
 ## Implementation order (dependency-driven)
 
-1. **P1 — Registry foundation** — `packages/core/src/artifacts.ts`: `ARTIFACT_TYPES` (12 kinds + `artifactFileName` + `nextArtifactSequence`). Export from `@noir-ai/core`. *Blocks everything below.*
-2. **P2 — Layout** — `packages/core/src/layout.ts`: add `analysisDir`/`bugsDir`/`subagentsDir`; change `specFile`/`planFile`/`prdFile`/`taskFile`/`decisionFile` (and any handoff/intake builders) to delegate to `artifactFileName` (new `nnnn`/`slug` args).
-3. **P3 — Writers** — `packages/workflow/src/artifacts.ts`: each `.md` writer computes `nnnn` + emits full frontmatter; `writeDecisionStub` → `ADR-NNNN-slug` + `status: proposed`. `packages/cli/src/commands/task.ts` `writeDoneArtifacts` uses `nextArtifactSequence(root,'adr')` + real slug.
-4. **P4 — PRD canon** — `packages/model/src/draft.ts`: 9 sections → the 6-section canonical PRD (fix the "they mirror" comment).
-5. **P5 — Gate** — `packages/skills/src/quality.ts`: `artifactPathDrift()` cross-checking skill bodies against `ARTIFACT_TYPES`; wire into `validateSkill` (hard) + `lintSkill` (soft section warning).
-6. **P6 — Skill fixes** — edit builtins that name non-canonical `.noir/` paths: `noir-planning`, `noir-subagent`, `noir-spec`, `noir-prd`, `noir-brainstorming`, `noir-rules`, `noir-wrap`, `noir-writing-skills`.
-7. **P7 — Docs** — `docs/reference/artifact-format.md` + `docs/decisions/0007-generated-artifact-standard.md`; link from skills docs.
-8. **P8 — Tests + gate** — update existing artifact/compiler/hygiene tests to the new names; add gate drift test; run full gate.
+1. **P1: Registry foundation**: `packages/core/src/artifacts.ts`: `ARTIFACT_TYPES` (12 kinds + `artifactFileName` + `nextArtifactSequence`). Export from `@noir-ai/core`. *Blocks everything below.*
+2. **P2: Layout**: `packages/core/src/layout.ts`: add `analysisDir`/`bugsDir`/`subagentsDir`; change `specFile`/`planFile`/`prdFile`/`taskFile`/`decisionFile` (and any handoff/intake builders) to delegate to `artifactFileName` (new `nnnn`/`slug` args).
+3. **P3: Writers**: `packages/workflow/src/artifacts.ts`: each `.md` writer computes `nnnn` + emits full frontmatter; `writeDecisionStub` → `ADR-NNNN-slug` + `status: proposed`. `packages/cli/src/commands/task.ts` `writeDoneArtifacts` uses `nextArtifactSequence(root,'adr')` + real slug.
+4. **P4: PRD canon**: `packages/model/src/draft.ts`: 9 sections → the 6-section canonical PRD (fix the "they mirror" comment).
+5. **P5: Gate**: `packages/skills/src/quality.ts`: `artifactPathDrift()` cross-checking skill bodies against `ARTIFACT_TYPES`; wire into `validateSkill` (hard) + `lintSkill` (soft section warning).
+6. **P6: Skill fixes**: edit builtins that name non-canonical `.noir/` paths: `noir-planning`, `noir-subagent`, `noir-spec`, `noir-prd`, `noir-brainstorming`, `noir-rules`, `noir-wrap`, `noir-writing-skills`.
+7. **P7: Docs**: `docs/reference/artifact-format.md` + `docs/decisions/0007-generated-artifact-standard.md`; link from skills docs.
+8. **P8: Tests + gate**: update existing artifact/compiler/hygiene tests to the new names; add gate drift test; run full gate.
 
 ## Affected files
 

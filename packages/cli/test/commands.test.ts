@@ -1,11 +1,11 @@
-// S9 t7 — cross-command flow + doctor provider-purity tests.
+// S9 t7: cross-command flow + doctor provider-purity tests.
 //
 // This file complements the per-command suites (context/memory/task/doctor.test)
 // with two cross-cutting concerns the per-command files don't cover:
 //
 //   1. A daemon-backed FLOW: `context search → memory recall → task status`
 //      driven through ONE mocked daemon-client, asserting the cumulative stream
-//      discipline holds across a sequence — every `--json` payload lands as its
+//      discipline holds across a sequence: every `--json` payload lands as its
 //      own line on STDOUT (stderr pristine), and human mode renders tables to
 //      STDERR (stdout pristine). Pins that the shared daemon seam + the
 //      `{ok:true,data}` envelope are consistent across commands, and that the
@@ -33,7 +33,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // `payloads` is the shared fake daemon tool-result map (keyed by tool name); the
 // mocked `callDaemonTool`/`withDaemon` read it live so each test can install
 // per-command fixtures. `modelResolve` is the spy `doctor` consults instead of
-// the real `resolveModelConfig` — a no-op default so a forgetful test still
+// the real `resolveModelConfig`: a no-op default so a forgetful test still
 // resolves cleanly; each provider test pins its own `mockReturnValue`.
 const { payloads, modelResolve } = vi.hoisted(() => ({
   payloads: { current: {} as Record<string, unknown> },
@@ -59,12 +59,12 @@ vi.mock('../src/daemon-client.js', () => ({
   // `memory` commands now probe for workspace membership first (ADR-0009); the
   // flow fixtures are NOT joined, so `workspaceRoutingTarget` returns null and
   // the commands take the project-daemon path. (`probeDaemon`/`withInProcessRead`
-  // are deliberately left UNMOCKED — undefined → the command's try/catch folds a
+  // are deliberately left UNMOCKED: undefined → the command's try/catch folds a
   // probe miss onto `{running:true}` and uses the mocked `callDaemonTool`.)
   workspaceRoutingTarget: () => null,
 }));
 
-// `doctor` imports ONLY `resolveModelConfig` from @noir-ai/model — a partial
+// `doctor` imports ONLY `resolveModelConfig` from @noir-ai/model: a partial
 // mock satisfies it and avoids loading the provider SDKs entirely.
 vi.mock('@noir-ai/model', () => ({ resolveModelConfig: modelResolve }));
 
@@ -120,7 +120,7 @@ function captureStreams(): { capture: () => Captured; restore: () => void } {
 /** Capture streams around `fn`, swallowing any thrown exit-code error so the
  *  caller can inspect output + stderr + the error separately (doctor throws on
  *  fail). Field names mirror doctor.test.ts: `err` is the THROWN value, `stderr`
- *  is the diagnostic stream — distinct so neither masks the other. */
+ *  is the diagnostic stream: distinct so neither masks the other. */
 async function run(
   fn: () => Promise<void>,
 ): Promise<{ stdout: string; stderr: string; err: unknown }> {
@@ -194,7 +194,7 @@ beforeEach(() => {
 });
 
 // 1. Daemon-backed command flow (context → memory → task)
-describe('daemon-backed command flow — shared mocked daemon, stream discipline', () => {
+describe('daemon-backed command flow: shared mocked daemon, stream discipline', () => {
   it('--json: each command emits its own `{ok:true,data}` line to STDOUT, stderr pristine', async () => {
     const { capture, restore } = captureStreams();
     try {
@@ -267,11 +267,11 @@ describe('daemon-backed command flow — shared mocked daemon, stream discipline
       // stdout is pristine (no data leaked into the human path).
       expect(c.out).toBe('');
       // Each command's diagnostic header + a rendered cell reaches stderr.
-      expect(c.err).toMatch(/context search — 1 hit/);
+      expect(c.err).toMatch(/context search: 1 hit/);
       expect(c.err).toContain('src/context.ts');
-      expect(c.err).toMatch(/memory recall — 1 hit/);
+      expect(c.err).toMatch(/memory recall: 1 hit/);
       expect(c.err).toContain('always pass ProjectId, never a fs path');
-      expect(c.err).toMatch(/task status — t-flow/);
+      expect(c.err).toMatch(/task status: t-flow/);
       expect(c.err).toContain('plan');
     } finally {
       restore();
@@ -329,15 +329,15 @@ describe('daemon-backed command flow — shared mocked daemon, stream discipline
   });
 });
 
-// 2. doctor provider-status — pure projection, NO live network call
-describe('doctor provider-status — resolveModelConfig is a pure projection (no live call)', () => {
+// 2. doctor provider-status: pure projection, NO live network call
+describe('doctor provider-status: resolveModelConfig is a pure projection (no live call)', () => {
   // doctor reads process.cwd(); run against a throwaway initialized project so
   // checkConfig → ok and checkProvider has a real `project.config.model` to hand
   // to the mocked resolveModelConfig.
   let root: string;
   let origCwd: string;
   let origFetch: typeof globalThis.fetch;
-  // A fetch that would satisfy a /health ping IF one were attempted — but the
+  // A fetch that would satisfy a /health ping IF one were attempted: but the
   // assertions prove it never is. Returning a 200 keeps a stray call from
   // masquerading as success (the not-called assertion is the real signal).
   const fetchSpy = vi.fn(() => Promise.resolve(new Response('{"ok":true}', { status: 200 })));
@@ -403,7 +403,7 @@ describe('doctor provider-status — resolveModelConfig is a pure projection (no
     // provider check is a pure projection (resolveModelConfig read no network).
     expect(fetchSpy).not.toHaveBeenCalled();
 
-    // The provider row reflects the MOCKED resolution verbatim — proving doctor
+    // The provider row reflects the MOCKED resolution verbatim: proving doctor
     // renders from resolveModelConfig's output, not from any live call.
     const env = JSON.parse(r.stdout) as {
       ok: boolean;
@@ -433,7 +433,7 @@ describe('doctor provider-status — resolveModelConfig is a pure projection (no
     };
     const provider = findCheck(env.data.checks, 'provider');
     // A missing key is a readiness WARN, never CRITICAL (model layer degrades to
-    // templates) — so the overall exit stays 0 (no fail check thrown).
+    // templates): so the overall exit stays 0 (no fail check thrown).
     expect(provider.status).toBe('warn');
     expect(provider.detail).toMatch(new RegExp(`missing ${PROV_KEY_ENV}`));
     expect(r.err).toBeUndefined();

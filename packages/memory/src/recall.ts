@@ -1,8 +1,8 @@
 // Hybrid recall pipeline for @noir-ai/memory.
 //
-// Reuses the context layer's hybrid retriever recipe — BM25 (`Store.searchFt`) ∪
+// Reuses the context layer's hybrid retriever recipe: BM25 (`Store.searchFt`) ∪
 // cosine kNN (`Store.knn`) fused by Reciprocal Rank Fusion (rank-based, k=60,
-// weights [0.5, 0.5] — raw BM25+cosine scores are NEVER summed) — scoped to
+// weights [0.5, 0.5]: raw BM25+cosine scores are NEVER summed): scoped to
 // `source:'memory'` so context and memory rows never collide. Adds a cheap
 // regex **entity-boost** (identifiers / file-paths extracted from the query,
 // NO LLM) that promotes hits whose `content` / `concepts` / `files`
@@ -15,22 +15,22 @@
 //     ├─ fuseRrf(bm25, knn, {k:60, weights:[0.5,0.5]})          → RrfResult[] (rank fusion)
 //     ├─ entity-boost: extract query entities (regex), add a per-match delta to
 //     │    each fused row's score (needs the obs → hydrated first), then re-sort
-//     │    by boosted score desc (stable — RRF order preserved on ties).
+//     │    by boosted score desc (stable: RRF order preserved on ties).
 //     └─ hydrate each fused id into a MemoryHit from the authoritative KV row
-//          `memory:obs:<id>` (FULL content — never the truncated FTS snippet),
+//          `memory:obs:<id>` (FULL content: never the truncated FTS snippet),
 //          applying the optional `type` / `sessionId` filters.
 //
 // Degradation (mirrors the context retriever's BM25-only fallback): if `embed()`
 // throws (the embedder is `kind:'none'`, a native load failure, a provider
 // error) OR `knn()`
-// itself threw, the kNN leg is skipped and recall degrades to BM25-only — the
+// itself threw, the kNN leg is skipped and recall degrades to BM25-only: the
 // searchFt results are still returned, fused trivially (each with only its BM25
 // rank term), and the outcome carries `degraded:true, mode:'bm25-only'`. A BM25
 // throw (e.g. a foreign read-only DB missing `docs_fts`) is also caught: recall
 // keeps going on the kNN leg when it can, or returns an empty result set rather
 // than crashing.
 //
-// This module owns NO state and opens NO second store connection — it reads
+// This module owns NO state and opens NO second store connection: it reads
 // through the INJECTED handle only (in-process only, canonical
 // ProjectId, capture/store/retrieve always local + free). The engine passes its
 // single-writer handle + the SAME `EmbedFn` the daemon already resolved for the
@@ -52,7 +52,7 @@ const MEMORY_SOURCE = 'memory';
 /** Default recall hit cap (mirrors Store.searchFt + the context retriever default). */
 const DEFAULT_RECALL_LIMIT = 10;
 
-/** Hard cap on a single recall — a huge caller limit must not hydrate every row. */
+/** Hard cap on a single recall: a huge caller limit must not hydrate every row. */
 const MAX_RECALL_LIMIT = 200;
 
 /**
@@ -64,7 +64,7 @@ const MIN_ENTITY_LEN = 3;
 /**
  * Score delta added per DISTINCT query entity an observation matches. RRF
  * scores are tiny (rank-based: max ≈ 2·0.5/(60+1) ≈ 0.016), so a single entity
- * match (0.1) deliberately OUTWEIGHS any rank gap — an explicit identifier /
+ * match (0.1) deliberately OUTWEIGHS any rank gap: an explicit identifier /
  * path in the query is a strong intent signal, and a hit that mentions it
  * outranks one that does not. Multiple distinct matches stack. Tunable.
  */
@@ -73,7 +73,7 @@ const ENTITY_BOOST_PER_MATCH = 0.1;
 /**
  * Common dev-query noise words dropped before matching so they do not inflate
  * the boost (every hit mentioning "the"/"for"/"use" would otherwise tie). Kept
- * small + conservative — only words that carry no retrieval signal.
+ * small + conservative: only words that carry no retrieval signal.
  */
 const STOPWORDS: ReadonlySet<string> = new Set([
   'the',
@@ -119,7 +119,7 @@ const STOPWORDS: ReadonlySet<string> = new Set([
 
 /** The injected store handle + the shared context embedder (read-only pipeline). */
 export interface RecallDeps {
-  /** The daemon's single-writer store handle (may be read-only — reads keep working). */
+  /** The daemon's single-writer store handle (may be read-only: reads keep working). */
   store: Store;
   /** Query embedder. A throw on `embed(query)` ⇒ BM25-only degradation. */
   embed: EmbedFn;
@@ -140,12 +140,12 @@ export interface RecallMemoryResult {
 /**
  * Cheap regex extraction of identifiers + file/path tokens from a query (NO LLM). Two kinds of entity are collected, de-duplicated:
  *
- *   1. **Qualified tokens** — whitespace-delimited tokens that contain a `/`,
+ *   1. **Qualified tokens**: whitespace-delimited tokens that contain a `/`,
  *      `.`, or `:` (e.g. `packages/memory/src/recall.ts`, `memory:obs`,
  *      `MemoryEngine.save`). Kept whole + lowercased so they match an
  *      observation's `files` / `concepts` exactly when it mentions the same path
  *      or qualified name.
- *   2. **Identifier subwords** — every token is also split at camelCase /
+ *   2. **Identifier subwords**: every token is also split at camelCase /
  *      PascalCase / snake_case / kebab-case boundaries into lowercase subwords
  *      (mirrors the index-side `explodeIdentifiers` convention from
  *      `@noir-ai/context`), so a query for `ContextEngine` yields `context` +
@@ -246,7 +246,7 @@ export async function recallMemory(
   opts?: RecallOptions,
 ): Promise<RecallMemoryResult> {
   const store = deps.store;
-  // Clamp the hit cap on BOTH bounds (mirrors Store.searchFt) — a huge limit
+  // Clamp the hit cap on BOTH bounds (mirrors Store.searchFt): a huge limit
   // must not materialize every row, and a negative/NaN/0 limit must not reach
   // `hits.slice(0, limit)` as a no-op.
   const rawLimit = opts?.limit ?? DEFAULT_RECALL_LIMIT;
@@ -261,7 +261,7 @@ export async function recallMemory(
   try {
     ftsHits = store.searchFt(query, { limit, source: MEMORY_SOURCE });
   } catch {
-    // e.g. a foreign read-only DB with no `docs_fts` table. Keep going — the
+    // e.g. a foreign read-only DB with no `docs_fts` table. Keep going: the
     // vec leg may still return something; flag degraded.
     ftsFailed = true;
   }
@@ -274,7 +274,7 @@ export async function recallMemory(
     try {
       knnHits = store.knn(qvec, { limit, source: MEMORY_SOURCE });
     } catch {
-      // vec0 table missing or query malformed — degrade to BM25-only.
+      // vec0 table missing or query malformed: degrade to BM25-only.
       knnFailed = true;
     }
   } catch {
@@ -294,7 +294,7 @@ export async function recallMemory(
   for (const row of fused) {
     const obs = getObservation(store, row.id);
     // A fused id with no KV row is a stale vec-only hit whose row was forgotten
-    // — never emit it with partial data (mirrors the engine's hydrateHits).
+    //: never emit it with partial data (mirrors the engine's hydrateHits).
     if (obs === null) continue;
     if (opts?.type !== undefined && obs.type !== opts.type) continue;
     if (opts?.sessionId !== undefined && obs.sessionId !== opts.sessionId) continue;
@@ -305,7 +305,7 @@ export async function recallMemory(
   }
 
   // Stable sort by boosted score desc. Node's Array.prototype.sort is stable
-  // (V8 ≥ 7.0), so equal scores preserve insertion order — which is fuseRrf's
+  // (V8 ≥ 7.0), so equal scores preserve insertion order: which is fuseRrf's
   // own deterministic order (score desc → best rank → first-seen). Truncate to
   // `limit` AFTER the sort so a boosted hit can leapfrog into the top window.
   hits.sort((a, b) => b.score - a.score);

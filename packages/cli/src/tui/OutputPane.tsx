@@ -20,7 +20,7 @@ interface OutputPaneProps {
   /** Optional title for the pane (shown as a dim header line). */
   title?: string;
   /**
-   * Show the NEWEST lines rather than the oldest — for output still arriving,
+   * Show the NEWEST lines rather than the oldest: for output still arriving,
    * where the interesting end is the one still being written. `scrollOffset` is
    * ignored while this is set.
    */
@@ -36,7 +36,7 @@ interface Row {
 
 /**
  * Build stable React keys from line content. Duplicate lines get a `#N` suffix
- * so each row's key is unique WITHOUT using the array index — the lint rule
+ * so each row's key is unique WITHOUT using the array index: the lint rule
  * flags index keys, and content keys are also correct here (the pane is read-
  * only, but content keys keep reconciliation honest across scroll refreshes).
  */
@@ -61,11 +61,11 @@ export function OutputPane({
 }: OutputPaneProps): ReactElement {
   // Content width already accounts for the parent panel's border + padding
   // (see contentWidth()). Truncating to this (not the full terminal width)
-  // keeps long lines — like the `noir status` table — inside the rounded box.
+  // keeps long lines: like the `noir status` table: inside the rounded box.
   const width = contentWidth();
 
   if (lines.length === 0) {
-    return <Text>{c.dim('(no output — type a /command, or ? for help)')}</Text>;
+    return <Text>{c.dim('(no output: type a /command, or ? for help)')}</Text>;
   }
 
   // Clamp the offset into range so a stale value (e.g. after the content
@@ -88,7 +88,7 @@ export function OutputPane({
         const truncated =
           displayWidth(row.text) > width ? truncateToWidth(row.text, width) : row.text;
         // wrap="truncate-end" guarantees a long line never wraps inside the
-        // bordered panel — the manual truncate above is the first line of
+        // bordered panel: the manual truncate above is the first line of
         // defense; this is the second (Ink will hard-truncate if the panel is
         // narrower than contentWidth() reported, e.g. under a tiny COLUMNS).
         return (

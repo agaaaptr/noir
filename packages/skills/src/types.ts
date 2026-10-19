@@ -79,7 +79,7 @@ export interface CompiledSkill {
  * A compiled integration = its compiled skill (`SKILL.md` + references) PLUS,
  * when `runtime` widens emission, a host-MCP server entry the host adapter may
  * merge into the host's MCP config (e.g. Claude's `.mcp.json`). The shape is
- * provider-neutral — the host adapter owns the on-disk format.
+ * provider-neutral: the host adapter owns the on-disk format.
  */
 export interface CompiledIntegration extends CompiledSkill {
   /** Present only when `runtimeEmitsHostMcp(declaration.runtime)` AND a non-null
@@ -97,7 +97,7 @@ export interface CompiledIntegration extends CompiledSkill {
 
 export interface EmitSummary {
   dir: string;
-  /** Skill names whose bytes on disk are now the compiled pack's — every file
+  /** Skill names whose bytes on disk are now the compiled pack's: every file
    *  was written (a fresh create, an identical rewrite, or a resolution that
    *  wrote the template: `replace`, `rename`, `duplicate`). Builtins +
    *  integrations. Disjoint from {@link preserved}: a skill with even one
@@ -107,8 +107,8 @@ export interface EmitSummary {
   references: number; // reference files written (excludes SKILL.md)
   /** The integrations this run processed, in emission order. Most land in
    *  `emitted` too, but one whose files were preserved lands in
-   *  {@link preserved} instead — an integration is classified exactly like a
-   *  builtin. Additive — callers that ignore it (existing cli) still get the
+   *  {@link preserved} instead: an integration is classified exactly like a
+   *  builtin. Additive: callers that ignore it (existing cli) still get the
    *  builtins in `emitted`. */
   integrations?: string[];
   /** Skill names still carrying bytes Noir did NOT write, because at least one
@@ -116,7 +116,7 @@ export interface EmitSummary {
    *  (the non-interactive default: CI, `--json`, piped runs). These skills are
    *  present in `dir` but their content is older than the pack, so a caller
    *  reporting on the run must name them separately rather than counting them
-   *  as refreshed. A skill here may have had OTHER files written — a
+   *  as refreshed. A skill here may have had OTHER files written: a
    *  half-refreshed skill is still partly stale, and that is the honest
    *  direction to report it.
    *
@@ -127,13 +127,13 @@ export interface EmitSummary {
   /** Stale `noir-*` directories removed from `dir` after emit (cleanup).
    *  Names a previous Noir version shipped but the current build no longer
    *  does (builtin renamed/removed). Only the `noir-` managed namespace is
-   *  ever pruned — user skills without the prefix are NEVER touched. Empty
+   *  ever pruned: user skills without the prefix are NEVER touched. Empty
    *  array when nothing was stale; undefined on callers that pre-date the
-   *  field (additive — old callers still get the rest of the summary). */
+   *  field (additive: old callers still get the rest of the summary). */
   pruned?: string[];
   /** `noir-*` entries the prune step REFRAINED from removing because they
    *  look user-authored (hand-rolled noir-foo/SKILL.md without canonical Noir
-   *  frontmatter). `assertNotUserOwned` guard. Names only — never user skills
+   *  frontmatter). `assertNotUserOwned` guard. Names only: never user skills
    *  without the `noir-` prefix (those are always left alone). */
   preservedUserOwned?: string[];
   /** One record per emitted skill file that existed AND differed from the
@@ -163,13 +163,13 @@ export interface SkillConflictContext {
   existing: string;
   /** The compiled bytes Noir would write. */
   proposed: string;
-  /** Always `'skill'` — the artifact class (apply-to-all is per-class). */
+  /** Always `'skill'`: the artifact class (apply-to-all is per-class). */
   mode: 'skill';
 }
 
 /**
  * One record per skill file that existed AND differed from the compiled
- * bytes. Mirrors @noir-ai/create's `ConflictRecord` (additive — old callers
+ * bytes. Mirrors @noir-ai/create's `ConflictRecord` (additive: old callers
  * ignore it).
  */
 export interface SkillConflict {
@@ -205,7 +205,7 @@ export type SkillConflictResolver = (
 /**
  * The set of host-shaped compile targets the compiler knows how to emit. Was
  * `'claude'` only through v1.1; widened to the full multi-host enum (mirrors
- * `@noir-ai/adapters`' `HostId` literally — duplicated here so skills does NOT
+ * `@noir-ai/adapters`' `HostId` literally: duplicated here so skills does NOT
  * add an adapters dependency; the values are a locked contract).
  *
  *  - `claude` | `agents-md` | `gemini` | `opencode` → verbatim SKILL.md + refs
@@ -213,7 +213,7 @@ export type SkillConflictResolver = (
  *  - `cursor` → transform to `<name>.mdc` (Cursor rule with YAML frontmatter
  *    `{description, globs, alwaysApply:false}` + SKILL.md body; no `references/`).
  *
- * The EMIT-LOCATION (where compiled files land per host — `.claude/skills/`,
+ * The EMIT-LOCATION (where compiled files land per host: `.claude/skills/`,
  * `.cursor/rules/`, etc.) is the cli/adapter's job, NOT the compiler's; the
  * compiler just produces host-shaped CONTENT.
  */

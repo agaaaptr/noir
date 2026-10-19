@@ -27,12 +27,12 @@ export type WorkflowState = (typeof STATES)[number];
 export type Mode = 'full' | 'quick';
 
 /**
- * Task classification — drives the soft, escapable gate predicates (the PRD
+ * Task classification: drives the soft, escapable gate predicates (the PRD
  * recommendation at the spec gate). Mirrors the user-facing
  * `prd.mandatoryFor` enum in @noir-ai/core's `NoirConfigSchema` (declared
  * LOCALLY here so workflow has no core-cycle concern; the two literals stay in
  * sync by tests). `undefined` (the default for legacy tasks) ⇒ no soft gate
- * fires — additive, fully backward-compatible.
+ * fires: additive, fully backward-compatible.
  */
 export const TASK_CLASSES = [
   'feature',
@@ -46,15 +46,15 @@ export const TASK_CLASSES = [
 export type TaskClass = (typeof TASK_CLASSES)[number];
 
 /**
- * Input shape for {@link recordGate} — what CALLERS pass. Omits `at` (the
+ * Input shape for {@link recordGate}: what CALLERS pass. Omits `at` (the
  * recorder stamps it from `Date.now()` so the audit reflects when the gate
  * actually fired, not when the caller constructed the object). Split out of
  * {@link GateResult}: callers used to pass a throwaway
- * `at: 0` that recordGate overrode — this shape makes the override implicit.
+ * `at: 0` that recordGate overrode: this shape makes the override implicit.
  *
  * The `decision` set widens to include `'failed'`
- * (evidence ran and failed — recovery offered), and an optional `evidence`
- * payload records the validation run. `'pending'` is NOT recorded — it is the
+ * (evidence ran and failed: recovery offered), and an optional `evidence`
+ * payload records the validation run. `'pending'` is NOT recorded: it is the
  * absence of a decision (advance did not land).
  */
 export type GateDecision = 'approved' | 'forced' | 'skipped' | 'failed';
@@ -88,7 +88,7 @@ export interface GateResultInput {
 }
 
 /**
- * A recorded gate decision — the AUTHORITATIVE shape stored in the
+ * A recorded gate decision: the AUTHORITATIVE shape stored in the
  * `audit:<taskId>` KV (the single source of truth) and surfaced via
  * `task.history` (a derived view the engine regenerates from the audit KV).
  * `at` is always present here; callers that want to RECORD a gate pass
@@ -111,7 +111,7 @@ export interface TaskState {
    * every write and every status read. Kept on the TaskState so consumers
    * (CLI `task status`, the daemon `workflow_status` tool, MCP clients) can
    * read the gate history from the persisted TaskState without a second KV
-   * lookup. Never edited directly outside the engine — derive via
+   * lookup. Never edited directly outside the engine: derive via
    * {@link readGateHistory}.
    */
   history: GateResult[];
@@ -145,10 +145,10 @@ export type ResearchEntryType = (typeof RESEARCH_ENTRY_TYPES)[number];
 
 export interface ResearchEntry {
   type: ResearchEntryType;
-  /** Capped (default 220 chars) — the ~2.2k-token-packet lesson. */
+  /** Capped (default 220 chars): the ~2.2k-token-packet lesson. */
   text: string;
   /**
-   * Evidence/citation — file:line, URL, or command. REQUIRED unless
+   * Evidence/citation: file:line, URL, or command. REQUIRED unless
    * `type === 'grounding-fact'`.
    */
   source?: string;
@@ -158,7 +158,7 @@ export interface ResearchEntry {
 
 /**
  * The gate-config block the engine consumes. Mirrors the
- * user-facing `prd:` block from @noir-ai/core's `NoirConfigSchema` — declared
+ * user-facing `prd:` block from @noir-ai/core's `NoirConfigSchema`: declared
  * locally (with a `readonly` array) so workflow has no core-cycle concern; the
  * daemon / CLI bridges NoirConfig → this shape at construction time. Every
  * field has a sane default, so an unspecified `gateConfig` (the legacy
@@ -169,7 +169,7 @@ export interface WorkflowGateConfig {
    * PRD soft-gate config. `mandatoryFor` lists the task classes for which a
    * missing PRD artifact (at the moment of entering the spec phase, in full
    * mode) is surfaced as an observable, escapable recommendation on the spec
-   * gate. The advance still proceeds — `--force <reason>` is the explicit
+   * gate. The advance still proceeds: `--force <reason>` is the explicit
    * override path; quick mode + unlisted classes skip the check entirely.
    */
   prd: {
@@ -180,9 +180,9 @@ export interface WorkflowGateConfig {
    * truthy for a task's class, the verify gate becomes evidence-backed: advance
    * into `done` requires fresh passing evidence (all HARD checks exit 0); a
    * failed HARD check blocks advance and offers recovery; SOFT checks record a
-   * soft-fail without blocking. Default OFF — a task with no verify config
+   * soft-fail without blocking. Default OFF: a task with no verify config
    * behaves exactly as before (the verify gate records `approved`/`forced`/
-   * `skipped` with no evidence and no blocking). `checks` is optional — when
+   * `skipped` with no evidence and no blocking). `checks` is optional: when
    * absent the CLI resolves defaults from the detected stack.
    */
   verify: {
@@ -194,7 +194,7 @@ export interface WorkflowGateConfig {
    * research soft-gate config. `recommendFor` lists the
    * task classes for which an empty `research:<taskId>` (or only source-less
    * assumptions) at the spec gate surfaces an observable, escapable grounding
-   * recommendation (mirrors the PRD gate — the advance always proceeds).
+   * recommendation (mirrors the PRD gate: the advance always proceeds).
    * `requireSource` enforces that non-grounding-fact entries carry a `source`.
    */
   research: {

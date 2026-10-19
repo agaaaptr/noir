@@ -9,7 +9,7 @@
 // read-modify-write orchestration across keys + single-flight serialization
 // lives in engine.ts.
 //
-// KV layout (namespaced `memory:` — disjoint from `ctx:` / `workflow:*`):
+// KV layout (namespaced `memory:`: disjoint from `ctx:` / `workflow:*`):
 //   memory:obs:<id>            → Observation        (authoritative full row)
 //   memory:sessions            → SessionInfo[]      (per-project rollup)
 //   memory:index               → string[]           (all obs ids; status count +
@@ -24,10 +24,10 @@
 // best-effort (and its absence never fails the forget).
 //
 // These helpers use ONLY the Store interface (no second connection, no schema
-// change — in-process only, canonical ProjectId). The RMW
+// change: in-process only, canonical ProjectId). The RMW
 // helpers (`bumpSession`, `decrementSession`, `appendConsolidationMiss`) MUST
 // be called from within the engine's single-flight / synchronous KV block so
-// two concurrent writers cannot clobber the list — see engine.ts.
+// two concurrent writers cannot clobber the list: see engine.ts.
 
 import type { Store } from '@noir-ai/store';
 import type { Observation, SessionInfo } from './types.js';
@@ -52,7 +52,7 @@ export function obsKey(id: string): string {
 
 /**
  * Hydrate the FULL {@link Observation} for `id` from the authoritative KV row.
- * Returns `null` when the id was never saved (or has been forgotten — the
+ * Returns `null` when the id was never saved (or has been forgotten: the
  * tombstone reads back as `null`). This is the ONLY correct way to read an
  * observation's complete `content` (never the truncated FTS snippet).
  */
@@ -66,7 +66,7 @@ export function setObservation(store: Store, obs: Observation): void {
 }
 
 /**
- * Clear the authoritative KV row for `id` (tombstone — mirrors the context
+ * Clear the authoritative KV row for `id` (tombstone: mirrors the context
  * indexer's `persist(..., tombstones)` which writes `null`). The id MUST also
  * be dropped from {@link INDEX_KEY} and the session rollup by the caller so the
  * index stays consistent (see engine.ts `forget`).
@@ -75,7 +75,7 @@ export function clearObservation(store: Store, id: string): void {
   store.setState(obsKey(id), null);
 }
 
-// Observation id index (KV `memory:index`) — status count + consolidate source
+// Observation id index (KV `memory:index`): status count + consolidate source
 
 /** All observation ids currently tracked (insertion order). Empty array if none. */
 export function getObservationIds(store: Store): string[] {
@@ -101,7 +101,7 @@ export function setSessions(store: Store, sessions: SessionInfo[]): void {
 
 /**
  * Increment the rollup for `sessionId` (inserting a new entry when first seen),
- * bumping `lastTs` to the max. RMW — call within the engine's serialized/sync KV
+ * bumping `lastTs` to the max. RMW: call within the engine's serialized/sync KV
  * block so two concurrent saves cannot lose an increment.
  */
 export function bumpSession(
@@ -123,7 +123,7 @@ export function bumpSession(
 
 /**
  * Decrement the rollup for `sessionId`, dropping the entry when it reaches zero
- * so a forgotten observation cleans up its own empty session. RMW — call within
+ * so a forgotten observation cleans up its own empty session. RMW: call within
  * the engine's serialized/sync KV block. No-op for an unknown session.
  */
 export function decrementSession(store: Store, sessionId: string): void {
@@ -164,9 +164,9 @@ export function getConsolidationMisses(store: Store): ConsolidationMiss[] {
 }
 
 /**
- * Append a refusal record to the audit log. RMW — called ONLY from the engine's
+ * Append a refusal record to the audit log. RMW: called ONLY from the engine's
  * serialized `consolidate`, so the append cannot race itself. A refusal is
- * never silent — the miss is recorded so the user can see why no lesson was
+ * never silent: the miss is recorded so the user can see why no lesson was
  * written (and that NO paid call was made).
  */
 export function appendConsolidationMiss(store: Store, miss: ConsolidationMiss): void {

@@ -28,7 +28,7 @@ const BIN = fileURLToPath(new URL('../src/bin.ts', import.meta.url));
 const require = createRequire(import.meta.url);
 const TSX_LOADER = pathToFileURL(require.resolve('tsx')).href;
 
-describe('Gate 1 — stdio round-trip', () => {
+describe('Gate 1: stdio round-trip', () => {
   let cwd: string;
 
   beforeAll(() => {
@@ -68,7 +68,7 @@ describe('Gate 1 — stdio round-trip', () => {
   it('stdio serves with NO daemon token present (stdio is token-free)', async () => {
     // The HTTP transport requires a bearer token (spec 6.1); stdio must NOT.
     // Nothing in this file ever starts an HTTP daemon, so no token has ever been
-    // written under the isolated daemon dir — the session below has to succeed
+    // written under the isolated daemon dir: the session below has to succeed
     // against an empty credential store, and must not mint one of its own.
     const tokenFiles = () => readdirSync(tmpRoot).filter((f) => f.endsWith('.token'));
     expect(tokenFiles()).toEqual([]);

@@ -1,4 +1,4 @@
-// TDD-A2 — palette fuzzy matcher (hand-rolled scorer). Pure-function tests over
+// TDD-A2: palette fuzzy matcher (hand-rolled scorer). Pure-function tests over
 // a fixed palette fixture; no TTY, no daemon, no network. Exercises the
 // subsequence scorer (`fuzzyScore`), the per-command field-weighted scorer
 // (`matchCommand`), and the `handRolledMatcher` swap seam the TUI will plug any
@@ -99,7 +99,7 @@ describe('fuzzyScore', () => {
 
   it('scores a clean prefix match higher than a scattered, gap-heavy match', () => {
     const prefix = expectMatch(fuzzyScore('sta', 'status')); // s(0) t(1) a(2)
-    const scattered = expectMatch(fuzzyScore('sts', 'status')); // s(0) t(1) s(4) — gaps
+    const scattered = expectMatch(fuzzyScore('sts', 'status')); // s(0) t(1) s(4): gaps
     expect(prefix.score).toBeGreaterThan(scattered.score);
   });
 });
@@ -115,7 +115,7 @@ describe('matchCommand', () => {
   });
 
   it('matches a query that only appears in a keyword (not in the label)', () => {
-    // 'snap' is a keyword of `snapshot`, and also a prefix of its label — but
+    // 'snap' is a keyword of `snapshot`, and also a prefix of its label: but
     // for `dump` (the *other* keyword) we prove keyword matching in isolation.
     const m = expectCommandMatch(matchCommand('dum', snapshotCmd));
     expect(m.item.id).toBe('snapshot');
@@ -152,7 +152,7 @@ describe('handRolledMatcher', () => {
     const out = handRolledMatcher.search('snap', PALETTE, 10);
     const ids = out.map((m) => m.item.id);
     expect(ids).toContain('snapshot');
-    // snapshot should be the top hit — 'snap' is an exact keyword prefix.
+    // snapshot should be the top hit: 'snap' is an exact keyword prefix.
     expect(out[0]?.item.id).toBe('snapshot');
   });
 

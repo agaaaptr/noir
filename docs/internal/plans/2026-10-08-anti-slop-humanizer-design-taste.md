@@ -1,4 +1,4 @@
-# Anti-slop + humanizer + design-taste adoption — Implementation Plan
+# Anti-slop + humanizer + design-taste adoption: Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -21,46 +21,46 @@
 
 ## Review Focus
 
-- **Lexical false positives** — a banned word used as a legitimate technical term must not warn. Pin with an allowlist test (`harness`, `unlock`, `elevated`, `journey`).
-- **Cluster boundary** — exactly three tier-2 words in one paragraph warn; two stay clean. Pin the boundary.
-- **Fenced code is prose-exempt** — a code block containing `robust seamless` yields no slop finding.
-- **Hook robustness** — the runner still emits valid `hookSpecificOutput` JSON when `.noir/rules/anti-slop.md` is absent (returns `{}` for that part, never crashes).
-- **Rename completeness** — the old name `noir-code-hygiene` appears nowhere in emitted artifacts, while a stale `.noir/rules` or host dir from a prior install is pruned on `noir sync`.
+- **Lexical false positives**: a banned word used as a legitimate technical term must not warn. Pin with an allowlist test (`harness`, `unlock`, `elevated`, `journey`).
+- **Cluster boundary**: exactly three tier-2 words in one paragraph warn; two stay clean. Pin the boundary.
+- **Fenced code is prose-exempt**: a code block containing `robust seamless` yields no slop finding.
+- **Hook robustness**: the runner still emits valid `hookSpecificOutput` JSON when `.noir/rules/anti-slop.md` is absent (returns `{}` for that part, never crashes).
+- **Rename completeness**: the old name `noir-code-hygiene` appears nowhere in emitted artifacts, while a stale `.noir/rules` or host dir from a prior install is pruned on `noir sync`.
 
 ---
 
 ## File Structure
 
-**Slice 1 — rule engine (`@noir-ai/skills` + `@noir-ai/cli` scan):**
-- Create `packages/skills/src/slop.ts` — lexical anti-slop word/phrase lists + cluster finder.
-- Create `packages/skills/src/humanizer.ts` — em-dash density, hedging, not-X-but-Y finder.
-- Create `packages/skills/src/debt-marker.ts` — `noir-debt:` marker rule.
-- Modify `packages/skills/src/hygiene.ts` — register the new rule families in `HYGIENE_RULES`.
-- Modify `packages/cli/src/hygiene-scan.ts` — per-file prose pass that calls the new finders.
+**Slice 1: rule engine (`@noir-ai/skills` + `@noir-ai/cli` scan):**
+- Create `packages/skills/src/slop.ts`: lexical anti-slop word/phrase lists + cluster finder.
+- Create `packages/skills/src/humanizer.ts`: em-dash density, hedging, not-X-but-Y finder.
+- Create `packages/skills/src/debt-marker.ts`: `noir-debt:` marker rule.
+- Modify `packages/skills/src/hygiene.ts`: register the new rule families in `HYGIENE_RULES`.
+- Modify `packages/cli/src/hygiene-scan.ts`: per-file prose pass that calls the new finders.
 
-**Slice 2 — always-on injection (`@noir-ai/create`):**
-- Create `packages/create/templates/anti-slop.md.tmpl` — the full always-on ruleset prose.
-- Modify `packages/create/templates/rules-seed.md.tmpl` — append the short always-on block.
-- Modify `packages/create/src/manifest.ts` — emit `.noir/rules/anti-slop.md` (regenerate) and extend `SESSION_START_HOOK_SCRIPT` to read it.
+**Slice 2: always-on injection (`@noir-ai/create`):**
+- Create `packages/create/templates/anti-slop.md.tmpl`: the full always-on ruleset prose.
+- Modify `packages/create/templates/rules-seed.md.tmpl`: append the short always-on block.
+- Modify `packages/create/src/manifest.ts`: emit `.noir/rules/anti-slop.md` (regenerate) and extend `SESSION_START_HOOK_SCRIPT` to read it.
 
-**Slice 3 — rename + rework (`@noir-ai/skills`, `@noir-ai/cli`, `@noir-ai/create`):**
+**Slice 3: rename + rework (`@noir-ai/skills`, `@noir-ai/cli`, `@noir-ai/create`):**
 - Rename `packages/skills/builtin/noir-code-hygiene` → `noir-codebase-audit`.
 - Modify `packages/cli/src/commands/skills.ts` (catalog map), `packages/create/templates/router.md.tmpl`, `rules-seed.md.tmpl`, `packages/skills/evals/noir-code-hygiene/`.
 - Rework all 27 builtin bodies to the hardened standard.
 
-**Slice 4 — new skills (`@noir-ai/skills`):**
+**Slice 4: new skills (`@noir-ai/skills`):**
 - Create `builtin/noir-lazy`, `builtin/noir-debt`, `builtin/noir-over-engineering-review`.
 
-**Slice 5 — design skills (`@noir-ai/skills`):**
+**Slice 5: design skills (`@noir-ai/skills`):**
 - Create `builtin/noir-design`, `builtin/noir-design-reference`, `builtin/noir-dataviz`; fold `noir-frontend`.
 
-**Slice 6 — gate, evals, docs:**
+**Slice 6: gate, evals, docs:**
 - Modify `scripts/hygiene-gate.mjs` (no-op, warns already exit 0), `scripts/docs-generate.mjs` (regenerate skills table).
 - Add evals for new/renamed skills; regenerate `docs/reference/skills.md`.
 
 ---
 
-## Slice 1 — Rule engine
+## Slice 1: Rule engine
 
 ### Task 1: Lexical anti-slop finder (`slop.ts`)
 
@@ -107,7 +107,7 @@ describe('slopFindings', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/skills/test/slop.test.ts`
-Expected: FAIL — `Cannot find module '../src/slop.js'`.
+Expected: FAIL: `Cannot find module '../src/slop.js'`.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -222,7 +222,7 @@ import { humanizerFindings } from '../src/humanizer.js';
 
 describe('humanizerFindings', () => {
   it('flags em-dash density above two per paragraph', () => {
-    const f = humanizerFindings('One — two — three — four.');
+    const f = humanizerFindings('One: two: three: four.');
     expect(f.map((x) => x.id)).toContain('humanizer-em-dash');
   });
   it('flags a hedging opener', () => {
@@ -239,7 +239,7 @@ describe('humanizerFindings', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/skills/test/humanizer.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL: module not found.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -319,7 +319,7 @@ describe('noir-debt marker', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/skills/test/debt-marker.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL: module not found.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -365,10 +365,10 @@ git commit -m "feat(skills): noir-debt marker rule with ceiling+trigger requirem
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// packages/cli/test/doctor-hygiene.test.ts — add one case to the existing describe
+// packages/cli/test/doctor-hygiene.test.ts: add one case to the existing describe
 it('reports a prose slop finding and a humanizer finding', async () => {
   mkdirSync(join(root, 'docs'), { recursive: true });
-  writeFileSync(join(root, 'docs', 'x.md'), 'We will leverage a robust seamless scalable platform — and — and —.\n');
+  writeFileSync(join(root, 'docs', 'x.md'), 'We will leverage a robust seamless scalable platform: and: and —.\n');
   const res = await scanOutputHygiene(root);
   const ids = res.findings.map((f) => f.id);
   expect(ids).toContain('slop-kill');
@@ -380,7 +380,7 @@ it('reports a prose slop finding and a humanizer finding', async () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/cli/test/doctor-hygiene.test.ts -t 'prose slop'`
-Expected: FAIL — the new ids are absent.
+Expected: FAIL: the new ids are absent.
 
 - [ ] **Step 3: Implement the prose pass in `hygiene-scan.ts`**
 
@@ -406,7 +406,7 @@ git commit -m "feat(cli): scan prose for lexical slop and humanizer tells"
 
 ---
 
-## Slice 2 — Always-on injection
+## Slice 2: Always-on injection
 
 ### Task 5: Always-on ruleset templates
 
@@ -421,7 +421,7 @@ git commit -m "feat(cli): scan prose for lexical slop and humanizer tells"
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// packages/create/test/rules-seed.test.ts — add
+// packages/create/test/rules-seed.test.ts: add
 it('the seed carries the short always-on anti-slop block', () => {
   const seed = loadTemplate('rules-seed.md.tmpl');
   expect(seed).toContain('anti-slop');
@@ -432,11 +432,11 @@ it('the seed carries the short always-on anti-slop block', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/create/test/rules-seed.test.ts`
-Expected: FAIL — the block is absent.
+Expected: FAIL: the block is absent.
 
 - [ ] **Step 3: Write the templates**
 
-`rules-seed.md.tmpl` — append (no banners, plain markdown, under 40 lines):
+`rules-seed.md.tmpl`: append (no banners, plain markdown, under 40 lines):
 
 ```markdown
 ## Anti-slop
@@ -456,7 +456,7 @@ Delete filler phrases (it is important to note that, needless to say) and slop t
 Keep em-dashes to at most two per paragraph. Avoid the not-X-but-Y contrast.
 ```
 
-`anti-slop.md.tmpl` — the full ruleset: the lists above plus the laziness ladder (the seven
+`anti-slop.md.tmpl`: the full ruleset: the lists above plus the laziness ladder (the seven
 rungs, YAGNI, reuse-before-write, delete-over-add, root-cause-not-symptom, the
 `noir-debt:` ceiling-and-trigger contract), each as a short prose block.
 
@@ -485,7 +485,7 @@ git commit -m "feat(create): always-on anti-slop ruleset templates"
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// packages/create/test/scaffold.test.ts — add
+// packages/create/test/scaffold.test.ts: add
 it('claude init emits .noir/rules/anti-slop.md and the runner reads it', async () => {
   await scaffold({ root, mode: 'init', transport: 'stdio', host: 'claude' });
   const rules = join(root, '.noir', 'rules', 'anti-slop.md');
@@ -501,7 +501,7 @@ it('claude init emits .noir/rules/anti-slop.md and the runner reads it', async (
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/create/test/scaffold.test.ts -t 'anti-slop'`
-Expected: FAIL — the file is absent / the hook output lacks it.
+Expected: FAIL: the file is absent / the hook output lacks it.
 
 - [ ] **Step 3: Implement**
 
@@ -536,7 +536,7 @@ git commit -m "feat(create): inject always-on anti-slop ruleset via the SessionS
 
 ---
 
-## Slice 3 — Rename + rework
+## Slice 3: Rename + rework
 
 ### Task 7: Rename `noir-code-hygiene` → `noir-codebase-audit`
 
@@ -550,7 +550,7 @@ git commit -m "feat(create): inject always-on anti-slop ruleset via the SessionS
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// packages/skills/test/builtin-hygiene-skill.test.ts — replace name assertions
+// packages/skills/test/builtin-hygiene-skill.test.ts: replace name assertions
 expect(builtins.map((b) => b.name)).toContain('noir-codebase-audit');
 expect(builtins.map((b) => b.name)).not.toContain('noir-code-hygiene');
 ```
@@ -558,14 +558,14 @@ expect(builtins.map((b) => b.name)).not.toContain('noir-code-hygiene');
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/skills/test/builtin-hygiene-skill.test.ts`
-Expected: FAIL — old name present, new name absent.
+Expected: FAIL: old name present, new name absent.
 
 - [ ] **Step 3: Perform the rename atomically**
 
 `git mv` the dir, edit `name:` and the H1, update the catalog map string, the router/seed
 references, the evals dir, and the test expectations. Grep the whole repo for
 `noir-code-hygiene` and clear every remaining occurrence except the CHANGELOG/roadmap
-(historical — left as-is).
+(historical: left as-is).
 
 - [ ] **Step 4: Run tests + gate to verify**
 
@@ -605,21 +605,21 @@ git commit -m "docs(skills): rework builtin bodies to the anti-slop and humanize
 
 ---
 
-## Slice 4 — New skills
+## Slice 4: New skills
 
 ### Task 9: `noir-lazy`
 
 **Files:** Create `packages/skills/builtin/noir-lazy/SKILL.md` (+ `references/` if needed).
 
-Body (original prose, no third-party text): the laziness ladder — YAGNI first, reuse what
+Body (original prose, no third-party text): the laziness ladder: YAGNI first, reuse what
 exists, stdlib over deps, one line over fifty, delete over add, root-cause-not-symptom —
 with WHEN triggers (`be lazy`, `simplest solution`, `do less`, `yagni`) and a do-not
 boundary (non-coding requests). Under 80 lines.
 
-- [ ] **Step 1: Write the failing eval/test** — assert the skill passes `validateSkill` and `lintSkill` and its description leads with a WHEN cue.
+- [ ] **Step 1: Write the failing eval/test**: assert the skill passes `validateSkill` and `lintSkill` and its description leads with a WHEN cue.
 - [ ] **Step 2: Run to verify it fails** (module absent).
 - [ ] **Step 3: Write the skill body.**
-- [ ] **Step 4: Run `pnpm vitest run packages/skills/test` — PASS.**
+- [ ] **Step 4: Run `pnpm vitest run packages/skills/test`: PASS.**
 - [ ] **Step 5: Commit** `feat(skills): noir-lazy laziness-ladder skill`.
 
 ### Task 10: `noir-debt` + `noir-over-engineering-review`
@@ -629,13 +629,13 @@ boundary (non-coding requests). Under 80 lines.
 
 `noir-debt`: harvest `noir-debt:` markers into a ledger (stdout first; a `.noir/`
 artifact later), grouped by file with ceiling + trigger. `noir-over-engineering-review`:
-diff-scoped complexity review — reinvented stdlib, unneeded deps, speculative abstractions,
-dead flexibility — one line per finding. Follow the same test/commit rhythm as Task 9, with
+diff-scoped complexity review: reinvented stdlib, unneeded deps, speculative abstractions,
+dead flexibility: one line per finding. Follow the same test/commit rhythm as Task 9, with
 a boundary that keeps both distinct from `noir-exploring`, `noir-doctor`, `noir-verifying`.
 
 ---
 
-## Slice 5 — Design skills
+## Slice 5: Design skills
 
 ### Task 11: `noir-design` + `noir-design-reference`
 
@@ -652,10 +652,10 @@ accessibility-floor; the 16-token palette schema; the 10-category UX rule ladder
 concrete thresholds; font-pairing and motion guidance. No binary assets; big fonts/icons
 are named as pointers.
 
-- [ ] **Step 1: Write the failing test** — `builtins` contain `noir-design` and `noir-design-reference`; `noir-frontend` is gone; `references/design.md` mentions `neobrutalism`, `glassmorphism`, `neumorphism`.
+- [ ] **Step 1: Write the failing test**: `builtins` contain `noir-design` and `noir-design-reference`; `noir-frontend` is gone; `references/design.md` mentions `neobrutalism`, `glassmorphism`, `neumorphism`.
 - [ ] **Step 2: Run to verify it fails.**
 - [ ] **Step 3: Write the skills + reference.**
-- [ ] **Step 4: Run `pnpm vitest run packages/skills/test packages/create/test` — PASS.**
+- [ ] **Step 4: Run `pnpm vitest run packages/skills/test packages/create/test`: PASS.**
 - [ ] **Step 5: Commit** `feat(skills): design direction + style reference inventory`.
 
 ### Task 12: `noir-dataviz`
@@ -669,7 +669,7 @@ delta-E floor; mark grammar (bar width, line weight, marker size); accessibility
 
 ---
 
-## Slice 6 — Gate, evals, docs
+## Slice 6: Gate, evals, docs
 
 ### Task 13: Evals + docs sync + full gate
 
@@ -678,9 +678,9 @@ delta-E floor; mark grammar (bar width, line weight, marker size); accessibility
   `{ skill_name, evals: [...] }`, matching `packages/skills/src/evals.ts`).
 - Modify `packages/skills/test/evals-real-output.test.ts` if it enumerates evals.
 
-- [ ] **Step 1: Add evals; run `pnpm vitest run packages/skills/test/evals-real-output.test.ts` — PASS.**
-- [ ] **Step 2: Regenerate docs** — `pnpm docs:generate` (regenerates `docs/reference/skills.md`).
-- [ ] **Step 3: Full gate** — `pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm docs:validate && pnpm hygiene:gate` all green.
+- [ ] **Step 1: Add evals; run `pnpm vitest run packages/skills/test/evals-real-output.test.ts`: PASS.**
+- [ ] **Step 2: Regenerate docs**: `pnpm docs:generate` (regenerates `docs/reference/skills.md`).
+- [ ] **Step 3: Full gate**: `pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm docs:validate && pnpm hygiene:gate` all green.
 - [ ] **Step 4: Commit** `chore(skills): evals + docs sync for the anti-slop and design adoption`.
 
 ---
@@ -694,5 +694,5 @@ delta-E floor; mark grammar (bar width, line weight, marker size); accessibility
 - **Type consistency:** `slopFindings`/`humanizerFindings` return `HygieneFinding[]` from
   `hygiene.ts` in every task; `DEBT_MARKER_RULE` is a `HygieneRule`; the manifest entry uses
   `loadTemplate`, matching Task 6's import.
-- **Review Focus:** each line is pinned — allowlist (Task 1), cluster boundary (Task 1),
+- **Review Focus:** each line is pinned: allowlist (Task 1), cluster boundary (Task 1),
   fenced-code exemption (Task 1), hook robustness (Task 6), rename completeness (Task 7).

@@ -1,4 +1,4 @@
-// v2 — the home-menu "update available" notice. Pure-function tests over
+// v2: the home-menu "update available" notice. Pure-function tests over
 // `buildUpdateNotice` + `updateAdvice`: the semver downgrade guard (an older or
 // equal cached version is never advertised as an upgrade) and the
 // install-type-specific advice mapping. No TTY, no daemon, no network.
@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildUpdateNotice, updateAdvice } from '../src/commands/update.js';
 
-describe('updateAdvice — install-type-specific command', () => {
+describe('updateAdvice: install-type-specific command', () => {
   it('native → noir update', () => {
     expect(updateAdvice('native')).toContain('noir update');
   });
@@ -28,7 +28,7 @@ describe('updateAdvice — install-type-specific command', () => {
   });
 });
 
-describe('buildUpdateNotice — semver guard', () => {
+describe('buildUpdateNotice: semver guard', () => {
   it('returns a notice when the latest is strictly newer', () => {
     const n = buildUpdateNotice({
       method: 'native',

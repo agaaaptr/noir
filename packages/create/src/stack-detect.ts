@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 /**
  * READ-ONLY stack detection. Probes for well-known marker files under `root`
- * and reports ONLY what is present — never assumes. The result feeds path
+ * and reports ONLY what is present: never assumes. The result feeds path
  * adaptation (where to drop `.claude/` vs `.cursor/` etc., future), ignore-file
  * selection, and the onboarding TUI's confirm step.
  *
@@ -42,7 +42,7 @@ export interface StackInfo {
   ci: string | null;
   /**
    * Existing AI instruction files found under root.
-   * Never clobbered — the scaffold confirms the write strategy (skip/add-section/
+   * Never clobbered: the scaffold confirms the write strategy (skip/add-section/
    * standalone).
    */
   existingAiFiles: { path: string; kind: string }[];
@@ -82,7 +82,7 @@ const PYTHON_FRAMEWORKS: ReadonlyArray<[dep: string, id: string]> = [
 ];
 
 /** Read+parse JSON without throwing; returns undefined on any error. JSON5/ESM
- *  `package.json` with comments would land here too — `package.json` is plain
+ *  `package.json` with comments would land here too: `package.json` is plain
  *  JSON in practice so a failed `JSON.parse` genuinely means "not a node
  *  project" or "broken file", both of which we report as "absent". */
 function readJson<T = unknown>(file: string): T | undefined {
@@ -106,7 +106,7 @@ export function detectStack(root: string): StackInfo {
   let monorepo = false;
   let packageManager: string | null = null;
 
-  // Node / JS / TS — gated on package.json presence.
+  // Node / JS / TS: gated on package.json presence.
   const pjPath = join(root, 'package.json');
   if (existsSync(pjPath)) {
     const pj = readJson<PackageJson>(pjPath);
@@ -154,7 +154,7 @@ export function detectStack(root: string): StackInfo {
     else if (existsSync(join(root, 'package-lock.json'))) packageManager = 'npm';
   }
 
-  // Python — pyproject.toml / requirements.txt / Pipfile / setup.py.
+  // Python: pyproject.toml / requirements.txt / Pipfile / setup.py.
   if (
     existsSync(join(root, 'pyproject.toml')) ||
     existsSync(join(root, 'requirements.txt')) ||
@@ -178,13 +178,13 @@ export function detectStack(root: string): StackInfo {
     }
   }
 
-  // Go — go.mod.
+  // Go: go.mod.
   if (existsSync(join(root, 'go.mod'))) {
     languages.add('go');
     packageManager = packageManager ?? 'go-modules';
   }
 
-  // Rust — Cargo.toml.
+  // Rust: Cargo.toml.
   if (existsSync(join(root, 'Cargo.toml'))) {
     languages.add('rust');
     const raw = safeRead(join(root, 'Cargo.toml'));
@@ -197,7 +197,7 @@ export function detectStack(root: string): StackInfo {
       // applied to `axum`/`rocket` so `axum-extra`-style crates don't trip the
       // same bug. The `/m` flag makes `^` match any line (the previous
       // `/^actix\s*=/` had no `/m` and only matched a string starting with
-      // `actix`, i.e. effectively never — dead code).
+      // `actix`, i.e. effectively never: dead code).
       if (/^\s*actix-web\b/m.test(raw)) frameworks.add('actix-web');
       if (/^\s*actix\s*=/m.test(raw)) frameworks.add('actix');
       if (/^\s*axum\s*=/m.test(raw)) frameworks.add('axum');
@@ -224,7 +224,7 @@ export function detectStack(root: string): StackInfo {
     }
   }
   // Invoke-time fallback: only when the dir has recognizable languages
-  // (user-agent alone doesn't define a project — an empty dir gets no PM).
+  // (user-agent alone doesn't define a project: an empty dir gets no PM).
   if (!packageManager && languages.size > 0) {
     const ua = process.env.npm_config_user_agent;
     if (ua) {
@@ -272,7 +272,7 @@ export function detectStack(root: string): StackInfo {
     const full = join(root, p);
     if (existsSync(full)) existingAiFiles.push({ path: p, kind });
   }
-  // .cursor/rules/**/*.md — probe the dir (shallow).
+  // .cursor/rules/**/*.md: probe the dir (shallow).
   const cursorRulesDir = join(root, '.cursor', 'rules');
   try {
     if (existsSync(cursorRulesDir)) {
@@ -307,13 +307,13 @@ function safeRead(file: string): string | undefined {
 }
 
 /** True iff `dep` appears as a PEP 508 dependency name in `pyproject.toml`
- *  text — handles PEP 621 `dependencies`/`optional-dependencies` list entries
+ *  text: handles PEP 621 `dependencies`/`optional-dependencies` list entries
  *  (`"fastapi"`, `"fastapi[all]>=0.100"`) AND Poetry `[tool.poetry.dependencies]`
  *  bare keys (`fastapi = "^0.100"`).
  *
  *  The `before` boundary (line-start, quote, or whitespace) plus the `after`
  *  PEP 508 boundary (whitespace, quote, version specifier `<>=!~`, extras `[`,
- *  marker `;`, or end-of-string) prevent substring mismatches — `flask` will
+ *  marker `;`, or end-of-string) prevent substring mismatches: `flask` will
  *  NOT match `flask-restful`, and `fastapi` will NOT match `x-fastapi`.
  *
  *  Never throws: `dep` is escaped, the regex is constructed from a controlled

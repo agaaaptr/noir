@@ -5,7 +5,7 @@
 //
 // Design notes:
 // - Subsequence matcher (not substring): "sts" matches "status" (s, t, s).
-// - Case-insensitive — both sides lowercased before comparison.
+// - Case-insensitive: both sides lowercased before comparison.
 // - Gap penalty (-0.1 per skipped char) makes tight matches beat scattered ones.
 // - Consecutive bonus (+8) rewards runs like a real fuzzy finder.
 // - Prefix bonus (+4 while text-index < query.length) makes a leading match
@@ -21,7 +21,7 @@ export interface FuzzyMatch {
   matchedIndices: number[];
 }
 
-/** Field weights — label dominates so titles win ties over help text. */
+/** Field weights: label dominates so titles win ties over help text. */
 const WEIGHTS = {
   label: 1.0,
   keyword: 0.7,
@@ -101,13 +101,13 @@ export function matchCommand(query: string, item: PaletteCommand): FuzzyMatch | 
     }
   };
 
-  // Label — weighted highest, plus the flat tie-break bonus.
+  // Label: weighted highest, plus the flat tie-break bonus.
   const labelHit = fuzzyScore(query, item.label);
   if (labelHit) {
     consider(labelHit.score * WEIGHTS.label + LABEL_TIE_BONUS, labelHit.indices);
   }
 
-  // Keywords — each scored independently, best keyword wins the field.
+  // Keywords: each scored independently, best keyword wins the field.
   if (item.keywords) {
     let bestKw: { score: number; indices: number[] } | null = null;
     for (const kw of item.keywords) {
@@ -119,7 +119,7 @@ export function matchCommand(query: string, item: PaletteCommand): FuzzyMatch | 
     }
   }
 
-  // Description — lowest weight, last resort.
+  // Description: lowest weight, last resort.
   if (item.description) {
     const descHit = fuzzyScore(query, item.description);
     if (descHit) {

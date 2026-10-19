@@ -1,4 +1,4 @@
-// `noir create [dir]` — greenfield first-run for the AI layer only.
+// `noir create [dir]`: greenfield first-run for the AI layer only.
 //
 // New command. Bootstraps Noir's AI layer (.noir/ store, host
 // pointers, skills) into `dir` (created if absent), with NO external
@@ -15,17 +15,17 @@
 // shared with init through `emitHostSkills`. See `init.ts` for the matrix.
 //
 // Stream discipline matches init: diagnostics → stderr, nothing on stdout
-// (so `noir create --json` is safe by construction — there is no data payload).
+// (so `noir create --json` is safe by construction: there is no data payload).
 //
 // Exit codes: `assertTransportUrl` is called DIRECTLY so transport/url
 // errors propagate as plain `Error` → bin.ts's handleError → exit 1, EXACTLY
 // matching `noir init` for the same error class. (The CLI exit-code contract
 // lists usage=2 for a missing `--url`; neither `init` nor `create` implements
 // that split today —
-// both report it as a plain error=1 — and the review asked for consistency
+// both report it as a plain error=1: and the review asked for consistency
 // over a one-sided fix. Changing them together is a separate, contract-level
 // change.) The target dir is created by the engine's `create` mode (the
-// duplicate mkdir that used to live here is gone — one attributable failure
+// duplicate mkdir that used to live here is gone: one attributable failure
 // point, in scaffold.ts).
 
 import { resolve } from 'node:path';
@@ -50,7 +50,7 @@ export interface CreateOptions {
   host?: HostId;
   /** Re-scaffold even if already initialized. */
   force?: boolean;
-  /** `--dry-run`/`--preview` — report the planned writes to stderr
+  /** `--dry-run`/`--preview`: report the planned writes to stderr
    *  without touching disk (incl. NOT creating the target dir). */
   dryRun?: boolean;
   /** Alias for `--dry-run`. Kept on the options bag so direct callers can
@@ -102,7 +102,7 @@ export async function create(
     ...conflictOpts,
   });
   // dry-run reports the planned writes and stops BEFORE skills emission +
-  // the "created" message — the target dir was NOT created, so nothing may
+  // the "created" message: the target dir was NOT created, so nothing may
   // touch disk. (The engine's create-mode mkdir is gated on !dryRun.)
   if (dryRun) {
     reportPlannedWrites(res);
@@ -120,11 +120,11 @@ export async function create(
   // configured host resolved inside scaffold).
   const host: HostId = res.host;
 
-  // Skills are out-of-manifest by design — same composition as init.
+  // Skills are out-of-manifest by design: same composition as init.
   const adapter = resolveAdapter(host);
   const skillsDir = adapter.skillsDir?.({ root });
   if (skillsDir === undefined) {
-    // Standardized wording — same phrase across init/sync/create so logs
+    // Standardized wording: same phrase across init/sync/create so logs
     // grep uniformly. (Each command used to phrase this differently.)
     process.stderr.write(`host '${host}' has no skill emitter; skipping skills\n`);
   } else {

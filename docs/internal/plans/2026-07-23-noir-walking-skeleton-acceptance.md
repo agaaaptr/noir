@@ -1,6 +1,6 @@
-# Noir Walking Skeleton — Manual Acceptance
+# Noir Walking Skeleton: Manual Acceptance
 
-## Gate 1 (stdio round-trip) — thesis proof
+## Gate 1 (stdio round-trip): thesis proof
 1. `pnpm build`
 2. In a scratch project dir: `node packages/cli/dist/bin.js init`
 3. Confirm `.noir/` (NOIR.md, config.yml, project.id) and root `.mcp.json` + `CLAUDE.md` exist.
@@ -9,7 +9,7 @@
 
 > If `noir` is not on PATH, either `pnpm link --global` the cli, or edit `.mcp.json` to `{"mcpServers":{"noir":{"command":"node","args":["<repo>/packages/cli/dist/bin.js","mcp","serve","--stdio"]}}}`.
 
-## Gate 2 (daemon-backed) — shared state + degradation
+## Gate 2 (daemon-backed): shared state + degradation
 1. `node packages/cli/dist/bin.js daemon start` -> prints a `http://127.0.0.1:<port>/mcp` URL.
 2. `curl http://127.0.0.1:<port>/health` -> `{"ok":true,"pid":...,"uptimeSec":...}`.
 3. (Optional) `node packages/cli/dist/bin.js init --transport streamable-http --url http://127.0.0.1:<port>/mcp`, then in Claude Code invoke `host_status`. **Expected:** `transport: "streamable-http"`, `daemon: true`, `pid` present.

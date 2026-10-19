@@ -55,7 +55,7 @@ const RESIDUE: readonly ResidueToken[] = [
 export const FORBIDDEN_RESIDUE: readonly string[] = RESIDUE.map((entry) => entry.token);
 
 /** One fail-tier rule per forbidden token. A token matches only when it stands
- *  alone — neither side is a word character or a hyphen — so `noir-workflow`
+ *  alone: neither side is a word character or a hyphen: so `noir-workflow`
  *  does not fire inside a longer identifier such as `noir-workflow-engine-`,
  *  which names this repository's own workflow engine rather than the removed
  *  plugin. It still fires on `plugins/noir-workflow/` and `noir-workflow.mode`,

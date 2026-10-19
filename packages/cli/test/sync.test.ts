@@ -1,4 +1,4 @@
-// `noir sync --check` — the CI drift gate: a dry-run that flips the exit code
+// `noir sync --check`: the CI drift gate: a dry-run that flips the exit code
 // when any managed artifact would change. Never writes.
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';

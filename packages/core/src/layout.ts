@@ -7,7 +7,7 @@ export const NOIR_DIR = '.noir';
 /**
  * User-global Noir home: `~/.noir` (HOME-relative, NOT project `.noir/`).
  *
- * Hosts cross-project, user-scoped state — today the daemon record
+ * Hosts cross-project, user-scoped state: today the daemon record
  * (`~/.noir/daemon.json`, written by @noir-ai/daemon) and the embedding-model
  * cache ({@link modelsDir}). Kept HOME-relative so a single project checkout
  * stays portable across machines (`ProjectId` is canonical, never a
@@ -35,7 +35,7 @@ export function modelsDir(): string {
  * Each pinned Node LTS lives under here as `~/.noir/runtime/v<version>/`
  * (with its own `bin/node`, `bin/npm`), provisioned by
  * `@noir-ai/core`'s `provisionManagedNode()`. HOME-relative for the same
- * portability reason as {@link modelsDir} — the runtime is machine-local, not
+ * portability reason as {@link modelsDir}: the runtime is machine-local, not
  * per-project.
  *
  * `NOIR_RUNTIME_DIR` overrides the root (mirrors `NOIR_DAEMON_JSON` /
@@ -54,7 +54,7 @@ export const paths = {
   storeDir: (root: string) => join(root, NOIR_DIR, 'store'),
   storeDb: (root: string, projectId: string) => join(root, NOIR_DIR, 'store', `${projectId}.db`),
   transcriptsDir: (root: string) => join(root, NOIR_DIR, 'transcripts'),
-  // Artifact directories and files — filenames follow the generated-artifact
+  // Artifact directories and files: filenames follow the generated-artifact
   // standard (`<CODE>-<NNNN>-<taskId>-<slug>.md`); see docs/reference/artifact-format.md
   specsDir: (root: string) => join(root, NOIR_DIR, 'specs'),
   specFile: (root: string, nnnn: number, taskId: string, slug: string) =>

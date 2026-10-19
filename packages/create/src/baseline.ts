@@ -6,7 +6,7 @@ import type { StackInfo } from './stack-detect.js';
  * Project-baseline compilation: the derivable facts (`detectStack`'s stack
  * summary plus canonical commands and entry points) rendered into the short
  * markdown block the host's `@import`ed `.noir/NOIR.md` carries. Read-only and
- * total — a foreign or empty dir still renders a minimal "unknown" block, never
+ * total: a foreign or empty dir still renders a minimal "unknown" block, never
  * throws.
  */
 
@@ -64,7 +64,7 @@ export function detectCommands(root: string): Record<string, string> {
         if (!(name in out) && new RegExp(`^${name}:`, 'm').test(raw)) out[name] = `make ${name}`;
       }
     } catch {
-      // unreadable Makefile — skip
+      // unreadable Makefile: skip
     }
   }
   return out;

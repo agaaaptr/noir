@@ -1,17 +1,17 @@
-// Anthropic provider adapter — single-shot Messages call via `@anthropic-ai/sdk`.
+// Anthropic provider adapter: single-shot Messages call via `@anthropic-ai/sdk`.
 //
 // HARD RULES enforced here, by construction:
 //
 // - SINGLE-SHOT: the request to `messages.create` carries ONLY
 //   `model`, `max_tokens`, `messages`, and (optionally) `system`. There is no
-//   `tools`, `tool_choice`, or `stream` key — so this adapter cannot express an
+//   `tools`, `tool_choice`, or `stream` key: so this adapter cannot express an
 //   agent/tool loop even if a caller tried. One bounded call, then return.
 // - SDK retries DISABLED (`maxRetries: 0`): the hosted SDK
 //   defaults to retrying transient failures; we opt out so one call can never
 //   silently multi-charge. The only retry lives in the structured path.
 // - IMPORT-ISOLATED: the `@anthropic-ai/sdk` is imported DYNAMICALLY
 //   inside `complete()`. A bundle whose configured provider never resolves to
-//   this adapter pays zero SDK bytes — the SDK is only pulled in at call time.
+//   this adapter pays zero SDK bytes: the SDK is only pulled in at call time.
 // - SECRETS stay in env: `key` is the resolved VALUE that `complete()`
 //   read from `process.env[apiKeyEnv]`, and `req.authToken` likewise carries the
 //   value read from `process.env[authTokenEnv]`; this module never touches
@@ -20,16 +20,16 @@
 // - NO SILENT PAID CALLS: every transport-affecting client option (`apiKey`,
 //   `authToken`, `baseURL`) is pinned explicitly, so the SDK never falls back to
 //   `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_BASE_URL` in the
-//   ambient env — such a fallback would be a silent paid call to a host the
+//   ambient env: such a fallback would be a silent paid call to a host the
 //   config did not choose. When neither credential is present the adapter
 //   returns `{ ok: false }` instead of constructing a client. (`complete()`
 //   normally degrades to `null` for a keyed provider whose env vars are missing,
 //   so reaching here without either credential means the provider block was
-//   wired without `apiKeyEnv`/`authTokenEnv` — a recoverable misconfiguration,
+//   wired without `apiKeyEnv`/`authTokenEnv`: a recoverable misconfiguration,
 //   surfaced rather than silently charged.)
 //
 // Errors (network, non-2xx, empty body, SDK throw) become `{ ok: false, reason }`
-// — a structured failure a caller may surface. `null` degradation (no provider /
+//: a structured failure a caller may surface. `null` degradation (no provider /
 // missing key) is decided one layer up in `complete()`, BEFORE this runs.
 //
 // Structured output is the CALLER's concern: if `req.schema` is present, the
@@ -71,7 +71,7 @@ interface AnthropicClient {
   messages: AnthropicMessages;
 }
 
-// `apiKey` / `authToken` accept `null` — the SDK only reads its env fallbacks
+// `apiKey` / `authToken` accept `null`: the SDK only reads its env fallbacks
 // when a credential is `undefined`, so an absent credential is pinned to `null`
 // to keep `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN` out of the request.
 type AnthropicSDK = new (opts: {
@@ -91,7 +91,7 @@ const DEFAULT_MAX_TOKENS = 2048;
 /**
  * Anthropic provider adapter. Registered under the name `anthropic` and
  * dispatched by `complete()` when a configured provider block's name is
- * `anthropic` (the hosted Messages endpoint). Returns raw text only — the
+ * `anthropic` (the hosted Messages endpoint). Returns raw text only: the
  * structured-output path wraps this adapter when a `schema` is present.
  */
 export const anthropicAdapter: ProviderAdapter = {
@@ -112,7 +112,7 @@ export const anthropicAdapter: ProviderAdapter = {
     }
 
     try {
-      // Dynamic import — a bundle that never selects the `anthropic` adapter
+      // Dynamic import: a bundle that never selects the `anthropic` adapter
       // ships no `@anthropic-ai/sdk` dependency. `default` is the
       // `Anthropic` client class. Cast through `unknown` into a structural view
       // so this file never depends on the SDK's exact exported types (resilient
@@ -131,7 +131,7 @@ export const anthropicAdapter: ProviderAdapter = {
         maxRetries: 0, // Never silently retry (bounded cost).
       });
 
-      // Single bounded Messages call. The body carries ONLY bounded fields — no
+      // Single bounded Messages call. The body carries ONLY bounded fields: no
       // `tools`, no `stream`. `system` is a top-level Anthropic param
       // (not folded into messages, as OpenAI does); `max_tokens` is REQUIRED by
       // the Messages API, so a default is applied when the request omits it.
@@ -177,5 +177,5 @@ export const anthropicAdapter: ProviderAdapter = {
 // Self-register on import: a consumer that imports `@noir-ai/model` (whose
 // index side-effect-imports this module) gets the adapter wired automatically;
 // `complete()` then dispatches by provider name `anthropic`. The SDK itself is
-// NOT loaded by this registration — only inside `complete()` above.
+// NOT loaded by this registration: only inside `complete()` above.
 registerProviderAdapter('anthropic', anthropicAdapter);

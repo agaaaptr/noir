@@ -1,14 +1,14 @@
-// C1 t10 — offline structural lint for the release/CI workflows.
+// C1 t10: offline structural lint for the release/CI workflows.
 //
 // The installer smoke test (ci.yml `install-smoke` job) and the release
-// checksum/attestation steps run ONLY in CI — they are online, never in the
+// checksum/attestation steps run ONLY in CI: they are online, never in the
 // unit suite (global constraint). But a YAML typo in those steps would only
 // surface when a push/PR triggers CI, tens of minutes late. This test lints
 // the structural invariants of the two workflow files OFFLINE so a regression
 // (dropped Windows matrix, missing attestation step, wrong action version)
 // fails locally + in the offline `pnpm test` gate, immediately.
 //
-// It is deliberately stdlib-only (no `yaml` parser dep) — it asserts the
+// It is deliberately stdlib-only (no `yaml` parser dep): it asserts the
 // specific strings/structure that matter, not full YAML well-formedness
 // (actions/checkout + the GH runner parse the YAML for real in CI).
 import { existsSync, readFileSync } from 'node:fs';
@@ -40,13 +40,13 @@ describe('release pipeline workflows (offline structural lint)', () => {
   describe('.github/workflows/ci.yml', () => {
     const yaml = readWorkflow('ci.yml');
 
-    it('runs the verify matrix on ubuntu and macos (Windows excluded — documented native-install gaps, not a prebuilt-binary issue)', () => {
+    it('runs the verify matrix on ubuntu and macos (Windows excluded: documented native-install gaps, not a prebuilt-binary issue)', () => {
       // The verify job's matrix is the first `os: [...]` block in the file.
       // Extract just that block so the install-smoke matrix (which also lists
       // OSes) can't satisfy this assertion by accident.
       // Windows is excluded from verify (and the smoke jobs below) because of
       // the documented native-install gaps + the win32-skipping chmod unit test
-      // — NOT a prebuilt-binary issue (better-sqlite3@13 SHIPS win32 N-API
+      //: NOT a prebuilt-binary issue (better-sqlite3@13 SHIPS win32 N-API
       // prebuilds).
       const verifyBlock = yaml.split('install-smoke')[0] ?? '';
       const osMatch = verifyBlock.match(/os:\s*\[([^\]]+)\]/);
@@ -76,7 +76,7 @@ describe('release pipeline workflows (offline structural lint)', () => {
       // includes ubuntu-latest and macos-latest. Windows is excluded for the
       // documented native-install gaps (npm.exe vs npm.cmd, `unzip` absent on
       // stock Windows, install.ps1 parity, Scoop .js shim), NOT a source-compile
-      // limitation — better-sqlite3@13 ships win32 N-API prebuilds.
+      // limitation: better-sqlite3@13 ships win32 N-API prebuilds.
       const smokeBlock = yaml.split('install-smoke')[1] ?? '';
       const osP = smokeBlock.match(/os:\s*\[([^\]]+)\]/);
       expect(osP, 'smoke matrix has an os: [...] list').not.toBeNull();
@@ -89,7 +89,7 @@ describe('release pipeline workflows (offline structural lint)', () => {
       expect(smokeBlock).toContain('noir doctor');
     });
 
-    // C1/P5 — the managed-Node provision smoke. These assert the structural
+    // C1/P5: the managed-Node provision smoke. These assert the structural
     // invariants OFFLINE so a regression fails locally + in `pnpm test`; the
     // job itself is online (the only place the REAL Node download runs) and is
     // never in the unit suite.
@@ -112,7 +112,7 @@ describe('release pipeline workflows (offline structural lint)', () => {
       expect(block).toContain('bash scripts/install.sh');
       // The clean-env PATH narrowing excludes runner-provided node/npm.
       expect(block).toContain('PATH: /usr/bin:/bin:/usr/sbin:/sbin');
-      // No PowerShell step — Windows is excluded from smoke matrices.
+      // No PowerShell step: Windows is excluded from smoke matrices.
       expect(block).not.toContain('install.ps1');
     });
 

@@ -1,4 +1,4 @@
-# S1 Stores — Manual Acceptance Checklist
+# S1 Stores: Manual Acceptance Checklist
 
 **Date:** 2026-07-24
 **Task:** S1-T8 (Final verification and acceptance)
@@ -97,12 +97,12 @@ store.close();
 
 ## S1 Scope Reminder
 
-S1 (Stores) provides the persistence layer + the daemon→store seam + the `store_status` diagnostic tool. It does **not** include (later slices — see `docs/roadmap/`):
-- **Embeddings model** (transformers.js / MiniLM) — injected via `EmbedFn` in S6/S7.
+S1 (Stores) provides the persistence layer + the daemon→store seam + the `store_status` diagnostic tool. It does **not** include (later slices: see `docs/roadmap/`):
+- **Embeddings model** (transformers.js / MiniLM): injected via `EmbedFn` in S6/S7.
 - **SDD workflow engine** (S4).
 - **Noir skill pack + host compiler** (S5).
-- **Context management** — indexing/watcher, RRF fusion, `context_search` (S6).
-- **Memory management** — typed lifecycle, capture, recall/consolidation/governance, `recall`/`memory_save` (S7).
+- **Context management**: indexing/watcher, RRF fusion, `context_search` (S6).
+- **Memory management**: typed lifecycle, capture, recall/consolidation/governance, `recall`/`memory_save` (S7).
 - **Bounded model layer** (S8).
 - **CLI/TUI home screen** (S9).
 

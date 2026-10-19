@@ -109,7 +109,7 @@ names, examples, and cross-references between files.
 
 For every reference, ensure it is valid, accessible, relevant, current, non-stale,
 non-misleading, non-contradictory, and consistent with the current implementation. If a
-reference is no longer valid, do not only note it — fix or update it.
+reference is no longer valid, do not only note it: fix or update it.
 
 ## 6. Audit Remaining Work and Technical Debt
 
@@ -218,4 +218,4 @@ results, (6) lint/build/test/validation results, (7) whether any outstanding iss
 remains, and (8) whether the project is **READY TO PUBLISH**.
 
 If any outstanding issue remains, the status must be **NOT READY TO PUBLISH**. If all
-verification is clean: **VERIFICATION COMPLETE — READY TO PUBLISH**.
+verification is clean: **VERIFICATION COMPLETE: READY TO PUBLISH**.

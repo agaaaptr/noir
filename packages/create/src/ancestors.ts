@@ -5,8 +5,8 @@
 // strip-replacing. Stored at `.noir/ancestors.json` as a flat map.
 //
 // Ancestor capture is UNCONDITIONAL (every init/create/sync writes a
-// snapshot of the managed regions it touched), so the first merge run — now the
-// DEFAULT — always has a base. `writeAncestors` is content-hash idempotent: a
+// snapshot of the managed regions it touched), so the first merge run: now the
+// DEFAULT: always has a base. `writeAncestors` is content-hash idempotent: a
 // no-op sync leaves the file untouched (no mtime/git churn).
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -37,7 +37,7 @@ export function readAncestors(root: string): Record<string, string> {
 
 /** Write the ancestor map. Ensures `.noir/` exists (a standalone caller may
  *  invoke this before the scaffold has created the dir). Derived state, so the
- *  plain write (no tmp) is fine. Content-hash dedup — when the serialized
+ *  plain write (no tmp) is fine. Content-hash dedup: when the serialized
  *  bytes equal what is already on disk, the rewrite is skipped so a no-op sync
  *  leaves ancestors.json untouched (no mtime/git churn). */
 export function writeAncestors(root: string, map: Record<string, string>): void {

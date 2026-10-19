@@ -1,23 +1,23 @@
-// @noir-ai/memory — Noir's cross-session memory layer.
+// @noir-ai/memory: Noir's cross-session memory layer.
 //
 // Local-first, in-process memory: append-only observations (pattern /
 // preference / architecture / bug / workflow / fact / decision / lesson) stored
-// ON TOP of the existing @noir-ai/store (FTS5 docs + sqlite-vec + KV — NO schema
+// ON TOP of the existing @noir-ai/store (FTS5 docs + sqlite-vec + KV: NO schema
 // migration), recalled via the context layer's hybrid retriever reused as-is
 // (BM25 + vec + RRF k=60) scoped to `source:'memory'`, and consolidated into
 // derived `type:'lesson'` rows by an explicit, provider-gated job that consumes
 // the bounded model layer.
 //
 // Non-negotiable rules:
-//   • in-process only — NO sidecar / external server;
-//   • canonical ProjectId — NEVER a filesystem path (observations are
+//   • in-process only: NO sidecar / external server;
+//   • canonical ProjectId: NEVER a filesystem path (observations are
 //     project-scoped via the store's projectId-keyed DB; KV keys namespaced
 //     `memory:`);
 //   • capture / store / retrieve ALWAYS local + free;
-//   • ANY LLM touch (consolidation) is OPT-IN + provider-explicit — refuse +
+//   • ANY LLM touch (consolidation) is OPT-IN + provider-explicit: refuse +
 //     log if no provider, NEVER a silent paid call (the Agent-Memory
 //     anti-pattern);
-//   • never truncate snippets — window-extract is inherited from the store and
+//   • never truncate snippets: window-extract is inherited from the store and
 //     the context layer;
 //     the full observation `content` is hydrated from the authoritative KV row
 //     `memory:obs:<id>` on every recall.
@@ -28,7 +28,7 @@
 // --- Capture (host-neutral CaptureEvent → SaveInput mapper; opt-in) ---
 // The bridge a host hook (Claude Code PreToolUse/PostToolUse/UserPromptSubmit/
 // Stop, or any future host) uses to turn its event into a `memory_save`-shaped
-// SaveInput. Pure — NO I/O, NO network, NO LLM (capture is always local + free). Auto-capture is OPT-IN: the user installs the hooks template
+// SaveInput. Pure: NO I/O, NO network, NO LLM (capture is always local + free). Auto-capture is OPT-IN: the user installs the hooks template
 // (templates/claude-hooks.md); `noir init`/`sync` NEVER wire it.
 export {
   buildContent,
@@ -49,9 +49,9 @@ export {
 // --- Config resolver (the core→memory bridge; pure projection) ---
 // resolveMemoryConfig maps @noir-ai/core's user-facing `memory` zod block to the
 // runtime MemoryConfig the engine consumes. Lives HERE (not in core) so core
-// never imports memory (no core→memory cycle — mirrors @noir-ai/context's
+// never imports memory (no core→memory cycle: mirrors @noir-ai/context's
 // resolveEmbedderConfig + @noir-ai/model's resolveModelConfig). Pure projection:
-// provider-EXPLICIT, reads NO env, never infers a provider — a missing
+// provider-EXPLICIT, reads NO env, never infers a provider: a missing
 // block resolves to consolidation-disabled, so runConsolidation refuses +
 // logs (`no-provider`) and makes NO paid model call.
 export {
@@ -59,7 +59,7 @@ export {
   resolveMemoryConfig,
 } from './config.js';
 // --- Consolidation (explicit, provider-gated, append-only job) ---
-// runConsolidation is the standalone algorithm extracted from the engine — the
+// runConsolidation is the standalone algorithm extracted from the engine: the
 // gate logic (no-provider / model-unavailable / no-candidates) + the derived
 // `type:'lesson'` append. Pure helpers (gatherCandidates / serializeCandidates
 // / dedupeConcepts) are exported for direct unit testing, mirroring how

@@ -13,7 +13,7 @@ function cfg(run: unknown): ReturnType<typeof parseConfig> {
   return parseConfig({ run });
 }
 
-describe('config schema — run block', () => {
+describe('config schema: run block', () => {
   it('parses a valid profiles map + defaultProfile', () => {
     const config = cfg({
       defaultProfile: 'work',
@@ -37,7 +37,7 @@ describe('config schema — run block', () => {
   });
 });
 
-describe('resolveRunProfile — precedence flag > env > defaultProfile > built-in', () => {
+describe('resolveRunProfile: precedence flag > env > defaultProfile > built-in', () => {
   const config = cfg({
     defaultProfile: 'work',
     profiles: {
@@ -96,7 +96,7 @@ describe('resolveRunProfile — precedence flag > env > defaultProfile > built-i
 // unintentional template interpolation).
 const REF = (name: string): string => `${'$'}{${name}}`;
 
-describe('profile env — dollar-brace expansion + null deletion', () => {
+describe('profile env: dollar-brace expansion + null deletion', () => {
   it('expands a dollar-brace reference from the base env, leaving unresolved refs literal', () => {
     expect(expandEnvVars(REF('ANTHROPIC_API_KEY'), BASE)).toBe('sk-real');
     expect(expandEnvVars(`prefix-${REF('MISSING_XYZ')}-suffix`, BASE)).toBe(
@@ -125,7 +125,7 @@ describe('profile env — dollar-brace expansion + null deletion', () => {
   });
 });
 
-describe('profile env — process-injection deny-list', () => {
+describe('profile env: process-injection deny-list', () => {
   const denied = (env: Record<string, string | null>) =>
     resolveRunProfile('p', cfg({ profiles: { p: { binary: 'claude', env } } }), BASE);
 
@@ -154,7 +154,7 @@ describe('profile env — process-injection deny-list', () => {
     if (r.ok) expect(r.profile.env?.ANTHROPIC_BASE_URL).toBe('https://api.z.ai/api/anthropic');
   });
 
-  it('never scans values — a denied name expanded into a value is still allowed', () => {
+  it('never scans values: a denied name expanded into a value is still allowed', () => {
     // ${VAR} expansion rewrites a VALUE only; no profile construction routes a
     // value into a key, so the deny-list stays key-based by design.
     const r = resolveRunProfile(

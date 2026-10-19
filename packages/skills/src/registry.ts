@@ -66,7 +66,7 @@ function toEntry(s: BuiltinSkill, kind: 'builtin' | 'integration'): SkillRegistr
 }
 
 /**
- * Build the full registry from `discoverAll()` — builtins + integrations in
+ * Build the full registry from `discoverAll()`: builtins + integrations in
  * one list, sorted by name. Pure (no I/O beyond discovery); never throws for
  * a malformed skill (a discovery failure surfaces upstream, the same as the
  * compiler's fail-fast).

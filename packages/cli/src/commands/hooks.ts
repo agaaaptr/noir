@@ -3,13 +3,13 @@
 // IN-PROCESS (no daemon, no store): the host hook entry is a filesystem
 // artifact (claude `.claude/settings.local.json`, gemini `.gemini/settings.json`,
 // cursor `.cursor/hooks.json`), so the write runs directly through
-// `@noir-ai/create`'s `emitHooksToFile` — the same primitive the scaffold uses.
+// `@noir-ai/create`'s `emitHooksToFile`: the same primitive the scaffold uses.
 // This is the explicit restore path for the write-once `mergeJson` hook that
 // `noir init --upgrade` and `noir sync` deliberately do NOT re-emit.
 //
 // Scriptability (hard rule): `--json` emits the `{ok,data}` envelope to stdout
 // (the only stdout write); the human messages go to stderr via `log`/`info`.
-// No interactive input is ever required — safe on a pipe / CI unconditionally.
+// No interactive input is ever required: safe on a pipe / CI unconditionally.
 
 import { loadProjectInfo, type ProjectInfo } from '@noir-ai/core';
 import { emitHooksToFile } from '@noir-ai/create';

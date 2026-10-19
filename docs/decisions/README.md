@@ -1,25 +1,26 @@
 # Architecture Decision Records
 
-ADRs record *why* a choice was made — not *what* the code does (the skills themselves show that). Capture decisions a future reader (human or agent) would otherwise have to reverse-engineer.
+ADRs record *why* a choice was made: not *what* the code does (the skills themselves show that). Capture decisions a future reader (human or agent) would otherwise have to reverse-engineer.
 
 ## Format
 
 - Filename: `NNNN-<short-slug>.md` (zero-padded, e.g. `0001-commit-per-scope.md`).
-- Append-only: never delete a superseded ADR — mark it **Status: Superseded by ADR-NNNN** and add the new one.
+- Append-only: never delete a superseded ADR: mark it **Status: Superseded by ADR-NNNN** and add the new one.
 - Sections: *Context*, *Decision*, *Consequences*.
 
 ## Index
 
-- [ADR-0001 — Documentation layout and spec/plan paths](0001-doc-layout-and-spec-plan-paths.md)
-- [ADR-0002 — Native skills only — plugin + marketplace removed](0002-native-skills-only-plugin-removed.md)
-- [ADR-0003 — v1.x capabilities — keystone refactor + five extensions](0003-v1x-capabilities.md)
-- [ADR-0004 — Multi-host adapters — the `resolveAdapter(host)` registry + AGENTS.md universal](0004-multi-host-adapters.md)
-- [ADR-0005 — Native installer is managed-Node, not a single binary](0005-native-installer-managed-node.md)
-- [ADR-0006 — C2 TUI command palette + daemon `--detach` (v2 orchestrator TUI scope superseded by ADR-0008)](0006-c2-tui-and-daemon-detach.md)
-- [ADR-0007 — C3 generated-artifact standard — type codes, frontmatter, per-type outlines](0007-generated-artifact-standard.md)
-- [ADR-0008 — v2 orchestrator TUI — single-surface consolidation + `noir run` headless host-driving](0008-v2-orchestrator-tui.md)
-- [ADR-0009 — Shared cross-repo workspaces](0009-shared-workspaces.md)
-- [ADR-0010 — Per-project daemon records, a real `daemon.port`, and HTTP-only auth](0010-per-project-daemon-records-and-http-auth.md)
-- [ADR-0011 — `.noir/.env` precedence, provenance, and the configuration doctrine](0011-noir-env-precedence-and-doctrine.md)
-- [ADR-0012 — Provider transport fields and ambient-env neutralization](0012-provider-transport-fields-and-ambient-env-neutralization.md)
-- [ADR-0013 — Workspace transport via the stdio bridge, and 400 for a misdirected workspace URL](0013-workspace-transport-and-daemon-routing.md)
+- [ADR-0001: Documentation layout and spec/plan paths](0001-doc-layout-and-spec-plan-paths.md)
+- [ADR-0002: Native skills only: plugin + marketplace removed](0002-native-skills-only-plugin-removed.md)
+- [ADR-0003: v1.x capabilities: keystone refactor + five extensions](0003-v1x-capabilities.md)
+- [ADR-0004: Multi-host adapters: the `resolveAdapter(host)` registry + AGENTS.md universal](0004-multi-host-adapters.md)
+- [ADR-0005: Native installer is managed-Node, not a single binary](0005-native-installer-managed-node.md)
+- [ADR-0006: C2 TUI command palette + daemon `--detach` (v2 orchestrator TUI scope superseded by ADR-0008)](0006-c2-tui-and-daemon-detach.md)
+- [ADR-0007: C3 generated-artifact standard: type codes, frontmatter, per-type outlines](0007-generated-artifact-standard.md)
+- [ADR-0008: v2 orchestrator TUI: single-surface consolidation + `noir run` headless host-driving](0008-v2-orchestrator-tui.md)
+- [ADR-0009: Shared cross-repo workspaces](0009-shared-workspaces.md)
+- [ADR-0010: Per-project daemon records, a real `daemon.port`, and HTTP-only auth](0010-per-project-daemon-records-and-http-auth.md)
+- [ADR-0011: `.noir/.env` precedence, provenance, and the configuration doctrine](0011-noir-env-precedence-and-doctrine.md)
+- [ADR-0012: Provider transport fields and ambient-env neutralization](0012-provider-transport-fields-and-ambient-env-neutralization.md)
+- [ADR-0013: Workspace transport via the stdio bridge, and 400 for a misdirected workspace URL](0013-workspace-transport-and-daemon-routing.md)
+- [ADR-0014: Host hook regeneration via an explicit `noir hooks sync` command](0014-hook-regeneration-command.md)

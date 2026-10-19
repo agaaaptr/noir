@@ -4,7 +4,7 @@ import { NOIR_DIR } from '@noir-ai/core';
 import { regenerate } from './writers.js';
 
 /**
- * Scaffold version stamp — Noir's equivalent of Copier's `last-applied`.
+ * Scaffold version stamp: Noir's equivalent of Copier's `last-applied`.
  * Stored at `.noir/scaffold-version` as a single `noir-scaffold=<semver>` line
  * so `noir init --upgrade` / `noir doctor` can diff against
  * {@link CURRENT_SCAFFOLD_VERSION} and decide which migrations to run.
@@ -31,7 +31,7 @@ export function scaffoldVersionPath(root: string): string {
 }
 
 /** Read the applied scaffold version, or `null` if the stamp is absent/unparseable.
- *  Never throws — doctor must keep reporting even on a malformed stamp. */
+ *  Never throws: doctor must keep reporting even on a malformed stamp. */
 export function readScaffoldVersion(root: string): string | null {
   let raw: string;
   try {

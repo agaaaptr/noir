@@ -30,12 +30,12 @@ export type {
   McpConfigOptions,
 } from './types.js';
 
-/** The readonly list of supported hosts — derived from the `HostId` union so it
+/** The readonly list of supported hosts: derived from the `HostId` union so it
  *  stays in lockstep with the type. Consumers (cli `--host` flag, doctor
  *  reporting) use this for "is this host valid?" + iteration. Order is the
- *  declaration order in `HostId` (claude first — the default).
+ *  declaration order in `HostId` (claude first: the default).
  *
- *  `Object.freeze` enforces the `readonly` type at runtime — a stray
+ *  `Object.freeze` enforces the `readonly` type at runtime: a stray
  *  `SUPPORTED_HOSTS.push('qwen')` from a JS caller fails loudly instead of
  *  silently corrupting the registry list (TS already prevents it in typed code). */
 export const SUPPORTED_HOSTS: readonly HostId[] = Object.freeze([
@@ -48,20 +48,20 @@ export const SUPPORTED_HOSTS: readonly HostId[] = Object.freeze([
 
 /**
  * Resolve a host id to its `HostAdapter`. The registry is a `Record<HostId,
- * HostAdapter>` so the type system enforces completeness — adding a host to
+ * HostAdapter>` so the type system enforces completeness: adding a host to
  * `HostId` requires wiring it here (TS errors otherwise). The CLI uses this
  * indirection instead of importing adapters directly so adding a host needs NO
  * CLI edits beyond the `--host` flag's enum.
  *
  * All five hosts are wired —
- *   - `claude`     — CLAUDE.md + `.claude/skills/` + `.mcp.json` (regression anchor).
- *   - `agents-md`  — universal AGENTS.md (the 32-platform baseline).
- *   - `gemini`     — GEMINI.md + AGENTS.md + `.gemini/mcp.json`.
- *   - `cursor`     — AGENTS.md + `.cursor/rules/*.mdc` + `.cursor/mcp.json`.
- *   - `opencode`   — AGENTS.md + `opencode.json` (different MCP shape).
+ *   - `claude`    : CLAUDE.md + `.claude/skills/` + `.mcp.json` (regression anchor).
+ *   - `agents-md` : universal AGENTS.md (the 32-platform baseline).
+ *   - `gemini`    : GEMINI.md + AGENTS.md + `.gemini/mcp.json`.
+ *   - `cursor`    : AGENTS.md + `.cursor/rules/*.mdc` + `.cursor/mcp.json`.
+ *   - `opencode`  : AGENTS.md + `opencode.json` (different MCP shape).
  *
  * Unknown/non-`HostId` strings are impossible to pass at compile time (the
- * signature accepts only `HostId`); the runtime fallback is defensive — a
+ * signature accepts only `HostId`); the runtime fallback is defensive: a
  * JS caller ignoring types still gets a clear error, not a silent `undefined`.
  */
 export function resolveAdapter(host: HostId): HostAdapter {
@@ -77,7 +77,7 @@ export function resolveAdapter(host: HostId): HostAdapter {
     case 'opencode':
       return opencodeAdapter;
     default: {
-      // Exhaustiveness guard — if `HostId` gains a member and this switch is
+      // Exhaustiveness guard: if `HostId` gains a member and this switch is
       // not updated, TS narrows `host` to `never` here. At runtime (untyped JS
       // callers) we still surface a clear message.
       const _exhaustive: never = host;

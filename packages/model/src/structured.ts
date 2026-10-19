@@ -1,7 +1,7 @@
-// Structured output — prompt-based JSON + validate + at most ONE repair retry.
+// Structured output: prompt-based JSON + validate + at most ONE repair retry.
 //
 // This module is the ONLY retry site in the model layer (SDK retries are
-// 0; bounded wall-clock + cost). It does NOT call a provider directly — it is
+// 0; bounded wall-clock + cost). It does NOT call a provider directly: it is
 // given a resolved {@link ProviderAdapter} by `complete()` and orchestrates the
 // JSON round-trip on top of the adapter's single-shot `complete()`. Because the
 // adapter surface has no `tools` / `stream`, this path cannot mutate into
@@ -12,14 +12,14 @@
 //   1. Inject a "respond with ONLY JSON matching the schema" system addendum.
 //   2. Call the adapter once (single shot).
 //   3. Extract JSON from the text (tolerant: direct, markdown-fence, span).
-//   4. Validate against `req.schema` — a ZodType (`.parse`) or a function.
+//   4. Validate against `req.schema`: a ZodType (`.parse`) or a function.
 //   5. On parse/validate failure, retry ONCE with the error fed back.
 //   6. Still bad ⇒ `{ ok: false, reason: "schema-validation-failed: …" }`.
 //
 // NO zod is imported at runtime here (the types.ts contract): validation
 // calls `.parse` ON the caller-supplied schema object, so the built library has
 // no value-level zod dependency. A best-effort `.description` (if the ZodType
-// carries one) is the only schema introspection — we never serialize the shape,
+// carries one) is the only schema introspection: we never serialize the shape,
 // so the caller's prompt is expected to describe the desired JSON; `schema` is
 // the validator, not the spec.
 
@@ -33,14 +33,14 @@ import type { CompleteRequest, CompleteResult, CompleteSchema, ProviderAdapter }
 // scalar schema is also honored.
 const JSON_INSTRUCTION =
   'Respond with ONLY a single valid JSON value that matches the requested schema. ' +
-  'Do not include markdown, code fences, commentary, or any surrounding prose — ' +
+  'Do not include markdown, code fences, commentary, or any surrounding prose: ' +
   'output the JSON and nothing else.';
 
 /**
  * Best-effort schema hint for the prompt. A ZodType MAY carry a `.description`
  * (set via `z.desc(...)` / `.meta({ description })`); a validator function
  * carries none. We never import zod at runtime, so we do NOT serialize the full
- * shape — the caller's prompt describes the desired JSON; `schema` validates.
+ * shape: the caller's prompt describes the desired JSON; `schema` validates.
  * Returns the trimmed description, or `''` when none is available.
  */
 function schemaDescription(schema: CompleteSchema | undefined): string {
@@ -65,7 +65,7 @@ function truncate(s: string, max: number): string {
 /**
  * Build the ONE repair retry: re-state the JSON contract, then surface the
  * precise parse/validate error and the offending output so the model can fix it.
- * The original task (`prompt`) is preserved verbatim — only the system gains the
+ * The original task (`prompt`) is preserved verbatim: only the system gains the
  * correction, so the retry is still a bounded single shot at the SAME task.
  */
 function withCorrectiveInstruction(
@@ -78,7 +78,7 @@ function withCorrectiveInstruction(
     `Your previous response failed validation and was NOT valid JSON matching the schema.\n\n` +
     `Error: ${error}\n\n` +
     `Previous output (do NOT repeat it):\n${truncate(badOutput, 500)}\n\n` +
-    `Return ONLY valid JSON matching the schema — no markdown, no prose.`;
+    `Return ONLY valid JSON matching the schema: no markdown, no prose.`;
   const system = base.system ? `${base.system}\n\n${correction}` : correction;
   return { ...base, system };
 }
@@ -123,7 +123,7 @@ function extractJSON(text: string): ParseOutcome {
     if (inner.ok) return inner;
   }
 
-  // 3. Outermost object/array span — collect valid candidates, shortest first
+  // 3. Outermost object/array span: collect valid candidates, shortest first
   //    (a tighter valid span beats a looser one that happens to balance).
   const candidates: string[] = [];
   const objStart = trimmed.indexOf('{');
@@ -138,7 +138,7 @@ function extractJSON(text: string): ParseOutcome {
     if (parsed.ok) return parsed;
   }
 
-  // No extraction worked — surface a short, safe excerpt (never the whole prompt
+  // No extraction worked: surface a short, safe excerpt (never the whole prompt
   // body, which could be large; raw content never reaches logs or usage).
   const excerpt = truncate(trimmed.replace(/\s+/g, ' '), 120);
   return { ok: false, error: `response was not valid JSON: ${JSON.stringify(excerpt)}` };
@@ -156,7 +156,7 @@ function extractJSON(text: string): ParseOutcome {
  * object (it has `.parse`, no call signature), so the function branch is the
  * validator-function member and the fall-through is the ZodType member. The
  * ZodType `.parse` is invoked via method syntax (`schema.parse(raw)`) so its
- * internal `this` binding is preserved — extracting `const p = schema.parse;
+ * internal `this` binding is preserved: extracting `const p = schema.parse;
  * p(raw)` would lose `this` and break zod's internal state reads.
  */
 function validateSchema(schema: CompleteSchema, raw: unknown): unknown {
@@ -185,7 +185,7 @@ function parseAndValidate(text: string, schema: CompleteSchema): ParseOutcome {
  *
  * Makes at most TWO adapter calls: an initial attempt, plus ONE repair retry on
  * parse/validate failure. An adapter/transport failure (`{ ok: false }`
- * or `null`) is propagated immediately — the retry budget is for JSON repair,
+ * or `null`) is propagated immediately: the retry budget is for JSON repair,
  * NOT for transient network errors (those stay bounded at one call).
  *
  * On success the validated object is returned as `value`, with `text`
@@ -206,7 +206,7 @@ export async function runStructured(
 
   // --- Attempt 1: the initial JSON request. ---
   const first = await adapter.complete(withJsonInstruction(req), key);
-  // Adapter/transport failure (incl. null degradation) — propagate, do NOT spend
+  // Adapter/transport failure (incl. null degradation): propagate, do NOT spend
   // the retry budget on a non-JSON failure (transport stays single-shot).
   if (!first?.ok) return first;
 
@@ -227,7 +227,7 @@ export async function runStructured(
   );
   // If the retry's transport itself failed, the overall result is still a
   // schema-validation failure (the first output was invalid JSON and we could
-  // not repair it) — surface that, not the transport error, so the caller sees
+  // not repair it): surface that, not the transport error, so the caller sees
   // the real cause. The first attempt's parse error is the actionable detail.
   if (!second?.ok) {
     return { ok: false, reason: `schema-validation-failed: ${parsed1.error}` };
@@ -244,7 +244,7 @@ export async function runStructured(
   }
 
   // Two strikes: the model could not produce schema-valid JSON. Degrade to a
-  // structured failure (NOT null — a call was attempted and billed; the caller
+  // structured failure (NOT null: a call was attempted and billed; the caller
   // may surface this). Reason is fixed-suffix `schema-validation-failed` so
   // callers can branch on it, followed by the last parse/validate error.
   return { ok: false, reason: `schema-validation-failed: ${parsed2.error}` };

@@ -1,4 +1,4 @@
-# S4 SDD Engine — Manual Acceptance Checklist
+# S4 SDD Engine: Manual Acceptance Checklist
 
 > **Living document.** This checklist validates that the SDD lifecycle engine runs end-to-end on a real task, gates record observable decisions, state survives daemon restart, and `--force` / quick mode work. Follow each step; check the box when satisfied.
 
@@ -19,7 +19,7 @@
 
 **Goal:** Start a task, advance through all 7 phases, approve each gate, and observe the audit trail.
 
-> **Note on artifacts:** The engine's `advance()` does NOT auto-write `.noir/specs/`, `.noir/plans/`, or `.noir/tasks/` files in Full mode — it only advances state + records gates to the audit. Artifact files are written via explicit `ArtifactWriter` calls (`writeSpec`, `writePlan`, etc.) or by `runQuick` (which writes a stub spec). To validate artifact creation, call the `ArtifactWriter` functions explicitly after advancing to the corresponding phase.
+> **Note on artifacts:** The engine's `advance()` does NOT auto-write `.noir/specs/`, `.noir/plans/`, or `.noir/tasks/` files in Full mode: it only advances state + records gates to the audit. Artifact files are written via explicit `ArtifactWriter` calls (`writeSpec`, `writePlan`, etc.) or by `runQuick` (which writes a stub spec). To validate artifact creation, call the `ArtifactWriter` functions explicitly after advancing to the corresponding phase.
 
 ### 1.1 Start a task
 
@@ -32,7 +32,7 @@ node /path/to/noir/packages/cli/dist/bin.js init  # creates .noir/
 node /path/to/noir/packages/cli/dist/bin.js daemon start
 ```
 
-Use the MCP tool `workflow_status` (no args) — should report `{ok: false, error: 'no active task'}`.
+Use the MCP tool `workflow_status` (no args): should report `{ok: false, error: 'no active task'}`.
 
 Start a task via the CLI (or direct engine call; the CLI wrapper is S5, so use the engine API for this acceptance test):
 
@@ -351,6 +351,6 @@ pnpm test       # Vitest unit + integration (117/117 tests green)
 - **Observable checkpoint invariant:** Every gate decision is recorded (`approved`/`forced`/`skipped`) in both `TaskState.history` (in-process view) and store KV `audit:<taskId>` (source of truth). The `.noir/audit/` export is a later helper (T3).
 - **Gates are escapable, never blocking:** The engine never halts on a gate; it records the decision and advances. Blocking is a host/policy concern (S5), not engine responsibility.
 - **Store discipline:** The engine uses only the public Store API (`getState`/`setState`); it never reaches into store internals. S1 established this contract.
-- **MCP tool naming:** Tools are `checkpoint` and `workflow_status` (no dots — MCP spec `^[a-zA-Z0-9_-]+$`).
+- **MCP tool naming:** Tools are `checkpoint` and `workflow_status` (no dots: MCP spec `^[a-zA-Z0-9_-]+$`).
 - **stdout discipline:** No stdout in engine/MCP paths (stderr only for errors).
 - **Type consistency:** `Phase`, `WorkflowState`, `GateResult`, `TaskState` are consistent across all tasks (T1–T6).

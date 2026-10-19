@@ -1,4 +1,4 @@
-// `noir memory capture` regression — content/file/eventType resolution → the
+// `noir memory capture` regression: content/file/eventType resolution → the
 // daemon `memory_capture` tool, with capture provenance (ADR-0009). daemon-client
 // is mocked at the boundary (no real daemon); the CLI command under test is real.
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';

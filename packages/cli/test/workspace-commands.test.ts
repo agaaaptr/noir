@@ -116,7 +116,7 @@ describe('noir daemon join / workspace leave', () => {
     ensureWorkspaceRegistry('demo');
     await daemonJoin({ name: 'demo' });
     expect(readWorkspaceMarker(root)).toBe('demo');
-    // A comment makes it unparseable JSON — the stdio restore must refuse.
+    // A comment makes it unparseable JSON: the stdio restore must refuse.
     writeFileSync(join(root, '.mcp.json'), '{\n  // user comment\n  "mcpServers": {}\n}\n', 'utf8');
 
     await expect(workspaceLeave({})).rejects.toThrow();

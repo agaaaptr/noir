@@ -19,7 +19,7 @@
 - **Names:** marketplace `noir`, plugin `noir-workflow`, scoped npm `@noir-ai/*`, bin `noir`.
 - **LICENSE = MIT.**
 - **stdio logging discipline:** stdout is reserved for JSON-RPC. Every `console.*` / log in a stdio-serving code path writes to **stderr** (`process.stderr`).
-- **No `Date.now()` in plan-author context** — irrelevant here; daemon/runtime code may freely use `Date.now()`.
+- **No `Date.now()` in plan-author context**: irrelevant here; daemon/runtime code may freely use `Date.now()`.
 - **TDD:** every code task writes the failing test first, watches it fail, implements minimally, watches it pass, then commits.
 
 ---
@@ -71,7 +71,7 @@ noir/
 │     ├─ src/index.ts
 │     ├─ src/bin.ts                  # arg dispatch (shebang)
 │     ├─ src/init.ts                 # init(root, opts)
-│     ├─ src/serve.ts                # serve(opts) — stdio or daemon-prefer
+│     ├─ src/serve.ts                # serve(opts): stdio or daemon-prefer
 │     ├─ src/daemon-cmd.ts           # daemon start|stop
 │     ├─ src/doctor.ts               # stub
 │     └─ test/{init,serve}.test.ts
@@ -119,7 +119,7 @@ packages:
   "name": "noir",
   "private": true,
   "version": "0.1.0",
-  "description": "Noir — the discipline, context, and memory layer for any agentic CLI.",
+  "description": "Noir: the discipline, context, and memory layer for any agentic CLI.",
   "license": "MIT",
   "type": "module",
   "engines": { "node": ">=20" },
@@ -277,7 +277,7 @@ export const NOIR_VERSION = '0.1.0';
 
 Run: `pnpm install`
 Run: `pnpm test`
-Expected: PASS — `monorepo smoke > exposes a version string`.
+Expected: PASS: `monorepo smoke > exposes a version string`.
 
 Run: `pnpm lint`
 Expected: Biome reports no errors (may suggest formatting; run `pnpm format` if so).
@@ -387,7 +387,7 @@ describe('loadProjectInfo', () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `pnpm test`
-Expected: FAIL — modules `../src/project-id.js`, `../src/config.js`, `../src/project.js`, `../src/layout.js` not found.
+Expected: FAIL: modules `../src/project-id.js`, `../src/config.js`, `../src/project.js`, `../src/layout.js` not found.
 
 - [ ] **Step 3: Implement the modules**
 
@@ -560,7 +560,7 @@ git commit -m "ci: github actions (lint/typecheck/build/test, ubuntu+macos, node
 
 ---
 
-## Task 4: S0 branding — rebrand the legacy plugin
+## Task 4: S0 branding: rebrand the legacy plugin
 
 **Files:**
 - Rename: `plugins/ai-dev-workflow/` → `plugins/noir-workflow/`
@@ -584,7 +584,7 @@ Run: `git mv plugins/ai-dev-workflow plugins/noir-workflow`
     {
       "name": "noir-workflow",
       "source": "./plugins/noir-workflow",
-      "description": "Noir's spec-driven development workflow for Claude Code — 2-mode (runs with OR without plugins). Skills: /init bootstrap, /sync context-load, /flow plan->execute->verify->document loop (investigate-confirm-act gates), /wrap session close, /checkpoint resume. The Noir-native distribution channel; superseded by the Noir CLI at runtime."
+      "description": "Noir's spec-driven development workflow for Claude Code: 2-mode (runs with OR without plugins). Skills: /init bootstrap, /sync context-load, /flow plan->execute->verify->document loop (investigate-confirm-act gates), /wrap session close, /checkpoint resume. The Noir-native distribution channel; superseded by the Noir CLI at runtime."
     }
   ]
 }
@@ -599,7 +599,7 @@ For each listed file, replace:
 - `ai-toolkit` → `noir`
 - `ai-dev-workflow` → `noir-workflow`
 
-(Preserve any historical references inside `docs/internal/specs/**` and `docs/plans/**` that describe past work — those are dated records, not live identity. Only update live files: the plugin's `SKILL.md`/`references/`/`templates/`, root `README.md`, root `AGENTS.md`.)
+(Preserve any historical references inside `docs/internal/specs/**` and `docs/plans/**` that describe past work: those are dated records, not live identity. Only update live files: the plugin's `SKILL.md`/`references/`/`templates/`, root `README.md`, root `AGENTS.md`.)
 
 - [ ] **Step 4: Verify no stale identifiers in live files**
 
@@ -619,7 +619,7 @@ git commit -m "refactor(brand): rebrand plugin to noir-workflow / marketplace no
 
 ---
 
-## Task 5: `@noir-ai/daemon` — status + server factory + stdio binding
+## Task 5: `@noir-ai/daemon`: status + server factory + stdio binding
 
 **Files:**
 - Create: `packages/daemon/package.json`, `packages/daemon/tsconfig.json`, `packages/daemon/tsup.config.ts`, `packages/daemon/src/{index.ts,status.ts,server.ts,stdio.ts}`, `packages/daemon/test/status.test.ts`
@@ -671,7 +671,7 @@ describe('buildStatus', () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm test`
-Expected: FAIL — `../src/status.js` not found (and `@noir-ai/daemon` package not yet created).
+Expected: FAIL: `../src/status.js` not found (and `@noir-ai/daemon` package not yet created).
 
 - [ ] **Step 3: Create the package and implement**
 
@@ -821,7 +821,7 @@ git commit -m "feat(daemon): host_status status, McpServer factory, stdio bindin
 
 ---
 
-## Task 6: `@noir-ai/adapters` — HostAdapter interface + claude emitter
+## Task 6: `@noir-ai/adapters`: HostAdapter interface + claude emitter
 
 **Files:**
 - Create: `packages/adapters/package.json`, `packages/adapters/tsconfig.json`, `packages/adapters/tsup.config.ts`, `packages/adapters/src/{index.ts,types.ts,claude.ts}`, `packages/adapters/test/claude.test.ts`
@@ -867,7 +867,7 @@ describe('claudeAdapter', () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm test`
-Expected: FAIL — `../src/claude.js` not found.
+Expected: FAIL: `../src/claude.js` not found.
 
 - [ ] **Step 3: Implement**
 
@@ -971,7 +971,7 @@ git commit -m "feat(adapters): HostAdapter interface + claude emitter"
 
 ---
 
-## Task 7: `@noir-ai/cli` — bin, `noir init`, `noir mcp serve --stdio`
+## Task 7: `@noir-ai/cli`: bin, `noir init`, `noir mcp serve --stdio`
 
 **Files:**
 - Create: `packages/cli/package.json`, `packages/cli/tsconfig.json`, `packages/cli/tsup.config.ts`, `packages/cli/src/{index.ts,bin.ts,init.ts,serve.ts,doctor.ts}`, `packages/cli/test/init.test.ts`
@@ -1018,7 +1018,7 @@ describe('init', () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm test`
-Expected: FAIL — `../src/init.js` not found.
+Expected: FAIL: `../src/init.js` not found.
 
 - [ ] **Step 3: Implement**
 
@@ -1209,7 +1209,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  process.stderr.write('Noir — commands: init | mcp serve [--stdio] | daemon start|stop | doctor\n');
+  process.stderr.write('Noir: commands: init | mcp serve [--stdio] | daemon start|stop | doctor\n');
   process.exitCode = 2;
 }
 
@@ -1246,7 +1246,7 @@ git commit -m "feat(cli): noir bin, init scaffolder, mcp serve --stdio"
 
 ---
 
-## Task 8: Gate 1 integration test — stdio round-trip
+## Task 8: Gate 1 integration test: stdio round-trip
 
 **Files:**
 - Create: `packages/cli/test/gate1-stdio.test.ts`, `packages/cli/package.json` (add `@modelcontextprotocol/client` devDep)
@@ -1279,7 +1279,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 
 const BIN = fileURLToPath(new URL('../src/bin.ts', import.meta.url));
 
-describe('Gate 1 — stdio round-trip', () => {
+describe('Gate 1: stdio round-trip', () => {
   let cwd: string;
   beforeAll(() => {
     cwd = mkdtempSync(join(tmpdir(), 'noir-gate1-'));
@@ -1317,18 +1317,18 @@ Expected: PASS (stdio server spawns, MCP handshake completes, `host_status` retu
 - [ ] **Step 4: Run the full suite + typecheck + build**
 
 Run: `pnpm test && pnpm typecheck && pnpm build`
-Expected: all green. **This is Gate 1 acceptance (a) — automated.**
+Expected: all green. **This is Gate 1 acceptance (a): automated.**
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add packages/cli
-git commit -m "test(cli): Gate 1 integration — stdio host_status round-trip"
+git commit -m "test(cli): Gate 1 integration: stdio host_status round-trip"
 ```
 
 ---
 
-## Task 9: `@noir-ai/daemon` — Streamable HTTP server + health + lifecycle files
+## Task 9: `@noir-ai/daemon`: Streamable HTTP server + health + lifecycle files
 
 **Files:**
 - Create: `packages/daemon/src/{http.ts,lifecycle.ts}`, `packages/daemon/test/{http.test.ts,lifecycle.test.ts}`
@@ -1337,7 +1337,7 @@ git commit -m "test(cli): Gate 1 integration — stdio host_status round-trip"
 **Interfaces:**
 - Consumes: `createNoirServer`, `buildStatus` (daemon), `loadProjectInfo`, `paths` (core), `NodeStreamableHTTPServerTransport`, `localhostHostValidation`, `localhostOriginValidation` (`@modelcontextprotocol/node`).
 - Produces:
-  - `startHttpServer(opts: { project: ProjectInfo; port?: number; idleTimeoutSec: number }): Promise<{ port: number; stop: () => Promise<void> }>` — binds `127.0.0.1`, exposes `GET /health` and `POST /mcp` (Streamable HTTP), writes `~/.noir/daemon.json`.
+  - `startHttpServer(opts: { project: ProjectInfo; port?: number; idleTimeoutSec: number }): Promise<{ port: number; stop: () => Promise<void> }>`: binds `127.0.0.1`, exposes `GET /health` and `POST /mcp` (Streamable HTTP), writes `~/.noir/daemon.json`.
   - `DaemonRecord` = `{ pid: number; port: number; startedAt: number }`; `daemonJsonPath(): string`; `readDaemonRecord(): DaemonRecord | null`; `writeDaemonRecord(rec): void`; `clearDaemonRecord(): void`; `pidAlive(pid: number): boolean`.
 
 - [ ] **Step 1: Add client devDep and write failing lifecycle test**
@@ -1383,7 +1383,7 @@ describe('daemon lifecycle files', () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm test`
-Expected: FAIL — `../src/lifecycle.js` not found.
+Expected: FAIL: `../src/lifecycle.js` not found.
 
 - [ ] **Step 3: Implement lifecycle.ts**
 
@@ -1483,7 +1483,7 @@ describe('startHttpServer', () => {
 - [ ] **Step 5: Run the test to verify it fails**
 
 Run: `pnpm test`
-Expected: FAIL — `../src/http.js` not found.
+Expected: FAIL: `../src/http.js` not found.
 
 - [ ] **Step 6: Implement http.ts**
 
@@ -1586,7 +1586,7 @@ git commit -m "feat(daemon): Streamable HTTP server, /health, daemon.json lifecy
 
 ---
 
-## Task 10: daemon lifecycle controls — `noir daemon start|stop`, ensureDaemonRunning, stale reclaim, idle-stop wiring
+## Task 10: daemon lifecycle controls: `noir daemon start|stop`, ensureDaemonRunning, stale reclaim, idle-stop wiring
 
 **Files:**
 - Create: `packages/daemon/src/ensure.ts`, `packages/daemon/test/ensure.test.ts`
@@ -1595,7 +1595,7 @@ git commit -m "feat(daemon): Streamable HTTP server, /health, daemon.json lifecy
 **Interfaces:**
 - Consumes: `startHttpServer`, `readDaemonRecord`, `writeDaemonRecord`, `clearDaemonRecord`, `pidAlive`, `loadProjectInfo`.
 - Produces:
-  - `ensureDaemonRunning(opts: { project: ProjectInfo; idleTimeoutSec: number }): Promise<{ port: number; url: string; started: boolean }>` — if a healthy daemon record exists, reuse it; else start one. Reclaims stale records (pid dead).
+  - `ensureDaemonRunning(opts: { project: ProjectInfo; idleTimeoutSec: number }): Promise<{ port: number; url: string; started: boolean }>`: if a healthy daemon record exists, reuse it; else start one. Reclaims stale records (pid dead).
   - `noir daemon start` and `noir daemon stop` CLI subcommands.
   - `noir mcp serve` (no `--stdio`) now prefers the daemon; on failure logs to stderr and falls back to in-process stdio (FS degradation).
   > This task implements **Gate 2 acceptance (a)** (shared-state + degradation).
@@ -1649,7 +1649,7 @@ describe('ensureDaemonRunning', () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm test`
-Expected: FAIL — `../src/ensure.js` not found.
+Expected: FAIL: `../src/ensure.js` not found.
 
 - [ ] **Step 3: Implement ensure.ts**
 
@@ -1679,7 +1679,7 @@ export async function ensureDaemonRunning(opts: { project: ProjectInfo; idleTime
     if (pidAlive(rec.pid) && await isHealthy(rec.port)) {
       return { port: rec.port, url: `http://127.0.0.1:${rec.port}/mcp`, started: false };
     }
-    clearDaemonRecord(); // stale — pid dead or health failed
+    clearDaemonRecord(); // stale: pid dead or health failed
   }
   const running = await startHttpServer({ project: opts.project, idleTimeoutSec: opts.idleTimeoutSec });
   return { port: running.port, url: `http://127.0.0.1:${running.port}/mcp`, started: true };
@@ -1871,13 +1871,13 @@ export async function doctor(): Promise<void> {
   process.stderr.write(`noir doctor\n${lines.join('\n')}\n`);
 }
 ```
-(Add `@noir-ai/daemon` to cli deps — already present.)
+(Add `@noir-ai/daemon` to cli deps: already present.)
 
 - [ ] **Step 2: Add README install/dev section**
 
-Append a `## Noir (toolkit) — developer setup` section to `README.md`:
+Append a `## Noir (toolkit): developer setup` section to `README.md`:
 ```markdown
-## Noir (toolkit) — developer setup
+## Noir (toolkit): developer setup
 
 The Noir CLI lives under `packages/`. From the repo root:
 
@@ -1901,9 +1901,9 @@ node packages/cli/dist/bin.js daemon start
 
 `docs/internal/plans/2026-07-23-noir-walking-skeleton-acceptance.md`:
 ```markdown
-# Noir Walking Skeleton — Manual Acceptance
+# Noir Walking Skeleton: Manual Acceptance
 
-## Gate 1 (stdio round-trip) — thesis proof
+## Gate 1 (stdio round-trip): thesis proof
 1. `pnpm build`
 2. In a scratch project dir: `node packages/cli/dist/bin.js init`
 3. Confirm `.noir/` (NOIR.md, config.yml, project.id) and root `.mcp.json` + `CLAUDE.md` exist.
@@ -1912,7 +1912,7 @@ node packages/cli/dist/bin.js daemon start
 
 > If `noir` is not on PATH, either `pnpm link --global` the cli, or edit `.mcp.json` to `{"mcpServers":{"noir":{"command":"node","args":["<repo>/packages/cli/dist/bin.js","mcp","serve","--stdio"]}}}`.
 
-## Gate 2 (daemon-backed) — shared state + degradation
+## Gate 2 (daemon-backed): shared state + degradation
 1. `node packages/cli/dist/bin.js daemon start` -> prints a `http://127.0.0.1:<port>/mcp` URL.
 2. `curl http://127.0.0.1:<port>/health` -> `{"ok":true,"pid":...,"uptimeSec":...}`.
 3. (Optional) `node packages/cli/dist/bin.js init --transport streamable-http --url http://127.0.0.1:<port>/mcp`, then in Claude Code invoke `host_status`. **Expected:** `transport: "streamable-http"`, `daemon: true`, `pid` present.
@@ -1937,7 +1937,7 @@ git commit -m "feat(cli,docs): noir doctor stub, dev README, manual acceptance c
 ## Notes for the implementer
 
 - **MCP v2 beta churn:** the SDK is beta until 2026-07-28. If an import path or option name differs in the installed version, trust the installed package's `.d.ts` over this plan and adjust; keep behavior identical.
-- **`server.connect()` per HTTP request:** the official Node example connects a transport per request (stateless, `sessionIdGenerator: undefined`). The plan follows that. If a given v2 build rejects repeated `connect()` on one `McpServer`, create a fresh server per request inside the handler (call `createNoirServer(ctx)` per request) — the handler is cheap.
-- **stdout purity:** never `console.log` in `stdio.ts`/`server.ts`/`http.ts` request paths — it corrupts the JSON-RPC stream on stdio. All diagnostics use `process.stderr`.
+- **`server.connect()` per HTTP request:** the official Node example connects a transport per request (stateless, `sessionIdGenerator: undefined`). The plan follows that. If a given v2 build rejects repeated `connect()` on one `McpServer`, create a fresh server per request inside the handler (call `createNoirServer(ctx)` per request): the handler is cheap.
+- **stdout purity:** never `console.log` in `stdio.ts`/`server.ts`/`http.ts` request paths: it corrupts the JSON-RPC stream on stdio. All diagnostics use `process.stderr`.
 - **zod subpath:** if `import * as z from 'zod/v4'` does not resolve, bump `zod` to `^4.0.0` across packages.
 - **Hermetic tests:** Gate 1 and ensure tests use temp cwds / temp records; do not mutate the real repo's `.noir/`.

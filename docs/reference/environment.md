@@ -1,7 +1,7 @@
 # Environment Variables
 
 Every environment variable Noir reads, grouped by function. This is the
-single reference — feature pages link here instead of restating defaults.
+single reference: feature pages link here instead of restating defaults.
 
 > **Precedence.** `.noir/.env` **wins for every key it defines**; the real
 > environment is the fallback for the keys the file does not define:
@@ -37,11 +37,11 @@ single reference — feature pages link here instead of restating defaults.
 > machine-global fallbacks there are the `env` block in
 > `~/.claude/settings.json` and `~/.zshenv`. The project-local `.noir/.env`
 > (level 2) is the one placement that works in every launch mode, which is why
-> it is the recommended home. Restart the daemon after changing a token — the
+> it is the recommended home. Restart the daemon after changing a token: the
 > daemon's env is a snapshot taken at spawn time.
 >
 > **How-to:** [Configuring a project with `.noir/.env`](../how-to/configure-env.md)
-> — the full precedence chain, what belongs in the file, and `noir env` for
+>: the full precedence chain, what belongs in the file, and `noir env` for
 > seeing which source is winning for each key.
 
 ## Integrations (opt-in)
@@ -50,7 +50,7 @@ single reference — feature pages link here instead of restating defaults.
 |---|---|---|---|
 | `CLICKUP_API_TOKEN` | — | conditional: required only when the **noir-clickup** integration is enabled (see [ClickUp how-to](../how-to/clickup.md)) | ClickUp personal token (`pk_...`). Resolved by the daemon at call time. Put it in `.noir/.env`, the recommended project-scoped home, and the winner for every key it defines. Machine-global fallbacks: the `env` block of `~/.claude/settings.json`, or `~/.zshenv` (NOT `.zshrc` — non-interactive shells skip it). **Restart the daemon after changing it.** |
 
-> **`CLICKUP_TEAM_ID` is NOT an env var** — Noir never reads it. Workspace
+> **`CLICKUP_TEAM_ID` is NOT an env var**: Noir never reads it. Workspace
 > binding (team/list/space ids) is configured as config.yml keys:
 > `integrations.clickup.teamId` / `.listId` / `.spaceId` (see
 > [Configuration](config.md)).
@@ -63,8 +63,8 @@ single reference — feature pages link here instead of restating defaults.
 
 ## Host gateway (`noir run`)
 
-`noir run` spawns the host and passes its own environment — with `.noir/.env`
-applied — through by inheritance, so a gateway configured in the file (or in
+`noir run` spawns the host and passes its own environment: with `.noir/.env`
+applied: through by inheritance, so a gateway configured in the file (or in
 the real environment) reaches the host process, which is what actually reads
 these values. When a run fails to log in, Noir's advice **names** the three
 credential variables in effect together with the source that won;
@@ -93,7 +93,7 @@ See [Connecting through a gateway](../how-to/gateways.md) and
 ## Model provider + embedder keys
 
 Provider keys are **named** in config (`model.providers.<name>.apiKeyEnv`), and
-the **value** is read at call time from the resolved environment — the config
+the **value** is read at call time from the resolved environment: the config
 stores the var NAME, never the secret. Example: `apiKeyEnv: ANTHROPIC_API_KEY`
 reads the `ANTHROPIC_API_KEY` environment variable. `apiKeyEnv` is a bare name,
 never an interpolation: `apiKeyEnv: ${ANTHROPIC_API_KEY}` resolves
@@ -101,8 +101,8 @@ never an interpolation: `apiKeyEnv: ${ANTHROPIC_API_KEY}` resolves
 silently. (Only `run.profiles.<name>.env` interpolates `${VAR}`.) Anonymous
 local providers (Ollama, LM Studio) omit `apiKeyEnv`.
 
-Place the **value** in `.noir/.env` — recommended, since it is project-scoped,
-`0600`, gitignored and the winner for every key it defines — or in the real
+Place the **value** in `.noir/.env`: recommended, since it is project-scoped,
+`0600`, gitignored and the winner for every key it defines: or in the real
 environment for a machine-wide value (see
 [Configuring a project with `.noir/.env`](../how-to/configure-env.md)).
 
@@ -146,7 +146,7 @@ unset means "baseURL required"):
 
 ## Advanced / test-only seams
 
-These are plumbing overrides — documented for completeness; most users never
+These are plumbing overrides: documented for completeness; most users never
 need them.
 
 | Variable | Default | Required | Description |
@@ -173,7 +173,7 @@ Two classes of name are **never** read from `.noir/.env`, even when the file
 defines them:
 
 - **A git-tracked file.** If `.noir/.env` is tracked by git, the whole file is
-  refused — none of its keys are in effect. Remedy: add `.noir/.env` to
+  refused: none of its keys are in effect. Remedy: add `.noir/.env` to
   `.gitignore` (Noir's managed block already does) and
   `git rm --cached .noir/.env`.
 - **The process-injection deny-list.** Every name below is ignored with a
@@ -188,18 +188,18 @@ defines them:
 
   Noir spawns Node children (the daemon, the host), so a file that arrived
   inside a cloned repository must not be able to inject into them. The
-  package-manager prefix is also why `npm_config_user_agent` — read by
-  `noir init`'s stack detection to tell npm from pnpm / yarn / bun — can only
+  package-manager prefix is also why `npm_config_user_agent`: read by
+  `noir init`'s stack detection to tell npm from pnpm / yarn / bun: can only
   arrive from the package manager that launched Noir, never from this file.
 
 `noir doctor`'s `noir-env` check reports the file's permissions and warns when
 it is tracked by git; `noir env` lists only the keys that actually won. Full
 detail: [Configuring a project with `.noir/.env`](../how-to/configure-env.md).
 
-## `noir env` — see which source won
+## `noir env`: see which source won
 
 `noir env` is the read-only answer to "which value is in effect, and who
-supplied it?". It **never prints a value** — only a name, its winning source,
+supplied it?". It **never prints a value**: only a name, its winning source,
 and a redacted shape.
 
 ```
@@ -224,7 +224,7 @@ OLLAMA_BASE_URL                           environment                        htt
    `OLLAMA_BASE_URL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`,
    `ANTHROPIC_BASE_URL`, `API_TIMEOUT_MS`, `NOIR_PROFILE`.
 3. Any name the project's own `model.providers.<name>.apiKeyEnv` asks for, read
-   through the shipped config mapper — so a provider key the allowlist would
+   through the shipped config mapper: so a provider key the allowlist would
    never have guessed still appears.
 
 Your whole shell environment is neither listed nor an answer to the question.
@@ -238,8 +238,8 @@ Your whole shell environment is neither listed nor an answer to the question.
 | **exit code** | `0` | `0` |
 
 `noir env` **always exits 0**: this is a report, and "your file is not being
-loaded" is information, not a failure. When there is nothing to report — the
-file defines no keys in effect and no curated ambient variable is set — it says
+loaded" is information, not a failure. When there is nothing to report: the
+file defines no keys in effect and no curated ambient variable is set: it says
 so on stderr instead of printing an empty table.
 
 ### The `--json` contract
@@ -265,7 +265,7 @@ so on stderr instead of printing an empty table.
 | `shadowed` | boolean, **optional** | Present and `true` only when `source` is `"file"` **and** the ambient environment defined a different value. Omitted otherwise — an absent field means "not shadowed", not "unknown". |
 | `valueLength` | number | The value's length in characters. This is all the JSON carries about the value: **no prefix, no shape** — strictly less than the human table shows. |
 
-`warnings` carries the loader's own diagnostics for the run — a malformed line,
+`warnings` carries the loader's own diagnostics for the run: a malformed line,
 a refused process-injection key, the tracked-file refusal, the `.noir/.env`
 shadow notice. They are carried even though the loader has already written them
 to stderr during startup, so a machine consumer never has to scrape stderr to
@@ -274,7 +274,7 @@ learn that the file was not applied.
 ## Secrets policy
 
 - **Never commit tokens.** `.noir/.env` is gitignored by the managed
-  `.gitignore` block; `.noir/config.yml` is committable project state — never
+  `.gitignore` block; `.noir/config.yml` is committable project state: never
   paste a literal secret into it.
 - **`apiKeyEnv` stores a NAME, never an interpolation.** Write
   `apiKeyEnv: ANTHROPIC_API_KEY`; the model layer reads
@@ -282,7 +282,7 @@ learn that the file was not applied.
   resolves `process.env['${ANTHROPIC_API_KEY}']` → `undefined` → a provider
   with no key, silently. Only `run.profiles.<name>.env` in `config.yml`
   interpolates `${VAR}`.
-- **Put the value in `.noir/.env`** — the recommended home: project-scoped,
+- **Put the value in `.noir/.env`**: the recommended home: project-scoped,
   `0600`, gitignored, and the winner for every key it defines. The
   machine-global fallbacks are the `env` block of `~/.claude/settings.json`
   (for GUI-launched daemons) and `~/.zshenv` (non-interactive shells);

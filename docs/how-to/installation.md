@@ -2,7 +2,7 @@
 
 > The complete install reference. Every supported path, when to pick each, and what to do when something goes wrong. New here? The [README](../README.md) is the 30-second "what and why"; this page is the copy-pasteable reference.
 >
-> **TL;DR — recommended (native installer):**
+> **TL;DR: recommended (native installer):**
 >
 > **macOS / Linux**
 > ```bash
@@ -16,18 +16,18 @@
 > Pin a version with `NOIR_VERSION=<VERSION>` (POSIX) or `$env:NOIR_VERSION='<VERSION>'` (PowerShell).
 
 <!-- noir:doc:status -->
-**Latest stable:** `1.19.2` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.19.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Latest stable:** `1.19.2` (npm dist-tag `latest`: `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.19.2-beta.1` (npm dist-tag `beta`: `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.19.2` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-10-15T07:51:00.390Z*
+*Last auto-generated: 2026-10-19T06:17:11.000Z*
 <!-- /noir:doc:status -->
 
 ---
 
 ## What you're installing
 
-Noir ships as the npm package **`@noir-ai/cli`** (bin: **`noir`**), with ten companion `@noir-ai/*` packages pulled in as dependencies. It is **not a single binary** — it is a Node.js program that builds a few **native modules** at install time:
+Noir ships as the npm package **`@noir-ai/cli`** (bin: **`noir`**), with ten companion `@noir-ai/*` packages pulled in as dependencies. It is **not a single binary**: it is a Node.js program that builds a few **native modules** at install time:
 
 | Native dep | Why |
 |---|---|
@@ -35,11 +35,11 @@ Noir ships as the npm package **`@noir-ai/cli`** (bin: **`noir`**), with ten com
 | `sqlite-vec` | 384-dim vector kNN over the same SQLite DB. |
 | `onnxruntime-node` | The runtime behind the local embedder (`@huggingface/transformers`, `all-MiniLM-L6-v2`). |
 
-Prebuilt binaries exist for **macOS / Linux / Windows on x64 + arm64**, so on the common platforms `install` is a link step, not a compile step. On exotic platforms you'll need a C/C++ toolchain — see [Troubleshooting](#troubleshooting).
+Prebuilt binaries exist for **macOS / Linux / Windows on x64 + arm64**, so on the common platforms `install` is a link step, not a compile step. On exotic platforms you'll need a C/C++ toolchain: see [Troubleshooting](#troubleshooting).
 
 ### What the native installer actually does
 
-The "native installer" is **not** a single-binary build — it provisions a **managed Node.js runtime** under `~/.noir/` (or `%USERPROFILE%\.noir\` on Windows) and installs `@noir-ai/cli` into an isolated prefix, then writes a `noir` shim at `~/.noir/bin/noir`. Concretely it lays down:
+The "native installer" is **not** a single-binary build: it provisions a **managed Node.js runtime** under `~/.noir/` (or `%USERPROFILE%\.noir\` on Windows) and installs `@noir-ai/cli` into an isolated prefix, then writes a `noir` shim at `~/.noir/bin/noir`. Concretely it lays down:
 
 | Path | What |
 |---|---|
@@ -48,7 +48,7 @@ The "native installer" is **not** a single-binary build — it provisions a **ma
 | `~/.noir/bin/noir` (POSIX) / `noir.cmd` (Windows) | The only PATH contract — a shim that invokes the managed Node against the isolated CLI entry. |
 | `~/.noir/install.json` | The install record (`method`, `version`, `channel`, `installedAt`, `managedRuntimeVersion`). `noir doctor` reads it; `noir update`/`noir migrate` write it. |
 
-You get a working `noir` on PATH with **no system Node prerequisite** and **no admin/sudo** — the runtime is in your home directory. The native deps (`better-sqlite3`, `sqlite-vec`, `onnxruntime-node`) still resolve to their **prebuilt** binaries for the common platforms; on exotic platforms they fall back to a source build (see [Troubleshooting](#troubleshooting)).
+You get a working `noir` on PATH with **no system Node prerequisite** and **no admin/sudo**: the runtime is in your home directory. The native deps (`better-sqlite3`, `sqlite-vec`, `onnxruntime-node`) still resolve to their **prebuilt** binaries for the common platforms; on exotic platforms they fall back to a source build (see [Troubleshooting](#troubleshooting)).
 
 Two release **channels** ship in parallel from `.github/workflows/release.yml`:
 
@@ -63,7 +63,7 @@ The installer, `npm`, `npx`, and `pnpm`/`yarn`/`bun` flows below all support bot
 
 ## Recommended: native installer
 
-A small script (`scripts/install.sh` on POSIX, `scripts/install.ps1` on Windows) that provisions a managed Node 22.x runtime and installs `@noir-ai/cli` into an isolated prefix under `~/.noir/`. It is **idempotent** (re-running upgrades in place), prints a PATH hint when needed, and verifies with `noir --version` at the end.
+A small script (`scripts/install.sh` on POSIX, `scripts/install.ps1` on Windows) that provisions a managed Node 22.x runtime and installs `@noir-ai/cli` into an isolated prefix under `~/.noir/`. It is **idempotent** (re-running upgrades in place) and **refuses a pinned downgrade** (a concrete `NOIR_VERSION` older than the installed version exits 2: the same guard as `noir install`/`migrate`), prints a PATH hint when needed, and verifies with `noir --version` at the end.
 
 ### macOS / Linux (`install.sh`)
 
@@ -84,13 +84,14 @@ curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.
 1. Detects OS + arch (`uname -s` / `uname -m`) and prints them for diagnostics.
 2. Provisions a managed Node 22.x runtime under `~/.noir/runtime/v<version>/` (the shim uses it; no system Node prerequisite). If the runtime is already provisioned, this is a no-op.
 3. Resolves the spec: `NOIR_VERSION` (if set) wins; otherwise `NOIR_CHANNEL` (default `latest`, or `beta`).
-4. Installs `@noir-ai/cli@<spec>` into `~/.noir/cli/` via the managed `npm` with `--prefix` (isolated; never the system global; never `sudo`).
-5. Writes the `~/.noir/bin/noir` shim (POSIX bash → managed node + isolated entry).
-6. Honors `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` (passed through to npm).
-7. Verifies with `noir --version` (via the shim) and prints a PATH hint if `noir` isn't on PATH.
-8. Records the install in `~/.noir/install.json` (`method: native`).
+4. Refuses a downgrade: a concrete `NOIR_VERSION` older than the version recorded in `~/.noir/install.json` exits 2 before installing: the same unconditional guard as `noir install`/`migrate`.
+5. Installs `@noir-ai/cli@<spec>` into `~/.noir/cli/` via the managed `npm` with `--prefix` (isolated; never the system global; never `sudo`).
+6. Writes the `~/.noir/bin/noir` shim (POSIX bash → managed node + isolated entry).
+7. Honors `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` (passed through to npm).
+8. Verifies with `noir --version` (via the shim) and prints a PATH hint if `noir` isn't on PATH.
+9. Records the install in `~/.noir/install.json` (`method: native`).
 
-### Windows (`install.ps1` — PowerShell)
+### Windows (`install.ps1`: PowerShell)
 
 Windows is a first-class install path. The PowerShell installer mirrors `install.sh` and writes a `noir.cmd` shim:
 
@@ -105,7 +106,7 @@ $env:NOIR_CHANNEL='beta'; powershell -ExecutionPolicy Bypass -c "irm https://raw
 $env:NOIR_VERSION='<VERSION>'; powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.ps1 | iex"
 ```
 
-It provisions the runtime under `%USERPROFILE%\.noir\runtime\v<version>\node.exe` (versioned, matching the POSIX `~/.noir/runtime/v<version>/`), installs into `.noir\cli\`, writes the `.noir\bin\noir.cmd` shim (the only PATH contract), and writes `.noir\install.json`. If the managed runtime isn't provisioned yet, it falls back to a system `node`/`npm` ≥ 22 if present. There is **no need for Git Bash, MSYS2, or WSL** — run the PowerShell one-liner from a normal PowerShell prompt.
+It provisions the runtime under `%USERPROFILE%\.noir\runtime\v<version>\node.exe` (versioned, matching the POSIX `~/.noir/runtime/v<version>/`), installs into `.noir\cli\`, writes the `.noir\bin\noir.cmd` shim (the only PATH contract), and writes `.noir\install.json`. If the managed runtime isn't provisioned yet, it falls back to a system `node`/`npm` ≥ 22 if present. There is **no need for Git Bash, MSYS2, or WSL**: run the PowerShell one-liner from a normal PowerShell prompt.
 
 **Safer than blind `curl | sh` / `irm | iex`:** download, review, then run.
 
@@ -138,7 +139,7 @@ shasum -a 256 install.sh            # compare to the install.sh line in SHA256SU
 gh attestation verify install.sh --repo agaaaptr/noir
 ```
 
-The `SHA256SUMS` file pins both `install.sh` and `install.ps1`; `gh attestation verify` checks the cryptographic attestation GitHub Actions minted for the file at publish time. Both are generated by the `release.yml` job that runs on every tag push — see [releasing.md](releasing.md#2c-installer-artifacts-checksums--attestation).
+The `SHA256SUMS` file pins both `install.sh` and `install.ps1`; `gh attestation verify` checks the cryptographic attestation GitHub Actions minted for the file at publish time. Both are generated by the `release.yml` job that runs on every tag push: see [releasing.md](releasing.md#2c-installer-artifacts-checksums--attestation).
 
 ---
 
@@ -150,13 +151,13 @@ If you already installed Noir via npm/pnpm/yarn/bun/Homebrew/Scoop and want to m
 noir install            # or: noir migrate   (alias, mirrors `claude migrate-installer`)
 ```
 
-`noir install` detects every Noir install on the system (`--list` to see them), provisions the native path, and writes `~/.noir/install.json` with `method: native`. Your `.noir/` project directory, `~/.noir/` user data, and config files are **never touched** — migration only changes where the `noir` bin resolves from. The previous install is left in place; to remove it as part of the same flow, pass `--uninstall-prev`:
+`noir install` detects every Noir install on the system (`--list` to see them), provisions the native path, and writes `~/.noir/install.json` with `method: native`. Your `.noir/` project directory, `~/.noir/` user data, and config files are **never touched**: migration only changes where the `noir` bin resolves from. The previous install is left in place; to remove it as part of the same flow, pass `--uninstall-prev`:
 
 ```bash
 noir install --uninstall-prev     # after the native swap, run the prior manager's uninstall
 ```
 
-Noir **never auto-uninstalls** the previous method — the flag is explicit, and the suggested uninstall command is always printed when `--uninstall-prev` is omitted. After migration you may need to refresh your shell's command hash:
+Noir **never auto-uninstalls** the previous method: the flag is explicit, and the suggested uninstall command is always printed when `--uninstall-prev` is omitted. After migration you may need to refresh your shell's command hash:
 
 ```bash
 hash -r && which -a noir          # POSIX shells (clears stale `noir` path hash)
@@ -166,17 +167,19 @@ If you started from a non-native install, a **one-time migration banner** is sho
 
 ### Version-assert (never a silent downgrade)
 
-`noir install`/`migrate` refuses to downgrade **unconditionally** — there is no interactive confirm and no escape hatch. If the target spec resolves to a **concrete older version** than the one on record, the command fails with a clear message and **exit code 2**:
+`noir install`/`migrate` refuses to downgrade **unconditionally**: there is no interactive confirm and no escape hatch. If the target spec resolves to a **concrete older version** than the one on record, the command fails with a clear message and **exit code 2**:
 
 ```
 refusing downgrade to <target> (installed <current>)
 ```
 
-The same hard guard refuses a target below the configured `minVersion` floor. It runs on every path — interactive, `--json`, and `--no-input` alike — so a positional version pin is only accepted when it is **equal to or newer than** the installed version:
+The same hard guard refuses a target below the configured `minVersion` floor. It runs on every path: interactive, `--json`, and `--no-input` alike: so a positional version pin is only accepted when it is **equal to or newer than** the installed version:
 
 ```bash
 noir install <VERSION>       # explicit positional pin — an older version is refused, not confirmed
 ```
+
+The raw shell installers carry the same guard: `install.sh` and `install.ps1` read `~/.noir/install.json` before installing and exit 2 on a concrete `NOIR_VERSION` pin older than the recorded version: so `NOIR_VERSION=<older> curl|bash` no longer silently downgrades.
 
 ---
 
@@ -190,7 +193,7 @@ noir update --check         # one-shot: print the latest version vs. what you ha
 noir update <VERSION>       # pin a specific version (positional)
 ```
 
-The check is **network-bound and timeout-bounded** (2s abort on the async path). When the registry is unreachable, `noir update` prints "Could not reach the registry." and exits — it never silently treats a network failure as "up to date".
+The check is **network-bound and timeout-bounded** (2s abort on the async path). When the registry is unreachable, `noir update` prints "Could not reach the registry." and exits: it never silently treats a network failure as "up to date".
 
 ### Async startup version check
 
@@ -219,7 +222,7 @@ noir init --upgrade --dry-run      # preview: nothing is written
 Everything the scaffold emits is idempotent, and most of it is **create-only**:
 a `skipIfExists` entry is written when it is absent and never touched when it is
 present, so an existing `.noir/.env`, `.noir/config.yml`, or `.noir/project.id`
-is not rewritten by an upgrade — the two secrets-bearing files in particular
+is not rewritten by an upgrade: the two secrets-bearing files in particular
 (`.noir/.env` at mode `0600`, and `config.yml`) are **never** replaced.
 
 **Two documentation seeds are the exception**, and only in the upgrade
@@ -250,7 +253,7 @@ explicit `--force` switches the policy to overwrite:
 noir init --upgrade --force        # overwrite conflicting files instead of preserving
 ```
 
-A refresh replaces the file's **contents** — the permission bits already on the
+A refresh replaces the file's **contents**: the permission bits already on the
 file are kept. Under `--dry-run` the preview separates the two cases so it never
 reads as "Noir will overwrite your files":
 
@@ -263,7 +266,7 @@ Would leave as-is (already present):
 ```
 
 > The refresh happens **only** under `--upgrade`. A plain `noir init`, `noir
-> create`, or `noir sync` never refreshes a doc seed — they only backfill a
+> create`, or `noir sync` never refreshes a doc seed: they only backfill a
 > missing one.
 
 ---
@@ -400,7 +403,7 @@ noir --version       # prints the installed version
 noir doctor          # config / store / embedder / native-deps / provider / install status
 ```
 
-`noir doctor` is the right next step on a fresh install. It checks the config schema, the SQLite store, the local embedder, the native dependencies, the (optional) model provider config, and an **install row** that reports the detected install method (`method=native` / `npm` / `pnpm` / …), the installed version, the latest-known version from the update cache, and a non-blocking advisory when the install isn't on the recommended native path. The install row is **advisory only** (`ok`/`warn`, never `fail`) and makes **no live network call** — it reads `~/.noir/install.json` and the update cache. No check makes an **external** network call (the daemon row probes the local `/health` endpoint on `127.0.0.1`). If anything is off, it says so plainly.
+`noir doctor` is the right next step on a fresh install. It checks the config schema, the SQLite store, the local embedder, the native dependencies, the (optional) model provider config, and an **install row** that reports the detected install method (`method=native` / `npm` / `pnpm` / …), the installed version, the latest-known version from the update cache, and a non-blocking advisory when the install isn't on the recommended native path. The install row is **advisory only** (`ok`/`warn`, never `fail`) and makes **no live network call**: it reads `~/.noir/install.json` and the update cache. No check makes an **external** network call (the daemon row probes the local `/health` endpoint on `127.0.0.1`). If anything is off, it says so plainly.
 
 Then, from the project you want Noir to manage:
 
@@ -408,7 +411,7 @@ Then, from the project you want Noir to manage:
 noir init            # scaffolds .noir/ + emits the 34 skills (33 builtins + 1 integration) + host wiring
 ```
 
-`noir init` is idempotent — see [getting-started.md](../getting-started.md) for the walkthrough.
+`noir init` is idempotent: see [getting-started.md](../getting-started.md) for the walkthrough.
 
 ---
 
@@ -422,7 +425,7 @@ noir init            # scaffolds .noir/ + emits the 34 skills (33 builtins + 1 i
 | **Disk** | ~150 MB for the install (node_modules + prebuilt native binaries + the CLI build output). |
 | **First-run model download** | The first time the context engine is used, the local embedder downloads the **~22 MB** `all-MiniLM-L6-v2` model **once** into `~/.noir/models/`. Cached after that; offline and private from then on. |
 
-**Windows:** the PowerShell installer (`install.ps1`) is the primary path — run it from a normal PowerShell prompt. There is **no need for Git Bash, MSYS2, or WSL**. The Scoop manifest is the alternative Windows path. If you prefer npm directly, `npm i -g @noir-ai/cli` works in any Node-bundled terminal.
+**Windows:** the PowerShell installer (`install.ps1`) is the primary path: run it from a normal PowerShell prompt. There is **no need for Git Bash, MSYS2, or WSL**. The Scoop manifest is the alternative Windows path. If you prefer npm directly, `npm i -g @noir-ai/cli` works in any Node-bundled terminal.
 
 ---
 
@@ -432,7 +435,7 @@ noir init            # scaffolds .noir/ + emits the 34 skills (33 builtins + 1 i
 
 The `noir` bin isn't on your PATH.
 
-- **Native installer** — it installs the shim at `~/.noir/bin/noir` (POSIX) or `%USERPROFILE%\.noir\bin\noir.cmd` (Windows). Add that directory to PATH:
+- **Native installer**: it installs the shim at `~/.noir/bin/noir` (POSIX) or `%USERPROFILE%\.noir\bin\noir.cmd` (Windows). Add that directory to PATH:
 
   ```bash
   # POSIX (add to ~/.zshrc / ~/.bashrc)
@@ -445,7 +448,7 @@ The `noir` bin isn't on your PATH.
 
   The installer prints this exact hint when it detects the issue.
 
-- **npm/pnpm/yarn/bun** — find the global bin, then add it to PATH:
+- **npm/pnpm/yarn/bun**: find the global bin, then add it to PATH:
 
   ```bash
   npm prefix -g              # e.g. /usr/local  or  ~/.npm-global
@@ -477,7 +480,7 @@ sudo apt install build-essential python3
 sudo dnf groupinstall "Development Tools" python3
 ```
 
-Then re-run the installer (or `npm install -g @noir-ai/cli`). On the common platforms you will never see this — the prebuild is a link step.
+Then re-run the installer (or `npm install -g @noir-ai/cli`). On the common platforms you will never see this: the prebuild is a link step.
 
 ### `pnpm approve-builds` prompt on install
 
@@ -487,14 +490,14 @@ pnpm gates postinstall scripts behind an explicit approval. If you see a prompt 
 pnpm approve-builds
 ```
 
-Approve the three native deps, then re-run `pnpm add -g @noir-ai/cli`. They are required — Noir's store and embedder depend on them.
+Approve the three native deps, then re-run `pnpm add -g @noir-ai/cli`. They are required: Noir's store and embedder depend on them.
 
 ### `EACCES: permission denied` writing to the global prefix
 
-This only affects the npm/pnpm/yarn/bun path — the **native installer never needs sudo** (it installs into `~/.noir/`). For the npm path, the global prefix (`npm prefix -g`, often `/usr/local`) isn't writable by your user. **Don't reach for `sudo npm install -g` reflexively** — it leaves root-owned files in your home dir's npm cache. Either:
+This only affects the npm/pnpm/yarn/bun path: the **native installer never needs sudo** (it installs into `~/.noir/`). For the npm path, the global prefix (`npm prefix -g`, often `/usr/local`) isn't writable by your user. **Don't reach for `sudo npm install -g` reflexively**: it leaves root-owned files in your home dir's npm cache. Either:
 
 1. **Move the prefix into your home dir** (recommended; see above), or
-2. **Switch to the native installer** (`curl | sh` / `irm | iex`) — it sidesteps the global prefix entirely.
+2. **Switch to the native installer** (`curl | sh` / `irm | iex`): it sidesteps the global prefix entirely.
 
 ### Corporate proxy / self-signed TLS
 
@@ -516,7 +519,7 @@ The installer passes these through to npm verbatim. For self-signed TLS, configu
 
 ### Beta installed but `noir --version` shows the stable version
 
-Two `noir` installs on PATH — npm's global `latest` and `beta` resolve to the same bin name. Uninstall whichever you don't want:
+Two `noir` installs on PATH: npm's global `latest` and `beta` resolve to the same bin name. Uninstall whichever you don't want:
 
 ```bash
 npm uninstall -g @noir-ai/cli       # removes whichever dist-tag you installed
@@ -527,7 +530,7 @@ npm install -g @noir-ai/cli@beta    # reinstall the one you want
 
 ### Deprecation warnings during install
 
-A couple of warnings may appear during `npm install -g @noir-ai/cli` — most are harmless and none come from Noir directly.
+A couple of warnings may appear during `npm install -g @noir-ai/cli`: most are harmless and none come from Noir directly.
 
 - **`prebuild-install` deprecation**: gone from `1.4.0-beta.1+`: Noir moved to `better-sqlite3@13` (an N-API rewrite) which removes `prebuild-install` entirely. If you still see it, you're on an older beta; upgrade.
 - **`boolean@3.2.0` deprecation**: a harmless transitive dependency (`@huggingface/transformers` → `onnxruntime-node` → `global-agent` → `boolean`). There is no released upstream fix yet (tracked in [transformers.js#1730](https://github.com/huggingface/transformers.js/pull/1730)); it will disappear with the next `transformers` release that bumps `onnxruntime-node`. It is muted in Noir's own monorepo via `allowedDeprecatedVersions`.

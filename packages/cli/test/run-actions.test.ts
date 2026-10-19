@@ -110,7 +110,7 @@ function cleanRunWith(
 /** One identical answer for every simulated run. */
 const ANSWER = 'The answer is 42. Done.';
 
-describe('noir run — post-run actions', () => {
+describe('noir run: post-run actions', () => {
   let log: { stream: 'out' | 'err'; chunk: string }[];
   let stdout: MockInstance<typeof process.stdout.write>;
   let stderr: MockInstance<typeof process.stderr.write>;
@@ -303,7 +303,7 @@ describe('noir run — post-run actions', () => {
     it('drops the answer options when the host produced no answer text', async () => {
       // A run can succeed with no assistant text at all (tool-only turns).
       // Offering "save the answer" there would ask for content that does not
-      // exist — and the memory seam would fall through to reading stdin.
+      // exist: and the memory seam would fall through to reading stdin.
       runHostMock.mockImplementationOnce(async (o: RunHostOptions) => {
         o.onEvent?.({ kind: 'init', sessionId: 's1', model: 'claude-sonnet-4' });
         o.onEvent?.({ kind: 'result', isError: false, numTurns: 1 });
@@ -356,7 +356,7 @@ describe('noir run — post-run actions', () => {
       clackMock.select.mockResolvedValueOnce('memory');
       // What the daemon client throws when nothing answers. The finished run's
       // result must survive it, and the failure must still be visible.
-      failure.current = new Error('daemon not reachable — try `noir daemon start`');
+      failure.current = new Error('daemon not reachable: try `noir daemon start`');
       expect(await runCli(['run', 'hi'])).toBe(0);
       expect(textOf('err')).toContain('daemon not reachable');
       expect(textOf('err')).toContain('did not complete');
@@ -451,10 +451,10 @@ describe('noir run — post-run actions', () => {
           errorText: 'connection reset',
         };
       });
-      // The first run succeeded, so the exit code stays 0 — the failure is of
+      // The first run succeeded, so the exit code stays 0: the failure is of
       // the follow-up, and it is reported rather than swallowed.
       expect(await runCli(['run', 'hi'])).toBe(0);
-      // Reported once — a failure that already printed its own diagnostic is
+      // Reported once: a failure that already printed its own diagnostic is
       // never echoed back a second time.
       expect(textOf('err').split('failed (exit 1)').length - 1).toBe(1);
       expect(textOf('err')).toContain('did not complete');
@@ -464,8 +464,8 @@ describe('noir run — post-run actions', () => {
 
 // The action set is one definition with two surfaces. The terminal prompt
 // collects a follow-up prompt itself, so it can continue whenever the host
-// reported a session id. A surface that continues in place — the dashboard's
-// run screen starts another turn on the same screen — has no seam to hand over,
+// reported a session id. A surface that continues in place: the dashboard's
+// run screen starts another turn on the same screen: has no seam to hand over,
 // and says so with `canContinue` instead.
 describe('the shared action set', () => {
   const base = { answer: ANSWER, transcript: '/tmp/t.jsonl', host: 'claude', opts: {} };

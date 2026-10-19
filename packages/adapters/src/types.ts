@@ -5,11 +5,11 @@
  * list has ONE owner; core/skills carry the enum string literals only (no
  * cross-package dep).
  *
- *  - `claude`     — Claude Code (the v1 default; the regression anchor).
- *  - `agents-md`  — the 32-platform universal AGENTS.md standard.
- *  - `gemini`     — Gemini CLI (GEMINI.md + AGENTS.md).
- *  - `cursor`     — Cursor (.cursor/rules/*.mdc + AGENTS.md).
- *  - `opencode`   — OpenCode (AGENTS.md + opencode.json).
+ *  - `claude`    : Claude Code (the v1 default; the regression anchor).
+ *  - `agents-md` : the 32-platform universal AGENTS.md standard.
+ *  - `gemini`    : Gemini CLI (GEMINI.md + AGENTS.md).
+ *  - `cursor`    : Cursor (.cursor/rules/*.mdc + AGENTS.md).
+ *  - `opencode`  : OpenCode (AGENTS.md + opencode.json).
  *
  * Add a new host here, extend `resolveAdapter`'s registry, and the schema +
  * compiler widen automatically.
@@ -19,8 +19,8 @@ export type HostId = 'claude' | 'agents-md' | 'gemini' | 'cursor' | 'opencode';
 export interface EmitContext {
   root: string;
   /** The project's `rules.enabled` switch, when the caller knows it. False says
-   *  this project has no `.noir/rules/RULES.md` — the scaffold withholds the
-   *  seed — so no emitted host file may `@`-import it or describe it. Undefined
+   *  this project has no `.noir/rules/RULES.md`: the scaffold withholds the
+   *  seed: so no emitted host file may `@`-import it or describe it. Undefined
    *  (every caller that predates the switch, and every project with no `rules:`
    *  block) means enabled, exactly as before. */
   rulesEnabled?: boolean;
@@ -32,14 +32,14 @@ export interface McpConfigOptions {
   /** The `command` a host MCP client should spawn for the stdio server.
    *  Defaults to `'noir'`. When Noir is native-installed, the engine passes the
    *  absolute shim path (`~/.noir/bin/noir`) here so GUI MCP clients (VS Code,
-   *  Cursor) that don't read shell profiles can still spawn the server — see
+   *  Cursor) that don't read shell profiles can still spawn the server: see
    *  `resolveNoirCommand()` in @noir-ai/core. */
   command?: string;
   /** The workspace this repo has joined, when it has joined one. A member repo
    *  reaches the shared workspace daemon through Noir's stdio bridge, so the
    *  server entry names the workspace on the command line rather than carrying
    *  an address: `noir mcp serve --stdio --workspace <name>`. The bridge is what
-   *  resolves the daemon, proves it owns the record, and reads the token — none
+   *  resolves the daemon, proves it owns the record, and reads the token: none
    *  of which can live in a committed config file. Absent ⇒ a plain stdio entry
    *  that talks to a daemon scoped to this repo alone. */
   workspace?: string;
@@ -51,7 +51,7 @@ export interface McpConfigOptions {
  * `@noir-ai/skills`' `compileIntegration().hostMcp` ONLY when the integration's
  * `runtime ∈ {mcp-stdio, external-mcp}` AND it carries a non-null `mcp`
  * declaration. Defined here (not imported from skills) so adapters does NOT
- * add a skills dependency — the structural shape travels cleanly across the
+ * add a skills dependency: the structural shape travels cleanly across the
  * package boundary.
  */
 export interface IntegrationMcpEmission {
@@ -66,7 +66,7 @@ export interface IntegrationMcpEmission {
 /**
  * The host-facing subset of a Noir handoff artifact. Defined HERE so the
  * optional {@link HostAdapter.emitHandoff} hook has a typed payload without the
- * adapters package taking a CLI dependency — the CLI conforms its richer
+ * adapters package taking a CLI dependency: the CLI conforms its richer
  * snapshot to this shape before handing it to the adapter. Every field is
  * nullable so a daemon-down / no-active-task handoff still type-checks.
  */
@@ -108,19 +108,19 @@ export interface HookEmission {
 }
 
 export interface HostAdapter {
-  /** The host identifier — must match a `HostId` registry key. Typed as
+  /** The host identifier: must match a `HostId` registry key. Typed as
    *  `HostId` (never a bare `string`) so the registry is type-safe end-to-end. */
   readonly id: HostId;
   /** Full contents of the host's MCP config file (e.g. .mcp.json).
    *
    *  Two-arg form (the original, used by `noir init`/`sync` today): emits only
-   *  the host's Noir MCP server entry. Backward-compatible — existing callers
+   *  the host's Noir MCP server entry. Backward-compatible: existing callers
    *  keep working unchanged.
    *
    *  Three-arg form (integration-aware overload): when an integration widens
    *  emission (`runtime:'external-mcp'` for Claude), merge the integration's
    *  server entry alongside the Noir entry. For `gated-write-proxy`/
-   *  `mcp-stdio`/`none` Claude renders no NEW entry — `mcp-stdio` registers
+   *  `mcp-stdio`/`none` Claude renders no NEW entry: `mcp-stdio` registers
    *  through the existing `noir mcp serve --stdio` entry, and ClickUp writes
    *  route through Noir's own MCP tool (no host MCP wiring). */
   emitMcpConfig(
@@ -148,12 +148,12 @@ export interface HostAdapter {
    *  it elsewhere. The shared `emitAgentsMd(ctx)` helper produces the CONTENT
    *  (byte-identical across hosts); the cli writes it to this path. */
   agentsMdPath?(ctx: EmitContext): string;
-  /** Host-handoff seam — the host-specific directive block for a Noir handoff
+  /** Host-handoff seam: the host-specific directive block for a Noir handoff
    *  artifact (the "Open \`<host>\` …" portion). OPTIONAL so existing / third-party
    *  adapters continue to type-check without implementing it; the CLI falls back
    *  to {@link hostLaunchDirective} (the generic single-line directive) when this
    *  is absent. A host that wants richer handoff wording (e.g. naming its native
-   *  context file or skill dir) implements this. TEXT ONLY — never launches the
+   *  context file or skill dir) implements this. TEXT ONLY: never launches the
    *  host (doctrine: Noir never spawns the host; the directive is pasteable text). */
   emitHandoff?(ctx: EmitContext, payload: HandoffPayload): string;
   /** Per-host lifecycle-hook wiring that invokes `noir hook`. Returns the config

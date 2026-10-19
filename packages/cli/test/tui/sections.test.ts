@@ -1,8 +1,8 @@
-// Home-consolidation (S1) — the shared curated-section module.
+// Home-consolidation (S1): the shared curated-section module.
 //
 // The no-drift contract: every {@link HomeAction} references a palette-registry
 // id, and {@link resolveSections} drops actions whose id no longer exists in
-// the live registry. These tests pin that contract — the menu + TUI home must
+// the live registry. These tests pin that contract: the menu + TUI home must
 // resolve against the real commander tree so they cannot drift from it.
 
 import { describe, expect, it } from 'vitest';
@@ -14,7 +14,7 @@ import {
   resolveSections,
 } from '../../src/tui/commands/sections.js';
 
-describe('HOME_SECTIONS — curated quick-action coverage', () => {
+describe('HOME_SECTIONS: curated quick-action coverage', () => {
   it('defines 5 sections with stable ids + labels + items', () => {
     expect(HOME_SECTIONS.length).toBe(5);
     const ids = HOME_SECTIONS.map((s) => s.id);
@@ -49,12 +49,12 @@ describe('HOME_SECTIONS — curated quick-action coverage', () => {
   });
 });
 
-describe('resolveSections — no-drift against the live registry', () => {
+describe('resolveSections: no-drift against the live registry', () => {
   it('resolves every curated id against buildPaletteCommands(createProgram())', async () => {
     const commands = buildPaletteCommands(createProgram());
     const resolved = await resolveSections(commands);
     // Every action in the curated module must survive resolution (its id exists
-    // in the real commander tree) — if a command was renamed/removed, this
+    // in the real commander tree): if a command was renamed/removed, this
     // test fails so the menu never silently loses an option.
     const curatedIds = HOME_SECTIONS.flatMap((s) => s.items.map((a) => a.id));
     const resolvedIds = new Set(resolved.flatMap((s) => s.items.map((a) => a.id)));
@@ -89,7 +89,7 @@ describe('resolveSections — no-drift against the live registry', () => {
   });
 
   it('drops a section that goes fully empty', async () => {
-    // Keep only commands whose id starts with "task" — the setup/dashboard/
+    // Keep only commands whose id starts with "task": the setup/dashboard/
     // status/memory sections all become empty.
     const commands = buildPaletteCommands(createProgram()).filter((c) => c.id.startsWith('task'));
     const resolved = await resolveSections(commands);

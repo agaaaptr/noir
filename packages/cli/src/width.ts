@@ -10,7 +10,7 @@
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 
-/** Terminal grapheme clusters, in order — the unit a renderer draws whole. */
+/** Terminal grapheme clusters, in order: the unit a renderer draws whole. */
 const segmenter = new Intl.Segmenter();
 
 function clusters(s: string): string[] {
@@ -76,7 +76,7 @@ export function truncateToWidth(s: string, width: number, ellipsis = '…'): str
 
 /**
  * `s` cut to at most `width` columns by removing the middle, so both the
- * leading and trailing text survive — used for long paths where the start
+ * leading and trailing text survive: used for long paths where the start
  * (directory) and end (file name) are the parts that identify it.
  *
  * Like `truncateToWidth`, the result is plain text with ANSI escapes

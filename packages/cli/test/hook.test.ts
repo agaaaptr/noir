@@ -1,5 +1,5 @@
 // The `noir hook` dispatch contract: host-dialect envelopes, the compiled
-// budgeted brief, the deny-list, and the opt-in Stop gate. Offline/free — no
+// budgeted brief, the deny-list, and the opt-in Stop gate. Offline/free: no
 // network, no API key, no live host; behavior is pinned with stdin-JSON fixtures.
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';

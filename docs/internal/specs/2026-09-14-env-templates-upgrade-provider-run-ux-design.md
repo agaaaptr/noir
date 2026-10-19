@@ -1,4 +1,4 @@
-# Env Templates + Upgrade Completeness + Provider Gateways + `noir run` UX — Design
+# Env Templates + Upgrade Completeness + Provider Gateways + `noir run` UX: Design
 
 > **Status:** implemented (shipped 2026-09-16 in v1.15.0)
 > **Target:** v1.15.0
@@ -27,10 +27,10 @@ config, `noir run`) predate the 1.13/1.14 hardening wave.
 
 `packages/create/templates/config.env.tmpl` (75 lines, renders `.noir/.env`) and
 `packages/create/templates/env.example.tmpl` (79 lines, renders `.noir/.env.example`) share
-67 of their bytes verbatim — 85% duplication. Only ~9 lines in either file are actionable
+67 of their bytes verbatim: 85% duplication. Only ~9 lines in either file are actionable
 (uncommentable assignments); ~87% is prose. The "Model provider key" section embeds a 7-line
-YAML block (config.yml syntax) inside an env file — a user who uncomments it gets a
-`no "=" — skipped` parser warning per line. The doctrine header occupies 16 lines of both
+YAML block (config.yml syntax) inside an env file: a user who uncomments it gets a
+`no "=": skipped` parser warning per line. The doctrine header occupies 16 lines of both
 files, and a shipped test (`packages/create/test/env-seed.test.ts:175-190`) *requires* the two
 files to carry it verbatim ("one body, two files").
 
@@ -48,10 +48,10 @@ Verified against the current tree (`packages/create/src/scaffold.ts`, `packages/
 1. **`skipIfExists` seeds freeze forever.** `.noir/.env.example`, `.noir/config.yml`,
    `.noir/rules/RULES.md` stay at the bytes of the initializing Noir version. A 1.12-era
    `.env.example` documents the pre-ADR-0011 precedence (real-env-wins) that 1.14.0 explicitly
-   inverted — no command short of hand-editing can fix it.
+   inverted: no command short of hand-editing can fix it.
 2. **`mergeJson` is backfilled by nothing.** Pre-C3 projects cannot obtain the SessionStart
    hook via `--upgrade`. (Recorded OPEN in backlog since 1.14.0; this slice keeps that
-   decision — user-owned, write-once — but makes `doctor` report it instead of hiding it.)
+   decision: user-owned, write-once: but makes `doctor` report it instead of hiding it.)
 3. **`--upgrade` ignores the configured host.** `init.ts` resolves `opts.host ?? 'claude'`
    with no config fallback, while `sync` and `doctor` both read `host:` from `config.yml`. On
    a cursor/gemini project, `--upgrade` writes a spurious claude surface and refreshes none of
@@ -65,7 +65,7 @@ Verified against the current tree (`packages/create/src/scaffold.ts`, `packages/
    `noir doctor` reports "up to date" on a stale tree.
 6. **Pre-1.3.0 projects run zero migrations.** The migration gate is `fromVersion !== null`;
    a project with `project.id` but no stamp is stamped current without ever running a
-   migration — permanently locked out of the one mechanism that can transform existing files.
+   migration: permanently locked out of the one mechanism that can transform existing files.
 
 ### 1.3 The model layer has no first-class gateway transport, and one decoy field
 
@@ -78,7 +78,7 @@ pinned by test). The request therefore goes to the **wrong host**, not the wrong
 
 The corporate-gateway case *works today by accident*: the `@anthropic-ai/sdk` constructor reads
 `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` from `process.env` on its own when the client
-is built without them — which **contradicts the module's own stated invariant** that env-var
+is built without them: which **contradicts the module's own stated invariant** that env-var
 presence is never consulted ("provider-explicit, no silent paid calls" governs provider
 *selection*, but `anthropic.ts:18-24` and `complete.ts:5-9` promise no env fallback at all;
 the guard at `anthropic.ts:91-93` blocks only the `apiKey` env fallback).
@@ -100,23 +100,23 @@ Empirically reproduced against the built CLI (15 agents, all adversarial verdict
   menu and dropped by the Ink palette (`rows.ts:147`). Six leaves with required positionals are
   affected (`context search`, `daemon join`, `memory forget`, `memory recall`, `task block`,
   `task decompose`). `run` declares its prompt as optional (`[prompt...]`, so `--list-profiles`
-  works with no argument) and therefore is NOT one of them — it instead gets its requirement from
+  works with no argument) and therefore is NOT one of them: it instead gets its requirement from
   the curated palette action. `run` is also absent from the home sections. The only working path
   today is typing `/run <prompt>` in the dashboard.
 - **No visual feedback at either layer.** In the TUI, `capture.ts:31-59` swaps
   `process.stdout.write` and `process.stderr.write` for string collectors for the whole
   dispatch; the OutputPane is filled only after the await resolves. The dashboard shows a
   static "…" and "running… (Ctrl+C to force exit)"; status polling is paused; Ink never
-  re-renders (a load-bearing invariant — Ink itself renders through the same swapped
+  re-renders (a load-bearing invariant: Ink itself renders through the same swapped
   `process.stdout.write`). In the terminal, assistant text streams, but the gap before the
-  first token is dead air — worst case unbounded (no timeout, no watchdog; host stderr is
+  first token is dead air: worst case unbounded (no timeout, no watchdog; host stderr is
   buffered and withheld until the end).
 - **Post-run is dump-and-exit.** The answer text is streamed and discarded; the only persisted
   artifact is the raw stream-json transcript. `noir memory capture` exists end-to-end but
   stores content verbatim (no distill), so feeding it a raw transcript would ingest garbage.
   Session continuation (`--continue`/`--resume`) is a first-class follow-up action across the
   ecosystem (Claude Code, Codex `exec resume`, Gemini `/resume`) and `session_id` already
-  arrives in the `init` event — but Noir never surfaces it.
+  arrives in the `init` event: but Noir never surfaces it.
 
 ---
 
@@ -149,7 +149,7 @@ Empirically reproduced against the built CLI (15 agents, all adversarial verdict
   Claude Code's own status convention `✳ verb… (2m 18s · ↓ 4.8k tokens)`; non-TTY fallback =
   plain periodic status lines, no ANSI; NO_COLOR governs color only, not motion.
 - **Spinner/stream coexistence:** ora v9 hooks `write()` and defers re-render 200 ms after a
-  non-newline write — the exact hazard when composing with mid-line assistant text. The safe
+  non-newline write: the exact hazard when composing with mid-line assistant text. The safe
   pattern for our terminal progress is a **single status line on stderr, redrawn only on
   event boundaries**, never overlapping an in-flight stdout text write without a newline.
 - **Post-run UX precedent:** pipeline-first ecosystem (`gh --json | jq`, `codex exec | tee`,
@@ -194,18 +194,18 @@ Empirically reproduced against the built CLI (15 agents, all adversarial verdict
 - No Windows-specific work (the case-folding backlog items stay deferred).
 - No streaming of *thinking* blocks or token-exact billing (usage stays the reducer's
   max-per-message.id estimate).
-- The daemon/MCP layer gains no run tool — TUI run rides the CLI dispatch seam.
+- The daemon/MCP layer gains no run tool: TUI run rides the CLI dispatch seam.
 
 ---
 
-## 4. Part A — Env template redesign
+## 4. Part A: Env template redesign
 
 ### 4.1 Design split
 
 **`config.env.tmpl` → `.noir/.env` (concise, uncomment-to-enable):**
 
 ```
-# .noir/.env — project configuration & secrets (chmod 600, gitignored).
+# .noir/.env: project configuration & secrets (chmod 600, gitignored).
 # This file WINS over your shell environment for every key it defines.
 # Run `noir env` to see the winning source per key.
 #
@@ -247,23 +247,23 @@ Empirically reproduced against the built CLI (15 agents, all adversarial verdict
 
 Rules applied (research-grounded): precedence stated in-header in 3 lines; the meaning of a
 commented line declared once; sections separated by `---` banners; every placeholder
-descriptive (`replace-with-your-…`) — no `sk-`-shaped fakes (secret-scanner friendly); the
+descriptive (`replace-with-your-…`): no `sk-`-shaped fakes (secret-scanner friendly); the
 gateway section first (the most common customization); no YAML inside the env file.
 
 **`env.example.tmpl` → `.noir/.env.example` (detailed, committable documentation):** opens
 with the file's purpose (what `.noir/.env` is for, the precedence ladder incl. run profiles,
 the 0600/gitignore/tracked-refusal contract, "never commit the real file, commit this one"),
-then documents each section in one-to-three lines per key — including the header-semantics of
+then documents each section in one-to-three lines per key: including the header-semantics of
 each gateway variable (`Bearer` vs `x-api-key`, host-only BASE_URL, both-set conflict), the
 `apiKeyEnv`-is-a-name rule, and the anti-documentation note that `CLICKUP_TEAM_ID` is
 config.yml, not env. Ends with the link to `docs/reference/environment.md`. No doctrine
-verbatim shared with `.env` — the "one body, two files" assertion is retired.
+verbatim shared with `.env`: the "one body, two files" assertion is retired.
 
 ### 4.2 Constraint compliance
 
 - Parser: every line stays a full-line `#` comment (the emitted `.env` must keep
-  `loadNoirEnv` warnings exactly empty — POSIX test). No value contains `#` unquoted.
-- `env-seed.test.ts` rewritten: doctrine-verbatim test deleted; new assertions — both files
+  `loadNoirEnv` warnings exactly empty: POSIX test). No value contains `#` unquoted.
+- `env-seed.test.ts` rewritten: doctrine-verbatim test deleted; new assertions: both files
   all-comment; `.env` ≤ 60 lines and ≥ 200 bytes; `.env.example` contains the purpose
   header, the precedence ladder, all documented variable names, the gateway block
   (BASE_URL + AUTH_TOKEN + one DEFAULT_*_MODEL), the apiKeyEnv-name rule, and the
@@ -275,11 +275,11 @@ verbatim shared with `.env` — the "one body, two files" assertion is retired.
 
 ---
 
-## 5. Part B — `noir init --upgrade` completeness
+## 5. Part B: `noir init --upgrade` completeness
 
 ### 5.1 Host-aware upgrade
 
-`init.ts` host resolution becomes `--host flag > .noir/config.yml host: > 'claude'` — the
+`init.ts` host resolution becomes `--host flag > .noir/config.yml host: > 'claude'`: the
 same precedence `sync` already implements. Regression test: a scaffolded cursor project
 upgraded without `--host` refreshes cursor artifacts and writes no claude surface.
 
@@ -291,11 +291,11 @@ upgrade path only):
 
 - File absent → create (existing `skipIfExists` behavior).
 - File present and byte-equal to the render of the *previous* Noir version's template
-  (looked up from the packaged template history — see 5.5) → **auto-refresh silently**; the
+  (looked up from the packaged template history: see 5.5) → **auto-refresh silently**; the
   user never edited it.
 - File present and edited → existing conflict flow (interactive prompt,
   `preserve`/`regenerate`, default `preserve`; non-interactive → `preserve` + reported).
-- `.noir/.env`, `.noir/config.yml`, `.noir/project.id` keep pure `skipIfExists` — user-owned,
+- `.noir/.env`, `.noir/config.yml`, `.noir/project.id` keep pure `skipIfExists`: user-owned,
   never auto-touched.
 
 ### 5.3 Honest skill + summary reporting
@@ -316,10 +316,10 @@ upgrade path only):
 
 `packages/create/src/template-history.ts`: a small registry mapping
 `scaffoldVersion → { envExample, rulesSeed }` template bytes (the 1.1.0 templates are
-snapshotted from the git tag at authoring time and committed as literals — a published
+snapshotted from the git tag at authoring time and committed as literals: a published
 tarball cannot read a git tag; each future template change appends an entry).
 `isStaleSeed(fileBytes, currentRender)`: stale iff the file bytes match a history entry that is
-not the current render — pure, no I/O, so the caller owns the read and the absent case. The
+not the current render: pure, no I/O, so the caller owns the read and the absent case. The
 `currentRender` guard is checked first, so a file already at the current render is never
 stale. This is the "rewrite only if still equal to the old template" primitive the 1.14.0
 audit identified as missing.
@@ -339,7 +339,7 @@ config.yml → `NODE_OPTIONS` spawn-injection hole. Regression test: a profile w
 
 ---
 
-## 6. Part C — Provider gateway transport (ADR-0012)
+## 6. Part C: Provider gateway transport (ADR-0012)
 
 ### 6.1 Config schema (`packages/core/src/config.ts` + `@noir-ai/model` types)
 
@@ -349,9 +349,9 @@ config.yml → `NODE_OPTIONS` spawn-injection hole. Regression test: a profile w
 {
   model?: string
   baseURL?: string          // now honored by BOTH anthropic and openai-compatible adapters
-  apiKeyEnv?: string        // x-api-key (anthropic) / Bearer (openai-compatible) — unchanged semantics
-  authTokenEnv?: string     // NEW — Authorization: Bearer for anthropic-shaped endpoints
-  timeoutMs?: number        // NEW — per-request timeout, min 1000, default: SDK default
+  apiKeyEnv?: string        // x-api-key (anthropic) / Bearer (openai-compatible): unchanged semantics
+  authTokenEnv?: string     // NEW: Authorization: Bearer for anthropic-shaped endpoints
+  timeoutMs?: number        // NEW: per-request timeout, min 1000, default: SDK default
 }
 ```
 
@@ -361,15 +361,15 @@ NAME; the value is read from the overlaid `process.env` at call time).
 ### 6.2 Adapter changes (`packages/model/src/providers/anthropic.ts`)
 
 - The SDK client is constructed with `{apiKey?, authToken?, baseURL?, timeout?, maxRetries}`
-  from the resolved request fields — `baseURL` is no longer dropped.
+  from the resolved request fields: `baseURL` is no longer dropped.
 - **Ambient env neutralized:** the client is constructed with explicit `baseURL:
   req.baseURL ?? defaultBaseURL` and, when neither `apiKey` nor `authToken` resolved, the
-  existing null-degradation fires *before* the client is built — so the SDK's own
+  existing null-degradation fires *before* the client is built: so the SDK's own
   constructor-time reads of `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN`/`ANTHROPIC_API_KEY`
   can never route a request the provider-explicit path did not choose. (Mechanism: pass
-  explicit `apiKey: null`-equivalents per SDK option semantics — verified against the SDK's
+  explicit `apiKey: null`-equivalents per SDK option semantics: verified against the SDK's
   precedence: constructor args beat env.)
-- `timeoutMs` maps to the SDK `timeout` option (milliseconds — SDK-native unit).
+- `timeoutMs` maps to the SDK `timeout` option (milliseconds: SDK-native unit).
 
 ### 6.3 Invariants preserved
 
@@ -383,7 +383,7 @@ NAME; the value is read from the overlaid `process.env` at call time).
 ### 6.4 Surfacing
 
 `noir env` gains a gateway section (curated keys: `ANTHROPIC_BASE_URL`,
-`ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY`, `API_TIMEOUT_MS` — with winning source, names
+`ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY`, `API_TIMEOUT_MS`: with winning source, names
 only). Its provenance is file-vs-environment: run profiles are resolved at `noir run` time, so
 a profile-sourced value is not a source `noir env` can attribute, and `noir run` surfaces it in
 its own credential note instead. `docs/reference/environment.md` + `config.md` gain the
@@ -392,11 +392,11 @@ ANTHROPIC_* entries and the `authTokenEnv`/`timeoutMs` fields (self-maintaining 
 
 ---
 
-## 7. Part D — `noir run` UX
+## 7. Part D: `noir run` UX
 
 ### 7.1 D1: terminal status line (stderr)
 
-A hand-rolled status line — no ora — written to stderr, redrawn only at event boundaries:
+A hand-rolled status line: no ora: written to stderr, redrawn only at event boundaries:
 
 - Seeded at spawn: `▶ claude · waiting for first event…`
 - `init`: `▶ claude · {model} · {mm:ss elapsed}`
@@ -404,7 +404,7 @@ A hand-rolled status line — no ora — written to stderr, redrawn only at even
   second UsageReducer fed in `onEvent`; max-per-message.id dedup preserved).
 - Tool activity (normalizer extension, 7.3): `⚙ {toolName}…`
 - End: the line is cleared and replaced by the existing summary.
-- Gated: `!opts.json && !opts.quiet && stderr.isTTY` — otherwise silent (non-TTY fallback:
+- Gated: `!opts.json && !opts.quiet && stderr.isTTY`: otherwise silent (non-TTY fallback:
   nothing; `--json`/`--quiet` pins preserved byte-for-byte). Non-TTY interactive runs print
   one plain line at start and one at end.
 - Host stderr is no longer fully withheld: a bounded tail (last ~20 lines) surfaces on
@@ -423,7 +423,7 @@ confirm unchanged.
 
 New App mode `run`. Entry: palette/home `/run` action, or typed `/run <prompt>`. Execution is
 **in-process**: the mode imports `runHost` from `orchestrator.js` (already in the TUI bundle)
-and streams events into React state — OutputPane grows a live region (append-only lines),
+and streams events into React state: OutputPane grows a live region (append-only lines),
 StatusBar shows `run · {model} · {elapsed} · {tokens}` (the deferred ADR-0008 token/cost
 bar), and the mode owns input (`Esc` cancel → child SIGTERM, 7.5). The capture invariant is
 respected by construction: the run mode does NOT dispatch through `captureProcessOutput` —
@@ -445,17 +445,17 @@ After a successful interactive run (terminal and TUI run-mode alike), offer acti
 terminal: `@clack/select` (lazy import, existing pattern); TUI: a `PostRunOverlay` modeled on
 `ConfirmOverlay`:
 
-1. **Save to memory** — distills via `memory_capture` (plain-text answer accumulator built in
+1. **Save to memory**: distills via `memory_capture` (plain-text answer accumulator built in
    `run.ts`; `--json` envelope gains `answerText`), provenance `capture`.
-2. **Add as task research** — `workflow_research_record` (source = `noir run`).
-3. **Write handoff artifact** — `noir handoff --write` seam.
-4. **Continue session** — re-invokes the host with `--resume <sessionId>` (sessionId surfaced
+2. **Add as task research**: `workflow_research_record` (source = `noir run`).
+3. **Write handoff artifact**: `noir handoff --write` seam.
+4. **Continue session**: re-invokes the host with `--resume <sessionId>` (sessionId surfaced
    from the `init` event; the prompt is collected fresh). Single-shot law preserved: this is
    a *new* invocation.
-5. **Copy/save answer** — writes the accumulated answer text to a file or stdout.
+5. **Copy/save answer**: writes the accumulated answer text to a file or stdout.
 6. **Dismiss** (default).
 
-Law: interactive-only — `isInteractive()` gate (stdin+stdout TTY, false under
+Law: interactive-only: `isInteractive()` gate (stdin+stdout TTY, false under
 `--json`/`--no-input`/CI/NO_COLOR); non-interactive runs behave exactly as today. Memory
 write goes through the daemon client (single-writer), degrading to a reported skip when the
 daemon is unavailable. `memory_capture` receives the distilled answer, never raw stream-json.
@@ -465,7 +465,7 @@ daemon is unavailable. `memory_capture` receives the distilled answer, never raw
 - Terminal: `SIGINT`/`SIGTERM` handlers write the transcript (best-effort), terminate the
   child (`SIGTERM`, then `SIGKILL` after 5 s), print `interrupted · transcript: <path>`, exit
   130/143 per convention. (Host contract: `claude -p` on SIGTERM exits 143 and preserves its
-  own transcript — documented, relied upon.)
+  own transcript: documented, relied upon.)
 - TUI run mode: `Esc` = the same path in-process (child kill + transcript + return to
   dashboard). TUI raw-mode Ctrl+C (0x03) is mapped to the same handler while a run is
   in-flight (Ink's default unmount is intercepted for the run mode only).
@@ -492,12 +492,12 @@ daemon is unavailable. `memory_capture` receives the distilled answer, never raw
 - **Breaking (template semantics):** the two templates' content changes; existing projects
   are migrated by the `1.1.0 → 1.2.0` refreshIfStale migration. No file format changes.
 - **Breaking (model layer, narrow):** the anthropic adapter no longer honors ambient
-  `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` — users relying on the accidental path must
+  `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN`: users relying on the accidental path must
   add `baseURL`/`authTokenEnv` to `model.providers` (documented in CHANGELOG + config docs;
   the host-passthrough path via `.noir/.env` for `noir run` is unaffected).
 - `noir run` output contract: stdout unchanged; stderr gains the status line (TTY-gated);
   `--json`/`--quiet` byte-pinned by existing tests.
-- Palette UX: rows that needed args now prompt instead of failing exit 2 — strictly wider.
+- Palette UX: rows that needed args now prompt instead of failing exit 2: strictly wider.
 
 ---
 
@@ -520,7 +520,7 @@ daemon is unavailable. `memory_capture` receives the distilled answer, never raw
 
 ---
 
-## 11. Testing plan (offline — never network/key)
+## 11. Testing plan (offline: never network/key)
 
 - Template: rewritten `env-seed.test.ts` (structure, all-comment, warnings-empty, no
   active lines, placeholder hygiene); template-history unit tests (stale/edited/absent).
@@ -528,7 +528,7 @@ daemon is unavailable. `memory_capture` receives the distilled answer, never raw
   interactive/non-interactive); honest skill-count test; stamp-less migration test; doctor
   drift test; profile deny-list test.
 - Provider: anthropic adapter constructs with forwarded fields (assert client options via a
-  seam — the adapters already take an SDK-client factory in tests); ambient-env inertness
+  seam: the adapters already take an SDK-client factory in tests); ambient-env inertness
   test (set env, no config → null); timeoutMs mapping test; `noir env` gateway section test.
 - Run UX: status-line writer unit tests (TTY gating, boundaries, clear-on-end); palette
   needsArg flow test (ink-testing-library, existing harness); normalizer tool-event tests;

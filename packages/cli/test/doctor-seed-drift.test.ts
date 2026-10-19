@@ -1,4 +1,4 @@
-// doctor — doc-seed drift.
+// doctor: doc-seed drift.
 //
 // `.noir/.env.example` is a committable documentation seed the scaffold writes
 // once. A later release may change the text it ships; doctor reports a project
@@ -13,7 +13,7 @@
 // the loader at a copy whose env.example template carries one added line
 // reproduces the state a later release is in. `NOIR_TEMPLATES_DIR` exists for
 // exactly this (see the create package's template loader), and the loader reads
-// it once at import time — hence the dynamic imports below, after the env var
+// it once at import time: hence the dynamic imports below, after the env var
 // is set.
 //
 // Offline/free: no network, no API key, no embedder.
@@ -94,7 +94,7 @@ async function runDoctor(): Promise<DoctorData> {
 
 const seedPath = (): string => join(root, '.noir', '.env.example');
 
-describe('noir doctor — doc-seed drift', () => {
+describe('noir doctor: doc-seed drift', () => {
   it('reports a warn row when .env.example is an unedited older seed', async () => {
     mkdirSync(join(root, '.noir'), { recursive: true });
     writeFileSync(seedPath(), recorded.envExample, 'utf8');

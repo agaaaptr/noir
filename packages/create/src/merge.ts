@@ -22,7 +22,7 @@ function trivial(base: string, ours: string, theirs: string): MergeResult | null
   return null;
 }
 
-/** Read index `i` of `arr` as a number (0 when out of range) — sidesteps
+/** Read index `i` of `arr` as a number (0 when out of range): sidesteps
  *  noUncheckedIndexedAccess without non-null assertions. */
 function numAt(arr: readonly number[], i: number): number {
   return arr[i] ?? 0;
@@ -67,7 +67,7 @@ export function lcsMatch(a: readonly string[], b: readonly string[]): Array<[num
  * `-` red, context dim). Reuses the SAME LCS machinery {@link mergeThreeWay}
  * does so there is exactly one line-diff algorithm in the package.
  *
- * `context` (default 3) — number of unchanged lines to keep around each hunk
+ * `context` (default 3): number of unchanged lines to keep around each hunk
  * (git-style). 0 → every non-equal line stands alone; large → whole-file blob.
  * The resolver uses the default; tests pin to a specific shape.
  */
@@ -95,7 +95,7 @@ export function lineDiff(base: string, head: string, context = 3): DiffLine[] {
       i++;
       j++;
     } else if (matched !== undefined) {
-      // Head is behind — emit adds up to the matched head index.
+      // Head is behind: emit adds up to the matched head index.
       out.push({ type: 'add', line: B[j] ?? '' });
       j++;
     } else if (i < A.length && !inA.has(i)) {
@@ -107,7 +107,7 @@ export function lineDiff(base: string, head: string, context = 3): DiffLine[] {
       out.push({ type: 'add', line: B[j] ?? '' });
       j++;
     } else {
-      // Both at matched anchors but not paired — advance the smaller index.
+      // Both at matched anchors but not paired: advance the smaller index.
       if (i < A.length) i++;
       else j++;
     }
@@ -116,7 +116,7 @@ export function lineDiff(base: string, head: string, context = 3): DiffLine[] {
 }
 
 /** Collapse runs of >2*`context` unchanged lines into a single `...` hunk
- *  separator so the preview stays readable on long files. Pure trim — never
+ *  separator so the preview stays readable on long files. Pure trim: never
  *  drops a del/add. */
 function collapseContext(lines: readonly DiffLine[], context: number): DiffLine[] {
   const out: DiffLine[] = [];
@@ -157,7 +157,7 @@ function collapseContext(lines: readonly DiffLine[], context: number): DiffLine[
  *   <theirs lines>
  *   `>>>>>>> theirs`
  *
- * `diff3(zdiff3)` writes the SAME shape — included here so the engine + clack
+ * `diff3(zdiff3)` writes the SAME shape: included here so the engine + clack
  * resolver have a single source of truth for marker layout. Returns the marked
  * region body (no outer delimiters); the caller wraps it with surrounding
  * context.
@@ -178,9 +178,9 @@ const eq = (a: readonly string[], b: readonly string[]): boolean =>
  * new template) with `base` (the last-emitted ancestor). Line-level diff3:
  * changes in disjoint line ranges merge; overlapping changes become inline
  * conflict markers. Default marker shape is the minimal diff3 form
- * (`<<<<<<< ours` / `=======` / `>>>>>>> theirs`) — byte-identical to v1.2 so
+ * (`<<<<<<< ours` / `=======` / `>>>>>>> theirs`): byte-identical to v1.2 so
  * {@link mergeManagedRegion} stays regression-anchored. Pass `'zdiff3'` to
- * include the base section (`||||||| base`) — used by the conflict resolver's
+ * include the base section (`||||||| base`): used by the conflict resolver's
  * 6th "merge (with conflict markers)" option. Pure + deterministic
  * (no IO) so it's unit-testable.
  */

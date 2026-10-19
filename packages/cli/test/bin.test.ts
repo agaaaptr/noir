@@ -1,4 +1,4 @@
-// S9 t1 — commander migration tests. Drives `createProgram()` (a fresh program
+// S9 t1: commander migration tests. Drives `createProgram()` (a fresh program
 // per case, since commander parse state is mutable) and asserts the S9 exit-code
 // contract + stream discipline (data→stdout, diagnostics→stderr) + behavior
 // preservation of the migrated commands. Side-effecting modules are mocked.
@@ -59,7 +59,7 @@ vi.mock('../src/commands/task.js', () => ({
   taskAdvance: vi.fn(async () => {}),
   taskNext: vi.fn(async () => {}),
 }));
-// C1 — install/migrate + update are real modules now; mock them at the
+// C1: install/migrate + update are real modules now; mock them at the
 // boundary so bin dispatch tests stay focused on argv → module wiring. Their
 // dedicated behavior (downgrade guard, native install, kill-switch) is covered
 // in install.test / update.test.
@@ -148,7 +148,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('commander migration — exit codes + stream discipline', () => {
+describe('commander migration: exit codes + stream discipline', () => {
   it('--help writes to stdout (conventional; users pipe it) and exits 0', async () => {
     const r = await parse(['--help']);
     expect(r.exitCode).toBe(EXIT.OK);
@@ -224,10 +224,10 @@ describe('commander migration — exit codes + stream discipline', () => {
   });
 });
 
-describe('commander migration — global flags', () => {
+describe('commander migration: global flags', () => {
   it('global flags parse without "unknown option" and reach the command', async () => {
     // status is mocked (no-op success). If any global flag were unrecognized,
-    // commander would exit 2 (usage) BEFORE dispatching — so reaching the
+    // commander would exit 2 (usage) BEFORE dispatching: so reaching the
     // action + exit 0 proves all globals parsed.
     const r = await parse(['--json', '--quiet', '--verbose', '--no-input', 'status']);
     expect(r.exitCode).toBe(EXIT.OK);
@@ -240,7 +240,7 @@ describe('commander migration — global flags', () => {
   it('--cwd <dir> changes the working directory before the action runs', async () => {
     // realpath: macOS `os.tmpdir()` is `/var/folders/...` (symlink to
     // `/private/var/folders/...`); process.cwd() resolves through it after
-    // chdir, and init() receives process.cwd() — so normalize the fixture.
+    // chdir, and init() receives process.cwd(): so normalize the fixture.
     const dir = realpathSync(mkdtempSync(join(tmpdir(), 'noir-bin-cwd-')));
     const origCwd = process.cwd();
     try {
@@ -265,7 +265,7 @@ describe('commander migration — global flags', () => {
   });
 });
 
-describe('commander migration — behavior preservation (migrated commands)', () => {
+describe('commander migration: behavior preservation (migrated commands)', () => {
   it('init defaults to stdio transport', async () => {
     const r = await parse(['init']);
     expect(r.exitCode).toBe(EXIT.OK);
@@ -408,7 +408,7 @@ describe('commander migration — behavior preservation (migrated commands)', ()
 
   it('daemon start --detach forwards the flag (the refusal lives in daemon.test)', async () => {
     const r = await parse(['daemon', 'start', '--detach']);
-    expect(r.exitCode).toBe(EXIT.OK); // mocked — real exit-2 covered in daemon.test
+    expect(r.exitCode).toBe(EXIT.OK); // mocked: real exit-2 covered in daemon.test
     expect(daemonStart).toHaveBeenLastCalledWith(expect.objectContaining({ detach: true }));
   });
 
@@ -446,7 +446,7 @@ describe('commander migration — behavior preservation (migrated commands)', ()
   });
 });
 
-describe('commander migration — wired subcommands (context/memory/task → module)', () => {
+describe('commander migration: wired subcommands (context/memory/task → module)', () => {
   it.each([
     ['context search', ['context', 'search', 'how do I configure x'], contextSearch],
     ['context index', ['context', 'index'], contextIndex],
@@ -475,7 +475,7 @@ describe('commander migration — wired subcommands (context/memory/task → mod
     expect(contextIndex).toHaveBeenCalledWith(expect.objectContaining({ paths: ['a', 'b'] }));
   });
 
-  it('memory save forwards content/type/files (now optional — module owns prompt/exit-2)', async () => {
+  it('memory save forwards content/type/files (now optional: module owns prompt/exit-2)', async () => {
     await parse(['memory', 'save', '--content', 'hi', '--type', 'fact', '--files', 'a.ts,b.ts']);
     expect(memorySave).toHaveBeenCalledWith(
       expect.objectContaining({ content: 'hi', type: 'fact', files: 'a.ts,b.ts' }),
@@ -524,7 +524,7 @@ describe('commander migration — wired subcommands (context/memory/task → mod
   });
 });
 
-describe('commander migration — wired subcommands (skills/daemon → module)', () => {
+describe('commander migration: wired subcommands (skills/daemon → module)', () => {
   it.each([
     ['skills list', ['skills', 'list'], skillsList],
     ['skills sync', ['skills', 'sync'], skillsSync],
@@ -561,13 +561,13 @@ describe('commander migration — wired subcommands (skills/daemon → module)',
   });
 });
 
-// C1 — `noir install` / `noir migrate` parse-level wiring (T5 hardening).
+// C1: `noir install` / `noir migrate` parse-level wiring (T5 hardening).
 // Asserts argv → install() with the right option shape (positional spec,
 // --list, --uninstall-prev, migrate alias). install() is mocked at the
 // boundary; its real behavior (downgrade guard, native install) lives in
 // install.test.ts. This mirrors the it.each pattern used for the other
 // dispatched subcommands above.
-describe('noir install / migrate (C1) — parse-level wiring', () => {
+describe('noir install / migrate (C1): parse-level wiring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -630,7 +630,7 @@ describe('global-install symlink invocation (regression)', () => {
   // .../lib/node_modules/@noir-ai/cli/dist/bin.js. Guards two regressions:
   //   1. the isMainModule guard must realpath(process.argv[1]) so main() runs
   //      under symlinked invocation (else a global `noir` install silently
-  //      exits 0 — main() never runs; this broke every published beta).
+  //      exits 0: main() never runs; this broke every published beta).
   //   2. --version exits 0 (commander v12 throws code 'commander.version').
   it('runs the bin via a symlink + --version exits 0 with output', () => {
     const distBin = fileURLToPath(new URL('../dist/bin.js', import.meta.url));

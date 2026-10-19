@@ -17,7 +17,7 @@
 //     │    • BM25 hit      → reuse FtsHit.snippet VERBATIM (never truncate);
 //     │                       path/parentDocId backfilled from docs.meta (ChunkMeta)
 //     │    • kNN-only hit   → window-extract a snippet from `readDoc(id)` (the
-//     │                       chunk's content) — vec0 carries no meta column, so
+//     │                       chunk's content): vec0 carries no meta column, so
 //     │                       without a hydrator the hit degrades to an empty
 //     │                       snippet but KEEPS ITS RANK (never crash,
 //     │                       never drop a ranked semantic hit on a missing window)
@@ -32,17 +32,17 @@
 //          zero results for one large hit). truncated:true iff the budget cut
 //          exhausted before the budget.
 //
-// Degradation: when the embedder is unavailable — `kind:'none'`, a native
-// load failure, a provider error, OR `knn()` itself threw — `search` falls back
+// Degradation: when the embedder is unavailable: `kind:'none'`, a native
+// load failure, a provider error, OR `knn()` itself threw: `search` falls back
 // to BM25-only and the payload carries `degraded:true, mode:'bm25-only'`. The
 // embedder signals unavailability by throwing from `embed()` (the `'none'`
 // factory does exactly that), so the retriever needs no a-priori knowledge of
-// the embedder kind — the throw IS the signal. A BM25 throw (e.g. a foreign
+// the embedder kind: the throw IS the signal. A BM25 throw (e.g. a foreign
 // read-only DB missing `docs_fts`) is also caught: search degrades to an empty
 // or vec-only result set rather than crashing.
 //
 // Mode truthfulness: beyond the bm25-only fallback there is a softer
-// degradation — `'knn'`. When the kNN leg ran successfully but a kNN-only hit
+// degradation: `'knn'`. When the kNN leg ran successfully but a kNN-only hit
 // could not be hydrated (no `readDoc` wired, or the source doc was
 // deleted/degraded), the hit keeps its rank but carries an empty snippet, and
 // the payload carries `mode:'knn'` so the caller knows it did not receive full
@@ -50,7 +50,7 @@
 // ran AND every hit got a real windowed snippet.
 //
 // Hard rules honored:
-//   • Reuses the existing Store API only — no getDoc added, no schema migration.
+//   • Reuses the existing Store API only: no getDoc added, no schema migration.
 //   • RRF k=60 RANK-BASED (no score normalization; raw scores never summed).
 //   • BM25 snippets reused verbatim (never truncated); kNN windows are prefix
 //     windows with `<<term>>` highlight to mirror the FTS5 snippet convention.
@@ -121,8 +121,8 @@ export interface RetrieverOptions {
    * interface exposes no read-by-id, so without a hydrator a purely-semantic
    * hit cannot be windowed. When provided and it hits, the chunk's content is
    * prefix-windowed with `<<query-term>>` highlights (mirroring FTS5). When
-   * omitted or it misses, the hit is emitted with an empty snippet — degraded
-   * but ranked — AND the search result's `mode` becomes `'knn'` so the
+   * omitted or it misses, the hit is emitted with an empty snippet: degraded
+   * but ranked: AND the search result's `mode` becomes `'knn'` so the
    * caller can tell the snippet quality is degraded. The engine
    * wires this from the indexer's `readChunkContent` when a content source
    * exists.
@@ -169,7 +169,7 @@ function asChunkMeta(meta: unknown): ChunkMeta | undefined {
   const m = meta as Record<string, unknown>;
   const path = m.path;
   const parentDocId = m.parentDocId;
-  // The two required fields — bail to `undefined` if either is missing/non-string
+  // The two required fields: bail to `undefined` if either is missing/non-string
   // so callers fall back to empty strings rather than crashing.
   if (typeof path !== 'string' || typeof parentDocId !== 'string') {
     return undefined;
@@ -234,7 +234,7 @@ function queryTermSet(query: string): Set<string> {
  *
  * Unlike FTS5's `snippet()` this is a PREFIX window (FTS5 picks the densest
  * window around match positions; vec0 gives us no match positions to center
- * on). Content shorter than the window is returned whole (highlighted) — it is
+ * on). Content shorter than the window is returned whole (highlighted): it is
  * never padded or mid-word split.
  */
 export function windowSnippet(content: string, query: string, windowTokens: number): string {
@@ -316,7 +316,7 @@ function packBudget(hits: ReadonlyArray<RetrieverHit>, budgetTokens: number): Pa
  *
  * The retriever owns no state beyond its configured tunables; every `search`
  * call is independent and side-effect-free (read-only against the store). It is
- * the ONLY read path for context — `context_search` delegates here. Write
+ * the ONLY read path for context: `context_search` delegates here. Write
  * (`indexDoc`/`upsertVec`) stays with the indexer/engine; the retriever never
  * mutates the store.
  */
@@ -326,7 +326,7 @@ export function createRetriever(deps: RetrieverDeps): Retriever {
   // `weights` is passed through verbatim; fuseRrf applies its own [0.5, 0.5]
   // default when undefined. (DEFAULT_RRF_WEIGHTS is `readonly` while
   // FuseRrfOptions.weights is a mutable tuple, so defaulting here would need a
-  // copy — cleaner to let fuseRrf, which already handles the default, do it.)
+  // copy: cleaner to let fuseRrf, which already handles the default, do it.)
   const weights = deps.opts?.weights;
   const defaultBudget = deps.opts?.budgetTokens ?? DEFAULT_BUDGET_TOKENS;
   const snippetWindowTokens = deps.opts?.snippetWindowTokens ?? DEFAULT_SNIPPET_WINDOW_TOKENS;
@@ -357,7 +357,7 @@ export function createRetriever(deps: RetrieverDeps): Retriever {
         try {
           knnHits = store.knn(qvec, { limit, source });
         } catch {
-          // vec table missing or query malformed — degrade to BM25-only.
+          // vec table missing or query malformed: degrade to BM25-only.
           knnFailed = true;
         }
       } catch {
@@ -377,7 +377,7 @@ export function createRetriever(deps: RetrieverDeps): Retriever {
 
       // Track whether ANY kNN-only hit could not be hydrated (no readDoc, or
       // readDoc missed). When true, the search did not deliver full hybrid
-      // snippet quality — surface that honestly via mode:'knn' (degraded but
+      // snippet quality: surface that honestly via mode:'knn' (degraded but
       // distinct from 'bm25-only', which means the kNN leg did not run at all).
       let knnUnhydrated = false;
 

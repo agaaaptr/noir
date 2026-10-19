@@ -8,7 +8,7 @@
 
 ## Global Constraints
 
-- Presentational only — no keybinding/routing/logic changes.
+- Presentational only: no keybinding/routing/logic changes.
 - Node ≥22, pnpm, ESM.
 - Full gate: lint → build → typecheck → test (1539) → docs:validate.
 - Spec: `docs/internal/specs/2026-08-08-tui-polish-design.md`.
@@ -59,7 +59,7 @@ export interface PanelProps {
  * A rounded-border container used by every TUI surface. Centralizes the
  * width budget (contentWidth + 4 for border + padding) so no caller
  * duplicates `borderStyle round` / `borderColor gray` / `width` math.
- * When `maxWidth` is set the panel caps at that value — used by the
+ * When `maxWidth` is set the panel caps at that value: used by the
  * command palette for the fixed-width overlay look.
  */
 export function Panel({ children, maxWidth }: PanelProps): ReactElement {
@@ -181,14 +181,14 @@ import { contentWidth } from '../../theme.js'; // for label truncation
 
 const PALETTE_WIDTH = 64; // fixed max-width column count
 
-// Query row — plain Box (no nested border):
+// Query row: plain Box (no nested border):
 const queryRow = (
   <Box paddingX={1}>
     <Text>{c.dim('> ')}{query}<Text>{c.dim('▌')}</Text></Text>
   </Box>
 );
 
-// Command label truncate helper — cap at PALETTE_WIDTH - 8 (prefix + padding + hint):
+// Command label truncate helper: cap at PALETTE_WIDTH - 8 (prefix + padding + hint):
 function truncateLabel(label: string): string {
   const max = Math.max(20, PALETTE_WIDTH - 8);
   return label.length > max ? label.slice(0, max - 1) + '…' : label;
@@ -272,7 +272,7 @@ export async function runPalette(opts: CliOptions, dispatch: TuiDeps['dispatch']
 
 - [ ] **Step 2: Verify terminal clear does NOT break Ink rendering**
 
-Ink's `render()` opens its own raw-mode and renders each frame to stdout. The clear-screen bytes are emitted BEFORE Ink takes control of the terminal — they do not interfere with Ink's frame rendering. `waitUntilExit()` restores the terminal on unmount.
+Ink's `render()` opens its own raw-mode and renders each frame to stdout. The clear-screen bytes are emitted BEFORE Ink takes control of the terminal: they do not interfere with Ink's frame rendering. `waitUntilExit()` restores the terminal on unmount.
 
 ```bash
 pnpm vitest run packages/cli/test/tui/
@@ -303,7 +303,7 @@ git commit -m "feat(tui): Panel component + block cursor + fixed-width palette +
   the terminal is clean (no leftover banner/menu above the frame).
 - Removed .superpowers/ (legacy, not in use).
 
-Presentational only — no keybinding/routing/logic changes.
+Presentational only: no keybinding/routing/logic changes.
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```

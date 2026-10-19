@@ -3,18 +3,18 @@
 // block. This module is deliberately split into THREE concerns so the
 // security-critical paths can be unit-tested in isolation:
 //
-//   1. `IntegrationService` — the per-serve-lifecycle handle built ONCE from the
+//   1. `IntegrationService`: the per-serve-lifecycle handle built ONCE from the
 //      discovered declarations (@noir-ai/skills `discoverIntegrations`) and held
 //      on `ctx.integrations` (mirrors `ctx.store` / `ctx.engine` / `ctx.memory`).
 //      Discovery is best-effort: a missing/unreadable pack degrades to an empty
 //      service (the `integrations_auth` tool still resolves a caller-supplied
 //      `envVar`; `noir_clickup_write` is simply not registered).
-//   2. `resolveToken` — the ONLY place a token value touches process.env. Read
+//   2. `resolveToken`: the ONLY place a token value touches process.env. Read
 //      at call time, returned to the calling agent, NEVER logged/echoed to
 //      stderr/audit bodies (the token travels only in the tool RESULT to the
 //      trusted host + the outbound `Authorization` header).
-//   3. `writeIntegrationAudit` — append-only JSONL into the SAME `.noir/audit/`
-//      dir as the gate export (reuse it — do not invent a new
+//   3. `writeIntegrationAudit`: append-only JSONL into the SAME `.noir/audit/`
+//      dir as the gate export (reuse it: do not invent a new
 //      audit location). One executed write ⇒ one line; dry-runs are NOT audited.
 //
 // Doctrine: graceful degradation (no-token ⇒ manual-paste / no-token refuse,
@@ -38,7 +38,7 @@ import { discoverIntegrations } from '@noir-ai/skills';
 export interface IntegrationBinding {
   /** Full declaration name, e.g. `'noir-clickup'`. */
   name: string;
-  /** Short name — declaration name with the `noir-` namespace stripped
+  /** Short name: declaration name with the `noir-` namespace stripped
    *  (`'clickup'`). The `noir_clickup_write` tool segment + the documented
    *  `integrations.clickup.*` config key both use this form. */
   shortName: string;
@@ -48,7 +48,7 @@ export interface IntegrationBinding {
   /** Effective runtime tier: the user's `integrations.<name>.runtime` overlay
    *  wins when set, else the declaration's `runtime`. The daemon gates write-tool
    *  registration on THIS (not the declaration's) so a local downgrade to `none`
-   *  actually takes the write tool off — the tier model: `none` = skill-side
+   *  actually takes the write tool off: the tier model: `none` = skill-side
    *  reads only, `integrations_auth` still resolves the token. */
   effectiveRuntime: IntegrationDeclaration['runtime'];
   teamId?: string;
@@ -63,7 +63,7 @@ export interface IntegrationBinding {
  * the filesystem per call.
  */
 export interface IntegrationService {
-  /** Project root — the anchor for `.noir/audit/` writes. */
+  /** Project root: the anchor for `.noir/audit/` writes. */
   root: string;
   /** Bindings keyed by BOTH the full name (`noir-clickup`) and the short name
    *  (`clickup`) so a tool/config using either form resolves the same binding. */
@@ -80,7 +80,7 @@ export function shortNameOf(name: string): string {
 /**
  * Build the integration service for one serve lifecycle. Discovery is
  * best-effort: a missing/unreadable skills pack ⇒ an empty service (the tools
- * degrade gracefully — `integrations_auth` still resolves a caller `envVar`;
+ * degrade gracefully: `integrations_auth` still resolves a caller `envVar`;
  * `noir_clickup_write` is simply not registered). Never throws.
  *
  * @param root project root (`.noir/audit/` anchor)
@@ -121,7 +121,7 @@ export function buildIntegrationService(
     const tokenEnv = cfg?.auth?.tokenEnv ?? declaration.auth.tokenEnv;
     // Effective runtime: the user's config overlay wins when set; otherwise the
     // declaration's tier. This is what the daemon must gate write-tool
-    // registration on (NOT the declaration's runtime) — a local downgrade to
+    // registration on (NOT the declaration's runtime): a local downgrade to
     // `none` for a read-only run takes the write tool off without touching the
     // shipped declaration.
     const effectiveRuntime = cfg?.runtime ?? declaration.runtime;
@@ -156,14 +156,14 @@ export type TokenResolution =
  * Resolve an integration token VALUE from `process.env` at CALL TIME (never at
  * load time; never cached beyond the call). The token is returned to the calling
  * agent in the tool result (trusted host) + travels in the outbound
- * `Authorization` header — and NOWHERE else (no stderr, no audit body).
+ * `Authorization` header: and NOWHERE else (no stderr, no audit body).
  *
  * Two call shapes:
  *   - `{ integration: 'noir-clickup' }` → look up `tokenEnv` from the discovered
  *     declaration (config override honored), then read `process.env[tokenEnv]`.
  *   - `{ envVar: 'CLICKUP_API_TOKEN' }` → read `process.env[envVar]` directly,
  *     but ONLY when `envVar` is one of the DECLARED tokenEnv names. An
- *     arbitrary/undeclared name is refused — otherwise any caller (or a hostile
+ *     arbitrary/undeclared name is refused: otherwise any caller (or a hostile
  *     prompt driving the agent) could exfiltrate an unrelated secret
  *     (AWS_*, GITHUB_TOKEN, NPM_TOKEN, …) straight into the tool result.
  */
@@ -206,7 +206,7 @@ export function resolveToken(
   return { ok: false, reason: 'no-token', envVar: '' };
 }
 
-/** One executed-write audit record. Append-only JSONL — one line
+/** One executed-write audit record. Append-only JSONL: one line
  *  per executed write. Dry-runs are NOT audited (no write happened). */
 export interface IntegrationAuditEntry {
   /** Fixed discriminator so a future `.noir/audit/` reader can filter mixed
@@ -234,12 +234,12 @@ export interface IntegrationAuditEntry {
 
 /**
  * Append one integration audit record to `.noir/audit/integration-<short>.jsonl`
- * (the SAME `.noir/audit/` dir as the gate export — reuse it, never a second
+ * (the SAME `.noir/audit/` dir as the gate export: reuse it, never a second
  * audit location).
  * Append-only JSONL so concurrent/sequential writes don't clobber each other and
  * the file grows linearly with executed writes. Creates the dir if missing.
  *
- * Propagates filesystem errors to the caller — the gated proxy's handler is the
+ * Propagates filesystem errors to the caller: the gated proxy's handler is the
  * best-effort boundary: it catches, sets the result envelope's `audited:false`,
  * and continues (the ClickUp write already happened; an audit failure does NOT
  * roll it back). Keeping the throw honest makes `audited:false` reachable instead
@@ -250,7 +250,7 @@ export function writeIntegrationAudit(
   integrationName: string,
   entry: IntegrationAuditEntry,
 ): void {
-  // Reuse the `.noir/audit/` dir (the single source of truth — no second audit
+  // Reuse the `.noir/audit/` dir (the single source of truth: no second audit
   // location). Integration writes are append-only + cross-task (not keyed by a
   // Noir task id), so a per-integration JSONL file is the natural shape: one
   // executed write ⇒ one line. The `.jsonl` extension keeps it distinct from

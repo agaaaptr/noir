@@ -1,4 +1,4 @@
-// Task 14 — `noir env` + per-key provenance in `noir doctor`.
+// Task 14: `noir env` + per-key provenance in `noir doctor`.
 //
 // Drives the REAL commander tree (`createProgram`) so the bin's `preAction` is
 // part of what is under test: it captures the ambient baseline `noir env`
@@ -6,7 +6,7 @@
 // as a shipped `noir` invocation does.
 //
 // HARD RULE asserted throughout: the command prints NAMES and a redacted SHAPE
-// (first three characters + length) — never a value. Every test that installs a
+// (first three characters + length): never a value. Every test that installs a
 // fake secret asserts the full string is absent from stdout AND stderr.
 //
 // Offline + free: tmp roots, no daemon, no network, no ~/.noir.
@@ -33,7 +33,7 @@ import { handleError } from '../src/output.js';
 /**
  * Drive a FRESH commander program (mirroring bin.run's parse→handleError→exit
  * contract). A fresh program per invocation avoids commander global-option
- * leakage across parses on the singleton — e.g. a prior test's `--json` would
+ * leakage across parses on the singleton: e.g. a prior test's `--json` would
  * otherwise stay set on the shared `program`.
  */
 async function runCli(argv: readonly string[]): Promise<number> {
@@ -53,7 +53,7 @@ const UNLISTED_KEY = 'NOIR_ENV_TEST_UNLISTED_KEY';
 /** Every ambient name this file manipulates, restored verbatim afterwards. */
 const MANAGED_KEYS: readonly string[] = [...CURATED_AMBIENT_KEYS, CONFIG_KEY, UNLISTED_KEY];
 
-/** The value strings used by the tests — asserted absent from every stream. */
+/** The value strings used by the tests: asserted absent from every stream. */
 const FILE_SECRET = 'pk_secret_value_abcdefghij';
 const AMBIENT_SECRET = 'sk-ambient-value-abcdefghij';
 /** A SHORT value (3 chars) where a 3-char prefix would be the whole value. */
@@ -68,7 +68,7 @@ function rowOf(vars: readonly EnvVarRow[], key: string): EnvVarRow {
 }
 
 /**
- * The rendered TABLE line for `key` — the row, isolated from the rest of stderr
+ * The rendered TABLE line for `key`: the row, isolated from the rest of stderr
  * (banner/advisory noise, and a tmp path that could coincidentally contain the
  * short value under test). Asserts the row exists so a missing key fails loudly.
  */
@@ -169,11 +169,11 @@ describe('noir env', () => {
     expect(Object.keys(row).sort()).toEqual(['key', 'source', 'valueLength']);
     expect(row.valueLength).toBe(FILE_SECRET.length);
     // The redacted shape (which carries the first three characters) is
-    // human-table-only — it must not appear in the machine payload.
+    // human-table-only: it must not appear in the machine payload.
     expect(stdoutText()).not.toContain('pk_');
   });
 
-  it('never enumerates the ambient environment — unlisted names are not reported', async () => {
+  it('never enumerates the ambient environment: unlisted names are not reported', async () => {
     process.env[UNLISTED_KEY] = 'pk_unlisted_value';
 
     const code = await runCli(['env', '--json']);
@@ -182,7 +182,7 @@ describe('noir env', () => {
     const vars: EnvVarRow[] = JSON.parse(stdoutText()).data.vars;
     expect(vars.find((v) => v.key === UNLISTED_KEY)).toBeUndefined();
     // `sources` records EVERY ambient name ('env'); PATH is the canary that the
-    // curated allowlist — not a dump — decides what is rendered.
+    // curated allowlist: not a dump: decides what is rendered.
     expect(vars.find((v) => v.key === 'PATH')).toBeUndefined();
     expect(stdoutText()).not.toContain('pk_unlisted_value');
   });
@@ -295,7 +295,7 @@ describe('noir env', () => {
     expect(err).not.toContain(FILE_SECRET);
   });
 
-  it('shows a SHORT value as its length only — the 3-char prefix would BE the value', async () => {
+  it('shows a SHORT value as its length only: the 3-char prefix would BE the value', async () => {
     // 3 chars: `${value.slice(0, 3)}…` would print the whole thing.
     process.env.NOIR_PROFILE = SHORT_VALUE;
 
@@ -304,7 +304,7 @@ describe('noir env', () => {
     expect(code).toBe(0);
     const row = tableRow(stderrText(), 'NOIR_PROFILE');
     expect(row).toContain(`…(${SHORT_VALUE.length})`);
-    expect(row).not.toContain(SHORT_VALUE); // no prefix — not even 3 chars of it
+    expect(row).not.toContain(SHORT_VALUE); // no prefix: not even 3 chars of it
   });
 
   it('shows a short FILE value as its length only too', async () => {
@@ -325,7 +325,7 @@ describe('noir env', () => {
       execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' });
       writeFileSync(envPath, `CLICKUP_API_TOKEN=${FILE_SECRET}\n`, 'utf8');
       execFileSync('git', ['add', '-f', '.noir/.env'], { cwd: root, stdio: 'ignore' });
-      // A refused file contributes NOTHING — so an exported Noir key is
+      // A refused file contributes NOTHING: so an exported Noir key is
       // un-shadowed and still in effect.
       process.env.ANTHROPIC_API_KEY = AMBIENT_SECRET;
 
@@ -343,7 +343,7 @@ describe('noir env', () => {
   );
 });
 
-describe('noir doctor — env provenance rows', () => {
+describe('noir doctor: env provenance rows', () => {
   let root: string;
   let envPath: string;
   let stderr: MockInstance<typeof process.stderr.write>;
@@ -439,7 +439,7 @@ describe('noir doctor — env provenance rows', () => {
     try {
       await doctor({ json: true });
     } catch {
-      /* doctor throws exit-1 after writing the envelope — the payload is what matters */
+      /* doctor throws exit-1 after writing the envelope: the payload is what matters */
     }
     return JSON.parse(stdoutText()).data;
   }

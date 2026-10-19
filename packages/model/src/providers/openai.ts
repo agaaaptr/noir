@@ -1,23 +1,23 @@
-// OpenAI provider adapter — single-shot chat completions via the `openai` SDK.
+// OpenAI provider adapter: single-shot chat completions via the `openai` SDK.
 //
 // HARD RULES enforced here, by construction:
 //
 // - SINGLE-SHOT: the request to `chat.completions.create` carries
 //   ONLY `model`, `messages`, and (optionally) `max_tokens`. There is no
-//   `tools`, `functions`, or `stream` key — so this adapter cannot express an
+//   `tools`, `functions`, or `stream` key: so this adapter cannot express an
 //   agent/tool loop even if a caller tried. Single bounded call, then return.
 // - SDK retries DISABLED (`maxRetries: 0`): the hosted SDK
 //   defaults to retrying transient failures; we opt out so one call can never
 //   silently multi-charge. The only retry lives in the structured path.
 // - IMPORT-ISOLATED: the `openai` SDK is imported DYNAMICALLY inside
 //   `complete()`. A bundle whose configured provider never resolves to this
-//   adapter pays zero `openai` bytes — the SDK is only pulled in at call time.
+//   adapter pays zero `openai` bytes: the SDK is only pulled in at call time.
 // - SECRETS stay in env: `key` is the resolved VALUE that `complete()`
 //   read from `process.env[apiKeyEnv]`; this module never touches `process.env`
 //   and never logs the value. Only token COUNTS leave via `usage`.
 //
 // Errors (network, non-2xx, empty body, SDK throw) become `{ ok: false, reason }`
-// — a structured failure a caller may surface. `null` degradation (no provider /
+//: a structured failure a caller may surface. `null` degradation (no provider /
 // missing key) is decided one layer up in `complete()`, BEFORE this runs.
 
 import { registerProviderAdapter } from '../complete.js';
@@ -37,7 +37,7 @@ type OpenAIChatCompletionsCreate = (
   },
   // Second options argument mirrors the real SDK's `(params, options?)` shape,
   // so this adapter can forward the caller's wall-clock bound and
-  // re-assert no retries at the per-request level — same pattern the
+  // re-assert no retries at the per-request level: same pattern the
   // anthropic adapter uses for `messages.create`.
   options?: { signal?: AbortSignal; maxRetries?: number },
 ) => Promise<{
@@ -74,7 +74,7 @@ export const openaiAdapter: ProviderAdapter = {
   complete: async (req, key): Promise<CompleteResult> => {
     // Hosted OpenAI ALWAYS requires a key. Guard explicitly so a misconfigured
     // anonymous `openai` block (no `apiKeyEnv`) cannot fall through to the SDK's
-    // OWN env fallback (`OPENAI_API_KEY`) — that would be a silent paid call via
+    // OWN env fallback (`OPENAI_API_KEY`): that would be a silent paid call via
     // env presence, which is forbidden. Anonymous LOCAL endpoints belong to the
     // dedicated `openai-compatible` adapter, not this one. This guards the
     // CREDENTIAL only; the endpoint is pinned at the client below, so neither
@@ -83,7 +83,7 @@ export const openaiAdapter: ProviderAdapter = {
       return { ok: false, reason: 'openai: missing API key (set apiKeyEnv on the provider block)' };
     }
     try {
-      // Dynamic import — a bundle that never selects the `openai` adapter ships
+      // Dynamic import: a bundle that never selects the `openai` adapter ships
       // no `openai` dependency. `default` is the `OpenAI` client class.
       // Cast through `unknown` into a structural view so this file never depends
       // on the SDK's exact exported types (resilient to minor version churn).
@@ -92,7 +92,7 @@ export const openaiAdapter: ProviderAdapter = {
         apiKey: key, // the VALUE complete() resolved from process.env[apiKeyEnv]
         // Pin the endpoint explicitly, exactly as the anthropic adapter does:
         // the SDK reads OPENAI_BASE_URL ONLY when `baseURL` is `undefined`, so
-        // omitting it would hand the endpoint to the ambient environment — a
+        // omitting it would hand the endpoint to the ambient environment: a
         // committable `.noir/.env` could then route every call to a host the
         // config never named. A configured `baseURL` still wins; the hosted
         // default (the SDK's own) is the fallback.
@@ -104,12 +104,12 @@ export const openaiAdapter: ProviderAdapter = {
         {
           model: req.model,
           messages: buildMessages(req),
-          // ONLY bounded fields. No `tools` / `stream` — by construction.
+          // ONLY bounded fields. No `tools` / `stream`: by construction.
           ...(req.maxTokens !== undefined ? { max_tokens: req.maxTokens } : {}),
         },
         {
           maxRetries: 0, // belt-and-suspenders: per-request as well as constructor.
-          // Forward the caller's wall-clock bound — same conditional
+          // Forward the caller's wall-clock bound: same conditional
           // spread as the other optional fields (only when a signal is present).
           ...(req.signal ? { signal: req.signal } : {}),
         },
@@ -145,5 +145,5 @@ export const openaiAdapter: ProviderAdapter = {
 // Self-register on import: a consumer that imports `@noir-ai/model` (whose
 // index side-effect-imports this module) gets the adapter wired automatically;
 // `complete()` then dispatches by provider name `openai`. The SDK itself is NOT
-// loaded by this registration — only inside `complete()` above.
+// loaded by this registration: only inside `complete()` above.
 registerProviderAdapter('openai', openaiAdapter);

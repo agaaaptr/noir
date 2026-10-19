@@ -12,28 +12,28 @@ import { WorkflowEngine } from '@noir-ai/workflow';
 import { EXIT } from '../output.js';
 
 /**
- * `noir hook` — the host-invoked lifecycle-hook dispatcher.
+ * `noir hook`: the host-invoked lifecycle-hook dispatcher.
  *
  * The scaffold writes per-host hook entries that call `noir hook --host <id>`
  * and pipe a JSON object to stdin describing the event. This command reads it,
  * loads the project's `enforcement` config from `.noir/config.yml`, and emits
  * the host's own decision dialect:
  *
- *  - `SessionStart`/`SubagentStart` — inject a compiled, budgeted brief
+ *  - `SessionStart`/`SubagentStart`: inject a compiled, budgeted brief
  *    (router + always-on rules) as `additionalContext`. The project baseline
  *    reaches the model through the host's own `@import` of `.noir/NOIR.md`, so
  *    it is not re-injected here.
- *  - `PreToolUse` — evaluate the deny-list and deny a violating call.
- *  - `Stop` — block stopping while the active task's verification is pending
+ *  - `PreToolUse`: evaluate the deny-list and deny a violating call.
+ *  - `Stop`: block stopping while the active task's verification is pending
  *    (opt-in via `enforcement.stopGate`).
- *  - anything else — pass through with exit 0.
+ *  - anything else: pass through with exit 0.
  *
  * A hook must never fail the session: every read is best-effort, enforcement
  * fails OPEN (an unknown event, a missing file, or an unreadable store never
  * blocks), and the command always emits valid JSON or nothing.
  */
 
-const BRIEF_BUDGET = 9000; // chars — under the host's 10,000-char additionalContext cap.
+const BRIEF_BUDGET = 9000; // chars: under the host's 10,000-char additionalContext cap.
 
 export type DialectHost = 'claude' | 'gemini' | 'cursor';
 
@@ -77,7 +77,7 @@ function readNoirFile(noirRoot: string, rel: string): string {
   }
 }
 
-/** The compiled, budgeted session brief: the router + the always-on rules — the
+/** The compiled, budgeted session brief: the router + the always-on rules: the
  *  two `.noir/` files no host context file `@import`s. The project baseline
  *  lives in `.noir/NOIR.md`, which every host already loads via its context
  *  file, so it is not re-injected here. Truncates under the injection cap. */
@@ -197,13 +197,13 @@ export async function stopGateDecision(
       return {
         block: true,
         reason:
-          'implementation is in progress — finish it and run `noir task verify` before stopping',
+          'implementation is in progress: finish it and run `noir task verify` before stopping',
       };
     }
     if (task.phase === 'verify') {
       return {
         block: true,
-        reason: 'verification is pending — run `noir task verify` before stopping',
+        reason: 'verification is pending: run `noir task verify` before stopping',
       };
     }
     return null;
@@ -221,7 +221,7 @@ function resolveHost(hostArg: string | undefined): DialectHost {
 /** The async entry point `bin.ts` wires to `noir hook`. */
 export async function hook(hostArg?: string): Promise<void> {
   // The host always pipes a JSON event on stdin, so an interactive TTY stdin
-  // means a human ran `noir hook` directly — it would otherwise block waiting on
+  // means a human ran `noir hook` directly: it would otherwise block waiting on
   // stdin, or (when stdin is empty and non-TTY) silently default to a
   // SessionStart injection. Point at the real user-facing command instead.
   if (process.stdin.isTTY) {
@@ -236,7 +236,7 @@ export async function hook(hostArg?: string): Promise<void> {
   try {
     input = JSON.parse(readFileSync(0, 'utf8')) as HookInput;
   } catch {
-    // No stdin or not JSON — the host always sends it, but never crash here.
+    // No stdin or not JSON: the host always sends it, but never crash here.
   }
 
   const root = findNoirRoot(input.cwd ?? process.cwd()) ?? process.cwd();

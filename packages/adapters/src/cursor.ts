@@ -11,10 +11,10 @@ import type {
 } from './types.js';
 
 /**
- * The `cursor` host adapter — Cursor. Cursor reads the universal `AGENTS.md`
+ * The `cursor` host adapter: Cursor. Cursor reads the universal `AGENTS.md`
  * for context (same content as every other host); that file's
  * `@.noir/rules/RULES.md` import IS the Noir working-rules surface for cursor
- * (NO separate `.cursor/rules/noir-contract.mdc` host-rules pointer — that
+ * (NO separate `.cursor/rules/noir-contract.mdc` host-rules pointer: that
  * file was REMOVED: it was `noir-`-prefixed and the cursor flat-skill prune
  * in `emitSkillsToDir` deleted it on every `noir init/create/sync --host
  * cursor`). Skills compile to FLAT `.mdc` in `.cursor/rules/` via
@@ -22,7 +22,7 @@ import type {
  * config lands at `.cursor/mcp.json`.
  *
  * `emitContext` returns the universal AGENTS.md content (the single native
- * context surface for cursor). There is NO `emitRules` here — cursor's rules
+ * context surface for cursor). There is NO `emitRules` here: cursor's rules
  * are delivered via AGENTS.md's `@.noir/rules/RULES.md` import, identical to
  * agents-md/opencode.
  */
@@ -32,7 +32,7 @@ export const cursorAdapter: HostAdapter = {
     return buildMcpServersJson(opts, integration);
   },
   emitContext(ctx: EmitContext): string {
-    // Cursor reads AGENTS.md — same universal content as every other host.
+    // Cursor reads AGENTS.md: same universal content as every other host.
     return emitAgentsMd(ctx);
   },
   skillsDir(ctx: EmitContext): string {
@@ -49,7 +49,7 @@ export const cursorAdapter: HostAdapter = {
     // Cursor hooks land in a standalone `.cursor/hooks.json` (version 1).
     // sessionStart injects the brief (the dispatcher emits `additional_context`);
     // preToolUse evaluates the deny-list (the dispatcher exits 2 with the reason
-    // on stderr — the verified "matches Claude Code behavior" block path), with
+    // on stderr: the verified "matches Claude Code behavior" block path), with
     // failClosed so a timing-out hook denies rather than silently allowing.
     // No `stop` entry: the Stop gate is claude-only today, so a cursor stop hook
     // would only spawn a process that always exits 0.

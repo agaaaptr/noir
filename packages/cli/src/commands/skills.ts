@@ -37,7 +37,7 @@ export interface SkillsOptions extends CliOptions {}
 // description, references?}`), so the column is a PRESENTATION-layer grouping
 // derived from the skill name. The map covers the current builtins; an unknown name
 // falls back to its `noir-`-stripped segment so a newly authored skill still
-// gets a sensible cell instead of an empty one. This is display-only — the
+// gets a sensible cell instead of an empty one. This is display-only: the
 // `--json` payload carries `category` too (same derivation) for consistency.
 const CATEGORY: Record<string, string> = {
   'noir-brainstorming': 'discovery',
@@ -108,7 +108,7 @@ function toRow(s: BuiltinSkill, kind: 'builtin' | 'integration' = 'builtin'): Sk
 // `noir skills list`
 /**
  * `noir skills list`: discover the full shipped pack (builtins + integrations)
- * and render it. Consistent with `emitSkillsToDir` (which emits BOTH) — the
+ * and render it. Consistent with `emitSkillsToDir` (which emits BOTH): the
  * `noir-clickup` integration shows up here alongside the builtins.
  *
  * `--json` emits `{ok:true, data:{count, skills: SkillRow[]}}` to stdout. A
@@ -134,7 +134,7 @@ export async function skillsList(opts: SkillsOptions): Promise<void> {
     ...integrations.map((i) => toRow(i, 'integration')),
   ];
   // Status is derived from the body (stub marker); category uses the CLI's
-  // CATEGORY map (name-derived) until skills carry `metadata.category` — after
+  // CATEGORY map (name-derived) until skills carry `metadata.category`: after
   // the content rewrite every skill gets, and `skills registry` reads it.
   // `skills list` keeps the curated CATEGORY map as its single source so the
   // human table is stable; the registry is the queryable form.
@@ -148,8 +148,8 @@ export async function skillsList(opts: SkillsOptions): Promise<void> {
   const intCount = integrations.length;
   const banner =
     intCount > 0
-      ? `noir skills — ${rows.length} skill${rows.length === 1 ? '' : 's'} (${builtins.length} builtin, ${intCount} integration${intCount === 1 ? '' : 's'})`
-      : `noir skills — ${rows.length} builtin skill${rows.length === 1 ? '' : 's'}`;
+      ? `noir skills: ${rows.length} skill${rows.length === 1 ? '' : 's'} (${builtins.length} builtin, ${intCount} integration${intCount === 1 ? '' : 's'})`
+      : `noir skills: ${rows.length} builtin skill${rows.length === 1 ? '' : 's'}`;
   log(banner, opts);
   table(
     rows.map((r) => ({
@@ -175,7 +175,7 @@ export async function skillsList(opts: SkillsOptions): Promise<void> {
  * Requires the project to be initialized (`loadProjectInfo` throws otherwise →
  * exit 1 with the "Run `noir init` first" hint). When the host adapter exposes
  * no `skillsDir` (no skill emitter for this host), the command reports nothing
- * to sync and exits 0 — behavior-preserving with the existing `noir sync`.
+ * to sync and exits 0: behavior-preserving with the existing `noir sync`.
  *
  * `--json` emits `{ok:true, data:{emitted, references, dir}}` to stdout.
  */
@@ -183,7 +183,7 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
   const root = process.cwd();
   // loadProjectInfo asserts Noir is initialized; route it through fail() so an
   // uninitialized project emits the canonical {ok:false,error} envelope under
-  // --json (a plain Error would leave stdout empty) — same as every other command.
+  // --json (a plain Error would leave stdout empty): same as every other command.
   let project: ProjectInfo;
   try {
     project = loadProjectInfo(root);
@@ -191,7 +191,7 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
     fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
   }
 
-  // Resolve the PROJECT's host adapter (not a hardcoded claude) — mirroring
+  // Resolve the PROJECT's host adapter (not a hardcoded claude): mirroring
   // sync.ts. A non-claude host (cursor/agents-md/opencode) has its own skillsDir
   // (e.g. .cursor/rules), and a host with NO skillsDir must report no-emitter
   // instead of silently writing a spurious .claude/skills/ tree.
@@ -245,7 +245,7 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
     );
   }
   // Same wording (and same reason) as `noir init`: the count above is skills
-  // that are fully current, and a skill left stale has to be named — under
+  // that are fully current, and a skill left stale has to be named: under
   // --json the `preserved` field above is what carries it.
   const stale = preservedStaleLine(preserved);
   if (stale !== undefined) warn(stale, opts);
@@ -254,12 +254,12 @@ export async function skillsSync(opts: SkillsOptions): Promise<void> {
 // `noir skills lint`
 /**
  * `noir skills lint`: the structural quality gate over the full shipped pack.
- * Runs `lintSkill` over `discoverAll()` — the structural errors, the hygiene
+ * Runs `lintSkill` over `discoverAll()`: the structural errors, the hygiene
  * fail tier and the advisory warnings (the hygiene warn tier included).
- * In-process (no daemon) — the pack is a filesystem artifact.
+ * In-process (no daemon): the pack is a filesystem artifact.
  *
  * Exit contract: 0 when every skill validates clean (errors empty); 1 when any
- * skill has errors (the gate fails). Warnings alone do NOT fail the lint — they
+ * skill has errors (the gate fails). Warnings alone do NOT fail the lint: they
  * are advisory and listed for the author. This mirrors how a real linter treats
  * hard errors vs style warnings.
  *
@@ -288,7 +288,7 @@ export async function skillsLint(opts: SkillsOptions): Promise<void> {
 
   // Exit-1 contract (the gate must FAIL, not silently pass): a lint error
   // produces a non-zero exit + the canonical failure envelope under --json
-  // (`{ok:false,error:{code,message}}` — no ad-hoc `{ok:false,data}` shape).
+  // (`{ok:false,error:{code,message}}`: no ad-hoc `{ok:false,data}` shape).
   if (errored.length > 0) {
     const message = `skills lint: ${errored.length} skill${errored.length === 1 ? '' : 's'} failed validation`;
     if (opts.json === true) {
@@ -299,7 +299,7 @@ export async function skillsLint(opts: SkillsOptions): Promise<void> {
       return;
     }
     warn(
-      `noir skills lint — ${errored.length} skill${errored.length === 1 ? '' : 's'} FAIL validation:`,
+      `noir skills lint: ${errored.length} skill${errored.length === 1 ? '' : 's'} FAIL validation:`,
       opts,
     );
     for (const s of errored) {
@@ -319,7 +319,7 @@ export async function skillsLint(opts: SkillsOptions): Promise<void> {
     process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
     return;
   }
-  log(`noir skills lint — ${skills.length} skills, all validate clean.`, opts);
+  log(`noir skills lint: ${skills.length} skills, all validate clean.`, opts);
   if (warned.length > 0) {
     info(`  ${warned.length} skill${warned.length === 1 ? '' : 's'} carry lint warnings:`, opts);
     for (const s of warned) {
@@ -331,7 +331,7 @@ export async function skillsLint(opts: SkillsOptions): Promise<void> {
 // `noir skills registry`
 /**
  * `noir skills registry`: emit the runtime-derived skill registry (id, kind,
- * category, version, status, refs, lines). In-process (no daemon) — reads the
+ * category, version, status, refs, lines). In-process (no daemon): reads the
  * shipped pack via `buildRegistry()`. The registry is NOT a committed file;
  * frontmatter is the single source of truth and this command derives it on
  * demand (nothing is cached to disk).
@@ -355,7 +355,7 @@ export async function skillsRegistry(opts: SkillsOptions): Promise<void> {
     process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
     return;
   }
-  log(`noir skills registry — ${reg.length} skills.`, opts);
+  log(`noir skills registry: ${reg.length} skills.`, opts);
   table(
     reg.map((r) => ({
       Skill: r.name,

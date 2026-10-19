@@ -1,6 +1,6 @@
 // The skill pack's report must match what actually landed on disk.
 //
-// A non-interactive run resolves a differing skill file to `preserve` — the
+// A non-interactive run resolves a differing skill file to `preserve`: the
 // right default for a pipe, but one that used to be invisible: the run counted
 // every skill it LOOKED at and printed "Emitted N", so a CI upgrade could keep
 // stale skill bodies for several versions while reporting success. These tests
@@ -101,7 +101,7 @@ describe('skill emit reports what it wrote, not what it attempted', () => {
     expect(r.stderr).toMatch(
       /1 skill\(s\) preserved as stale \(interactive TTY required to refresh\): noir-brainstorming/,
     );
-    // The user's bytes survived — the report matches the disk.
+    // The user's bytes survived: the report matches the disk.
     expect(readFileSync(join(root, SKILL_REL), 'utf8')).toBe(USER_EDIT);
   });
 
@@ -184,7 +184,7 @@ describe('every skill emitter reports preserved skills the same way', () => {
     expect(stderr).toMatch(
       /1 skill\(s\) preserved as stale \(interactive TTY required to refresh\): noir-brainstorming/,
     );
-    // The user's bytes survived the emit — the report matches the disk.
+    // The user's bytes survived the emit: the report matches the disk.
     expect(
       readFileSync(join(target, '.claude', 'skills', 'noir-brainstorming', 'SKILL.md'), 'utf8'),
     ).toBe(USER_EDIT);
@@ -192,7 +192,7 @@ describe('every skill emitter reports preserved skills the same way', () => {
 
   it('carries the preserved field in `skills sync --json`, empty rather than absent', async () => {
     // `skills sync` re-emits with the overwrite policy, so nothing is preserved
-    // here — the field is what tells a consumer so without an existence check,
+    // here: the field is what tells a consumer so without an existence check,
     // and it is the same one the other emitters carry.
     await parse(['init']);
 

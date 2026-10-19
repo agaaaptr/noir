@@ -1,12 +1,12 @@
 # How to run a spec-driven task end to end
 
-A Noir task moves through a fixed ladder of phases — intake, clarify, spec,
-plan, execute, verify, document — and three of those transitions are **gates**
+A Noir task moves through a fixed ladder of phases: intake, clarify, spec,
+plan, execute, verify, document: and three of those transitions are **gates**
 (spec, plan, verify): the engine will not move past them unless the discipline
 was followed, or you say so explicitly with a reason.
 
 You normally drive this by talking to the host. This page is for the times you
-drive it yourself — scripting it, resuming after a break, or reading exactly
+drive it yourself: scripting it, resuming after a break, or reading exactly
 what state a task is in. The *why* behind the ladder is in
 [Spec-Driven Development Workflow](../explanation/sdd-workflow.md); this page is
 the commands.
@@ -32,7 +32,7 @@ noir task new --slug csv-export --mode quick
 noir task new --slug csv-export --class feature
 ```
 
-`--slug` is required and doubles as the task id — it is the handle you use
+`--slug` is required and doubles as the task id: it is the handle you use
 everywhere else, and it appears in every artifact filename. **Re-running the
 same slug overwrites the task**: the store's key-value state is the source of
 truth, not a journal, so starting `csv-export` again resets it rather than
@@ -44,7 +44,7 @@ forking a second one.
 | `--class` | `feature` \| `epic` \| `enhancement` \| `bugfix` \| `spike` \| `quick-task` \| `refactor` | Drives the soft **PRD gate**: a `feature` or `epic` that reaches the spec gate without a PRD gets an observable recommendation. |
 
 Both flags are validated on your machine before anything is sent, so a typo is a
-clean usage error (exit `2`) listing the values that are accepted — not a
+clean usage error (exit `2`) listing the values that are accepted: not a
 mystery failure from the server.
 
 The command prints the new task's status block (see below).
@@ -77,7 +77,7 @@ Updated     2026-09-15 04:10:02Z
 | `Next gate` | The next transition that will require a decision (`spec`, `plan`, `verify`), or `—` past them all. |
 | `Block reason` | Present only while the task is blocked. |
 
-An unknown or absent task is exit `3`, not an empty success — so a script can
+An unknown or absent task is exit `3`, not an empty success: so a script can
 tell "no such task" from "task exists, nothing to report".
 
 `noir task next` adds the phase's skill and the next gate's skill:
@@ -97,7 +97,7 @@ noir task advance --to execute     # jump to a later phase
 ```
 
 `--to` accepts any phase in the ladder and is validated client-side. A jump
-forward **bypasses** the gates it skips — the engine records at most the one gate
+forward **bypasses** the gates it skips: the engine records at most the one gate
 guarding the phase you land on (spec → `specified`, plan → `planned`, document →
 the verify/`done` gate); a jump landing on execute or verify records nothing at
 all. A jumped-over gate only appears in the task's audit trail if you later jump
@@ -106,7 +106,7 @@ back through it.
 `advance` prints the same status block as `task status`, so one command always
 tells you where you landed. Two things it does implicitly when you land at
 `done`: it appends a changelog entry and a pending decision-record stub (pass
-`--no-artifacts` to skip), and it never clobbers an existing file — the artifact
+`--no-artifacts` to skip), and it never clobbers an existing file: the artifact
 writes use a preserve-on-conflict policy. When you name `verify` explicitly
 (`noir task advance --to verify`), it also prints one hint, ``run `noir handoff`
 for a ready-to-paste host prompt``, because that is the moment work leaves
@@ -114,7 +114,7 @@ Noir's planning and enters the host's execution.
 
 ## 4. Escape a gate on purpose
 
-A gate that will not open is not a wall — it is a decision waiting to be
+A gate that will not open is not a wall: it is a decision waiting to be
 recorded:
 
 ```bash
@@ -129,7 +129,7 @@ noir task advance --skip
 Both are recorded in the audit trail with a timestamp (§9). That is the point:
 Noir does not stop you, it makes the shortcut *visible*.
 
-## 5. Prove it — the verify gate
+## 5. Prove it: the verify gate
 
 The verify gate is the one that asks for evidence rather than a promise. It runs
 the checks you configured and submits their results:
@@ -165,7 +165,7 @@ The gate approves only when the task actually lands at `done`. If it fires but
 lands somewhere else, the command says so rather than claiming success, and
 tells you to run it again once you are at `verify`.
 
-A failing gate is a **failure** — exit `1`, never a silent success — and it
+A failing gate is a **failure**: exit `1`, never a silent success: and it
 prints the recovery options it will accept:
 
 ```
@@ -174,14 +174,14 @@ recovery: `noir task verify` | `noir task advance --force <reason>` | `noir task
 ```
 
 The number after `evidence-failed at` is the task's `updatedAt` in epoch
-milliseconds, printed raw — the status block's `Updated` field is the one that is
+milliseconds, printed raw: the status block's `Updated` field is the one that is
 formatted as a readable timestamp.
 
 Under `--json` a pending gate keeps its full context: `{ok:false, error:{…},
 data:{pendingGate, recovery, evidence}}`.
 
 With no checks configured the command exits `2` rather than inventing something
-to run — the gate wants a real signal, not a rubber stamp.
+to run: the gate wants a real signal, not a rubber stamp.
 
 ## 6. Record what you learned
 
@@ -203,7 +203,7 @@ noir task research-record --type discovery \
 
 The source requirement is the whole point: an entry with no evidence is an
 assumption, so it must be typed as one. Recording findings is also what silences
-the **research-grounding recommendation** — a `feature` or `epic` reaching the
+the **research-grounding recommendation**: a `feature` or `epic` reaching the
 spec gate with no source-backed findings gets a recommendation to record some
 (or `--force <reason>` to proceed without). It is a soft gate, so it never
 blocks.
@@ -221,7 +221,7 @@ noir task abandon
 state, phase, next gate, and the skill for the current phase. `--prompt`
 surfaces a continue instruction in this run's briefing (echoed on stderr only —
 it is not persisted, so a later `noir task resume` will not show it). A task
-with nothing to resume exits `1` — again, honest rather than silently empty.
+with nothing to resume exits `1`: again, honest rather than silently empty.
 
 **`block`** marks the task blocked with a mandatory non-empty reason (an empty
 one is exit `2`). A blocked task is resumable, but only by jumping:
@@ -230,8 +230,8 @@ one is exit `2`). A blocked task is resumable, but only by jumping:
 resume a blocked task with: noir task advance --to <phase>
 ```
 
-**`abandon`** is terminal. It confirms interactively — *"Abandon this task? This
-is terminal and cannot be undone."* — defaulting to **no**; declining or
+**`abandon`** is terminal. It confirms interactively: *"Abandon this task? This
+is terminal and cannot be undone."*: defaulting to **no**; declining or
 cancelling exits `5` and leaves the task alone. Under `--no-input`, `--json`,
 or CI there is no prompt and it proceeds, so be deliberate there.
 
@@ -241,7 +241,7 @@ or CI there is no prompt and it proceeds, so be deliberate there.
 noir task decompose cap-06 --out .noir/plans/cap-06.json
 ```
 
-This drafts an offline **SlicePlan** — a template skeleton, no provider needed,
+This drafts an offline **SlicePlan**: a template skeleton, no provider needed,
 so it works with no key configured. `--out <path>` also persists the plan JSON;
 either way it prints a line per slice. Each slice is meant to enter the same
 ladder you have been using:
@@ -263,7 +263,7 @@ That record is exported to a file when the task is checkpointed:
 **`.noir/audit/<taskId>.json`**. Alongside it, the artifacts of a `done` task
 land in `.noir/CHANGELOG.md` and `.noir/decisions/`.
 
-The rest of the artifact set is created as you go — `.noir/intake/`,
+The rest of the artifact set is created as you go: `.noir/intake/`,
 `.noir/clarifications/`, `.noir/specs/`, `.noir/plans/`, `.noir/tasks/`
 — following the standard naming in
 [Generated-artifact format & naming standard](../reference/artifact-format.md).
@@ -272,14 +272,14 @@ The rest of the artifact set is created as you go — `.noir/intake/`,
 
 **"`task advance` exits 4."** The daemon is not running and the command writes.
 `noir daemon start --detach`, then retry. `noir task status` is the one read with
-a fallback — with the daemon confirmed down it answers from the store directly
+a fallback: with the daemon confirmed down it answers from the store directly
 and marks the row `degraded`. `noir task next` still needs the daemon.
 
 **"The gate says the PRD is missing."** That is the soft PRD gate on a `feature`
 or `epic`. Either write the PRD or record why you are not:
 `noir task advance --force "<reason>"`.
 
-**"I forgot my phase — `advance` did something unexpected."** Run
+**"I forgot my phase: `advance` did something unexpected."** Run
 `noir task status` before advancing. A bare `noir task advance` always moves one
 step from wherever you are, while a `--to` jump bypasses the gates in between —
 only the gate guarding the phase you land on can be recorded.

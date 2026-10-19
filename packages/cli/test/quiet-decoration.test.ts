@@ -6,7 +6,7 @@
 // ANSI today, and must keep not carrying it).
 //
 // The theme never sees the parsed command options, so the quiet signal reaches
-// it the same way every other gate does — through the process environment. The
+// it the same way every other gate does: through the process environment. The
 // CLI's own `preAction` writes `NOIR_QUIET=1` for a `--quiet` invocation (and
 // deletes the variable otherwise), mirroring the existing `NOIR_NON_INTERACTIVE`
 // bridge. These tests set the variable the CLI would produce and force colour
@@ -17,7 +17,7 @@ import { json, table } from '../src/output.js';
 import { badge, c, useColor } from '../src/theme.js';
 
 const ROWS = [
-  { Check: 'runtime', Status: 'OK', Detail: 'node 20 — healthy' },
+  { Check: 'runtime', Status: 'OK', Detail: 'node 20: healthy' },
   { Check: 'store', Status: 'FAIL', Detail: 'store DB would not open' },
 ];
 const COLS = ['Check', 'Status', 'Detail'];
@@ -85,7 +85,7 @@ function capture(stream: NodeJS.WriteStream): { read: () => string; restore: () 
   };
 }
 
-describe('useColor — quiet mode', () => {
+describe('useColor: quiet mode', () => {
   it('reports colour OFF for a quiet run even when colour is forced', () => {
     process.env.CLICOLOR_FORCE = '1';
     process.env.NOIR_QUIET = '1';
@@ -104,7 +104,7 @@ describe('useColor — quiet mode', () => {
   });
 });
 
-describe('palette + badge — quiet mode', () => {
+describe('palette + badge: quiet mode', () => {
   it('c.* returns plain text under quiet (no ANSI even with colour forced)', () => {
     process.env.CLICOLOR_FORCE = '1';
     process.env.NOIR_QUIET = '1';
@@ -122,7 +122,7 @@ describe('palette + badge — quiet mode', () => {
   });
 });
 
-describe('table — quiet mode', () => {
+describe('table: quiet mode', () => {
   it('renders with no ANSI escapes under quiet (headers + body plain)', () => {
     process.env.CLICOLOR_FORCE = '1';
     process.env.NOIR_QUIET = '1';

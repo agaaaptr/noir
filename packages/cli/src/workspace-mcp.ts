@@ -1,4 +1,4 @@
-// `.mcp.json` rewrite/restore for workspace membership — the ONLY user-facing
+// `.mcp.json` rewrite/restore for workspace membership: the ONLY user-facing
 // file a join/leave touches. It rewrites just the `noir` server entry and refuses
 // to clobber a config that does not look Noir-emitted unless `--force` (never a
 // silent overwrite). Inside that entry it replaces only the transport (how a host
@@ -53,7 +53,7 @@ function isNoirEmitted(mcpServers: Record<string, unknown> | undefined): boolean
 }
 
 /** The `noir` entry as a plain key/value record, or `{}` when there is none (or
- *  it is not an object) — so a merge always has something to spread. */
+ *  it is not an object): so a merge always has something to spread. */
 function noirEntry(mcpServers: Record<string, unknown> | undefined): Record<string, unknown> {
   const noir = mcpServers?.noir;
   if (typeof noir !== 'object' || noir === null || Array.isArray(noir)) return {};
@@ -86,7 +86,7 @@ function writeNoirTransport(
 
 /** Point the repo's `noir` MCP entry at the workspace daemon. The entry stays on
  *  stdio: `noir mcp serve --workspace <name>` resolves the daemon, proves it is
- *  the one the record names, and relays to it with the daemon's own token — so
+ *  the one the record names, and relays to it with the daemon's own token: so
  *  neither an address nor a secret is written into the repo's config. */
 export function writeWorkspaceEntry(
   root: string,

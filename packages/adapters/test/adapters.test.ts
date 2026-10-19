@@ -12,13 +12,13 @@ import type { EmitContext, HostAdapter, IntegrationMcpEmission } from '../src/ty
 
 const ctx: EmitContext = { root: '/tmp/demo' };
 
-// Shared emission invariant — adapters whose `emitContext` IS the universal
+// Shared emission invariant: adapters whose `emitContext` IS the universal
 // AGENTS.md (agents-md / cursor / opencode) produce BYTE-IDENTICAL content.
-// Gemini is EXCLUDED here — like claude, its `emitContext` returns its NATIVE
+// Gemini is EXCLUDED here: like claude, its `emitContext` returns its NATIVE
 // context (GEMINI.md); the universal AGENTS.md is composed SEPARATELY by the
 // cli via the same `emitAgentsMd` helper (identical by construction), so it is
 // not asserted through `emitContext`. Claude is excluded for the same reason.
-describe('AGENTS.md parity — adapters whose emitContext IS the AGENTS.md', () => {
+describe('AGENTS.md parity: adapters whose emitContext IS the AGENTS.md', () => {
   const agentsMdHosts: HostAdapter[] = [agentsMdAdapter, cursorAdapter, opencodeAdapter];
 
   it('every agents-md-composing adapter emits the canonical AGENTS.md content', () => {
@@ -91,7 +91,7 @@ describe('gemini adapter', () => {
     expect(md).toContain(CONTEXT_BLOCK_END);
     expect(md).toContain(RULES_BLOCK.begin);
     expect(md).toContain(RULES_BLOCK.end);
-    // Gemini @file imports — bare `@.noir/...` (NO `@import`, NO quotes).
+    // Gemini @file imports: bare `@.noir/...` (NO `@import`, NO quotes).
     expect(md).toContain('@.noir/NOIR.md');
     expect(md).toContain('@.noir/rules/RULES.md');
     expect(md).not.toContain('@import');
@@ -106,7 +106,7 @@ describe('gemini adapter', () => {
     expect(rulesIdx).toBeGreaterThan(ctxIdx);
   });
 
-  it('has NO emitRules (folded into emitContext — GEMINI.md carries both)', () => {
+  it('has NO emitRules (folded into emitContext: GEMINI.md carries both)', () => {
     expect(geminiAdapter.emitRules).toBeUndefined();
   });
 
@@ -137,7 +137,7 @@ describe('cursor adapter', () => {
     expect(cursorAdapter.emitContext(ctx)).toBe(emitAgentsMd(ctx));
   });
 
-  it('has NO emitRules (cursor rules are delivered via AGENTS.md — no separate host-rules .mdc)', () => {
+  it('has NO emitRules (cursor rules are delivered via AGENTS.md: no separate host-rules .mdc)', () => {
     // The prior `noir-contract.mdc` host-rules pointer was REMOVED: it
     // collided with the cursor flat-skill prune of `noir-*.mdc` under
     // `.cursor/rules/`. Cursor's rules now come via AGENTS.md's
@@ -192,7 +192,7 @@ describe('opencode adapter', () => {
   it('emitMcpConfig (stdio) produces the opencode.json shape: $schema + mcp.local', () => {
     const json = JSON.parse(opencodeAdapter.emitMcpConfig(ctx, { transport: 'stdio' }));
     expect(json.$schema).toBe('https://opencode.ai/config.json');
-    // OpenCode stdio entries are `{ type: 'local', command: [...] }` — the
+    // OpenCode stdio entries are `{ type: 'local', command: [...] }`: the
     // command is an ARRAY (not the claude `{command, args}` split). The first
     // element threads opts.command (defaults to 'noir'; absolute native shim
     // when resolveNoirCommand() detects a native install).
@@ -200,7 +200,7 @@ describe('opencode adapter', () => {
       type: 'local',
       command: ['noir', 'mcp', 'serve', '--stdio'],
     });
-    // The claude `{mcpServers}` key is NOT present — different shape entirely.
+    // The claude `{mcpServers}` key is NOT present: different shape entirely.
     expect(json.mcpServers).toBeUndefined();
   });
 
@@ -208,7 +208,7 @@ describe('opencode adapter', () => {
     // Regression guard: opencode used to hardcode 'noir' and silently drop
     // opts.command, so a native install emitted a bare 'noir' that GUI MCP
     // clients (no shell profile PATH) couldn't spawn. All 5 adapters must
-    // thread opts.command — see the table-driven parity test below.
+    // thread opts.command: see the table-driven parity test below.
     const json = JSON.parse(
       opencodeAdapter.emitMcpConfig(ctx, {
         transport: 'stdio',
@@ -221,10 +221,10 @@ describe('opencode adapter', () => {
     });
   });
 
-  it('emitMcpConfig (http) produces {type:"remote", url} — opencode spells it "remote", NOT "http"', () => {
+  it('emitMcpConfig (http) produces {type:"remote", url}: opencode spells it "remote", NOT "http"', () => {
     // Verified against https://opencode.ai/docs/mcp-servers/: "Add remote MCP
     // servers by setting `type` to \"remote\"". The prior `type:'http'` shape
-    // was wrong — opencode has no `'http'`/`'sse'` enum value.
+    // was wrong: opencode has no `'http'`/`'sse'` enum value.
     const json = JSON.parse(
       opencodeAdapter.emitMcpConfig(ctx, {
         transport: 'streamable-http',
@@ -267,10 +267,10 @@ describe('opencode adapter', () => {
     expect(json.mcp['noir-linear']).toEqual({ type: 'remote', url: 'https://mcp.linear.app/sse' });
   });
 
-  it('opencode env vars land under `environment:` (NOT `env:`) — verified verbatim from opencode docs', () => {
+  it('opencode env vars land under `environment:` (NOT `env:`): verified verbatim from opencode docs', () => {
     // Opencode's server entries use the `environment:` key for env vars (the
     // `.mcp.json` / `.cursor/mcp.json` / `.gemini/mcp.json` family keeps `env:`
-    // — correct for THOSE hosts; this assertion guards opencode's spelling).
+    //: correct for THOSE hosts; this assertion guards opencode's spelling).
     const stdioWithEnv: IntegrationMcpEmission = {
       serverName: 'noir-github',
       command: 'noir-integration-github',
@@ -298,9 +298,9 @@ describe('opencode adapter', () => {
   });
 });
 
-// buildMcpServersJson — the shared {mcpServers} helper (claude parity anchor).
+// buildMcpServersJson: the shared {mcpServers} helper (claude parity anchor).
 
-describe('buildMcpServersJson — the shared {mcpServers} helper', () => {
+describe('buildMcpServersJson: the shared {mcpServers} helper', () => {
   it('claude.emitMcpConfig delegates here (byte-identical output)', () => {
     // The claude adapter MUST produce the same bytes as the shared helper —
     // this is the S10-Adapters refactor's regression anchor (the
@@ -343,7 +343,7 @@ describe('buildMcpServersJson — the shared {mcpServers} helper', () => {
     };
     expect(oc.mcp.noir.command).toEqual(['noir', ...bridge]);
 
-    // Unset, the entry is plain stdio — the byte-parity anchor above is the
+    // Unset, the entry is plain stdio: the byte-parity anchor above is the
     // same code path, so this pins that adding the option changed nothing.
     expect(buildMcpServersJson({ transport: 'stdio' })).toBe(
       buildMcpServersJson({ transport: 'stdio', workspace: undefined }),
@@ -366,7 +366,7 @@ describe('buildMcpServersJson — the shared {mcpServers} helper', () => {
   });
 
   it('opencode does NOT use buildMcpServersJson (different shape)', () => {
-    // Sanity: opencode emits its own shape — the {mcpServers} helper output is
+    // Sanity: opencode emits its own shape: the {mcpServers} helper output is
     // NOT what opencode produces. This guards against a future refactor
     // accidentally routing opencode through the shared helper.
     const opts = { transport: 'stdio' as const };
@@ -374,12 +374,12 @@ describe('buildMcpServersJson — the shared {mcpServers} helper', () => {
   });
 });
 
-// Path seams — the four NEW adapters implement mcpConfigPath + agentsMdPath.
+// Path seams: the four NEW adapters implement mcpConfigPath + agentsMdPath.
 // Claude is intentionally EXCLUDED (per the spec: "existing adapters keep
-// working unchanged" — claude leaves these optional seams undefined; its MCP
+// working unchanged": claude leaves these optional seams undefined; its MCP
 // path stays hardcoded in the cli/create scaffold as before).
 
-describe('path seams — every new adapter declares its MCP + AGENTS.md paths', () => {
+describe('path seams: every new adapter declares its MCP + AGENTS.md paths', () => {
   it.each([
     ['agents-md', agentsMdAdapter, '/tmp/demo/.mcp.json', '/tmp/demo/AGENTS.md'],
     ['gemini', geminiAdapter, '/tmp/demo/.gemini/mcp.json', '/tmp/demo/AGENTS.md'],
@@ -399,13 +399,13 @@ describe('path seams — every new adapter declares its MCP + AGENTS.md paths', 
   });
 });
 
-// MCP command threading — cross-adapter parity contract.
+// MCP command threading: cross-adapter parity contract.
 // Every host adapter MUST honor opts.command (the absolute native shim that
 // resolveNoirCommand() emits for native installs). opencode used to hardcode
-// 'noir' and silently drop it — this table-driven test locks the contract so
+// 'noir' and silently drop it: this table-driven test locks the contract so
 // the bug can't silently recur for ANY of the 5 hosts.
 
-describe('MCP command threading — every adapter honors opts.command', () => {
+describe('MCP command threading: every adapter honors opts.command', () => {
   // Extract the noir command from whatever shape each host emits. The 4
   // {mcpServers}-shape adapters split command/args; opencode packs them in a
   // single array. Both must surface opts.command as the resolved command.

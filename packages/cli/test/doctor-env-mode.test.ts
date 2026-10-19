@@ -1,16 +1,16 @@
-// `noir doctor` — the `.noir/.env` permission row.
+// `noir doctor`: the `.noir/.env` permission row.
 //
 // The row exists so a credential file another account can read is visible, and so
 // the reader can tell WHY it is lax. A file that carries the mode it was created
-// with — an older Noir seeded it before owner-only became the contract, a clone
-// delivered it, or it was made by hand — is not a change the reader made, while a
+// with: an older Noir seeded it before owner-only became the contract, a clone
+// delivered it, or it was made by hand: is not a change the reader made, while a
 // mode altered after the file was written is something that happened on this
 // machine afterwards. Both branches are warnings with the same remedy; only the
 // cause sentence differs, because "you did this" and "this arrived with your repo"
 // send a reader to different next steps.
 //
 // The row must also print the mode it actually observed, in octal, and evaluate
-// every group/other bit — the same predicate the owner-only heal uses, so the row
+// every group/other bit: the same predicate the owner-only heal uses, so the row
 // warns exactly about the files the next `init`/`sync` will tighten.
 //
 // Finally it must go quiet once the file is owner-only: the loader re-checks the
@@ -59,7 +59,7 @@ const modeOf = (): number => statSync(envPath()).mode & 0o777;
  * Seed `.noir/.env` in the state a file that "came this way" is in: the mode has
  * not been touched since the contents were last written. Built by setting the
  * mode first and writing the contents second, because an in-place write keeps the
- * mode and stamps `mtime` and `ctime` together — the same pair of facts an
+ * mode and stamps `mtime` and `ctime` together: the same pair of facts an
  * older Noir's seed, a clone, or a `touch` leaves behind. The mode must leave the
  * owner write bit set, since that second write has to succeed.
  */
@@ -71,7 +71,7 @@ function seedModeUntouchedSinceWrite(mode: number): void {
 }
 
 /**
- * Seed `.noir/.env` with its mode changed AFTER the contents were written — the
+ * Seed `.noir/.env` with its mode changed AFTER the contents were written: the
  * state a `chmod`, a `chown`, or a metadata-restoring copy leaves behind. The
  * pause keeps the two timestamps distinguishable even where they are stored with
  * millisecond resolution.
@@ -102,7 +102,7 @@ async function envRow(): Promise<{ status: string; detail: string }> {
   } catch {
     // A CRITICAL check (native deps on a host without sqlite-vec) signals through
     // the exit code by throwing, and it does so AFTER the JSON payload is on
-    // stdout — the row under test was already written.
+    // stdout: the row under test was already written.
   } finally {
     process.stdout.write = origOut;
     process.stderr.write = origErr;
@@ -115,7 +115,7 @@ async function envRow(): Promise<{ status: string; detail: string }> {
   return row;
 }
 
-describe('noir doctor — .noir/.env permission row', () => {
+describe('noir doctor: .noir/.env permission row', () => {
   it('passes an owner-only file and names the mode it observed', async () => {
     seedModeUntouchedSinceWrite(0o600);
 
@@ -125,7 +125,7 @@ describe('noir doctor — .noir/.env permission row', () => {
     expect(row.detail).toContain('0600');
   });
 
-  it('passes a file the owner alone can read — the contract is owner-only, not writable', async () => {
+  it('passes a file the owner alone can read: the contract is owner-only, not writable', async () => {
     // `chmod 400` is a mode the owner typed, so it lands on the changed-mode side
     // of the split; all this test asks of the row is that it stays quiet and
     // reports the mode it saw.
@@ -201,7 +201,7 @@ describe('noir doctor — .noir/.env permission row', () => {
     expect(res.envMode).toBe('healed');
     expect(modeOf()).toBe(0o600);
     // Nothing has anything left to warn about, so the message does not come back
-    // on the next command — the row stays clean, repeatedly.
+    // on the next command: the row stays clean, repeatedly.
     expect(loadNoirEnv(root).warnings.join('\n')).not.toMatch(/chmod 600/);
     expect((await envRow()).status).toBe('ok');
     expect((await envRow()).status).toBe('ok');

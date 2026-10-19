@@ -1,16 +1,16 @@
-// The single command surface (v2) — presentational renderer.
+// The single command surface (v2): presentational renderer.
 //
 // The App owns the query + active row + the single `useInput` dispatcher; this
 // component only paints the rows {@link buildPaletteRows} produced for the
 // active corpus (commands / output / help). No `useInput`, no dispatch, no
-// history — the App is the sole decision-maker, so home, palette, and typed
+// history: the App is the sole decision-maker, so home, palette, and typed
 // /command all funnel through one seam.
 //
 // Layout (two-column, per the v2 design): a fixed label column (bold) on the
 // left, a dim hint column on the right. For command rows the hint is the
 // command's argv (short + unambiguous); the FULL description is shown as a
 // wrapped detail line on the ACTIVE row only, so it is never truncated. The
-// active row is highlighted with reverse video (SGR 7) — visible on any
+// active row is highlighted with reverse video (SGR 7): visible on any
 // terminal, not just color ones.
 
 import { Box, Text } from 'ink';
@@ -29,7 +29,7 @@ const PALETTE_WIDTH = 64;
 const ROW_TEXT_WIDTH = PALETTE_WIDTH - 6; // 58
 /** Fixed label column: the `▸ `/`  ` prefix (2) + the label. */
 const LABEL_WIDTH = 26;
-/** Max hint column width — derived from the row budget so the two-column row
+/** Max hint column width: derived from the row budget so the two-column row
  *  can never overflow again (was a hardcoded 34, off by 2). */
 const HINT_WIDTH = ROW_TEXT_WIDTH - LABEL_WIDTH; // 32
 
@@ -63,7 +63,7 @@ function placeholder(corpus: Corpus): string {
   return 'keybindings';
 }
 
-/** The palette's props — supplied by the App (which owns input + dispatch). */
+/** The palette's props: supplied by the App (which owns input + dispatch). */
 export interface PaletteProps {
   readonly corpus: Corpus;
   readonly query: string;
@@ -169,7 +169,7 @@ export function Palette({ corpus, query, active, rows, arg }: PaletteProps): Rea
     const hint = truncateToWidth(hintRaw, HINT_WIDTH);
 
     if (focused) {
-      // Reverse video highlights the whole row — no inner color needed.
+      // Reverse video highlights the whole row: no inner color needed.
       elements.push(
         <Box key={row.key} paddingX={1}>
           <Text>{c.inverse(`${labelCol}${hint}`)}</Text>
@@ -194,7 +194,7 @@ export function Palette({ corpus, query, active, rows, arg }: PaletteProps): Rea
 
     // Detail line: the FULL description on the active row, wrapped so it is
     // never truncated. Command rows always show it; help rows show it too
-    // (matching command-row UX — the hint column only truncates). Output-corpus
+    // (matching command-row UX: the hint column only truncates). Output-corpus
     // rows are excluded: their secondary is a line number / empty-state text,
     // not a description. A leading `↳` marks the detail as belonging to the row
     // above (not a new selectable item); continuation lines align under the

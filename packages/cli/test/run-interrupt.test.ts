@@ -55,7 +55,7 @@ describe('the interrupt convention', () => {
   });
 });
 
-describe('RunInterrupt — the kill ladder', () => {
+describe('RunInterrupt: the kill ladder', () => {
   it('asks the child to stop first, and does not force it before the grace', () => {
     vi.useFakeTimers();
     const interrupt = newInterrupt();
@@ -124,7 +124,7 @@ describe('RunInterrupt — the kill ladder', () => {
     expect(child.signals).toEqual(['SIGTERM']);
   });
 
-  it('runs its own ladder for a second child — the one the shell bridge spawned', () => {
+  it('runs its own ladder for a second child: the one the shell bridge spawned', () => {
     vi.useFakeTimers();
     const interrupt = newInterrupt();
     const first = new FakeChild();
@@ -145,7 +145,7 @@ describe('RunInterrupt — the kill ladder', () => {
     const interrupt = newInterrupt();
     const failed = new FakeChild();
     // What a spawn that failed leaves behind: a handle with no pid. Signalling
-    // it would mean pid 0 — every process in Noir's own group.
+    // it would mean pid 0: every process in Noir's own group.
     Object.defineProperty(failed, 'pid', { value: undefined });
     const kill = vi.spyOn(failed, 'kill');
     interrupt.track(failed);
@@ -190,7 +190,7 @@ describe('RunInterrupt — the kill ladder', () => {
   });
 });
 
-describe('RunInterrupt — terminal signals', () => {
+describe('RunInterrupt: terminal signals', () => {
   it('answers SIGINT by stopping the host and recording which signal it was', () => {
     const interrupt = newInterrupt();
     const child = new FakeChild();

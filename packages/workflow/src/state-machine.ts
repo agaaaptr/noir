@@ -5,7 +5,7 @@ import type { Phase, WorkflowState } from './types.js';
 export { PHASES, STATES } from './types.js';
 
 // Legal state transitions (happy path + terminal). Gates (spec/plan/verify) are
-// modeled as the transition INTO specified/planned/done — the engine records a
+// modeled as the transition INTO specified/planned/done: the engine records a
 // GateResult at that point (see gates.ts).
 const TRANSITIONS: Record<WorkflowState, WorkflowState[]> = {
   draft: ['clarifying'],
@@ -18,7 +18,7 @@ const TRANSITIONS: Record<WorkflowState, WorkflowState[]> = {
   // `blocked` has NO outgoing edges: the engine exits blocked only via an
   // explicit `opts.to` jump (which bypasses this table), NOT a forward advance
   // (nextPhase(blocked) is null). Declaring edges here would mislead a caller
-  // into calling advance(blockedTask) — which throws.
+  // into calling advance(blockedTask): which throws.
   blocked: [],
   abandoned: [],
 };

@@ -1,4 +1,4 @@
-// Slice S-T2 — `noir create` behavior tests.
+// Slice S-T2: `noir create` behavior tests.
 //
 // Drives the REAL `commands/create.ts` (no mock) against a fresh temp dir so
 // the engine delegation, dir-creation, transport handling, and skills emission
@@ -63,12 +63,12 @@ describe('noir create <dir>', () => {
     expect(mcp.mcpServers.noir).toEqual({ type: 'http', url: 'http://127.0.0.1:4321/mcp' });
   });
 
-  it('rejects streamable-http without --url (plain Error, parity with init — M2)', async () => {
+  it('rejects streamable-http without --url (plain Error, parity with init: M2)', async () => {
     const target = join(tmp, 'no-url');
     await expect(create(target, { transport: 'streamable-http' })).rejects.toThrow(
       /requires --url/,
     );
-    // Nothing was written — the precondition runs before scaffold().
+    // Nothing was written: the precondition runs before scaffold().
     expect(existsSync(target)).toBe(false);
   });
 

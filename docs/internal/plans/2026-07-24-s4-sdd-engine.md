@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add `@noir-ai/workflow` — the opinionated-but-escapable SDD lifecycle engine: a per-task state machine driving `Intake→Clarify→Spec→Plan→Execute→Verify→Document` through **observable, escapable gates**, with Full/Quick/Resume modes, persisted in the store KV + `.noir/` markdown artifacts, surfaced via `noir.checkpoint` + `noir.workflow_status` MCP tools.
+**Goal:** Add `@noir-ai/workflow`: the opinionated-but-escapable SDD lifecycle engine: a per-task state machine driving `Intake→Clarify→Spec→Plan→Execute→Verify→Document` through **observable, escapable gates**, with Full/Quick/Resume modes, persisted in the store KV + `.noir/` markdown artifacts, surfaced via `noir.checkpoint` + `noir.workflow_status` MCP tools.
 
 **Architecture:** New 6th package `@noir-ai/workflow` (depends `core` + `store`). A hand-rolled FSM (explicit transition table + guards) models task state; gates are programmatic checkpoints recording `{phase, decision, reason?, at}` to the store KV (exported to `.noir/audit/`); an `ArtifactWriter` scaffolds `.noir/{intake,clarifications,specs,plans,tasks,decisions}/` markdown. The daemon constructs a `WorkflowEngine` backed by its store and registers the 2 MCP tools.
 
@@ -47,7 +47,7 @@ packages/
 │     ├─ engine.test.ts
 │     ├─ modes.test.ts
 │     └─ resume.test.ts
-└─ (core, store, daemon, adapters, cli — existing)
+└─ (core, store, daemon, adapters, cli: existing)
 ```
 
 Daemon wiring: `packages/daemon/src/workflow-seam.ts` (construct `WorkflowEngine` from the daemon's store) + register `noir.checkpoint` + `noir.workflow_status` in the server factory.
@@ -113,7 +113,7 @@ describe('SDD state machine', () => {
   "dependencies": { "@noir-ai/core": "workspace:*", "@noir-ai/store": "workspace:*" }
 }
 ```
-`packages/workflow/tsconfig.json` + `tsup.config.ts`: same shape as `store` (extends base; entry `src/index.ts`; esm; dts; no `references` — resolves via pnpm symlink).
+`packages/workflow/tsconfig.json` + `tsup.config.ts`: same shape as `store` (extends base; entry `src/index.ts`; esm; dts; no `references`: resolves via pnpm symlink).
 
 `packages/workflow/src/types.ts`:
 ```ts
@@ -147,7 +147,7 @@ export interface TaskState {
 import { STATES, type WorkflowState, type Phase } from './types.js';
 
 // Legal state transitions (happy path + terminal). Gates (spec/plan/verify) are
-// modeled as the transition INTO specified/planned/done — the engine records a
+// modeled as the transition INTO specified/planned/done: the engine records a
 // GateResult at that point (see gates.ts).
 const TRANSITIONS: Record<WorkflowState, WorkflowState[]> = {
   draft:       ['clarifying'],
@@ -202,7 +202,7 @@ export type { Phase, WorkflowState, Mode, GateResult, TaskState } from './types.
 
 - [ ] **Step 4: Run → PASS**; `pnpm typecheck`; `pnpm lint`. (`pnpm install` to link the new package first.)
 
-- [ ] **Step 5: Commit** — `feat(workflow): scaffold @noir-ai/workflow + SDD state machine`
+- [ ] **Step 5: Commit**: `feat(workflow): scaffold @noir-ai/workflow + SDD state machine`
 
 ---
 
@@ -212,15 +212,15 @@ export type { Phase, WorkflowState, Mode, GateResult, TaskState } from './types.
 
 **Interfaces:** `recordGate(store, taskId, result: GateResult): Promise<void>` (writes to store KV `audit:<taskId>` list + marks `decision`); `gateFor(phase)` (spec→entering `specified`, plan→`planned`, verify→`done`).
 
-- [ ] **Step 1: Failing test** (`gates.test.ts`): using a real store (temp dir), `recordGate` appends an `approved` result; then a `forced` result (with reason) — assert the KV list has 2 entries, ordered, with correct `decision`/`reason`/`at`. Assert `skipped` (quick mode) is recorded too.
+- [ ] **Step 1: Failing test** (`gates.test.ts`): using a real store (temp dir), `recordGate` appends an `approved` result; then a `forced` result (with reason): assert the KV list has 2 entries, ordered, with correct `decision`/`reason`/`at`. Assert `skipped` (quick mode) is recorded too.
 
 - [ ] **Step 2: Run → FAIL.**
 
-- [ ] **Step 3: Implement** — `gates.ts` reads the store KV `audit:<taskId>` (array), appends the `GateResult`, writes back. `at = Date.now()`. Export `recordGate`. (Audit KV is the source; export-to-`.noir/audit/` is a later helper — keep T2 to KV.)
+- [ ] **Step 3: Implement**: `gates.ts` reads the store KV `audit:<taskId>` (array), appends the `GateResult`, writes back. `at = Date.now()`. Export `recordGate`. (Audit KV is the source; export-to-`.noir/audit/` is a later helper: keep T2 to KV.)
 
 - [ ] **Step 4: Run → PASS**; typecheck; lint.
 
-- [ ] **Step 5: Commit** — `feat(workflow): observable gates + audit recording (store KV)`
+- [ ] **Step 5: Commit**: `feat(workflow): observable gates + audit recording (store KV)`
 
 ---
 
@@ -234,15 +234,15 @@ export type { Phase, WorkflowState, Mode, GateResult, TaskState } from './types.
 
 - [ ] **Step 2: Run → FAIL.**
 
-- [ ] **Step 3: Implement** — `artifacts.ts` (pure file writes via `node:fs`; markdown with marker blocks for idempotent re-write, like the CLI's CLAUDE.md block). Add `.noir/specs|plans|tasks|decisions|audit` path helpers to `@noir-ai/core` `layout.ts` (one helper per dir, or a `paths.workflowArtifacts(root)` object).
+- [ ] **Step 3: Implement**: `artifacts.ts` (pure file writes via `node:fs`; markdown with marker blocks for idempotent re-write, like the CLI's CLAUDE.md block). Add `.noir/specs|plans|tasks|decisions|audit` path helpers to `@noir-ai/core` `layout.ts` (one helper per dir, or a `paths.workflowArtifacts(root)` object).
 
 - [ ] **Step 4: Run → PASS**; typecheck; lint.
 
-- [ ] **Step 5: Commit** — `feat(workflow): ArtifactWriter (.noir/ markdown scaffolding + audit export)`
+- [ ] **Step 5: Commit**: `feat(workflow): ArtifactWriter (.noir/ markdown scaffolding + audit export)`
 
 ---
 
-## Task 4: `WorkflowEngine` — advance/gate/status (Full mode + `--force` + jump)
+## Task 4: `WorkflowEngine`: advance/gate/status (Full mode + `--force` + jump)
 
 **Files:** Create `packages/workflow/src/engine.ts`, `packages/workflow/test/engine.test.ts`; modify `index.ts`.
 
@@ -252,11 +252,11 @@ export type { Phase, WorkflowState, Mode, GateResult, TaskState } from './types.
 
 - [ ] **Step 2: Run → FAIL.**
 
-- [ ] **Step 3: Implement** — `engine.ts` uses the FSM (`applyTransition`) + `recordGate` (T2) + persists `TaskState` to store KV `workflow:<taskId>` (+ `workflow:active`). `advance` with `force` requires a reason (throw if missing). `checkpoint` flushes state to KV (for resume, T5 deepens).
+- [ ] **Step 3: Implement**: `engine.ts` uses the FSM (`applyTransition`) + `recordGate` (T2) + persists `TaskState` to store KV `workflow:<taskId>` (+ `workflow:active`). `advance` with `force` requires a reason (throw if missing). `checkpoint` flushes state to KV (for resume, T5 deepens).
 
 - [ ] **Step 4: Run → PASS**; typecheck; lint.
 
-- [ ] **Step 5: Commit** — `feat(workflow): WorkflowEngine — advance, observable gates, --force, jump-to-phase`
+- [ ] **Step 5: Commit**: `feat(workflow): WorkflowEngine: advance, observable gates, --force, jump-to-phase`
 
 ---
 
@@ -264,17 +264,17 @@ export type { Phase, WorkflowState, Mode, GateResult, TaskState } from './types.
 
 **Files:** Create `packages/workflow/src/modes.ts`, `packages/workflow/test/{modes.test.ts, resume.test.ts}`; modify `engine.ts`/`index.ts`.
 
-**Interfaces:** `quickPath(engine, taskId)` — stubs a spec + jumps to execute (gates `skipped`, still verify); `resumeTask(store, root, projectId)` — reads `workflow:active`, reconstructs the `TaskState`, returns it (or null).
+**Interfaces:** `quickPath(engine, taskId)`: stubs a spec + jumps to execute (gates `skipped`, still verify); `resumeTask(store, root, projectId)`: reads `workflow:active`, reconstructs the `TaskState`, returns it (or null).
 
 - [ ] **Step 1: Failing test** (`modes.test.ts`): `quickPath` leaves gates `skipped`, writes a stub spec, lands at `executing`. `resume.test.ts`: start a task, advance to `specified`, close the store, reopen, `resumeTask` returns the in-flight `TaskState` with `phase:'spec'`.
 
 - [ ] **Step 2: Run → FAIL.**
 
-- [ ] **Step 3: Implement** — `modes.ts`: `quickPath` calls `engine.advance` with `skipped` gates (a mode flag) + `ArtifactWriter.writeSpec` stub; `resumeTask` reads `workflow:active` + `workflow:<taskId>` from KV. Ensure the engine persists enough to reconstruct on resume.
+- [ ] **Step 3: Implement**: `modes.ts`: `quickPath` calls `engine.advance` with `skipped` gates (a mode flag) + `ArtifactWriter.writeSpec` stub; `resumeTask` reads `workflow:active` + `workflow:<taskId>` from KV. Ensure the engine persists enough to reconstruct on resume.
 
 - [ ] **Step 4: Run → PASS**; typecheck; lint.
 
-- [ ] **Step 5: Commit** — `feat(workflow): Full/Quick/Resume modes + cross-session resume`
+- [ ] **Step 5: Commit**: `feat(workflow): Full/Quick/Resume modes + cross-session resume`
 
 ---
 
@@ -288,11 +288,11 @@ export type { Phase, WorkflowState, Mode, GateResult, TaskState } from './types.
 
 - [ ] **Step 2: Run → FAIL.**
 
-- [ ] **Step 3: Implement** — `workflow-seam.ts` builds the engine; `server.ts` registers the 2 tools (inputSchema `{}` / minimal) when a store is present (same pattern as `store_status`). `host_status`/`store_status` unchanged.
+- [ ] **Step 3: Implement**: `workflow-seam.ts` builds the engine; `server.ts` registers the 2 tools (inputSchema `{}` / minimal) when a store is present (same pattern as `store_status`). `host_status`/`store_status` unchanged.
 
 - [ ] **Step 4: Run → PASS**; typecheck; lint; full `pnpm test`.
 
-- [ ] **Step 5: Commit** — `feat(daemon,workflow): noir.checkpoint + noir.workflow_status MCP tools`
+- [ ] **Step 5: Commit**: `feat(daemon,workflow): noir.checkpoint + noir.workflow_status MCP tools`
 
 ---
 
@@ -302,24 +302,24 @@ export type { Phase, WorkflowState, Mode, GateResult, TaskState } from './types.
 
 - [ ] **Step 1:** README "Noir workflow" subsection (the lifecycle, modes, observable gates, the 2 MCP tools).
 - [ ] **Step 2:** Manual acceptance checklist (lifecycle runs end-to-end on a real task; gates record decisions; resume across daemon restart; `--force` + quick mode).
-- [ ] **Step 3:** Final pipeline: `pnpm lint && pnpm typecheck && pnpm build && pnpm test` — all green. **S4 acceptance: the lifecycle runs end-to-end** (task progresses through phases, gates record observable decisions, state survives resume, `--force` + quick mode work).
+- [ ] **Step 3:** Final pipeline: `pnpm lint && pnpm typecheck && pnpm build && pnpm test`: all green. **S4 acceptance: the lifecycle runs end-to-end** (task progresses through phases, gates record observable decisions, state survives resume, `--force` + quick mode work).
 - [ ] **Step 4:** Bump roadmap current-status (S4 → built; next = S5). Refresh agentmemory.
-- [ ] **Step 5:** Commit — `feat(docs): S4 workflow README + acceptance; roadmap status bump`
+- [ ] **Step 5:** Commit: `feat(docs): S4 workflow README + acceptance; roadmap status bump`
 
 ---
 
 ## Notes for the implementer
 
-- **`@noir-ai/workflow` is pure-ish logic + file/KV I/O.** Inject the `Store` (from `@noir-ai/store`) into the engine; never reach into store internals (use `getState`/`setState`/the public API — S1 established the contract).
+- **`@noir-ai/workflow` is pure-ish logic + file/KV I/O.** Inject the `Store` (from `@noir-ai/store`) into the engine; never reach into store internals (use `getState`/`setState`/the public API: S1 established the contract).
 - **Gates are observable, not blocking:** the engine always records a `GateResult` (approved/forced/skipped); it never silently drops a gate. `--force` requires a reason.
 - **Audit = store KV source + `.noir/audit/` export** (T2 writes KV; T3/T-artifacts writes the export).
 - **No LLM in S4:** artifacts are scaffolded (templates/stubs); drafting is S8.
 - **stdout discipline:** no stdout in engine/MCP paths (stderr only).
-- **MCP tool names** are `checkpoint` + `workflow_status` (no dots — MCP spec `^[a-zA-Z0-9_-]+$`; lesson from S1-T7).
+- **MCP tool names** are `checkpoint` + `workflow_status` (no dots: MCP spec `^[a-zA-Z0-9_-]+$`; lesson from S1-T7).
 
 ## Self-review (controller, after writing)
 - Spec coverage: FSM (T1), gates+audit (T2), artifacts (T3), engine+force+jump (T4), modes+resume (T5), MCP (T6), docs+verify (T7). All OQ decisions reflected (new pkg, hand-rolled FSM, observable gates, minimal MCP, store KV audit, Document stubs). ✓
-- Placeholders: none — real code per task (with "trust installed types" only where the MCP SDK may differ).
+- Placeholders: none: real code per task (with "trust installed types" only where the MCP SDK may differ).
 - Type consistency: `Phase`/`WorkflowState`/`GateResult`/`TaskState` consistent across tasks; `paths` workflow helpers added to core once (T3).
 
 ## Execution handoff

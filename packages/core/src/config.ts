@@ -4,7 +4,7 @@ export const NoirConfigSchema = z.object({
   // Multi-host: widens from `z.literal('claude')` to a 5-value enum. The
   // canonical `HostId` union lives in @noir-ai/adapters (single owner); core
   // owns the enum STRING here so it does not import adapters (no core→adapters
-  // cycle — mirrors the existing pattern where `model`/`memory`/`context`/`prd`
+  // cycle: mirrors the existing pattern where `model`/`memory`/`context`/`prd`
   // redeclare shapes their resolvers consume). `claude` remains the default so
   // existing single-host projects are byte-equivalent (regression anchor).
   host: z
@@ -31,7 +31,7 @@ export const NoirConfigSchema = z.object({
     })
     .default({ idleTimeoutSec: 900 })
     .describe('Local daemon settings'),
-  // The context layer (@noir-ai/context). Mirrors the `daemon` idiom — a
+  // The context layer (@noir-ai/context). Mirrors the `daemon` idiom: a
   // top-level object with `.default({})` so a config with NO `context:` block
   // still parses and behaves as local-embedder-attempted. The
   // embedder shape is `kind`-based to match the discriminated `EmbedderConfig`
@@ -62,7 +62,7 @@ export const NoirConfigSchema = z.object({
             .describe('Remote embedder provider (openai | voyage | cohere)'),
           // Ollama base URL, e.g. http://localhost:11434 (only when kind:'ollama').
           baseURL: z.string().optional().describe('Ollama base URL'),
-          // Target dimensionality — must be 384 to match the existing vec0 table.
+          // Target dimensionality: must be 384 to match the existing vec0 table.
           dim: z
             .number()
             .int()
@@ -90,14 +90,14 @@ export const NoirConfigSchema = z.object({
   // The bounded model layer (@noir-ai/model). Mirrors the `daemon` idiom —
   // a top-level object with `.default({})` so a config with NO `model:` block
   // still parses and behaves as fully-degraded (every `complete()` call returns
-  // `null`; callers substitute a template — the always-available offline path).
+  // `null`; callers substitute a template: the always-available offline path).
   // `resolveModelConfig` (@noir-ai/model) is the single
   // bridge from this user-facing schema to the runtime shape `complete()`
   // consumes, so core never imports model (no core→model cycle).
   //
   // Provider-EXPLICIT, never silent paid: the provider is
   // resolved ONLY from explicit `defaultProvider` / a tier's provider key. Env-
-  // var presence is NEVER consulted to pick a provider — `ANTHROPIC_API_KEY`
+  // var presence is NEVER consulted to pick a provider: `ANTHROPIC_API_KEY`
   // being set for another tool does NOT activate Anthropic in Noir. No explicit,
   // configured provider ⇒ `null`. Secrets live in env vars only:
   // `apiKeyEnv` stores the env-var NAME (`ANTHROPIC_API_KEY`), never the value,
@@ -129,7 +129,7 @@ export const NoirConfigSchema = z.object({
       // Configured provider blocks, keyed by name. `model` is required (a provider
       // without a model id is meaningless); `apiKeyEnv` is omitted for anonymous
       // local providers (Ollama / LM Studio) which then send no auth header.
-      // `authTokenEnv` names a bearer token instead of an API key — for gateways
+      // `authTokenEnv` names a bearer token instead of an API key: for gateways
       // that authenticate with `Authorization: Bearer`; like `apiKeyEnv` it stores
       // the NAME, never the value. `timeoutMs` bounds a single request.
       providers: z
@@ -142,7 +142,7 @@ export const NoirConfigSchema = z.object({
                 .string()
                 .optional()
                 .describe(
-                  'Base URL for a custom endpoint — Anthropic-shaped gateways and OpenAI-compatible local providers (Ollama/LM Studio/vLLM)',
+                  'Base URL for a custom endpoint: Anthropic-shaped gateways and OpenAI-compatible local providers (Ollama/LM Studio/vLLM)',
                 ),
               apiKeyEnv: z
                 .string()
@@ -182,7 +182,7 @@ export const NoirConfigSchema = z.object({
   //
   // Provider-EXPLICIT, never silent paid: the provider is
   // resolved ONLY from explicit `consolidation.provider`. Env-var presence is
-  // NEVER consulted to pick a provider — `ANTHROPIC_API_KEY` being set for
+  // NEVER consulted to pick a provider: `ANTHROPIC_API_KEY` being set for
   // another tool does NOT activate consolidation. No explicit, enabled provider
   // ⇒ `runConsolidation` refuses with `'no-provider'` + writes a miss audit, and
   // NO `complete()` call is made (the Agent-Memory anti-pattern: an LLM
@@ -193,7 +193,7 @@ export const NoirConfigSchema = z.object({
       consolidation: z
         .object({
           // Master switch (default false). When false, `consolidate` refuses +
-          // logs (`no-provider`) regardless of provider/model — the first gate.
+          // logs (`no-provider`) regardless of provider/model: the first gate.
           enabled: z
             .boolean()
             .default(false)
@@ -204,7 +204,7 @@ export const NoirConfigSchema = z.object({
           provider: z.string().optional().describe('Provider key for consolidation'),
           // Provider-specific model id (consumed by `complete()`; optional
           // here only because a future anonymous local provider may not need it
-          // — runConsolidation still refuses when model is absent).
+          //: runConsolidation still refuses when model is absent).
           model: z.string().optional().describe('Model id for consolidation'),
           // Restrict candidates to these types (default: every non-`lesson`).
           types: z.array(z.string()).optional().describe('Candidate-type filter'),
@@ -220,7 +220,7 @@ export const NoirConfigSchema = z.object({
   // check in `noir doctor`, which measures that file against `lengthBudgetKb`.
   rules: z
     .object({
-      // Master switch (default true — opt-out). False ⇒ `noir init`/`noir
+      // Master switch (default true: opt-out). False ⇒ `noir init`/`noir
       // create` emit no `.noir/rules/RULES.md` and `noir init --upgrade` does
       // not backfill one, and `noir doctor` reports its budget check as
       // disabled. A RULES.md already on disk is never deleted or rewritten
@@ -231,7 +231,7 @@ export const NoirConfigSchema = z.object({
         .default(true)
         .describe('Emit the working-rules seed and run its budget check in `noir doctor`'),
       // Soft byte budget for `.noir/rules/RULES.md`, in KB. `noir doctor` warns
-      // (never fails) when the file exceeds it — an over-long rules file tends
+      // (never fails) when the file exceeds it: an over-long rules file tends
       // to accumulate clauses no failure stands behind. Positive int.
       lengthBudgetKb: z
         .number()
@@ -241,7 +241,7 @@ export const NoirConfigSchema = z.object({
         .describe('Soft budget for `.noir/rules/RULES.md` (KB), measured by `noir doctor`'),
     })
     // Outer default matches the parsed output shape (Zod v4 requirement): an
-    // absent `rules:` block resolves to enabled/6 — the seed-emitting default.
+    // absent `rules:` block resolves to enabled/6: the seed-emitting default.
     .default({ enabled: true, lengthBudgetKb: 6 })
     .describe('Working-rules seed and its `noir doctor` budget'),
   // `prd:` block. Additive, escapable-soft-gate config for the
@@ -254,7 +254,7 @@ export const NoirConfigSchema = z.object({
   // as `model`/`memory`/`context` declare provider shapes that their resolvers
   // in other packages consume.
   //
-  // Defaults: `mandatoryFor: ['feature', 'epic']` — the noir-prd skill's "when
+  // Defaults: `mandatoryFor: ['feature', 'epic']`: the noir-prd skill's "when
   // to draft" rule. Quick-mode + non-mandatory taskClasses skip the check
   // entirely; a present-but-empty `prd:` block also degrades to the default.
   prd: z
@@ -274,7 +274,7 @@ export const NoirConfigSchema = z.object({
   // truthy for a task's class, advance into `done` requires fresh passing
   // evidence; HARD checks block on non-zero, SOFT checks record + nudge. The
   // engine reads this via the daemon/CLI `resolveGateConfig` bridge (no
-  // core→workflow cycle — the TaskClass enum is duplicated here as a literal).
+  // core→workflow cycle: the TaskClass enum is duplicated here as a literal).
   workflow: z
     .object({
       gate: z
@@ -362,10 +362,10 @@ export const NoirConfigSchema = z.object({
     })
     .describe('SDD workflow engine settings'),
   // Integration layer (@noir-ai/skills `integrations/<name>/`). Additive
-  // block keyed by integration name — every field optional + default-`{}` so a
+  // block keyed by integration name: every field optional + default-`{}` so a
   // config with NO `integrations:` block still parses and behaves as "no
   // integrations wired" (degraded by default; the skill playbook still ships
-  // and works in manual-paste mode regardless of this block — it only carries
+  // and works in manual-paste mode regardless of this block: it only carries
   // the per-workspace binding like team_id/list_id for the gated proxy). The
   // declaration shape lives in @noir-ai/skills' Zod schema; this block is the
   // USER-facing overlay (which integration is enabled + where it points), not
@@ -386,7 +386,7 @@ export const NoirConfigSchema = z.object({
               // Override the token env var name (defaults to the declaration's
               // `auth.tokenEnv` when undefined). Min(1) matches the declaration
               // schema's invariant (`integrations-schema.ts` tokenEnv is non-empty)
-              // — an empty-string override must FAIL validation, not silently
+              //: an empty-string override must FAIL validation, not silently
               // disable the integration (env[''] is always undefined).
               tokenEnv: z
                 .string()
@@ -413,7 +413,7 @@ export const NoirConfigSchema = z.object({
   // The `update:` block. Additive, no-op when absent (defaults make it a
   // pass-through). Configures the async startup version check + self-update
   // surface (`noir update`). Mirrors the `daemon:`/`rules:`/`prd:` idiom: an
-  // absent `update:` block resolves to enabled/24h/latest/notice — the safe
+  // absent `update:` block resolves to enabled/24h/latest/notice: the safe
   // defaults. `minVersion` is a floor: update never installs below it. The
   // env kill-switches NOIR_DISABLE_UPDATE_CHECK / NOIR_DISABLE_UPDATES are
   // honored OUTSIDE config (process-level), so enterprise users can disable
@@ -428,7 +428,7 @@ export const NoirConfigSchema = z.object({
         .default(24)
         .describe('Version-check cache TTL (hours)'),
       channel: z.enum(['latest', 'beta']).default('latest').describe('Update channel'),
-      minVersion: z.string().default('1.6.0').describe('Floor — update never installs below this'),
+      minVersion: z.string().default('1.6.0').describe('Floor: update never installs below this'),
       display: z
         .enum(['notice', 'silent'])
         .default('notice')
@@ -442,7 +442,7 @@ export const NoirConfigSchema = z.object({
       display: 'notice',
     })
     .describe('Update checker (honors NOIR_DISABLE_UPDATE_CHECK / NOIR_DISABLE_UPDATES)'),
-  // D — `run:` block for the host orchestrator (`noir run`). Additive; an absent
+  // D: `run:` block for the host orchestrator (`noir run`). Additive; an absent
   // block behaves exactly as today (built-in host default, no profiles). The
   // ssh_config / VS-Code-terminal-profiles pattern: `profiles` is a name-keyed
   // map of host-binary bundles; `defaultProfile` names the fallback. Selection
@@ -450,7 +450,7 @@ export const NoirConfigSchema = z.object({
   // built-in default. Profile names are strict [A-Za-z0-9_-] (no dots/spaces —
   // keeps CLI quoting trivial and the name usable verbatim in shell bridges).
   // `env` values support ${VAR} expansion from Noir's process env, and `null`
-  // deletes a variable from the child env — literal secrets should never be
+  // deletes a variable from the child env: literal secrets should never be
   // committed to config.yml (it is committable project state).
   run: z
     .object({
@@ -484,7 +484,7 @@ export const NoirConfigSchema = z.object({
     .default({ profiles: {} })
     .describe('Host orchestrator run settings'),
   // Shared cross-repo workspaces. A workspace daemon is a long-lived
-  // shared server, so its idle timeout defaults to 0 (never auto-stop) — the
+  // shared server, so its idle timeout defaults to 0 (never auto-stop): the
   // user stops it explicitly with `noir workspace stop`.
   workspace: z
     .object({

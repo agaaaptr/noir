@@ -9,7 +9,7 @@
 // flag; only when it's missing AND the session is interactive do we prompt via
 // @clack (lazy-imported so non-interactive paths never load it). Missing
 // content under non-interactive / --no-input / --json / CI / NO_COLOR ⇒ exit 2
-// (USAGE) naming the missing flag — NO blocking prompt on a pipe. A cancel at
+// (USAGE) naming the missing flag: NO blocking prompt on a pipe. A cancel at
 // the prompt ⇒ exit 5 (CANCELLED).
 //
 // `memory consolidate` is opt-in + provider-explicit: the
@@ -17,7 +17,7 @@
 // `memory.consolidation.enabled: true` AND a provider+model resolved. Calling a
 // tool the daemon doesn't register would mis-map onto exit 4 (daemon-down), so
 // we discover the daemon's tool list first (caller.listTools) and, if the tool
-// is absent, emit a clear "not exposed" message + exit 1 (honest — the daemon IS
+// is absent, emit a clear "not exposed" message + exit 1 (honest: the daemon IS
 // up, consolidation just isn't enabled). A provider refusal
 // (`{ok:false,reason:'no-provider'|'model-unavailable'|'no-candidates'}`) is
 // honored as exit 1 with the reason; it is NEVER a silent paid call.
@@ -71,7 +71,7 @@ function resolveWorkspace(): {
   }
 }
 
-/** Call a memory tool — workspace daemon when joined, else the project daemon. */
+/** Call a memory tool: workspace daemon when joined, else the project daemon. */
 async function callMemory<T>(
   opts: MemoryOptions,
   name: string,
@@ -93,7 +93,7 @@ async function withMemoryDaemon<T>(
 }
 
 // Tool result shapes (slices of the daemon wire payloads; CLI depends only on
-// the MCP contract — local types, mirrors context.ts / status.ts).
+// the MCP contract: local types, mirrors context.ts / status.ts).
 
 /** A daemon logical-failure envelope, read generically. */
 interface ToolFailure {
@@ -158,7 +158,7 @@ interface MemoryConsolidateOk {
   from?: unknown;
 }
 
-/** `memory_consolidate` refusal (ConsolidationResult failure branch — data). */
+/** `memory_consolidate` refusal (ConsolidationResult failure branch: data). */
 interface MemoryConsolidateRefusal {
   ok: false;
   reason: 'no-provider' | 'model-unavailable' | 'no-candidates';
@@ -281,7 +281,7 @@ export async function memoryRecall(opts: MemoryRecallOptions): Promise<void> {
       });
       // Honest per-call outcome: this branch runs because the daemon is DOWN
       // (read-only fallback), AND the recall itself reports its own degraded
-      // (BM25-only) state — both feed the rendered flag.
+      // (BM25-only) state: both feed the rendered flag.
       const data = { query: opts.query, hits, degraded, mode };
       if (opts.json === true) {
         process.stdout.write(`${JSON.stringify({ ok: true, data })}\n`);
@@ -315,7 +315,7 @@ function renderRecall(
 ): void {
   const flag = degraded ? `  ${badge('warn', 'degraded: BM25-only')}` : '';
   log(
-    `memory recall — ${hits.length} hit${hits.length === 1 ? '' : 's'} for '${query}'${flag}`,
+    `memory recall: ${hits.length} hit${hits.length === 1 ? '' : 's'} for '${query}'${flag}`,
     opts,
   );
   if (hits.length === 0) {
@@ -324,7 +324,7 @@ function renderRecall(
   }
   // Full content per hit (never truncate the DATA; display shows it whole
   // in a readable block rather than a cramped table cell). The block-list shape
-  // is load-bearing — do NOT sweep this into the responsive table().
+  // is load-bearing: do NOT sweep this into the responsive table().
   for (let i = 0; i < hits.length; i++) {
     const h = hits[i];
     if (h === undefined) continue;
@@ -404,7 +404,7 @@ function renderObservation(obs: Record<string, unknown>, opts: CliOptions): void
   if (typeof content === 'string') log(`\n${content}`, opts);
 }
 
-// `noir memory capture [file]` — manual transcript/notes distill
+// `noir memory capture [file]`: manual transcript/notes distill
 export interface MemoryCaptureOptions extends MemoryOptions {
   /** A transcript/notes file to distill (or pipe stdin). */
   file?: string;
@@ -455,7 +455,7 @@ async function resolveCaptureContent(opts: MemoryCaptureOptions): Promise<string
     } catch {
       fail(
         EXIT.USAGE,
-        'memory capture could not read piped stdin — pass --content <text> or --file <path>.',
+        'memory capture could not read piped stdin: pass --content <text> or --file <path>.',
         opts,
       );
     }
@@ -563,7 +563,7 @@ export async function memorySessions(opts: MemoryOptions): Promise<void> {
 
 /** Render the sessions list (human table to stderr; --json handled by caller). */
 function renderSessions(sessions: SessionRow[], opts: CliOptions): void {
-  log(`memory sessions — ${sessions.length} session${sessions.length === 1 ? '' : 's'}`, opts);
+  log(`memory sessions: ${sessions.length} session${sessions.length === 1 ? '' : 's'}`, opts);
   table(
     sessions.map((s) => ({ Session: s.id, Observations: s.count, 'Last seen': stamp(s.lastTs) })),
     ['Session', 'Observations', 'Last seen'],
@@ -604,7 +604,7 @@ export interface MemoryConsolidateOptions extends MemoryOptions {
 }
 
 export async function memoryConsolidate(opts: MemoryConsolidateOptions): Promise<void> {
-  // Capability discovery (spec: "only if the daemon exposes it — else a clear
+  // Capability discovery (spec: "only if the daemon exposes it: else a clear
   // message"): a daemon that didn't opt into consolidation registers no
   // `memory_consolidate` tool. Detecting that via listTools lets us say so
   // honestly instead of calling a missing tool (which would mis-map to exit 4).
@@ -654,7 +654,7 @@ export async function memoryConsolidate(opts: MemoryConsolidateOptions): Promise
   }
 
   // Refusal (no-provider / model-unavailable / no-candidates) or a degraded
-  // envelope. Both are honest exit-1 outcomes — consolidation did NOT run. Read
+  // envelope. Both are honest exit-1 outcomes: consolidation did NOT run. Read
   // via a record cast so the picks are valid across the refusal + ToolFailure
   // union members (they don't all carry `error` / `degraded`).
   const env = res as unknown as Record<string, unknown>;

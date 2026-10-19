@@ -3,13 +3,13 @@
 // The hard rules are enforced AT THE TYPE LEVEL so an agent loop
 // cannot be expressed through this surface even by a careless caller:
 //
-// - SINGLE-SHOT ONLY — {@link CompleteRequest} carries no `tools`, `functions`,
+// - SINGLE-SHOT ONLY: {@link CompleteRequest} carries no `tools`, `functions`,
 //   or `stream` field. Without a tool parameter there is no way to construct a
 //   tool/exec loop here; the type itself is the tripwire.
-// - Provider-EXPLICIT — `provider` is a REQUIRED field, and resolution in
+// - Provider-EXPLICIT: `provider` is a REQUIRED field, and resolution in
 //   `complete()` never reads env-var presence to pick one. No explicit,
 //   configured provider ⇒ `null`.
-// - null-degradation FIRST-CLASS — {@link CompleteResult} includes `null` as a
+// - null-degradation FIRST-CLASS: {@link CompleteResult} includes `null` as a
 //   peer variant (no provider configured ⇒ degrade to a caller template). It
 //   is never an exception, so callers branch on presence and the full Noir
 //   suite runs offline + free.
@@ -33,7 +33,7 @@ export type CompleteSchema = z.ZodType | ((raw: unknown) => unknown);
 
 /**
  * The four bounded task tiers. A tier is an OPTIONAL budget hint on a
- * request — it selects a per-tier `maxTokens` default when the caller omits
+ * request: it selects a per-tier `maxTokens` default when the caller omits
  * `maxTokens` (the per-tier default). A tier NEVER selects a provider or model: those stay
  * explicit on the request (provider-explicit, never inferred from env).
  * Tier→provider/model resolution is the caller's job (it reads resolved config);
@@ -42,7 +42,7 @@ export type CompleteSchema = z.ZodType | ((raw: unknown) => unknown);
 export type Tier = 'draft' | 'title' | 'summarize' | 'consolidate';
 
 /**
- * One bounded model call. Deliberately minimal — there is NO `tools`,
+ * One bounded model call. Deliberately minimal: there is NO `tools`,
  * `functions`, or `stream` field, so by construction this surface cannot
  * express an agent or tool-exec loop. `signal` lets a caller
  * bound wall-clock further (abort); there is never a stream to cancel.
@@ -50,7 +50,7 @@ export type Tier = 'draft' | 'title' | 'summarize' | 'consolidate';
 export interface CompleteRequest {
   /** Optional system prompt (role: system). */
   system?: string;
-  /** The user prompt (role: user). Required — the task to complete. */
+  /** The user prompt (role: user). Required: the task to complete. */
   prompt: string;
   /** Optional structured-output contract; presence routes via the JSON path. */
   schema?: CompleteSchema;
@@ -67,7 +67,7 @@ export interface CompleteRequest {
    */
   tier?: Tier;
   /**
-   * Base URL for the provider endpoint — a local OpenAI-compatible server
+   * Base URL for the provider endpoint: a local OpenAI-compatible server
    * (Ollama / LM Studio / vLLM, e.g. `http://localhost:11434/v1`) or a gateway
    * host. NOT caller-set: `complete()` forwards it from the resolved provider
    * block (`cfg.providers[name].baseURL`). The `openai-compatible` adapter
@@ -80,7 +80,7 @@ export interface CompleteRequest {
    * Bearer token forwarded to an Anthropic-shaped endpoint as
    * `Authorization: Bearer`, for gateways that authenticate with a token rather
    * than an API key. NOT caller-set: `complete()` reads the value from the env
-   * var named by the provider block's `authTokenEnv` and forwards it here — the
+   * var named by the provider block's `authTokenEnv` and forwards it here: the
    * same env-at-call-time rule as the API key, and the same reason: the config
    * file and this request carry names and resolved values, never secrets on
    * disk. Optional; an adapter that authenticates with a key ignores it.
@@ -90,7 +90,7 @@ export interface CompleteRequest {
    * Per-request timeout in milliseconds. NOT caller-set: `complete()` forwards
    * it from the resolved provider block (`cfg.providers[name].timeoutMs`), and
    * it is honored by the anthropic adapter (and any adapter that consumes it).
-   * Optional — omit to keep the adapter's own default.
+   * Optional: omit to keep the adapter's own default.
    */
   timeoutMs?: number;
   /** Optional abort signal to bound the call (single shot, no streaming). */
@@ -98,7 +98,7 @@ export interface CompleteRequest {
 }
 
 /**
- * Token accounting for a successful call. Carries COUNTS only — never prompts
+ * Token accounting for a successful call. Carries COUNTS only: never prompts
  * or keys (values are never logged alongside usage).
  */
 export interface CompleteUsage {
@@ -109,16 +109,16 @@ export interface CompleteUsage {
 /**
  * The result of a bounded model call. Three first-class variants:
  *
- * - `{ ok: true, text, value?, usage? }` — completion succeeded. `text` is the
+ * - `{ ok: true, text, value?, usage? }`: completion succeeded. `text` is the
  *   raw model output; `value` is present ONLY on the structured path (when a
  *   `schema` was supplied and the parsed+validated JSON object is returned —
  *   structured mode returns an `object`). Free-text calls leave `value`
  *   unset, so callers branch `if ('value' in result)` to consume structured.
- * - `{ ok: false, reason }` — a call was ATTEMPTED (provider configured + key
+ * - `{ ok: false, reason }`: a call was ATTEMPTED (provider configured + key
  *   present + adapter ran) but failed (network, non-2xx, parse error, or the
  *   structured path failed JSON parse/validate twice). This is a recoverable
  *   error a caller may surface; it is NOT degradation.
- * - `null` — DEGRADATION: no provider was configured, or a keyed provider's
+ * - `null`: DEGRADATION: no provider was configured, or a keyed provider's
  *   env var was missing. The caller substitutes a template/stub (the model
  *   layer degrades to templates when no provider is configured). This is the
  *   always-available offline path; the full Noir test suite exercises it with
@@ -143,7 +143,7 @@ export interface ProviderAdapter {
 }
 
 /**
- * One configured provider block — mirrors a `model.providers[name]` entry in
+ * One configured provider block: mirrors a `model.providers[name]` entry in
  * `.noir/config.yml`. `apiKeyEnv` is the NAME of the environment variable that
  * holds the secret, NEVER the value itself, so the config file stays safe to
  * commit and share; `complete()` reads the value at call time only.
@@ -168,7 +168,7 @@ export interface ProviderConfig {
 /**
  * The model-layer config block. Mirrors the user-facing `model:` block added to
  * `NoirConfigSchema`; every field is optional so an absent
- * `model:` block resolves to `{}` — full degradation, offline, the default.
+ * `model:` block resolves to `{}`: full degradation, offline, the default.
  * `complete(req, cfg)` consumes this directly with no dependency on `@noir-ai/core`
  * (the core→model bridge is kept external, avoiding a cycle), and the fully-resolved
  * zod output is structurally assignable to this permissive shape.

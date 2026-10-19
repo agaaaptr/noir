@@ -1,4 +1,4 @@
-// v2 — buildPaletteRows dedup (recents vs curated quick-actions vs full list).
+// v2: buildPaletteRows dedup (recents vs curated quick-actions vs full list).
 // Pure function tests: a command must never render twice on one palette screen.
 import { describe, expect, it } from 'vitest';
 import type { HomeSection } from '../../src/tui/commands/sections.js';
@@ -19,7 +19,7 @@ function cmd(id: string, category = 'x', needsArg?: string): PaletteCommand {
   };
 }
 
-describe('buildPaletteRows — dedup', () => {
+describe('buildPaletteRows: dedup', () => {
   it('a command in both recents and a curated home section renders once (recents wins)', () => {
     const commands = [cmd('status'), cmd('context index'), cmd('doctor')];
     const recent = [cmd('status')];
@@ -89,7 +89,7 @@ describe('buildPaletteRows — dedup', () => {
   });
 });
 
-describe('buildPaletteRows — argument requirements', () => {
+describe('buildPaletteRows: argument requirements', () => {
   /** A curated action for `prompt`, declaring a value the CLI leaves optional. */
   const PROMPT_SECTION: HomeSection = {
     id: 'workflow',
@@ -156,7 +156,7 @@ describe('buildPaletteRows — argument requirements', () => {
   /**
    * The curated `memory save` action passes its value behind the `--content`
    * flag, so it dispatches a DIFFERENT argv than the registry entry for the same
-   * command. Only the row carrying that flag can accept the value — a row that
+   * command. Only the row carrying that flag can accept the value: a row that
    * dispatches `memory save` bare would swallow it (commander ignores the extra
    * operand and the command re-prompts).
    */

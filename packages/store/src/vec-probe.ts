@@ -3,7 +3,7 @@
 // sqlite-vec ships a per-platform native binary that the store loads into every
 // connection at open time. When the binary is missing/broken on a host, store
 // open and any vec operation throw. Workspace packages that consume the store
-// (context, daemon, …) need to gate their vec-backed test suites on this — but
+// (context, daemon, …) need to gate their vec-backed test suites on this: but
 // they MUST NOT import `better-sqlite3` / `sqlite-vec` directly: those are the
 // store's own dependencies and are not resolvable from other packages under
 // pnpm's strict node_modules. This module is the single place that touches the

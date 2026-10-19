@@ -1,7 +1,7 @@
 // The matcher swap seam. `FuzzyMatcher` is the interface the TUI depends on;
 // `handRolledMatcher` is the default, dependency-free implementation built on
 // `matchCommand`. Swapping in a native fzf/ItsFuzzy binding later means shipping
-// a second `FuzzyMatcher` — the palette code never changes.
+// a second `FuzzyMatcher`: the palette code never changes.
 
 import { type FuzzyMatch, matchCommand } from './fuzzyMatch.js';
 import type { PaletteCommand } from './types.js';

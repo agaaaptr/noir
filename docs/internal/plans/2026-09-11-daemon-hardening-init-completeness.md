@@ -1,14 +1,14 @@
-# Daemon Hardening + Init Completeness + `.noir/.env` Consolidation — Implementation Plan
+# Daemon Hardening + Init Completeness + `.noir/.env` Consolidation: Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Fix the daemon's single global record (which can put two writers on one DB), make `.noir/.env` the real, precedence-winning, auto-created home for project-scoped configuration, and make `noir init --upgrade` backfill what the manifest grew — all in one release.
+**Goal:** Fix the daemon's single global record (which can put two writers on one DB), make `.noir/.env` the real, precedence-winning, auto-created home for project-scoped configuration, and make `noir init --upgrade` backfill what the manifest grew: all in one release.
 
 **Architecture:** Seven independent slices that ship together (spec §19). A–D rework the daemon runtime; E/E4 rework the scaffold manifest and the upgrade engine; F inverts the env-file precedence contract and consolidates the doctrine across 9 skills and 14 docs; G fixes `noir run`'s credential diagnostics. Each slice is revertible on its own; F + F-docs are one release unit (behaviour + its documentation).
 
 **Tech Stack:** TypeScript (ESM), pnpm workspaces, tsup, vitest, zod, better-sqlite3, `@modelcontextprotocol/{client,node,server}`, biome.
 
-**Spec:** [`docs/internal/specs/2026-09-11-daemon-hardening-init-completeness-design.md`](../specs/2026-09-11-daemon-hardening-init-completeness-design.md) — read it alongside this plan; the plan argues from it and does not restate its rationale.
+**Spec:** [`docs/internal/specs/2026-09-11-daemon-hardening-init-completeness-design.md`](../specs/2026-09-11-daemon-hardening-init-completeness-design.md): read it alongside this plan; the plan argues from it and does not restate its rationale.
 
 ## Global Constraints
 
@@ -18,7 +18,7 @@
 - **Never print a secret value.** Every diagnostic added names variables and files only. Existing contract: `doctor.ts:329` "names only, never values".
 - **`claude` is the regression anchor.** A bare `noir init` must stay byte-identical for every manifest entry that exists today. The only permitted content change is `env.example.tmpl` (E1), which has its own assertion.
 - **The daemon is the single writer.** No change may open the store for writing in a second process.
-- **Generated docs.** `docs/reference/{config,cli,mcp-tools}.md` are written whole-file by `scripts/docs-generate.mjs`. Editing the `.md` is a no-op after the next `pnpm docs:generate` — edit the generator.
+- **Generated docs.** `docs/reference/{config,cli,mcp-tools}.md` are written whole-file by `scripts/docs-generate.mjs`. Editing the `.md` is a no-op after the next `pnpm docs:generate`: edit the generator.
 - **`skipIfExists` never modifies an existing file.** This invariant is what makes Task 10 safe.
 - **Version bump:** `CURRENT_SCAFFOLD_VERSION` `1.0.0 → 1.1.0` (Task 11). Package version bump happens only in the release task (Task 20), not per-slice.
 
@@ -30,17 +30,17 @@
 
 | Path | Responsibility |
 |---|---|
-| `packages/daemon/src/project-record.ts` | Per-project daemon record read/write/clear/list — mirrors `workspace-record.ts` |
+| `packages/daemon/src/project-record.ts` | Per-project daemon record read/write/clear/list: mirrors `workspace-record.ts` |
 | `packages/daemon/src/migrate-legacy-record.ts` | One-shot retirement of `~/.noir/daemon.json` |
 | `packages/core/src/git-tracked.ts` | Bounded, non-throwing `isGitTracked(root, relPath)` |
-| `packages/cli/src/commands/env.ts` | `noir env` — resolved keys, winning source, shadowing; never values |
+| `packages/cli/src/commands/env.ts` | `noir env`: resolved keys, winning source, shadowing; never values |
 | `packages/create/templates/noir-readme.md.tmpl` | The `.noir/README.md` map |
 | `packages/create/templates/config.env.tmpl` | Body for the created `.noir/.env` (all-comment) |
 | `docs/how-to/configure-env.md` | The missing canonical how-to (spec §18.1) |
 | `docs/decisions/0010-per-project-daemon-records-and-http-auth.md` | ADR-0010 |
 | `docs/decisions/0011-noir-env-precedence-and-doctrine.md` | ADR-0011 |
 
-**Modified — daemon runtime (A–D)**
+**Modified: daemon runtime (A–D)**
 
 | Path | Change |
 |---|---|
@@ -54,7 +54,7 @@
 | `packages/cli/src/commands/daemon.ts` | Per-project stop/status; remove the guards; `--all`; `token` subcommand |
 | `packages/cli/src/commands/doctor.ts` | Provenance rows; integration rows |
 
-**Modified — scaffold + env (E, E4, F)**
+**Modified: scaffold + env (E, E4, F)**
 
 | Path | Change |
 |---|---|
@@ -74,7 +74,7 @@
 
 ---
 
-## Slice A — Per-project daemon records
+## Slice A: Per-project daemon records
 
 ### Task 1: The project-record module
 
@@ -143,17 +143,17 @@ describe('project-record', () => {
 - [ ] **Step 2: Run it and confirm it fails**
 
 Run: `pnpm vitest run packages/daemon/test/project-record.test.ts`
-Expected: FAIL — cannot resolve `../src/project-record.js`.
+Expected: FAIL: cannot resolve `../src/project-record.js`.
 
 - [ ] **Step 3: Implement the module**
 
 ```ts
 // packages/daemon/src/project-record.ts
-// Per-project daemon record — the project-scoped counterpart to
+// Per-project daemon record: the project-scoped counterpart to
 // `~/.noir/daemon.json`. Mirrors `workspace-record.ts`: one file per identity,
 // so no code path can read, adopt, or clear another project's record.
 // That is what removes the `wrongProject` guards in ensure.ts / commands/daemon.ts
-// (spec §4.3) — the bug is structural, so the fix is structural.
+// (spec §4.3): the bug is structural, so the fix is structural.
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { atomicWriteFile, noirHome } from '@noir-ai/core';
@@ -199,13 +199,13 @@ export function clearProjectDaemonRecord(projectId: string): void {
   if (existsSync(p)) rmSync(p, { force: true });
 }
 
-/** Every project record on this machine — for `noir daemon status --all` + doctor. */
+/** Every project record on this machine: for `noir daemon status --all` + doctor. */
 export function listProjectDaemonRecords(): Array<{ projectId: string; rec: ProjectDaemonRecord }> {
   let names: string[];
   try {
     names = readdirSync(projectRecordDir());
   } catch {
-    return []; // dir absent — no daemon has ever run
+    return []; // dir absent: no daemon has ever run
   }
   const out: Array<{ projectId: string; rec: ProjectDaemonRecord }> = [];
   for (const name of names) {
@@ -303,7 +303,7 @@ describe('cross-project daemon isolation', () => {
 - [ ] **Step 2: Run it and confirm it fails**
 
 Run: `pnpm vitest run packages/daemon/test/project-isolation.test.ts`
-Expected: FAIL — `ensureDaemonRunning` still reads the global record and clears it.
+Expected: FAIL: `ensureDaemonRunning` still reads the global record and clears it.
 
 - [ ] **Step 3: Rewrite `http.ts`'s record write + shutdown**
 
@@ -322,7 +322,7 @@ Replace the `rec` block and the shutdown clear (`http.ts:179-204`):
     if (idleTimer) { clearInterval(idleTimer); idleTimer = undefined; }
     await new Promise<void>((r) => httpServer.close(() => r()));
     await daemonStore?.store.close().catch(() => undefined);
-    // Only clear OUR record (pid match) — a slow-dying predecessor or a
+    // Only clear OUR record (pid match): a slow-dying predecessor or a
     // restarting daemon must not have its record wiped by this one.
     const rec = readProjectDaemonRecord(opts.project.id);
     if (rec && rec.pid === pid) clearProjectDaemonRecord(opts.project.id);
@@ -331,7 +331,7 @@ Replace the `rec` block and the shutdown clear (`http.ts:179-204`):
 
 Swap the import: drop `clearDaemonRecord, readDaemonRecord, writeDaemonRecord` from `./lifecycle.js`, keep `DAEMON_MODE_ENV, type DaemonRecord`, and add the four project-record functions from `./project-record.js`. `DaemonRecord` is still used by `spawn.ts`; keep the type exported from `lifecycle.ts` until Task 3 removes its last user.
 
-- [ ] **Step 4: Rewrite `ensure.ts` — the guards disappear**
+- [ ] **Step 4: Rewrite `ensure.ts`: the guards disappear**
 
 ```ts
 export async function ensureDaemonRunning(opts: {
@@ -366,7 +366,7 @@ In `packages/cli/src/daemon-client.ts`, move the `expectedProject` resolution **
 
 ```ts
 export async function probeDaemon(opts: DaemonClientOptions = {}): Promise<DaemonProbe> {
-  // Resolve the project FIRST — with per-project records the ProjectId IS the
+  // Resolve the project FIRST: with per-project records the ProjectId IS the
   // lookup key, so the record cannot be read before it is known.
   const expectedProject =
     opts.project?.id ??
@@ -415,7 +415,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 - Test: `packages/daemon/test/migrate-legacy-record.test.ts`
 
 **Interfaces:**
-- Produces: `retireLegacyDaemonRecord(): Promise<void>` — resolves on success or no-op; **rejects** when a live legacy daemon refuses to exit (spec §4.5).
+- Produces: `retireLegacyDaemonRecord(): Promise<void>`: resolves on success or no-op; **rejects** when a live legacy daemon refuses to exit (spec §4.5).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -467,7 +467,7 @@ describe('retireLegacyDaemonRecord', () => {
 - [ ] **Step 2: Run it and confirm it fails**
 
 Run: `pnpm vitest run packages/daemon/test/migrate-legacy-record.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL: module not found.
 
 - [ ] **Step 3: Implement it**
 
@@ -510,7 +510,7 @@ export async function retireLegacyDaemonRecord(
 
   const pid = typeof rec?.pid === 'number' ? rec.pid : undefined;
   if (pid !== undefined && pidAlive(pid)) {
-    try { process.kill(pid, 'SIGTERM'); } catch { /* already gone — fall through */ }
+    try { process.kill(pid, 'SIGTERM'); } catch { /* already gone: fall through */ }
     const exited = await waitForExit(pid, opts.exitTimeoutMs ?? DEFAULT_EXIT_TIMEOUT_MS);
     if (!exited) {
       // Do NOT remove the file and do NOT let the caller start a second daemon:
@@ -518,7 +518,7 @@ export async function retireLegacyDaemonRecord(
       throw new Error(
         `a daemon from a previous Noir version (pid ${pid}) did not exit within ` +
           `${opts.exitTimeoutMs ?? DEFAULT_EXIT_TIMEOUT_MS}ms and still holds this project's ` +
-          `store open — stop it with \`kill ${pid}\` and re-run.`,
+          `store open: stop it with \`kill ${pid}\` and re-run.`,
       );
     }
   }
@@ -546,7 +546,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 ---
 
-## Slice B — `daemon.port`
+## Slice B: `daemon.port`
 
 ### Task 4: Honour `daemon.port` with an honest fallback
 
@@ -607,7 +607,7 @@ describe('daemon.port', () => {
 - [ ] **Step 2: Run it and confirm it fails**
 
 Run: `pnpm vitest run packages/daemon/test/port.test.ts`
-Expected: the second test FAILS — today `listen()` rejects with `EADDRINUSE`.
+Expected: the second test FAILS: today `listen()` rejects with `EADDRINUSE`.
 
 - [ ] **Step 3: Implement the fallback**
 
@@ -616,7 +616,7 @@ Replace the listen block (`http.ts:170-177`):
 ```ts
   // `daemon.port` is a PREFERENCE, not a demand: two projects may legitimately
   // configure the same port, and failing the command would be worse than
-  // degrading. On EADDRINUSE we retry ephemeral and warn — and the record below
+  // degrading. On EADDRINUSE we retry ephemeral and warn: and the record below
   // always carries the port actually bound, so the record never lies.
   async function listenOn(port: number): Promise<number> {
     return new Promise((resolve, reject) => {
@@ -636,7 +636,7 @@ Replace the listen block (`http.ts:170-177`):
   } catch (err) {
     if (opts.port !== undefined && opts.port !== 0 && (err as NodeJS.ErrnoException).code === 'EADDRINUSE') {
       process.stderr.write(
-        `noir: port ${opts.port} is in use — falling back to an ephemeral port.\n`,
+        `noir: port ${opts.port} is in use: falling back to an ephemeral port.\n`,
       );
       port = await listenOn(0);
     } else throw err;
@@ -645,7 +645,7 @@ Replace the listen block (`http.ts:170-177`):
 
 - [ ] **Step 4: Update the config description and thread the port**
 
-`packages/core/src/config.ts` — drop the "not yet wired" clause:
+`packages/core/src/config.ts`: drop the "not yet wired" clause:
 
 ```ts
       port: z
@@ -679,7 +679,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 ---
 
-## Slice C — HTTP auth token
+## Slice C: HTTP auth token
 
 ### Task 5: Token generation, `/mcp` enforcement, CLI header
 
@@ -726,7 +726,7 @@ Plus an HTTP-level test in `packages/daemon/test/http.test.ts`: `GET /health` wi
 - [ ] **Step 2: Run it and confirm it fails**
 
 Run: `pnpm vitest run packages/daemon/test/token.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL: module not found.
 
 - [ ] **Step 3: Implement the token module**
 
@@ -771,7 +771,7 @@ export function tokenMatches(expected: string, provided: string | undefined): bo
 }
 ```
 
-- [ ] **Step 3b: Extend `atomicWriteFile` with an optional `mode` — REQUIRED**
+- [ ] **Step 3b: Extend `atomicWriteFile` with an optional `mode`: REQUIRED**
 
 **Verified:** the current signature is `atomicWriteFile(path: string, data: string): void`
 (`packages/core/src/install-method.ts:117`). It writes the temp file with umask (0o644) and only
@@ -786,7 +786,7 @@ others:
 export interface AtomicWriteOptions {
   /** Mode applied to the temp file before the rename, on EVERY write that
    *  requests it (so the destination never exists with a laxer mode). When set,
-   *  the post-rename prevMode restore is skipped — the caller's mode is
+   *  the post-rename prevMode restore is skipped: the caller's mode is
    *  authoritative. */
   mode?: number;
 }
@@ -797,7 +797,7 @@ export function atomicWriteFile(path: string, data: string, opts: AtomicWriteOpt
   try { prevMode = statSync(path).mode & 0o777; } catch { /* absent on first write */ }
   const tmp = `${path}.tmp-${process.pid}-${Date.now()}`;
   // `mode` on writeFileSync is masked by umask; 0o600 has no group/other bits,
-  // so it survives any umask. On Windows the argument is ignored — the
+  // so it survives any umask. On Windows the argument is ignored: the
   // permission model there is ACL-based, so tests must not assert 0600 on win32.
   writeFileSync(tmp, data, opts.mode !== undefined
     ? { encoding: 'utf8', mode: opts.mode }
@@ -809,13 +809,13 @@ export function atomicWriteFile(path: string, data: string, opts: AtomicWriteOpt
 }
 ```
 
-Add to the test in Step 1: a **Windows guard** — `it.skipIf(process.platform === 'win32')(...)` around
+Add to the test in Step 1: a **Windows guard**: `it.skipIf(process.platform === 'win32')(...)` around
 the 0600 assertion, since `mode` is a no-op on Windows.
 
 - [ ] **Step 3c: Confirm the existing consumers still compile**
 
 Run: `pnpm typecheck`
-Expected: PASS — the new parameter is optional, so every existing call site is unaffected.
+Expected: PASS: the new parameter is optional, so every existing call site is unaffected.
 
 - [ ] **Step 4: Enforce on `/mcp` only**
 
@@ -823,7 +823,7 @@ In `http.ts`, after the host/origin validation and before the `/mcp` branch:
 
 ```ts
     // Auth on the HTTP transport only (spec 6.1). /health stays token-free —
-    // the probe depends on it and its body carries no secret — but it remains
+    // the probe depends on it and its body carries no secret: but it remains
     // host/origin validated above.
     if (req.url === '/mcp') {
       const provided = req.headers.authorization?.replace(/^Bearer\s+/i, '');
@@ -892,7 +892,7 @@ Assert `noir daemon token` prints the current project's token to **stdout** and 
 
 - [ ] **Step 2: Implement the subcommand and workspace token**
 
-Mirror Task 5 in `workspace-http.ts` using the workspace name as the scope key, and add the `token` verb. `headersHelper` support is documentation-only (Task 17) — the command is the deliverable.
+Mirror Task 5 in `workspace-http.ts` using the workspace name as the scope key, and add the `token` verb. `headersHelper` support is documentation-only (Task 17): the command is the deliverable.
 
 - [ ] **Step 3: Run, then commit**
 
@@ -904,7 +904,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 ---
 
-## Slice D — Connect-triggered activation
+## Slice D: Connect-triggered activation
 
 ### Task 7: Connect-first ordering (project path only)
 
@@ -925,7 +925,7 @@ Point at a configured `daemon.port` with no daemon running; assert the first cal
 ```ts
   // Connect-first when a stable address exists (a configured daemon.port).
   // Without one there is no address to probe, so today's ensure-first path is
-  // retained — D depends on B (spec 7.1).
+  // retained: D depends on B (spec 7.1).
   const preferred = project.config.daemon.port;
   if (preferred !== undefined && preferred !== 0) {
     const direct = `http://127.0.0.1:${preferred}/mcp`;
@@ -938,7 +938,7 @@ Point at a configured `daemon.port` with no daemon running; assert the first cal
   return { url: ensured.url, stop: ensured.stop };
 ```
 
-- [ ] **Step 3: Add the workspace guard test — this is the important one**
+- [ ] **Step 3: Add the workspace guard test: this is the important one**
 
 ```ts
 it('withWorkspaceDaemon never auto-starts (ADR-0009 §11)', async () => {
@@ -962,7 +962,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 ---
 
-## Slice E — Init completeness
+## Slice E: Init completeness
 
 ### Task 8: `.env.example` doctrine, the full variable set, and a real `.noir/.env`
 
@@ -1004,7 +1004,7 @@ it('documents the doctrine and the full variable set in .env.example', async () 
 `config.env.tmpl` header (the doctrine must match spec §12.1 verbatim):
 
 ```
-# .noir/.env — project-scoped configuration for this repo.
+# .noir/.env: project-scoped configuration for this repo.
 #
 # This file is the recommended home for project-scoped configuration and
 # secrets. Precedence:
@@ -1026,17 +1026,17 @@ it('documents the doctrine and the full variable set in .env.example', async () 
 
 Then the commented variable groups (ClickUp, embedder keys, model provider via `apiKeyEnv`, `NOIR_PROFILE`, update kill-switches), closing with a pointer to `docs/reference/environment.md`.
 
-**Plumbing note (verified — do not skip).** `ManifestEntry` (`manifest.ts:53-78`) has **no
+**Plumbing note (verified: do not skip).** `ManifestEntry` (`manifest.ts:53-78`) has **no
 permission field**, and `skipIfExists(absPath, content): WriteOutcome` (`writers.ts:229`) takes no
 mode. The 0600 must be plumbed explicitly, in three places:
 
 ```ts
-// 1. manifest.ts — add an optional field to ManifestEntry
+// 1. manifest.ts: add an optional field to ManifestEntry
   /** Permission for a NEWLY created file (e.g. 0o600 for a credential seed).
    *  Applied only on creation; an existing file's mode is never changed. */
   fileMode?: number;
 
-// 2. manifest.ts — the entry, next to `envExample`
+// 2. manifest.ts: the entry, next to `envExample`
     {
       path: P.env,
       mode: 'skipIfExists',
@@ -1045,7 +1045,7 @@ mode. The 0600 must be plumbed explicitly, in three places:
       description: 'project-scoped env file (gitignored, 0600)',
     },
 
-// 3. writers.ts — thread it through skipIfExists
+// 3. writers.ts: thread it through skipIfExists
 export function skipIfExists(absPath: string, content: string, fileMode?: number): WriteOutcome {
   if (existsSync(absPath)) return { status: 'skipped', path: absPath };
   atomicWriteFile(absPath, content, fileMode !== undefined ? { mode: fileMode } : {});
@@ -1056,7 +1056,7 @@ export function skipIfExists(absPath: string, content: string, fileMode?: number
 The orchestrator (`scaffold.ts`) forwards `entry.fileMode` to the `skipIfExists` dispatch, and to
 the dry-run predictor (which reports the planned mode without writing).
 
-Add `env: `${NOIR_DIR}/.env`` to the `P` path map. **Both entries coexist** — `.env.example` stays
+Add `env: `${NOIR_DIR}/.env`` to the `P` path map. **Both entries coexist**: `.env.example` stays
 the committable documentation, `.env` is the working file.
 
 - [ ] **Step 3: Run, then commit**
@@ -1089,7 +1089,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 - [ ] **Step 2: Implement**
 
-Remove the three vestigial entries (`ignore-manager.ts:23-25`). Write the README template: what exists now, what appears later (with the triggering command per directory — `store/` ← daemon, `specs|plans|tasks|intake|clarifications/` ← workflow phases, `audit/` ← integrations, `transcripts/` ← `noir run`), and where to go next.
+Remove the three vestigial entries (`ignore-manager.ts:23-25`). Write the README template: what exists now, what appears later (with the triggering command per directory: `store/` ← daemon, `specs|plans|tasks|intake|clarifications/` ← workflow phases, `audit/` ← integrations, `transcripts/` ← `noir run`), and where to go next.
 
 - [ ] **Step 3: Run the full create + core + adapters suites**
 
@@ -1111,7 +1111,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 ---
 
-## Slice E4 — `--upgrade` backfill
+## Slice E4: `--upgrade` backfill
 
 ### Task 10: `--upgrade` emits every manifest mode
 
@@ -1122,7 +1122,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 **Interfaces:**
 - Produces: `--upgrade` creates absent `skipIfExists` entries; never modifies an existing one.
 
-- [ ] **Step 1: Write the failing test — the §1.6 regression test**
+- [ ] **Step 1: Write the failing test: the §1.6 regression test**
 
 ```ts
 it('backfills a skipIfExists seed added after initialization', async () => {
@@ -1145,7 +1145,7 @@ it('backfills a skipIfExists seed added after initialization', async () => {
 - [ ] **Step 2: Run it and confirm it fails**
 
 Run: `pnpm vitest run packages/create/test/upgrade-backfill.test.ts`
-Expected: FAIL — `.env.example` is not created (skipIfExists is skipped on upgrade).
+Expected: FAIL: `.env.example` is not created (skipIfExists is skipped on upgrade).
 
 - [ ] **Step 3: Implement**
 
@@ -1213,7 +1213,7 @@ Bump `CURRENT_SCAFFOLD_VERSION` to `'1.1.0'`, add the migration entry to `MIGRAT
 
 - [ ] **Step 3: Assert doctor reports drift for a 1.0.0 project**
 
-Run `checkScaffoldVersion` against a 1.0.0 fixture and assert `drift: true` — the existing row (`doctor.ts:461-485`) already does this; the test pins it.
+Run `checkScaffoldVersion` against a 1.0.0 fixture and assert `drift: true`: the existing row (`doctor.ts:461-485`) already does this; the test pins it.
 
 - [ ] **Step 4: Run, then commit**
 
@@ -1229,7 +1229,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 ---
 
-## Slice F — `.noir/.env` precedence and consolidation
+## Slice F: `.noir/.env` precedence and consolidation
 
 ### Task 12: Invert the precedence and record provenance
 
@@ -1268,7 +1268,7 @@ it('confines the overlay to the object it is given', () => {
 - [ ] **Step 2: Run it and confirm it fails**
 
 Run: `pnpm vitest run packages/core/test/env-file.test.ts`
-Expected: the first test FAILS — today the ambient value wins.
+Expected: the first test FAILS: today the ambient value wins.
 
 - [ ] **Step 3: Implement**
 
@@ -1284,7 +1284,7 @@ Replace the fill-only-unset branch:
   const sources: Record<string, 'file' | 'env'> = {};
   for (const [k, v] of Object.entries(vars)) {
     if (PROCESS_INJECTION_ENV_RE.test(k)) {
-      warnings.push(`.noir/.env: refusing process-injection key '${k}' — ignored`);
+      warnings.push(`.noir/.env: refusing process-injection key '${k}': ignored`);
       continue;
     }
     overlay[k] = v;
@@ -1308,7 +1308,7 @@ Add the shadowing warning (Task 14 consumes it; emit here so it fires once):
 - [ ] **Step 4: Update every existing test that asserted fill-only-unset**
 
 Run: `pnpm vitest run packages/core packages/daemon packages/cli`
-Expected: existing env-file tests need their expectations flipped — that is the intended behaviour change, and the flips are the record of it.
+Expected: existing env-file tests need their expectations flipped: that is the intended behaviour change, and the flips are the record of it.
 
 - [ ] **Step 5: Commit**
 
@@ -1336,7 +1336,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 - Test: `packages/core/test/git-tracked.test.ts`
 
 **Interfaces:**
-- Produces: `isGitTracked(root: string, relPath: string): boolean` — never throws; `false` on any git failure.
+- Produces: `isGitTracked(root: string, relPath: string): boolean`: never throws; `false` on any git failure.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1392,7 +1392,7 @@ In `loadNoirEnv`, immediately after the file is read successfully:
 ```ts
   if (isGitTracked(root, join(NOIR_DIR, '.env'))) {
     warnings.push(
-      `.noir/.env: refusing to load — it is tracked by git. A cloned repository ` +
+      `.noir/.env: refusing to load: it is tracked by git. A cloned repository ` +
         `could redirect credentials through it. Fix: add \`.noir/.env\` to .gitignore ` +
         `(Noir's managed block already does) and run \`git rm --cached .noir/.env\`.`,
     );
@@ -1449,7 +1449,7 @@ Follow the `status` command's structure for the table/`--json` split and `EXIT` 
 ```bash
 git commit -m "feat(cli): add \`noir env\` + per-key provenance in doctor
 
-Answers \\\"which value is actually in effect\\\" — the question behind the
+Answers \\\"which value is actually in effect\\\": the question behind the
 maintainer's \\\"I edited .noir/.env and nothing changed\\\". Names only,
 never values (spec 12.4)."
 
@@ -1494,14 +1494,14 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 ---
 
-## Slice F-docs — Doctrine consolidation
+## Slice F-docs: Doctrine consolidation
 
 ### Task 16: The missing how-to page
 
 **Files:**
 - Create: `docs/how-to/configure-env.md`
 
-- [ ] **Step 1: Write the page** per spec §18.1 — what the file is for, creating it, the precedence chain (§12.1 verbatim), seeing what is in effect, common recipes (ClickUp, model provider with the `apiKeyEnv` NAME trap, embedder, profiles, `NOIR_PROFILE`), safety (gitignore/0600/denylist/tracked refusal), troubleshooting.
+- [ ] **Step 1: Write the page** per spec §18.1: what the file is for, creating it, the precedence chain (§12.1 verbatim), seeing what is in effect, common recipes (ClickUp, model provider with the `apiKeyEnv` NAME trap, embedder, profiles, `NOIR_PROFILE`), safety (gitignore/0600/denylist/tracked refusal), troubleshooting.
 
 - [ ] **Step 2: Link it** from `getting-started.md`, `environment.md`, `clickup.md`, and `host-profiles.md`.
 
@@ -1521,13 +1521,13 @@ The file was referenced in six pages and documented in none of them
 
 **Files:** the 14 items in spec §12.5.
 
-- [ ] **Step 1: Edit `scripts/docs-generate.mjs` first** — the Precedence source (`:196-210`) and the Secrets-policy source (`:330-345`).
+- [ ] **Step 1: Edit `scripts/docs-generate.mjs` first**: the Precedence source (`:196-210`) and the Secrets-policy source (`:330-345`).
 
-- [ ] **Step 2: Edit the hand-authored pages** — `environment.md` (precedence block `:6-11`; the three placements `:15-19, :25, :109-111`; provider-key placement `:38-53`; the `NOIR_SKIP_NODE_PROVISION` row; the refused-keys note), `clickup.md:17-37`, `host-profiles.md:68-71`, `getting-started.md:60-69` and `:219-225`, `privacy.md:38`, `architecture.md:46, :54`, `config.yml.tmpl`.
+- [ ] **Step 2: Edit the hand-authored pages**: `environment.md` (precedence block `:6-11`; the three placements `:15-19, :25, :109-111`; provider-key placement `:38-53`; the `NOIR_SKIP_NODE_PROVISION` row; the refused-keys note), `clickup.md:17-37`, `host-profiles.md:68-71`, `getting-started.md:60-69` and `:219-225`, `privacy.md:38`, `architecture.md:46, :54`, `config.yml.tmpl`.
 
 - [ ] **Step 3: Fix the `apiKeyEnv` conflation in all three places** so no doc shows `apiKeyEnv: ${VAR}`.
 
-- [ ] **Step 4: Regenerate and DIFF — this is the acceptance test**
+- [ ] **Step 4: Regenerate and DIFF: this is the acceptance test**
 
 ```bash
 pnpm docs:generate
@@ -1554,12 +1554,12 @@ linked. Generated pages fixed in scripts/docs-generate.mjs (spec 12.5)."
 
 - [ ] **Step 1: Rewrite the ClickUp setup block** (`SKILL.md:36-53`) with `.noir/.env` as option 1, a real env var / one-shot for CI as option 2, and `~/.claude/settings.json` explicitly labelled a machine-global fallback that cannot shadow the file. Fix `:392`, `:307-308`, and the API reference.
 
-- [ ] **Step 2: Update the four other skills** — `noir-doctor` (add the `noir-env`/`provider` rows and the `chmod 600` remedy), `noir-writing-skills` (a config-placement rule for skill authors), `noir-context` (embedder keys), `noir-security` and `noir-backend` (name the file).
+- [ ] **Step 2: Update the four other skills**: `noir-doctor` (add the `noir-env`/`provider` rows and the `chmod 600` remedy), `noir-writing-skills` (a config-placement rule for skill authors), `noir-context` (embedder keys), `noir-security` and `noir-backend` (name the file).
 
 - [ ] **Step 3: Run the skills quality gate**
 
 Run: `pnpm vitest run packages/skills && pnpm build`
-Expected: PASS — `validateSkill`/`lintSkill` enforce WHAT+WHEN descriptions and structure.
+Expected: PASS: `validateSkill`/`lintSkill` enforce WHAT+WHEN descriptions and structure.
 
 - [ ] **Step 4: Commit**
 
@@ -1573,7 +1573,7 @@ and never named .noir/.env. Eight further skills carried the same gap
 
 ---
 
-## Slice G — `noir run` diagnostics
+## Slice G: `noir run` diagnostics
 
 ### Task 19: Credential diagnostics
 
@@ -1611,7 +1611,7 @@ it('notices an uninitialized project on stderr, and stays silent under --json', 
 });
 ```
 
-- [ ] **Step 2: Implement** — broaden the credential shape check, use `loadNoirEnv(...).sources` to name the file when it won, and add the informational uninitialized notice (stderr only, suppressed under `--json`, never a failure).
+- [ ] **Step 2: Implement**: broaden the credential shape check, use `loadNoirEnv(...).sources` to name the file when it won, and add the informational uninitialized notice (stderr only, suppressed under `--json`, never a failure).
 
 - [ ] **Step 3: Run, then commit**
 
@@ -1640,9 +1640,9 @@ Expected: all five green. Do not proceed on a red gate.
 
 - [ ] **Step 2: Write ADR-0010 and ADR-0011** from spec §20 (items 1–8 → 0010; 9–15 → 0011).
 
-- [ ] **Step 3: Sync the roadmap** — `capability-05` gap items move out of "Gap / roadmap delta"; `backlog.md` resolves the ignore-list entry and records the deferrals (D if unused, Windows env case-insensitivity, `env-filename` collision risk, `.claude/settings.local.json` policy); `STATUS.md` sprint entry; `releases.md` current-status; `roadmap.manifest.yaml`.
+- [ ] **Step 3: Sync the roadmap**: `capability-05` gap items move out of "Gap / roadmap delta"; `backlog.md` resolves the ignore-list entry and records the deferrals (D if unused, Windows env case-insensitivity, `env-filename` collision risk, `.claude/settings.local.json` policy); `STATUS.md` sprint entry; `releases.md` current-status; `roadmap.manifest.yaml`.
 
-- [ ] **Step 4: CHANGELOG** — a **Changed** entry for the precedence inversion and an **Added** entry for the rest, plus the upgrade steps from spec §15.
+- [ ] **Step 4: CHANGELOG**: a **Changed** entry for the precedence inversion and an **Added** entry for the rest, plus the upgrade steps from spec §15.
 
 - [ ] **Step 5: Commit and STOP for approval**
 
@@ -1667,4 +1667,4 @@ Acceptance criteria → task: A1–A5→T2,T3 · B1–B3→T4 · C1–C5→T5,T6
 
 **Type consistency.** `ProjectDaemonRecord` (T1) is the type used in T2/T3/T4. `readProjectDaemonRecord`/`writeProjectDaemonRecord`/`clearProjectDaemonRecord`/`listProjectDaemonRecords` keep one spelling throughout. `loadNoirEnv` gains `sources` in T12 and is consumed under that exact name in T14 and T19. `retireLegacyDaemonRecord(opts?)` in T3 is called with no argument in T2. `NOIR_DAEMON_DIR_ENV` is the constant; `NOIR_DAEMON_DIR` is the string. `isGitTracked(root, relPath)` (T13) is called with the same two-argument shape everywhere.
 
-**Known gaps, deliberately recorded rather than silently dropped:** the Windows denylist case-insensitivity (`env-file.ts:146`) and the `env-filename` case-collision risk are found-but-deferred; both go to `backlog.md` in T20 with an explicit note. Task 6's `headersHelper` support is documentation-only by design (spec §6.1) — the host-side wiring cannot be verified offline.
+**Known gaps, deliberately recorded rather than silently dropped:** the Windows denylist case-insensitivity (`env-file.ts:146`) and the `env-filename` case-collision risk are found-but-deferred; both go to `backlog.md` in T20 with an explicit note. Task 6's `headersHelper` support is documentation-only by design (spec §6.1): the host-side wiring cannot be verified offline.

@@ -11,7 +11,7 @@ import {
  * Build the daemon's {@link WorkflowEngine} from its already-open store handle
  * + the project `root` + `projectId`.
  *
- * One engine per serve lifecycle — constructed once alongside the store (see
+ * One engine per serve lifecycle: constructed once alongside the store (see
  * {@link openStoreForDaemon}) and reused across every HTTP request, exactly as
  * the store handle is. The engine is a thin orchestrator over the store KV, so
  * it inherits the daemon's single-writer discipline for free.
@@ -19,7 +19,7 @@ import {
  * Degraded story: the engine itself is mode-agnostic; when the underlying store
  * was opened read-only (`storeDegraded === true`), `workflow_status` still works
  * (a pure KV read via {@link Store.getState}) while `checkpoint { action:'save' }`
- * throws `"store is read-only (daemon down)"` — the tool handler catches that and
+ * throws `"store is read-only (daemon down)"`: the tool handler catches that and
  * surfaces a clear JSON error instead of crashing the daemon.
  *
  * Gate-config bridge: the optional `gateConfig` resolves
@@ -44,7 +44,7 @@ export function buildWorkflowEngine(
  * test; this resolver is the single bridge so user overrides actually reach the
  * engine. Resolves the `prd.mandatoryFor` override
  * and the `workflow.gate.verify` evidence-gate config.
- * Returns `undefined` only when BOTH blocks are at their defaults — otherwise the
+ * Returns `undefined` only when BOTH blocks are at their defaults: otherwise the
  * engine always receives an explicit shape (no surprise default merge).
  */
 export function resolveGateConfig(config?: NoirConfig): WorkflowGateConfig | undefined {
@@ -54,10 +54,10 @@ export function resolveGateConfig(config?: NoirConfig): WorkflowGateConfig | und
   const mandatoryFor = (mandatoryForRaw ?? [])
     .filter((c) => valid.has(c))
     .map((c) => c as TaskClass);
-  // Verify-gate block — pass through the user's shape (the engine applies it).
+  // Verify-gate block: pass through the user's shape (the engine applies it).
   const verifyCfg = config?.workflow?.gate?.verify;
   const hasVerify = verifyCfg !== undefined;
-  // An EXPLICIT `prd.mandatoryFor` (including `[]` — "recommend a PRD for no
+  // An EXPLICIT `prd.mandatoryFor` (including `[]`: "recommend a PRD for no
   // task class") is user intent, never coerced to the default. Only the ABSENCE
   // of the prd block (or an explicit default pair) counts as "at default".
   const prdExplicit = mandatoryForRaw !== undefined;
@@ -79,7 +79,7 @@ export function resolveGateConfig(config?: NoirConfig): WorkflowGateConfig | und
   if (prdAtDefault && verifyAtDefault && researchAtDefault) return undefined;
   return {
     // prdExplicit honors an explicit `mandatoryFor` (incl. `[]`); the ABSENT
-    // case keeps the feature/epic default — an earlier pass-through of the raw
+    // case keeps the feature/epic default: an earlier pass-through of the raw
     // (empty) array silently suppressed the PRD recommendation for feature/epic.
     prd: { mandatoryFor: prdExplicit ? mandatoryFor : ['feature', 'epic'] },
     verify: hasVerify

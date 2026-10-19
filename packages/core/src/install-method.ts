@@ -29,7 +29,7 @@ export interface InstallRecord {
   managedRuntimeVersion?: string;
   /** Per-version dismissals of the migration banner. When the
    *  current CLI version is in this list, `shouldShowMigrationBanner` returns
-   *  false — one nudge per version per non-native install. Absent ⇒ show. */
+   *  false: one nudge per version per non-native install. Absent ⇒ show. */
   dismissedVersions?: string[];
 }
 
@@ -64,7 +64,7 @@ export function ensureShimExecutable(): void {
     const mode = statSync(shim).mode & 0o777;
     if (mode !== 0o755) chmodSync(shim, 0o755);
   } catch {
-    // Absent or unreadable — nothing to heal (first install chmods explicitly).
+    // Absent or unreadable: nothing to heal (first install chmods explicitly).
   }
 }
 
@@ -75,14 +75,14 @@ export function ensureShimExecutable(): void {
  * `spawn noir ENOENT` even when `~/.noir/bin` is on the user's shell PATH.
  *
  * When a native install is detected (`install.json` `method:'native'` AND the
- * shim file exists), return the absolute shim path — MCP clients can spawn an
+ * shim file exists), return the absolute shim path: MCP clients can spawn an
  * absolute path with no PATH dependency. Otherwise fall back to `'noir'`
  * (works when `noir` is on PATH, e.g. an npm-global install in a terminal-spawn
  * client). Never throws: a missing/unreadable record degrades to `'noir'`.
  */
 export function resolveNoirCommand(): string {
   // Env override for tests + CI: pin the command without requiring a native
-  // install record on disk. NOT documented as a user knob — this is a test
+  // install record on disk. NOT documented as a user knob: this is a test
   // seam. Production code relies on the install.json path below.
   if (process.env.NOIR_MCP_COMMAND) return process.env.NOIR_MCP_COMMAND;
   const rec = readInstallRecord();
@@ -100,7 +100,7 @@ export function resolveNoirCommand(): string {
  *  in the failure path, because an interrupted write must not leave a stray
  *  copy of the destination next to it: a bare `CLAUDE.md.tmp-…` is plain
  *  clutter in `git status` and is walked by the context indexer as a document
- *  in its own right — a co-owned host file's half-written twin would be indexed
+ *  in its own right: a co-owned host file's half-written twin would be indexed
  *  as garbage. The dot prefix keeps a leftover (only reachable through a
  *  SIGKILL or a power loss, where no handler runs) out of the way, and the
  *  unlink covers every failure the process can still observe.
@@ -108,7 +108,7 @@ export function resolveNoirCommand(): string {
  *  Mode preservation (defense vs the "noir update → permission denied" bug):
  *  `writeFileSync` on a fresh temp yields the umask default (0o644, NO exec
  *  bit). If `path` already exists, the temp's mode replaces the target's on
- *  rename — so an overwrite of an executable shim (0o755) would lose the exec
+ *  rename: so an overwrite of an executable shim (0o755) would lose the exec
  *  bit. This stat's the existing target BEFORE the write and re-applies its
  *  mode after the rename, so a rewrite keeps the original perms (matching
  *  `install -m` / rsync semantics). Callers writing a NEW exec file must still
@@ -118,7 +118,7 @@ export function resolveNoirCommand(): string {
  *  An explicit `opts.mode` OVERRIDES that preservation contract: it is
  *  authoritative on every write (see {@link AtomicWriteOptions}).
  *
- *  NOTE: this does NOT call `fsync()` on the temp fd before the rename — the
+ *  NOTE: this does NOT call `fsync()` on the temp fd before the rename: the
  *  rename itself is atomic on POSIX, but a hard crash before the OS flushes
  *  the temp's dirty pages could leave a partially-written file visible at
  *  `path`. The trade-off is deliberate: the install/update caches and records
@@ -129,7 +129,7 @@ export function resolveNoirCommand(): string {
 export interface AtomicWriteOptions {
   /** Requested mode, applied to the temp file BEFORE the rename (so the
    *  destination never exists with a laxer mode). Authoritative on EVERY write
-   *  that passes it — including a rewrite of an existing file, whose mode is
+   *  that passes it: including a rewrite of an existing file, whose mode is
    *  then NOT restored (a caller asking for 0600 on a file that is currently
    *  0644 must end at 0600). Omit it to keep the legacy behaviour: create at
    *  the umask default, and restore the pre-existing target's mode on a
@@ -140,14 +140,14 @@ export interface AtomicWriteOptions {
 export function atomicWriteFile(path: string, data: string, opts: AtomicWriteOptions = {}): void {
   mkdirSync(dirname(path), { recursive: true });
   // Stat the existing target (if any) so we can restore its mode after the
-  // atomic rename — a rewrite must not silently strip the exec bit. The temp
+  // atomic rename: a rewrite must not silently strip the exec bit. The temp
   // file is written with umask (0o644); without this, `noir update` rewriting
   // the shim would make it non-executable (the recurring "permission denied").
   let prevMode: number | undefined;
   try {
     prevMode = statSync(path).mode & 0o777;
   } catch {
-    // Absent on first write — nothing to preserve; caller chmods if exec.
+    // Absent on first write: nothing to preserve; caller chmods if exec.
   }
   // Same directory as the target (a rename across filesystems would fail), and
   // dot-prefixed so a leftover that no JS could clean up stays out of the way.
@@ -171,7 +171,7 @@ export function atomicWriteFile(path: string, data: string, opts: AtomicWriteOpt
     );
     renameSync(tmp, path);
   } catch (err) {
-    // The PRIMARY guarantee is that the destination is untouched — it still
+    // The PRIMARY guarantee is that the destination is untouched: it still
     // holds the previous bytes (or is absent), which is what the caller and its
     // user care about. Removing the staged temp is best-effort: it keeps a
     // failed write from leaving a stray sibling, and a cleanup that itself
@@ -186,7 +186,7 @@ export function atomicWriteFile(path: string, data: string, opts: AtomicWriteOpt
   // Restore the pre-existing mode ONLY when the caller requested none. The
   // restore exists to keep an EXISTING file's perms across a rewrite (the
   // exec-bit-preservation contract); when a mode WAS requested it would undo
-  // that request — silently leaving a rewritten credential at the lax mode it
+  // that request: silently leaving a rewritten credential at the lax mode it
   // was supposed to tighten.
   if (opts.mode === undefined && prevMode !== undefined) {
     try {
@@ -214,7 +214,7 @@ export function readInstallRecord(): InstallRecord | null {
 
 /**
  * Remove the install record file. Uses a direct `rmSync` (NOT a temp-then-
- * rename) intentionally: this is a DELETE, not a write — there is no
+ * rename) intentionally: this is a DELETE, not a write: there is no
  * half-written intermediate state to guard against, and the same pattern is
  * used by `clearProjectDaemonRecord` in the daemon. An atomic rename can't express
  * "this file no longer exists". */

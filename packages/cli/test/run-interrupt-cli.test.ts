@@ -2,7 +2,7 @@
 // started Noir, actually does.
 //
 // The command drives a host child, so an interrupt has to stop the CHILD and
-// then report the run as interrupted — never exit with the host still running,
+// then report the run as interrupted: never exit with the host still running,
 // and never report a deliberately stopped host as a failure. Offline: runHost is
 // replaced by a stand-in that hands over a fake child and settles when that
 // child is signalled, so the exit codes, the message and the transcript are
@@ -72,7 +72,7 @@ function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-describe('noir run — the interrupt contract', () => {
+describe('noir run: the interrupt contract', () => {
   let stderr: MockInstance<typeof process.stderr.write>;
   let stdout: MockInstance<typeof process.stdout.write>;
   let exit: MockInstance<typeof process.exit>;
@@ -195,7 +195,7 @@ describe('noir run — the interrupt contract', () => {
     const code = await done;
 
     expect(code).toBe(130);
-    // One line on stdout, and it is the envelope — a scripted consumer reads a
+    // One line on stdout, and it is the envelope: a scripted consumer reads a
     // machine answer, not a human sentence about a keystroke.
     const lines = stdoutText()
       .split('\n')
@@ -210,7 +210,7 @@ describe('noir run — the interrupt contract', () => {
     expect(envelope.error.message).toContain('interrupted · transcript: ');
   });
 
-  it('reports the interrupt under --quiet — the verdict carries signal', async () => {
+  it('reports the interrupt under --quiet: the verdict carries signal', async () => {
     const done = runCli(['run', 'why is the build slow', '--quiet']);
     await flush();
 
@@ -252,7 +252,7 @@ describe('noir run — the interrupt contract', () => {
     // A host that refuses the polite signal keeps the run live, so the SECOND
     // interrupt is the one that ends it. Leaving there must not leave a machine
     // consumer without an answer: one envelope, the same one the first interrupt
-    // would have produced — and the host forced, so nothing is left behind.
+    // would have produced: and the host forced, so nothing is left behind.
     runHostMock.mockImplementationOnce(async (opts: RunHostOptions): Promise<RunHostResult> => {
       const child = new StubbornChild();
       current = child;
@@ -295,7 +295,7 @@ describe('noir run — the interrupt contract', () => {
     expect(envelope.error.message).toContain('interrupted · transcript: ');
 
     // Close the run the way the forced kill would, so it hands the process's
-    // own signal handling back — an interrupt handler left installed would
+    // own signal handling back: an interrupt handler left installed would
     // answer for every later run in this process.
     (current as StubbornChild).die();
     await done;
@@ -303,7 +303,7 @@ describe('noir run — the interrupt contract', () => {
 
     // The run can still resolve inside the window between the forced kill and
     // the deferred exit (a pipe under backpressure widens it), so the count is
-    // read again after the run has settled: one run, one answer — the leaving
+    // read again after the run has settled: one run, one answer: the leaving
     // path and the run's own interrupted path cannot both write one.
     const settled = stdoutText()
       .split('\n')
@@ -312,7 +312,7 @@ describe('noir run — the interrupt contract', () => {
     expect(JSON.parse(settled[0] as string)).toMatchObject({ ok: false, error: { code: 130 } });
   });
 
-  it('honours a second interrupt without --json — the verdict and the exit code', async () => {
+  it('honours a second interrupt without --json: the verdict and the exit code', async () => {
     runHostMock.mockImplementationOnce(async (opts: RunHostOptions): Promise<RunHostResult> => {
       const child = new StubbornChild();
       current = child;

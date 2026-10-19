@@ -7,10 +7,10 @@
 // discriminated union (from ../types) and returns `{ embed, info }`.
 //
 // Provider matrix:
-//   local    — @huggingface/transformers + all-MiniLM-L6-v2 (DEFAULT; lazy load)
-//   remote   — OpenAI / Voyage / Cohere (OPT-IN, provider-explicit, paid)
-//   ollama   — local Ollama server (OPT-IN, provider-explicit)
-//   none     — disable vectors; search degrades to BM25-only
+//   local   : @huggingface/transformers + all-MiniLM-L6-v2 (DEFAULT; lazy load)
+//   remote  : OpenAI / Voyage / Cohere (OPT-IN, provider-explicit, paid)
+//   ollama  : local Ollama server (OPT-IN, provider-explicit)
+//   none    : disable vectors; search degrades to BM25-only
 
 import type { EmbedderConfig, EmbedderInfo, EmbedFn } from '../types.js';
 import { localEmbedder } from './local.js';
@@ -28,7 +28,7 @@ export interface ResolvedEmbedder {
 
 /**
  * Build an `{ embed, info }` pair from a config. Construction never touches the
- * network or the native runtime — even `local` defers its dynamic import to the
+ * network or the native runtime: even `local` defers its dynamic import to the
  * first `embed()` call. `kind:'none'` (and any load failure the caller lets
  * propagate) yields BM25-only retrieval downstream.
  */
@@ -52,7 +52,7 @@ export function createEmbedFn(cfg: EmbedderConfig): ResolvedEmbedder {
       return { embed, info: { kind: 'ollama', model: cfg.model, dim: EMBED_DIM } };
     }
     case 'none': {
-      // Defer the error to embed() — but the retriever branches on
+      // Defer the error to embed(): but the retriever branches on
       // info.kind === 'none' first, so this stub never runs in the normal path.
       const embed: EmbedFn = async () => {
         throw new Error('embedder disabled (kind:"none"); search degrades to BM25-only');
@@ -63,7 +63,7 @@ export function createEmbedFn(cfg: EmbedderConfig): ResolvedEmbedder {
 }
 
 // `fakeEmbedFn` (./fake.js) is a TEST-ONLY deterministic double (SHA-256-seeded
-// 384-dim vectors) and is deliberately NOT re-exported here — this barrel is
+// 384-dim vectors) and is deliberately NOT re-exported here: this barrel is
 // shipped via the package `exports` map, so re-exporting it would publish a test
 // fixture as (unreachable) production surface. context's own tests import it via
 // the relative `../src/embedders/fake.js` path; cross-package suites keep a

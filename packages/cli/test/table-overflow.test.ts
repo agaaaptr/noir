@@ -80,7 +80,7 @@ function renderTable(
 }
 
 // A single column whose header is far wider than any of the test terminals'
-// content budgets, paired with an even wider cell — the shape that used to be
+// content budgets, paired with an even wider cell: the shape that used to be
 // pinned open by its own header and overflow.
 const wideHeader = 'H'.repeat(140);
 const wideCell = 'c'.repeat(200);
@@ -100,7 +100,7 @@ const shortCols = Array.from({ length: 12 }, (_, i) => `h${String(i).padStart(2,
 const shortRow: Record<string, string> = {};
 for (const col of shortCols) shortRow[col] = 'abcd';
 
-describe('table overflow — real cli-table3 rendering', () => {
+describe('table overflow: real cli-table3 rendering', () => {
   it.each([80, 100, 120] as const)(
     'a table with one very wide column never exceeds %i columns',
     (width) => {
@@ -145,7 +145,7 @@ describe('table overflow — real cli-table3 rendering', () => {
   });
 });
 
-describe('terminalWidth — measures the stream tables are written to', () => {
+describe('terminalWidth: measures the stream tables are written to', () => {
   it('prefers stderr.columns over stdout.columns', () => {
     setColumns(process.stderr, 100);
     setColumns(process.stdout, 60);

@@ -10,7 +10,7 @@
 //     and the final file name survive.
 //
 // cli-table3 is mocked so the column widths and the cell text `table()` hands
-// to it can be inspected directly — the real renderer's own index-based
+// to it can be inspected directly: the real renderer's own index-based
 // truncation would otherwise hide whether OUR measurement was right.
 //
 // A wide CJK glyph is a fixture here on purpose: it is the case a code-unit
@@ -91,7 +91,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('table column widths — display width, not code units', () => {
+describe('table column widths: display width, not code units', () => {
   it('allocates a coloured badge its visible width, not its escape-inflated length', () => {
     process.env.CLICOLOR_FORCE = '1';
     const cell = badge('warn', 'WARN');
@@ -119,7 +119,7 @@ describe('table column widths — display width, not code units', () => {
       {
         Check: 'native deps',
         Status: badge('warn', 'WARN'),
-        Detail: 'better-sqlite3 loadable but sqlite-vec missing — search degrades to BM25',
+        Detail: 'better-sqlite3 loadable but sqlite-vec missing: search degrades to BM25',
       },
       { Check: 'store', Status: badge('error', 'FAIL'), Detail: 'store DB would not open' },
     ];
@@ -205,7 +205,7 @@ describe('table cell truncation', () => {
   it('leaves a multi-word cell for word wrap rather than cutting it', () => {
     setEnv('COLUMNS', '60');
     const detail =
-      'better-sqlite3 loadable but sqlite-vec native layer missing — search degrades to BM25';
+      'better-sqlite3 loadable but sqlite-vec native layer missing: search degrades to BM25';
 
     table(
       [{ Check: 'native deps', Status: 'WARN', Detail: detail }],
@@ -219,7 +219,7 @@ describe('table cell truncation', () => {
   });
 });
 
-describe('badge — colour is applied after truncation', () => {
+describe('badge: colour is applied after truncation', () => {
   it('truncates the label to the requested width and keeps its colour', () => {
     process.env.CLICOLOR_FORCE = '1';
     const plain = '⚠ a very long degraded detail';

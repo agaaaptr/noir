@@ -1,4 +1,4 @@
-// S9 t2 — output infra tests. Verifies the S9 stream discipline (data→stdout,
+// S9 t2: output infra tests. Verifies the S9 stream discipline (data→stdout,
 // diagnostics→stderr), the auto-disable matrix for decoration (--json / --quiet
 // / CI / NO_COLOR / !TTY), the exit-code contract, and fail()/handleError().
 //
@@ -208,7 +208,7 @@ describe('isNoInput', () => {
   });
 });
 
-describe('json() — stdout discipline', () => {
+describe('json(): stdout discipline', () => {
   it('writes JSON.stringify(obj) + newline to STDOUT only', () => {
     const { capture, restore } = captureStreams();
     try {
@@ -222,7 +222,7 @@ describe('json() — stdout discipline', () => {
   });
 });
 
-describe('human diagnostics — stderr + suppression', () => {
+describe('human diagnostics: stderr + suppression', () => {
   it('log writes plain text to STDERR', () => {
     const { capture, restore } = captureStreams();
     try {
@@ -291,7 +291,7 @@ describe('human diagnostics — stderr + suppression', () => {
   });
 });
 
-describe('table() — cli-table3, suppressed under --json', () => {
+describe('table(): cli-table3, suppressed under --json', () => {
   it('renders head + rows to STDERR', () => {
     const { capture, restore } = captureStreams();
     try {
@@ -337,7 +337,7 @@ describe('table() — cli-table3, suppressed under --json', () => {
   });
 });
 
-describe('spinner() — ora, no-op when non-interactive', () => {
+describe('spinner(): ora, no-op when non-interactive', () => {
   it('returns a no-op (ora not constructed) when !isInteractive', () => {
     setTty(false, false);
     const sp = spinner('working', {});
@@ -375,7 +375,7 @@ describe('spinner() — ora, no-op when non-interactive', () => {
   });
 });
 
-describe('fail() — exit code + stream routing', () => {
+describe('fail(): exit code + stream routing', () => {
   it('writes the message to STDERR (non-json) and throws a noir CommanderError', () => {
     const { capture, restore } = captureStreams();
     try {
@@ -414,7 +414,7 @@ describe('fail() — exit code + stream routing', () => {
   });
 });
 
-describe('requireInteractive — scriptable hard rule', () => {
+describe('requireInteractive: scriptable hard rule', () => {
   it('throws exit 2 (USAGE) when not interactive', () => {
     setTty(false, false);
     let caught: unknown;
@@ -433,7 +433,7 @@ describe('requireInteractive — scriptable hard rule', () => {
   });
 });
 
-describe('inferExitCode — full mapping', () => {
+describe('inferExitCode: full mapping', () => {
   it('NoirCliError → its exitCode', () => {
     expect(inferExitCode(new NoirCliError(EXIT.CANCELLED, 'x'))).toBe(EXIT.CANCELLED);
   });
@@ -458,7 +458,7 @@ describe('inferExitCode — full mapping', () => {
   });
 });
 
-describe('handleError — stderr + process.exitCode', () => {
+describe('handleError: stderr + process.exitCode', () => {
   it('writes NoirCliError message and sets exitCode', () => {
     const { capture, restore } = captureStreams();
     try {

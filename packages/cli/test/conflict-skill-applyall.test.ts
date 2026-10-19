@@ -1,4 +1,4 @@
-// Regression — the @clack conflict resolver must OFFER "apply to all" for the
+// Regression: the @clack conflict resolver must OFFER "apply to all" for the
 // `skill` mode (skills emit via `emitSkillsToDir` with mode='skill'), not just
 // `regenerate`. Before the fix the gate was `mode === 'regenerate'`, so a
 // `noir init --upgrade` / `noir sync` re-emitting many divergent skills
@@ -27,7 +27,7 @@ beforeEach(() => {
   isCancelMock.mockClear();
 });
 
-describe('clack conflict resolver — apply-to-all for skill mode', () => {
+describe('clack conflict resolver: apply-to-all for skill mode', () => {
   it('returns applyToAll=true when the user picks Yes for mode=skill', async () => {
     selectMock.mockImplementation(async (opts: { message: string }) => {
       if (opts.message.startsWith('Apply ')) return 'yes';

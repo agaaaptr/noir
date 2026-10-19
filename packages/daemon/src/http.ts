@@ -28,7 +28,7 @@ import {
 } from './token.js';
 import { buildWorkflowEngine, resolveGateConfig } from './workflow-seam.js';
 
-/** The method set `/mcp` accepts — the same one the Streamable HTTP transport
+/** The method set `/mcp` accepts: the same one the Streamable HTTP transport
  *  itself accepts, so a request refused here and one refused deeper down agree
  *  on what this endpoint allows. One list, three consumers: the guard below,
  *  the `Allow` header, and the refusal message, so a change lands in all three
@@ -73,11 +73,11 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
   // The daemon is the single writer: open the store ONCE per serve lifecycle
   // and reuse the same handle across every HTTP request. The stateless
   // Streamable HTTP model builds a fresh McpServer per request, but they all
-  // share this one store handle — no per-request re-open, no second writer.
+  // share this one store handle: no per-request re-open, no second writer.
   const daemonStore = await openStoreForDaemon(opts.project.id, opts.project.root).catch(
     () => undefined,
   );
-  // One engine per lifecycle, built from the shared store handle — reused
+  // One engine per lifecycle, built from the shared store handle: reused
   // across every request, exactly like the store. The gate-config bridge
   // resolves the user's `prd.mandatoryFor` override so
   // it reaches the engine (no surprise default when the user customized it).
@@ -90,12 +90,12 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
       )
     : undefined;
   // One context engine per lifecycle, built from the same shared store handle +
-  // the resolved embedder config — reused across every request, exactly like the
+  // the resolved embedder config: reused across every request, exactly like the
   // store + engine. The daemon owns ONE embedder: the config is resolved once
   // (`resolveEmbedderConfig`) and the `EmbedFn` materialized once
   // (`createEmbedFn`); the same `EmbedFn` is handed to the memory engine below.
   // The context engine still takes the `EmbedderConfig` (its own contract) and
-  // resolves its embedder internally from the SAME config — for `kind:'local'`
+  // resolves its embedder internally from the SAME config: for `kind:'local'`
   // the ONNX pipeline is module-cached, so the two resolutions share one loaded
   // model. The store's `degraded` flag threads through so `context_status`/
   // `memory_save` are honest under a read-only handle and writes short-circuit.
@@ -112,7 +112,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     : undefined;
   // One memory engine per lifecycle, built from the same shared store handle +
   // the SAME `EmbedFn` already materialized for the context engine (the daemon
-  // owns one embedder; memory takes `{store, embed, ...}` — no embedder
+  // owns one embedder; memory takes `{store, embed, ...}`: no embedder
   // duplication).
   // Consolidation is OPT-IN + provider-explicit (NEVER a silent
   // paid call, the Agent-Memory anti-pattern). The master switch is the
@@ -147,7 +147,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     // Update activity ONLY for requests that pass validation (a rejected bad
     // host/origin must not reset the idle timer, else an attacker or
     // misconfigured client could keep the daemon alive forever by pinging any
-    // path with an invalid origin). /health is validated TOO — an
+    // path with an invalid origin). /health is validated TOO: an
     // unauthenticated cross-origin keep-alive (a malicious page's fetch) must
     // not defeat the idle shutdown. Legitimate local probes send loopback Host
     // + no Origin, which localhostHostValidation / localhostOriginValidation
@@ -203,7 +203,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
       }
       // A query-string MCP URL is the WORKSPACE daemon's shape (?p=<projectId>).
       // This daemon serves one project at a bare /mcp, so answer 400 naming the
-      // mismatch — before auth, so a misdirected host gets the actionable
+      // mismatch: before auth, so a misdirected host gets the actionable
       // message rather than a 401 about a token that was never the problem.
       if (hasQuery) {
         res.writeHead(400, { 'content-type': 'application/json' });
@@ -218,8 +218,8 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
       }
       // Auth on the HTTP transport only. The guard shares its exact
       // predicate with the route below, so no request can reach the MCP handler
-      // without passing it. /health stays token-free — the liveness probe
-      // depends on it and its body carries no secret — but it remains
+      // without passing it. /health stays token-free: the liveness probe
+      // depends on it and its body carries no secret: but it remains
       // host/origin validated above.
       const provided = req.headers.authorization?.replace(/^Bearer\s+/i, '');
       if (!tokenMatches(daemonToken, provided)) {
@@ -261,7 +261,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
 
   // `daemon.port` is a PREFERENCE, not a demand: two projects may legitimately
   // configure the same port, and failing the command would be worse than
-  // degrading. On EADDRINUSE we retry ephemeral and warn — and the record below
+  // degrading. On EADDRINUSE we retry ephemeral and warn: and the record below
   // always carries the port actually bound, so the record never lies.
   async function listenOn(port: number): Promise<number> {
     return new Promise((resolve, reject) => {
@@ -285,7 +285,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
       (err as NodeJS.ErrnoException).code === 'EADDRINUSE'
     ) {
       process.stderr.write(
-        `noir: port ${opts.port} is in use — falling back to an ephemeral port.\n`,
+        `noir: port ${opts.port} is in use: falling back to an ephemeral port.\n`,
       );
       port = await listenOn(0);
     } else throw err;
@@ -312,7 +312,7 @@ export async function startHttpServer(opts: StartHttpOptions): Promise<RunningDa
     }
     await new Promise<void>((r) => httpServer.close(() => r()));
     await daemonStore?.store.close().catch(() => undefined);
-    // Only clear OUR record (pid match) — a slow-dying predecessor or a
+    // Only clear OUR record (pid match): a slow-dying predecessor or a
     // restarting daemon must not have its record wiped by this one.
     const rec = readProjectDaemonRecord(opts.project.id);
     if (rec && rec.pid === pid) {

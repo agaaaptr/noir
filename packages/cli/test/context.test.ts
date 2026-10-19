@@ -1,5 +1,5 @@
-// S9 — `noir context {search,index,status}` tests. daemon-client is mocked
-// at the module boundary (no real daemon / HTTP — NF4): `callDaemonTool` returns
+// S9: `noir context {search,index,status}` tests. daemon-client is mocked
+// at the module boundary (no real daemon / HTTP: NF4): `callDaemonTool` returns
 // a per-test payload. These pin the contract:
 //   • --json emits `{ok:true,data}` to STDOUT only (stderr pristine);
 //   • human mode renders tables/snippets to STDERR;
@@ -13,7 +13,7 @@ const { payloads } = vi.hoisted(() => ({ payloads: { current: {} as Record<strin
 // The daemon-down fallback adds two new exports to daemon-client that the
 // existing tests must mock explicitly (otherwise the real `probeDaemon` is
 // undefined in the mock factory and the `try/catch` in contextSearch silently
-// treats every probe as "daemon up" — masking the probe entirely). Default the
+// treats every probe as "daemon up": masking the probe entirely). Default the
 // probe to `{running:true}` so the EXISTING tests keep exercising the daemon
 // path; a probe-down test overrides `probeResult.current`.
 const { probeResult } = vi.hoisted(() => ({
@@ -217,14 +217,14 @@ describe('context search --json', () => {
   });
 });
 
-describe('context search — human table on stderr', () => {
+describe('context search: human table on stderr', () => {
   it('renders hit count + a table to STDERR, nothing to STDOUT', async () => {
     const { capture, restore } = captureStreams();
     try {
       await contextSearch({ ...base, query: 'ContextEngine' });
       const c = capture();
       expect(c.out).toBe('');
-      expect(c.err).toMatch(/context search — 2 hits/);
+      expect(c.err).toMatch(/context search: 2 hits/);
       expect(c.err).toContain('src/context.ts');
       expect(c.err).toContain('0.0312');
     } finally {
@@ -246,10 +246,10 @@ describe('context search — human table on stderr', () => {
       await contextSearch({ ...base, query: 'x' });
       const err = capture().err;
       // the ad-hoc `[degraded: BM25-only]` marker is now a status badge
-      // (`⚠ degraded: BM25-only`) — symbol + text label, colorblind/NO_COLOR-safe.
+      // (`⚠ degraded: BM25-only`): symbol + text label, colorblind/NO_COLOR-safe.
       expect(err).toContain('degraded: BM25-only');
       expect(err).toContain('⚠');
-      expect(err).toContain('budget hit — results truncated');
+      expect(err).toContain('budget hit: results truncated');
     } finally {
       restore();
     }
@@ -286,7 +286,7 @@ describe('context index', () => {
     payloads.current.context_index = {
       ok: false,
       degraded: true,
-      error: 'store is read-only (daemon down) — context_index is unavailable',
+      error: 'store is read-only (daemon down): context_index is unavailable',
     };
     await expect(contextIndex({ ...base })).rejects.toMatchObject({ exitCode: 1 });
   });

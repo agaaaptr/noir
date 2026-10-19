@@ -8,7 +8,7 @@
 //
 // Provider-explicit, NEVER silent remote: `kind:'remote'` and
 // `kind:'ollama'` are only selected when the user explicitly sets them in
-// config. The default is `kind:'local'` — in-process, offline, free, private.
+// config. The default is `kind:'local'`: in-process, offline, free, private.
 // Remote API keys are read from environment variables ONLY (secrets stay out of
 // the config file, matching how the model layer handles provider keys); a
 // missing key yields a
@@ -19,17 +19,17 @@ import { EMBED_DIM } from './embedders/normalize.js';
 import type { EmbedderConfig } from './types.js';
 
 /**
- * User-facing context config shape — mirrors `NoirConfig['context']` (the zod
+ * User-facing context config shape: mirrors `NoirConfig['context']` (the zod
  * block @noir-ai/core ships). Declared locally with every field
  * optional so this module type-checks WITHOUT a forward dependency on a core
- * type (core never imports context — no cycle), AND so a config with no
+ * type (core never imports context: no cycle), AND so a config with no
  * `context:` block (or a partial one) parses cleanly. The fully
  * resolved zod output is structurally assignable to this permissive shape, so
  * the mapper accepts `NoirConfig['context']` directly.
  */
 export interface ContextUserConfig {
   embedder?: {
-    /** Default `'local'` (in-process transformers.js — offline, free, private). */
+    /** Default `'local'` (in-process transformers.js: offline, free, private). */
     kind?: 'local' | 'remote' | 'ollama' | 'none';
     /** Local HF repo id / remote provider model id / Ollama model tag. */
     model?: string;
@@ -48,7 +48,7 @@ export interface ContextUserConfig {
 
 /**
  * The environment variable that carries the API key for a remote provider, or
- * `undefined` for an unknown provider (no inference — provider-explicit).
+ * `undefined` for an unknown provider (no inference: provider-explicit).
  */
 function apiKeyEnvVar(provider: string): string | undefined {
   switch (provider) {
@@ -67,14 +67,14 @@ function apiKeyEnvVar(provider: string): string | undefined {
  * Resolve a user-facing {@link ContextUserConfig} into the discriminated
  * {@link EmbedderConfig} the factory (`createEmbedFn`) consumes.
  *
- * - `undefined` / missing block ⇒ `{kind:'local'}` (the safe default — a config
+ * - `undefined` / missing block ⇒ `{kind:'local'}` (the safe default: a config
  *   with no `context:` block stays local-embedder-attempted).
  * - `kind:'local'` ⇒ in-process transformers.js (model optional; factory
  *   defaults to `Xenova/all-MiniLM-L6-v2`).
  * - `kind:'none'` ⇒ vectors disabled; `search` degrades to BM25-only.
  * - `kind:'remote'` / `'ollama'` ⇒ provider-explicit; the API key (remote) /
  *   base URL (ollama) are resolved from env when absent in config. A missing
- *   key is NOT an error here — the built embedder throws from `embed()` so the
+ *   key is NOT an error here: the built embedder throws from `embed()` so the
  *   engine degrades to BM25-only instead of crashing at construction.
  *
  * NEVER returns a remote/ollama config unless `kind` is explicitly that value —

@@ -5,15 +5,15 @@
 // stdout). Exit 1 if any CRITICAL (fail) check is unhealthy, else 0.
 //
 // Severity model:
-//   - ok   — healthy.
-//   - warn — degraded but usable (daemon down, onnx missing, provider key
+//   - ok  : healthy.
+//   - warn: degraded but usable (daemon down, onnx missing, provider key
 //            missing, project not initialized). NEVER triggers exit 1.
-//   - fail — CRITICAL. `config` (parse error), `native deps` (better-sqlite3 /
+//   - fail: CRITICAL. `config` (parse error), `native deps` (better-sqlite3 /
 //            sqlite-vec will not load), and `store` (open fails) mean the product
 //            is broken on this host; `output hygiene` fails when the repository's
 //            own text carries a fail-tier hygiene finding. Exit 1 if any fail.
 //
-// Honesty rules: provider status uses `resolveModelConfig` — a PURE projection
+// Honesty rules: provider status uses `resolveModelConfig`: a PURE projection
 // of the user's config + env-var NAME presence; it makes NO live call.
 // Native-dep probes are best-effort try/catch (the store's native
 // binaries are probed via `vecAvailability`, the single cross-package surface;
@@ -21,13 +21,13 @@
 //
 // Cold-start: the @noir-ai/store import (which loads better-sqlite3) is
 // DYNAMIC, inside the action, so merely running `noir status` / `noir --help`
-// never pays the native-bindings cost. @noir-ai/model is imported eagerly — its
+// never pays the native-bindings cost. @noir-ai/model is imported eagerly: its
 // provider self-registration is light (SDKs load lazily inside `complete()`).
 //
 // Stream discipline: `--json` writes `{ok:true, data:{checks,summary}}`
 // to stdout (the only stdout write). Doctor always emits `ok:true` because the
 // COMMAND succeeded in producing a diagnosis; the system-health pass/fail is
-// signaled by the EXIT CODE (0 healthy / 1 critical failure) — the same shape
+// signaled by the EXIT CODE (0 healthy / 1 critical failure): the same shape
 // `npm audit --json` uses (valid JSON out, non-zero exit when issues found).
 
 import { spawnSync } from 'node:child_process';
@@ -132,9 +132,9 @@ export interface DoctorPayload {
   scaffold: { onDisk: string | null; current: string; drift: boolean };
   /** RULES.md budget measurement. `null` when there is nothing to measure —
    *  the project isn't initialized, `rules.enabled` is false in
-   *  `.noir/config.yml`, or `.noir/rules/RULES.md` is absent — and in each of
+   *  `.noir/config.yml`, or `.noir/rules/RULES.md` is absent: and in each of
    *  those cases the check row stays informational (warn skip, ok "disabled",
-   *  or ok "no RULES.md"). Never drives `fail` — over-budget is a `warn`. */
+   *  or ok "no RULES.md"). Never drives `fail`: over-budget is a `warn`. */
   rules: {
     onDisk: { bytes: number; lines: number };
     budget: { kb: number; maxLines: number };
@@ -146,7 +146,7 @@ export interface DoctorPayload {
    *  cursor/opencode; the host's native context file when distinct from
    *  AGENTS.md (claude → CLAUDE.md, gemini → GEMINI.md); the host's MCP
    *  config). The check row is `ok` when
-   *  all present, `warn` (NEVER `fail`) when any are missing — re-running
+   *  all present, `warn` (NEVER `fail`) when any are missing: re-running
    *  `noir sync` restores them. */
   host: { active: HostId; expected: string[]; missing: string[] } | null;
   /** Publish-readiness report (repo-developer-facing, advisory). `null`
@@ -155,7 +155,7 @@ export interface DoctorPayload {
    *  "skipped"). Otherwise carries the count of workspace `package.json` files
    *  validated + the list of advisory issues found (bad semver, missing
    *  `files`, cli missing `bin`, …). The row severity is `warn` when any issues
-   *  are present, `ok` otherwise — NEVER `fail` (a missing field does not break
+   *  are present, `ok` otherwise: NEVER `fail` (a missing field does not break
    *  the local install). */
   publish: { checked: number; issues: string[] } | null;
   /** Install-method report. `method` from ~/.noir/install.json (fallback
@@ -178,7 +178,7 @@ export interface DoctorPayload {
 async function probeOnnx(): Promise<{ ok: boolean; reason: string }> {
   try {
     // Variable specifier (not a string literal) so tsc does NOT try to resolve
-    // a module the CLI package does not directly depend on — onnxruntime-node
+    // a module the CLI package does not directly depend on: onnxruntime-node
     // is the context engine's dep and resolves through ITS node_modules at
     // runtime. Best-effort: hosts that hoist it resolve; otherwise not-loadable.
     const spec = 'onnxruntime-node';
@@ -232,7 +232,7 @@ function checkConfig(root: string): { project: ProjectInfo | undefined; result: 
       result: {
         name: 'config',
         status: 'warn',
-        detail: `no .noir/config.yml in ${root} — run \`noir init\``,
+        detail: `no .noir/config.yml in ${root}: run \`noir init\``,
       },
     };
   }
@@ -262,7 +262,7 @@ async function checkDaemon(checks: CheckResult[], project: ProjectInfo | undefin
     checks.push({
       name: 'daemon',
       status: 'warn',
-      detail: 'skipped — project not initialized',
+      detail: 'skipped: project not initialized',
     });
     return;
   }
@@ -284,7 +284,7 @@ async function checkDaemon(checks: CheckResult[], project: ProjectInfo | undefin
     return;
   }
   try {
-    // Bounded probe — a stale record pointing at a blackhole socket (TCP
+    // Bounded probe: a stale record pointing at a blackhole socket (TCP
     // accepted, HTTP never answered) must not hang `noir doctor` for minutes.
     const res = await fetch(`http://127.0.0.1:${rec.port}/health`, {
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
@@ -294,7 +294,7 @@ async function checkDaemon(checks: CheckResult[], project: ProjectInfo | undefin
         ? ((await res.json()) as { ok?: boolean; pid?: number; uptimeSec?: number })
         : null;
     // PID-reuse guard (mirrors daemonStatus): require the responding /health to
-    // carry OUR recorded pid — a foreign process serving /health is not our daemon.
+    // carry OUR recorded pid: a foreign process serving /health is not our daemon.
     const pidOk = typeof body?.pid === 'number' && body.pid === rec.pid;
     if (body && body.ok === true && pidOk) {
       checks.push({
@@ -344,20 +344,20 @@ async function checkStore(
   root: string,
 ): Promise<void> {
   if (!project) {
-    checks.push({ name: 'store', status: 'warn', detail: 'skipped — not initialized' });
+    checks.push({ name: 'store', status: 'warn', detail: 'skipped: not initialized' });
     return;
   }
   const dbPath = paths.storeDb(root, project.id);
   if (!existsSync(dbPath)) {
     // Fresh project: the store DB is created LAZILY when the daemon first runs
-    // (or when content is indexed) — `noir init`/`create` does not pre-create it.
+    // (or when content is indexed): `noir init`/`create` does not pre-create it.
     // Its absence on an otherwise-initialized project is EXPECTED, not a failure:
     // surfacing it as `fail` would alarm every new user on their first `noir doctor`.
     // Warn (never exit-1) with the action that materializes the store.
     checks.push({
       name: 'store',
       status: 'warn',
-      detail: `not created yet — the store DB is created when the daemon first runs (\`noir daemon start\` or index content); expected at ${dbPath}`,
+      detail: `not created yet: the store DB is created when the daemon first runs (\`noir daemon start\` or index content); expected at ${dbPath}`,
     });
     return;
   }
@@ -392,18 +392,18 @@ async function checkStore(
 const ENV_REFUSAL_PREFIX = '.noir/.env: refusing to load';
 
 /**
- * Why a `.noir/.env` is readable beyond its owner — the two causes the permission
+ * Why a `.noir/.env` is readable beyond its owner: the two causes the permission
  * advisory tells apart.
  *
- * `legacy` — nothing has changed the file's mode since its contents were last
+ * `legacy`: nothing has changed the file's mode since its contents were last
  * written, so the mode is the one the file was created with. Seeding this file
  * owner-only arrived in Noir 1.14.0, so a project carried over from an earlier
  * version (or a file created by hand, or one delivered by a clone) simply came
- * this way — and so does a file saved by a tool that replaces rather than
+ * this way: and so does a file saved by a tool that replaces rather than
  * rewrites it, since the replacement is a fresh inode. The reader did nothing
  * wrong.
  *
- * `changed` — the mode was altered after the contents were last written: a
+ * `changed`: the mode was altered after the contents were last written: a
  * `chmod`, a `chown`, or a restore that re-applied metadata.
  */
 type EnvModeCause = 'legacy' | 'changed';
@@ -412,7 +412,7 @@ type EnvModeCause = 'legacy' | 'changed';
  * Which cause left `st`'s file readable beyond its owner.
  *
  * POSIX stamps `mtime` only when the contents change, and `ctime` on every inode
- * change — a `chmod` and a `chown` included — so equal timestamps mean the mode
+ * change: a `chmod` and a `chown` included: so equal timestamps mean the mode
  * has not been touched since the contents were written, and a newer `ctime` means
  * something set it afterwards. That is the whole of what the file can say about
  * its own history: a file rewritten in place AFTER someone loosened its mode
@@ -429,13 +429,13 @@ function octalMode(mode: number): string {
 
 /**
  * The permission advisory for a file that is not owner-only: the mode observed,
- * the remedy, and why the file is in that state — the remedy comes before the
+ * the remedy, and why the file is in that state: the remedy comes before the
  * cause, because a long detail is the first thing a narrow table truncates.
  */
 function describeEnvMode(cause: EnvModeCause, mode: number): string {
-  const lead = `is ${octalMode(mode)} — accessible to other accounts; run \`noir sync\` (or \`chmod 600 .noir/.env\`) to make it owner-only.`;
+  const lead = `is ${octalMode(mode)}: accessible to other accounts; run \`noir sync\` (or \`chmod 600 .noir/.env\`) to make it owner-only.`;
   return cause === 'legacy'
-    ? `${lead} Nothing has changed its mode since the file was written, so the file predates the owner-only contract (an older Noir seeded it, a clone delivered it, it was created by hand, or it was saved by a tool that replaces the file) — this is not a change you made.`
+    ? `${lead} Nothing has changed its mode since the file was written, so the file predates the owner-only contract (an older Noir seeded it, a clone delivered it, it was created by hand, or it was saved by a tool that replaces the file): this is not a change you made.`
     : `${lead} Its mode was changed after the file was written (a \`chmod\`, a \`chown\`, or a restore that re-applied metadata), so no older Noir left it this way.`;
 }
 
@@ -444,18 +444,18 @@ function describeEnvMode(cause: EnvModeCause, mode: number): string {
  *
  * Three concerns, in the order the user should read them:
  *
- *   1. REFUSAL — a git-tracked file contributes NOTHING. Reporting
+ *   1. REFUSAL: a git-tracked file contributes NOTHING. Reporting
  *      only its permissions here would tell the user everything is fine while
  *      every key in it is being ignored, which is precisely the "I edited
  *      `.noir/.env` and nothing changed" confusion this check exists to kill.
  *      The permissions advisory is skipped for a refused file, mirroring the
  *      loader, which refuses before it even parses (so it emits no other
  *      diagnostic either).
- *   2. PERMISSION advisory — a group/world-readable file can leak tokens
+ *   2. PERMISSION advisory: a group/world-readable file can leak tokens
  *      (ssh/aws-credentials convention). Warn, never fail. The row names the
  *      mode it observed and whether the file predates the owner-only contract,
  *      so a file an older Noir seeded is not reported as the reader's own doing.
- *   3. PROVENANCE — one `ok` row per key the file DEFINES, naming the side that
+ *   3. PROVENANCE: one `ok` row per key the file DEFINES, naming the side that
  *      won. The file is the user's own short list, so this is not an
  *      enumeration of the environment (see `noir env` for the curated view);
  *      the value is never read, only the key name.
@@ -466,19 +466,19 @@ function checkNoirEnv(checks: CheckResult[], root: string, loaded: LoadedEnv): v
   try {
     st = statSync(path);
   } catch {
-    return; // no .env file — nothing to check
+    return; // no .env file: nothing to check
   }
   if (loaded.warnings.some((w) => w.startsWith(ENV_REFUSAL_PREFIX))) {
     checks.push({
       name: 'noir-env',
       status: 'warn',
-      detail: `${path} is tracked by git — refused, so NONE of its keys are in effect. Fix: add \`.noir/.env\` to .gitignore and run \`git rm --cached .noir/.env\`.`,
+      detail: `${path} is tracked by git: refused, so NONE of its keys are in effect. Fix: add \`.noir/.env\` to .gitignore and run \`git rm --cached .noir/.env\`.`,
     });
     return;
   }
   const mode = st.mode & 0o777;
   // Owner-only is the contract, so ANY group or other bit is exposure to another
-  // account — the same predicate the heal uses, which is why a row that warns here
+  // account: the same predicate the heal uses, which is why a row that warns here
   // is a row the next `init`/`sync` tightens. After that heal the file is 0600,
   // this row is `ok`, and the loader's matching advisory stays silent: neither
   // repeats once the file is owner-only.
@@ -506,7 +506,7 @@ function checkEmbedder(
   vecOk: boolean,
 ): void {
   if (!project) {
-    checks.push({ name: 'embedder', status: 'warn', detail: 'skipped — not initialized' });
+    checks.push({ name: 'embedder', status: 'warn', detail: 'skipped: not initialized' });
     return;
   }
   const emb = project.config.context.embedder;
@@ -525,7 +525,7 @@ function checkEmbedder(
     checks.push({
       name: 'embedder',
       status: 'warn',
-      detail: `${kind}/${model} (${emb.dim}-dim) configured but vec native layer unavailable — search degrades to BM25`,
+      detail: `${kind}/${model} (${emb.dim}-dim) configured but vec native layer unavailable: search degrades to BM25`,
     });
     return;
   }
@@ -542,10 +542,10 @@ function checkProvider(
   sources: LoadedEnv['sources'],
 ): void {
   if (!project) {
-    checks.push({ name: 'provider', status: 'warn', detail: 'skipped — not initialized' });
+    checks.push({ name: 'provider', status: 'warn', detail: 'skipped: not initialized' });
     return;
   }
-  // PURE projection — resolveModelConfig reads config + env-var NAMES only; it
+  // PURE projection: resolveModelConfig reads config + env-var NAMES only; it
   // NEVER makes a live call and NEVER infers a provider from env-var presence.
   const resolved = resolveModelConfig(project.config.model);
   const names = Object.keys(resolved.providers);
@@ -563,7 +563,7 @@ function checkProvider(
     const p = resolved.providers[name];
     if (!p) continue;
     // Provenance: when the winning source for the key is
-    // `.noir/.env`, say so — "key present" alone leaves the user staring at an
+    // `.noir/.env`, say so: "key present" alone leaves the user staring at an
     // empty shell export wondering where the key came from. The NAME only; the
     // value is never read here, let alone printed.
     const fromFile =
@@ -583,7 +583,7 @@ function checkProvider(
     if (!p.hasKey && credentialName) missing = true;
     parts.push(`${name}/${p.model ?? '?'} (${key})`);
   }
-  // Provider readiness is never CRITICAL — the model layer degrades to `null`
+  // Provider readiness is never CRITICAL: the model layer degrades to `null`
   // (templates) when a key is missing, so this is an ok/warn signal only.
   checks.push({
     name: 'provider',
@@ -603,7 +603,7 @@ export interface InstallCheckOutcome {
   latestKnown: string | null;
 }
 
-/** Pure: build the doctor `install` row. NEVER `fail` — an install method issue
+/** Pure: build the doctor `install` row. NEVER `fail`: an install method issue
  *  is advisory, not a broken host. Reads the cache only; no network. */
 export function buildInstallCheck(opts: {
   method: InstallMethod;
@@ -636,7 +636,7 @@ function checkScaffoldVersion(
   current: string;
   drift: boolean;
 } {
-  // readScaffoldVersion never throws — it returns null on an absent/malformed
+  // readScaffoldVersion never throws: it returns null on an absent/malformed
   // stamp, so doctor keeps reporting even on a partially-initialized project.
   const onDisk = readScaffoldVersion(root);
   const current = CURRENT_SCAFFOLD_VERSION;
@@ -662,7 +662,7 @@ function checkScaffoldVersion(
  * bytes on disk are still an exact copy of a seed an OLDER Noir recorded (the
  * user never edited the file), doctor surfaces it the same way it surfaces a
  * stale scaffold stamp: a `warn` row naming the file and the command that
- * refreshes it. Absent, current, or user-edited files produce no row — the
+ * refreshes it. Absent, current, or user-edited files produce no row: the
  * comparison is exact, so even a whitespace change is treated as the user's.
  */
 function checkSeedDrift(checks: CheckResult[], root: string): void {
@@ -671,7 +671,7 @@ function checkSeedDrift(checks: CheckResult[], root: string): void {
   try {
     bytes = readFileSync(seedPath, 'utf8');
   } catch {
-    return; // absent — nothing to compare
+    return; // absent: nothing to compare
   }
   // Render the current template exactly as the scaffold would. The env.example
   // seed carries no `{{...}}` placeholder, so the rendered text is the raw
@@ -681,7 +681,7 @@ function checkSeedDrift(checks: CheckResult[], root: string): void {
     checks.push({
       name: 'doc seed',
       status: 'warn',
-      detail: `.noir/.env.example is an unedited copy of an older Noir — run \`noir init --upgrade\` to refresh it`,
+      detail: `.noir/.env.example is an unedited copy of an older Noir: run \`noir init --upgrade\` to refresh it`,
     });
   }
 }
@@ -689,7 +689,7 @@ function checkSeedDrift(checks: CheckResult[], root: string): void {
 /**
  * Soft RULES.md budget cap. Mirrors the Failure-Backed Rules doctrine:
  * an over-budget RULES.md tends to accumulate stale / speculative clauses, so
- * doctor warns (NEVER fails — purely a hygiene nudge) when the file exceeds
+ * doctor warns (NEVER fails: purely a hygiene nudge) when the file exceeds
  * the configured `lengthBudgetKb` (default 6 KB) OR a 150-line ceiling. The
  * check is honest about the "nothing to measure" cases:
  *
@@ -713,25 +713,25 @@ function checkRulesMdBudget(
   over: boolean;
 } | null {
   if (!project) {
-    checks.push({ name: 'rules budget', status: 'warn', detail: 'skipped — not initialized' });
+    checks.push({ name: 'rules budget', status: 'warn', detail: 'skipped: not initialized' });
     return null;
   }
   // The switch wins over everything below: a project that opted out has no
-  // budget to enforce. Reported as `ok` — an explicit opt-out is a decision,
-  // not a problem — but the row says disabled, so a green run never hides the
+  // budget to enforce. Reported as `ok`: an explicit opt-out is a decision,
+  // not a problem: but the row says disabled, so a green run never hides the
   // fact that nothing was measured. A RULES.md that exists is NOT measured and
   // NOT touched: `noir doctor` never writes.
   if (project.config.rules.enabled === false) {
     checks.push({
       name: 'rules budget',
       status: 'ok',
-      detail: 'disabled — rules.enabled is false in .noir/config.yml (RULES.md is not measured)',
+      detail: 'disabled: rules.enabled is false in .noir/config.yml (RULES.md is not measured)',
     });
     return null;
   }
   const rulesPath = paths.rulesMd(root);
   if (!existsSync(rulesPath)) {
-    // No RULES.md is fine — most projects don't have one yet. Informational ok
+    // No RULES.md is fine: most projects don't have one yet. Informational ok
     // so a green run stays green without forcing a file creation.
     checks.push({
       name: 'rules budget',
@@ -769,7 +769,7 @@ function checkRulesMdBudget(
   const status: Severity = over ? 'warn' : 'ok';
   const kb = (n: number): string => (n / 1024).toFixed(1);
   const detail = over
-    ? `OVER: ${kb(bytes)} KB / ${lengthBudgetKb} KB · ${lineCount}/${maxLines} lines — trim RULES.md (failure-backed clauses only) or raise rules.lengthBudgetKb`
+    ? `OVER: ${kb(bytes)} KB / ${lengthBudgetKb} KB · ${lineCount}/${maxLines} lines: trim RULES.md (failure-backed clauses only) or raise rules.lengthBudgetKb`
     : `${kb(bytes)} KB / ${lengthBudgetKb} KB · ${lineCount}/${maxLines} lines (within budget)`;
   checks.push({ name: 'rules budget', status, detail });
   return {
@@ -796,21 +796,21 @@ function summarize(checks: CheckResult[]): DoctorPayload['summary'] {
  * `project.config.host`) + verifies the host's primary emission paths exist on
  * disk. The expected set mirrors `buildHostArtifacts` in @noir-ai/create:
  *
- *   - AGENTS.md for the hosts that emit it (agents-md/cursor/opencode — their
+ *   - AGENTS.md for the hosts that emit it (agents-md/cursor/opencode: their
  *     native context surface IS AGENTS.md). claude/gemini do NOT emit AGENTS.md
  *     (their CLAUDE.md/GEMINI.md @-import the canonical .noir/ sources; a root
  *     AGENTS.md would double-import them, so neither emits it).
  *   - The host's native context file when distinct from AGENTS.md
  *     (claude → CLAUDE.md; gemini → GEMINI.md; agents-md/cursor/opencode →
  *     none, AGENTS.md IS the context). Cursor's working-rules ride AGENTS.md's
- *     `@.noir/rules/RULES.md` import — NO separate `.cursor/rules/noir-contract.mdc`
+ *     `@.noir/rules/RULES.md` import: NO separate `.cursor/rules/noir-contract.mdc`
  *     host-rules pointer (it was `noir-`-prefixed, so the cursor flat-skill
  *     prune deleted it on every sync).
  *   - The host's MCP config (.mcp.json / .gemini/mcp.json / .cursor/mcp.json /
  *     opencode.json).
  *
  * Severity is `ok` when every expected path exists, `warn` when any are
- * missing (NEVER `fail` — a missing host artifact is restored by `noir sync`,
+ * missing (NEVER `fail`: a missing host artifact is restored by `noir sync`,
  * not a critical product failure). Mirrors the policy of the other
  * presence/projection checks (scaffold-version drift, RULES.md budget): warn,
  * surface the remediation, never block.
@@ -824,7 +824,7 @@ function checkHostArtifacts(
   project: ProjectInfo | undefined,
 ): { active: HostId; expected: string[]; missing: string[] } | null {
   if (!project) {
-    checks.push({ name: 'host artifacts', status: 'warn', detail: 'skipped — not initialized' });
+    checks.push({ name: 'host artifacts', status: 'warn', detail: 'skipped: not initialized' });
     return null;
   }
   const host = project.config.host;
@@ -836,8 +836,8 @@ function checkHostArtifacts(
   // restore with `noir sync`. Kept inline (not imported) so doctor stays a
   // READ-ONLY health probe with zero write-side coupling.
   const expected: string[] = [];
-  // AGENTS.md — only for hosts whose emitContext IS the AGENTS.md (claude/
-  // gemini skip it — their native context file already covers .noir/).
+  // AGENTS.md: only for hosts whose emitContext IS the AGENTS.md (claude/
+  // gemini skip it: their native context file already covers .noir/).
   const emitsAgentsMd = host === 'agents-md' || host === 'cursor' || host === 'opencode';
   if (emitsAgentsMd) {
     expected.push(relOr(adapter.agentsMdPath?.(ectx) ?? 'AGENTS.md', root));
@@ -845,7 +845,7 @@ function checkHostArtifacts(
   // Host-native context file (when distinct from AGENTS.md).
   if (host === 'claude') expected.push('CLAUDE.md');
   else if (host === 'gemini') expected.push('GEMINI.md');
-  // Cursor has NO separate host-rules .mdc — the prior `noir-contract.mdc`
+  // Cursor has NO separate host-rules .mdc: the prior `noir-contract.mdc`
   // pointer was REMOVED (it was `noir-`-prefixed, so the cursor flat-skill
   // prune in emitSkillsToDir deleted it on every noir init/create/sync).
   // Cursor's rules ride AGENTS.md's `@.noir/rules/RULES.md` import instead.
@@ -896,7 +896,7 @@ export function checkNestedNoir(
     name: 'nested .noir',
     status: detected ? 'warn' : 'ok',
     detail: detected
-      ? `nested Noir artifacts inside .noir/ (${found.join(', ')}) — likely from running \`noir init\` inside .noir/. Remove them; the real project is at ${root}.`
+      ? `nested Noir artifacts inside .noir/ (${found.join(', ')}): likely from running \`noir init\` inside .noir/. Remove them; the real project is at ${root}.`
       : 'no nested .noir/ artifacts',
   });
   return { detected, paths: found };
@@ -904,8 +904,8 @@ export function checkNestedNoir(
 
 // Output hygiene (repository-developer-facing, two tiers).
 //
-// The scan itself — which files are read, which directories are excluded, the
-// caps — lives in ../hygiene-scan.ts, the single source of scope for both this
+// The scan itself: which files are read, which directories are excluded, the
+// caps: lives in ../hygiene-scan.ts, the single source of scope for both this
 // doctor row and the CI gate (scripts/hygiene-gate.mjs). This command adds the
 // report row on top: a fail-tier finding makes the check CRITICAL (exit 1); a
 // warn-tier finding warns and never exit-1s, exactly as the daemon and provider
@@ -933,7 +933,7 @@ type EmbedLike = (text: string) => Promise<Float32Array>;
 
 /**
  * Collect dedup candidates: the host context files that exist at the root
- * (CLAUDE.md / AGENTS.md / GEMINI.md — the hand-mirrored-overlap case) plus
+ * (CLAUDE.md / AGENTS.md / GEMINI.md: the hand-mirrored-overlap case) plus
  * `.noir/rules/RULES.md`. `.noir/NOIR.md` is EXCLUDED because host context
  * files `@import` it by design (their similarity is intentional, not a dup).
  */
@@ -962,7 +962,7 @@ export function collectDedupCandidates(root: string): { path: string; text: stri
  * exact content-hash cannot. Opt-in so a default `noir doctor` never pays the
  * embedder-load cost; degrades to a `warn` skip when the embedder is
  * unavailable (kind=none / native layer missing). `opts.embed` is a testability
- * seam — tests inject a deterministic fake; production omits it and the local
+ * seam: tests inject a deterministic fake; production omits it and the local
  * embedder is lazy-loaded via `@noir-ai/context`.
  */
 export async function checkSemanticDupDoctor(
@@ -972,7 +972,7 @@ export async function checkSemanticDupDoctor(
   opts: { embed?: EmbedLike } = {},
 ): Promise<void> {
   if (!project) {
-    checks.push({ name: 'semantic dup', status: 'warn', detail: 'skipped — not initialized' });
+    checks.push({ name: 'semantic dup', status: 'warn', detail: 'skipped: not initialized' });
     return;
   }
   const candidates = collectDedupCandidates(root);
@@ -992,7 +992,7 @@ export async function checkSemanticDupDoctor(
       checks.push({
         name: 'semantic dup',
         status: 'warn',
-        detail: 'embedder kind=none — set context.embedder.kind=local to enable semantic dedup',
+        detail: 'embedder kind=none: set context.embedder.kind=local to enable semantic dedup',
       });
       return;
     }
@@ -1002,7 +1002,7 @@ export async function checkSemanticDupDoctor(
       checks.push({
         name: 'semantic dup',
         status: 'warn',
-        detail: `embedder unavailable — skipped (${msg(e)})`,
+        detail: `embedder unavailable: skipped (${msg(e)})`,
       });
       return;
     }
@@ -1056,7 +1056,7 @@ function resolveWorkspacePackagesDir(): string | null {
           return null;
         }
       } catch {
-        // Malformed package.json — keep walking.
+        // Malformed package.json: keep walking.
       }
     }
     const parent = dirname(here);
@@ -1075,7 +1075,7 @@ function resolveWorkspacePackagesDir(): string | null {
  */
 const SEMVER_ISH = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
-/** Best-effort `npm pack --dry-run` on the cli package — read-only (it does
+/** Best-effort `npm pack --dry-run` on the cli package: read-only (it does
  *  NOT write the tarball). Returns `{ fileCount, distIncluded }` parsed from
  *  npm's notice output, or `{ error }` when npm is unavailable / the pack
  *  fails. Gated on npm being on PATH (the spec's expensive-but-optional leg):
@@ -1099,7 +1099,7 @@ function npmPackDryRun(
     return { error: res.error ? res.error.message : `npm pack exited ${res.status ?? '?'}` };
   }
   const out = `${res.stdout ?? ''}\n${res.stderr ?? ''}`;
-  // `npm notice total files: 42` — the canonical summary line.
+  // `npm notice total files: 42`: the canonical summary line.
   const totalMatch = out.match(/total files:\s*(\d+)/i);
   const fileCount = totalMatch?.[1] ? Number.parseInt(totalMatch[1], 10) : null;
   // `dist/` appears in the tarball contents (`npm notice <size> dist/<file>`).
@@ -1118,7 +1118,7 @@ function npmPackDryRun(
  * Optionally runs `npm pack --dry-run` on the cli package (best-effort, gated
  * on npm being available) to report the file count + confirm `dist/` ships.
  *
- * Severity is ALWAYS `ok` or `warn` — NEVER `fail`: a missing/odd package.json
+ * Severity is ALWAYS `ok` or `warn`: NEVER `fail`: a missing/odd package.json
  * field does not break the local install (this is an advisory nudge to repo
  * developers, not a project-facing health check). The check runs ALWAYS (it
  * produces a row in every doctor report) but returns `null` from
@@ -1133,11 +1133,11 @@ export function checkPublish(
     checks.push({
       name: 'publish',
       status: 'ok',
-      detail: 'skipped — not a monorepo checkout (no packages/* workspace)',
+      detail: 'skipped: not a monorepo checkout (no packages/* workspace)',
     });
     return null;
   }
-  // Discover workspace package.json files (depth-1 dirs only — no glob dep).
+  // Discover workspace package.json files (depth-1 dirs only: no glob dep).
   let entries: string[] = [];
   try {
     entries = readdirSync(packagesDir, { withFileTypes: true })
@@ -1189,7 +1189,7 @@ export function checkPublish(
   // Best-effort npm pack --dry-run on the cli package. Gated on npm being
   // available; a failure here is surfaced in the detail but does NOT add an
   // issue (it is environmental, not a package.json defect). `skipNpmPack` is a
-  // testability seam — synthetic test fixtures have no real `dist/`, so the
+  // testability seam: synthetic test fixtures have no real `dist/`, so the
   // dist-absent signal would otherwise pollute the package.json-validation
   // assertions. Production (`doctor()`) leaves it unset.
   let packNote = '';
@@ -1217,7 +1217,7 @@ export function checkPublish(
 }
 
 /** Repo-relative POSIX form of `abs` under `root`. Defensive: rejects
- *  paths that escape `root` — mirrors `hostRel` in @noir-ai/create/manifest.ts.
+ *  paths that escape `root`: mirrors `hostRel` in @noir-ai/create/manifest.ts.
  *  A future adapter that returns a stray path fails loudly here instead of
  *  producing a misleading "missing" row for a path doctor would never probe.
  *  Relative literals (e.g. `'AGENTS.md'`, `'.mcp.json'`) pass through unchanged
@@ -1254,10 +1254,7 @@ function severityBadge(s: Severity): string {
 }
 
 function renderHuman(payload: DoctorPayload, opts: CliOptions): void {
-  log(
-    `noir doctor — ${payload.checks.length} check${payload.checks.length === 1 ? '' : 's'}`,
-    opts,
-  );
+  log(`noir doctor: ${payload.checks.length} check${payload.checks.length === 1 ? '' : 's'}`, opts);
   table(
     payload.checks.map((c) => ({
       Check: c.name,
@@ -1275,7 +1272,7 @@ function renderHuman(payload: DoctorPayload, opts: CliOptions): void {
         opts,
       );
     } else {
-      log('nothing to fix — permissions already owner-only', opts);
+      log('nothing to fix: permissions already owner-only', opts);
     }
   }
   const { ok, warn: warnN, fail } = payload.summary;
@@ -1292,7 +1289,7 @@ function renderHuman(payload: DoctorPayload, opts: CliOptions): void {
 }
 
 /** The `--fix` pass: re-assert owner-only permissions on the files Noir keeps
- *  private — `.noir/.env` (the credential seed) and, when the project is
+ *  private: `.noir/.env` (the credential seed) and, when the project is
  *  initialized, the store DB and its directory (the indexed context + memory).
  *  Each is tightened to 0600/0700 by {@link ensureOwnerOnly} /
  *  {@link ensureOwnerOnlyDir}, which are best-effort no-ops on a missing file
@@ -1313,7 +1310,7 @@ function fixOwnerOnlyPermissions(root: string, project: ProjectInfo | undefined)
 }
 
 /** The honest per-host enforcement coverage: which gates are ENFORCED vs
- *  advisory-only, and the resolved fail-mode. Never `fail` — it is a report of
+ *  advisory-only, and the resolved fail-mode. Never `fail`: it is a report of
  *  what the chosen host can actually do, not a defect. */
 const ENFORCEMENT_COVERAGE: Record<HostId, { status: Severity; detail: string }> = {
   claude: {
@@ -1332,18 +1329,18 @@ const ENFORCEMENT_COVERAGE: Record<HostId, { status: Severity; detail: string }>
   },
   opencode: {
     status: 'warn',
-    detail: 'context-only — the plugin hook surface is unverified, so no deny hook is emitted',
+    detail: 'context-only: the plugin hook surface is unverified, so no deny hook is emitted',
   },
   'agents-md': {
     status: 'warn',
-    detail: 'context-only — AGENTS.md is advisory and has no hook surface, so nothing is enforced',
+    detail: 'context-only: AGENTS.md is advisory and has no hook surface, so nothing is enforced',
   },
 };
 
 /** One row: the enforcement coverage for the resolved host. */
 function checkEnforcementCoverage(checks: CheckResult[], project: ProjectInfo | undefined): void {
   if (project === undefined) {
-    checks.push({ name: 'enforcement', status: 'ok', detail: 'skipped — not initialized' });
+    checks.push({ name: 'enforcement', status: 'ok', detail: 'skipped: not initialized' });
     return;
   }
   if (project.config.enforcement.enabled === false) {
@@ -1351,7 +1348,7 @@ function checkEnforcementCoverage(checks: CheckResult[], project: ProjectInfo | 
       name: 'enforcement',
       status: 'warn',
       detail:
-        'disabled — enforcement.enabled is false in .noir/config.yml (the hook is emitted but exits 0 on every event)',
+        'disabled: enforcement.enabled is false in .noir/config.yml (the hook is emitted but exits 0 on every event)',
     });
     return;
   }
@@ -1374,15 +1371,15 @@ export async function doctor(opts: DoctorOptions = {}): Promise<void> {
   const { project, result: configResult } = checkConfig(root);
   checks.push(configResult);
   // The permission heal (--fix) runs before the checks that read the healed
-  // files — the store DB is opened by checkStore next, and the .env mode is read
-  // by checkNoirEnv — so every row reports the post-heal state, and the payload
+  // files: the store DB is opened by checkStore next, and the .env mode is read
+  // by checkNoirEnv: so every row reports the post-heal state, and the payload
   // carries what the pass did via `fixes`.
   const fixes = opts.fix === true ? fixOwnerOnlyPermissions(root, project) : undefined;
   await checkDaemon(checks, project);
   const { vecOk } = await checkNativeDeps(checks);
   await checkStore(checks, project, root);
   checkEmbedder(checks, project, vecOk);
-  // `.noir/.env` is read ONCE and shared by the provider + noir-env rows — both
+  // `.noir/.env` is read ONCE and shared by the provider + noir-env rows: both
   // need "which side won for this key". Names only: the loader never opens a
   // value into anything doctor prints.
   const noirEnv = loadNoirEnv(root);

@@ -12,7 +12,7 @@ export function levenshtein(a: string, b: string): number {
   if (m === 0) return n;
   if (n === 0) return m;
   // Two rolling rows. Every index 0..n is written before it is read, so the
-  // `?? 0` fallbacks are a noUncheckedIndexedAccess type-level only — they never
+  // `?? 0` fallbacks are a noUncheckedIndexedAccess type-level only: they never
   // actually trigger.
   let prev = Array.from({ length: n + 1 }, (_, j) => j);
   let curr = new Array<number>(n + 1).fill(0);
@@ -33,7 +33,7 @@ export function levenshtein(a: string, b: string): number {
 /**
  * The candidate(s) closest to `input`, case-insensitive, within an edit-distance
  * threshold (up to `max` results, all at the same minimum distance). Empty when
- * nothing is close enough — the caller then omits the "did you mean" hint.
+ * nothing is close enough: the caller then omits the "did you mean" hint.
  */
 export function closestCommands(input: string, candidates: string[], max = 3): string[] {
   const needle = input.toLowerCase();

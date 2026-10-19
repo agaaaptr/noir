@@ -1,4 +1,4 @@
-// draft.ts — bounded PRD drafting helper.
+// draft.ts: bounded PRD drafting helper.
 //
 // The PRD is the pre-SDD product artifact (`.noir/prd/PRD-<NNNN>-<taskId>-<slug>.md`) the
 // spec later `@import`s. This helper drafts it from the intake + clarification
@@ -12,11 +12,11 @@
 // Graceful degradation is FIRST-CLASS: when `complete()` returns `null`
 // (no provider configured, or a keyed provider's env var is missing) `draftPrd`
 // returns `null` too and the caller substitutes {@link PRD_FALLBACK_TEMPLATE}.
-// This is the always-available offline path — the full Noir test suite runs
+// This is the always-available offline path: the full Noir test suite runs
 // with zero network. `draftPrd` itself NEVER throws; an attempted-call failure
 // (`{ ok: false }`) is surfaced to the caller as `null` after a structured
 // miss, distinct from a clean offline `null` only at the call site (the
-// caller's substitution is identical — the template — but a future miss-audit
+// caller's substitution is identical: the template: but a future miss-audit
 // sink can distinguish them).
 //
 // `draftSpec` (the sibling this mirrors) does NOT exist yet in @noir-ai/model —
@@ -28,7 +28,7 @@ import { complete } from './complete.js';
 import type { CompleteRequest, ModelConfig } from './types.js';
 
 /**
- * The inputs to a PRD draft — the same three signals the `noir-prd` skill
+ * The inputs to a PRD draft: the same three signals the `noir-prd` skill
  * grounds in before drafting. `memory` is RETRIEVED context (never fabricated);
  * `clarify` is resolved clarification Q&A; `intake` is the raw intake notes.
  */
@@ -37,12 +37,12 @@ export interface DraftPrdInput {
   intake: string;
   /** Resolved clarification Q&A, one entry per line (optional). */
   clarify?: string[];
-  /** Retrieved memory context (optional; never fabricated — Evidence needs a source). */
+  /** Retrieved memory context (optional; never fabricated: Evidence needs a source). */
   memory?: string;
 }
 
 /**
- * Options for a PRD draft call. `provider` + `model` are EXPLICIT — the
+ * Options for a PRD draft call. `provider` + `model` are EXPLICIT: the
  * provider is never inferred from env-var presence. `signal`
  * bounds wall-clock further; there is never a stream to cancel.
  */
@@ -68,22 +68,22 @@ export const PRD_FALLBACK_TEMPLATE = `# PRD
 <fill in: what's broken or missing, in user terms>
 
 ## Evidence
-<fill in: proof it's real — data, tickets, user reports. Never fabricate; cite a source.>
+<fill in: proof it's real: data, tickets, user reports. Never fabricate; cite a source.>
 
 ## Audience
 <fill in: for whom>
 
 ## Success Criteria
-<fill in: machine-verifiable, quantified thresholds — not "fast" or "intuitive">
+<fill in: machine-verifiable, quantified thresholds: not "fast" or "intuitive">
 
 ## Appetite / Mode
 <fill in: time-box; small batch or bet>
 
 ## Proposed Direction
-<fill in: product-altitude solution sketch — not the technical design>
+<fill in: product-altitude solution sketch: not the technical design>
 
 ## No-gos
-<fill in: explicitly out of scope — the highest-signal section>
+<fill in: explicitly out of scope: the highest-signal section>
 
 ## Rabbit holes
 <fill in: known pitfalls to avoid>
@@ -130,7 +130,7 @@ function buildPrdPrompt(input: DraftPrdInput): string {
 
   if (input.memory && input.memory.trim().length > 0) {
     lines.push('');
-    lines.push('# Retrieved memory (grounding context — do not fabricate beyond this)');
+    lines.push('# Retrieved memory (grounding context: do not fabricate beyond this)');
     lines.push(input.memory.trim());
   }
 
@@ -140,7 +140,7 @@ function buildPrdPrompt(input: DraftPrdInput): string {
     `Draft a Product Requirements Document with EXACTLY these sections in order, each a level-2 markdown heading, no filler: ${PRD_SECTIONS.join(', ')}.`,
   );
   lines.push(
-    'Stay at product altitude (the spec later handles the technical design). For Evidence, cite the intake/memory verbatim or write "<fill in: needs source>" — NEVER fabricate a metric or ticket. Success Criteria must be machine-verifiable (a check an implementer can run), not adjectives.',
+    'Stay at product altitude (the spec later handles the technical design). For Evidence, cite the intake/memory verbatim or write "<fill in: needs source>": NEVER fabricate a metric or ticket. Success Criteria must be machine-verifiable (a check an implementer can run), not adjectives.',
   );
   return lines.join('\n');
 }
@@ -148,7 +148,7 @@ function buildPrdPrompt(input: DraftPrdInput): string {
 const PRD_SYSTEM_PROMPT =
   'You are drafting a Noir Product Requirements Document (PRD): the pre-SDD ' +
   'product artifact the technical spec later @imports. Output ONLY the markdown ' +
-  'PRD — no preamble, no closing remarks. The user message carries the intake, ' +
+  'PRD: no preamble, no closing remarks. The user message carries the intake, ' +
   'clarification Q&A, and grounding memory; never fabricate Evidence beyond what ' +
   'they provide.';
 
@@ -161,10 +161,10 @@ const PRD_SYSTEM_PROMPT =
  *    callers substitute {@link PRD_FALLBACK_TEMPLATE} in both cases (the offline
  *    path is first-class).
  *
- * Never throws — `complete()`'s adapter try/catch surfaces failures as
+ * Never throws: `complete()`'s adapter try/catch surfaces failures as
  * `{ ok: false, reason }`, which this helper collapses to `null` (a missed
  * draft is recoverable: the template lands and a later pass refines it). The
- * PRD itself is the caller's responsibility to write via `writePrd` — this
+ * PRD itself is the caller's responsibility to write via `writePrd`: this
  * helper ONLY produces the body text.
  *
  * @example
@@ -192,7 +192,7 @@ export async function draftPrd(
   };
   const result = await complete(req, cfg);
   // null (offline) and `{ ok: false }` (attempted-call failure) both degrade to
-  // null — the caller substitutes PRD_FALLBACK_TEMPLATE. Optional chain: when
+  // null: the caller substitutes PRD_FALLBACK_TEMPLATE. Optional chain: when
   // `result` is null, `result?.ok` short-circuits to undefined → `!undefined`
   // is true, so the offline case is covered without a separate null check.
   if (!result?.ok) return null;

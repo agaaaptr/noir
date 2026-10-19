@@ -20,8 +20,8 @@ intake → clarify → spec → plan → execute → verify → document
 
 ## Modes
 
-- **full (default)** — Every gate fires. Spec, plan, and verify are authored AND reviewed. For real features or risky changes.
-- **quick** — Spec and plan are skipped (stubs written). Verify still fires. For small/trivial/spike tasks. Override per task: `noir task new --slug <s> --mode quick` (writes a stub spec, records the spec+plan gates as `skipped`, fast-forwards to `executing`).
+- **full (default)**: Every gate fires. Spec, plan, and verify are authored AND reviewed. For real features or risky changes.
+- **quick**: Spec and plan are skipped (stubs written). Verify still fires. For small/trivial/spike tasks. Override per task: `noir task new --slug <s> --mode quick` (writes a stub spec, records the spec+plan gates as `skipped`, fast-forwards to `executing`).
 
 ## Gates (3 decision points)
 
@@ -101,4 +101,4 @@ Naming follows the generated-artifact standard ([`docs/reference/artifact-format
 
 ## MCP tools
 
-The daemon exposes `workflow_status`, `workflow_start` (with `taskClass`), `workflow_advance` (with `evidence`), `workflow_resume`, `workflow_block`, `workflow_abandon`, `workflow_research_record`, and `checkpoint` as MCP tools — gated on the engine context.
+The daemon exposes `workflow_status`, `workflow_start` (with `taskClass`), `workflow_advance` (with `evidence`), `workflow_resume`, `workflow_block`, `workflow_abandon`, `workflow_research_record`, and `checkpoint` as MCP tools: gated on the engine context.

@@ -25,11 +25,11 @@ afterEach(() => {
   rmSync(tmp, { recursive: true, force: true });
 });
 
-// Task: grep-level invariant — no raw writeFileSync/writeFile to a generated
+// Task: grep-level invariant: no raw writeFileSync/writeFile to a generated
 // artifact outside the contract. The producers must go through `onConflict` /
 // `buildConflictOpts`. A stub onConflict that records its consultation proves
 // the seam fires; a non-interactive guard proves CI/--json never hangs.
-describe('universal contract — producers consult the seam', () => {
+describe('universal contract: producers consult the seam', () => {
   it('skills/compiler emitSkillsToDir consults onConflict on a differing file', async () => {
     // Build a one-skill pack, pre-populate the target with a differing file,
     // then assert a stub onConflict is consulted + its resolution drives the
@@ -38,7 +38,7 @@ describe('universal contract — producers consult the seam', () => {
     mkdirSync(join(builtinDir, 'noir-x'), { recursive: true });
     writeFileSync(
       join(builtinDir, 'noir-x', 'SKILL.md'),
-      '---\nname: noir-x\ndescription: Use when testing the conflict contract — validate fixture behavior.\nmetadata:\n  category: test\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n## When to use\n- when testing\n## Procedure\n1. **Test** — the fixture.\n## Notes\n- fixture only\n# fresh',
+      '---\nname: noir-x\ndescription: Use when testing the conflict contract — validate fixture behavior.\nmetadata:\n  category: test\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n## When to use\n- when testing\n## Procedure\n1. **Test**: the fixture.\n## Notes\n- fixture only\n# fresh',
       'utf8',
     );
 
@@ -47,7 +47,7 @@ describe('universal contract — producers consult the seam', () => {
     // Pre-populate the EXACT file Noir will emit, with different bytes.
     writeFileSync(
       join(target, 'noir-x', 'SKILL.md'),
-      '---\nname: noir-x\ndescription: Use when testing the conflict contract — validate fixture behavior.\nmetadata:\n  category: test\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n# USER-EDIT\nThis is user-edited content.\n\n## When to use\n- when testing\n## Procedure\n1. **Test** — the fixture.\n## Notes\n- fixture only',
+      '---\nname: noir-x\ndescription: Use when testing the conflict contract — validate fixture behavior.\nmetadata:\n  category: test\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n# USER-EDIT\nThis is user-edited content.\n\n## When to use\n- when testing\n## Procedure\n1. **Test**: the fixture.\n## Notes\n- fixture only',
       'utf8',
     );
 
@@ -73,14 +73,14 @@ describe('universal contract — producers consult the seam', () => {
     mkdirSync(join(builtinDir, 'noir-x'), { recursive: true });
     writeFileSync(
       join(builtinDir, 'noir-x', 'SKILL.md'),
-      '---\nname: noir-x\ndescription: Use when testing the conflict contract — validate fixture behavior.\nmetadata:\n  category: test\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n## When to use\n- when testing\n## Procedure\n1. **Test** — the fixture.\n## Notes\n- fixture only\n# fresh',
+      '---\nname: noir-x\ndescription: Use when testing the conflict contract — validate fixture behavior.\nmetadata:\n  category: test\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n## When to use\n- when testing\n## Procedure\n1. **Test**: the fixture.\n## Notes\n- fixture only\n# fresh',
       'utf8',
     );
     const target = join(tmp, 'out');
     mkdirSync(join(target, 'noir-x'), { recursive: true });
     writeFileSync(
       join(target, 'noir-x', 'SKILL.md'),
-      '---\nname: noir-x\ndescription: Use when testing the conflict contract — validate fixture behavior.\nmetadata:\n  category: test\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n## When to use\n- when testing\n## Procedure\n1. **Test** — the fixture.\n## Notes\n- fixture only\n# USER-EDIT',
+      '---\nname: noir-x\ndescription: Use when testing the conflict contract — validate fixture behavior.\nmetadata:\n  category: test\n  version: 1.0.0\nlicense: MIT\n---\n# noir-x\n## When to use\n- when testing\n## Procedure\n1. **Test**: the fixture.\n## Notes\n- fixture only\n# USER-EDIT',
       'utf8',
     );
 
@@ -96,7 +96,7 @@ describe('universal contract — producers consult the seam', () => {
 
   it('skills/compiler emitSkillsToDir does NOT rm an orphaned noir-* that is user-owned', async () => {
     // Pack ships noir-shipped. Target pre-populated with:
-    //   - noir-shipped/         (current — kept)
+    //   - noir-shipped/         (current: kept)
     //   - noir-user-handrolled/ (user-authored: SKILL.md WITHOUT canonical
     //                            `name: noir-user-handrolled` frontmatter —
     //                            MUST be preserved by the assertNotUserOwned guard)
@@ -117,7 +117,7 @@ Overview sentence.
 ## When to use
 - when testing
 ## Procedure
-1. **Test** — the contract.
+1. **Test**: the contract.
 ## Notes
 - fixture only`,
       'utf8',
@@ -142,12 +142,12 @@ Overview sentence.
   });
 
   // Note: workflow artifact writers (writeIntake/writeSpec/…) and store
-  // exportMarkdown are covered in their own packages (workflow + store) — the
+  // exportMarkdown are covered in their own packages (workflow + store): the
   // CLI does not depend on @noir-ai/workflow, so the producer-level seam tests
   // live alongside the producers.
 });
 
-// Task 2: diff preview — lineDiff produces a structured unified diff; the
+// Task 2: diff preview: lineDiff produces a structured unified diff; the
 // clack resolver renders it to stderr (NO_COLOR honored via the theme).
 describe('diff preview (lineDiff + theme)', () => {
   it('lineDiff emits add/del/eq records LCS-based', () => {
@@ -165,7 +165,7 @@ describe('diff preview (lineDiff + theme)', () => {
 
   it('theme strips colors under NO_COLOR (preview honors the env gate)', async () => {
     // Importing the theme's `c` directly + flipping NO_COLOR proves the diff
-    // preview's color helpers reduce to plain text. (Indirect — the actual
+    // preview's color helpers reduce to plain text. (Indirect: the actual
     // resolver writes to stderr; we test the color gate at the theme layer.)
     const { c } = await import('../src/theme.js');
     const saved = process.env.NO_COLOR;
@@ -181,7 +181,7 @@ describe('diff preview (lineDiff + theme)', () => {
   });
 });
 
-// Task 3: apply-to-all — a regenerate conflict resolution with applyToAll
+// Task 3: apply-to-all: a regenerate conflict resolution with applyToAll
 // reduces an N-prompt run to 1 prompt; managedBlock stays per-file (memory key
 // is the path, not the class).
 describe('apply-to-all (per-class memory)', () => {
@@ -257,7 +257,7 @@ describe('apply-to-all (per-class memory)', () => {
   });
 });
 
-// Task 4: 6th "merge (with conflict markers)" option — zdiff3 markers on an
+// Task 4: 6th "merge (with conflict markers)" option: zdiff3 markers on an
 // unresolved overlap. mergeThreeWay(style:'zdiff3') emits `||||||| base`.
 describe('6th merge option (zdiff3 markers)', () => {
   it('mergeThreeWay(zdiff3) emits <<<<<<< / ||||||| base / ======= / >>>>>>>', () => {
@@ -286,7 +286,7 @@ describe('6th merge option (zdiff3 markers)', () => {
   });
 });
 
-// Task 5: structured --json report — ScaffoldResult.conflicts[] is populated
+// Task 5: structured --json report: ScaffoldResult.conflicts[] is populated
 // when non-interactive (no prompt fires).
 describe('ScaffoldResult.conflicts[] under non-interactive', () => {
   it('a differing regenerate file populates conflicts[] with hashes + resolution (no prompt)', async () => {

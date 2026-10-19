@@ -142,9 +142,9 @@ function toCliOptions(g: Record<string, unknown>): CliOptions {
     quiet: g.quiet === true,
     verbose: g.verbose === true,
     input: g.input !== false,
-    // TUI policy — additive only. `--tui`/`--no-tui` land on `tui`
+    // TUI policy: additive only. `--tui`/`--no-tui` land on `tui`
     // (true/false; absent when neither flag is given). Spread conditionally so
-    // the default-args case (no flag) does NOT add a `tui` key — keeps the
+    // the default-args case (no flag) does NOT add a `tui` key: keeps the
     // exact-shape assertions in bin.test.ts green.
     ...(g.tui === true || g.tui === false ? { tui: g.tui === true } : {}),
     // `--no-tips` is stored under `tips` (default true; flag ⇒ false). Map to
@@ -168,7 +168,7 @@ function toStatusOptions(g: Record<string, unknown>): StatusOptions {
  * Narrow commander's `string | undefined` host option to `HostId |
  * undefined`. Commander's `.choices(SUPPORTED_HOSTS)` already rejects unknown
  * values at parse time (usage=2), so by the time the action runs any string
- * present IS one of `SUPPORTED_HOSTS`. The cast is therefore total — but kept
+ * present IS one of `SUPPORTED_HOSTS`. The cast is therefore total: but kept
  * explicit (not a type assertion) so a future change to the choices wiring
  * surfaces here rather than silently coercing. Returns `undefined` for an
  * unset flag so callers can conditional-spread (preserves the exact-arg-shape
@@ -201,7 +201,7 @@ export interface DeprecationEntry {
 }
 
 /**
- * Deprecation registry. **Empty today** — no `noir` command is deprecated.
+ * Deprecation registry. **Empty today**: no `noir` command is deprecated.
  * When adding an entry, update the CHANGELOG + `docs/reference/cli.md` (and,
  * if the old form still routes, add a redirect). {@link emitDeprecationHintsFor}
  * scans this on every dispatch and emits one `tip()` per match; `--no-tips` /
@@ -246,7 +246,7 @@ export function emitDeprecationHintsFor(cmd: Command, opts: CliOptions): void {
 }
 
 /** Top-level command names (plus aliases) for a "did you mean" hint on an
- *  unknown command. Hidden commands are excluded — the `hook` dispatcher is the
+ *  unknown command. Hidden commands are excluded: the `hook` dispatcher is the
  *  host's internal contract, not a user command, and suggesting it would only
  *  route the user into its own guard. */
 function topLevelCommandNames(program: Command): string[] {
@@ -264,7 +264,7 @@ export function createProgram(): Command {
 
   program
     .name('noir')
-    .description('Noir — discipline, context, and memory layer for agentic CLIs.')
+    .description('Noir: discipline, context, and memory layer for agentic CLIs.')
     .version(NOIR_VERSION, '-v, --version')
     // Global flags. makeGlobal() propagates each to every subcommand so
     // they parse in any position (e.g. `noir status --json` as well as `noir
@@ -274,7 +274,7 @@ export function createProgram(): Command {
     .addOption(new Option('--quiet', 'suppress non-essential diagnostics'))
     .addOption(new Option('--verbose', 'show additional diagnostic detail'))
     .addOption(new Option('--cwd <path>', 'run as if started in <path>'))
-    // TUI policy — advisory routing for bare `noir` only (never hard-gates a
+    // TUI policy: advisory routing for bare `noir` only (never hard-gates a
     // subcommand). `--tui`/`--no-tui` are a commander negatable pair: parsed
     // onto a single `tui` attribute (true / false / absent=auto). Bare `noir`
     // in a TTY runs the home menu by default; `--no-tui` forces the
@@ -289,7 +289,7 @@ export function createProgram(): Command {
         'route bare `noir` to the non-interactive `status` path even in a TTY',
       ),
     )
-    // Deprecation / redirect hints — `--no-tips` silences the `tip()` helper
+    // Deprecation / redirect hints: `--no-tips` silences the `tip()` helper
     // for CI / log-friendly runs. No command is deprecated today; the flag is
     // the headless contract for quieting future notices.
     .addOption(new Option('--no-tips', 'suppress redirect / deprecation hints on stderr'))
@@ -329,7 +329,7 @@ export function createProgram(): Command {
     }
     // Load project-local .noir/.env AFTER the --cwd chdir so the .env root
     // matches the effective project (a `--cwd /other` run must never inherit the
-    // launch dir's tokens into the host subprocess). Idempotent — and the
+    // launch dir's tokens into the host subprocess). Idempotent: and the
     // `.noir/.env` rule
     // inverts the usual dotenv rule: a key the file DEFINES wins, and the real
     // environment is the fallback for keys the file omits. The overlay is
@@ -340,12 +340,12 @@ export function createProgram(): Command {
     // as it was before that overlay: reporting "the file's value won, and the
     // one you exported is being ignored" needs the pre-overlay values, which are
     // indistinguishable from the file's own afterwards. Capture it for that
-    // command only — every other command just applies the overlay.
+    // command only: every other command just applies the overlay.
     if (actionCmd.name() === 'env') captureAmbientEnv();
     applyNoirEnv(process.cwd());
     // Propagate --json / --no-input to the deep conflict resolver via env
     // so a regenerate conflict never prompts under those flags (the @clack
-    // prompt writes to stdout — it would corrupt --json output and violate
+    // prompt writes to stdout: it would corrupt --json output and violate
     // --no-input). Done here centrally so init/create/sync need no arg changes
     // (no bin.test.ts arg-pin cascade). buildConflictOpts reads this flag.
     const nonInteractive = opts.json === true || opts.input === false;
@@ -353,13 +353,13 @@ export function createProgram(): Command {
     else delete process.env.NOIR_NON_INTERACTIVE;
     // Propagate --quiet the same way, for the colour authority (theme.useColor),
     // which never sees the parsed options. Mirrors NOIR_NON_INTERACTIVE: it is
-    // an output, not an input — any ambient NOIR_QUIET is deleted when the run
+    // an output, not an input: any ambient NOIR_QUIET is deleted when the run
     // did not ask for quiet, so exporting it by hand has no effect.
     if (opts.quiet === true) process.env.NOIR_QUIET = '1';
     else delete process.env.NOIR_QUIET;
     // Deprecation / redirect hints. Scans {@link DEPRECATIONS} against the
     // dispatched command path; emits via `tip()` (suppressed by --no-tips /
-    // --json). Empty registry today — no-op until an entry is added.
+    // --json). Empty registry today: no-op until an entry is added.
     emitDeprecationHintsFor(actionCmd, toCliOptions(opts));
   });
 
@@ -407,7 +407,7 @@ export function createProgram(): Command {
         const transport: 'stdio' | 'streamable-http' =
           opts.transport === 'streamable-http' ? 'streamable-http' : 'stdio';
         // `upgrade`/`host` are conditionally spread so an UNSET flag does NOT add
-        // an `upgrade: false` / `host: …` key to the opts object — that would
+        // an `upgrade: false` / `host: …` key to the opts object: that would
         // break the toEqual-based arg assertions in bin.test.ts (which expects
         // exactly `{transport, url}` for the default-invocation cases). Matches
         // the conditional-spread pattern used for task/memory options elsewhere.
@@ -430,14 +430,14 @@ export function createProgram(): Command {
         // `{ok, data}` envelope so it matches the headless contract every read
         // command uses. The args passed to init() are UNCHANGED (bin.test.ts
         // arg pins still hold); only the return value is captured + emitted.
-        // `init` returns `undefined` on the already-initialized no-op — skip.
+        // `init` returns `undefined` on the already-initialized no-op: skip.
         if (cmd.optsWithGlobals().json === true && result !== undefined) {
           json({ ok: true, data: result });
         }
       },
     );
 
-  // `noir create [dir]` — greenfield AI-layer bootstrap. Lazy import
+  // `noir create [dir]`: greenfield AI-layer bootstrap. Lazy import
   // mirrors sync's dispatcher so the create module isn't loaded for unrelated
   // commands. Optional `[dir]` defaults to process.cwd() inside the action.
   program
@@ -451,7 +451,7 @@ export function createProgram(): Command {
     .addOption(
       new Option(
         '--host <id>',
-        'target agentic CLI (default: claude) — drives host-side emission',
+        'target agentic CLI (default: claude): drives host-side emission',
       ).choices(SUPPORTED_HOSTS),
     )
     .action(
@@ -518,7 +518,7 @@ export function createProgram(): Command {
     .addOption(
       // Optional `--host` override. When omitted, sync reads host from
       // `.noir/config.yml` (whatever `noir init --host <id>` persisted). The
-      // override is rarely needed — documented as advanced.
+      // override is rarely needed: documented as advanced.
       new Option(
         '--host <id>',
         'override the configured host (advanced; default reads .noir/config.yml)',
@@ -572,7 +572,7 @@ export function createProgram(): Command {
       },
     );
 
-  // `mcp` group — preserve legacy bare-`mcp` usage error.
+  // `mcp` group: preserve legacy bare-`mcp` usage error.
   const mcpCmd = program.command('mcp').description('MCP server control');
   mcpCmd
     .command('serve')
@@ -592,7 +592,7 @@ export function createProgram(): Command {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir mcp serve [--stdio] [--workspace <name>]');
   });
 
-  // `daemon` group — start/stop/status/restart.
+  // `daemon` group: start/stop/status/restart.
   // `start` runs the daemon in the FOREGROUND by default; `--detach` forks a
   // detached child. `--_detached-child` is the hidden marker the detached
   // child carries: it tells the child it IS the daemon (run in-process),
@@ -669,7 +669,7 @@ export function createProgram(): Command {
     'after',
     [
       '',
-      'Shared workspaces (two repos, one product — e.g. backend + frontend):',
+      'Shared workspaces (two repos, one product: e.g. backend + frontend):',
       '  noir daemon start --workspace <name> --detach   found a workspace from this repo',
       '  noir daemon join <name>                         join it from the other repo',
       '',
@@ -775,7 +775,7 @@ export function createProgram(): Command {
       await status(toStatusOptions(actionGlobals(args)));
     });
 
-  // `noir env` — which configuration is in effect and where each value comes
+  // `noir env`: which configuration is in effect and where each value comes
   // from. READ-ONLY, and names-and-shapes only: never a value.
   program
     .command('env')
@@ -784,7 +784,7 @@ export function createProgram(): Command {
       await env(toCliOptions(actionGlobals(args)));
     });
 
-  // `noir hook` — the host-invoked SessionStart / SubagentStart runner. Reads
+  // `noir hook`: the host-invoked SessionStart / SubagentStart runner. Reads
   // the hook input from stdin and emits `hookSpecificOutput` on stdout. Hidden
   // from `--help` and the command palette: it is the scaffold's internal
   // contract with the host, not a user command (see commands/hook.ts).
@@ -799,7 +799,7 @@ export function createProgram(): Command {
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
       // The hidden dispatcher takes no positional arguments. A positional here
-      // is a human typo — most often `noir hooks sync` (plural). Fail with the
+      // is a human typo: most often `noir hooks sync` (plural). Fail with the
       // hint instead of running the SessionStart injection (the empty/non-JSON
       // stdin default), which would silently dump the brief as JSON.
       if (cmd.args.length > 0) {
@@ -971,7 +971,7 @@ export function createProgram(): Command {
     );
   });
 
-  // `skills` group — list/sync the builtin pack in-process.
+  // `skills` group: list/sync the builtin pack in-process.
   const skillsGrp = program.command('skills').description('builtin skills');
   skillsGrp
     .command('list')
@@ -1001,7 +1001,7 @@ export function createProgram(): Command {
     throw new NoirCliError(EXIT.USAGE, 'Usage: noir skills list|sync|lint|registry');
   });
 
-  // `hooks` group — the explicit restore path for a host lifecycle hook that was
+  // `hooks` group: the explicit restore path for a host lifecycle hook that was
   // removed (or never written). In-process: the hook entry is a host config file,
   // not daemon state. The hidden `noir hook` command above is the dispatcher the
   // host invokes; this group manages the wiring that points at it.
@@ -1027,7 +1027,7 @@ export function createProgram(): Command {
     .option('--mode <mode>', 'full | quick')
     .option(
       '--class <taskClass>',
-      'task class (feature/epic/enhancement/bugfix/spike/quick-task/refactor) — drives the PRD gate',
+      'task class (feature/epic/enhancement/bugfix/spike/quick-task/refactor): drives the PRD gate',
     )
     .action(async (...args: unknown[]) => {
       const cmd = trailingCmd(args);
@@ -1264,7 +1264,7 @@ export function createProgram(): Command {
     .action(async (...args: unknown[]) => {
       await handoff(buildHandoffOptions(trailingCmd(args).optsWithGlobals()));
     });
-  // `noir wrap` — session-end alias (same handler, friendlier name at the end of
+  // `noir wrap`: session-end alias (same handler, friendlier name at the end of
   // a session). Same options; no separate code path.
   program
     .command('wrap')
@@ -1274,7 +1274,7 @@ export function createProgram(): Command {
       await handoff(buildHandoffOptions(trailingCmd(args).optsWithGlobals()));
     });
 
-  // `noir release <version> [--channel beta|stable] [--dry-run]` — guided
+  // `noir release <version> [--channel beta|stable] [--dry-run]`: guided
   // orchestrator over the patch-release flow. Hands off
   // at the human-approval gates; NEVER auto-approves the GitHub publish job.
   program
@@ -1298,12 +1298,12 @@ export function createProgram(): Command {
       });
     });
 
-  // `noir tui` — the interactive Ink dashboard. LAZY-loaded: the Ink app
+  // `noir tui`: the interactive Ink dashboard. LAZY-loaded: the Ink app
   // (React) is imported ONLY inside this action via `await import('./tui/…')`,
   // so React + Ink never enter the main CLI startup path. `noir status`,
   // `noir doctor`, a bare `noir`, etc. stay fast and React-free. The dispatch
   // seam is the SAME shape `home(opts, deps)` uses (a fresh commander program
-  // per dispatch, with its own error → exit-code mapping) — command routing is
+  // per dispatch, with its own error → exit-code mapping): command routing is
   // NOT reimplemented in the TUI; `/`-prefixed inputs are routed through it.
   // Interactive-only: requires a TTY; under `--json` / `--no-input` / non-TTY
   // / CI / NO_COLOR it errors cleanly via `requireInteractive` (exit 2).
@@ -1318,7 +1318,7 @@ export function createProgram(): Command {
       requireInteractive(opts, '`noir tui`');
       // LAZY load the Ink dashboard. The import path is computed at runtime
       // (not a string literal) so esbuild cannot statically follow it into the
-      // tui graph during the bin build — that static analysis is what hoists
+      // tui graph during the bin build: that static analysis is what hoists
       // bin.ts's entry body (incl. the `isMainModule` realpath guard) into a
       // shared chunk, turning dist/bin.js into a facade and breaking a global
       // `noir` install under its symlink. The tui is built as a sibling entry
@@ -1332,7 +1332,7 @@ export function createProgram(): Command {
       // minutes (QwenLM PR #4462). Force production BEFORE the TUI loads.
       process.env.NODE_ENV ||= 'production';
       const { runTui } = await import(/* @vite-ignore */ tuiUrl);
-      // Same dispatch seam as homeDeps.dispatch above — a fresh program per
+      // Same dispatch seam as homeDeps.dispatch above: a fresh program per
       // dispatched argv, errors mapped to process.exitCode (never thrown out).
       const dispatch = async (argv: readonly string[]): Promise<void> => {
         const sub = createProgram();
@@ -1345,14 +1345,14 @@ export function createProgram(): Command {
       await runTui(opts, dispatch);
     });
 
-  // `noir palette` — the fuzzy command palette opened directly. Same lazy Ink
+  // `noir palette`: the fuzzy command palette opened directly. Same lazy Ink
   // mount as `noir tui` but renders the App palette-first
   // (`{ kind: 'palette' }` initial mode), so the user can fuzzy-run any command
   // without first entering the dashboard. Interactive-only (requireInteractive →
   // exit 2 under non-TTY/--json/--no-input/CI/NO_COLOR), exactly like `noir tui`.
   program
     .command('palette')
-    .description('fuzzy command palette — run any noir command (Ink)')
+    .description('fuzzy command palette: run any noir command (Ink)')
     .action(async (...args: unknown[]) => {
       const g = actionGlobals(args);
       const opts = toCliOptions(g);
@@ -1371,7 +1371,7 @@ export function createProgram(): Command {
       await runPalette(opts, dispatch);
     });
 
-  // `noir run <prompt>` — drive the host CLI headless and render its
+  // `noir run <prompt>`: drive the host CLI headless and render its
   // stream-json (the headless host-driving surface). Streams the host's output and
   // reports token/cost from the `result` event. `--command <binary>` overrides
   // the per-host default so users with multiple profiles (claude vs claude-work)
@@ -1416,7 +1416,7 @@ export function createProgram(): Command {
       return;
     }
     if (rows.length === 0) {
-      info('(no run profiles configured — add a run.profiles block to .noir/config.yml)', opts);
+      info('(no run profiles configured: add a run.profiles block to .noir/config.yml)', opts);
       return;
     }
     table(rows, ['NAME', 'DEFAULT', 'BINARY'], opts);
@@ -1461,13 +1461,13 @@ const homeDeps: HomeDeps = {
       await sub.parseAsync([...argv], { from: 'user' });
     } catch (err) {
       // Map the sub-command's failure to process.exitCode (never throw out
-      // of dispatch — home returns and the outer program exit reflects this).
+      // of dispatch: home returns and the outer program exit reflects this).
       handleError(err);
     }
   },
   // The grouped home menu resolves its sections against the LIVE palette
-  // registry — the same source the TUI palette
-  // uses — so the menu cannot drift from the commander tree.
+  // registry: the same source the TUI palette
+  // uses: so the menu cannot drift from the commander tree.
   commands: buildPaletteCommands(createProgram()),
 };
 
@@ -1500,7 +1500,7 @@ const isMainModule = (() => {
     // (.../bin/noir -> .../lib/node_modules/@noir-ai/cli/dist/bin.js), so argv[1]
     // is the symlink path while import.meta.url is the RESOLVED real path. Compare
     // the REAL paths so `noir` runs under BOTH direct + symlinked invocation.
-    // (Without this, a global `noir` install silently exits 0 — main() never runs.)
+    // (Without this, a global `noir` install silently exits 0: main() never runs.)
     return pathToFileURL(realpathSync(entry)).href === import.meta.url;
   } catch {
     return false;

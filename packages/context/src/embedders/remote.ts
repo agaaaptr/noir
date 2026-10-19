@@ -4,8 +4,8 @@
 //   - Provider-explicit and NEVER the default. The caller selects `kind:'remote'`
 //     with a concrete `provider` in config; there is no inference from env vars,
 //     so source text is never silently sent to a cloud endpoint (no inference
-//     from env-var presence — the config alone decides).
-//   - `apiKey` absence does NOT throw at construction — the embedder builds
+//     from env-var presence: the config alone decides).
+//   - `apiKey` absence does NOT throw at construction: the embedder builds
 //     cleanly so `context_status` can report `kind:'remote'`, and `embed()`
 //     throws a clear "not configured" error so the engine degrades to BM25-only
 //     rather than crashing. This makes a misconfigured key observable
@@ -21,7 +21,7 @@
 import type { EmbedFn } from '../types.js';
 import { EMBED_DIM, l2normalize } from './normalize.js';
 
-/** Default bound on the remote embedding POST — a cloud endpoint that accepts
+/** Default bound on the remote embedding POST: a cloud endpoint that accepts
  *  TCP but never answers (or trickles) must not hang search/index/recall. 60s
  *  is generous for embedding latency. Mirrors the ollama embedder. */
 const REMOTE_FETCH_TIMEOUT_MS = 60_000;

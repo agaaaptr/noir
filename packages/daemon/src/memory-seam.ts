@@ -18,12 +18,12 @@ import type { Store } from '@noir-ai/store';
  *
  * The provider is resolved ONLY from an explicit opt-in: the `consolidate` tier
  * key, falling back to `defaultProvider`. Env-var presence is NEVER consulted
- * — `ANTHROPIC_API_KEY` being set for another tool does NOT activate
+ *: `ANTHROPIC_API_KEY` being set for another tool does NOT activate
  * consolidation here. A provider is "consolidation-capable" only when that key
  * resolves to a configured provider block that itself declares a `model` id;
  * otherwise this returns `null`.
  *
- * NOTE: this function ALONE is NOT the consolidation gate — it ignores the
+ * NOTE: this function ALONE is NOT the consolidation gate: it ignores the
  * user's `memory.consolidation.enabled` master switch. The AND of that switch
  * with this derivation (and with the memory-block provider) lives in
  * {@link resolveConsolidationCapability}, which is what the daemon wiring +
@@ -42,7 +42,7 @@ export function resolveMemoryConsolidation(
 }
 
 /**
- * The consolidation capability gate — the SINGLE source of truth both
+ * The consolidation capability gate: the SINGLE source of truth both
  * {@link buildMemoryEngine} and the daemon wiring (stdio/http) consult to decide
  * (a) whether the `memory_consolidate` MCP tool registers and (b) whether the
  * engine's `consolidate` can run. Returns the usable `{provider, model}` when
@@ -50,29 +50,29 @@ export function resolveMemoryConsolidation(
  *
  * The gate is the AND of ALL three (NEVER a silent paid
  * call, the Agent-Memory anti-pattern):
- *  (a) `resolvedMemory.consolidation.enabled === true` — the user's EXPLICIT
+ *  (a) `resolvedMemory.consolidation.enabled === true`: the user's EXPLICIT
  *      master switch under `memory:`. This is the LOAD-BEARING gate: a config
  *      with no `memory:` block (or `enabled:false`) resolves to `null`
  *      REGARDLESS of `model.defaultProvider`, so a `model:` block set for
  *      summarize/title/draft does NOT silently enable a paid consolidation call.
- *  (b) a usable provider+model — prefer the one named under `memory:` (with its
+ *  (b) a usable provider+model: prefer the one named under `memory:` (with its
  *      own `model` id); fall back to the MODEL-derived derivation
  *      ({@link resolveMemoryConsolidation}) ONLY when the user enabled
  *      consolidation but did NOT name a provider under `memory:`.
  *  (c) the resolved pair has both a `provider` and a `model` id.
  *
- * `resolvedMemory` is the output of `resolveMemoryConfig(config.memory)` — the
- * pure core→memory bridge (no env inference, no cycle). Pure projection — reads
+ * `resolvedMemory` is the output of `resolveMemoryConfig(config.memory)`: the
+ * pure core→memory bridge (no env inference, no cycle). Pure projection: reads
  * NO env, holds NO secrets, never throws. Whether the provider is actually
  * CALLABLE at runtime (key present, network up) is decided inside `complete()`
- * — here we only decide config-time capability.
+ *: here we only decide config-time capability.
  */
 export function resolveConsolidationCapability(
   resolvedMemory: MemoryConfig | undefined,
   modelCfg: ResolvedModelConfig | undefined,
 ): { provider: string; model: string } | null {
   const cons = resolvedMemory?.consolidation;
-  // (a) The master switch — load-bearing gate. Must be explicitly `true`; an
+  // (a) The master switch: load-bearing gate. Must be explicitly `true`; an
   // absent OR `false` block disables consolidation regardless of `model:`.
   // This is the line against the "silent paid consolidation" leak: a
   // `model.defaultProvider:'anthropic'` set for summarize/title/draft must NOT
@@ -91,7 +91,7 @@ export function resolveConsolidationCapability(
  * {@link MemoryModel} shape the memory engine consumes. This is the ONLY LLM
  * entry point in the memory layer, and it is reached ONLY after the engine's
  * provider gate passes (never a silent paid call). `null` degrades to the
- * engine's `model-unavailable` refusal; `{ok:false}` wraps as the same — both
+ * engine's `model-unavailable` refusal; `{ok:false}` wraps as the same: both
  * are logged, neither crashes, neither is a surprise bill.
  *
  * Consolidation is free-text PROSE (not structured), so the `value`/`usage`
@@ -124,17 +124,17 @@ function bindMemoryModel(modelCfg: ResolvedModelConfig): MemoryModel {
  * for the context engine (the daemon owns one embedder; memory takes
  * `{store, embed, ...}`, no embedder duplication).
  *
- * One engine per serve lifecycle — constructed once alongside the store (see
+ * One engine per serve lifecycle: constructed once alongside the store (see
  * {@link openStoreForDaemon}), the workflow engine (see
  * {@link buildWorkflowEngine}), and the context engine (see
  * {@link buildContextEngine}), and reused across every HTTP request, exactly as
- * those handles are. The engine — like the context indexer — is the ONLY thing
+ * those handles are. The engine: like the context indexer: is the ONLY thing
  * that writes `source:'memory'` rows through the injected handle; it never opens
  * a second connection, so the daemon's single-writer discipline is preserved
  * (in-process, no sidecar, canonical `ProjectId`).
  *
  * Consolidation is OPT-IN + provider-explicit (NEVER a silent paid
- * call). The capability gate is {@link resolveConsolidationCapability} — the AND
+ * call). The capability gate is {@link resolveConsolidationCapability}: the AND
  * of the user's `memory.consolidation.enabled` master switch (the load-bearing
  * gate), a usable provider+model (preferring the `memory:` block, falling back
  * to the model-derived derivation when enabled but no provider named under
@@ -143,12 +143,12 @@ function bindMemoryModel(modelCfg: ResolvedModelConfig): MemoryModel {
  *   - the model layer's {@link complete} is bound as the engine's model
  *     injection, AND
  *   - the runtime gate `config.consolidation` is set so `consolidate` can run.
- * When the gate is `null` — most importantly when `enabled === false`, regardless
- * of `model.defaultProvider` — NO model is wired and `engine.consolidate`
+ * When the gate is `null`: most importantly when `enabled === false`, regardless
+ * of `model.defaultProvider`: NO model is wired and `engine.consolidate`
  * self-refuses (`'no-provider'`) WITHOUT calling the model. The daemon registers
  * the `memory_consolidate` MCP tool only in the capable case.
  *
- * `resolvedMemory` is the output of `resolveMemoryConfig(config.memory)` — the
+ * `resolvedMemory` is the output of `resolveMemoryConfig(config.memory)`: the
  * pure core→memory bridge. Passing it here means the engine's `config` reflects
  * the user's `memory:` consent exactly (never a hardcoded `enabled:true`).
  *
@@ -170,7 +170,7 @@ export function buildMemoryEngine(
   // Consolidation capability gate. The AND of the user's master
   // switch + a usable provider+model. `null` ⇒ consolidation fully OFF: no model
   // wired, `memory_consolidate` not registered, and `engine.consolidate` refuses
-  // `'no-provider'` WITHOUT a model call — regardless of `model.defaultProvider`.
+  // `'no-provider'` WITHOUT a model call: regardless of `model.defaultProvider`.
   const cons = resolveConsolidationCapability(resolvedMemory, modelCfg);
   if (!cons) {
     // Pass resolvedMemory through so the engine's config reflects the user's

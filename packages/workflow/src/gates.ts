@@ -33,15 +33,15 @@ export function gateFor(phase: Phase): WorkflowState | null {
  * AUTHORITATIVE record for every gate outcome (audit in store KV as source of
  * truth + export to `.noir/audit/<taskId>.json`).
  * The {@link TaskState.history} field is a DERIVED view, regenerated from this
- * KV by the engine — never edited directly. This collapses the dual source
+ * KV by the engine: never edited directly. This collapses the dual source
  * of truth: one write, one timestamp, one read-back.
  *
  * This is the "quiet observable checkpoint": an `approved`, `forced`, or
- * `skipped` decision is always recorded — never silently dropped — and `forced`
+ * `skipped` decision is always recorded: never silently dropped: and `forced`
  * carries a `reason`.
  *
  * `at` is stamped here (`Date.now()`) rather than trusted from the caller, so
- * the audit reflects when the gate actually fired (single timestamp — the
+ * the audit reflects when the gate actually fired (single timestamp: the
  * sub-ms drift between the engine's history stamp and the audit KV stamp is
  * gone, because there is no longer a second stamp). The write is append-only:
  * prior entries are read and preserved (never overwritten).
@@ -56,13 +56,13 @@ export function recordGate(store: Store, taskId: string, result: GateResultInput
 
 /**
  * Read the authoritative gate audit for `taskId` from the store KV. Returns an
- * empty array when no gate has fired yet (a fresh task) — never `null`, so
+ * empty array when no gate has fired yet (a fresh task): never `null`, so
  * callers can spread/index without a separate undefined check.
  *
  * The engine uses this to regenerate {@link TaskState.history} (the derived
  * view) on every advance and every status read; downstream consumers
  * (`buildWorkflowStatus`, the CLI `task status`) read `task.history` and so get
- * the derived-from-KV value indirectly — the audit KV remains the SOT they all
+ * the derived-from-KV value indirectly: the audit KV remains the SOT they all
  * ultimately derive from.
  */
 export function readGateHistory(store: Store, taskId: string): GateResult[] {

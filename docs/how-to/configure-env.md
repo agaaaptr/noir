@@ -1,7 +1,7 @@
 # Configuring a project with `.noir/.env`
 
 `.noir/.env` is the **recommended home for project-scoped configuration and
-secrets** — the integration tokens, provider keys, and selection variables this
+secrets**: the integration tokens, provider keys, and selection variables this
 repository needs. Noir reads it in-process and applies it to its own
 environment, so a value placed here is in effect for every Noir command and
 every host/daemon Noir spawns, no matter how the process was launched
@@ -13,7 +13,7 @@ what is actually in effect, recipes, and how it is kept safe.
 
 ## 1. What the file is for
 
-**Belongs here — anything project-scoped:**
+**Belongs here: anything project-scoped:**
 
 | Kind | Example key |
 |---|---|
@@ -25,11 +25,11 @@ what is actually in effect, recipes, and how it is kept safe.
 
 **Does not belong here:**
 
-- **Machine-wide values.** The file is per-checkout and gitignored — each
+- **Machine-wide values.** The file is per-checkout and gitignored: each
   developer has their own. A value that must be identical on every machine
   belongs in the real environment (`~/.zshenv`, CI, a container env, launchd).
 - **Per-user UI preferences.** `NO_COLOR`, `COLUMNS`, `NOIR_ACCESSIBLE`,
-  `NOIR_NO_BANNER` describe *your session*, not the project — put them in your
+  `NOIR_NO_BANNER` describe *your session*, not the project: put them in your
   shell rc or your host's settings.
 - **Structural project configuration.** Hosts, tiers, embedder kind, workspace
   ids, and run-profile binaries live in `.noir/config.yml`, which is
@@ -38,7 +38,7 @@ what is actually in effect, recipes, and how it is kept safe.
 
 **The committable counterpart** is `.noir/.env.example`: a detailed, commented
 guide to each variable, the precedence order, and what to commit. It is
-documentation for the team and is never loaded — keep it in git, keep the real
+documentation for the team and is never loaded: keep it in git, keep the real
 file out.
 
 ## 2. Creating it
@@ -58,7 +58,7 @@ bring an **unedited** copy of it forward to the text the installed version ships
 — `.noir/.env` itself is never refreshed. See
 [installation.md → Upgrading a project's scaffold](installation.md#upgrading-a-projects-scaffold-noir-init---upgrade).
 
-Creating it by hand — from an older project, or after deleting it:
+Creating it by hand: from an older project, or after deleting it:
 
 ```bash
 touch .noir/.env && chmod 600 .noir/.env
@@ -87,10 +87,10 @@ overrides the one you just put in the repository.
 
 There is deliberately **no `VAR=value noir …` prefix level**. Such a prefix
 lands in `process.env` indistinguishably from the inherited environment, so it
-is level 3 — it cannot override this file. The genuine per-invocation override
+is level 3: it cannot override this file. The genuine per-invocation override
 is a `run.profiles.<n>.env` entry (level 1).
 
-Shadows are not silent — when the file defines a key the environment *also*
+Shadows are not silent: when the file defines a key the environment *also*
 defines with a **different** value, Noir emits one stderr line naming the key
 and which source won. It never prints either value:
 
@@ -100,7 +100,7 @@ and which source won. It never prints either value:
 
 Scope: applying the file mutates **only Noir's own `process.env`** (and the
 children it spawns). It never writes to a shell profile, never exports to the
-parent, and never persists anything — so a manual `claude` invocation in your
+parent, and never persists anything: so a manual `claude` invocation in your
 terminal still sees your shell environment exactly as before. That is what
 makes the "several Claude profiles with different API keys" setup keep working.
 
@@ -116,7 +116,7 @@ Two behaviours worth knowing before you write entries:
 
 ## 4. Seeing what is in effect
 
-`noir env` answers "which value is winning, and who supplied it?" — read-only,
+`noir env` answers "which value is winning, and who supplied it?": read-only,
 and it prints **names and redacted shapes only, never a value**:
 
 ```
@@ -140,22 +140,22 @@ embedder keys, the host gateway variables `ANTHROPIC_BASE_URL` /
 plus any name the project's own `model.providers.<name>.apiKeyEnv` asks for.
 Your whole shell environment is neither listed nor an answer to the question.
 
-`--json` emits the structured form — `{ok:true, data:{vars, warnings}}` with
-`{key, source, shadowed?, valueLength}` rows — carrying even less than the
+`--json` emits the structured form: `{ok:true, data:{vars, warnings}}` with
+`{key, source, shadowed?, valueLength}` rows: carrying even less than the
 table (a length, never a shape). The command always exits 0: "your file is not
 being loaded" is information, not a failure.
 
 `noir doctor` reports the same provenance in its check list:
 
-- `noir-env:<KEY>` — `from .noir/.env` for every key the file defines.
+- `noir-env:<KEY>`: `from .noir/.env` for every key the file defines.
 - `noir-env`: the file's permissions; a **warn** when it is group/world
   readable, and a **warn** naming the remedy when the file is tracked by git.
-- `provider` — per configured provider, `key present (from .noir/.env)` when the
+- `provider`: per configured provider, `key present (from .noir/.env)` when the
   winning source for that provider's `apiKeyEnv` is the file.
 
 ## 5. Common recipes
 
-### Integration token — ClickUp
+### Integration token: ClickUp
 
 ```bash
 # .noir/.env                                  (gitignored — never commit)
@@ -163,12 +163,12 @@ CLICKUP_API_TOKEN=pk_your_token_here
 ```
 
 Then restart the daemon: `noir daemon restart`. The daemon's environment is a
-**spawn-time snapshot** — a token added after it started is invisible to it
+**spawn-time snapshot**: a token added after it started is invisible to it
 until it restarts. Workspace binding is config, not env: `CLICKUP_TEAM_ID` is
 never read; set `integrations.clickup.teamId` / `.listId` / `.spaceId` in
 `.noir/config.yml` instead. Full guide: [clickup.md](clickup.md).
 
-### Model provider key — `apiKeyEnv` is a NAME, never `${VAR}`
+### Model provider key: `apiKeyEnv` is a NAME, never `${VAR}`
 
 This is the trap that silently disables a provider. `apiKeyEnv` stores the
 variable **name**; Noir reads `process.env[<that name>]` at call time. So:
@@ -197,7 +197,7 @@ Writing `apiKeyEnv: ${ANTHROPIC_API_KEY}` resolves
 `process.env['${ANTHROPIC_API_KEY}']` → `undefined` → a provider with no key,
 silently. Only `run.profiles.<name>.env` interpolates `${VAR}`; `apiKeyEnv`
 does not. With no provider configured (or no key resolvable) the model layer
-degrades to templates — Noir never makes a silent paid call.
+degrades to templates: Noir never makes a silent paid call.
 
 ### Remote embedder
 
@@ -225,9 +225,9 @@ NOIR_PROFILE=work
 
 Precedence for the selection itself: `--profile <name>` flag > `NOIR_PROFILE` >
 `run.defaultProfile` > built-in host default. Define the profiles in
-`.noir/config.yml` — see [host-profiles.md](host-profiles.md).
+`.noir/config.yml`: see [host-profiles.md](host-profiles.md).
 
-### A per-invocation override — a run profile
+### A per-invocation override: a run profile
 
 ```yaml
 # .noir/config.yml
@@ -248,7 +248,7 @@ Level 1 of the chain, and the only per-invocation override Noir has: a
 that spawn, so it also outranks this file. It is the right escape hatch for a CI
 job (export the value in the job environment, reference it here rather than
 writing it into the file) and for testing a rotated token without editing
-anything. A `VAR=value noir …` prefix is **not** an override — it arrives in
+anything. A `VAR=value noir …` prefix is **not** an override: it arrives in
 `process.env` exactly like the inherited environment (level 3), so this file
 still wins.
 
@@ -257,7 +257,7 @@ still wins.
 - **Gitignored by the managed block.** `/.noir/.env` and `/.noir/.env.*` are
   ignored; `!/.noir/.env.example` keeps the example committable.
 - **`0600`.** `noir init` creates the file unreadable by others, and the mode is
-  **re-asserted automatically** on every run that may write it — `noir init`
+  **re-asserted automatically** on every run that may write it: `noir init`
   (including `--upgrade` and `--force`), `noir create`, and `noir sync`. A file
   an older Noir seeded, a clone delivered, or a `chmod` widened is therefore
   healed the next time one of those runs. Remedy if you would rather not wait
@@ -266,7 +266,7 @@ still wins.
   the file is group/world readable; the row names the mode it observed and
   whether the file **predates** the owner-only contract (an older Noir seeded it,
   a clone delivered it, it was created by hand, or a tool replaced it) or was
-  widened **after** it was written (a `chmod`, a `chown`, or a restore) — so a
+  widened **after** it was written (a `chmod`, a `chown`, or a restore): so a
   file you never touched is not reported as your doing.
 - **A git-*tracked* `.noir/.env` is refused outright.** Noir never interprets
   it, so none of its keys are in effect, and the refusal names the remedy:
@@ -277,7 +277,7 @@ still wins.
 
   The reason is that a tracked file arrives with the clone. Under this
   precedence it could set `ANTHROPIC_BASE_URL` to an attacker's endpoint while
-  the *token* still arrives through the environment fallback — the file needs
+  the *token* still arrives through the environment fallback: the file needs
   no secret of its own to exfiltrate yours. Untracked (the normal case, since
   init creates it gitignored) is trusted; outside a git repository the file is
   trusted too, and any git failure degrades to trust rather than disabling the
@@ -290,7 +290,7 @@ still wins.
   a file that arrived inside a cloned repository must not be able to inject
   into them. The full list is in
   [environment.md](../reference/environment.md).
-- **Never commit it, and never pass a token as a CLI argument** — arguments are
+- **Never commit it, and never pass a token as a CLI argument**: arguments are
   visible in process lists.
 - **Noir never prints a value.** `noir env` prints the name, the winning
   source, and a redacted shape; `--json` prints a length. The loader's warnings
@@ -302,15 +302,15 @@ still wins.
 
 Run `noir env` and read the `SOURCE` column. `environment` means the file is not
 defining that key: usually a typo, a line still commented out, or a malformed
-line (the loader writes `.noir/.env:<line>: <reason> — skipped` to stderr). If
+line (the loader writes `.noir/.env:<line>: <reason>: skipped` to stderr). If
 the key *is* in the file and your shell also had it, the row reads
-`.noir/.env (shadows environment)` — the file is winning, and the stderr
+`.noir/.env (shadows environment)`: the file is winning, and the stderr
 shadow line named the key when the command started.
 
 **"Still `no-token` after I added it."**
 
 The daemon's environment is a snapshot taken when it spawned. Restart it —
-`noir daemon restart` — then retry. This is the most common cause of "the token
+`noir daemon restart`: then retry. This is the most common cause of "the token
 works in my shell but the integration says it is missing".
 
 **"My repository's `.noir/.env` was ignored."**
@@ -322,7 +322,7 @@ the file.
 
 **"I set a key and it has no effect at all."**
 
-Check the command's stderr for `refusing process-injection key '<NAME>'` — that
+Check the command's stderr for `refusing process-injection key '<NAME>'`: that
 name is on the deny-list above and is never read from a project file. For a
 provider key, confirm `apiKeyEnv` in `config.yml` names the variable you set
 (a bare name, never `${...}`), and that `noir doctor`'s `provider` row reports
@@ -334,6 +334,6 @@ provider key, confirm `apiKeyEnv` in `config.yml` names the variable you set
   Noir reads, and the secrets policy.
 - [config.md](../reference/config.md): the `.noir/config.yml` schema.
 - [clickup.md](clickup.md): the ClickUp integration end to end.
-- [host-profiles.md](host-profiles.md) — run profiles and the `${VAR}`
+- [host-profiles.md](host-profiles.md): run profiles and the `${VAR}`
   interpolation they support.
-- [privacy.md](../explanation/privacy.md) — what leaves your machine, and when.
+- [privacy.md](../explanation/privacy.md): what leaves your machine, and when.

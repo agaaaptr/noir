@@ -1,5 +1,5 @@
 // Shell-bridge fallback (Slice C): when `noir run --command <name>` fails with
-// ENOENT, resolve the name through the user's interactive shell — PATH entries
+// ENOENT, resolve the name through the user's interactive shell: PATH entries
 // exported in rc files, zsh/bash/fish aliases and functions. The name always
 // travels via argv (never in the -c string) and the host prompt only as "$@",
 // so no user-controlled text ever reaches the shell parser.
@@ -32,12 +32,12 @@ const ENV = (shell: string, path: string, home: string): Record<string, string> 
   PATH: path,
   HOME: home,
   // zsh reads rc files from $ZDOTDIR (defaults to $HOME but can be set to
-  // something else, as it is in this dev environment) — pin it to the temp dir
+  // something else, as it is in this dev environment): pin it to the temp dir
   // so the integration tests control exactly which .zshrc is sourced.
   ZDOTDIR: home,
 });
 
-describe('isEligibleForShellFallback — guards', () => {
+describe('isEligibleForShellFallback: guards', () => {
   it('rejects a name containing a path separator (it is a path, not a shell name)', () => {
     expect(
       isEligibleForShellFallback('/usr/bin/claude', { env: ENV('/bin/zsh', '', ''), ...POSIX }),
@@ -81,7 +81,7 @@ describe('isEligibleForShellFallback — guards', () => {
   });
 });
 
-describe('parseProbeOutput + classifyResolution — sentinel parsing', () => {
+describe('parseProbeOutput + classifyResolution: sentinel parsing', () => {
   it('parses a PATH executable (zsh whence format)', () => {
     const out = '\nN:/opt/homebrew/bin/claude\nK:claude: command\n';
     const { path, kind } = parseProbeOutput(out);
@@ -114,7 +114,7 @@ describe('parseProbeOutput + classifyResolution — sentinel parsing', () => {
   });
 });
 
-describe('buildBridgeArgs — prompt travels only via "$@" / $argv', () => {
+describe('buildBridgeArgs: prompt travels only via "$@" / $argv', () => {
   it('zsh bridge: -lic script, name literal, then hostArgs after the dummy $0', () => {
     const b = buildBridgeArgs(
       'claude-work',
@@ -141,7 +141,7 @@ describe('buildBridgeArgs — prompt travels only via "$@" / $argv', () => {
   });
 });
 
-describe('resolveCommandViaShell — real-shell integration (gated on zsh/bash)', () => {
+describe('resolveCommandViaShell: real-shell integration (gated on zsh/bash)', () => {
   let dir: string;
   afterEach(() => {
     if (dir) rmSync(dir, { recursive: true, force: true });

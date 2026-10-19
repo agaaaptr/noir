@@ -166,7 +166,7 @@ describe('deprecation / redirect hints', () => {
     }
   });
 
-  it('no hint when the registry is empty (the default — no command deprecated today)', () => {
+  it('no hint when the registry is empty (the default: no command deprecated today)', () => {
     const program = new Command().name('noir');
     const sub = program.command('status').action(() => {});
     const captured: string[] = [];
@@ -184,7 +184,7 @@ describe('deprecation / redirect hints', () => {
   });
 });
 
-describe('ScaffoldResult gap close — init/sync/create emit ScaffoldResult under --json', () => {
+describe('ScaffoldResult gap close: init/sync/create emit ScaffoldResult under --json', () => {
   it('noir init --json (mkdtemp dogfood) emits the ScaffoldResult with conflicts[] to stdout', async () => {
     const dir = realpathSync(mkdtempSync(join(tmpdir(), 'noir-c1-init-')));
     const origCwd = process.cwd();
@@ -303,7 +303,7 @@ describe('ScaffoldResult gap close — init/sync/create emit ScaffoldResult unde
     expect(Array.isArray(envelope.data.conflicts)).toBe(true);
   });
 
-  it('noir init (no --json) writes NO envelope to stdout — human output unchanged', async () => {
+  it('noir init (no --json) writes NO envelope to stdout: human output unchanged', async () => {
     // Mock init's return via the real module boundary is heavy; instead drive
     // create (mocked) without --json and assert stdout stays empty.
     vi.mocked(create).mockResolvedValueOnce({

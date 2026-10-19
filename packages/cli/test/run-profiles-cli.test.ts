@@ -38,7 +38,7 @@ async function runCli(argv: readonly string[]): Promise<number> {
   return typeof process.exitCode === 'number' ? process.exitCode : 0;
 }
 
-describe('noir run — run profiles (CLI)', () => {
+describe('noir run: run profiles (CLI)', () => {
   let stderr: MockInstance<typeof process.stderr.write>;
   let stdout: MockInstance<typeof process.stdout.write>;
   let cwd: MockInstance<typeof process.cwd>;
@@ -181,7 +181,7 @@ describe('noir run — run profiles (CLI)', () => {
   });
 
   it('works outside a project (no .noir) with the built-in default', async () => {
-    // No .noir in root — loadRunConfig returns null; run must still succeed.
+    // No .noir in root: loadRunConfig returns null; run must still succeed.
     const code = await runCli(['run', 'hello']);
     expect(code).toBe(0);
     expect(runHostMock).toHaveBeenCalledTimes(1);

@@ -1,12 +1,12 @@
 // Top status bar. Renders a one-line summary of the live snapshot: host, mode
 // (from the active workflow task, if any), phase (or "idle"), and daemon
-// health. Degrades cleanly — when the payload is null (project uninitialized,
+// health. Degrades cleanly: when the payload is null (project uninitialized,
 // snapshot in flight, or the daemon fully down), every field shows a dash and
 // the daemon cell reads "down" so the user is never looking at empty space.
 //
 // The run screen reuses the same bar with a `run` summary instead of the
 // snapshot cells: a host run has no workflow/daemon snapshot to show, and what
-// a user needs mid-run is what is streaming — which model, how long, and how
+// a user needs mid-run is what is streaming: which model, how long, and how
 // many tokens have moved.
 
 import { Text } from 'ink';
@@ -28,7 +28,7 @@ export interface RunProgress {
 
 interface StatusBarProps {
   payload: StatusPayload | null;
-  /** When true, the snapshot is being (re)loaded — shown as a dim hint. */
+  /** When true, the snapshot is being (re)loaded: shown as a dim hint. */
   loading?: boolean;
   /** Present on the run screen: render the live run instead of the snapshot. */
   run?: RunProgress;

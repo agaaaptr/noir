@@ -19,6 +19,6 @@ Adopt a typed `docs/` layout: `architecture/`, `decisions/` (ADRs), `findings/`,
 
 ## Update (2026-07-25)
 
-The typed-layout intent above stands (`architecture/`, `decisions/`, `findings/`, `specs/`, `plans/` + a `docs/README.md` index), with one refinement learned in practice. The **Superpowers SDD flow's per-slice spec/plan artifacts** — the v1.0 SDD dogfood — live under `docs/internal/{specs,plans}/`, following the SDD skill's own default convention, while `docs/internal/specs/` holds the top-level Noir blueprint (`2026-07-23-noir-toolkit-design.md`).
+The typed-layout intent above stands (`architecture/`, `decisions/`, `findings/`, `specs/`, `plans/` + a `docs/README.md` index), with one refinement learned in practice. The **Superpowers SDD flow's per-slice spec/plan artifacts**: the v1.0 SDD dogfood: live under `docs/internal/{specs,plans}/`, following the SDD skill's own default convention, while `docs/internal/specs/` holds the top-level Noir blueprint (`2026-07-23-noir-toolkit-design.md`).
 
 So the original "specs/plans go to `docs/internal/specs/` + `docs/plans/`, overriding `docs/internal/`" is refined to: **top-level design specs → `docs/internal/specs/`**; **SDD-per-slice specs/plans → `docs/internal/{specs,plans}/`** (the dogfood convention, kept so the SDD skill works unmodified). This preserves the typed top-level layout without fighting the skill's per-slice output path.

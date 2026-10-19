@@ -2,7 +2,7 @@
 //
 // A run leaves its raw stream-json in `.noir/transcripts/`, and this screen
 // lists the recent ones and re-renders a chosen one through the SAME stream
-// fold the live run screen uses — so reopening an old run reads as prose and
+// fold the live run screen uses: so reopening an old run reads as prose and
 // tool activity, not as JSONL. It is deliberately read-only: nothing here can
 // change or delete a transcript, because a transcript is the audit record of
 // what a host actually did, and that is not something to edit from a list.
@@ -141,7 +141,7 @@ export function TranscriptPicker({
         <Header tagline="transcripts" />
         <Panel>
           <Box paddingX={1}>
-            <Text>{c.dim('no transcripts yet — a run leaves one here')}</Text>
+            <Text>{c.dim('no transcripts yet: a run leaves one here')}</Text>
           </Box>
         </Panel>
         <Text>{c.dim('Esc back')}</Text>

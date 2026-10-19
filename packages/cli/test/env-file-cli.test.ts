@@ -26,7 +26,7 @@ vi.mock('../src/orchestrator.js', async (importOriginal) => {
 
 import { run as runCli } from '../src/bin.js';
 
-describe('bin.run — applies .noir/.env at process start', () => {
+describe('bin.run: applies .noir/.env at process start', () => {
   let root: string;
   let cwd: ReturnType<typeof vi.spyOn>;
 

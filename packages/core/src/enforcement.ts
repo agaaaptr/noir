@@ -96,7 +96,7 @@ function commandCandidate(toolInput: unknown): string | undefined {
 
 /**
  * Evaluate the deny-list against a tool call. Returns a deny decision when a
- * rule matches, else `null` (allow). Pure and total — never throws.
+ * rule matches, else `null` (allow). Pure and total: never throws.
  */
 export function evaluateDeny(
   rules: readonly DenyRule[],
@@ -118,7 +118,7 @@ export function evaluateDeny(
   const candidates = [...paths];
   if (command) candidates.push(command);
   if (candidates.length === 0) {
-    // No recognized field — match against the whole serialized input so a rule
+    // No recognized field: match against the whole serialized input so a rule
     // can still target an unfamiliar tool shape.
     candidates.push(JSON.stringify(toolInput ?? ''));
   }

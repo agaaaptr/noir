@@ -1,5 +1,5 @@
 // Command input display. The input buffer + cursor live in the App (so is the
-// keybinding dispatch); this component is purely presentational — it renders
+// keybinding dispatch); this component is purely presentational: it renders
 // the prefix convention (`/` invokes a native Noir subcommand, bare text is a
 // hint) and shows a block cursor at the end of the buffer.
 //

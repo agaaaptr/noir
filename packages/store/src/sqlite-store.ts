@@ -16,7 +16,7 @@ import type {
   VecUpsertMeta,
 } from './types.js';
 
-/** Hard cap on hits any single search/kNN call may materialize — the retriever
+/** Hard cap on hits any single search/kNN call may materialize: the retriever
  *  budgets/trims results anyway, so a caller passing `limit: 1e9` must not make
  *  better-sqlite3 `.all()` build every row (with snippets + meta JSON) in memory
  *  before the trim happens. */
@@ -27,8 +27,8 @@ const MAX_HITS = 200;
  * whitespace and wrap each term in double quotes (embedded quotes doubled), so
  * operator characters (`-` `*` `:` `(` `)` `NEAR` …) and bare boolean keywords
  * are treated as LITERAL text instead of FTS5 expression syntax. Every search
- * path funnels through `searchFt`, and every caller passes raw user text — no
- * caller builds structured FTS5 queries — so escaping here is safe and single.
+ * path funnels through `searchFt`, and every caller passes raw user text: no
+ * caller builds structured FTS5 queries: so escaping here is safe and single.
  * An empty/whitespace-only input matches nothing (the caller's guards normally
  * short-circuit first). */
 function ftsEscape(query: string): string {
@@ -37,7 +37,7 @@ function ftsEscape(query: string): string {
     .map((t) => t.replace(/"/g, '""'))
     .filter((t) => t.length > 0)
     .map((t) => `"${t}"`);
-  // `""` is a valid empty FTS5 phrase that matches nothing — never throws.
+  // `""` is a valid empty FTS5 phrase that matches nothing: never throws.
   return terms.length > 0 ? terms.join(' ') : '""';
 }
 
@@ -67,7 +67,7 @@ interface VecRow {
  * virtual table (deferred from v1 because `vec0` requires the extension
  * loaded) is created. In read-only mode none of those writes happen; callers
  * get a best-effort read handle against whatever schema already exists on
- * disk — kNN works if the `vec` table was created by a prior read-write open,
+ * disk: kNN works if the `vec` table was created by a prior read-write open,
  * otherwise queries fail clearly against the missing table.
  *
  * `__db` is exposed for tests to assert schema state directly.
@@ -92,7 +92,7 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     mkdirSync(storeDir, { recursive: true, mode: 0o700 });
     ensureOwnerOnlyDir(storeDir);
     // SQLite creates the database file itself and takes no creation mode, so
-    // without this it would land at the umask default (0644) — the project's
+    // without this it would land at the umask default (0644): the project's
     // indexed context readable by every account on the machine. Creating the
     // file here first, at 0600, means SQLite only ever opens an existing file.
     // 'a' appends, so an existing database is never truncated.
@@ -110,7 +110,7 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
 
   // Load sqlite-vec (read-safe; needed for kNN in either mode) FAIL-SOFT: if the
   // platform native binary is absent/broken (the exact case `vecAvailability()`
-  // probes for), we must NOT make the whole store — KV, FTS, workflow, memory —
+  // probes for), we must NOT make the whole store: KV, FTS, workflow, memory —
   // unopenable. Record the flag, skip the vec0 DDL, and let vec operations throw
   // a clear "vec unavailable" error instead of crashing at open.
   let vecMissing = false;
@@ -130,7 +130,7 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     db.pragma('busy_timeout = 5000');
     migrate(db);
     // vec0 DDL deferred from v1: vec0 requires the sqlite-vec extension to be
-    // loaded (done above). `source`/`id` are metadata columns — filterable in
+    // loaded (done above). `source`/`id` are metadata columns: filterable in
     // kNN (`source = ?`) and deletable for idempotent upsert (`id = ?`). vec0
     // keys on rowid (auto-assigned); there is no text primary key.
     if (!vecMissing) {
@@ -139,7 +139,7 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
       );
     }
     // SQLite creates the write-ahead log and shared-memory files itself, at the
-    // umask default, and they carry database pages — the same content as the
+    // umask default, and they carry database pages: the same content as the
     // database. They are re-created on a later open, so they are tightened here
     // on every writable open, once the migration above has made both exist.
     ensureOwnerOnly(`${dbPath}-wal`);
@@ -183,7 +183,7 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     }
     // The docs_ad AFTER DELETE trigger replays the row into docs_fts as a
     // 'delete' command (external-content sync, see migrations.ts), keeping the
-    // FTS index consistent — no manual docs_fts work needed here.
+    // FTS index consistent: no manual docs_fts work needed here.
     db.prepare('DELETE FROM docs WHERE id = ?').run(id);
   };
 
@@ -194,7 +194,7 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     const limit = Number.isFinite(raw) && raw > 0 ? Math.min(Math.floor(raw), MAX_HITS) : 10;
     // bm25(): more negative = more relevant, so ORDER BY score ascending.
     // snippet(docs_fts, 0, ...): column 0 is `content`; 16-token window with
-    // <<match>> markers — NEVER the full content (a narrow context window, so
+    // <<match>> markers: NEVER the full content (a narrow context window, so
     // the host gets the match and its surroundings, not whole files).
     const source = opts?.source;
     // Escape the raw query into literal phrases (see ftsEscape) so operator
@@ -263,7 +263,7 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
     const limit = Number.isFinite(raw) && raw > 0 ? Math.min(Math.floor(raw), MAX_HITS) : 5;
     const buf = Buffer.from(vec.buffer, vec.byteOffset, vec.byteLength);
     // `MATCH ? AND k = ?` is the canonical vec0 kNN form (version-independent;
-    // `ORDER BY distance` is ascending by default — nearest first). distance is
+    // `ORDER BY distance` is ascending by default: nearest first). distance is
     // L2, so lower == more similar; we mirror it onto `score` to match the FTS
     // convention where lower bm25 == more relevant.
     const source = opts?.source;
@@ -282,7 +282,7 @@ export async function openStore(opts: OpenOptions): Promise<Store & { __db: Data
   const countVecs = (): number => {
     if (vecMissing) return 0;
     // A read-only degraded handle over a DB whose original writer had a broken
-    // binary may have NO vec0 table (it was never created) — return 0 instead
+    // binary may have NO vec0 table (it was never created): return 0 instead
     // of throwing 'no such table'.
     try {
       return (db.prepare('SELECT count(*) AS c FROM vec').get() as { c: number }).c;

@@ -20,7 +20,7 @@ describe('closestCommands', () => {
   });
 
   it('returns multiple candidates at the same minimum distance', () => {
-    // "in" is distance 2 from both "init" and "run" — both are returned.
+    // "in" is distance 2 from both "init" and "run": both are returned.
     expect(closestCommands('in', commands)).toEqual(['init', 'run']);
     // "rundate" vs "update" (distance 2) is the only candidate within threshold.
     expect(closestCommands('rundate', commands)).toEqual(['update']);

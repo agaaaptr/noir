@@ -1,28 +1,28 @@
 # Noir Roadmap
 
-> **Living roadmap.** This directory is the single source of truth for Noir's long-term development direction as an **AI-native, host-agnostic, spec-driven engineering platform**. It defines *where Noir is headed and why* — it is **not** an implementation backlog.
+> **Living roadmap.** This directory is the single source of truth for Noir's long-term development direction as an **AI-native, host-agnostic, spec-driven engineering platform**. It defines *where Noir is headed and why*: it is **not** an implementation backlog.
 
 - **Where Noir is today:** [`releases.md`](releases.md) (shipped status, release history, version targets) + [`STATUS.md`](STATUS.md) (per-capability progress).
 - **What is deferred:** [`backlog.md`](backlog.md) (consolidated engineering debt).
 - **Origin / detailed rationale:** `docs/internal/specs/2026-07-23-noir-toolkit-design.md`.
-- **Decisions of record:** `docs/decisions/` (ADR `0001`…`0013`).
+- **Decisions of record:** `docs/decisions/` (ADR `0001`…`0014`).
 
-Every capability on this roadmap must go through the project lifecycle before implementation — **research → analysis → architecture proposal → specification → planning → slice → implementation → validation → documentation → checkpoint → release**. Implementation is never done directly from the roadmap alone; the spec derived from it is the reference.
+Every capability on this roadmap must go through the project lifecycle before implementation: **research → analysis → architecture proposal → specification → planning → slice → implementation → validation → documentation → checkpoint → release**. Implementation is never done directly from the roadmap alone; the spec derived from it is the reference.
 
 ---
 
 ## Philosophy
 
-Noir is built on these principles (one canonical list — capability docs reference this, they do not restate it):
+Noir is built on these principles (one canonical list: capability docs reference this, they do not restate it):
 
-- **Spec before implementation** — a change is specified, planned, and validated before code.
-- **Research first** — design decisions are informed by research and analysis, not assumption.
-- **Documentation as code** — docs are versioned, reviewed, and generated like code.
-- **Living documentation** — docs must reflect the shipped reality, never a stale plan.
-- **Single source of truth** — information lives once; other files reference, not copy.
-- **Incremental delivery** — foundation first; optimize after it is stable.
-- **Automation first** — automate what can be automated.
-- **Host agnostic** — one core; hosts are thin targets.
+- **Spec before implementation**: a change is specified, planned, and validated before code.
+- **Research first**: design decisions are informed by research and analysis, not assumption.
+- **Documentation as code**: docs are versioned, reviewed, and generated like code.
+- **Living documentation**: docs must reflect the shipped reality, never a stale plan.
+- **Single source of truth**: information lives once; other files reference, not copy.
+- **Incremental delivery**: foundation first; optimize after it is stable.
+- **Automation first**: automate what can be automated.
+- **Host agnostic**: one core; hosts are thin targets.
 - **Maintainability over complexity.**
 - **Adopt ideas, not copies.**
 
@@ -47,7 +47,7 @@ The roadmap is a set of **capabilities**, each an independent development area t
 | 8 | [Platform Engineering & Developer Experience](capability-08-platform-engineering-dx.md) | Shipped core (toolchain) | Medium |
 | 9 | [AI Platform Evolution & Long-Term Vision](capability-09-platform-evolution.md) | Vision | Low |
 
-> The authoritative machine-readable status lives in [`roadmap.manifest.yaml`](roadmap.manifest.yaml) — keep it in sync when STATUS.md changes.
+> The authoritative machine-readable status lives in [`roadmap.manifest.yaml`](roadmap.manifest.yaml): keep it in sync when STATUS.md changes.
 
 ## Capability dependency
 
@@ -86,9 +86,9 @@ This is a *conceptual* dependency graph. The final implementation dependency is 
 
 ## How to use this roadmap
 
-- **When shipping a version:** update `releases.md` + `STATUS.md` + `roadmap.manifest.yaml`, add the release to the root `CHANGELOG.md`; the release registry (`.noir/releases/`) is updated automatically by CI on publish — run `pnpm release:history` to view it and `pnpm release:rebuild` to regenerate it locally.
+- **When shipping a version:** update `releases.md` + `STATUS.md` + `roadmap.manifest.yaml`, add the release to the root `CHANGELOG.md`; the release registry (`.noir/releases/`) is updated automatically by CI on publish: run `pnpm release:history` to view it and `pnpm release:rebuild` to regenerate it locally.
 - **When direction changes:** update the vision + capability index, and record the *why* as an ADR in `docs/decisions/`.
-- **When tempted to add scope:** check `backlog.md` / `releases.md` Deferred table — if it is listed, it is intentional; add new deferrals there rather than dropping them silently.
+- **When tempted to add scope:** check `backlog.md` / `releases.md` Deferred table: if it is listed, it is intentional; add new deferrals there rather than dropping them silently.
 - **To change a capability doc:** see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Relationship with other documents

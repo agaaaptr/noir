@@ -1,4 +1,4 @@
-// SP-B — Noir banner (TDD). Pure-function tests; no env/TTY mocking.
+// SP-B: Noir banner (TDD). Pure-function tests; no env/TTY mocking.
 import { afterEach, describe, expect, it } from 'vitest';
 import { NOIR_TAGLINE, renderBanner, shouldShowBanner } from '../src/banner.js';
 

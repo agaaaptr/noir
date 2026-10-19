@@ -10,7 +10,7 @@
 //     (the daemon owns a single ContextEngine → one pipeline per serve cycle).
 //     A failed load resets the memo so the next call can retry (e.g. after a
 //     transient first-run download failure).
-//   - Model weights cache is pinned to `~/.noir/models/` (HOME-relative — keeps
+//   - Model weights cache is pinned to `~/.noir/models/` (HOME-relative: keeps
 //     the project `.noir/` dir portable across machines),
 //     centralized as `modelsDir()` in @noir-ai/core. The local
 //     `MODELS_DIR` const re-exports that value so this module's existing
@@ -23,11 +23,11 @@ import { modelsDir } from '@noir-ai/core';
 import type { EmbedFn } from '../types.js';
 import { EMBED_DIM, l2normalize } from './normalize.js';
 
-/** Default HF repo id — 384-dim, matches the vec0 table with zero migration. */
+/** Default HF repo id: 384-dim, matches the vec0 table with zero migration. */
 export const DEFAULT_LOCAL_MODEL = 'Xenova/all-MiniLM-L6-v2';
 
 /**
- * `~/.noir/models/` — user-global cache for downloaded ONNX weights.
+ * `~/.noir/models/`: user-global cache for downloaded ONNX weights.
  * HOME-relative (NOT project `.noir/`) so projects stay portable. Centralized
  * via `@noir-ai/core`'s `modelsDir()`; re-exported here so existing imports of
  * `MODELS_DIR` keep resolving to the same path.
@@ -81,7 +81,7 @@ async function loadPipeline(model: string): Promise<LoadedEmbedder> {
       const dim = out.dims.at(-1) ?? EMBED_DIM;
       if (dim !== EMBED_DIM) {
         throw new Error(
-          `local embedder: model "${model}" produced ${dim}-dim vectors but the vec0 table is fixed at ${EMBED_DIM} — configure a ${EMBED_DIM}-dim model (default: ${DEFAULT_LOCAL_MODEL})`,
+          `local embedder: model "${model}" produced ${dim}-dim vectors but the vec0 table is fixed at ${EMBED_DIM}: configure a ${EMBED_DIM}-dim model (default: ${DEFAULT_LOCAL_MODEL})`,
         );
       }
       const raw = new Float32Array(dim);
@@ -116,7 +116,7 @@ export interface LocalEmbedderOptions {
 }
 
 export interface LocalEmbedder {
-  /** Embed function — loads the model lazily on first invocation. */
+  /** Embed function: loads the model lazily on first invocation. */
   embed: EmbedFn;
   /** Resolved model id. */
   model: string;
@@ -124,7 +124,7 @@ export interface LocalEmbedder {
 
 /**
  * Build a local in-process embedder. Construction is synchronous and never
- * touches the network or the native runtime — the dynamic `import()` happens
+ * touches the network or the native runtime: the dynamic `import()` happens
  * inside `embed()`, so `localEmbedder()` is safe to call at startup. Load
  * failures surface as rejections from `embed()`; callers (retriever/engine)
  * catch them and degrade to BM25-only.

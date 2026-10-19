@@ -1,22 +1,22 @@
 /**
- * @noir-ai/create — the Noir scaffold engine.
+ * @noir-ai/create: the Noir scaffold engine.
  *
  * Public surface (consumed by `@noir-ai/cli` and by tests):
- *  - {@link scaffold} — the orchestrator for init/create/sync.
- *  - {@link buildManifest} + {@link ManifestEntry} — the declarative artifact table.
- *  - {@link regenerate} / {@link managedBlock} / {@link skipIfExists} — the
+ *  - {@link scaffold}: the orchestrator for init/create/sync.
+ *  - {@link buildManifest} + {@link ManifestEntry}: the declarative artifact table.
+ *  - {@link regenerate} / {@link managedBlock} / {@link skipIfExists}: the
  *    three-mode writer (low-level; the orchestrator is the usual entry point).
- *  - {@link ensureOwnerOnly} — re-assert 0600 on an existing credential file.
- *  - {@link render} — `{{var}}` template interpolation.
- *  - {@link isStaleSeed} / {@link SEED_TEMPLATE_HISTORY} — shipped seed bytes
+ *  - {@link ensureOwnerOnly}: re-assert 0600 on an existing credential file.
+ *  - {@link render}: `{{var}}` template interpolation.
+ *  - {@link isStaleSeed} / {@link SEED_TEMPLATE_HISTORY}: shipped seed bytes
  *    per past scaffold version, for deciding whether an upgrade may refresh a
  *    seed the user never edited.
- *  - {@link detectStack} — read-only stack detection.
+ *  - {@link detectStack}: read-only stack detection.
  *  - {@link readScaffoldVersion} / {@link writeScaffoldVersion} /
- *    {@link CURRENT_SCAFFOLD_VERSION} — scaffold-version stamp.
- *  - {@link runMigrations} / {@link MIGRATIONS} — version-upgrade runner.
+ *    {@link CURRENT_SCAFFOLD_VERSION}: scaffold-version stamp.
+ *  - {@link runMigrations} / {@link MIGRATIONS}: version-upgrade runner.
  *
- * This package has NO bin — the `npm create noir-ai` greenfield
+ * This package has NO bin: the `npm create noir-ai` greenfield
  * entry point is not implemented yet. It is engine-only: the cli imports it.
  */
 

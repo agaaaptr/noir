@@ -1,4 +1,4 @@
-// `noir tui` entry — mounts the Ink dashboard. LAZY-loaded: bin.ts does
+// `noir tui` entry: mounts the Ink dashboard. LAZY-loaded: bin.ts does
 // `await import('./tui/index.js')` inside the `tui` action only, so React +
 // Ink never enter the main CLI startup path (`noir status`, `noir doctor`, a
 // bare `noir` all stay React-free). The entry wires the default
@@ -60,7 +60,7 @@ function defaultFetchStatus(opts: CliOptions): () => Promise<StatusPayload | nul
  * spawn is built here rather than in the run screen so that screen stays a
  * renderer: it is handed a `start` and only knows how to draw what comes back.
  *
- * Synchronous by design — the caller renders the pane it just asked for — so a
+ * Synchronous by design: the caller renders the pane it just asked for: so a
  * failure to even resolve a spawn (an unknown profile, an unusable host) is
  * thrown rather than exiting the process: the screen reports it in place
  * instead of the dashboard dying at the first keystroke. A continuation
@@ -144,8 +144,8 @@ function defaultRunDeps(opts: CliOptions): RunDeps {
 
 /**
  * Mount the dashboard and resolve when the user exits. The caller (bin.ts)
- * supplies the dispatch seam — the same shape `home(opts, deps).dispatch`
- * uses — so command routing is owned by the bin, not reimplemented here.
+ * supplies the dispatch seam: the same shape `home(opts, deps).dispatch`
+ * uses: so command routing is owned by the bin, not reimplemented here.
  */
 export async function runTui(opts: CliOptions, dispatch: TuiDeps['dispatch']): Promise<void> {
   process.stdout.write('\x1b[2J\x1b[H');
@@ -155,7 +155,7 @@ export async function runTui(opts: CliOptions, dispatch: TuiDeps['dispatch']): P
 }
 
 /**
- * `noir palette` — mount the App palette-first. Reuses the SAME
+ * `noir palette`: mount the App palette-first. Reuses the SAME
  * `runTui` deps (dispatch seam, commands, recents) so the fuzzy command
  * palette is identical to the dashboard's Ctrl+K palette, just opened
  * directly. `dispatch` is the same shape `runTui` receives from bin.ts.
@@ -184,7 +184,7 @@ async function buildTuiDeps(opts: CliOptions, dispatch: TuiDeps['dispatch']): Pr
   // ProjectId-keyed recent-commands persistence: resolve the canonical id
   // once at launch so recents are isolated per project (respects the .noir/
   // single-source-of-truth invariant). An uninitialized project (loadProjectInfo
-  // throws) degrades to empty recents — the palette still works with the full
+  // throws) degrades to empty recents: the palette still works with the full
   // command list.
   let projectId: string | null = null;
   try {
@@ -197,7 +197,7 @@ async function buildTuiDeps(opts: CliOptions, dispatch: TuiDeps['dispatch']): Pr
     fetchStatus: defaultFetchStatus(opts),
     // The live host-run screen. Present here (not optional in practice) is what
     // routes a `run <prompt>` selection to the screen instead of dispatching it
-    // through the captured-command path — see `enterRunOrDispatch` in App.tsx.
+    // through the captured-command path: see `enterRunOrDispatch` in App.tsx.
     run: defaultRunDeps(opts),
     // The palette source, derived from a fresh commander program at launch.
     commands: buildPaletteCommandsForTui(),

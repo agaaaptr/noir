@@ -46,13 +46,13 @@ describe('claudeAdapter', () => {
   });
 });
 
-// PARITY GATE — the claude surface is the regression anchor for `noir init`.
+// PARITY GATE: the claude surface is the regression anchor for `noir init`.
 // Slice E grows the init output (.noir/README.md, .noir/.env) and drops three
 // vestigial ignore entries, but it may not move a byte of what CLAUDE.md and
 // .mcp.json contain. These literals are byte-frozen on purpose: any drift in
 // the adapter (or in the templates that must render to the same bytes) fails
 // here rather than silently in a user's repo.
-describe('claudeAdapter — byte-frozen emission (noir init regression anchor)', () => {
+describe('claudeAdapter: byte-frozen emission (noir init regression anchor)', () => {
   const ctx = { root: '/tmp/demo' };
 
   it('emitContext() output is byte-frozen', () => {
@@ -74,10 +74,10 @@ describe('claudeAdapter — byte-frozen emission (noir init regression anchor)',
   });
 });
 
-describe('claudeAdapter.emitMcpConfig — Slice X integration overload', () => {
+describe('claudeAdapter.emitMcpConfig: Slice X integration overload', () => {
   const ctx = { root: '/tmp/demo' };
 
-  it('two-arg form still works (backward-compatible — no integration entry)', () => {
+  it('two-arg form still works (backward-compatible: no integration entry)', () => {
     const json = JSON.parse(claudeAdapter.emitMcpConfig(ctx, { transport: 'stdio' }));
     expect(Object.keys(json.mcpServers)).toEqual(['noir']);
   });

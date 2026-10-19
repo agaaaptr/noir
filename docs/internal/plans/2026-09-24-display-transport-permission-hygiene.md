@@ -1,11 +1,11 @@
-# Display integrity, workspace transport, permission contract, and output hygiene — implementation plan
+# Display integrity, workspace transport, permission contract, and output hygiene: implementation plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or
 > superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Fix four reported defect classes in 1.15.0 — terminal layout that breaks its own frame, an unreachable
+**Goal:** Fix four reported defect classes in 1.15.0: terminal layout that breaks its own frame, an unreachable
 workspace daemon, a `.noir/.env` permission contract that only applies at creation, and the total absence of
-output-quality constraints — and bring every affected document back in line with the shipped code.
+output-quality constraints: and bring every affected document back in line with the shipped code.
 
 **Architecture:** One shared display-width module becomes the sole authority for measuring terminal text, and
 every renderer's width budget is derived from its container rather than hard-coded. The host reaches a workspace
@@ -23,12 +23,12 @@ three enforcers.
 
 - Every package stays on one unified version; all 11 packages move together.
 - Node floor is `>=22`; ESM only; no CommonJS requires.
-- The test suite runs offline and free — no network, no paid key, ever.
+- The test suite runs offline and free: no network, no paid key, ever.
 - `pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm docs:validate` must be green before any claim
   of completion.
 - Conventional Commits, one scope per commit (`fix(cli): …`, `fix(daemon): …`).
 - Comments and documentation must not contain internal planning shorthand (slice codes, roadmap codenames, bare
-  spec/plan/ADR section citations) — the rule in `AGENTS.md` §"No internal jargon in comments or docs".
+  spec/plan/ADR section citations): the rule in `AGENTS.md` §"No internal jargon in comments or docs".
 - The planning corpus is exempt from the hygiene sweep: `docs/decisions/**`, `docs/internal/**`,
   `docs/roadmap/**`, `CHANGELOG.md`, `.superpowers/**`.
 - No new runtime dependency may be added without recording why in the task that adds it.
@@ -39,7 +39,7 @@ Five input classes the spec implies but no single task's tests naturally cover. 
 owns the code.
 
 1. **Injected width that disagrees with `process.stdout.columns`.** `ink-testing-library` hard-codes 100 columns,
-   so tests that do not inject a width cannot exercise the 80-column case at all — which is how the footer and
+   so tests that do not inject a width cannot exercise the 80-column case at all: which is how the footer and
    divider bugs shipped. The harness itself is the risk. (Task 6)
 2. **Text that is already wider than the whole terminal.** A 200-column path in an 80-column terminal must
    ellipsise rather than emit an over-wide row, and must not loop forever when no column can shrink further.
@@ -54,7 +54,7 @@ owns the code.
 
 ---
 
-## Workstream A — Display integrity
+## Workstream A: Display integrity
 
 ### Task 1 (Workstream A): Shared display-width module
 
@@ -111,7 +111,7 @@ owns the code.
 ### Task 3 (Workstream A): Correct table geometry and graceful overflow
 
 **Files:**
-- Modify: `packages/cli/src/theme.ts` (the terminal-width helper — read the stream the table is written to)
+- Modify: `packages/cli/src/theme.ts` (the terminal-width helper: read the stream the table is written to)
 - Modify: `packages/cli/src/output.ts` (the trim loop, the floor logic, the row-overflow path)
 - Test: `packages/cli/test/table-overflow.test.ts`
 
@@ -207,7 +207,7 @@ to implement.
 - Test: `packages/cli/test/output-helpers.test.ts`
 
 - [ ] **Step 1:** Confirm by search that the key/value helper has no call sites anywhere in the package (the audit
-      found none but did not complete a repository-wide search — finish that search before deleting).
+      found none but did not complete a repository-wide search: finish that search before deleting).
 - [ ] **Step 2:** Delete it if it is genuinely unused, or wire it if a caller was intended; either way the codebase
       must not carry an exported helper nothing uses.
 - [ ] **Step 3:** Fix the definition-list path so a value is formatted once rather than twice (the value is currently
@@ -217,7 +217,7 @@ to implement.
 
 ---
 
-## Workstream B — Workspace transport and daemon safety
+## Workstream B: Workspace transport and daemon safety
 
 ### Task 9 (Workstream B): The workspace stdio bridge
 
@@ -313,7 +313,7 @@ to implement.
 
 ---
 
-## Workstream C — Permission contract
+## Workstream C: Permission contract
 
 ### Task 15 (Workstream C): Re-assert `.noir/.env` to 0600
 
@@ -373,7 +373,7 @@ to implement.
 
 ---
 
-## Workstream D — Output hygiene system
+## Workstream D: Output hygiene system
 
 ### Task 19 (Workstream D): A tiered hygiene rule source
 
@@ -459,7 +459,7 @@ to implement.
 - Test: `packages/skills/test/evals-real-output.test.ts`
 
 - [ ] **Step 1: Write a failing test** proving the current harness passes a case whose `expected_output` matches but
-      whose candidate output violates the rule — i.e. that the harness cannot currently fail for the right reason.
+      whose candidate output violates the rule: i.e. that the harness cannot currently fail for the right reason.
 - [ ] **Step 2:** Extend the harness to accept a candidate-output source and assert the four assertion types against
       it, keeping `expected_output` suites working.
 - [ ] **Step 3:** Add a hygiene eval suite that fails on a slop-laden candidate and passes on a clean one.
@@ -516,14 +516,14 @@ truncating write, so an interrupted write can leave a user's file half-written.
 
 - [ ] **Step 1: Write a failing test** that simulates an interrupted write (inject a failing write after truncation)
       and asserts the original content is still intact on disk.
-- [ ] **Step 2:** Run and confirm failure — the current writers destroy the original.
+- [ ] **Step 2:** Run and confirm failure: the current writers destroy the original.
 - [ ] **Step 3:** Route both writers through the existing atomic write helper, preserving the destination's mode as
       that helper already does, while keeping the file-executable helper's re-assert behaviour intact.
 - [ ] **Step 4:** Commit `fix(create,core): write co-owned host files atomically`.
 
 ---
 
-## Workstream E — Repository sweep
+## Workstream E: Repository sweep
 
 ### Task 29 (Workstream E): Sweep jargon from code comments
 
@@ -564,7 +564,7 @@ truncating write, so an interrupted write can leave a user's file half-written.
 
 ---
 
-## Workstream F — Documentation accuracy and release choreography
+## Workstream F: Documentation accuracy and release choreography
 
 ### Task 32 (Workstream F): Record the two interface decisions
 
@@ -623,7 +623,7 @@ truncating write, so an interrupted write can leave a user's file half-written.
 
 Task 1's dependency question is settled: **declare `string-width` directly.** The package is already present in
 the install graph as a dependency of Ink (`ink` → `string-width@^8.2.0`, plus `slice-ansi@^9` and
-`cli-truncate@^6`), so declaring it adds no new package to the install — it only turns an already-installed
+`cli-truncate@^6`), so declaring it adds no new package to the install: it only turns an already-installed
 transitive dependency into an explicit, relyable one. Pin the declared range to the same major Ink resolves so a
 future Ink bump cannot silently change the measurement underneath both.
 

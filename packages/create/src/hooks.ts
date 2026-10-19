@@ -5,7 +5,7 @@ import { resolveNoirCommand } from '@noir-ai/core';
 import { mergeJson, regenerate } from './writers.js';
 
 /**
- * Emit a host's lifecycle-hook config on demand — the write-once `mergeJson`
+ * Emit a host's lifecycle-hook config on demand: the write-once `mergeJson`
  * hook the scaffold deliberately does NOT re-emit on `noir init --upgrade` or
  * `noir sync`. This is the explicit restore path (`noir hooks sync`): it runs
  * the same `adapter.emitHooks` seam the scaffold uses and dispatches each entry
@@ -15,7 +15,7 @@ import { mergeJson, regenerate } from './writers.js';
  * command instead of being left as-is; the user's other keys and non-Noir hooks
  * are never touched.
  *
- * Pure filesystem work — no daemon, no store, no prompt. A host with no hook
+ * Pure filesystem work: no daemon, no store, no prompt. A host with no hook
  * surface (agents-md, opencode) returns an empty outcome list.
  */
 

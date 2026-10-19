@@ -11,7 +11,7 @@
 // CLASS so an N-pointer `noir init --upgrade` → 1 prompt); managedBlock conflicts
 // stay PER-FILE. A unified line-diff preview (LCS-based, from
 // @noir-ai/create's `lineDiff`) renders to STDERR before the prompt (through the
-// shared theme — `+` green / `-` red / context dim), so `--json`/piped stdout stays
+// shared theme: `+` green / `-` red / context dim), so `--json`/piped stdout stays
 // pristine. The 6th "merge" option writes the engine-provided zdiff3-marked
 // bytes when a 3-way merge hit an overlap.
 import {
@@ -24,7 +24,7 @@ import { isInteractive } from './output.js';
 import { c } from './theme.js';
 
 export interface ConflictOptsInput {
-  /** `--force`: explicit re-scaffold — overwrite differing files, no prompt. */
+  /** `--force`: explicit re-scaffold: overwrite differing files, no prompt. */
   force?: boolean;
   /** Explicit interactivity signal. When set, wins over the env/TTY
    *  heuristic. `false` ⇒ preserve (never prompt); `true` ⇒ allow the @clack
@@ -72,7 +72,7 @@ export function buildConflictOpts(input: ConflictOptsInput = {}): ScaffoldConfli
     return { conflictPolicy: 'preserve', onConflict: clackConflictResolver };
   }
   // Fallback: NOIR_NON_INTERACTIVE bridge (--json/--no-input) OR the
-  // isInteractive() TTY/CI/NO_COLOR gate — either ⇒ preserve, never prompt.
+  // isInteractive() TTY/CI/NO_COLOR gate: either ⇒ preserve, never prompt.
   if (flaggedNonInteractive() || !isInteractive()) {
     return { conflictPolicy: 'preserve' };
   }
@@ -90,7 +90,7 @@ export function buildConflictOpts(input: ConflictOptsInput = {}): ScaffoldConfli
 function renderDiffPreview(ctx: ConflictContext): void {
   // `lineDiff` is imported statically at the top of this module. It used to be
   // a lazy `require('@noir-ai/create')`, but tsup bundles every @noir-ai/*
-  // internal into dist/bin.js — a dynamic `require` survives bundling as an
+  // internal into dist/bin.js: a dynamic `require` survives bundling as an
   // ESM-incompatible `__require` shim that throws "Dynamic require of
   // @noir-ai/create is not supported" at runtime (broke `init --upgrade`
   // whenever a file conflict triggered this preview). The static import is
@@ -155,7 +155,7 @@ async function clackConflictResolver(ctx: ConflictContext): Promise<ConflictReso
   // key their per-run memory by a single class, so one "Yes" reuses the choice
   // across the whole run. The `managedBlock`/`managedBlocks` paths are per-file
   // (the engine keys memory by path::block, not by class), so they must NOT
-  // offer "apply to all" — reusing a per-file decision there would silently
+  // offer "apply to all": reusing a per-file decision there would silently
   // clobber unrelated blocks.
   const mode = (ctx.mode ?? 'regenerate') as string;
   const supportsApplyToAll = mode !== 'managedBlock' && mode !== 'managedBlocks';

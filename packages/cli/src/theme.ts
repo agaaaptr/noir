@@ -2,7 +2,7 @@
 //
 // Built on `picocolors` (the SAME lib the rest of the CLI already uses), so the
 // decoration strips consistently under NO_COLOR / non-TTY. cli-table3 styles
-// via a SECOND lib (@colors/colors) whose NO_COLOR/TTY semantics differ — that
+// via a SECOND lib (@colors/colors) whose NO_COLOR/TTY semantics differ: that
 // split is what painted every table header red while the body stripped. Routing
 // ALL color through this module (the `c` object + `badge()`) closes that leak:
 // there is exactly one color authority, and it honors NO_COLOR / CLICOLOR_FORCE
@@ -34,21 +34,21 @@ export type BadgeState = 'ok' | 'warn' | 'error' | 'info';
  * without guarding. Compose with `c.bold(c.info(s))` etc.
  */
 export const c = {
-  /** Green — success / healthy. */
+  /** Green: success / healthy. */
   ok: (s: string): string => (useColor() ? FORCE.green(s) : s),
-  /** Yellow — degraded but usable. */
+  /** Yellow: degraded but usable. */
   warn: (s: string): string => (useColor() ? FORCE.yellow(s) : s),
-  /** Red — reserved strictly for ERROR. Never a table header. */
+  /** Red: reserved strictly for ERROR. Never a table header. */
   error: (s: string): string => (useColor() ? FORCE.red(s) : s),
-  /** Cyan — informational / brand-neutral accent for labels. */
+  /** Cyan: informational / brand-neutral accent for labels. */
   info: (s: string): string => (useColor() ? FORCE.cyan(s) : s),
-  /** Blue — the Midnight Cobalt brand role (banner / accent). */
+  /** Blue: the Midnight Cobalt brand role (banner / accent). */
   accent: (s: string): string => (useColor() ? FORCE.blue(s) : s),
-  /** Dim — secondary text, table borders when color is on. */
+  /** Dim: secondary text, table borders when color is on. */
   dim: (s: string): string => (useColor() ? FORCE.dim(s) : s),
-  /** Bold — emphasis (table headers compose this with `info`). */
+  /** Bold: emphasis (table headers compose this with `info`). */
   bold: (s: string): string => (useColor() ? FORCE.bold(s) : s),
-  /** Reverse video (SGR 7) — inverted background for the active list row. */
+  /** Reverse video (SGR 7): inverted background for the active list row. */
   inverse: (s: string): string => (useColor() ? FORCE.inverse(s) : s),
 };
 
@@ -64,10 +64,10 @@ const BADGE_SYMBOL: Readonly<Record<BadgeState, string>> = {
 
 /**
  * Render a status badge: always `SYMBOL LABEL`, colored by `state` when color
- * is on. The TEXT LABEL is unconditional — this is the accessibility invariant.
+ * is on. The TEXT LABEL is unconditional: this is the accessibility invariant.
  * `label` defaults to the state name, so `badge('ok')` reads `✓ ok`.
  *
- * `maxWidth` bounds the badge to that many terminal columns — pass it when the
+ * `maxWidth` bounds the badge to that many terminal columns: pass it when the
  * badge goes into a column of a known width (a table cell). The text is cut
  * BEFORE the color is applied, because the truncators strip ANSI escapes and
  * return plain text; colouring first would leave the badge uncoloured or, worse,
@@ -117,7 +117,7 @@ export function isCiEnv(): boolean {
 
 /**
  * `NOIR_QUIET`: the value the CLI's own `preAction` writes for a `--quiet`
- * invocation, so this module — which never sees the parsed command options —
+ * invocation, so this module: which never sees the parsed command options —
  * reads the same quiet signal the output helpers take from their `opts`. Read
  * live like every other gate here. The CLI owns the variable: it sets it to
  * `1` for a quiet run and deletes whatever value it found otherwise, so a
@@ -144,7 +144,7 @@ function quietMode(): boolean {
  *                            escapes inflate the raw byte length of rendered
  *                            lines, which breaks the responsive-width
  *                            guarantee `max(line.length) <= terminalWidth()`
- *                            that `table()` exists to uphold — and the
+ *                            that `table()` exists to uphold: and the
  *                            regression test that locks it (fits 60/80/120 in
  *                            theme.test.ts). The CLI's own top-of-file
  *                            contract states decoration auto-disables under
@@ -192,7 +192,7 @@ export function terminalWidth(): number {
 
 /**
  * Usable content width inside a bordered TUI panel. Ink's `borderStyle` adds a
- * 1-char border on each side, and `paddingX={1}` adds 1 char inside that — so a
+ * 1-char border on each side, and `paddingX={1}` adds 1 char inside that: so a
  * full-width rounded panel has `terminalWidth - 4` columns of usable text.
  * Components that truncate long lines (OutputPane) MUST use this, not
  * {@link terminalWidth}, or content overflows the border.

@@ -1,10 +1,10 @@
-# Slice X — Integration skill system (ClickUp first) — design spec
+# Slice X: Integration skill system (ClickUp first): design spec
 
 > v1.x capability slice. Companion: `docs/internal/specs/2026-07-25-v1x-capabilities-design.md` §4.4 + §4.4.1 (ClickUp reference, locked). **Predecessor keystone K (committed)** provides the daemon/MCP + managed-block foundations.
 > **Status: NOT started.** This spec is the implementation reference; the next session writes the plan + executes.
 
 ## Goal
-A first-class integration layer: **skill-only default** (read+playbook) + **gated-write-proxy MCP tool** (stateless writes, confirm gate) + **full runtime tier** (stateful, gated on keychain). First integration = **ClickUp** (all 5 flows verified feasible with the `pk_` personal token — no OAuth).
+A first-class integration layer: **skill-only default** (read+playbook) + **gated-write-proxy MCP tool** (stateless writes, confirm gate) + **full runtime tier** (stateful, gated on keychain). First integration = **ClickUp** (all 5 flows verified feasible with the `pk_` personal token: no OAuth).
 
 ## Locked decisions
 - **3-tier model:** skill-only / **gated-write-proxy** (stateless writes via a Noir MCP tool that enforces dry-run→confirm) / full-runtime (stateful OAuth/webhook/polling, gated on keychain).
@@ -19,22 +19,22 @@ A first-class integration layer: **skill-only default** (read+playbook) + **gate
 
 ## ClickUp 5 flows (verified API v2; auth `Authorization: pk_<token>`, NO Bearer)
 1. `GET /task/{id}` (numeric, or `?custom_task_ids=true&team_id=`) → bounded model drafts PRD (**opt-in**) + emits task-detail md doc.
-2. `PUT /task/{id} {status}` — `status` is a system field; valid values from the list's statuses.
+2. `PUT /task/{id} {status}`: `status` is a system field; valid values from the list's statuses.
 3. `POST /list/{list_id}/task {name,parent}` (subtask; parent same list) + `PUT /task/{sub} {status}`.
 4. `POST /task/{id}/comment {comment_text, notify_all, assignee?}`.
-5. Batch create — **no bulk endpoint** → loop `POST /list/{list_id}/task` (concurrency cap 4-8 + 429 backoff reading `X-RateLimit-Reset`); input = H2-per-task MD template (+ CSV adapter); dry-run preview table → **explicit confirm** → POST.
+5. Batch create: **no bulk endpoint** → loop `POST /list/{list_id}/task` (concurrency cap 4-8 + 429 backoff reading `X-RateLimit-Reset`); input = H2-per-task MD template (+ CSV adapter); dry-run preview table → **explicit confirm** → POST.
 
 ## Architecture
 - `packages/skills/integrations/<name>/{SKILL.md, integration.json, references/, [server/]}`.
-- `@noir-ai/skills`: add `discoverIntegrations()` (sibling to `discoverBuiltin`) + `integration.json` Zod schema + validate; widen emit for host MCP config when `runtime∈{mcp-stdio,external-mcp}`. **(This is the deferred K3 — lands here.)**
+- `@noir-ai/skills`: add `discoverIntegrations()` (sibling to `discoverBuiltin`) + `integration.json` Zod schema + validate; widen emit for host MCP config when `runtime∈{mcp-stdio,external-mcp}`. **(This is the deferred K3: lands here.)**
 - `@noir-ai/adapters`: `HostAdapter.emitMcpConfig(integration?, ctx)` overload (S10-aware abstraction).
 - `@noir-ai/core`: `integrations: {[name]: {auth, runtime, …}}` config block.
 - **daemon:** `integrations_auth` MCP tool (resolve `CLICKUP_API_TOKEN` server-side at call time → kills the non-interactive-shell gotcha; skill never reads shell env) + `noir_clickup_write` gated-write-proxy (dry-run→confirm→POST + audit) + (config-only) emit host MCP for `external-mcp`.
 - `noir-prd` skill (built in P) + ClickUp intake bridge (`sdd.intakeFrom: 'task'`); `noir-wrap` write-back (`sdd.writeBack: ['status','subtasks']`).
 
 ## Verify-live before lock-in (NOT blockers; runtime checks)
-- ClickUp `GET /list/{id}` returns a usable `statuses` array (no dedicated endpoint; community-attested; official schema blank) — fallback: probe tasks / attempt PUT + handle 400.
-- Tag auto-create vs 400 (ClickApp-dependent) — runtime check + "create missing tag?" prompt.
+- ClickUp `GET /list/{id}` returns a usable `statuses` array (no dedicated endpoint; community-attested; official schema blank): fallback: probe tasks / attempt PUT + handle 400.
+- Tag auto-create vs 400 (ClickApp-dependent): runtime check + "create missing tag?" prompt.
 
 ## Acceptance
 - ClickUp skill (5 flows) works with the `pk_` token; gated-write-proxy enforces confirm before any write; offline cassettes in CI (no real network); `integrations_auth` resolves the token.
@@ -42,13 +42,13 @@ A first-class integration layer: **skill-only default** (read+playbook) + **gate
 - 746+ tests green; cassette-based tests (mcp-record or MockServer).
 
 ## Open questions (next-session clarification)
-- **X-OQ1:** gated-write-proxy tool shape — generic `integrations_call(name, op, payload)` or per-integration `noir_clickup_*` tools? [lean: per-integration, clearer]
+- **X-OQ1:** gated-write-proxy tool shape: generic `integrations_call(name, op, payload)` or per-integration `noir_clickup_*` tools? [lean: per-integration, clearer]
 - **X-OQ2:** audit log location for write-proxy calls (`.noir/audit/` reuse, or a new integrations log)?
-- **X-OQ3:** 2-way sync trigger — at `/wrap` only, or also a standalone `noir clickup sync`? (SP-6)
-- **X-OQ4:** cassette strategy — `mcp-record` vs MockServer vs both?
+- **X-OQ3:** 2-way sync trigger: at `/wrap` only, or also a standalone `noir clickup sync`? (SP-6)
+- **X-OQ4:** cassette strategy: `mcp-record` vs MockServer vs both?
 
 ## Risks
 - Scope creep (default-deny runtime tier; ADR required per escalation).
 - Multi-host MCP wiring divergence (abstraction lives in `HostAdapter`, not the integration).
 - Prompt-injection in skill-only reads (allowlisted endpoints + host tool-approval gate; document in `SKILL.md`).
-- OAuth storage before keychain (refuse; explicit opt-in only if ever allowed — never silent).
+- OAuth storage before keychain (refuse; explicit opt-in only if ever allowed: never silent).

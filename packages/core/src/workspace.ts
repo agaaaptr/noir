@@ -1,9 +1,9 @@
-// Cross-repo "workspace" layout + registry — the user-scoped sharing unit that
+// Cross-repo "workspace" layout + registry: the user-scoped sharing unit that
 // lets ≥2 agent sessions in DIFFERENT repositories share decision memory through
 // one detached daemon (see docs/internal/specs/2026-09-09-shared-workspace-context-design.md).
 //
 // Everything here is HOME-relative under `~/.noir/workspaces/<name>/` (never a
-// project `.noir/`), keyed by a NAME — the machine-stable identity a group of
+// project `.noir/`), keyed by a NAME: the machine-stable identity a group of
 // repos opts into, distinct from any single project's canonical ProjectId. The
 // registry (registry.json) is the single source of truth for who may talk to the
 // workspace daemon; a project's join marker (`.noir/workspace.json`) is a local
@@ -21,7 +21,7 @@ export const WORKSPACE_NAME_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 /** User-global workspace root: `~/.noir/workspaces/` (NOIR_WORKSPACES_DIR override). */
 export function workspaceHomeDir(): string {
   // An empty (or whitespace) override must not resolve the workspace root to a
-  // relative path off the CWD — treat it as unset and fall back to the default.
+  // relative path off the CWD: treat it as unset and fall back to the default.
   return process.env[WORKSPACES_DIR_ENV]?.trim() || join(noirHome(), 'workspaces');
 }
 

@@ -1,5 +1,5 @@
-// SP-C — buildConflictOpts (TDD). Interactivity is driven by real TTY/env
-// state (set per-test, like home.test.ts) — no mocks.
+// SP-C: buildConflictOpts (TDD). Interactivity is driven by real TTY/env
+// state (set per-test, like home.test.ts): no mocks.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildConflictOpts } from '../src/conflict.js';
 
@@ -80,7 +80,7 @@ describe('buildConflictOpts (SP-C)', () => {
     expect(o.onConflict).toBeUndefined();
   });
 
-  it('explicit interactive:false wins over a TTY (hermetic — never prompts)', () => {
+  it('explicit interactive:false wins over a TTY (hermetic: never prompts)', () => {
     setTty(true, true); // TTY would normally prompt
     const o = buildConflictOpts({ interactive: false });
     expect(o.conflictPolicy).toBe('preserve');

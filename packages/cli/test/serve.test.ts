@@ -1,10 +1,10 @@
-// `noir mcp serve` (HTTP branch) — the two defects the final verification found:
+// `noir mcp serve` (HTTP branch): the two defects the final verification found:
 //
 //   1. `daemon.port` was dropped on the floor: serve called ensureDaemonRunning
 //      with only idleTimeoutSec, so a project that pins a stable daemon port got
-//      an ephemeral one — the configured address never matched.
+//      an ephemeral one: the configured address never matched.
 //   2. The success line named the URL alone, but `/mcp` requires
-//      `Authorization: Bearer <token>` (T5) — a client handed only the URL gets
+//      `Authorization: Bearer <token>` (T5): a client handed only the URL gets
 //      a 401. The line must point at `noir daemon token` WITHOUT printing it.
 //
 // The daemon boundary is mocked (no daemon, no HTTP, no store); `@noir-ai/core`
@@ -41,7 +41,7 @@ function fakeProject(config: NoirConfig): ProjectInfo {
   return { id: 'serve-test', name: 'serve-test', root: '/tmp/noir-serve-test', config };
 }
 
-describe('noir mcp serve — daemon wiring', () => {
+describe('noir mcp serve: daemon wiring', () => {
   let stderr: MockInstance<typeof process.stderr.write>;
 
   beforeEach(() => {

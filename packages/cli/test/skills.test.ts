@@ -1,4 +1,4 @@
-// S9 — `noir skills {list,sync}` behavior tests.
+// S9: `noir skills {list,sync}` behavior tests.
 //
 // Both sub-commands are in-process (no daemon), so these are plain unit tests
 // over the module functions: stdout/stderr stream discipline + --json schema +
@@ -113,7 +113,7 @@ describe('noir skills list', () => {
     expect(r.err).toBeUndefined();
     expect(r.stdout).toBe('');
     // Banner reports 34 skills (33 builtin + 1 integration).
-    expect(r.stderr).toMatch(/noir skills — 34 skills \(33 builtin, 1 integration\)/);
+    expect(r.stderr).toMatch(/noir skills: 34 skills \(33 builtin, 1 integration\)/);
     expect(r.stderr).toMatch(/Skill.*Kind.*Category.*Description/);
     expect(r.stderr).toMatch(/noir-brainstorming/);
     expect(r.stderr).toMatch(/noir-clickup/);
@@ -164,7 +164,7 @@ describe('noir skills sync', () => {
       expect(r.err).toBeDefined();
       expect(inferExitCode(r.err)).toBe(1);
       // S9 contract: --json emits the canonical {ok:false,error} envelope on
-      // stdout (a plain Error would leave it empty — the iter-3 fix).
+      // stdout (a plain Error would leave it empty: the iter-3 fix).
       const env = JSON.parse(r.stdout) as { ok: boolean; error: { code: number; message: string } };
       expect(env.ok).toBe(false);
       expect(env.error.code).toBe(1);
@@ -196,14 +196,14 @@ describe('noir skills lint', () => {
       expect(Array.isArray(s.warnings)).toBe(true);
     }
     // The shipped pack validates clean (0 errored), so the clean path emits
-    // ok:true + exit 0. `ok` is asserted boolean (the failure path — exit 1 +
-    // {ok:false,error} — is exercised by the code contract in skillsLint, but a
+    // ok:true + exit 0. `ok` is asserted boolean (the failure path: exit 1 +
+    // {ok:false,error}: is exercised by the code contract in skillsLint, but a
     // forced-error test would need to mock @noir-ai/skills).
     expect(typeof env.ok).toBe('boolean');
   });
 
   it('is project-independent (no init required)', async () => {
-    // skills lint reads the shipped pack only — works outside any project.
+    // skills lint reads the shipped pack only: works outside any project.
     const r = await run(() => skillsLint({ json: true }));
     expect(r.err).toBeUndefined();
     expect(r.stderr).toBe('');

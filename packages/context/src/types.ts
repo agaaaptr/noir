@@ -1,6 +1,6 @@
 // Context-local types for @noir-ai/context.
 //
-// These are the package's OWN interfaces — the storage surface (`Store`,
+// These are the package's OWN interfaces: the storage surface (`Store`,
 // `EmbedFn`, `IndexDoc`, `FtsHit`, `VecHit`) is re-exported from
 // @noir-ai/store below, and the user-facing zod schema lives in @noir-ai/core
 // (`NoirConfigSchema.context`). There is deliberately NO zod here: core owns
@@ -77,7 +77,7 @@ export interface NoneEmbedderConfig {
 
 /**
  * Discriminated configuration for the embedder factory (`createEmbedFn`).
- * The core zod schema maps onto this via `resolveEmbedderConfig` — that mapper
+ * The core zod schema maps onto this via `resolveEmbedderConfig`: that mapper
  * is the only bridge between the two layers.
  */
 export type EmbedderConfig =
@@ -104,7 +104,7 @@ export interface ChunkMeta {
   /** Repo-relative or absolute path of the source file. */
   path: string;
   /**
-   * `sha256(path)` — stable parent-document id. The budget packer collapses
+   * `sha256(path)`: stable parent-document id. The budget packer collapses
    * duplicate parent-docs on this field so one file can't flood the results.
    */
   parentDocId: string;
@@ -135,13 +135,13 @@ export type RRFWeights = [number, number];
 
 /**
  * Retrieval mode actually used for a `search` call.
- * - `'hybrid'` — BM25 ∪ kNN fused by RRF, AND every kNN-only hit was hydrated
+ * - `'hybrid'`: BM25 ∪ kNN fused by RRF, AND every kNN-only hit was hydrated
  *   to a real windowed snippet (the ideal outcome).
- * - `'knn'` — the kNN leg ran but at least one kNN-only hit could NOT be
+ * - `'knn'`: the kNN leg ran but at least one kNN-only hit could NOT be
  *   hydrated (no `readDoc` hydrator, or the source doc was deleted/degraded),
  *   so that hit keeps its rank but carries an empty snippet. Honest about the
  *   fact the caller did not receive the full hybrid snippet quality.
- * - `'bm25-only'` — degraded fallback when the embedder is unavailable
+ * - `'bm25-only'`: degraded fallback when the embedder is unavailable
  *   (`kind:'none'` or `embed()` threw); the kNN leg did not run at all.
  */
 export type SearchMode = 'hybrid' | 'knn' | 'bm25-only';
@@ -162,7 +162,7 @@ export interface RetrieverMeta {
 /**
  * A single ranked result. `snippet` is FTS5 window-extracted
  * (`snippet(docs_fts,0,'<<','>>','…',16)`) for BM25 hits, or a window around
- * the chunk's first N tokens for kNN-only hits — never truncated mid-token.
+ * the chunk's first N tokens for kNN-only hits: never truncated mid-token.
  *
  * `path` and `parentDocId` are top-level (the public item shape is
  * `{id, source, score, snippet, path, parentDocId}`): the retriever
@@ -177,7 +177,7 @@ export interface RetrieverHit {
   snippet: string;
   /** Repo-relative or absolute path of the source file (backfilled from meta). */
   path: string;
-  /** `sha256(path)` — stable parent-document id (backfilled from meta). */
+  /** `sha256(path)`: stable parent-document id (backfilled from meta). */
   parentDocId: string;
   /** Secondary enrichment (language, sha256, chunkIndex). */
   meta: RetrieverMeta;
@@ -214,7 +214,7 @@ export interface IndexResult {
   indexed: number;
   /** Chunks whose SHA-256 matched KV (unchanged since last index). */
   skipped: number;
-  /** Files removed since last index — their chunks + vectors were deleted. */
+  /** Files removed since last index: their chunks + vectors were deleted. */
   deleted: number;
   /**
    * True when the embedder was unavailable this run (docs indexed without

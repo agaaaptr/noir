@@ -1,20 +1,20 @@
 // The host orchestrator. Drives the host agentic CLI as a
 // headless subprocess and consumes its `stream-json` event stream, rather than
-// Noir running its own model + tool loop (impossible by construction — the
+// Noir running its own model + tool loop (impossible by construction: the
 // model request type has no tools/stream parameter).
 //
 // This module is the PURE, testable core:
-//   - `resolveHostRun` — the spawn command for a host (custom binary wins over
-//     the host default, so users with multiple profiles — e.g. `claude` vs
-//     `claude-work` — can point Noir at their own binary without a restart).
-//   - `parseStreamLine` / `normalizeStreamEvent` — map a raw `stream-json` line
+//   - `resolveHostRun`: the spawn command for a host (custom binary wins over
+//     the host default, so users with multiple profiles: e.g. `claude` vs
+//     `claude-work`: can point Noir at their own binary without a restart).
+//   - `parseStreamLine` / `normalizeStreamEvent`: map a raw `stream-json` line
 //     to a small `NoirEvent` union (the `init`/`assistant`/`result` payloads are
 //     the stable, shared contract across hosts).
-//   - `UsageReducer` — accumulates token/cost with the `max usage per
+//   - `UsageReducer`: accumulates token/cost with the `max usage per
 //     message.id` rule (Claude emits one JSONL line PER content block of an
 //     assistant message, each line's `usage` a CUMULATIVE snapshot of that
-//     message — summing lines over-counts ~2.5-3x).
-//   - `runHost` — the spawn + readline integration over that core.
+//     message: summing lines over-counts ~2.5-3x).
+//   - `runHost`: the spawn + readline integration over that core.
 
 import { spawn } from 'node:child_process';
 import { constants } from 'node:os';
@@ -35,7 +35,7 @@ const HOST_BINARY: Record<HostId, string | null> = {
   gemini: 'gemini',
   opencode: 'opencode',
   cursor: 'cursor-agent',
-  'agents-md': null, // emits AGENTS.md — a file host, not a spawnable CLI
+  'agents-md': null, // emits AGENTS.md: a file host, not a spawnable CLI
 };
 
 /**
@@ -78,7 +78,7 @@ export interface TokenUsage {
   readonly cacheReadTokens?: number;
 }
 
-/** The normalized event union — the shared, host-agnostic payload. */
+/** The normalized event union: the shared, host-agnostic payload. */
 export type NoirEvent =
   | { readonly kind: 'init'; readonly sessionId?: string; readonly model?: string }
   | {
@@ -94,11 +94,11 @@ export type NoirEvent =
       readonly tools?: readonly string[];
       readonly usage?: TokenUsage;
       /** Set when the host flags the assistant message as an API error
-       *  (`is_api_error_message:true` or an `error` category string) — its text
+       *  (`is_api_error_message:true` or an `error` category string): its text
        *  is a diagnostic, never the answer. */
       readonly isError?: boolean;
       /** The host's error category string (e.g. "authentication_failed") when
-       *  the assistant event carries one — used for actionable auth guidance. */
+       *  the assistant event carries one: used for actionable auth guidance. */
       readonly errorCategory?: string;
     }
   | {
@@ -224,7 +224,7 @@ export function normalizeStreamEvent(raw: unknown): NoirEvent | null {
     const messageId = message ? str(message.id) : undefined;
     const usage = message ? usageFrom(message.usage) : undefined;
     const error = {
-      // An API error message is a diagnostic, not the answer — flag it so the
+      // An API error message is a diagnostic, not the answer: flag it so the
       // caller never streams it as assistant text (optional-when-true keeps
       // exact-shape consumers of the existing union intact).
       ...(r.is_api_error_message === true || typeof r.error === 'string'
@@ -279,7 +279,7 @@ export function normalizeStreamEvent(raw: unknown): NoirEvent | null {
 /**
  * Normalize one frame of a `stream_event` (the incremental feed a host emits
  * when it is asked for partial messages). Only the two frames that carry live
- * progress are modelled — a tool call as it starts, and a stretch of assistant
+ * progress are modelled: a tool call as it starts, and a stretch of assistant
  * text as it is written; the boundary frames around them are noise.
  */
 function normalizeStreamEventInner(inner: Record<string, unknown> | null): NoirEvent {
@@ -316,7 +316,7 @@ export interface UsageSnapshot {
  * Accumulates token/cost from a `stream-json` feed with the dedup rule: take
  * the `max` usage per `message.id`, never sum lines. Claude emits one line per
  * content block of an assistant message, each carrying that message's
- * CUMULATIVE usage — so the correct per-message total is the max, and the
+ * CUMULATIVE usage: so the correct per-message total is the max, and the
  * session total is the sum of per-message maxes.
  */
 export class UsageReducer {
@@ -334,7 +334,7 @@ export class UsageReducer {
       return;
     }
     // A tool announcement carries the usage of the message it came out of, and
-    // for a tool-only message it is the only carrier — so it folds through the
+    // for a tool-only message it is the only carrier: so it folds through the
     // same per-message rule rather than being dropped. The rule itself is
     // unchanged: one entry per message id, taking the max.
     const usage = event.kind === 'assistant' || event.kind === 'tool' ? event.usage : undefined;
@@ -349,7 +349,7 @@ export class UsageReducer {
       this.output += output;
       return;
     }
-    // Cumulative snapshot — only the growth over the last-seen max counts.
+    // Cumulative snapshot: only the growth over the last-seen max counts.
     this.input += Math.max(0, input - prev.input);
     this.output += Math.max(0, output - prev.output);
     this.maxByMessage.set(key, {
@@ -385,14 +385,14 @@ export interface HostChild {
 }
 
 /**
- * Signal a child — the one and only safe way to do it.
+ * Signal a child: the one and only safe way to do it.
  *
  * A spawn that failed (ENOENT, a bad interpreter) produces a handle with no
  * pid, and signalling that is NOT a harmless no-op: Node hands pid 0 to
  * `kill(2)`, which means "every process in my own process group". So an
  * unguarded `child.kill()` while a bad command is failing would take out Noir,
  * whatever shares its job (a pipeline peer, a wrapper script) and the terminal
- * job around them — the opposite of stopping one host. Callers that skip the
+ * job around them: the opposite of stopping one host. Callers that skip the
  * pid check are the bug; this is the check.
  */
 export function signalChild(child: HostChild, signal: NodeJS.Signals): void {
@@ -408,7 +408,7 @@ export function signalChild(child: HostChild, signal: NodeJS.Signals): void {
  * arrives while it is still starting up (sourcing the rc files): the signal is
  * gone before the alias runs, so the host never sees it and only the caller's
  * escalation ends the run. One signal is therefore not enough for a bridged run
- * — it is offered again on this beat until the child is reaped, or until this
+ *: it is offered again on this beat until the child is reaped, or until this
  * window closes (the same order as the interrupt grace, so a host that ignores
  * every signal is still ended by the escalation).
  *
@@ -431,7 +431,7 @@ export interface RunHostOptions {
   /** Normalized event (for streaming render). */
   onEvent?: (event: NoirEvent) => void;
   /**
-   * The child, as soon as it exists — and again for every later spawn of the
+   * The child, as soon as it exists: and again for every later spawn of the
    * same run, because a command resolved through the shell bridge is a second
    * child. Handing it over is what lets a caller kill the process itself: a
    * signal that reached Noir is not otherwise addressed to the host it spawned.
@@ -442,7 +442,7 @@ export interface RunHostOptions {
    * that is already aborted kills the child as soon as it spawns, so a caller
    * that raced its own cancellation does not leak a process. Escalation (a
    * SIGKILL for a host that ignores the polite signal) is the caller's, not
-   * this function's — the run still resolves through the ordinary close path
+   * this function's: the run still resolves through the ordinary close path
    * with the kill folded into its result.
    */
   signal?: AbortSignal;
@@ -456,7 +456,7 @@ export interface RunHostResult {
   readonly stderr: string;
   /** Whether the host signalled an error (non-zero exit OR a stream-json
    *  `is_error:true` result / API-error assistant event). Exit code alone is
-   *  not reliable — claude can exit 0 with `is_error:true` (#79500). */
+   *  not reliable: claude can exit 0 with `is_error:true` (#79500). */
   readonly isError: boolean;
   /** The first API-error assistant text (e.g. "Not logged in · Please run
    *  /login"), quoted into the CLI's failure message. */
@@ -490,7 +490,7 @@ export function runHost(opts: RunHostOptions): Promise<RunHostResult> {
  * Spawn `binary` with `args` and consume its stream-json. On an ENOENT spawn
  * error (and not already a shell-bridge run) it attempts the shell fallback:
  * the name may be an alias/function or a PATH entry only visible inside the
- * user's interactive shell — see `shell-bridge.ts` for the safety model.
+ * user's interactive shell: see `shell-bridge.ts` for the safety model.
  *
  * `bridged` marks the spawn whose process is an interactive shell before it is
  * the host, which is the one case where a single polite signal can be lost —
@@ -591,7 +591,7 @@ function spawnAndConsume(
       detachAbort();
       if (spawnError !== null) return; // the error/fallback path owns this spawn
       // A host terminated by a signal (crash/SIGKILL/OOM) yields code === null
-      // with no result event — without this it would be reported as exit 0
+      // with no result event: without this it would be reported as exit 0
       // success. Fold the kill into a non-zero exit + isError (128+n is the
       // shell convention for signal termination).
       const killed = code === null && signal != null;

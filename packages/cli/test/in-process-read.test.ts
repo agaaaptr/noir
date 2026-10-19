@@ -1,9 +1,9 @@
-// G1 — in-process read-only fallback when the daemon is down (S9 DS-5).
+// G1: in-process read-only fallback when the daemon is down (S9 DS-5).
 //
 // Store-touching commands normally route through the daemon (the single writer).
 // When the daemon is DOWN, READS (context search / memory recall / memory
 // sessions / task status) fall back to an in-process read-only store + engines
-// via `withInProcessRead` (daemon-client.ts) — exit 0 with real results instead
+// via `withInProcessRead` (daemon-client.ts): exit 0 with real results instead
 // of exit 4. WRITES (task new / task advance / memory save / memory forget /
 // context index) KEEP the daemon-required exit-4 path (single-writer
 // invariant): they never open a store for writes in-process.
@@ -11,7 +11,7 @@
 // Offline by construction (NF4): the daemon liveness probe is mocked to report
 // `{running:false}` (no real daemon, no HTTP), and the store is a real
 // temp-dir SQLite DB seeded through `openStore` (writable) + the engine
-// factories — the same primitives `withInProcessRead` uses, so the fallback
+// factories: the same primitives `withInProcessRead` uses, so the fallback
 // reads are exercised against REAL storage, not a stub.
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -43,7 +43,7 @@ vi.mock('../src/daemon-client.js', async (importOriginal) => {
 
 // WRITES go through `withDaemon` → `resolveDaemon` → `ensureDaemonRunning`.
 // With the daemon down, that must REJECT so the write keeps its exit-4 path
-// (it must never open a store for writes in-process — single-writer). Stub the
+// (it must never open a store for writes in-process: single-writer). Stub the
 // daemon's ensure to reject → daemon-client maps it to exit 4. No real daemon
 // is ever started (NF4).
 //
@@ -51,7 +51,7 @@ vi.mock('../src/daemon-client.js', async (importOriginal) => {
 // the REAL daemon-client module (the `importOriginal` partial mock above can
 // yield a second instance for other importers), whose `probeDaemon` reads this
 // project's record. A no-record/no-alive probe degrades to `{running:false}`
-// cleanly — matching the mocked probe and keeping every read on the fallback
+// cleanly: matching the mocked probe and keeping every read on the fallback
 // path offline.
 vi.mock('@noir-ai/daemon', () => ({
   ensureDaemonRunning: vi.fn(async () => {
@@ -61,7 +61,7 @@ vi.mock('@noir-ai/daemon', () => ({
   pidAlive: () => false,
   // resolveGateConfig is imported by the in-process read fallback to plumb the
   // user's prd.mandatoryFor override (c4-surface-wiring S5). Return undefined so
-  // the engine applies its own default (no surprise override) — mirrors the
+  // the engine applies its own default (no surprise override): mirrors the
   // absent-config path.
   resolveGateConfig: () => undefined,
 }));
@@ -83,7 +83,7 @@ async function seed(): Promise<void> {
   // Scaffold the .noir project (project.id + config.yml) so loadProjectInfo
   // resolves in-process (the fallback reads the project the same way the CLI
   // does). The embedder is configured `kind:none` → BM25-only: offline, no
-  // model download, no network — the deterministic read path.
+  // model download, no network: the deterministic read path.
   mkdirSync(join(root, '.noir', 'store'), { recursive: true });
   writeFileSync(join(root, '.noir', 'project.id'), `${projectId}\n`, 'utf8');
   writeFileSync(
@@ -192,7 +192,7 @@ describe('withInProcessRead (daemon-client)', () => {
 });
 
 // Wire-level: READS fall back, WRITES keep exit 4
-describe('in-process read fallback — daemon down', () => {
+describe('in-process read fallback: daemon down', () => {
   it("'context search foo' returns results (exit 0), not exit 4", async () => {
     const { capture, restore } = captureStreams();
     try {
@@ -258,9 +258,9 @@ describe('in-process read fallback — daemon down', () => {
     }
   });
 
-  it("'task new' still exits 4 (write requires the daemon — single writer)", async () => {
+  it("'task new' still exits 4 (write requires the daemon: single writer)", async () => {
     // The daemon is down (probe false). A write must NOT open the store
-    // in-process — it keeps the exit-4 daemon-down path.
+    // in-process: it keeps the exit-4 daemon-down path.
     const { capture, restore } = captureStreams();
     try {
       await expect(taskNew({ json: true, slug: 'new-task', project })).rejects.toMatchObject({

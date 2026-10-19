@@ -1,11 +1,11 @@
 // `noir run` credential diagnostics (spec 13). The auth branch used to key on
 // `ANTHROPIC_API_KEY` alone, so a custom gateway (`ANTHROPIC_AUTH_TOKEN` +
-// `ANTHROPIC_BASE_URL`) got a bare "run /login" — the wrong remedy for a
+// `ANTHROPIC_BASE_URL`) got a bare "run /login": the wrong remedy for a
 // non-interactive API-key setup. These tests pin the broadened shape, the
 // source-naming (`.noir/.env` vs the environment, spec 13.2), the names-only
 // rule (spec G4), and the uninitialized-project notice (spec 13.3).
 //
-// Offline: drives the real commander tree + run.ts with a mocked runHost — no
+// Offline: drives the real commander tree + run.ts with a mocked runHost: no
 // host is ever spawned, and no network or key is needed.
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -36,7 +36,7 @@ import { handleError } from '../src/output.js';
 /**
  * Drive a FRESH commander program (mirroring bin.run's parse→handleError→exit
  * contract). A fresh program per invocation avoids commander global-option
- * leakage across parses on the singleton — e.g. a prior test's `--json` would
+ * leakage across parses on the singleton: e.g. a prior test's `--json` would
  * otherwise stay set on the shared `program` and change fail()'s routing.
  */
 async function runCli(argv: readonly string[]): Promise<number> {
@@ -49,14 +49,14 @@ async function runCli(argv: readonly string[]): Promise<number> {
   return typeof process.exitCode === 'number' ? process.exitCode : 0;
 }
 
-/** The credential shapes `noir run` must know about — scrubbed per test. */
+/** The credential shapes `noir run` must know about: scrubbed per test. */
 const CREDENTIAL_VARS = [
   'ANTHROPIC_API_KEY',
   'ANTHROPIC_AUTH_TOKEN',
   'ANTHROPIC_BASE_URL',
 ] as const;
 
-describe('noir run — credential diagnostics', () => {
+describe('noir run: credential diagnostics', () => {
   let stderr: MockInstance<typeof process.stderr.write>;
   let stdout: MockInstance<typeof process.stdout.write>;
   let cwd: MockInstance<typeof process.cwd>;
@@ -116,7 +116,7 @@ describe('noir run — credential diagnostics', () => {
     return runCli(argv);
   }
 
-  /** Write `.noir/.env` the way `noir init` does — mode 0600, no advisory. */
+  /** Write `.noir/.env` the way `noir init` does: mode 0600, no advisory. */
   function writeNoirEnv(contents: string): void {
     mkdirSync(join(tmp, '.noir'), { recursive: true });
     writeFileSync(join(tmp, '.noir', '.env'), contents, { mode: 0o600 });
@@ -129,7 +129,7 @@ describe('noir run — credential diagnostics', () => {
     const err = stderrText();
     expect(err).toMatch(/ANTHROPIC_AUTH_TOKEN/);
     expect(err).toMatch(/ANTHROPIC_BASE_URL/);
-    // Still the auth story — the login hint is not replaced, it is completed.
+    // Still the auth story: the login hint is not replaced, it is completed.
     expect(err).toContain('claude /login');
   });
 
@@ -150,7 +150,7 @@ describe('noir run — credential diagnostics', () => {
   it('a profile that deletes the credential → the note does not claim it is set', async () => {
     // The credential is in the ambient environment, but a run profile nulls it
     // out of the CHILD env. credentialNote must read the effective child env,
-    // not process.env — otherwise it would claim ANTHROPIC_API_KEY "is set …
+    // not process.env: otherwise it would claim ANTHROPIC_API_KEY "is set …
     // unset it" for a value the child never sees.
     process.env.ANTHROPIC_API_KEY = 'sk-env-secret';
     mkdirSync(join(tmp, '.noir'), { recursive: true });
@@ -167,7 +167,7 @@ describe('noir run — credential diagnostics', () => {
     expect(err).not.toContain('sk-env-secret');
   });
 
-  it('never prints a credential value — from the environment or from .noir/.env', async () => {
+  it('never prints a credential value: from the environment or from .noir/.env', async () => {
     process.env.ANTHROPIC_API_KEY = 'sk-env-secret';
     expect(await runExpectingFailure()).toBe(1);
     expect(stderrText()).toContain('ANTHROPIC_API_KEY');
@@ -188,7 +188,7 @@ describe('noir run — credential diagnostics', () => {
   });
 
   it('notices an uninitialized project on stderr, and never fails the run', async () => {
-    // Default mock: the host succeeds — the notice is informational, so the
+    // Default mock: the host succeeds: the notice is informational, so the
     // run still exits 0.
     expect(await runCli(['run', 'hi'])).toBe(0);
     const err = stderrText();

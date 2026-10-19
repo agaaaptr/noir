@@ -89,7 +89,7 @@ export interface ScaffoldOptions {
   upgrade?: boolean;
   /** Re-scaffold even when the target is already initialized (bypasses
    *    the already-initialized no-op guard). Does NOT bypass `assertSafeRoot`
-   *    — root-safety is hard, never bypassable. */
+   *   : root-safety is hard, never bypassable. */
   force?: boolean;
   /** Preview: compute the same written/skipped/migrated lists without touching
    *    disk. `noir doctor`/CI use this to report drift. */
@@ -102,10 +102,10 @@ export interface ScaffoldOptions {
    *    `'overwrite'` is byte-backward-compatible. `'preserve'` keeps the user's
    *    file (the non-TTY / CI default in the cli). */
   conflictPolicy?: 'overwrite' | 'preserve';
-  /** Per-file conflict resolver — the UI seam (the engine stays UI-free;
+  /** Per-file conflict resolver: the UI seam (the engine stays UI-free;
    *    the cli injects a @clack-based resolver). Called when a `regenerate`
    *    file exists and differs from the template. The return type widens to
-   *    accept a rich shape carrying `applyToAll` — the engine then reuses the
+   *    accept a rich shape carrying `applyToAll`: the engine then reuses the
    *    decision for the rest of the run (per artifact CLASS). */
   onConflict?: (ctx: ConflictContext) => Promise<ConflictResolverReturn> | ConflictResolverReturn;
   /** Three-way merge managed regions (base/ours/theirs) using a persisted
@@ -114,7 +114,7 @@ export interface ScaffoldOptions {
    *  DEFAULT TRUE: ancestor capture is unconditional, so the first merge
    *  run always has a base. Set to `false` (CLI `--no-merge-regions`) to
    *  restore strip-replace. Supports BOTH single-region (NOIR.md, ignores) AND
-   *  multi-region (CLAUDE.md CONTEXT+RULES) managed files — the multi-region
+   *  multi-region (CLAUDE.md CONTEXT+RULES) managed files: the multi-region
    *  path merges managed regions per block (`managedBlocks` +
    *  `mergeManagedRegion`). */
   mergeManagedRegions?: boolean;
@@ -132,7 +132,7 @@ export interface ScaffoldResult {
   /** Repo-relative paths skipIfExists'd (already present). */
   skipped: string[];
   /** Repo-relative `regenerate` paths skipped because byte-identical to
-   *  the template (content-hash dedup — no rewrite). */
+   *  the template (content-hash dedup: no rewrite). */
   identical: string[];
   /** Repo-relative doc-only seed paths REPLACED on the upgrade path because the
    *  copy on disk was still byte-identical to an older Noir's shipped text —
@@ -142,7 +142,7 @@ export interface ScaffoldResult {
    *  "Noir updated documentation you never touched" apart from "Noir created
    *  something new".
    *
-   *  A seed the user DID edit is never listed here — it goes through the
+   *  A seed the user DID edit is never listed here: it goes through the
    *  ordinary conflict flow, so it appears in {@link written} only when a
    *  resolver explicitly chose to replace it (or `--force` did). Empty on every
    *  other run: a fresh `init`/`create` has nothing to compare against and
@@ -150,7 +150,7 @@ export interface ScaffoldResult {
   refreshed: string[];
   /** True when the already-initialized guard short-circuited (a bare
    *  `noir init`/`create` on an initialized project). Callers (init.ts/create.ts)
-   *  gate skills emission + the "initialized" message on this — a no-op must NOT
+   *  gate skills emission + the "initialized" message on this: a no-op must NOT
    *  re-emit skills or claim it initialized. */
   noop: boolean;
   /** Migration steps executed (`<from>→<to>`), when upgrade ran. */
@@ -158,7 +158,7 @@ export interface ScaffoldResult {
   /** Migration conflicts (repo-relative or `<runner>:…`), when upgrade ran. */
   migrationConflicts: string[];
   /** Repo-relative paths a migration CHANGED (wrote or refreshed), when upgrade
-   *  ran — reported separately from {@link refreshed} so callers can name
+   *  ran: reported separately from {@link refreshed} so callers can name
    *  "migrated" files (e.g. `.noir/config.yml`) apart from doc seeds. */
   migrationChanged: string[];
   stack: StackInfo;
@@ -167,7 +167,7 @@ export interface ScaffoldResult {
   toVersion: string;
   /** The host actually emitted (post-default). */
   host: HostTag;
-  /** Structured conflict report — one record per file that existed AND
+  /** Structured conflict report: one record per file that existed AND
    *  differed from the proposed bytes (regenerate conflict path). Populated in
    *  `--json`/`--no-input`/non-TTY runs (no prompt fires) so a CI/JSON caller
    *  can see exactly which files diverged + how they were resolved, without
@@ -178,19 +178,19 @@ export interface ScaffoldResult {
    *  (repo-relative path → mode), i.e. the {@link ManifestEntry.fileMode} of a
    *  `skipIfExists` entry that had no file on disk. A real run reports the mode
    *  it applied; a `dryRun` reports the mode it WOULD apply (the predictor's
-   *  job — the caller can preview `.noir/.env` at 0600 without writing it).
+   *  job: the caller can preview `.noir/.env` at 0600 without writing it).
    *  Paths the entry skipped (already present) are absent: an existing file's
    *  mode is never changed. Optional so existing external constructors of this
    *  type (test stubs) stay valid; `scaffold()` always populates it. */
   fileModes?: Record<string, number>;
-  /** What the run did to the permissions of `.noir/.env` — the outcome of
+  /** What the run did to the permissions of `.noir/.env`: the outcome of
    *  {@link ensureOwnerOnly}, which is called on every run that may write, in
    *  every mode, because the seeded file's 0600 mode is applied only when it is
    *  created.
    *  `'healed'` means a group/world-readable file was tightened to 0600, so a
    *  caller can report the fix instead of leaving the user to notice it in a
    *  later diagnostic; `'unchanged'` and `'unsupported'` mean nothing needed
-   *  doing (or the platform has no POSIX mode bits) — the `'unchanged'` a fresh
+   *  doing (or the platform has no POSIX mode bits): the `'unchanged'` a fresh
    *  `create` reports, whose seed was written 0600 in the same run. Absent on a
    *  dry run, which must not touch disk. Optional so existing external
    *  constructors of this type stay valid. */
@@ -201,7 +201,7 @@ export interface ScaffoldResult {
 export interface ConflictRecord {
   /** Repo-relative path of the conflicting file. */
   path: string;
-  /** Artifact class — drives apply-to-all memory scope + report grouping. */
+  /** Artifact class: drives apply-to-all memory scope + report grouping. */
   mode: ConflictContext['mode'];
   /** LCS similarity (0-1) between existing and proposed. */
   similarity?: number;
@@ -222,7 +222,7 @@ export interface ConflictContext {
   existing: string;
   /** The content the scaffold would write. */
   proposed: string;
-  /** Artifact class — drives apply-to-all memory scope (`regenerate` shares
+  /** Artifact class: drives apply-to-all memory scope (`regenerate` shares
    *  one decision across a run; `managedBlock`/`managedBlocks` stay per-file).
    *  Defaults to `'regenerate'` for backward compatibility with older resolvers
    *  that pre-date the field (the engine always sets it). */
@@ -255,12 +255,12 @@ export type ConflictResolution =
  *  `'one'`) OR a rich shape carrying `applyToAll`. The engine unwraps both; when
  *  `applyToAll` is true it stores the choice in its per-run memory keyed by
  *  artifact CLASS (`regenerate` shares one decision across a run; managedBlock
- *  stays per-file regardless — user edits there need individual review). */
+ *  stays per-file regardless: user edits there need individual review). */
 export type ConflictResolverReturn =
   | ConflictResolution
   | { resolution: ConflictResolution; applyToAll?: boolean };
 
-/** A partial emit — the two contexts that re-emit a SUBSET of the manifest.
+/** A partial emit: the two contexts that re-emit a SUBSET of the manifest.
  *  A fresh `init`/`create` (and `--force`) is neither: it emits every mode, so
  *  {@link EMITTED_IN} is only consulted for these. */
 type EmitContext = 'sync' | 'upgrade';
@@ -269,19 +269,19 @@ type EmitContext = 'sync' | 'upgrade';
  *  special-cased by path), so a new manifest entry inherits the right behavior
  *  from its mode alone.
  *
- *  - `sync` re-emits the **runtime subset** — the always-safe-to-rewrite
+ *  - `sync` re-emits the **runtime subset**: the always-safe-to-rewrite
  *    entries (`regenerate` + `managedBlock`). `skipIfExists` is excluded
  *    because sync is not a scaffold event: it refreshes the host pointers, it
  *    does not (re)create a project's seeds.
  *  - `upgrade` (`noir init --upgrade`) re-emits the runtime subset PLUS
- *    `skipIfExists`, which normally creates only when the file is ABSENT — so
+ *    `skipIfExists`, which normally creates only when the file is ABSENT: so
  *    an upgrade backfills a seed added to the manifest after a project was
  *    initialized while remaining unable to touch a file the user owns. The one
  *    entry that goes further is a doc-only seed flagged `refreshIfStale`, whose
  *    untouched older copy is replaced (see {@link ManifestEntry}).
  *    `mergeJson` stays OUT: `.claude/settings.local.json` is user-owned and
  *    write-ONCE by its own contract (init/create only), and the merge re-appends
- *    the SessionStart hook whenever the dedup substring is gone — i.e. an
+ *    the SessionStart hook whenever the dedup substring is gone: i.e. an
  *    upgrade emit would resurrect a hook the user deliberately removed. */
 const EMITTED_IN: Record<WriteMode, { sync: boolean; upgrade: boolean }> = {
   regenerate: { sync: true, upgrade: true },
@@ -291,19 +291,19 @@ const EMITTED_IN: Record<WriteMode, { sync: boolean; upgrade: boolean }> = {
 };
 
 /**
- * Refuse to scaffold when `root` is — or is inside — a `.noir/` directory.
+ * Refuse to scaffold when `root` is: or is inside: a `.noir/` directory.
  * Running `noir init`/`create`/`sync` while cwd = `.noir/` would
  * otherwise mint a FRESH project id (because `<root>/.noir/project.id` is
  * absent) and build a NESTED second project (`.noir/.noir/`, `.noir/CLAUDE.md`,
- * `.noir/.claude/skills/`, …) — the duplicate-`.noir` bug. The walk ascends the
+ * `.noir/.claude/skills/`, …): the duplicate-`.noir` bug. The walk ascends the
  * ancestor chain only, so a legitimate project root that merely CONTAINS a
  * `.noir/` store is never flagged. String-based: works whether or not `root`
  * exists on disk yet (so `noir create <new-dir>` is still guarded).
  *
- * Hard against literal `.noir` path segments — NOT bypassable by `--force`
+ * Hard against literal `.noir` path segments: NOT bypassable by `--force`
  * (which is reserved for the already-initialized no-op). NOTE: the walk is
  * string-based, so a symlink whose TARGET is inside `.noir/` is not resolved
- * (a local self-foot-gun only — the caller controls `root` — not externally
+ * (a local self-foot-gun only: the caller controls `root`: not externally
  * exploitable); in practice `--cwd`/positional roots are literal paths.
  */
 export function assertSafeRoot(root: string): void {
@@ -326,16 +326,16 @@ export function assertSafeRoot(root: string): void {
  *  EVERY mode re-asserts, `create` included. The seeded file's 0600 is applied
  *  by the writer only when the file is CREATED (`skipIfExists` never opens an
  *  existing one), so the mode can only be trusted on a run that checks the file
- *  as it finds it — and `create` reaches an existing tree too: `--force` (or a
+ *  as it finds it: and `create` reaches an existing tree too: `--force` (or a
  *  plain re-run) over a project initialized earlier is the same `.noir/.env`
  *  that `init` would find, and it can already be sitting at 0644. Gating the
  *  heal to `init`/`sync` on the grounds that "create writes its seed 0600 in the
  *  same run" holds only for a FRESH tree. Including `create` costs nothing on
- *  that fresh tree — the file is absent or already 0600, so the heal is a no-op
- *  — and closes the gap on a forced one.
+ *  that fresh tree: the file is absent or already 0600, so the heal is a no-op
+ * : and closes the gap on a forced one.
  *
- *  Called from both exits — the already-initialized no-op and the end of the
- *  emit — because a bare `noir init` on an existing project re-emits nothing
+ *  Called from both exits: the already-initialized no-op and the end of the
+ *  emit: because a bare `noir init` on an existing project re-emits nothing
  *  but must still fix a credential file left at a wider mode by an older
  *  version. Only one of the two runs per invocation. */
 function envOwnerOnly(opts: ScaffoldOptions): EnvMode | undefined {
@@ -361,7 +361,7 @@ function readConfiguredHost(root: string): HostTag {
 /** The `rules.enabled` switch from an existing `.noir/config.yml`, or `true`.
  *  A project with no config yet (a fresh `init`/`create`) has not opted out of
  *  anything, and an absent, unreadable or invalid config degrades to the schema
- *  default — so the working-rules seed keeps being emitted exactly as it always
+ *  default: so the working-rules seed keeps being emitted exactly as it always
  *  was.
  *
  *  Reads the config directly rather than through {@link loadProjectInfo}, which
@@ -389,7 +389,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     throw new Error("transport 'streamable-http' requires opts.url");
   }
 
-  // 1. Root for `create` may not exist yet — mirror `init.ts`'s mkdir of .noir/.
+  // 1. Root for `create` may not exist yet: mirror `init.ts`'s mkdir of .noir/.
   if (opts.mode === 'create' && !opts.dryRun) {
     mkdirSync(opts.root, { recursive: true });
   }
@@ -420,7 +420,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   const baseline = renderBaseline(stack, detectCommands(opts.root), detectEntryPoints(opts.root));
 
   // Ancestor snapshot is read + captured UNCONDITIONALLY (not just under
-  // --merge) so the first merge run — now the DEFAULT — always has a base. The
+  // --merge) so the first merge run: now the DEFAULT: always has a base. The
   // merge APPLICATION still keys off `mergeManagedRegions` below; ancestor
   // CAPTURE is always-on. `writeAncestors` at the end dedups internally.
   const ancestors = readAncestors(opts.root);
@@ -475,7 +475,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   }
 
   // 4. Migrations (only when explicitly upgrading). A project with NO identity
-  //    at all — no scaffold-version stamp AND no valid project.id — is a fresh,
+  //    at all: no scaffold-version stamp AND no valid project.id: is a fresh,
   //    never-initialized tree: nothing to migrate, so skip entirely and report
   //    no steps. A stamped project runs from its recorded version. A legacy
   //    project (a valid project.id but no stamp) passes `null` through; the
@@ -515,24 +515,24 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
     command,
     stack,
     // The project's own working-rules switch: a project that set
-    // `rules.enabled: false` gets no `.noir/rules/RULES.md` — not on the first
+    // `rules.enabled: false` gets no `.noir/rules/RULES.md`: not on the first
     // scaffold, and not backfilled by an upgrade. Unchanged (enabled) whenever
     // the config is absent or says nothing about rules.
     rulesEnabled: readConfiguredRulesEnabled(opts.root),
   });
-  // Which subset this run emits — `null` means every mode (a fresh
+  // Which subset this run emits: `null` means every mode (a fresh
   // `init`/`create`, and `--force`). `sync` re-emits the runtime subset;
   // `init --upgrade` additionally re-emits `skipIfExists`, whose
   // create-only-if-absent semantics are exactly what backfills a seed added to
-  // the manifest after a project was initialized — the regression where
+  // the manifest after a project was initialized: the regression where
   // `.noir/.env.example` was reachable by no command at all. On top of that,
   // an upgrade is the only way to reach the doc-seed refresh: an entry flagged
   // `refreshIfStale` has its existing file READ and compared against the bytes
   // Noir used to ship, so a copy the user never touched gets the newer text.
-  // Both branches keep the same guarantee for everything else — an unflagged
+  // Both branches keep the same guarantee for everything else: an unflagged
   // entry goes through the writer that does not open an existing file at all,
   // and a flagged seed the user edited only ever reaches the conflict flow.
-  // `--upgrade` still excludes `mergeJson` — see {@link EMITTED_IN}.
+  // `--upgrade` still excludes `mergeJson`: see {@link EMITTED_IN}.
   const emitContext: EmitContext | null =
     opts.mode === 'sync'
       ? 'sync'
@@ -581,7 +581,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   // GROUP applicable entries by target path (manifest order preserved within
   // each group) so files carrying MULTIPLE managed blocks (CLAUDE.md today =
   // CONTEXT + RULES) get ONE atomic multi-region write. Single-entry
-  // paths keep the existing per-entry writer — byte-stable for the NOIR.md
+  // paths keep the existing per-entry writer: byte-stable for the NOIR.md
   // brief, the ignore files, and the regenerated `.mcp.json`. dryRun uses the
   // SAME grouping so its reported paths match what a real run would write
   // (CLAUDE.md reported once, not twice).
@@ -649,11 +649,11 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
           // 'replace'/'duplicate'/'rename' → unsupported for managedBlocks
           // (managed regions are inside co-owned files); treat as 'merge'.
           process.stderr.write(
-            `noir: managed-region conflict in ${relPath} — wrote inline markers; resolve manually.\n`,
+            `noir: managed-region conflict in ${relPath}: wrote inline markers; resolve manually.\n`,
           );
         } else {
           process.stderr.write(
-            `noir: managed-region conflict in ${relPath} — wrote inline markers; resolve manually.\n`,
+            `noir: managed-region conflict in ${relPath}: wrote inline markers; resolve manually.\n`,
           );
         }
       }
@@ -713,7 +713,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
           continue;
         }
         // Refreshable seed. The comparison needs the current render, so this is
-        // the one dry-run case that renders a body — a preview that reported a
+        // the one dry-run case that renders a body: a preview that reported a
         // different outcome from the run it previews would be worse than none.
         // An edited seed reads as "already present": the interactive conflict
         // prompt cannot run under a preview, and leaving the user's bytes alone
@@ -784,12 +784,12 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
             continue;
           }
           process.stderr.write(
-            `noir: managed-region conflict in ${entry.path} — wrote inline markers; resolve manually.\n`,
+            `noir: managed-region conflict in ${entry.path}: wrote inline markers; resolve manually.\n`,
           );
         }
         // Content-hash dedup (post-heal: re-read, the heal may have wiped).
         // If the would-be-written bytes equal the on-disk file, skip the write
-        // (no mtime/git churn) — a no-op `noir sync` writes NOTHING.
+        // (no mtime/git churn): a no-op `noir sync` writes NOTHING.
         const onDisk = readOptional(abs);
         const predicted = predictManagedBlock(onDisk ?? '', block, regionText);
         if (onDisk !== undefined && predicted === onDisk) {
@@ -810,11 +810,11 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
       } else {
         // `skipIfExists`: create the seed when it is absent, otherwise leave it
         // untouched. A refreshable doc seed is the one exception, and only on
-        // an upgrade — see `refreshableSeedKind`.
+        // an upgrade: see `refreshableSeedKind`.
         const seedKind = refreshableSeedKind(entry, emitContext);
         if (seedKind === undefined) {
           // `entry.fileMode` rides along so a created `.noir/.env` is 0600 from
-          // the moment it exists — see `skipIfExists`.
+          // the moment it exists: see `skipIfExists`.
           const out = skipIfExists(abs, body, entry.fileMode);
           if (out.written) {
             written.push(entry.path);
@@ -840,7 +840,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
           // Edited by the user, so it is theirs: run the same conflict flow the
           // other write modes use rather than replacing anything silently. The
           // artifact class is `skipIfExists`, which scopes an "apply to all"
-          // answer to the seeds alone — a decision about these doc files must
+          // answer to the seeds alone: a decision about these doc files must
           // not ride along into `.mcp.json`'s pointer-file conflicts.
           const out = await writeWithConflict(abs, entry.path, body, opts, {
             memory: conflictMemory,
@@ -860,12 +860,12 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   }
 
   // 6. Stamp scaffold-version on init/create (NOT sync). Written last so a
-  //    crash leaves the previous stamp. Upgrade rewrites it to current — but
+  //    crash leaves the previous stamp. Upgrade rewrites it to current: but
   //    ONLY when every migration actually applied. A non-empty
   //    `migrationConflicts` means a transformation did NOT land, so stamping
   //    "current" would make that failure permanent and invisible: the migration
   //    would never retry (the window closes) and `noir doctor` would stop
-  //    reporting drift. Leaving the OLD stamp keeps both honest — the retry and
+  //    reporting drift. Leaving the OLD stamp keeps both honest: the retry and
   //    the drift report. The conflicts themselves are already reported to the
   //    caller via `ScaffoldResult.migrationConflicts` (`--json` included).
   if (
@@ -877,7 +877,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<ScaffoldResult> {
   }
 
   // Persist the ancestor snapshot UNCONDITIONALLY (every init/create/sync
-  // seeds it) so the first merge run — now the default — has a base.
+  // seeds it) so the first merge run: now the default: has a base.
   // `writeAncestors` dedups internally: when the serialized bytes equal the
   // on-disk file, the rewrite is skipped, so a no-op sync leaves ancestors.json
   // untouched too (true zero-write idempotency).
@@ -944,7 +944,7 @@ function similarity(a: string, b: string): number {
  *  region this is a no-op (returns `theirs`). On conflict, returns the merged
  *  bytes WITH zdiff3 markers as `text` AND `conflict: true`, so the per-file
  *  scaffold site can hand the resolver a 6th "merge (with conflict markers)"
- *  option. `cleanTheirs` is the un-merged template — what the
+ *  option. `cleanTheirs` is the un-merged template: what the
  *  `'replace'` resolution would write. */
 function mergeManagedRegion(
   abs: string,
@@ -971,7 +971,7 @@ function mergeManagedRegion(
 }
 
 /** Consult {@link ScaffoldOptions.onConflict} for a managed-region merge
- *  conflict (single-block path). Per-file (never apply-to-all — user edits
+ *  conflict (single-block path). Per-file (never apply-to-all: user edits
  *  inside a `<!-- noir:* -->` region need individual review). When no resolver
  *  is wired OR the engine is non-interactive, returns `undefined` so the caller
  *  falls through to the earlier behavior (write the merged-with-markers bytes +
@@ -985,7 +985,7 @@ async function resolveManagedConflictCtx(
   const resolution = typeof ret === 'string' ? ret : ret.resolution;
   if (resolution === 'rename' || resolution === 'duplicate') {
     // Not meaningful for a region INSIDE a co-owned file. Treat as 'merge'
-    // (write the marked bytes — the user keeps both sides, manually resolves).
+    // (write the marked bytes: the user keeps both sides, manually resolves).
     return 'merge';
   }
   if (resolution === 'replace') {
@@ -994,7 +994,7 @@ async function resolveManagedConflictCtx(
     // (the un-merged template region) instead of the marked merge.
     return 'replace';
   }
-  // 'merge' / 'preserve' / 'cancel' — pass through.
+  // 'merge' / 'preserve' / 'cancel': pass through.
   return resolution;
 }
 
@@ -1054,14 +1054,14 @@ type SeedPlan = 'create' | 'keep' | 'refresh' | 'conflict';
 
 /**
  * Decide what to do with a refreshable seed, from the file currently on disk:
- *  - absent                          → `create` — the ordinary seed backfill.
- *  - an exact copy of a RECORDED     → `refresh` — Noir wrote these bytes and
+ *  - absent                          → `create`: the ordinary seed backfill.
+ *  - an exact copy of a RECORDED     → `refresh`: Noir wrote these bytes and
  *    older version                      the user never changed them.
- *  - an exact copy of what Noir      → `keep` — already current, nothing to do.
+ *  - an exact copy of what Noir      → `keep`: already current, nothing to do.
  *    writes today
- *  - present but unreadable          → `keep` — the bytes cannot be compared,
+ *  - present but unreadable          → `keep`: the bytes cannot be compared,
  *                                       so they cannot be shown to be Noir's.
- *  - anything else                   → `conflict` — these are the user's bytes,
+ *  - anything else                   → `conflict`: these are the user's bytes,
  *                                       and only the user may replace them.
  *
  * The order matters only in that `keep` is checked after the staleness test,
@@ -1071,7 +1071,7 @@ type SeedPlan = 'create' | 'keep' | 'refresh' | 'conflict';
  * A read that fails for any reason other than "no file there" resolves to
  * `keep` rather than propagating. Deciding whether to replace a file requires
  * reading it, and writing one whose bytes could not be read is the one outcome
- * this whole path exists to prevent — so an unreadable seed (permissions, a
+ * this whole path exists to prevent: so an unreadable seed (permissions, a
  * symlink loop, a directory in the way) is left exactly as it is and reported
  * as skipped, the same as any other file the run declines to touch. Letting the
  * error escape would instead abort the emit loop part-way through, leaving the
@@ -1105,7 +1105,7 @@ function planSeedWrite(abs: string, seed: SeedKind, currentRender: string): Seed
  *
  *  Throws when a flagged entry declares no seed kind. Such an entry could only
  *  ever be compared against the wrong seed's bytes, and the consequence of that
- *  comparison is an overwrite — so it fails loudly instead of guessing. */
+ *  comparison is an overwrite: so it fails loudly instead of guessing. */
 function refreshableSeedKind(
   entry: ManifestEntry,
   emitContext: EmitContext | null,
@@ -1124,13 +1124,13 @@ function refreshableSeedKind(
  * Write a file whose bytes DIFFER from what is on disk, honoring conflict
  * resolution when the target already exists. Identical bytes (or a missing
  * file) write straight through (content-hash dedup is not applied at this
- * level — identical still "writes" today to keep sync/--upgrade byte-stable).
+ * level: identical still "writes" today to keep sync/--upgrade byte-stable).
  * Resolution:
- *  - `replace`         — overwrite.
- *  - `preserve`/`cancel` — keep the user's file; report skipped.
- *  - `rename`          — move the user's file to `<path>.local`, write the new
+ *  - `replace`        : overwrite.
+ *  - `preserve`/`cancel`: keep the user's file; report skipped.
+ *  - `rename`         : move the user's file to `<path>.local`, write the new
  *                        bytes in place.
- *  - `duplicate`       — write the new bytes to `<path>.noir`, keep the user's.
+ *  - `duplicate`      : write the new bytes to `<path>.noir`, keep the user's.
  * Returns the repo-relative paths to record as written / skipped.
  *
  * Both callers are user-owned targets that must not be clobbered on a whim: a
@@ -1145,7 +1145,7 @@ async function writeWithConflict(
   proposed: string,
   opts: ScaffoldOptions,
   internals: {
-    /** Per-run memory keyed by artifact CLASS — populated when a resolver
+    /** Per-run memory keyed by artifact CLASS: populated when a resolver
      *  returns `applyToAll`. */
     memory: Map<string, ConflictResolution>;
     /** Append a structured record for `ScaffoldResult.conflicts`. */
@@ -1242,7 +1242,7 @@ async function writeWithConflict(
       return { written: [], skipped: [relPath], identical: [] };
     case 'cancel':
       // Review fix: Cancel ABORTS the whole scaffold. It used to fall through
-      // to "skip this file" and keep writing the remaining entries — a contract
+      // to "skip this file" and keep writing the remaining entries: a contract
       // violation (Cancel/Escape must stop the run). Throwing propagates out of
       // scaffold(); the cli reports it. Entries written before this conflict
       // remain on disk, as with any cancelled operation.
@@ -1274,7 +1274,7 @@ function groupApplicableByPath(
   manifest: readonly ManifestEntry[],
   host: HostTag,
   /** The partial emit this run performs, or `null` for "every mode". Modes not
-   *  listed in {@link EMITTED_IN} for the context are dropped here — the single
+   *  listed in {@link EMITTED_IN} for the context are dropped here: the single
    *  place the manifest subset is decided. */
   emitContext: EmitContext | null,
 ): Map<string, ManifestEntry[]> {
@@ -1290,7 +1290,7 @@ function groupApplicableByPath(
 }
 
 /** True for the canonical NOIR.md path the manifest emits (the BRIEF_BLOCK
- *  target). Scoped so the legacy-heal only fires for that one file — we must
+ *  target). Scoped so the legacy-heal only fires for that one file: we must
  *  not wipe arbitrary co-owned managed files. */
 function isNoirMdPath(relPath: string): boolean {
   return relPath === '.noir/NOIR.md';
@@ -1306,7 +1306,7 @@ function healLegacyNoirMd(absPath: string): void {
   try {
     content = readFileSync(absPath, 'utf8');
   } catch {
-    return; // absent — fresh write, nothing to heal
+    return; // absent: fresh write, nothing to heal
   }
   if (/<!-- noir:[a-z]+ begin -->/.test(content)) return; // already managed-shape
   rmSync(absPath, { force: true });

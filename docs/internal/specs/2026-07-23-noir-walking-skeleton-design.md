@@ -1,4 +1,4 @@
-# Noir — Walking Skeleton Design (S0 → S2 → S3)
+# Noir: Walking Skeleton Design (S0 → S2 → S3)
 
 - **Date:** 2026-07-23
 - **Status:** Proposed (awaiting review)
@@ -18,8 +18,8 @@ before any single subsystem is deepened (blueprint §10 de-risk principle).
 
 It is **one spec with two acceptance gates**:
 
-- **Gate 1 — stdio round-trip.** Claude Code spawns the Noir MCP server over stdio; `noir.host_status` returns.
-- **Gate 2 — daemon-backed (Streamable HTTP).** The *same* handler core also binds Streamable HTTP behind an auto-managed daemon, with graceful FS fallback = Gate 1's in-process stdio path.
+- **Gate 1: stdio round-trip.** Claude Code spawns the Noir MCP server over stdio; `noir.host_status` returns.
+- **Gate 2: daemon-backed (Streamable HTTP).** The *same* handler core also binds Streamable HTTP behind an auto-managed daemon, with graceful FS fallback = Gate 1's in-process stdio path.
 
 Toolchain: **pnpm workspaces + tsup + vitest + Biome + TypeScript (ESM) + GitHub Actions.** MCP SDK: **v2 beta** (`@modelcontextprotocol/server` + `@modelcontextprotocol/node`), stable release expected **2026-07-28**. Four `@noir-ai/*` packages: `core`, `daemon`, `adapters`, `cli`.
 
@@ -37,7 +37,7 @@ Toolchain: **pnpm workspaces + tsup + vitest + Biome + TypeScript (ESM) + GitHub
 - One MCP tool: `noir.host_status`.
 - S0 branding: rebrand the legacy Claude plugin (`ai-toolkit` / `ai-dev-workflow`) to the Noir identity.
 
-### 1.2 Out of scope (deferred — see §9)
+### 1.2 Out of scope (deferred: see §9)
 `@noir-ai/store` (persistence), `@noir-ai/skills` + compiler, `@noir-ai/model`, `@noir-ai/create`, the SDD workflow engine, context indexing, memory management, the TUI home screen, and all hosts beyond Claude Code. `host_status` needs **no persistence** to round-trip, so the store is not built here.
 
 ---
@@ -51,7 +51,7 @@ Toolchain: **pnpm workspaces + tsup + vitest + Biome + TypeScript (ESM) + GitHub
 | WS-3 | Toolchain | pnpm + tsup + vitest + Biome + TS (ESM) + GitHub Actions | Modern, fast, minimal-config; vitest DX suits dogfooding TDD; Biome replaces eslint+prettier with one tool. |
 | WS-4 | Transport architecture | Shared handler core + two transport bindings (stdio + Streamable HTTP); FS fallback = in-process stdio path | Multi-transport-in-one-server is a documented best practice; makes Gate 1→2 promotion *additive*; folds graceful degradation (principle 5) in for free. |
 | WS-5 | MCP SDK | v2 beta (`@modelcontextprotocol/server` + `@modelcontextprotocol/node`), → stable 2026-07-28 | Stable in 5 days; cleaner package split maps onto `@noir-ai/daemon`; no future migration; stdio (Gate 1) is the most stable part of any MCP SDK, so beta risk is minimal in the gate-1 window. |
-| WS-6 | Plugin rebrand | Rename legacy plugin as part of S0 branding | Blueprint §10 S0 lists "branding/rename"; the repo is Noir-branded but still ships `ai-dev-workflow`/`ai-toolkit` — fix the identity inconsistency now. |
+| WS-6 | Plugin rebrand | Rename legacy plugin as part of S0 branding | Blueprint §10 S0 lists "branding/rename"; the repo is Noir-branded but still ships `ai-dev-workflow`/`ai-toolkit`: fix the identity inconsistency now. |
 
 ---
 
@@ -97,15 +97,15 @@ Deferred packages (not materialized, not stubbed): `store`, `skills`, `model`, `
 ```
 .noir/
 ├─ NOIR.md        # canonical context (minimal: project name + a Noir status line)
-├─ config.yml     # { host: claude, mode: full|quick, daemon: { idleTimeoutSec, port } } — validated by core zod schema (port optional; default = auto-pick a free 127.0.0.1 port)
-└─ project.id     # canonical ProjectId — generated, NOT a filesystem path (D6 / §9.3 anti-footgun)
+├─ config.yml     # { host: claude, mode: full|quick, daemon: { idleTimeoutSec, port } }: validated by core zod schema (port optional; default = auto-pick a free 127.0.0.1 port)
+└─ project.id     # canonical ProjectId: generated, NOT a filesystem path (D6 / §9.3 anti-footgun)
 ```
 
 Generated at repo root (idempotent re-emit via marker-comment blocks):
-- **`.mcp.json`** — *critical* (this is how Claude Code connects).
-- **`CLAUDE.md`** — contains `@import ".noir/NOIR.md"` (zero duplication).
+- **`.mcp.json`**: *critical* (this is how Claude Code connects).
+- **`CLAUDE.md`**: contains `@import ".noir/NOIR.md"` (zero duplication).
 
-All other `.noir/` subdirectories from blueprint §5.4 (`state/`, `specs/`, `memory/`, `context/`, `skills/`, `agents/`, `commands/`, `hooks/`, `mcp/`) are **deferred** — each appears when its subsystem's slice arrives.
+All other `.noir/` subdirectories from blueprint §5.4 (`state/`, `specs/`, `memory/`, `context/`, `skills/`, `agents/`, `commands/`, `hooks/`, `mcp/`) are **deferred**: each appears when its subsystem's slice arrives.
 
 ---
 
@@ -116,20 +116,20 @@ The only tool surface in the skeleton (no args). Returns project + runtime statu
 - **Gate 1 (stdio):** `{ noir: <version>, project: { id, name }, host: "claude", transport: "stdio", daemon: false }`
 - **Gate 2 (daemon):** `{ …, transport: "streamable-http", daemon: true, pid: <number>, uptimeSec: <number> }`
 
-### 5.2 Gate 1 — stdio round-trip
+### 5.2 Gate 1: stdio round-trip
 - `@noir-ai/daemon` builds an MCP server via `@modelcontextprotocol/server` (v2), registers `noir.host_status`, and binds the SDK's **stdio** transport.
-- Entry point: `noir mcp serve --stdio` (Claude spawns it). The `--stdio` flag means **force in-process stdio mode** (skip the daemon entirely) — this is Gate 1's mode and also the daemon's FS-fallback path.
+- Entry point: `noir mcp serve --stdio` (Claude spawns it). The `--stdio` flag means **force in-process stdio mode** (skip the daemon entirely): this is Gate 1's mode and also the daemon's FS-fallback path.
 - The `claude` adapter emits root `.mcp.json`:
   ```json
   { "mcpServers": { "noir": { "command": "noir", "args": ["mcp", "serve", "--stdio"] } } }
   ```
 - `noir init` scaffolds `.noir/` (NOIR.md, config.yml, project.id) then runs the claude adapter to emit `.mcp.json` + `CLAUDE.md`.
 
-**Acceptance — Gate 1:**
+**Acceptance: Gate 1:**
 - **(a) Automated:** a vitest integration test spawns `noir mcp serve --stdio`, connects with a real MCP client (`@modelcontextprotocol/client`), calls `host_status`, asserts the Gate-1 JSON.
 - **(b) Manual (thesis proof):** `noir init` → open Claude Code in the project → invoke the `noir` MCP tool → observe the `host_status` response.
 
-### 5.3 Gate 2 — daemon-backed (Streamable HTTP)
+### 5.3 Gate 2: daemon-backed (Streamable HTTP)
 - The **same** handler core additionally binds **Streamable HTTP** via `@modelcontextprotocol/node`.
 - A daemon lifecycle manager in `@noir-ai/daemon`:
   - Auto-start on demand (first connect / `noir` invocation).
@@ -138,9 +138,9 @@ The only tool surface in the skeleton (no args). Returns project + runtime statu
   - Health endpoint: `GET /health`.
   - Graceful shutdown on `SIGTERM`/`SIGINT`.
   - Stale-socket detection + reclaim (PID dead → take over).
-- Listens on **localhost TCP** (`127.0.0.1` only), **not** a unix socket — Claude Code's `.mcp.json` `url` transport expects `http(s)://`. (Shared-secret token noted as a security follow-up.)
+- Listens on **localhost TCP** (`127.0.0.1` only), **not** a unix socket: Claude Code's `.mcp.json` `url` transport expects `http(s)://`. (Shared-secret token noted as a security follow-up.)
 - **Daemon activation:** a plain HTTP `.mcp.json` only points at a URL, so something must bring the daemon up. For the skeleton, any `noir` invocation runs an `ensureDaemonRunning()` helper that starts-if-down (detached, writes `daemon.pid`); `noir daemon start` / `noir daemon stop` are explicit controls. In the Gate 2 manual demo the user runs `noir` once to bring the daemon up, then Claude Code (HTTP `.mcp.json`) connects to it.
-  - **v0 implementation note (2026-07-23 reconciliation):** the shipped skeleton runs a **foreground daemon** — `noir daemon start` blocks in-process, with the http server + idle timer keeping it alive, and the lifecycle record is written to `~/.noir/daemon.json` (pid + port), not `daemon.pid`. The detached / socket-activated lifecycle described above is a **post-v0 refinement**; the foreground shape is sufficient for the Gate 2 round-trip and acceptance.
+  - **v0 implementation note (2026-07-23 reconciliation):** the shipped skeleton runs a **foreground daemon**: `noir daemon start` blocks in-process, with the http server + idle timer keeping it alive, and the lifecycle record is written to `~/.noir/daemon.json` (pid + port), not `daemon.pid`. The detached / socket-activated lifecycle described above is a **post-v0 refinement**; the foreground shape is sufficient for the Gate 2 round-trip and acceptance.
 - **Serve modes (unambiguous):**
   - `noir mcp serve --stdio` → in-process stdio (Gate 1 / FS-fallback). Never touches the daemon.
   - `noir mcp serve` (no flag) → prefer the daemon: connect if up, else start it, else if it cannot start fall back to in-process stdio with a stderr warning. (This is the graceful-degradation story, D7/principle 5/Risk #1, built in from day one.)
@@ -150,13 +150,13 @@ The only tool surface in the skeleton (no args). Returns project + runtime statu
   { "mcpServers": { "noir": { "type": "http", "url": "http://127.0.0.1:<port>/mcp" } } }
   ```
 
-**Acceptance — Gate 2:**
+**Acceptance: Gate 2:**
 - **(a) Automated:** start daemon → HTTP `host_status` round-trip (`daemon: true`); kill daemon → assert `noir mcp serve` falls back to in-process stdio (degradation test); two clients through one daemon (proves shared state); idle-stop fires after timeout; stale-socket reclaim works.
 - **(b) Manual:** with the daemon running, Claude Code (HTTP `.mcp.json`) connects and `host_status` reports `daemon: true`.
 
 ---
 
-## 6. S0 branding — legacy plugin rebrand
+## 6. S0 branding: legacy plugin rebrand
 
 The repo is Noir-branded but still ships the predecessor Claude plugin under old names. Realign it as a focused S0 task (independent and cheap; can be the first commit on `develop`).
 
@@ -172,7 +172,7 @@ The repo is Noir-branded but still ships the predecessor Claude plugin under old
 
 ## 7. Error handling & degradation
 
-- **stdio logging discipline (real MCP gotcha):** stdout is reserved for JSON-RPC — **all logs go to stderr** (or a file). Implemented from day one.
+- **stdio logging discipline (real MCP gotcha):** stdout is reserved for JSON-RPC: **all logs go to stderr** (or a file). Implemented from day one.
 - Daemon unreachable → in-process stdio fallback + a stderr warning.
 - Stale daemon socket (PID dead) → detect on connect, reclaim, restart.
 - No `.noir/` (not initialized) → `host_status` returns a clear `"not initialized; run \`noir init\`"` message, not an exception.
@@ -184,8 +184,8 @@ The repo is Noir-branded but still ships the predecessor Claude plugin under old
 
 - **Unit:** core config-schema validation; `ProjectId` generation; adapter emitter output (snapshot of generated `.mcp.json` + `CLAUDE.md`).
 - **Integration (Gate 1):** stdio server subprocess + real MCP client → `host_status`.
-- **Integration (Gate 2):** daemon lifecycle — start, health, HTTP round-trip, idle-stop, stale-socket reclaim, FS-fallback path.
-- **CI:** GitHub Actions, macOS + Linux, Node LTS — `pnpm install → biome check → tsc --noEmit → tsup build → vitest`.
+- **Integration (Gate 2):** daemon lifecycle: start, health, HTTP round-trip, idle-stop, stale-socket reclaim, FS-fallback path.
+- **CI:** GitHub Actions, macOS + Linux, Node LTS: `pnpm install → biome check → tsc --noEmit → tsup build → vitest`.
 
 ---
 

@@ -47,7 +47,7 @@ export function readManagedBlock(file: string, block: ManagedBlock): string | nu
  *  stripping any prior region for `block` and preserving all other content.
  *
  *  The write is atomic (via `atomicWriteFile`: temp sibling + rename), because
- *  this region lives in a file the user also owns — CLAUDE.md, .gitignore and
+ *  this region lives in a file the user also owns: CLAUDE.md, .gitignore and
  *  friends. A plain truncating write that is interrupted part-way through would
  *  leave the user's own content half-written on disk. The temp-and-rename swap
  *  also keeps the destination's existing permissions (the helper restores them),

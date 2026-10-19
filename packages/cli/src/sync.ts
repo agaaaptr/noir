@@ -1,4 +1,4 @@
-// `noir sync` — re-emit the runtime subset of the scaffold manifest.
+// `noir sync`: re-emit the runtime subset of the scaffold manifest.
 //
 // Refactor: delegates to `@noir-ai/create`'s `scaffold({mode:'sync'})`,
 // which emits ONLY the regenerate + managedBlock entries (the always-safe-to-
@@ -8,7 +8,7 @@
 //   - The engine re-emits `.mcp.json` (regenerate) + NOIR.md brief
 //     (managedBlock) + CLAUDE.md context/rules blocks + ignore-file blocks.
 //     The predecessor's sync re-emitted only CLAUDE.md blocks + ignores and
-//     did NOT refresh `.mcp.json`/NOIR.md — the engine is a strict superset
+//     did NOT refresh `.mcp.json`/NOIR.md: the engine is a strict superset
 //     here, so a transport/url change is now picked up by `noir sync`.
 //   - The engine does NOT seed `.noir/rules/RULES.md` on sync (RULES.md is
 //     skipIfExists, owned by init/create). The predecessor seeded it when
@@ -37,7 +37,7 @@ import { resolveInteractive } from './output.js';
 export interface SyncOptions {
   /** `--host <id>` override. When set, takes precedence over the
    *  `.noir/config.yml` `host:` field. Useful for re-emitting under a
-   *  different host without re-init (advanced — the canonical host stays
+   *  different host without re-init (advanced: the canonical host stays
    *  whatever init wrote). */
   host?: HostId;
   /** Overwrite differing regenerated files without prompting (bypasses
@@ -51,21 +51,21 @@ export interface SyncOptions {
    *  the bin as `--no-merge-regions`. When explicitly `false`, hand-edits
    *  inside `<!-- noir:* -->` markers are discarded on a template upgrade. */
   mergeManagedRegions?: boolean;
-  /** `--dry-run`/`--preview` — report the planned writes to stderr
+  /** `--dry-run`/`--preview`: report the planned writes to stderr
    *  without touching disk. sync still requires a valid `.noir/project.id`
    *  (the engine's "not initialized" gate fires regardless). */
   dryRun?: boolean;
   /** Alias for `--dry-run`. Kept on the options bag so direct callers can
    *  pass either spelling; the bin collapses both flags before dispatch. */
   preview?: boolean;
-  /** `--check` — a dry-run that exits non-zero when any managed artifact would
+  /** `--check`: a dry-run that exits non-zero when any managed artifact would
    *  change (the CI drift gate). Never writes. */
   check?: boolean;
 }
 
 export async function sync(root: string, opts: SyncOptions = {}): Promise<ScaffoldResult> {
   const host = resolveSyncHost(root, opts);
-  // The engine reads ScaffoldOptions.interactive (hermetic — never
+  // The engine reads ScaffoldOptions.interactive (hermetic: never
   // process.env). The CLI derives it once from the bridge + TTY/CI/NO_COLOR gate.
   const interactive = resolveInteractive();
   const conflictOpts = buildConflictOpts({ force: opts.force, interactive });
@@ -101,7 +101,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
   // its "not initialized" gate when `.noir/project.id` is missing, so a dry-run
   // sync on an uninitialized project is a clean error (not a misleading no-op).
   // `--check` is the same dry-run plus a non-zero exit when anything would
-  // change — the CI drift gate.
+  // change: the CI drift gate.
   if (dryRun) {
     if (opts.check === true) {
       const drift = res.written.length;
@@ -123,7 +123,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
   reportEnvHeal(res);
 
   // Surface the no-op so users see sync was a true no-op on disk (the
-  // scaffold wrote nothing — every runtime file was content-hash identical).
+  // scaffold wrote nothing: every runtime file was content-hash identical).
   // Skills emission below still runs (it has its own dedup).
   if (res.written.length === 0 && res.identical.length > 0) {
     process.stderr.write('Nothing to sync (Noir-managed files are up to date).\n');
@@ -132,7 +132,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
   const adapter = resolveAdapter(host);
   const skillsDir = adapter.skillsDir?.({ root });
   if (skillsDir === undefined) {
-    // Standardized wording — same phrase across init/sync/create so logs
+    // Standardized wording: same phrase across init/sync/create so logs
     // grep uniformly. (sync used to phrase this as "nothing to sync".)
     process.stderr.write(`host '${host}' has no skill emitter; skipping skills\n`);
   } else {
@@ -181,7 +181,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<Scaffo
 }
 
 /** Resolve the sync host: explicit `--host` override > `.noir/config.yml`
- *  `host:` field > `'claude'` (default — preserves the v1.1 regression anchor
+ *  `host:` field > `'claude'` (default: preserves the v1.1 regression anchor
  *  for projects initialized before the multi-host layer). The config read is
  *  best-effort: if
  *  `.noir/config.yml` is absent OR fails to parse, scaffold's own

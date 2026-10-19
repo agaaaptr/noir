@@ -4,7 +4,7 @@
 // header-color / responsive-width behavior these tests exist to lock down).
 //
 // What MUST hold:
-//   - badge() ALWAYS returns SYMBOL + TEXT LABEL — the accessibility invariant
+//   - badge() ALWAYS returns SYMBOL + TEXT LABEL: the accessibility invariant
 //     (NO_COLOR and colorblind users get the same information as a sighted user).
 //   - table() NEVER paints a header red (RED is reserved for ERROR), and strips
 //     ALL ANSI under NO_COLOR (no @colors/colors leak from cli-table3).
@@ -86,7 +86,7 @@ afterEach(() => {
   });
 });
 
-describe('badge — symbol + text-label invariant', () => {
+describe('badge: symbol + text-label invariant', () => {
   it('each state pairs its symbol with the state name by default', () => {
     expect(badge('ok')).toMatch(/✓.*ok/);
     expect(badge('warn')).toMatch(/⚠.*warn/);
@@ -128,7 +128,7 @@ describe('badge — symbol + text-label invariant', () => {
   });
 });
 
-describe('useColor — env gates', () => {
+describe('useColor: env gates', () => {
   it('NO_COLOR ⇒ false (any non-empty value)', () => {
     process.env.NO_COLOR = '1';
     expect(useColor()).toBe(false);
@@ -137,7 +137,7 @@ describe('useColor — env gates', () => {
   });
 
   it('CLICOLOR_FORCE=1 ⇒ true (forces color on a redirected stream)', () => {
-    // Non-TTY stdout, no other enabler — only CLICOLOR_FORCE flips it on.
+    // Non-TTY stdout, no other enabler: only CLICOLOR_FORCE flips it on.
     Object.defineProperty(process.stdout, 'isTTY', { value: false, configurable: true });
     process.env.CLICOLOR_FORCE = '1';
     expect(useColor()).toBe(true);
@@ -184,23 +184,23 @@ describe('accessibleMode', () => {
   });
 });
 
-describe('table — cli-table3 rendering invariants (real, unmocked)', () => {
+describe('table: cli-table3 rendering invariants (real, unmocked)', () => {
   // Two columns: a narrow fixed label and a wide free-text body (the shape that
   // used to go red + overflow). Rows are sized to force word-wrap under narrow
   // terminals and full-width rendering under wide ones.
   const rows = [
-    { Check: 'runtime', Status: 'OK', Detail: 'node 20 — healthy' },
+    { Check: 'runtime', Status: 'OK', Detail: 'node 20: healthy' },
     {
       Check: 'native deps',
       Status: 'WARN',
       Detail:
-        'better-sqlite3 loadable but sqlite-vec native layer missing — search degrades to BM25',
+        'better-sqlite3 loadable but sqlite-vec native layer missing: search degrades to BM25',
     },
     { Check: 'store', Status: 'FAIL', Detail: 'store DB would not open' },
   ];
   const cols = ['Check', 'Status', 'Detail'];
 
-  it('NEVER paints a header (or any cell) red — red is reserved for ERROR', () => {
+  it('NEVER paints a header (or any cell) red: red is reserved for ERROR', () => {
     process.env.CLICOLOR_FORCE = '1'; // force color ON so any red WOULD show
     const { read, restore } = captureStderr();
     try {
@@ -265,7 +265,7 @@ describe('table — cli-table3 rendering invariants (real, unmocked)', () => {
     try {
       table(rows, cols, {});
       const out = read();
-      // Find the line carrying the 'Check' header — it must ALSO contain 'Status'
+      // Find the line carrying the 'Check' header: it must ALSO contain 'Status'
       // and 'Detail' (a wrapped header would split them across lines).
       const headerLine = out.split('\n').find((l) => l.includes('Check'));
       expect(headerLine).toBeDefined();

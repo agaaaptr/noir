@@ -1,4 +1,4 @@
-// `noir init` — first-run + `--upgrade`.
+// `noir init`: first-run + `--upgrade`.
 //
 // Refactor: the ad-hoc writers (syncIgnores, writeManagedRegion,
 // writeFileSync for .mcp.json/project.id/config.yml/NOIR.md/RULES.md) are
@@ -7,12 +7,12 @@
 // emits; this module is now a thin caller that owns ONLY:
 //   - the transport/url precondition (the localhost security gate, whose
 //     error strings are locked by url-validation.test.ts), and
-//   - skills emission (out-of-manifest by design — composed after scaffold()).
+//   - skills emission (out-of-manifest by design: composed after scaffold()).
 //
 // Multi-host: the 8 direct `claudeAdapter` imports across init/sync/create
 // collapsed to `resolveAdapter(host)` where `host` comes from `--host <id>`
 // (default `'claude'`). The adapter drives (a) the manifest via
-// `scaffold({host})` and (b) skills emission — claude/cursor have a skill dir;
+// `scaffold({host})` and (b) skills emission: claude/cursor have a skill dir;
 // gemini/agents-md/opencode have no skill concept and the call is skipped.
 //
 // Deliberate behavior changes vs the predecessor (latent-bug fixes; see the
@@ -44,7 +44,7 @@ export interface InitOptions {
   url?: string;
   /** `noir init --upgrade`: run scaffold migrations from the on-disk
    *  scaffold-version to current, then re-emit every manifest mode except
-   *  `mergeJson` — including `skipIfExists`, which creates only when the file is
+   *  `mergeJson`: including `skipIfExists`, which creates only when the file is
    *  absent. That backfills seeds added to the manifest after this project was
    *  initialized without ever touching a user-owned file. */
   upgrade?: boolean;
@@ -62,7 +62,7 @@ export interface InitOptions {
   /** Re-scaffold even if already initialized (bypasses the
    *  already-initialized no-op guard in scaffold()). */
   force?: boolean;
-  /** `--dry-run`/`--preview` — report the planned writes to stderr
+  /** `--dry-run`/`--preview`: report the planned writes to stderr
    *  (via {@link reportPlannedWrites}) without touching disk. The scaffold
    *  engine already supports this; the CLI just surfaces it. */
   dryRun?: boolean;
@@ -79,13 +79,13 @@ export interface InitOptions {
  */
 export interface InitResult extends ScaffoldResult {
   /** One record per skill file that existed AND differed from the compiled
-   *  bytes, with the resolution that was applied — including the files a
+   *  bytes, with the resolution that was applied: including the files a
    *  non-interactive run left alone. Always an array once skills emission has
    *  run; absent on the `--dry-run` and already-initialized paths, which stop
    *  before emission. */
   skillConflicts?: SkillConflict[];
   /** Names of the skills left with the user's own bytes because a differing
-   *  file was preserved. Empty when every skill is current — the `--json`
+   *  file was preserved. Empty when every skill is current: the `--json`
    *  counterpart of the stderr line that warns about stale skills. */
   preservedSkills?: string[];
 }
@@ -101,7 +101,7 @@ export async function init(root: string, opts: InitOptions): Promise<InitResult 
   assertTransportUrl(opts);
 
   const host: HostId = resolveInitHost(root, opts);
-  // The engine reads ScaffoldOptions.interactive (hermetic — never
+  // The engine reads ScaffoldOptions.interactive (hermetic: never
   // process.env). The CLI derives it once from the bridge + TTY/CI/NO_COLOR gate.
   const interactive = resolveInteractive();
   const conflictOpts = buildConflictOpts({ force: opts.force, interactive });
@@ -123,7 +123,7 @@ export async function init(root: string, opts: InitOptions): Promise<InitResult 
     ...conflictOpts,
   });
   // dry-run reports the planned writes (result's written/skipped/identical)
-  // and stops BEFORE skills emission + the "initialized" message — nothing was
+  // and stops BEFORE skills emission + the "initialized" message: nothing was
   // written, so the host skill dir must stay untouched and we must not claim
   // init. Under --json the bin emits the planned list as the `{ok, data}`
   // envelope on stdout (the data channel) instead.
@@ -133,10 +133,10 @@ export async function init(root: string, opts: InitOptions): Promise<InitResult 
   }
   // Report the permission heal BEFORE the already-initialized check. A bare
   // `noir init` on an existing project re-emits nothing, but it still
-  // re-asserts the 0600 mode on `.noir/.env` — and a file fixed without a word
+  // re-asserts the 0600 mode on `.noir/.env`: and a file fixed without a word
   // is exactly the silent drift this re-assert exists to end.
   reportEnvHeal(res);
-  // If the already-initialized guard no-op'd scaffold, stop — don't re-emit
+  // If the already-initialized guard no-op'd scaffold, stop: don't re-emit
   // skills or print "initialized" (scaffold already printed the no-op message).
   if (res.noop) return res;
 
@@ -176,7 +176,7 @@ export async function init(root: string, opts: InitOptions): Promise<InitResult 
     );
   }
   // Migration-transformed files (e.g. `.noir/config.yml` gaining the env
-  // pointer) are surfaced on their own — distinct from `refreshed` (doc seeds),
+  // pointer) are surfaced on their own: distinct from `refreshed` (doc seeds),
   // because a migrated file is a config change the next `git diff` will show.
   if (res.migrationChanged.length > 0) {
     process.stderr.write(
@@ -202,7 +202,7 @@ export async function init(root: string, opts: InitOptions): Promise<InitResult 
  * write artifacts for the wrong host and leave the ones the project actually
  * uses stale.
  *
- * The config read is best-effort — an absent, unreadable, or invalid config
+ * The config read is best-effort: an absent, unreadable, or invalid config
  * must not fail the run, so each degrades to the default. Only the unreadable
  * case is reported, because that is the one where a host the user configured
  * cannot be determined. A config that parses but omits `host:` is not an error:
@@ -215,7 +215,7 @@ function resolveInitHost(root: string, opts: InitOptions): HostId {
     return loadProjectInfo(root).config.host;
   } catch {
     // Also reached when the config is readable but the project id is missing or
-    // invalid — either way the configured host is unknowable from here.
+    // invalid: either way the configured host is unknowable from here.
     process.stderr.write(
       `Could not read the configured host from ${paths.config(root)}; using 'claude'.\n`,
     );
@@ -233,16 +233,16 @@ function resolveInitHost(root: string, opts: InitOptions): HostId {
  * are still an unedited copy of an older version's text.
  * `conflicts` is always empty under dryRun (no writes → no conflicts).
  * `fileModes` carries the planned permission for entries that would CREATE at a
- * non-default mode — annotated onto the planned line (`… (mode 600)`).
+ * non-default mode: annotated onto the planned line (`… (mode 600)`).
  *
- * Emitted via the `log()` stderr helper — a HUMAN diagnostic, so under `--json`
+ * Emitted via the `log()` stderr helper: a HUMAN diagnostic, so under `--json`
  * the bin emits the planned list as the structured `{ok, data}` envelope on
  * stdout (the data channel) instead, matching the CLI stream discipline used by
  * the other init/create/sync diagnostics. Shared by init/create/sync (the same
  * dryRun surface on all three scaffold modes).
  */
 export function reportPlannedWrites(res: ScaffoldResult): void {
-  log('Dry run — no files were written.');
+  log('Dry run: no files were written.');
   if (res.written.length > 0) {
     log('Planned writes:');
     for (const p of res.written) {
@@ -276,10 +276,10 @@ export function reportPlannedWrites(res: ScaffoldResult): void {
  *
  * The seed writer applies the file's 0600 mode only when it CREATES it, so the
  * scaffold re-asserts the mode on every run and records what it did on
- * `ScaffoldResult.envMode`. Only a real heal is worth a line — a file that was
+ * `ScaffoldResult.envMode`. Only a real heal is worth a line: a file that was
  * already owner-only, or a platform with no POSIX mode bits, has nothing to
  * report, and the announcement must not repeat on runs that changed nothing.
- * Shared by every command whose run can find the file already there — `init`,
+ * Shared by every command whose run can find the file already there: `init`,
  * `sync` and `create` (whose `--force`/re-run over an existing tree reaches the
  * same file `init` would).
  */
@@ -310,7 +310,7 @@ async function emitHostSkills(
   const adapter = resolveAdapter(host);
   const skillsDir = adapter.skillsDir?.({ root });
   if (skillsDir === undefined) {
-    // Standardized wording — same phrase across init/sync/create so logs
+    // Standardized wording: same phrase across init/sync/create so logs
     // grep uniformly. (Each command used to phrase this differently.)
     process.stderr.write(`host '${host}' has no skill emitter; skipping skills\n`);
     return undefined;
@@ -359,7 +359,7 @@ export function preservedStaleLine(preserved: readonly string[]): string | undef
 
 /**
  * Transport + URL precondition. The error strings here are the SECURITY GATE
- * locked by `url-validation.test.ts` — do not rephrase. Thrown errors are
+ * locked by `url-validation.test.ts`: do not rephrase. Thrown errors are
  * plain `Error`s (bin.ts's `main().catch` maps them to stderr + exitCode 1).
  *
  * Exported so `noir create` (commands/create.ts) reuses the SAME gate instead

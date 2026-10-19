@@ -22,7 +22,7 @@ export function loadProjectInfo(root: string): ProjectInfo {
     throw new Error(`Noir is not initialized in ${root}. Run \`noir init\` first.`);
   }
   // Reject a non-UUID id (which could carry `/`, `..`, or an absolute segment)
-  // before it ever reaches a path join — the ProjectId "never a filesystem
+  // before it ever reaches a path join: the ProjectId "never a filesystem
   // path" invariant is enforced here, the single load boundary.
   if (!isValidProjectId(rawId)) {
     throw new Error(
@@ -42,8 +42,8 @@ export function loadProjectInfo(root: string): ProjectInfo {
  *  absent, unreadable, or does not parse.
  *
  *  Unlike {@link loadProjectInfo} this does not need a canonical project id, so
- *  a caller that runs BEFORE (or without) an identity — a first `noir init` over
- *  a config the user wrote by hand — can still see what the project configured.
+ *  a caller that runs BEFORE (or without) an identity: a first `noir init` over
+ *  a config the user wrote by hand: can still see what the project configured.
  *  An unusable config degrades to `undefined` and the caller applies the schema
  *  defaults, which is what an absent config means anyway. */
 export function readProjectConfig(root: string): NoirConfig | undefined {

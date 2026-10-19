@@ -1,11 +1,11 @@
-// S10 — multi-host CLI tests.
+// S10: multi-host CLI tests.
 //
 // Drives the REAL `init`/`create`/`sync` (no mocks) end-to-end through the
 // resolved adapter for each `--host <id>`. Asserts the host's primary
 // artifacts land on disk + that the chosen host persists to `.noir/config.yml`
 // (so a subsequent bare `noir sync` re-emits the SAME host without --host).
 // The claude default is asserted byte-identical to v1.1 (fix-wave I1 REMOVED
-// the additive root AGENTS.md — it double-imported .noir/ via CLAUDE.md).
+// the additive root AGENTS.md: it double-imported .noir/ via CLAUDE.md).
 //
 // The bin-level `--host` argv wiring is covered in bin.test.ts; this file
 // covers the module-level behavior the bin dispatches to.
@@ -44,7 +44,7 @@ async function captureStderr(fn: () => Promise<unknown>): Promise<string> {
   }
 }
 
-describe('noir init --host <id> — per-host artifact matrix', () => {
+describe('noir init --host <id>: per-host artifact matrix', () => {
   it('claude (default): CLAUDE.md + .mcp.json + .claude/skills (SKILL.md); NO AGENTS.md (I1)', async () => {
     await init(root, { transport: 'stdio' });
 
@@ -70,7 +70,7 @@ describe('noir init --host <id> — per-host artifact matrix', () => {
     // I1: gemini NO LONGER emits AGENTS.md.
     expect(existsSync(join(root, 'AGENTS.md'))).toBe(false);
     expect(existsSync(join(root, '.gemini', 'mcp.json'))).toBe(true);
-    // Gemini has no skill concept — no .claude/skills, no .gemini/skills.
+    // Gemini has no skill concept: no .claude/skills, no .gemini/skills.
     expect(existsSync(join(root, '.claude'))).toBe(false);
     // Claude artifacts do NOT leak.
     expect(existsSync(join(root, 'CLAUDE.md'))).toBe(false);
@@ -83,17 +83,17 @@ describe('noir init --host <id> — per-host artifact matrix', () => {
     await init(root, { transport: 'stdio', host: 'cursor' });
 
     expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
-    // No separate host-rules .mdc — the prior `noir-contract.mdc` pointer was
+    // No separate host-rules .mdc: the prior `noir-contract.mdc` pointer was
     // REMOVED (it collided with the cursor flat-skill prune of `noir-*.mdc`
     // under .cursor/rules/). Cursor's rules ride AGENTS.md's
     // `@.noir/rules/RULES.md` import instead (same universal surface as
     // agents-md/opencode). The `noir-rules` builtin skill now legitimately
-    // lands at `noir-rules.mdc` (a real skill, FLAT) — no host-rules pointer
+    // lands at `noir-rules.mdc` (a real skill, FLAT): no host-rules pointer
     // collides with it anymore.
     expect(existsSync(join(root, '.cursor', 'rules', 'noir-rules.mdc'))).toBe(true);
     expect(existsSync(join(root, '.cursor', 'mcp.json'))).toBe(true);
     // Cursor skills land FLAT under .cursor/rules/ (one .mdc per skill, no
-    // per-name subdir — Cursor's rule loader does not recurse).
+    // per-name subdir: Cursor's rule loader does not recurse).
     expect(existsSync(join(root, '.cursor', 'rules', 'noir-brainstorming.mdc'))).toBe(true);
     // The prior nested layout is GONE.
     expect(
@@ -129,8 +129,8 @@ describe('noir init --host <id> — per-host artifact matrix', () => {
   });
 });
 
-describe('noir create --host <id> — greenfield per host', () => {
-  it('create --host gemini bootstraps a fresh dir with GEMINI.md + .gemini/mcp.json (NO AGENTS.md — I1)', async () => {
+describe('noir create --host <id>: greenfield per host', () => {
+  it('create --host gemini bootstraps a fresh dir with GEMINI.md + .gemini/mcp.json (NO AGENTS.md: I1)', async () => {
     const target = join(root, 'fresh-gemini');
     expect(existsSync(target)).toBe(false);
 
@@ -159,11 +159,11 @@ describe('noir create --host <id> — greenfield per host', () => {
   });
 });
 
-describe('noir sync — host round-trips from .noir/config.yml', () => {
+describe('noir sync: host round-trips from .noir/config.yml', () => {
   it('init --host gemini then bare sync re-emits GEMINI.md (host read from config)', async () => {
     await init(root, { transport: 'stdio', host: 'gemini' });
     // Wipe GEMINI.md to USER-ONLY content (no managed regions) so the bare sync
-    // must RE-EMIT both regions. (Merge is now the default — a stale IN-REGION
+    // must RE-EMIT both regions. (Merge is now the default: a stale IN-REGION
     // edit would be PRESERVED by the merge, so removing the regions entirely is
     // the merge-default-compatible way to prove sync re-emits them. A missing
     // region is always re-added fresh.)
@@ -177,7 +177,7 @@ describe('noir sync — host round-trips from .noir/config.yml', () => {
     expect(md).toContain('@.noir/NOIR.md');
     // User content OUTSIDE the markers survives sync.
     expect(md).toContain('# My gemini notes');
-    // Host was read from config (gemini), not the default claude — proven by
+    // Host was read from config (gemini), not the default claude: proven by
     // GEMINI.md being touched at all (a claude sync would not write GEMINI.md).
     expect(md).toContain('<!-- noir:rules begin -->');
   });
@@ -187,7 +187,7 @@ describe('noir sync — host round-trips from .noir/config.yml', () => {
     await init(root, { transport: 'stdio' });
     expect(existsSync(join(root, 'CLAUDE.md'))).toBe(true);
 
-    // Override-emt under cursor — adds cursor artifacts alongside.
+    // Override-emt under cursor: adds cursor artifacts alongside.
     await sync(root, { host: 'cursor' });
     // Cursor's rules ride AGENTS.md's @-import (no separate host-rules .mdc).
     expect(existsSync(join(root, 'AGENTS.md'))).toBe(true);
@@ -195,7 +195,7 @@ describe('noir sync — host round-trips from .noir/config.yml', () => {
   });
 });
 
-describe('noir init — the re-emit host round-trips from .noir/config.yml', () => {
+describe('noir init: the re-emit host round-trips from .noir/config.yml', () => {
   it('bare --upgrade on a cursor project re-emits cursor artifacts and writes no claude surface', async () => {
     await init(root, { transport: 'stdio', host: 'cursor' });
     // Delete the cursor surfaces so their reappearance is proof the upgrade ran
@@ -252,7 +252,7 @@ describe('noir init — the re-emit host round-trips from .noir/config.yml', () 
     expect(text).toContain('(host: claude,');
   });
 
-  it('an unreadable config does not fail the run — it degrades to claude and says so', async () => {
+  it('an unreadable config does not fail the run: it degrades to claude and says so', async () => {
     await init(root, { transport: 'stdio', host: 'cursor' });
     writeFileSync(paths.config(root), 'host: [unterminated\n', 'utf8');
 
@@ -265,7 +265,7 @@ describe('noir init — the re-emit host round-trips from .noir/config.yml', () 
   });
 });
 
-describe('noir create --force — the re-emit host round-trips from .noir/config.yml', () => {
+describe('noir create --force: the re-emit host round-trips from .noir/config.yml', () => {
   it('a forced re-create over a gemini project keeps gemini artifacts and writes no claude surface', async () => {
     const target = join(root, 'force-gemini');
     await create(target, { transport: 'stdio', host: 'gemini' });
@@ -285,10 +285,10 @@ describe('noir create --force — the re-emit host round-trips from .noir/config
   });
 });
 
-describe('noir init — claude byte-identity (regression anchor)', () => {
+describe('noir init: claude byte-identity (regression anchor)', () => {
   // Fix-wave I1 restored the byte-identity guarantee: the default `noir init` is
   // now FULLY byte-equivalent to v1.1 (the additive root AGENTS.md was REMOVED
-  // — claude's CLAUDE.md already @-imports .noir/ sources, so AGENTS.md
+  //: claude's CLAUDE.md already @-imports .noir/ sources, so AGENTS.md
   // double-imported them). The scaffold.test.ts parity gates assert .mcp.json +
   // CLAUDE.md regions byte-equal the adapter; here we add the no-AGENTS.md
   // regression anchor + confirm the v1.1 files are still byte-stable.

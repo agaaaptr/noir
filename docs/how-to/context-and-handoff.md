@@ -3,7 +3,7 @@
 This page covers the two ends of a working session. At the start you need the
 right code in front of you without reading whole files; at the end you need the
 state of the work to survive into the next session. The first half is
-**context** — index, search, status. The second half is **handoff** — `noir
+**context**: index, search, status. The second half is **handoff**: `noir
 handoff` and its session-end alias `noir wrap`.
 
 They live on one page because they are the same move in opposite directions: one
@@ -19,7 +19,7 @@ noir daemon start --detach
 
 Context search reads a **read-only fallback** when the daemon is down, so it
 keeps working. Indexing and status do not: they need the daemon and exit `4`
-without it. Handoff never fails on a missing daemon — it degrades (§4).
+without it. Handoff never fails on a missing daemon: it degrades (§4).
 
 ## 1. Index the project
 
@@ -29,7 +29,7 @@ noir context index --path src --path packages/cli
 noir context index --force
 ```
 
-The indexer walks the paths you give it — the project root when you give none —
+The indexer walks the paths you give it: the project root when you give none —
 splits each file into chunks, and stores those chunks plus a vector for each.
 That scope is the one you *index*, not one you configure: the
 `context.roots` key in `.noir/config.yml` is descriptive only, and
@@ -42,7 +42,7 @@ That scope is the one you *index*, not one you configure: the
 
 Without `--force` the walk is **incremental**: a file whose content hash has not
 changed is skipped, and a file that vanished is deleted from the index. Reach
-for `--force` when the index looks wrong rather than merely stale — after an
+for `--force` when the index looks wrong rather than merely stale: after an
 embedder swap, or a corrupted store.
 
 To keep the index small, index the directories that matter rather than the whole
@@ -60,7 +60,7 @@ Total chunks           4211
 
 `Failed` counts files that could not be read (binary, encoding, IO). They are
 reported, not fatal. If the embedder is unavailable, the header carries
-`degraded: vectors skipped` — the chunks are indexed and searchable by keyword,
+`degraded: vectors skipped`: the chunks are indexed and searchable by keyword,
 but not by meaning.
 
 ## 2. Search it
@@ -89,14 +89,14 @@ context search — 4 hits · hybrid · 1832 tokens
 | `Score` | The fused rank score. Compare hits to each other; the absolute number is not meaningful on its own. |
 | `Snippet` | The matching region of the chunk. |
 
-The header names the **mode** the search actually ran in — `hybrid` when both
+The header names the **mode** the search actually ran in: `hybrid` when both
 passes contributed, `bm25-only` when the vectors were unavailable. Two suffixes
 can follow:
 
 - `degraded: BM25-only` means the daemon was unreachable, so Noir fell back to a
   **read-only** in-process search over the same store. Keyword matching only;
   nothing was written. Start the daemon and re-run for the full ranking.
-- `(budget hit — results truncated)` — more hits were ranked than fit the
+- `(budget hit: results truncated)`: more hits were ranked than fit the
   per-request token budget (about 4k tokens). Narrow the query so the best hits
   come in under it.
 
@@ -122,10 +122,10 @@ Degraded        no
 `Docs` is the number of indexed documents, `Vectors` the number of vector rows.
 The **embedder** line is the one to read when search behaves oddly: it names the
 kind and the model that is actually in use, and `none (BM25-only)` means no
-embedder is configured at all — keyword search only. `Degraded` reports whether
+embedder is configured at all: keyword search only. `Degraded` reports whether
 the engine is running in a reduced mode.
 
-The default embedder is `local` — a small model that ships with Noir, needs no
+The default embedder is `local`: a small model that ships with Noir, needs no
 API key, and runs on your machine. Remote embedders are opt-in; see
 [configure-env.md](configure-env.md).
 
@@ -147,11 +147,11 @@ noir handoff --json | jq -r '.data.directive'
 ```
 
 The artifact carries the project identity, the active task and its phase, an
-**`## Open host` directive** — the exact line to paste into your host — the next
+**`## Open host` directive**: the exact line to paste into your host: the next
 step and the skill that performs it, and two bounded seeds:
 
-- **Extracted context** — up to 5 `context_search` hits for the task's domain.
-- **Extracted memory** — up to 5 `memory_recall` observations for the same.
+- **Extracted context**: up to 5 `context_search` hits for the task's domain.
+- **Extracted memory**: up to 5 `memory_recall` observations for the same.
 
 The extraction query is the **active task id**, or the project name when no task
 is active, so the seed is about the work in hand rather than the repository at
@@ -159,7 +159,7 @@ large. Five is a deliberate cap: this is a seed to start a conversation, not a
 dump.
 
 Two things `noir handoff` deliberately does **not** do. It never spawns the
-host — the directive is text, and you decide what to paste and where. And it
+host: the directive is text, and you decide what to paste and where. And it
 never hard-fails on a degraded environment: a down daemon or a missing embedder
 leaves a note in the artifact (`_No context hits (or daemon down)…_`) and the
 command still exits `0` with the rest of the handoff intact.
@@ -176,19 +176,19 @@ numbered, so a project accumulates an ordered series. The path is reported on
 stderr, and the artifact is **not** also printed to stdout: with `--write` you
 asked for a file, so that is what you get. The directory is gitignored by Noir's
 managed block (`.noir/handoff/`), because these prompts are session-specific and
-machine-local — paste-and-go, not reviewed source.
+machine-local: paste-and-go, not reviewed source.
 
 `--write --json` writes the file *and* emits the structured envelope, so a
 script can have both the artifact and its metadata.
 
-## 6. `noir wrap` — the session-end name
+## 6. `noir wrap`: the session-end name
 
 ```bash
 noir wrap
 ```
 
 `noir wrap` is `noir handoff` under the name you reach for at the end of a
-session. It is the **same handler** with the same flags — there is no second
+session. It is the **same handler** with the same flags: there is no second
 code path and no different output. The `noir-wrap` skill uses it to close out a
 task, which is why you will see it named in the phase ladder
 ([sdd-tasks.md](sdd-tasks.md)).
@@ -198,17 +198,17 @@ task, which is why you will see it named in the phase ladder
 **"Search returns nothing for a term I know is in the file."** Run
 `noir context status` and check the `Docs` and `Indexed files` counts, then look
 at the scope line of your last `noir context index` run. If the file was never in
-that scope — or was added after the last index — re-run the index naming it
+that scope: or was added after the last index: re-run the index naming it
 explicitly: `noir context index --path <dir>`. Coverage comes from the `--path`
 values, never from `context.roots`, which is informational only. If `Degraded` is
 `yes`, or the header said `degraded: BM25-only`, start the daemon.
 
 **"The index is huge and slow."** Index the directories that matter instead of
-the whole project — `noir context index --path src --path packages/cli`. Editing
+the whole project: `noir context index --path src --path packages/cli`. Editing
 `context.roots` in `.noir/config.yml` will not do it: the index scope is what you
 pass to `--path`, and a bare `noir context index` always means the project root.
 
-**"`context index` exits 4 but search works."** Correct — they differ on
+**"`context index` exits 4 but search works."** Correct: they differ on
 purpose. Search can still read on its own; indexing writes to the project
 database, and only the daemon may do that. `noir daemon start --detach`.
 
@@ -217,7 +217,7 @@ embedder is available; the artifact says which. Start the daemon and re-run.
 
 **"I edited the handoff file and it was overwritten."** `--write` reuses the
 numbered path for the same task, so a re-run regenerates it. Copy anything you
-edited out of `.noir/handoff/` — it is a generated artifact, not a source file.
+edited out of `.noir/handoff/`: it is a generated artifact, not a source file.
 
 ## See also
 

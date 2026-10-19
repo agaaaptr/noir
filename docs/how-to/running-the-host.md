@@ -1,6 +1,6 @@
 # How to run the host agent headless
 
-`noir run "<prompt>"` drives a host agentic CLI — Claude Code by default —
+`noir run "<prompt>"` drives a host agentic CLI: Claude Code by default —
 **headless**: no interactive session, the answer streams back as plain text, and
 the whole run is scriptable under `--json`. Use it for a one-off question, a
 step in a script or CI job, or any moment you want the host's answer without
@@ -25,7 +25,7 @@ is silenced by `--json` and `--quiet`.
 
 ## 1. Ask a question
 
-The prompt is every positional argument, joined with spaces — quoting is
+The prompt is every positional argument, joined with spaces: quoting is
 optional but keeps the shell out of it:
 
 ```bash
@@ -33,7 +33,7 @@ noir run "summarize the TODOs in src/"
 noir run summarize the TODOs in src/          # same prompt
 ```
 
-The host's answer — and only the answer — is written to **stdout** as it
+The host's answer: and only the answer: is written to **stdout** as it
 arrives. Everything else Noir says (usage totals, the transcript path, warnings)
 goes to **stderr**, so `noir run "…" > answer.md` captures the answer alone.
 
@@ -45,9 +45,9 @@ noir run --command claude-work "…"   # a specific host binary
 ```
 
 `--host` takes one of the supported adapter ids; `--command` takes the binary
-that host should be driven through. When the name is not on `PATH` — it is an
+that host should be driven through. When the name is not on `PATH`: it is an
 alias or a function from your shell rc, or a `PATH` entry only your interactive
-shell knows — Noir probes your shell for it and either re-spawns the resolved
+shell knows: Noir probes your shell for it and either re-spawns the resolved
 path or bridges the alias through it, passing the prompt as argv only, never
 shell-parsed. That probe needs `$SHELL` to be `zsh`, `bash`, or `fish`, and is
 skipped on Windows: without it, `--command` fails with "no executable found".
@@ -57,7 +57,7 @@ typing either way. Details: [host-profiles.md](host-profiles.md#note-shell-resol
 When the host fails, the run exits non-zero with one actionable sentence. On an
 **authentication** failure it also names every credential and gateway variable
 in effect (`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`)
-and where each came from — `.noir/.env` or the environment — so "unset it"
+and where each came from: `.noir/.env` or the environment: so "unset it"
 points at the file that actually supplies it. **No variable value is ever
 printed**, only its name and source. The last 20 lines of the host's own stderr
 follow, because that is where a host narrates its progress and its real error.
@@ -91,7 +91,7 @@ It names the host, then the model once the host has announced it, then the
 elapsed time and running token totals. It redraws only when the host reports
 something, and it gets out of the way before the answer is written.
 
-When stderr is **not** a terminal — a pipe, a CI log, a captured file — the
+When stderr is **not** a terminal: a pipe, a CI log, a captured file: the
 animation would be noise, so it becomes two plain markers instead: one when the
 run starts and one when it ends.
 
@@ -99,7 +99,7 @@ run starts and one when it ends.
 
 ## 3. Read the answer as data (`--json`)
 
-`--json` turns the run into a single structured envelope on stdout — no
+`--json` turns the run into a single structured envelope on stdout: no
 streamed text, no status line, no human diagnostics:
 
 ```bash
@@ -132,25 +132,25 @@ noir run --json "summarize the TODOs in src/"
 | `exitCode` | The **host's** exit status. Noir's own exit code is the one your shell reads. |
 
 A failure under `--json` is one `{ok:false, error:{code,message}}` envelope, and
-`error.message` stays a single concise sentence — the stderr tail from §1 is a
+`error.message` stays a single concise sentence: the stderr tail from §1 is a
 human diagnostic and never enters the envelope. The transcript always has the
 full output.
 
 ## 4. Choose which host setup runs it (`--profile`)
 
-Run **profiles** are named host setups in `.noir/config.yml` — how you keep
+Run **profiles** are named host setups in `.noir/config.yml`: how you keep
 several hosts, accounts, or credential sets side by side: `noir run --profile
 work "…"` selects one, and `noir run --list-profiles` prints the configured
 names without running anything. The selection order is `--profile <name>` >
 `NOIR_PROFILE` > `run.defaultProfile` > built-in default, and an unknown name is
-a hard error listing the names that exist — never a silent fallback to a
+a hard error listing the names that exist: never a silent fallback to a
 different host; the full config shape and the `${VAR}` interpolation a profile's
 `env` supports are in [host-profiles.md](host-profiles.md).
 
 ## 5. Decide what to do with the answer
 
-On an **interactive terminal** — both stdin and stdout a TTY, and not `--json`,
-`--no-input`, CI, or `NO_COLOR` — a successful run asks what to do next:
+On an **interactive terminal**: both stdin and stdout a TTY, and not `--json`,
+`--no-input`, CI, or `NO_COLOR`: a successful run asks what to do next:
 
 | Choice | What it does |
 |---|---|
@@ -167,7 +167,7 @@ shown at all.
 
 Two things to know before you rely on it:
 
-- **Everywhere else it is offered nothing at all** — a pipe, `--json`,
+- **Everywhere else it is offered nothing at all**: a pipe, `--json`,
   `--no-input`, CI, or `NO_COLOR`. A scripted run keeps exactly the output it
   has always had.
 - **No choice changes the run's exit code.** The menu runs after the run has
@@ -181,7 +181,7 @@ unreachable they say so and leave everything else alone.
 ## 6. Stop a run in progress
 
 Press `Ctrl+C` once. Noir forwards `SIGTERM` to the host and leaves with the
-conventional `128 + signal` code — the code for the signal **Noir** received:
+conventional `128 + signal` code: the code for the signal **Noir** received:
 
 | You send | Noir forwards | Noir exits |
 |---|---|---|
@@ -193,7 +193,7 @@ time to leave immediately instead of waiting that grace out; the host is killed
 first either way, so nothing is left running behind.
 
 An interrupted run is **not** a failure. There is no `failed` line and no token
-summary — the host did as it was told. What the host had already produced is
+summary: the host did as it was told. What the host had already produced is
 written to the transcript before Noir leaves, and the message says where:
 
 ```
@@ -218,7 +218,7 @@ starts is listed, and the status bar tracks the model, the elapsed time, and the
 running token totals.
 
 The prompt is the one you typed on the dashboard line, so the screen starts
-running straight away — there is no second prompt to fill in. One keystroke does
+running straight away: there is no second prompt to fill in. One keystroke does
 stand between the two: `run` is treated as a destructive command, so a `y / n`
 confirm overlay asks you to approve it first. `y` opens the live run screen with
 the prompt you typed; `n` or `Esc` leaves the run unstarted and returns you to
@@ -252,19 +252,19 @@ form that carries no assistant text (a tool-only turn, for instance). The
 transcript records everything the host sent; read it there.
 
 **"`noir run` says the binary was not found."** The name is not on `PATH` and
-the shell probe could not resolve it — usually `$SHELL` is unset (a GUI or
+the shell probe could not resolve it: usually `$SHELL` is unset (a GUI or
 launchd-launched process) or is not `zsh`/`bash`/`fish`, or you are on Windows.
 Point `--command` at a real executable or a launcher script, or declare a run
 profile and use `--profile`. See
 [host-profiles.md](host-profiles.md#note-shell-resolution-fallback).
 
 **"It runs with the wrong credentials."** Run `noir env` to see which source
-wins for each key — a value in `.noir/.env` beats the environment. See
+wins for each key: a value in `.noir/.env` beats the environment. See
 [configure-env.md](configure-env.md).
 
 **"I want the run to cost nothing."** It already does, in Noir's books: the
 token figures are an API-equivalent estimate, and the host spends your own
-subscription or key. Avoiding a *paid* call is a different question — see
+subscription or key. Avoiding a *paid* call is a different question: see
 [privacy.md](../explanation/privacy.md).
 
 ## See also

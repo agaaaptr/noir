@@ -1,20 +1,20 @@
 // Dashboard root component. Owns the interactive state (input buffer, scroll
 // offset, dispatched output, snapshot, palette query/active, the active screen)
-// and the SINGLE keybinding dispatcher (v2 — the palette, home, help, and search
+// and the SINGLE keybinding dispatcher (v2: the palette, home, help, and search
 // surfaces all collapsed into one corpus-aware palette, so keyboard routing
 // lives here alone). The snapshot is fetched via {@link TuiDeps.fetchStatus} on
 // a short interval (paused while a `/<command>` is dispatching, so a StatusBar
 // refresh can never race the stream capture). Dispatch goes through the EXISTING
-// {@link TuiDeps.dispatch} seam — the same `home(opts, deps).dispatch` shape —
+// {@link TuiDeps.dispatch} seam: the same `home(opts, deps).dispatch` shape —
 // so command routing is NOT reimplemented here.
 //
 // Screens (the {@link Mode} union): `dashboard` (default), `palette` (the single
-// command surface — corpus `commands` | `output` | `help`, opened by Ctrl+K /
+// command surface: corpus `commands` | `output` | `help`, opened by Ctrl+K /
 // Ctrl+F / h / ? and cycled with Tab), `confirm` (the `y/N` gate before a
-// destructive dispatch — now covering EVERY dispatch path, typed /command
+// destructive dispatch: now covering EVERY dispatch path, typed /command
 // included), `run` (the live host-run screen) and `transcripts` (the read-only
 // transcript picker). Every selection funnels through {@link handleRun}, so
-// destructive commands always pause at the confirm overlay — and the two
+// destructive commands always pause at the confirm overlay: and the two
 // self-contained screens own their own keyboards rather than routing keys here.
 
 import { Box, type Key, Text, useApp, useInput } from 'ink';
@@ -44,7 +44,7 @@ import { StatusBar } from './StatusBar.js';
 export interface TuiDeps {
   /**
    * Run a Noir sub-command by user-form argv on a fresh commander program.
-   * Same contract as {@link HomeDeps.dispatch}: must not throw — it owns its
+   * Same contract as {@link HomeDeps.dispatch}: must not throw: it owns its
    * own error → exit-code mapping and leaves the outcome on `process.exitCode`.
    */
   dispatch: (argv: readonly string[]) => Promise<void>;
@@ -55,22 +55,22 @@ export interface TuiDeps {
    */
   fetchStatus: () => Promise<StatusPayload | null>;
   /**
-   * The palette source — one {@link PaletteCommand} per leaf `noir` subcommand,
+   * The palette source: one {@link PaletteCommand} per leaf `noir` subcommand,
    * derived from the commander tree at `noir tui` launch (NOT re-walked per
    * keystroke). Optional for backward-compat (the unit tests omit it); when
    * absent the palette falls back to an empty command list.
    */
   readonly commands?: readonly PaletteCommand[];
-  /** The fuzzy matcher. Optional — defaults to {@link handRolledMatcher}. */
+  /** The fuzzy matcher. Optional: defaults to {@link handRolledMatcher}. */
   readonly matcher?: FuzzyMatcher;
   /**
    * Record a dispatched command into the persisted recent-commands list.
-   * Optional for backward-compat — when absent, recents are not recorded.
+   * Optional for backward-compat: when absent, recents are not recorded.
    */
   record?: (argv: readonly string[]) => Promise<void>;
   /**
    * Load the persisted recent commands (newest first) for the palette's recent
-   * section. Optional — when absent, defaults to the on-disk history loader.
+   * section. Optional: when absent, defaults to the on-disk history loader.
    */
   loadRecent?: () => Promise<readonly PaletteCommand[]>;
   /**
@@ -85,7 +85,7 @@ export interface TuiDeps {
 /** Optional initial state for tests (the live entry leaves these at defaults). */
 export interface AppProps {
   deps: TuiDeps;
-  /** Initial snapshot — skips the first fetch when provided (tests). */
+  /** Initial snapshot: skips the first fetch when provided (tests). */
   initialPayload?: StatusPayload | null;
   /** Refresh interval in ms (default 5000). Set large in tests. */
   refreshMs?: number;
@@ -99,11 +99,11 @@ export interface AppProps {
 /**
  * The dashboard's discriminated screen union. Exactly one screen is active at a
  * time; the App keys its render + keybinding handler off `mode.kind`.
- * - `dashboard` — the default screen: live snapshot, command input, output pane.
- * - `palette` — the single command surface, with a `corpus` selecting what the
+ * - `dashboard`: the default screen: live snapshot, command input, output pane.
+ * - `palette`: the single command surface, with a `corpus` selecting what the
  *   query filters (commands / output / help). `collecting` is set while the
  *   selected command's argument is being typed.
- * - `confirm` — an in-TUI confirmation prompt for a destructive dispatch.
+ * - `confirm`: an in-TUI confirmation prompt for a destructive dispatch.
  */
 export type Mode =
   | { kind: 'dashboard' }
@@ -153,7 +153,7 @@ export function App({
   const [recent, setRecent] = useState<readonly PaletteCommand[]>([]);
   // The curated home sections, resolved against the live registry once.
   const [homeSections, setHomeSections] = useState<readonly HomeSection[]>([]);
-  // v2 — the single palette's query + active row (owned here so the App's one
+  // v2: the single palette's query + active row (owned here so the App's one
   // `useInput` routes palette keys and can resolve the active row on Enter).
   const [paletteQuery, setPaletteQuery] = useState('');
   const [paletteActive, setPaletteActive] = useState(0);
@@ -178,7 +178,7 @@ export function App({
         }
       })
       .catch(() => {
-        // Recents are a nice-to-have — a read failure leaves the full list.
+        // Recents are a nice-to-have: a read failure leaves the full list.
       });
     return () => {
       cancelled = true;
@@ -217,7 +217,7 @@ export function App({
       .then(fetched)
       .catch(() => fetched(null));
     const id = setInterval(() => {
-      // Skip the tick while a fetch is still pending — a slow/restarting daemon
+      // Skip the tick while a fetch is still pending: a slow/restarting daemon
       // (gatherStatusPayload does a probe + MCP round-trips) must not stack
       // concurrent fetches.
       if (inFlight) return;
@@ -226,7 +226,7 @@ export function App({
         .fetchStatus()
         .then(fetched)
         .catch(() => {
-          // Keep the last-good payload on a transient probe/daemon failure — a
+          // Keep the last-good payload on a transient probe/daemon failure: a
           // poll-time hiccup must not wipe the dashboard to "down".
           inFlight = false;
         });
@@ -279,8 +279,8 @@ export function App({
 
   /**
    * The `run <prompt>` command has two homes. When the run seams are wired, it
-   * opens the live run screen (the host streams into the pane). Otherwise — and
-   * for every other command, and for a `run` that carries flags — it is an
+   * opens the live run screen (the host streams into the pane). Otherwise: and
+   * for every other command, and for a `run` that carries flags: it is an
    * ordinary dispatch whose output is captured into the pane.
    */
   function enterRunOrDispatch(argv: readonly string[]): void {
@@ -440,7 +440,7 @@ export function App({
         const row = paletteRows[paletteActive];
         if (!row?.argv) return;
         if (row.needsArg !== undefined) {
-          // The command cannot run bare — collect its argument on the input
+          // The command cannot run bare: collect its argument on the input
           // line before anything dispatches.
           setArgBuffer('');
           setArgNotice(null);
@@ -498,7 +498,7 @@ export function App({
       const value = argBuffer.trim();
       if (value.length === 0) {
         // An empty value would dispatch the same bare argv the palette cannot
-        // run — hold the step open and say why, so Enter is never a silent
+        // run: hold the step open and say why, so Enter is never a silent
         // no-op.
         setArgNotice(`a ${collecting.label} is required`);
         return;
@@ -541,7 +541,7 @@ export function App({
 
   // Keybinding dispatcher (a single useInput for the whole App).
   useInput((input, key) => {
-    // Ctrl+C leaves the dashboard, as it always has — except while a host is
+    // Ctrl+C leaves the dashboard, as it always has: except while a host is
     // live, where the run screen takes it as "stop the host" (the same thing Esc
     // means there). Ink's own Ctrl+C exit is turned off at the entry point so
     // this is the one place that decides: a keystroke can never tear the frame
@@ -588,7 +588,7 @@ export function App({
     }
     if (isDestructive(argv)) {
       // Destructive typed /commands go through the SAME confirm gate the
-      // palette uses (v2 — closes the old typed-path bypass).
+      // palette uses (v2: closes the old typed-path bypass).
       setMode({ kind: 'confirm', argv });
       return;
     }

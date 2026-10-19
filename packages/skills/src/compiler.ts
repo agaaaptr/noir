@@ -18,7 +18,7 @@ import {
   withinLineBudget,
 } from './quality.js';
 
-// Re-exported for backward-compat — callers (hygiene tests, CLI) import these
+// Re-exported for backward-compat: callers (hygiene tests, CLI) import these
 // from './compiler.js'. The single source of truth is quality.ts (where the
 // body-structure rules live); these aliases keep the old import surface stable.
 export { bodyOf, looksLikeWhenDescription } from './quality.js';
@@ -69,9 +69,9 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
   else if (!looksLikeWhenDescription(description)) {
     errors.push('description must state WHEN to trigger (e.g. "Use when…"), not WHAT it does');
   } else if (!isWhatWhenDescription(description)) {
-    // The description must ALSO carry a WHAT clause — the trigger phrase
+    // The description must ALSO carry a WHAT clause: the trigger phrase
     // alone (WHEN-only) fails. Errors, not warnings: it's part of the contract.
-    errors.push('description must be WHAT+WHEN — a WHAT clause after the trigger phrase');
+    errors.push('description must be WHAT+WHEN: a WHAT clause after the trigger phrase');
   }
   // Structural gate: metadata, required sections, line budget, one-level refs.
   if (!metadata?.category?.trim()) errors.push('missing `metadata.category`');
@@ -100,13 +100,13 @@ export function validateSkill(skill: BuiltinSkill): ValidationResult {
     if (finding.tier === 'fail') errors.push(message);
     else warnings.push(message);
   }
-  // Soft warnings (lint-level) — advisory, non-failing.
+  // Soft warnings (lint-level): advisory, non-failing.
   warnings.push(...lintWarnings(skill));
   return { ok: errors.length === 0, errors, warnings: warnings.length > 0 ? warnings : undefined };
 }
 
 /**
- * `lintSkill` — the soft quality gate. Errors = `validateSkill` errors (a
+ * `lintSkill`: the soft quality gate. Errors = `validateSkill` errors (a
  * skill that fails validation is broken, the hygiene fail tier included);
  * warnings = the hygiene warn tier plus the `quality.ts` style rules (thin
  * body, no examples, first-person narration, …). A skill can validate clean
@@ -126,16 +126,16 @@ export function lintSkill(skill: BuiltinSkill): {
  * runs for every target (a malformed skill is malformed in any format).
  *
  *  - `claude` | `agents-md` | `gemini` | `opencode` (the AGENTS.md-aligned
- *    hosts): canonical format copied verbatim — `SKILL.md` plus its
+ *    hosts): canonical format copied verbatim: `SKILL.md` plus its
  *    `references/` siblings. These hosts read the same SKILL.md shape;
  *    the EMIT-LOCATION (which dir they land in) is the cli/adapter's job, not
  *    the compiler's.
- *  - `cursor`: transform into a Cursor `.mdc` rule — ONE file `<name>.mdc`
+ *  - `cursor`: transform into a Cursor `.mdc` rule: ONE file `<name>.mdc`
  *    whose frontmatter carries the skill description, a wildcard globs entry,
  *    and `alwaysApply: false` (the agent decides whether to pull the rule via
  *    the description; never auto-applied). The body is the SKILL.md BODY
  *    (frontmatter stripped). Cursor's rule format has no references concept,
- *    so references are dropped (documented as a known limitation — the body is
+ *    so references are dropped (documented as a known limitation: the body is
  *    the surface).
  *
  * The `target` defaults to `'claude'` for backward compatibility with every
@@ -157,7 +157,7 @@ export function compileSkill(skill: BuiltinSkill, target: CompileTarget = 'claud
 }
 
 /**
- * Cursor `.mdc` rule transform — frontmatter `{description, globs, alwaysApply:
+ * Cursor `.mdc` rule transform: frontmatter `{description, globs, alwaysApply:
  * false}` + the SKILL.md body. The description drives Cursor's agent-decided
  * rule selection (the default: `alwaysApply: false`).
  * Cursor's rule format has no references/ concept, so the body alone is the
@@ -199,7 +199,7 @@ export function compileIntegration(
   integration: IntegrationSkill,
   target: CompileTarget = 'claude',
 ): CompiledIntegration {
-  // Validate the skill half first (throws on a bad SKILL.md — same path as
+  // Validate the skill half first (throws on a bad SKILL.md: same path as
   // builtins). compileSkill returns a base CompiledSkill; we layer hostMcp on.
   const base = compileSkill(integration, target);
   const { runtime, mcp } = integration.declaration;
@@ -225,12 +225,12 @@ export async function emitSkillsToDir(
     builtinDir?: string;
     integrationsDir?: string;
     includeIntegrations?: boolean;
-    /** CompileTarget — selects the per-skill transform. Defaults to
+    /** CompileTarget: selects the per-skill transform. Defaults to
      *  `'claude'` (the v1.1 verbatim SKILL.md shape) so every existing caller
      *  stays byte-identical. `'cursor'` compiles each skill to a `.mdc` rule
      *  file (frontmatter `description`/`globs`/`alwaysApply:false` + the
      *  SKILL.md body); the other targets map to the verbatim shape (their
-     *  hosts have no skill concept, so emit is skipped upstream — but the
+     *  hosts have no skill concept, so emit is skipped upstream: but the
      *  default-verbatim policy keeps the signature total). */
     target?: CompileTarget;
     /** Policy for a skill file that exists AND differs from the compiled
@@ -286,7 +286,7 @@ export async function emitSkillsToDir(
   // Non-interactive guard. The bridge `NOIR_NON_INTERACTIVE` is set by the
   // bin's preAction under --json/--no-input; the explicit `interactive: false`
   // wins over the env (mirrors @noir-ai/create's hermetic flag). When false,
-  // the resolver is NEVER consulted — differing files fall back to `policy`.
+  // the resolver is NEVER consulted: differing files fall back to `policy`.
   const interactive =
     opts.interactive ??
     (process.env.NOIR_NON_INTERACTIVE === undefined || process.env.NOIR_NON_INTERACTIVE === '');
@@ -297,7 +297,7 @@ export async function emitSkillsToDir(
    *
    *  Returns whether the compiled bytes actually reached a Noir-owned path.
    *  `'preserved'` means the differing copy on disk stands and nothing was
-   *  written for it — the caller may not count that file as refreshed. */
+   *  written for it: the caller may not count that file as refreshed. */
   const writeWithConflict = async (
     absDest: string,
     relDest: string,
@@ -353,7 +353,7 @@ export async function emitSkillsToDir(
       } else if (resolution === 'duplicate') {
         // Write the compiled bytes to <absDest>.noir; keep the user's file.
         // The compiled version is on disk (just not at the canonical path), so
-        // this counts as written — the user explicitly asked to keep theirs.
+        // this counts as written: the user explicitly asked to keep theirs.
         await writeFile(await uniqueAside(absDest, '.noir'), content, 'utf8');
         return 'written';
       }
@@ -372,7 +372,7 @@ export async function emitSkillsToDir(
   // Partition by outcome, not by attempt: a skill lands in `emitted` only when
   // every one of its files is now Noir's bytes, and in `preserved` when at
   // least one file was left as the user had it. A skill is never in both, and
-  // a half-refreshed skill is reported as preserved — under-reporting stale
+  // a half-refreshed skill is reported as preserved: under-reporting stale
   // bytes is the failure this split exists to prevent.
   for (const s of builtins) {
     const compiled = compileSkill(s, target);
@@ -399,7 +399,7 @@ export async function emitSkillsToDir(
         const outcome = await writeWithConflict(dest, rel, f.content, f.path[0] !== 'SKILL.md');
         if (outcome === 'preserved') sawPreserved = true;
       }
-      // `hostMcp` is NOT written per-skill — it is surfaced to the host adapter
+      // `hostMcp` is NOT written per-skill: it is surfaced to the host adapter
       // (via discoverAll/compileIntegration) to merge into the host's single
       // MCP config (e.g. `.mcp.json`). Wiring lives in cli/daemon.
       kept.push(i.name);
@@ -414,7 +414,7 @@ export async function emitSkillsToDir(
   // was since renamed/removed (e.g. `noir-old-thing`). Each `noir sync`
   // re-writes the CURRENT pack but a stale entry would otherwise linger forever.
   // After emit, scan `targetDir` for `noir-`-prefixed entries this run did not
-  // account for and remove them. ONLY the `noir-` namespace — user skills
+  // account for and remove them. ONLY the `noir-` namespace: user skills
   // without the prefix are NEVER touched (they are not Noir's to manage).
   // "Accounted for" spans the whole pack, not just the written half: a skill
   // whose files were preserved still owns its directory.
@@ -437,12 +437,12 @@ export async function emitSkillsToDir(
   try {
     dirEntries = await readdir(targetDir, { withFileTypes: true });
   } catch {
-    dirEntries = []; // targetDir vanished between the mkdir above and now — nothing to prune.
+    dirEntries = []; // targetDir vanished between the mkdir above and now: nothing to prune.
   }
   for (const ent of dirEntries) {
     if (!ent.name.startsWith('noir-')) continue;
     if (flat) {
-      // Cursor flat layout — prune stale FILES (`noir-<name>.mdc`) + legacy
+      // Cursor flat layout: prune stale FILES (`noir-<name>.mdc`) + legacy
       // nested DIRS (`noir-<name>/`) from a sync.
       if (ent.isFile()) {
         const mdcMatch = ent.name.match(/^(noir-[a-z0-9]+(?:-[a-z0-9]+)*)\.mdc$/);
@@ -455,12 +455,12 @@ export async function emitSkillsToDir(
           continue;
         }
       } else if (ent.isDirectory()) {
-        // Legacy cursor nested dir — clear unconditionally (the flat
+        // Legacy cursor nested dir: clear unconditionally (the flat
         // layout has NO `noir-{name}/` dirs under .cursor/rules/; any such dir
         // is stale by definition, regardless of name overlap with the current
-        // pack — the fresh `.mdc` file is what's kept, not the dir).
+        // pack: the fresh `.mdc` file is what's kept, not the dir).
         // Guard: skip if NONE of the `.mdc` files inside look Noir-emitted
-        // (canonical cursor frontmatter) — a user hand-rolling a noir-X/ dir
+        // (canonical cursor frontmatter): a user hand-rolling a noir-X/ dir
         // with arbitrary content is preserved.
         if (await isUserOwnedCursorLegacyDir(join(targetDir, ent.name))) {
           preservedUserOwned.push(ent.name);
@@ -470,7 +470,7 @@ export async function emitSkillsToDir(
         continue;
       }
     } else {
-      // Nested layout — prune stale DIRS only (the canonical shape).
+      // Nested layout: prune stale DIRS only (the canonical shape).
       if (!ent.isDirectory()) continue;
       if (keep.has(ent.name)) continue;
       // `assertNotUserOwned`: a `noir-*/` dir whose SKILL.md does not
@@ -487,7 +487,7 @@ export async function emitSkillsToDir(
       await rm(join(targetDir, ent.name), { recursive: true, force: true });
       pruned.push(ent.name);
     } catch {
-      // Swallow — stale-entry pruning is hygienic, not correctness-critical.
+      // Swallow: stale-entry pruning is hygienic, not correctness-critical.
     }
   }
 
@@ -507,7 +507,7 @@ export async function emitSkillsToDir(
  *  Noir-managed iff it contains a SKILL.md whose YAML frontmatter carries a
  *  `name:` matching `noir-<dir>`. Missing SKILL.md, missing frontmatter, or a
  *  non-matching name ⇒ user-authored (left alone). Best-effort: any IO error
- *  ⇒ treat as user-owned (the safe default — never silently delete). */
+ *  ⇒ treat as user-owned (the safe default: never silently delete). */
 async function isUserOwnedSkillDir(dirAbs: string): Promise<boolean> {
   try {
     const skillMd = await readFile(join(dirAbs, 'SKILL.md'), 'utf8');
@@ -541,7 +541,7 @@ async function isUserOwnedMdc(fileAbs: string): Promise<boolean> {
  *  case: a Noir sync left `noir-{name}/noir-{name}.mdc` behind. The dir
  *  is Noir-managed iff at least one `.mdc` inside carries canonical cursor
  *  frontmatter (`alwaysApply:`). Absent / hand-rolled content ⇒ user-authored.
- *  Empty dir ⇒ treat as user-owned (safe — never silently delete). */
+ *  Empty dir ⇒ treat as user-owned (safe: never silently delete). */
 async function isUserOwnedCursorLegacyDir(dirAbs: string): Promise<boolean> {
   try {
     const entries = await readdir(dirAbs);

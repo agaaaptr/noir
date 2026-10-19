@@ -6,7 +6,7 @@
 // dotenv / Node --env-file consensus, which fills only UNSET keys:
 //   - a key `.noir/.env` DEFINES wins; the REAL environment is the FALLBACK for
 //     the keys the file omits. For PROJECT configuration the project file must
-//     be able to describe the project — under fill-only-unset a token exported
+//     be able to describe the project: under fill-only-unset a token exported
 //     from `~/.zshrc` silently shadows the one the user just put in the project
 //     file, which is the bug this precedence exists to kill;
 //   - `sources` records which side won, per key, so `noir env` + doctor can
@@ -14,10 +14,10 @@
 //   - a missing file is a silent no-op (Node --env-file-if-exists behavior);
 //   - a file git TRACKS is refused outright: it may have arrived
 //     with the clone, and under this precedence it could redirect a credential
-//     that the fallback supplies. Untracked (the normal case — Noir's managed
+//     that the fallback supplies. Untracked (the normal case: Noir's managed
 //     .gitignore block lists `/.noir/.env`) is trusted;
 //   - the parser is the documented Node --env-file dialect (the conformance
-//     oracle for this hand-rolled ~40-LOC subset — no new dependency);
+//     oracle for this hand-rolled ~40-LOC subset: no new dependency);
 //   - NO `${VAR}` interpolation and NO command substitution, by design (a
 //     dotenv file is data, not a script);
 //   - malformed lines are skipped with a one-line stderr warning + line number,
@@ -35,7 +35,7 @@ const KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
  *
  * This must NEVER be a `path.join(NOIR_DIR, '.env')` product. Git pathspecs are
  * canonically forward-slash separated on every platform, and on Windows `join`
- * yields `.noir\.env` — which `ls-files --error-unmatch` can match nothing
+ * yields `.noir\.env`: which `ls-files --error-unmatch` can match nothing
  * against, reporting a TRACKED file as untracked and silently disabling the
  * git-tracked refusal on Windows only. Same convention as `IGNORE_ENTRIES` in
  * ignore-manager.ts (which also spells `/.noir/.env` literally). Keep in sync
@@ -44,7 +44,7 @@ const KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const ENV_FILE_REL_PATH = '.noir/.env';
 
 /**
- * Keys a `.noir/.env` may NEVER set — process-injection vectors. Noir spawns
+ * Keys a `.noir/.env` may NEVER set: process-injection vectors. Noir spawns
  * node child processes (the daemon, the host binary), so a `.noir/.env` from an
  * untrusted checkout (e.g. an attacker-committed file in a cloned repo) setting
  * `NODE_OPTIONS=--require=/tmp/evil.js` (or `LD_PRELOAD`, npm_config_*, …) would
@@ -73,7 +73,7 @@ const PROCESS_INJECTION_ENV_RE =
  * child environment. The names a `.noir/.env` file may never define are equally
  * dangerous when they arrive from a run profile's `env` block: both files are
  * committable project state, so a key either of them sets is inherited by the
- * node/npm child `noir run` spawns — turning a cloned repository into arbitrary
+ * node/npm child `noir run` spawns: turning a cloned repository into arbitrary
  * code execution on the user's machine. Callers must refuse (never silently
  * drop) a matching key and tell the user why.
  */
@@ -105,12 +105,12 @@ export function parseEnvFile(text: string): EnvFileParseResult {
     if (line.startsWith('export ')) line = line.slice('export '.length).trimStart();
     const eq = line.indexOf('=');
     if (eq === -1) {
-      warnings.push(`.noir/.env:${i + 1}: no '=' — skipped`);
+      warnings.push(`.noir/.env:${i + 1}: no '=': skipped`);
       continue;
     }
     const key = line.slice(0, eq).trim();
     if (!KEY_RE.test(key)) {
-      warnings.push(`.noir/.env:${i + 1}: invalid key '${key}' — skipped`);
+      warnings.push(`.noir/.env:${i + 1}: invalid key '${key}': skipped`);
       continue;
     }
     let value = line.slice(eq + 1).trim();
@@ -130,7 +130,7 @@ export function parseEnvFile(text: string): EnvFileParseResult {
         }
         if (c === first) {
           if (value[j + 1] === first) {
-            j++; // doubled quote — a literal quote, keep scanning
+            j++; // doubled quote: a literal quote, keep scanning
             continue;
           }
           close = j;
@@ -138,8 +138,8 @@ export function parseEnvFile(text: string): EnvFileParseResult {
         }
       }
       if (close === -1) {
-        // Unterminated quote — malformed (Node's --env-file would error).
-        warnings.push(`.noir/.env:${i + 1}: unterminated quoted value — skipped`);
+        // Unterminated quote: malformed (Node's --env-file would error).
+        warnings.push(`.noir/.env:${i + 1}: unterminated quoted value: skipped`);
         continue;
       }
       value = value.slice(1, close);
@@ -160,7 +160,7 @@ export interface LoadedEnv {
    * Provenance of every key that resolves to something, key→winner:
    * `'file'` when `.noir/.env` defines it, `'env'` when the key is only in the
    * ambient environment and the file therefore falls through to it. NAMES ONLY,
-   * never a value — this object is renderable by `noir env` / doctor.
+   * never a value: this object is renderable by `noir env` / doctor.
    */
   readonly sources: Record<string, 'file' | 'env'>;
 }
@@ -175,7 +175,7 @@ export interface LoadedEnv {
  * able to
  * redirect credentials that the ambient environment supplies. The refusal is
  * decided BEFORE parsing, so a tracked file's contents are never even read into
- * the overlay — the only thing emitted for it is the remedy.
+ * the overlay: the only thing emitted for it is the remedy.
  */
 export function loadNoirEnv(
   root: string,
@@ -186,17 +186,17 @@ export function loadNoirEnv(
   try {
     text = readFileSync(path, 'utf8');
   } catch {
-    return { overlay: {}, warnings: [], sources: {} }; // missing file — silent no-op
+    return { overlay: {}, warnings: [], sources: {} }; // missing file: silent no-op
   }
   // TRACKED-FILE REFUSAL. Runs before the parse so a repo-supplied
-  // file is never interpreted at all — a refused file must not be able to warn
+  // file is never interpreted at all: a refused file must not be able to warn
   // about, shadow, or contribute a single key. Same early-return shape as the
   // missing-file no-op (empty overlay), plus the refusal warning.
   if (isGitTracked(root, ENV_FILE_REL_PATH)) {
     return {
       overlay: {},
       warnings: [
-        `.noir/.env: refusing to load — it is tracked by git. A cloned repository ` +
+        `.noir/.env: refusing to load: it is tracked by git. A cloned repository ` +
           `could redirect credentials through it. Fix: add \`.noir/.env\` to .gitignore ` +
           `(Noir's managed block already does) and run \`git rm --cached .noir/.env\`.`,
       ],
@@ -205,16 +205,16 @@ export function loadNoirEnv(
   }
   const { vars, warnings } = parseEnvFile(text);
   // Permission advisory (names-only, never values): a group/world-readable .env
-  // leaks tokens to other local users — the ssh/aws-credentials convention.
+  // leaks tokens to other local users: the ssh/aws-credentials convention.
   try {
     const st = statSync(path);
     if ((st.mode & 0o077) !== 0) {
       warnings.push(
-        `.noir/.env: permissions ${(st.mode & 0o777).toString(8)} allow others to read — run chmod 600`,
+        `.noir/.env: permissions ${(st.mode & 0o777).toString(8)} allow others to read: run chmod 600`,
       );
     }
   } catch {
-    /* stat race (deleted between read + stat) — no advisory */
+    /* stat race (deleted between read + stat): no advisory */
   }
   // PRECEDENCE: a key this file defines WINS; the real environment
   // is the FALLBACK for keys the file omits. This departs from Node --env-file
@@ -225,7 +225,7 @@ export function loadNoirEnv(
   const sources: Record<string, 'file' | 'env'> = {};
   for (const [k, v] of Object.entries(vars)) {
     if (PROCESS_INJECTION_ENV_RE.test(k)) {
-      warnings.push(`.noir/.env: refusing process-injection key '${k}' — ignored`);
+      warnings.push(`.noir/.env: refusing process-injection key '${k}': ignored`);
       continue;
     }
     if (env[k] !== undefined && env[k] !== v) {
@@ -240,7 +240,7 @@ export function loadNoirEnv(
     sources[k] = 'file';
   }
   // Ambient keys the file does not define are the fallback: they still resolve,
-  // so record them as 'env' — `noir env` can then report every resolved key's
+  // so record them as 'env': `noir env` can then report every resolved key's
   // source without re-reading the environment. Read from the `env` argument
   // only (never the `process.env` global), so this stays as confined as the
   // overlay itself. Process-injection names are skipped on this side too: they
@@ -257,11 +257,11 @@ export function loadNoirEnv(
 /**
  * Load + apply `.noir/.env` to `env` (default `process.env`) in place, warning
  * on malformed lines and on every key whose file value overrides an ambient
- * one. Returns the applied overlay. Idempotent — call once at process start
+ * one. Returns the applied overlay. Idempotent: call once at process start
  * (CLI entry + daemon/serve entry).
  *
  * CONFINEMENT INVARIANT: writes go into the `env` object it is handed and
- * nowhere else — never the `process.env` global. A caller that passes its own
+ * nowhere else: never the `process.env` global. A caller that passes its own
  * object (a child-spawn env, a test) is therefore fully insulated, and a user's
  * manual `claude` invocations are untouched by anything Noir does here.
  */

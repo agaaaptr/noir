@@ -1,4 +1,4 @@
-// S9 — `noir memory {recall,save,sessions,forget,consolidate}` tests.
+// S9: `noir memory {recall,save,sessions,forget,consolidate}` tests.
 // daemon-client is mocked at the module boundary (no real daemon) and
 // @clack/prompts is mocked so the interactive `save` prompt is deterministic.
 // These pin the contract:
@@ -24,7 +24,7 @@ const { payloads, clackMock, CANCEL } = vi.hoisted(() => ({
 }));
 
 // `probeDaemon`/`withInProcessRead` are new daemon-client exports backing the
-// daemon-down read fallback (DS-5). They MUST be mocked explicitly — a missing
+// daemon-down read fallback (DS-5). They MUST be mocked explicitly: a missing
 // `probeDaemon` in the factory makes memoryRecall's `try/catch` treat every
 // probe as "daemon up", silently masking the probe. Default to `{running:true}`
 // (existing tests keep the daemon path); a fallback test flips `probeResult.current`.
@@ -50,7 +50,7 @@ vi.mock('../src/daemon-client.js', async (importOriginal) => {
       fn({
         memory: {
           // `memoryRecall`'s fallback now uses `recallWithMeta` (`{hits, degraded,
-          // mode}`) — mirror the engine contract.
+          // mode}`): mirror the engine contract.
           recall: vi.fn(async () => []),
           recallWithMeta: vi.fn(async () => ({
             hits: [],
@@ -317,7 +317,7 @@ describe('memory save', () => {
     payloads.current.memory_save = {
       ok: false,
       degraded: true,
-      error: 'store is read-only (daemon down) — memory_save is unavailable',
+      error: 'store is read-only (daemon down): memory_save is unavailable',
     };
     await expect(memorySave({ ...base, content: 'x' })).rejects.toMatchObject({ exitCode: 1 });
   });

@@ -2,10 +2,10 @@
 //
 // Aggregates a project + daemon + store + context + workflow + memory snapshot.
 // Project info (id/name/host/version) is assembled IN-PROCESS from
-// `loadProjectInfo` + `NOIR_VERSION` — no daemon round-trip just to name the
+// `loadProjectInfo` + `NOIR_VERSION`: no daemon round-trip just to name the
 // project. Daemon state comes from a read-only {@link probeDaemon} (liveness
 // probe of `~/.noir/daemon.json` + pid + GET /health) that NEVER starts a daemon
-// (deliberate: `status` is probe-only and works daemon-down — a down
+// (deliberate: `status` is probe-only and works daemon-down: a down
 // daemon is reported honestly + exit 0, never auto-started). When the probe finds
 // a running daemon, the optional count tools are fetched over one connection via
 // {@link withRunningDaemon} (which reuses the running daemon and also never
@@ -14,7 +14,7 @@
 //
 // Graceful degradation (every engine is optional): every count tool —
 // `host_status` (enriches `daemon.transport`), `store_status`, `context_status`,
-// `workflow_status`, `memory_sessions` — is wrapped in {@link tryTool} and
+// `workflow_status`, `memory_sessions`: is wrapped in {@link tryTool} and
 // contributes `null` when absent or when its engine is not wired. One missing
 // engine never fails the snapshot; even the daemon being down doesn't (it is the
 // one piece of information `status` exists to report). A tool's own
@@ -143,11 +143,11 @@ export interface StatusPayload {
  * `memory_sessions` only when it wired the matching engine, so a missing engine
  * surfaces as a tool-call failure that we fold to `null` rather than failing
  * the snapshot. A tool's own `{ok:false,…}` envelope is returned as data (the
- * caller normalizes it) — only transport / parse / not-registered failures map
+ * caller normalizes it): only transport / parse / not-registered failures map
  * to `null` here.
  *
  * Exported so `noir handoff` reuses the SAME fold-to-null pattern for its
- * bounded `context_search` / `memory_recall` extraction — a missing embedder or
+ * bounded `context_search` / `memory_recall` extraction: a missing embedder or
  * a daemon-down degrades to `null` instead of failing the handoff artifact.
  */
 export async function tryTool<T>(
@@ -193,7 +193,7 @@ function pickContext(c: ContextStatusResult | null): StatusPayload['context'] {
 
 function pickWorkflow(w: WorkflowStatusResult | null): StatusPayload['workflow'] {
   // `workflow_status` returns `{ok:false,error:'no active task'}` (data) when no
-  // task is active — normalize that to `null` so the payload's `workflow` field
+  // task is active: normalize that to `null` so the payload's `workflow` field
   // cleanly means "active task snapshot present".
   if (w?.ok !== true) return null;
   return {
@@ -292,7 +292,7 @@ function renderHuman(p: StatusPayload, opts: CliOptions): void {
   // Banner + definition list both go to stderr (rendering is a no-op under
   // --json; we only render human when opts.json is false, but passing opts
   // keeps --quiet honest).
-  log(`noir status — ${p.project.name} (${p.project.id})`, opts);
+  log(`noir status: ${p.project.name} (${p.project.id})`, opts);
   definitionList(
     [
       { label: 'Project', value: `${p.project.name} (${p.project.id})` },
@@ -321,13 +321,13 @@ function renderHuman(p: StatusPayload, opts: CliOptions): void {
  * (uninitialized → exit 1 propagated to the caller); daemon state comes from a
  * {@link probeDaemon} (NEVER auto-starts). When the daemon is up, the optional
  * count tools are fetched over one {@link withRunningDaemon} connection; when it
- * is down, those sections are `null` and `daemon:{running:false}` — this function
+ * is down, those sections are `null` and `daemon:{running:false}`: this function
  * never throws on a down daemon (the handoff command degrades gracefully).
  */
 export async function gatherStatusPayload(opts: StatusOptions): Promise<StatusPayload> {
-  // In-process project info — no daemon round-trip. Uninitialized → exit 1
+  // In-process project info: no daemon round-trip. Uninitialized → exit 1
   // (both `status` and `handoff` treat an uninitialized project as a hard error
-  // — there is no project to snapshot). Route through fail() so --json emits the
+  //: there is no project to snapshot). Route through fail() so --json emits the
   // canonical {ok:false,error} envelope (a plain Error would leave stdout empty).
   let project: ProjectInfo;
   try {
@@ -335,7 +335,7 @@ export async function gatherStatusPayload(opts: StatusOptions): Promise<StatusPa
   } catch {
     fail(EXIT.ERROR, 'Noir is not initialized in this directory. Run `noir init` first.', opts);
   }
-  // Probe — never starts a daemon. A down daemon is reported honestly.
+  // Probe: never starts a daemon. A down daemon is reported honestly.
   const probe = await probeDaemon(opts);
 
   let host: HostStatusResult | null = null;
@@ -345,7 +345,7 @@ export async function gatherStatusPayload(opts: StatusOptions): Promise<StatusPa
   let memory: MemorySessionsResult | null = null;
 
   if (probe.running) {
-    // Reuse the already-running daemon — withRunningDaemon NEVER auto-starts
+    // Reuse the already-running daemon: withRunningDaemon NEVER auto-starts
     // (probe-only). Pass the probe we already computed so it doesn't GET /health
     // a second time. Every tool is optional (tryTool folds a missing engine /
     // logical-failure envelope to null); host_status now only enriches
@@ -375,7 +375,7 @@ export async function gatherStatusPayload(opts: StatusOptions): Promise<StatusPa
  * (NEVER auto-starts). When the daemon is up, the optional count tools are
  * fetched over one {@link withRunningDaemon} connection; when it is down, those
  * sections are `null` and `daemon:{running:false}` is rendered with exit 0
- * (status is informational — a down daemon is not an error).
+ * (status is informational: a down daemon is not an error).
  *
  * `--json` emits `{ok:true, data: StatusPayload}` to stdout. The human path
  * renders a two-column table on stderr. Uninitialized project → exit 1 from
@@ -398,7 +398,7 @@ export async function status(opts: StatusOptions): Promise<void> {
 
   const payload = await gatherStatusPayload(opts);
   if (opts.json === true) {
-    // Single stdout write — the versioned success envelope.
+    // Single stdout write: the versioned success envelope.
     process.stdout.write(`${JSON.stringify({ ok: true, data: payload })}\n`);
     return;
   }

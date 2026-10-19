@@ -1,7 +1,7 @@
 // `noir run <prompt>`: drive the host agentic CLI headless and render its
 // stream-json. This is the programmatic host-driving line and the
 // headless orchestrator surface: Noir spawns the host as a subprocess,
-// streams its output, and reports the token/cost from the `result` event — it
+// streams its output, and reports the token/cost from the `result` event: it
 // never runs its own model + tool loop (an agent loop is impossible by
 // construction: the model request type has no tools/stream parameter).
 //
@@ -35,7 +35,7 @@ import { HOST_STDERR_TAIL_LINES, hostStderrTail, RunStatusLine } from '../run-st
  * Anthropic credential / gateway variables that change how a headless (`-p`)
  * host run authenticates. A custom gateway sets `ANTHROPIC_AUTH_TOKEN` +
  * `ANTHROPIC_BASE_URL` and fails exactly like a stale API key, so the auth
- * advice must cover every recognised shape — not just `ANTHROPIC_API_KEY`.
+ * advice must cover every recognised shape: not just `ANTHROPIC_API_KEY`.
  */
 const CREDENTIAL_ENV_VARS = [
   'ANTHROPIC_API_KEY',
@@ -70,7 +70,7 @@ function credentialNote(
   const pronoun = one ? 'it' : 'them';
   const verb = one ? 'overrides' : 'override';
   return (
-    ` Note: ${subject} — ${pronoun} ${verb} the logged-in account in \`-p\` mode; ` +
+    ` Note: ${subject}: ${pronoun} ${verb} the logged-in account in \`-p\` mode; ` +
     `unset ${pronoun} in the named source (or fix the value) if you meant to use your subscription.`
   );
 }
@@ -110,7 +110,7 @@ function answerText(event: NoirEvent): string | undefined {
  * Stream an assistant text delta to stdout (non-json mode only). The host's
  * answer is data, so it goes to stdout; diagnostics go to stderr. The status
  * line is told first, so it can finish its own row before the answer is written
- * — the answer must never start glued to the tail of the progress text.
+ *: the answer must never start glued to the tail of the progress text.
  */
 function streamEvent(event: NoirEvent, opts: RunOptions, status: RunStatusLine): void {
   if (opts.json === true) return; // json mode buffers; no streaming writes
@@ -134,7 +134,7 @@ export async function run(prompt: string, opts: RunOptions): Promise<void> {
  *
  * `resumeSessionId` continues a session an earlier invocation started: the
  * child is spawned with `--resume <id>` and a prompt collected fresh, and
- * everything else — the stream, the transcript, the summary — is this same
+ * everything else: the stream, the transcript, the summary: is this same
  * code path. It stays a single-shot invocation: the host answers and exits,
  * and Noir holds no session open between turns.
  */
@@ -159,12 +159,12 @@ async function runOnce(
   const root = process.cwd();
   // Credential provenance for the failure advice: `sources` records, per key,
   // whether `.noir/.env` or the ambient environment won. Names
-  // only — never a value. Read from `process.env`, which the bin's preAction
+  // only: never a value. Read from `process.env`, which the bin's preAction
   // has already overlaid with `.noir/.env` (the file wins).
   const envSources = loadNoirEnv(root).sources;
 
   // Run-profile resolution: --profile > NOIR_PROFILE > run.defaultProfile >
-  // built-in default. Config load is best-effort — `noir run` keeps working
+  // built-in default. Config load is best-effort: `noir run` keeps working
   // outside an initialized project (no profiles, built-in host behavior).
   const config = loadRunConfig(root) ?? parseConfig({});
   const resolved = resolveRunProfile(opts.profile, config, process.env);
@@ -182,14 +182,14 @@ async function runOnce(
   const env = profile.env ? mergeEnv(process.env, profile.env) : undefined;
 
   // Spec 13.3: running outside an initialized project stays supported, but the
-  // gap deserves a word — with no `.noir/.env` there are no project
+  // gap deserves a word: with no `.noir/.env` there are no project
   // credentials, so an auth failure would read as "noir is broken" instead of
   // "this project has none". One informational stderr line, BEFORE the spawn:
   // never a failure, never a prompt, and silenced by `log()` under
   // --json/--quiet so a machine consumer's output stays pristine.
   if (!existsSync(join(root, NOIR_DIR, '.env'))) {
     log(
-      `This project has no ${NOIR_DIR}/.env — that is where Noir reads project credentials and ` +
+      `This project has no ${NOIR_DIR}/.env: that is where Noir reads project credentials and ` +
         `run config from. Run \`noir init\` to scaffold one (\`noir run\` works without it).`,
       opts,
     );
@@ -198,14 +198,14 @@ async function runOnce(
   const transcriptLines: string[] = [];
   // The answer as plain text, accumulated as it streams. The transcript is raw
   // stream-json, so it cannot feed a post-run action; this can. Accumulating
-  // does not touch what is written to stdout — the same text still goes out
+  // does not touch what is written to stdout: the same text still goes out
   // live, byte for byte.
   const answer: string[] = [];
-  // The host's own id for this session, when it reports one — the handle a
+  // The host's own id for this session, when it reports one: the handle a
   // continuation needs.
   let sessionId: string | undefined;
 
-  // The binary the user is actually driving — a per-invocation `--command` or
+  // The binary the user is actually driving: a per-invocation `--command` or
   // profile override wins over the host default. Named in the status line and
   // in every failure message, so it is resolved once here.
   const binary = customBinary && customBinary.length > 0 ? customBinary : host;
@@ -223,12 +223,12 @@ async function runOnce(
   status.begin();
 
   // The interrupt contract for this run, installed for exactly as long as a
-  // host child is live. A Ctrl+C in the terminal — or a SIGTERM from whatever
-  // started Noir — stops the HOST and then reports it, rather than killing Noir
+  // host child is live. A Ctrl+C in the terminal: or a SIGTERM from whatever
+  // started Noir: stops the HOST and then reports it, rather than killing Noir
   // and leaving the host running behind it.
   // One verdict per run, whichever path reaches it first. The second-signal path
   // below writes its envelope and leaves, but it leaves only once that write has
-  // landed — and the child it forced can resolve this run inside that window, so
+  // landed: and the child it forced can resolve this run inside that window, so
   // the run's own interrupted path can arrive at the verdict second. A run that
   // wrote two verdicts would hand a scripted consumer two answers to one run.
   let verdictWritten = false;
@@ -280,7 +280,7 @@ async function runOnce(
     status.finishRow();
     // A stop that landed while the spawn was still failing is still a stop. The
     // run was asked to end, and why the host never got going is beside the point
-    // — reporting it as a failure would blame the host for doing as it was told.
+    //: reporting it as a failure would blame the host for doing as it was told.
     if (interrupt.interruptedBy !== undefined) {
       if (claimVerdict()) {
         failInterrupted(interrupt.interruptedBy, host, transcriptLines, opts);
@@ -292,7 +292,7 @@ async function runOnce(
     const detail = err instanceof Error ? err.message : String(err);
     const enoent = (err as NodeJS.ErrnoException)?.code === 'ENOENT';
     const guidance = enoent
-      ? ` No executable '${binary}' was found. Shell aliases and functions (e.g. from .zshrc) are invisible to noir — use an executable on PATH, an absolute path, or a launcher script such as ~/.local/bin/${binary}.`
+      ? ` No executable '${binary}' was found. Shell aliases and functions (e.g. from .zshrc) are invisible to noir: use an executable on PATH, an absolute path, or a launcher script such as ~/.local/bin/${binary}.`
       : '';
     const subject =
       customBinary && customBinary.length > 0
@@ -334,7 +334,7 @@ async function runOnce(
     // as the tail of the answer rather than as the run's verdict.
     status.finishRow();
     // The host's own stderr is where its progress and its deeper error detail
-    // live, and it is otherwise withheld entirely — a bounded tail is what makes
+    // live, and it is otherwise withheld entirely: a bounded tail is what makes
     // the failure diagnosable. It is a human diagnostic: under --json the
     // message stays the one concise sentence a machine consumer reads, and the
     // transcript path is what points at the rest.
@@ -354,7 +354,7 @@ async function runOnce(
       /not logged|login|authenticate|invalid api key/i.test(`${reason}\n${stderrTail}`);
     let message = `host '${binary}' failed (exit ${result.exitCode}): ${reason}`;
     if (isAuth) {
-      message += ` Open a terminal and run \`${binary} /login\` (interactive-only — it cannot run inside \`noir run\`), then retry.`;
+      message += ` Open a terminal and run \`${binary} /login\` (interactive-only: it cannot run inside \`noir run\`), then retry.`;
       message += credentialNote(env ?? process.env, envSources);
     }
     message += ` If you use another profile, pass \`--command <binary>\` or define a run profile under run.profiles. transcript: ${transcript}`;
@@ -411,7 +411,7 @@ async function runOnce(
 /**
  * Merge a profile's env overlay over the base env; `undefined` values delete
  * the key. This is the single place a profile env becomes a child environment,
- * so it also refuses a process-injection key — a second net behind profile
+ * so it also refuses a process-injection key: a second net behind profile
  * resolution, in case some future path builds a child env without resolving the
  * profile first. The overlay keys are scanned (never the base, whose
  * `NODE_OPTIONS`/`LD_LIBRARY_PATH` etc. are the user's own ambient environment).
@@ -467,7 +467,7 @@ function safeTranscript(host: string, lines: readonly string[]): string {
  * Persist the raw stream-json lines to `.noir/transcripts/<host>-<ts>.jsonl`.
  * Exported because the TUI's run screen persists a run the same way, and the
  * directory mode / file mode / best-effort rules below are the whole contract
- * for a transcript on disk — a second implementation would be a second answer
+ * for a transcript on disk: a second implementation would be a second answer
  * to "who can read this file".
  */
 export function writeTranscript(
@@ -479,12 +479,12 @@ export function writeTranscript(
   const dir = paths.transcriptsDir(root);
   const file = join(dir, `${host}-${ts}.jsonl`);
   try {
-    // Transcripts contain raw host prompts/output (may include secrets) — create
+    // Transcripts contain raw host prompts/output (may include secrets): create
     // the dir 0700 and the file 0600 so they are not group/world-readable.
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     writeFileSync(file, `${lines.join('\n')}${lines.length > 0 ? '\n' : ''}`, { mode: 0o600 });
   } catch {
-    // Transcript persistence is best-effort — a read-only .noir/ must not fail
+    // Transcript persistence is best-effort: a read-only .noir/ must not fail
     // the run.
     return '(not persisted)';
   }

@@ -1,4 +1,4 @@
-# ADR-0009 — Shared cross-repo workspaces
+# ADR-0009: Shared cross-repo workspaces
 
 - **Status:** Accepted
 - **Date:** 2026-09-09
@@ -15,7 +15,7 @@ isolation (`ensureDaemonRunning` reuses a daemon only when its recorded
 
 ## Decision
 
-Introduce a **workspace** — a named, cross-repo sharing unit under
+Introduce a **workspace**: a named, cross-repo sharing unit under
 `~/.noir/workspaces/<name>/` (registry.json + store.db + its own daemon record) —
 served by **one workspace daemon** (foreground by default, or `--detach`):
 
@@ -46,7 +46,7 @@ served by **one workspace daemon** (foreground by default, or `--detach`):
   0`); the knob is user-configurable via the `workspace:` config block.
 - `memory_capture` is wired as a manual CLI verb (provenance `auto:<hook>`); no
   auto-installed **capture** hooks. (The `claude` host does get an unrelated
-  `SessionStart` *context* hook at `noir init` — it bootstraps context, it does
+  `SessionStart` *context* hook at `noir init`: it bootstraps context, it does
   not capture memory.)
 - `noir memory *` in a joined repo routes to the workspace daemon (`?p=`
   identity); `context`/`workflow`/`task` stay per-project. `noir memory

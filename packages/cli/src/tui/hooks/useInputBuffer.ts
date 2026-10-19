@@ -1,12 +1,12 @@
 // The dashboard input-buffer hook. Extracted from `App.tsx` so the
 // command-history + recall-cursor state can live with the keybindings that use
 // it instead of dangling inside the App's single `useInput` closure. Owns:
-//   - `buffer` — the current text being composed at the prompt.
-//   - `history` — in-memory command history (newest first), with move-to-front
+//   - `buffer`: the current text being composed at the prompt.
+//   - `history`: in-memory command history (newest first), with move-to-front
 //     dedup (matches the persisted recents store).
-//   - `recall` — Up/Down history walk via an index cursor (`-1` = not
+//   - `recall`: Up/Down history walk via an index cursor (`-1` = not
 //     recalling).
-//   - `seed` — replace the session history with the persisted recents.
+//   - `seed`: replace the session history with the persisted recents.
 //
 // Deliberately tiny + framework-shaped like the rest of the TUI state: `buffer`
 // is a React state string so keystrokes rerender the CommandInput, while
@@ -15,7 +15,7 @@
 // IMPORTANT: every returned function is wrapped in `useCallback` so its identity
 // is STABLE across renders. The App passes `seed` into a `useEffect` dependency
 // array (`[deps.loadRecent, seed]`); a plain function re-created each render
-// would make that effect re-run every render — an infinite setState loop that
+// would make that effect re-run every render: an infinite setState loop that
 // leaks memory and OOMs the TUI after ~a minute of idle. All these functions
 // only touch refs (+ the stable `setBuffer`), so `useCallback(…, [])` is safe.
 
@@ -35,7 +35,7 @@ export interface InputBuffer {
   /**
    * Walk the command history from the recall cursor. `up` returns the next
    * older entry (or the newest when not recalling); `down` returns the next
-   * newer entry. Either direction clamps at its boundary — past the newest it
+   * newer entry. Either direction clamps at its boundary: past the newest it
    * returns `null` (back on the edit line).
    */
   recall: (dir: 'up' | 'down') => string | null;

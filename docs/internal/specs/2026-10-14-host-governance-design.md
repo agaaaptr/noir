@@ -84,7 +84,7 @@ already walks up to find.
 
 ### Awareness (SessionStart / SubagentStart)
 
-The injected brief is `.noir/router.md` plus `.noir/rules/anti-slop.md` — the two
+The injected brief is `.noir/router.md` plus `.noir/rules/anti-slop.md`: the two
 `.noir/` files no host context file imports. The compiled project baseline
 (stack, package manager, CI, canonical commands, entry points) is serialized
 into `.noir/NOIR.md` and reaches the model through the host's existing
@@ -117,14 +117,14 @@ does not block.
 
 `NoirConfigSchema` in `@noir-ai/core` gains an `enforcement` block:
 
-- `enforcement.enabled` (bool, default true) — evaluates the deny-list + built-in
+- `enforcement.enabled` (bool, default true): evaluates the deny-list + built-in
   guards. The deny hook is emitted regardless; when disabled it exits 0 without
   evaluating.
-- `enforcement.deny` (array of `{ tool?, pattern, reason }`) — extra rules.
+- `enforcement.deny` (array of `{ tool?, pattern, reason }`): extra rules.
   `tool` is optional and matches any tool when absent. `pattern` matches the
   `tool_input` string (a path substring for file tools, a command substring for
   Bash). `reason` is the deny reason the agent sees.
-- `enforcement.stopGate` (bool, default false) — opt-in Stop gate (claude-only).
+- `enforcement.stopGate` (bool, default false): opt-in Stop gate (claude-only).
 
 ## Non-goals
 

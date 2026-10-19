@@ -1,6 +1,6 @@
-# Noir — next-session handoff & playbook
+# Noir: next-session handoff & playbook
 
-> **Status (2026-07-27): the overnight runtime-polish session shipped `1.4.0-beta.1` to `develop` (→ npm `beta`).** The first PUBLISHED version of this work — the intermediate `1.3.0-beta.7` / `1.3.0-beta.8` / `1.4.0` tags failed CI on a `useColor()` leak under `CI=true` (ANSI-wrapped headers broke the responsive-table width test) and were never published; the bug is fixed in `1.4.0-beta.1`. 1315/1315 tests green (verified under `CI=true`). This doc + `docs/CHANGELOG.md` + `docs/roadmap/` + `docs/internal/plans/2026-07-26-overnight-runtime-polish.md` + `/recall noir` = full context.
+> **Status (2026-07-27): the overnight runtime-polish session shipped `1.4.0-beta.1` to `develop` (→ npm `beta`).** The first PUBLISHED version of this work: the intermediate `1.3.0-beta.7` / `1.3.0-beta.8` / `1.4.0` tags failed CI on a `useColor()` leak under `CI=true` (ANSI-wrapped headers broke the responsive-table width test) and were never published; the bug is fixed in `1.4.0-beta.1`. 1315/1315 tests green (verified under `CI=true`). This doc + `docs/CHANGELOG.md` + `docs/roadmap/` + `docs/internal/plans/2026-07-26-overnight-runtime-polish.md` + `/recall noir` = full context.
 
 ## What shipped in `1.4.0-beta.1` (all on `develop`)
 - **Install + output (from the beta.7/beta.8 work):** `engines >=22` + `better-sqlite3@13` (removes `prebuild-install`) + `boolean` muted + deprecation troubleshooting doc; output design-system (`theme.ts`, red headers killed, responsive tables, `badge()`, `definitionList()`/`kv()`, NO_COLOR/CLICOLOR_FORCE/NOIR_ACCESSIBLE).
@@ -23,7 +23,7 @@
 
 ## Release-process notes
 - The `release.yml` `publish` job uses `environment: release` with `required_reviewers`. If a push's npm publish sits behind that approval gate, approve it in the GitHub Actions UI (or remove required reviewers for beta).
-- Tags `v1.3.0-beta.7`, `v1.3.0-beta.8`, `v1.4.0` were pushed but their CI FAILED (color bug) — they never published. `v1.4.0-beta.1` (the fix) is the published release. The failed tags are harmless historical markers; delete from the remote if desired.
+- Tags `v1.3.0-beta.7`, `v1.3.0-beta.8`, `v1.4.0` were pushed but their CI FAILED (color bug): they never published. `v1.4.0-beta.1` (the fix) is the published release. The failed tags are harmless historical markers; delete from the remote if desired.
 
 ## Conventions (unchanged)
 Sub-agents Opus (design/review) + Sonnet (implementation) only; main loop runs all `pnpm` validation; commits local on `develop` until the release push; dogfood SDD; graceful degradation; no silent paid calls; adopt ideas, not copies. **No internal session/tier labels in code** (a defect this session corrected repo-wide).

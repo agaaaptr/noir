@@ -15,7 +15,7 @@ import { runtimeDir } from './layout.js';
 /**
  * The single pinned Node version Noir provisions into `~/.noir/runtime/`.
  *
- * Node 22 LTS (codename **Jod**), active LTS — best native-dep prebuild
+ * Node 22 LTS (codename **Jod**), active LTS: best native-dep prebuild
  * coverage for `better-sqlite3@13` / `onnxruntime-node`, and matches the
  * package `engines >= 22`. Bump this constant (and `scripts/node-version.env`)
  * together to move Noir onto a newer runtime; the module is otherwise
@@ -26,7 +26,7 @@ export const MANAGED_NODE_VERSION = '22.23.2';
 /** Minimum Node major version accepted for the SYSTEM fallback path. */
 export const MIN_SYSTEM_NODE_MAJOR = 22;
 
-/** Default bound on the SHASUMS256.txt + archive downloads — Node archives are
+/** Default bound on the SHASUMS256.txt + archive downloads: Node archives are
  *  20-40MB, so 5 minutes is generous; a stalled connection must not hang
  *  `noir install`/`noir update` for undici's implicit ~300s. */
 const NODE_DOWNLOAD_TIMEOUT_MS = 300_000;
@@ -80,7 +80,7 @@ export function detectNodeTarget(): NodeTarget {
  *
  * Note the asymmetry: the version DIR is `v<version>` (e.g. `v22.11.0/`)
  * but the FILE basename uses the bare version inside `node-v22.11.0-…`
- * — both are how nodejs.org/dist is actually laid out.
+ *: both are how nodejs.org/dist is actually laid out.
  */
 export function nodeArchiveUrl(version: string, target: NodeTarget): string {
   const base = nodeDistBaseUrl();
@@ -137,7 +137,7 @@ const defaultExec: ExecSeam = (cmd, args, opts) =>
 
 // Download + verify.
 
-/** A fetch seam — defaults to the global `fetch` (mockable in tests). */
+/** A fetch seam: defaults to the global `fetch` (mockable in tests). */
 export type FetchSeam = typeof globalThis.fetch;
 
 /**
@@ -147,7 +147,7 @@ export type FetchSeam = typeof globalThis.fetch;
  * FAIL-CLOSED: any mismatch, missing entry, or non-2xx response rejects —
  * the caller must NEVER install an unverified archive. The returned
  * `archiveBuf` is fully in memory (Node archives are ~25 MB; this is the
- * Claude-Code / volta model — download once, verify, then extract).
+ * Claude-Code / volta model: download once, verify, then extract).
  *
  * `opts.fetch` is a mock seam (defaults to `globalThis.fetch`).
  */
@@ -157,7 +157,7 @@ export async function downloadAndVerify(
   opts: { fetch?: FetchSeam; signal?: AbortSignal } = {},
 ): Promise<{ archiveBuf: Buffer; sha256: string }> {
   const doFetch = opts.fetch ?? globalThis.fetch;
-  // Default the bound at the seam so no caller can omit it — a stalled-but-not-
+  // Default the bound at the seam so no caller can omit it: a stalled-but-not-
   // dead download must not hang `noir install`/`noir update` for undici's
   // implicit ~300s. Node archives are 20-40MB, so 5 minutes is generous.
   const signal = opts.signal ?? AbortSignal.timeout(NODE_DOWNLOAD_TIMEOUT_MS);
@@ -236,7 +236,7 @@ export async function extractNode(
 
   try {
     // Reject a crafted archive whose entries escape destDir (`../` or absolute
-    // paths) BEFORE extraction — tar/unzip do not contain this on their own,
+    // paths) BEFORE extraction: tar/unzip do not contain this on their own,
     // and a traversal entry would write arbitrary files outside the runtime dir.
     await assertNoTraversal(target, tmpArchiveBase, destDir, exec, opts);
 
@@ -330,7 +330,7 @@ export interface ProvisionOptions {
  * Provision the managed Node runtime. Pipeline:
  *
  * 1. **Reuse**: if `~/.noir/runtime/v<version>/bin/node` already exists,
- *    return it immediately (idempotent — `noir init` / re-install are no-ops).
+ *    return it immediately (idempotent: `noir init` / re-install are no-ops).
  * 2. **Download + verify**: {@link downloadAndVerify} (fail-closed SHA-256).
  * 3. **Extract + atomic rename**: extract into a staging dir, then rename the
  *    extracted `node-v<ver>-<os>-<arch>/` *contents* into the final
@@ -338,7 +338,7 @@ export interface ProvisionOptions {
  * 4. **Cleanup**: remove other `~/.noir/runtime/v<old>/` dirs (keep current only).
  * 5. **Fallback**: on any failure, probe the system for a Node ≥
  *    {@link MIN_SYSTEM_NODE_MAJOR}; if found, return `{ source: 'system' }`
- *    + warn. If no usable system Node either, throw — never silent.
+ *    + warn. If no usable system Node either, throw: never silent.
  */
 export async function provisionManagedNode(opts: ProvisionOptions = {}): Promise<ProvisionedNode> {
   const version = opts.version ?? MANAGED_NODE_VERSION;
@@ -454,7 +454,7 @@ function cleanupOldRuntimes(root: string, keepVersion: string): void {
  *
  * `NOIR_SYSTEM_NODE_BIN` is a hard override (mirrors the `NOIR_*_JSON` test
  * pattern): when SET, the probe uses exactly that path and never falls back
- * to a PATH lookup — set to `''` to force "no system node" in tests. When
+ * to a PATH lookup: set to `''` to force "no system node" in tests. When
  * UNSET, the probe resolves `node` on PATH via `which`/`where`. */
 async function probeSystemNode(env: NodeJS.ProcessEnv): Promise<ProvisionedNode | null> {
   let nodeBin: string | null;

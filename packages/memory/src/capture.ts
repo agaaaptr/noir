@@ -7,7 +7,7 @@
 // that flows through the SAME `MemoryEngine.save` path as a deliberate save.
 //
 // Capture is ALWAYS local + free: {@link toSaveInput} is
-// a PURE function — no I/O, no network, no LLM, no store. It builds the input;
+// a PURE function: no I/O, no network, no LLM, no store. It builds the input;
 // the engine's `save` performs the write. There is deliberately NO source field
 // on {@link SaveInput} (it is set at save time), so an event routed through
 // `memory_save` lands with `source:'explicit'`; {@link captureSource} is exported
@@ -20,12 +20,12 @@
 // surface the user did not ask for).
 //
 // Canonical ProjectId: {@link CaptureEvent.project} is the canonical id the
-// capture command resolved from cwd — NEVER a filesystem path. The mapper copies
+// capture command resolved from cwd: NEVER a filesystem path. The mapper copies
 // it through unchanged (it is recorded on the observation at save time).
 
 import type { MemorySource, MemoryType, ProjectId, SaveInput } from './types.js';
 
-// Hook event names (open enum — forward-compat with new host hook names)
+// Hook event names (open enum: forward-compat with new host hook names)
 
 /**
  * Known host hook events Noir can capture (the four Claude Code hooks the v1
@@ -39,7 +39,7 @@ export const CAPTURE_HOOKS = ['PreToolUse', 'PostToolUse', 'UserPromptSubmit', '
 /** One of {@link CAPTURE_HOOKS} OR any host-defined hook name (open enum). */
 export type CaptureEventType = (typeof CAPTURE_HOOKS)[number] | (string & {});
 
-// Defaults — the opinionated capture policy
+// Defaults: the opinionated capture policy
 
 /**
  * Hook events captured by DEFAULT. Persist session-end summaries + the
@@ -53,14 +53,14 @@ export const DEFAULT_CAPTURE_HOOKS: readonly CaptureEventType[] = ['Stop', 'User
 /**
  * The default capture policy: capture {@link DEFAULT_CAPTURE_HOOKS} only. Used
  * when {@link toSaveInput} is called with no `policy` argument. Host-neutral +
- * conservative — the user owns the policy.
+ * conservative: the user owns the policy.
  */
 export const DEFAULT_CAPTURE_POLICY: CapturePolicy = { hooks: DEFAULT_CAPTURE_HOOKS };
 
 // CaptureEvent (the host-neutral schema)
 
 /**
- * The structured payload a host hook forwards. All fields optional — a hook
+ * The structured payload a host hook forwards. All fields optional: a hook
  * populates whichever it has (a `Stop` hook carries a `summary`; a
  * `UserPromptSubmit` hook carries the `prompt`; a tool hook carries `toolName`
  * + `toolInput`). Unknown extra fields are tolerated (the mapper reads only the
@@ -73,7 +73,7 @@ export interface CapturePayload {
   toolInput?: unknown;
   /** The submitted prompt text (`UserPromptSubmit`). */
   prompt?: string;
-  /** A session-end summary (`Stop`) — free text the host derived or was given. */
+  /** A session-end summary (`Stop`): free text the host derived or was given. */
   summary?: string;
 }
 
@@ -88,7 +88,7 @@ export interface CapturePayload {
  * the capture command resolves it from `cwd` before constructing the event.
  */
 export interface CaptureEvent {
-  /** Hook event name (open enum — {@link CaptureEventType}). */
+  /** Hook event name (open enum: {@link CaptureEventType}). */
   event_type: CaptureEventType;
   /** Epoch millis of the event (host-supplied or `Date.now()` at capture). */
   ts: number;
@@ -105,7 +105,7 @@ export interface CaptureEvent {
 /**
  * An opinionated capture policy. Controls WHICH hook events are persisted when
  * {@link toSaveInput} is called. Defaults to {@link DEFAULT_CAPTURE_POLICY}
- * (session summaries + submitted prompts only). The user owns this — it is the
+ * (session summaries + submitted prompts only). The user owns this: it is the
  * one knob that keeps auto-capture from flooding memory.
  */
 export interface CapturePolicy {
@@ -117,7 +117,7 @@ export interface CapturePolicy {
   hooks?: ReadonlyArray<CaptureEventType>;
 }
 
-// toSaveInput — the pure host-event → SaveInput mapper
+// toSaveInput: the pure host-event → SaveInput mapper
 
 /**
  * Project a host-neutral {@link CaptureEvent} into a {@link SaveInput} ready for
@@ -132,12 +132,12 @@ export interface CapturePolicy {
  *   • content is built from the event's payload fields (summary / prompt / a
  *     compact tool-call description);
  *   • `type` is inferred lightly (a decision-shaped prompt → `'decision'`; a
- *     tool hook → `'workflow'`; otherwise `'fact'`) — a heuristic the user can
+ *     tool hook → `'workflow'`; otherwise `'fact'`): a heuristic the user can
  *     override by editing the saved row;
  *   • `files` is pulled best-effort from a tool input's `file_path`;
  *   • `sessionId` is forwarded when present.
  *
- * Returning `null` is the documented "skip" signal — the caller (a capture
+ * Returning `null` is the documented "skip" signal: the caller (a capture
  * command) MUST NOT treat it as an error; it is the policy working as intended.
  *
  * @param event  The host-neutral capture event.
@@ -201,7 +201,7 @@ export function buildContent(event: CaptureEvent): string | null {
 /**
  * Render a compact one-line description of a tool call for memory content, e.g.
  * `"Ran Bash: npm test"` or `"Edited src/foo.ts"`. Returns `null` when the
- * payload carries neither a toolName nor a toolInput. Pure + best-effort — it
+ * payload carries neither a toolName nor a toolInput. Pure + best-effort: it
  * never throws on an unexpected toolInput shape (it renders what it can).
  */
 export function describeToolCall(payload: CapturePayload): string | null {
@@ -221,14 +221,14 @@ export function describeToolCall(payload: CapturePayload): string | null {
     if (pattern !== null) return `${toolName} /${pattern}/`;
     return `Used ${toolName}`;
   }
-  // No toolName — describe the input object best-effort, else nothing.
+  // No toolName: describe the input object best-effort, else nothing.
   if (cmd !== null) return `Ran command: ${cmd}`;
   if (filePath !== null) return `Touched ${filePath}`;
   return null;
 }
 
 /**
- * Light type inference for a captured event (a heuristic — the user can override
+ * Light type inference for a captured event (a heuristic: the user can override
  * by editing the saved row; no LLM is involved). Decision-shaped prompts
  * → `'decision'`; tool hooks → `'workflow'`; otherwise `'fact'` (the engine's
  * default type). Pure.
@@ -261,7 +261,7 @@ export function extractFiles(payload: CapturePayload): string[] {
  * `'auto:stop'`, `'auto:posttooluse'`), lowercased so the bucket name is a
  * stable identifier. Exported for a dedicated `noir memory capture` CLI
  * that persists an event OUTSIDE the `memory_save` envelope and wants to tag
- * provenance — the MCP `memory_save` path itself records `source:'explicit'`
+ * provenance: the MCP `memory_save` path itself records `source:'explicit'`
  * (SaveInput carries no source field by design).
  */
 export function captureSource(eventType: CaptureEventType): MemorySource {

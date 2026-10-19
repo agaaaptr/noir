@@ -1,9 +1,9 @@
-# 2026-08-19 — v2 TUI fixes + `noir run` orchestration + configuration surface
+# 2026-08-19: v2 TUI fixes + `noir run` orchestration + configuration surface
 
 > **Status:** implemented (shipped 2026-08-20 in v1.12.0-beta.1; folded into v1.13.0). Supersedes none; builds on ADR-0008.
 > **Scope:** fix two shipped v1.11.2 defects, harden `noir run` host-error handling, add three
 > run/config features (shell-bridge fallback, run profiles, `.noir/.env`), and make the
-> configuration surface fully documented. No release in this session — commits stay local.
+> configuration surface fully documented. No release in this session: commits stay local.
 
 ## Context
 
@@ -12,7 +12,7 @@ Three independent problems surfaced in one session:
 1. **Palette help corpus wraps** (shipped regression, v1.11.2): the two-column row budgets
    `LABEL_WIDTH(26) + HINT_WIDTH(34) = 60` columns, but the actual text width inside the panel
    is **58** (`PALETTE_WIDTH 64 − round border 2 − panel paddingX 2 − row paddingX 2`). Ink
-   word-wraps the truncated hint's tail onto a flush-left second line — the description appears
+   word-wraps the truncated hint's tail onto a flush-left second line: the description appears
    to "move to the left column". The two-column constants landed in `c47d1e3` (final 1.11.2).
 2. **`noir run` misreports host failures** (reproduced end-to-end against the built CLI):
    - an assistant event carrying `error:"authentication_failed"` / `is_api_error_message:true`
@@ -43,7 +43,7 @@ Three independent problems surfaced in one session:
 - **Help corpus shows the full description as a wrapped detail line on the active row**
   (matches command-row UX, solves "can't read the truncated description"). Relax the detail-line
   gate from `isActive && row.argv && row.secondary` to
-  `isActive && row.secondary && (row.argv || corpus === 'help')` — **not** all `argv`-null rows
+  `isActive && row.secondary && (row.argv || corpus === 'help')`: **not** all `argv`-null rows
   (output corpus uses `secondary` for line numbers / empty-state text).
 - Detail-line wrap width derived from the budget: `wrap(row.secondary, ROW_TEXT_WIDTH - 4)`
   (prefix is `'  ↳ '` = 4) = 54.
@@ -64,10 +64,10 @@ Three independent problems surfaced in one session:
   - `streamEvent` skips assistant events with `isError === true` (error text never reaches stdout).
   - `failed = result.exitCode !== 0 || result.isError`. On `failed`:
     - persist transcript first (unchanged, keep on failure);
-    - `fail(EXIT.ERROR, msg, opts)` — throws `CommanderError` → `handleError` sets exit 1; under
+    - `fail(EXIT.ERROR, msg, opts)`: throws `CommanderError` → `handleError` sets exit 1; under
       `--json` emits `{ok:false,error:{code:1,message}}`. Message embeds: resolved binary
       (`opts.command ?? host`), `errorText` (or stderr), auth hint when the category is auth
-      (`run \`claude /login\`` / `\`claude auth login\`` — interactive-only so it cannot run
+      (`run \`claude /login\`` / `\`claude auth login\``: interactive-only so it cannot run
       inside `noir run`; note `ANTHROPIC_API_KEY` override if set), and the generic
       "pass `--command <binary>` for another profile" hint. Include `exitCode` + `transcript` in
       the message so `--json` consumers still see them (do not extend shared `fail()`).
@@ -75,7 +75,7 @@ Three independent problems surfaced in one session:
   - **ENOENT / spawn error** (`catch`, run.ts:102): message names the **custom binary** when
     `--command` is set (today it wrongly names the host), and when
     `err.code === 'ENOENT'` adds: aliases/functions from the shell rc are invisible to `spawn()`
-    — use an executable on `PATH`, an absolute path, or a launcher script (`~/.local/bin/<name>`).
+   : use an executable on `PATH`, an absolute path, or a launcher script (`~/.local/bin/<name>`).
   - Empty-prompt polish: when `--command` is set, echo it in the usage message
     (`a prompt is required: \`noir run --command <binary> <prompt>\``). Exit 2 / `{ok:false,code:2}`
     unchanged.
@@ -97,7 +97,7 @@ Only when the initial `spawn(binary)` fails **ENOENT**, and all guards pass:
   - `N:` resolves an absolute path (PATH visible only after rc) → **respawn that path directly**
     (plain `spawn`, no shell). Cache per name.
   - `K:` is `alias` or `function` → **bridge execution**: `$SHELL -lic 'NAME "$@"' noirbridge
-    <flags...> <prompt>` — the prompt and flags arrive as positional args (`"$@"`), never parsed
+    <flags...> <prompt>`: the prompt and flags arrive as positional args (`"$@"`), never parsed
     by the shell (injection-proof; verified against hostile prompts). Do **not** `exec NAME`
     (aliases don't expand from variables; bash can't exec functions).
   - otherwise → friendly "not found" error with launcher-script guidance.
@@ -143,7 +143,7 @@ Only when the initial `spawn(binary)` fails **ENOENT**, and all guards pass:
   ignored; `EMPTY=` → `''`; last definition wins; **no** `${}` interpolation or command
   substitution (documented); malformed line → one-line stderr warning with line number + skip.
 - Load eagerly **once** at the CLI entry (`bin.ts run()`) and at the serve entry
-  (`serve.ts`) — both precede MCP-server/daemon construction, since the daemon is
+  (`serve.ts`): both precede MCP-server/daemon construction, since the daemon is
   always launched through the CLI. This covers GUI/launchd/detached contexts and
   `noir run` host spawns.
 - Security: add `/.noir/.env` to `ignore-manager` `IGNORE_ENTRIES` (scaffold gitignore); ship a
@@ -157,7 +157,7 @@ Only when the initial `spawn(binary)` fails **ENOENT**, and all guards pass:
   object/record fields (1–2 levels) so `docs/reference/config.md` becomes self-maintaining with
   real descriptions.
 - New `docs/reference/environment.md`: one grouped table (Integrations / Provider keys /
-  Updates / Terminal behavior / Advanced-test-only) — columns `Variable | Default | Required |
+  Updates / Terminal behavior / Advanced-test-only): columns `Variable | Default | Required |
   Description`; conditional requirements inline ("required only when the noir-clickup
   integration is enabled"). Includes `CLICKUP_API_TOKEN` (placement + daemon-restart rule +
   **explicit note that team/list/space ids are config.yml keys, NOT env vars**) and every
@@ -181,11 +181,11 @@ Only when the initial `spawn(binary)` fails **ENOENT**, and all guards pass:
 ## Out of scope (backlog)
 
 - Wiring the parsed-but-inert keys (`rules.enabled`, `update.display`, `context.roots`,
-  `context.budgetTokens`, `daemon.port`) — recorded as backlog, not implemented here.
-- `memory capture` command (referenced by a template) — reword the template to the
+  `context.budgetTokens`, `daemon.port`): recorded as backlog, not implemented here.
+- `memory capture` command (referenced by a template): reword the template to the
   explicit-save reality; shipping the command is backlog.
-- Windows PowerShell bridge for aliases — error-only on win32 for now.
-- A gitignored secrets-split file (`.noir/config.local.yml`) — `${VAR}` expansion covers v1.
+- Windows PowerShell bridge for aliases: error-only on win32 for now.
+- A gitignored secrets-split file (`.noir/config.local.yml`): `${VAR}` expansion covers v1.
 
 ## Docs impact
 

@@ -83,10 +83,10 @@ describe('buildMigrationPlan (pure)', () => {
     expect(plan.autoUninstall).toBe(false);
   });
 
-  // I2 — update.minVersion floor (config.ts:238). The floor is a hard lower
+  // I2: update.minVersion floor (config.ts:238). The floor is a hard lower
   // bound on the resolved target version; an explicit pin below it is refused
   // the same way a downgrade is. Mirrors the downgrade guard: only concrete
-  // X.Y.Z versions are compared — 'latest'/'beta' resolve to the newest at
+  // X.Y.Z versions are compared: 'latest'/'beta' resolve to the newest at
   // install time (always >= floor by definition), so they never trip the floor.
   describe('minVersion floor', () => {
     it('belowMinVersion true when target is a concrete version below the floor', () => {
@@ -122,7 +122,7 @@ describe('buildMigrationPlan (pure)', () => {
       expect(plan.belowMinVersion).toBe(false);
     });
 
-    it('belowMinVersion false for channel targets (latest/beta) — resolved at install time', () => {
+    it('belowMinVersion false for channel targets (latest/beta): resolved at install time', () => {
       expect(
         buildMigrationPlan({
           detected: [],
@@ -170,7 +170,7 @@ describe('buildMigrationPlan (pure)', () => {
   });
 });
 
-// install() --dismiss — C1 hardening (brief Step 2): persists the current CLI
+// install() --dismiss: C1 hardening (brief Step 2): persists the current CLI
 // version on install.json's dismissedVersions so the migration banner stops
 // showing for that version. Idempotent.
 
@@ -217,7 +217,7 @@ describe('install() --dismiss (banner dismissal persistence)', () => {
     expect(written.version).toBe('1.6.0');
   });
 
-  it('is idempotent — does not duplicate an already-dismissed version', async () => {
+  it('is idempotent: does not duplicate an already-dismissed version', async () => {
     const existing: InstallRecord = {
       method: 'npm',
       version: '1.6.0',
@@ -262,7 +262,7 @@ async function runStderrFn<T>(fn: () => Promise<T>): Promise<{ stderr: string; r
   return { stderr: errChunks.join(''), result };
 }
 
-describe('installManagedNode() (P2 — provisions managed Node)', () => {
+describe('installManagedNode() (P2: provisions managed Node)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default: provision returns the managed Node, npm install succeeds, and

@@ -4,10 +4,10 @@
 // read/write here is a single `callDaemonTool` round-trip; the daemon is the
 // sole writer of the store, so the CLI never opens the store in-process. If
 // the daemon can't be reached, `callDaemonTool` maps the failure onto exit 4
-// (DAEMON_DOWN) with the stable remediation hint — see daemon-client.ts.
+// (DAEMON_DOWN) with the stable remediation hint: see daemon-client.ts.
 //
 // A daemon tool's OWN logical-failure envelope (`{ok:false, degraded:true,
-// error}` — e.g. a read-only store refusing `context_index`, or the embedder
+// error}`: e.g. a read-only store refusing `context_index`, or the embedder
 // throwing inside `context_search`) is DATA, not a transport failure: it parses
 // cleanly, so this module surfaces it honestly as exit 1 (ERROR) with the
 // daemon's message, rather than re-packaging it as daemon-down.
@@ -77,7 +77,7 @@ export interface ContextStatusData {
   degraded: boolean;
 }
 
-/** A daemon logical-failure envelope (`{ok:false,…}`) — read generically. */
+/** A daemon logical-failure envelope (`{ok:false,…}`): read generically. */
 interface ToolFailure {
   ok: false;
   degraded?: boolean;
@@ -110,7 +110,7 @@ interface ContextIndexResult {
 
 /**
  * Coerce a commander `--limit <n>` string into a positive int, or fail with
- * exit 2 (USAGE) naming the flag — mirrors the daemon's zod
+ * exit 2 (USAGE) naming the flag: mirrors the daemon's zod
  * `number().int().positive()` but at the CLI edge so a bad value never starts a
  * daemon round-trip.
  */
@@ -127,7 +127,7 @@ function parseLimit(raw: string | undefined, label: string, opts: CliOptions): n
  * Normalize a daemon logical-failure envelope into a thrown exit-1 ERROR. The
  * envelope is data (it parsed cleanly), so this is NOT daemon-down; we surface
  * the daemon's own `error`/`reason` verbatim so the user sees the real cause
- * (e.g. "store is read-only (daemon down) — context_index is unavailable").
+ * (e.g. "store is read-only (daemon down): context_index is unavailable").
  */
 function failTool(label: string, envelope: ToolFailure, opts: CliOptions): never {
   const detail = envelope.error ?? envelope.reason ?? 'unknown failure';
@@ -229,9 +229,9 @@ export async function contextSearch(opts: ContextSearchOptions): Promise<void> {
 
 function renderSearch(data: ContextSearchData, opts: CliOptions): void {
   const flag = data.degraded ? `  ${badge('warn', 'degraded: BM25-only')}` : '';
-  const trunc = data.truncated ? ' (budget hit — results truncated)' : '';
+  const trunc = data.truncated ? ' (budget hit: results truncated)' : '';
   log(
-    `context search — ${data.hits.length} hit${data.hits.length === 1 ? '' : 's'} · ${data.mode} · ${data.consumedTokens} tokens${flag}${trunc}`,
+    `context search: ${data.hits.length} hit${data.hits.length === 1 ? '' : 's'} · ${data.mode} · ${data.consumedTokens} tokens${flag}${trunc}`,
     opts,
   );
   table(
@@ -284,7 +284,7 @@ export async function contextIndex(opts: ContextIndexOptions): Promise<void> {
 function renderIndex(data: ContextIndexData, paths: string[] | undefined, opts: CliOptions): void {
   const scope = paths && paths.length > 0 ? paths.join(', ') : '.';
   const flag = data.degraded ? `  ${badge('warn', 'degraded: vectors skipped')}` : '';
-  log(`context index — ${scope}${flag}`, opts);
+  log(`context index: ${scope}${flag}`, opts);
   definitionList(
     [
       { label: 'Indexed (new)', value: data.indexed },
@@ -322,7 +322,7 @@ function describeEmbedder(e: ContextStatusData['embedder']): string {
 
 function renderStatus(data: ContextStatusData, opts: CliOptions): void {
   const flag = data.degraded ? `  ${badge('warn', 'degraded')}` : '';
-  log(`context status — ${data.projectId}${flag}`, opts);
+  log(`context status: ${data.projectId}${flag}`, opts);
   definitionList(
     [
       { label: 'Project', value: data.projectId },

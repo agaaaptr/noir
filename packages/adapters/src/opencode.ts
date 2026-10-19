@@ -9,8 +9,8 @@ import type {
 } from './types.js';
 
 /**
- * The `opencode` host adapter — OpenCode. Reads the universal `AGENTS.md`
- * (context + rules unified — no separate rules emission, no skill concept).
+ * The `opencode` host adapter: OpenCode. Reads the universal `AGENTS.md`
+ * (context + rules unified: no separate rules emission, no skill concept).
  *
  * The DIFFERENCE from the `{mcpServers}` family lives in MCP config: OpenCode's
  * root `opencode.json` carries an `mcp` block whose entries are `type`-tagged —
@@ -26,11 +26,11 @@ import type {
 export const opencodeAdapter: HostAdapter = {
   id: 'opencode',
   emitMcpConfig(_ctx, opts: McpConfigOptions, integration?: IntegrationMcpEmission): string {
-    // OpenCode's `mcp` block — entries carry an explicit `type` tag (verified
+    // OpenCode's `mcp` block: entries carry an explicit `type` tag (verified
     // against https://opencode.ai/docs/mcp-servers/):
     //   - stdio  → { type: 'local',  command: [...] }   (command is an ARRAY)
-    //   - remote → { type: 'remote', url: ... }          (HTTP/SSE — NOT 'http')
-    // Server env vars land under `environment:` (NOT `env:` — opencode's own
+    //   - remote → { type: 'remote', url: ... }          (HTTP/SSE: NOT 'http')
+    // Server env vars land under `environment:` (NOT `env:`: opencode's own
     // spelling). Noir server always present; optional integration merges
     // alongside under its `serverName`. (Does NOT use buildMcpServersJson —
     // different shape; that helper's `env:` is correct for `.mcp.json` /
@@ -38,7 +38,7 @@ export const opencodeAdapter: HostAdapter = {
     const mcp: Record<string, unknown> = {
       noir:
         opts.transport === 'stdio'
-          ? // Thread opts.command like buildMcpServersJson does (mcp.ts:36) — the
+          ? // Thread opts.command like buildMcpServersJson does (mcp.ts:36): the
             // absolute native shim when resolveNoirCommand() detects a native
             // install, so GUI MCP clients (no shell profile PATH) can spawn it.
             // The argv itself comes from the shared helper, so a joined repo's
@@ -65,8 +65,8 @@ export const opencodeAdapter: HostAdapter = {
   emitContext(ctx: EmitContext): string {
     return emitAgentsMd(ctx);
   },
-  // No `emitRules` — rules live IN AGENTS.md (the @-import covers RULES.md).
-  // No `skillsDir` — no skill concept.
+  // No `emitRules`: rules live IN AGENTS.md (the @-import covers RULES.md).
+  // No `skillsDir`: no skill concept.
   mcpConfigPath(ctx: EmitContext): string {
     return join(ctx.root, 'opencode.json');
   },

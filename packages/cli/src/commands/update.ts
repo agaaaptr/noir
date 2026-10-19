@@ -56,7 +56,7 @@ export function buildUpdateTarget(opts: {
   const targetSpec = opts.spec ?? opts.channel;
   // The guard target: a concrete `spec` (an exact version) WINS over the
   // fetched registry version, because the downgrade and minVersion guards must
-  // evaluate what we will ACTUALLY install — not what the registry happens to
+  // evaluate what we will ACTUALLY install: not what the registry happens to
   // offer. A pinned `spec 1.9.0` against a 1.12.0 registry is a DOWNGRADE,
   // and a pinned `spec 1.5.0` can trip the minVersion floor; both were
   // previously missed because the guards only ever looked at `latestKnown`.
@@ -87,14 +87,14 @@ export function buildUpdateTarget(opts: {
 
 /**
  * Per-segment numeric semver comparison (major.minor.patch). Returns true when
- * `a` is strictly greater than `b`. Pre-release suffixes are ignored — Noir
+ * `a` is strictly greater than `b`. Pre-release suffixes are ignored: Noir
  * versioning is `MAJOR.MINOR.PATCH` only, and the registry's dist-tag is the
  * source of truth for "latest". Non-numeric segments coerce to 0. Used here
  * instead of a full semver library to keep the CLI's dependency surface
  * unchanged (the same helper lives in install.ts for the downgrade guard).
  */
 function semverGt(a: string, b: string): boolean {
-  // Strip a leading `v` (npm-idiomatic) — bare Number('v1') is NaN.
+  // Strip a leading `v` (npm-idiomatic): bare Number('v1') is NaN.
   const seg = (s: string): number => Number(s.replace(/^v/, '')) || 0;
   const pa = a.split('.').map(seg);
   const pb = b.split('.').map(seg);
@@ -112,7 +112,7 @@ function semverGt(a: string, b: string): boolean {
  * segment, non-numeric → 0. Returns true when `a` is strictly less than `b`.
  */
 function semverLt(a: string, b: string): boolean {
-  // Strip a leading `v` (npm-idiomatic) — bare Number('v1') is NaN.
+  // Strip a leading `v` (npm-idiomatic): bare Number('v1') is NaN.
   const seg = (s: string): number => Number(s.replace(/^v/, '')) || 0;
   const pa = a.split('.').map(seg);
   const pb = b.split('.').map(seg);
@@ -127,10 +127,10 @@ function semverLt(a: string, b: string): boolean {
 export async function update(opts: UpdateOptions = {}): Promise<void> {
   // NOIR_DISABLE_UPDATES is the hard kill-switch for the SELF-UPDATE surface
   // (distinct from NOIR_DISABLE_UPDATE_CHECK, which only gags the background
-  // version check). When set, `noir update` refuses to run at all — enterprises
+  // version check). When set, `noir update` refuses to run at all: enterprises
   // can pin this in the environment to enforce "updates flow only through the
   // package manager / image rebuild, never from inside the CLI". `fail` is
-  // `: never` (always throws) — the explicit `return` is defensive.
+  // `: never` (always throws): the explicit `return` is defensive.
   if (process.env.NOIR_DISABLE_UPDATES !== undefined) {
     fail(
       EXIT.USAGE,
@@ -169,7 +169,7 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
     fetchSpin.fail('Could not reach the registry.');
     // Registry-unreachable is a FAILURE: route through fail() so --json emits
     // {ok:false,error} on stdout AND the process exits 1 (a silent return would
-    // leave stdout empty + exit 0 — indistinguishable from success for scripts).
+    // leave stdout empty + exit 0: indistinguishable from success for scripts).
     fail(EXIT.ERROR, 'Could not reach the registry.', opts);
   }
   fetchSpin.succeed(`Latest: ${latest}`);
@@ -180,7 +180,7 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
   try {
     minVersion = loadProjectInfo(process.cwd()).config.update.minVersion;
   } catch {
-    // Not initialized yet — the config default applies.
+    // Not initialized yet: the config default applies.
   }
   const target = buildUpdateTarget({
     method,
@@ -234,7 +234,7 @@ export async function update(opts: UpdateOptions = {}): Promise<void> {
     // (which may predate the chmod fix). Re-assert the freshly-written shim is
     // executable so the user's NEXT `noir …` doesn't fail with permission
     // denied. This is the ONLY line that closes the regression once 1.7.4+ is
-    // installed — it runs in the NEW binary's process.
+    // installed: it runs in the NEW binary's process.
     ensureShimExecutable();
     updateSpin.succeed(`Updated to noir ${res.version}`);
     if (opts.json === true) {
@@ -285,7 +285,7 @@ function updateCmdFor(method: string, spec: string): string[] | null {
 /**
  * The human-readable update command for an install method. Mirrors
  * {@link updateCmdFor} (the machine command) with the manager the user should
- * actually run — `noir update` is the universal entry (it re-dispatches to the
+ * actually run: `noir update` is the universal entry (it re-dispatches to the
  * right manager), but the package-manager spellings are shown for transparency.
  */
 export function updateAdvice(method: string): string {
@@ -320,7 +320,7 @@ export interface UpdateNotice {
 /**
  * Build the home-menu "update available" notice from the cached latest version.
  * Returns `null` when there is no cached latest, no current version, or the
- * latest is NOT strictly newer (the semver downgrade guard — a stale/older
+ * latest is NOT strictly newer (the semver downgrade guard: a stale/older
  * cache entry is never advertised as an upgrade).
  */
 export function buildUpdateNotice(opts: {
@@ -356,6 +356,6 @@ export async function runAsyncUpdateCheck(opts: {
     }
     // Non-blocking: never print in quiet/CI/non-TTY; a mismatch only nudges.
   } catch {
-    // silent on any failure — this is a non-blocking background check
+    // silent on any failure: this is a non-blocking background check
   }
 }

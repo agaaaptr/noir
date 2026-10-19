@@ -3,13 +3,13 @@
 // The bare `noir` home menu (packages/cli/src/commands/home.ts) and the Ink TUI
 // palette's `commands` corpus (App.tsx → palette/rows.ts) both render a curated
 // set of quick actions. This module is the SINGLE source of that curation so
-// the two renderers cannot drift — the same one-table-two-renderers idea that
+// the two renderers cannot drift: the same one-table-two-renderers idea that
 // keeps the TUI palette aligned with the commander tree.
 //
 // No-drift contract: every {@link HomeAction} references a palette-registry
 // `id` (e.g. 'context search'), NOT a hand-written argv. {@link resolveSections}
 // re-derives the live palette commands and drops any action whose id no longer
-// exists — so a future commander change degrades the menu to what exists
+// exists: so a future commander change degrades the menu to what exists
 // instead of crashing it.
 //
 // This module is deliberately React-free (no ink import) so `home.ts` (the lean
@@ -43,8 +43,8 @@ export interface HomeAction {
     /**
      * Short name of the collected value ('query', 'content'), shown as the
      * palette's input placeholder. Set it when the value is not a plain
-     * positional argument — a flag-carried value, or a prompt the CLI accepts
-     * but does not require — so the palette still knows to ask for it.
+     * positional argument: a flag-carried value, or a prompt the CLI accepts
+     * but does not require: so the palette still knows to ask for it.
      */
     readonly label?: string;
     readonly prompt: string;
@@ -276,7 +276,7 @@ export const HOME_SECTIONS: readonly HomeSection[] = [
  *
  * @param commands The live palette commands (from
  *   `buildPaletteCommands(createProgram())`). bin.ts supplies them to both
- *   home.ts and the TUI — this module stays free of a bin.ts import edge (and
+ *   home.ts and the TUI: this module stays free of a bin.ts import edge (and
  *   of the load-time cycle a dynamic `import('../../bin.js')` would create,
  *   since bin.ts imports home.ts which imports this module).
  */
@@ -287,14 +287,14 @@ export async function resolveSections(commands: readonly PaletteCommand[]): Prom
     const items: HomeAction[] = [];
     for (const action of section.items) {
       const entry = byId.get(action.id);
-      if (!entry) continue; // id removed from the tree — degrade, don't crash
+      if (!entry) continue; // id removed from the tree: degrade, don't crash
       items.push({
         ...action,
         // Resolve the dispatch argv from the registry (never hand-written).
         dispatch: action.dispatch ?? [...entry.argv],
       });
     }
-    if (items.length === 0) continue; // section went empty — drop it
+    if (items.length === 0) continue; // section went empty: drop it
     out.push({ ...section, items });
   }
   return out;

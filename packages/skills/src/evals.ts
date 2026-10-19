@@ -2,8 +2,8 @@
 //
 // Skills are declared as `evals/**/evals.json` per the agentskills.io format
 // (`{skill_name, evals:[{id, prompt, expected_output, assertions?}]}`). The
-// harness loads every suite and runs OFFLINE assertions only — `contains`,
-// `not-contains`, `regex`, `length-gte` — no LLM, no network, so it runs in
+// harness loads every suite and runs OFFLINE assertions only: `contains`,
+// `not-contains`, `regex`, `length-gte`: no LLM, no network, so it runs in
 // `pnpm test` (the project's offline/free constraint). This is the executable
 // that turns the JSON declaration into a vitest suite (see test/evals.test.ts).
 //
@@ -14,7 +14,7 @@
 //
 // Assertions must be able to run against a CANDIDATE answer (what a model or
 // a stub standing in for one actually produced), not only against the
-// self-declared `expected_output` — otherwise a suite can never fail for the
+// self-declared `expected_output`: otherwise a suite can never fail for the
 // right reason. `evaluateSuite` therefore accepts an optional candidate-output
 // source. Passing no source keeps asserting `expected_output`, so suites that
 // predate candidate output work unchanged; passing a source makes an eval it
@@ -46,7 +46,7 @@ export interface EvalSuite {
 }
 
 /**
- * Candidate answers keyed by eval id — what a model (or a stub standing in for
+ * Candidate answers keyed by eval id: what a model (or a stub standing in for
  * one) actually produced. An id present here is the text the assertions run
  * against. An id absent is a failure for that eval: the run recorded no answer,
  * and asserting the golden `expected_output` instead would report a pass the
@@ -146,7 +146,7 @@ const PKG_ROOT = dirname(HERE);
 export const EVALS_DIR = join(PKG_ROOT, 'evals');
 
 /**
- * Load every eval suite under `dir` (default the shipped `evals/` dir — each
+ * Load every eval suite under `dir` (default the shipped `evals/` dir: each
  * subdir carries an `evals.json`). Skips non-`.json` files and missing dirs
  * (no evals = no-op). Fail-fast on a malformed suite (a broken evals.json is a
  * bug, not a skip).
@@ -197,7 +197,7 @@ export function evaluateSuite(
     // run could not record an answer (a misspelled id, or a model call that
     // never happened). Scoring the golden `expected_output` here would report
     // the very pass this harness exists to prevent, so a missing entry is a
-    // failure — but only when a source was supplied at all. With no source, a
+    // failure: but only when a source was supplied at all. With no source, a
     // suite that predates candidate output keeps asserting its declared
     // directive (backward compatible).
     if (candidates && !(e.id in candidates)) {

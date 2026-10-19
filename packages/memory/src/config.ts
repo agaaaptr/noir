@@ -5,35 +5,35 @@
 // Lives HERE, in memory, so @noir-ai/core never imports @noir-ai/memory
 // (no core→memory cycle): core owns the user-facing schema, memory owns the
 // engine type + this mapper (mirrors @noir-ai/context's `resolveEmbedderConfig`
-// and @noir-ai/model's `resolveModelConfig` — the same per-package bridge shape
+// and @noir-ai/model's `resolveModelConfig`: the same per-package bridge shape
 // every layer uses). The fully-
 // resolved zod output is structurally assignable to the permissive
 // {@link MemoryUserConfig} mirror below, so the mapper accepts a
-// `NoirConfig['memory']` directly — callers pass `resolveMemoryConfig(cfg.memory)`.
+// `NoirConfig['memory']` directly: callers pass `resolveMemoryConfig(cfg.memory)`.
 //
 // Provider-EXPLICIT, never silent paid: this mapper is a
-// PURE projection of what the user wrote — it NEVER infers a provider from
+// PURE projection of what the user wrote: it NEVER infers a provider from
 // env-var presence. No explicit `consolidation.provider` ⇒ a disabled runtime
 // config ⇒ `runConsolidation` refuses with `'no-provider'` + writes a miss audit
 // and makes NO `complete()` call. This is the line between free (store/embed)
-// and paid (LLM) — NEVER a silent paid call (the Agent-Memory anti-pattern).
-// The mapper reads NO environment, holds NO secrets, and never throws — an
+// and paid (LLM): NEVER a silent paid call (the Agent-Memory anti-pattern).
+// The mapper reads NO environment, holds NO secrets, and never throws: an
 // unusable config stays a clean disabled default.
 
 import type { MemoryConfig } from './types.js';
 
 /**
- * User-facing memory config shape — mirrors `NoirConfig['memory']` (the zod block
+ * User-facing memory config shape: mirrors `NoirConfig['memory']` (the zod block
  * @noir-ai/core ships). Declared LOCALLY with every field
  * optional so this module type-checks WITHOUT a forward dependency on a core
- * type (core never imports memory — no cycle; @noir-ai/core is not even
+ * type (core never imports memory: no cycle; @noir-ai/core is not even
  * consulted here), AND so a config with no `memory:` block (or a partial one)
  * maps cleanly to a fully-disabled runtime config. The fully-resolved zod output
  * is structurally assignable to this permissive shape, so the mapper accepts a
  * `NoirConfig['memory']` directly.
  */
 export interface MemoryUserConfig {
-  /** Consolidation gate (provider-explicit — never silent paid). */
+  /** Consolidation gate (provider-explicit: never silent paid). */
   consolidation?: {
     /** Master switch (default false). When false, `consolidate` refuses + logs. */
     enabled?: boolean;
@@ -51,7 +51,7 @@ export interface MemoryUserConfig {
  * {@link MemoryConfig} the memory engine (and `runConsolidation`) consume.
  *
  * - `undefined` / missing block ⇒ `{ consolidation: { enabled: false } }`
- *   (consolidation disabled — the safe default; capture/store/retrieve stay
+ *   (consolidation disabled: the safe default; capture/store/retrieve stay
  *   local + free. `runConsolidation` then refuses with `'no-provider'` + logs,
  *   making NO paid call).
  * - A block whose `consolidation.enabled` is absent or `false` ⇒ the same
@@ -66,7 +66,7 @@ export interface MemoryUserConfig {
  * mirrors how `resolveModelConfig` normalizes `tiers`/`providers` to
  * always-present objects.
  *
- * This mapper is a PURE projection — it copies fields through unchanged, NEVER
+ * This mapper is a PURE projection: it copies fields through unchanged, NEVER
  * infers a provider from env-var presence, reads NO environment, holds NO
  * secrets, and never throws. Whether a configured provider is actually USABLE is
  * decided at call time inside `complete()` (which re-reads env idempotently),
@@ -81,7 +81,7 @@ export function resolveMemoryConfig(raw?: MemoryUserConfig): MemoryConfig {
   // `enabled` is defaulted to false: an absent OR explicitly-false block both
   // disable consolidation. Strict `=== true` so a stray truthy non-boolean
   // (impossible post-zod, possible from hand-built test input) never enables a
-  // paid call by accident — provider-EXPLICIT means opt-in is deliberate.
+  // paid call by accident: provider-EXPLICIT means opt-in is deliberate.
   const enabled = cons?.enabled === true;
   const provider = cons?.provider;
   const model = cons?.model;
@@ -90,9 +90,9 @@ export function resolveMemoryConfig(raw?: MemoryUserConfig): MemoryConfig {
   // Always populate `consolidation` with `enabled` defaulted, so consumers read
   // `config.consolidation.enabled` without a separate undefined check (mirrors
   // how resolveModelConfig normalizes `tiers`/`providers` to always-present
-  // objects). An absent block ⇒ disabled — NEVER a silent paid call.
+  // objects). An absent block ⇒ disabled: NEVER a silent paid call.
   const consolidation: NonNullable<MemoryConfig['consolidation']> = { enabled };
-  // Pure passthrough — no normalization, no env inference, no defaults beyond
+  // Pure passthrough: no normalization, no env inference, no defaults beyond
   // `enabled`. Optional fields are copied only when present so `undefined` never
   // overwrites a meaningful absent-with-a-default state downstream.
   if (provider !== undefined) consolidation.provider = provider;

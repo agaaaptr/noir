@@ -1,4 +1,4 @@
-// `noir doctor` — the two-tier output-hygiene check.
+// `noir doctor`: the two-tier output-hygiene check.
 //
 // The check runs the @noir-ai/skills hygiene rules over the repository's own
 // source and documents. A fail-tier pattern (a divider drawn in punctuation,
@@ -35,16 +35,16 @@ import {
 } from '../src/commands/doctor.js';
 import { scanOutputHygiene } from '../src/hygiene-scan.js';
 
-/** A divider drawn in punctuation around `label` — a fail-tier banner. */
+/** A divider drawn in punctuation around `label`: a fail-tier banner. */
 const banner = (label: string): string => `// ${'='.repeat(10)} ${label} ${'='.repeat(10)}\n`;
 
-/** A heading that opens with a decorative emoji — a fail-tier document pattern. */
+/** A heading that opens with a decorative emoji: a fail-tier document pattern. */
 const emojiHeading = (): string => `# ${String.fromCodePoint(0x1f389)} Release notes\n`;
 
 /** A forbidden residue token, on a line of its own. */
 const residue = (token: string): string => `${token}\n`;
 
-/** A run of comment lines long enough to be narration — a warn-tier pattern. */
+/** A run of comment lines long enough to be narration: a warn-tier pattern. */
 const longCommentBlock = (): string =>
   Array.from({ length: MAX_COMMENT_BLOCK_LINES }, (_, i) => `// filler line ${i + 1}`).join('\n') +
   '\n';
@@ -261,7 +261,7 @@ async function runDoctor(): Promise<DoctorData> {
   try {
     await doctor({ json: true });
   } catch {
-    // expected on a fail — the payload was captured before the throw
+    // expected on a fail: the payload was captured before the throw
   } finally {
     process.chdir(origCwd);
     process.stdout.write = origOut;
@@ -271,7 +271,7 @@ async function runDoctor(): Promise<DoctorData> {
   return envelope.data;
 }
 
-describe('noir doctor — the output-hygiene check is registered', () => {
+describe('noir doctor: the output-hygiene check is registered', () => {
   it('emits a failing output-hygiene row when the repository carries a fail-tier pattern', async () => {
     write('packages/a/src/load.ts', `${banner('load')}export const a = 1;\n`);
     const data = await runDoctor();

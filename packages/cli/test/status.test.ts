@@ -1,4 +1,4 @@
-// S9 t4 — `noir status` tests. The daemon MCP client is mocked at the module
+// S9 t4: `noir status` tests. The daemon MCP client is mocked at the module
 // boundary (no real daemon, no real HTTP): `withDaemon` is replaced with a fake
 // that invokes the passed `fn` against a controllable `callTool` so each tool's
 // payload (or failure) is deterministic. These pin the status contract:
@@ -7,7 +7,7 @@
 //   • optional engines degrade gracefully (store/context/workflow/memory → null
 //     when the tool is absent or returns a logical-failure envelope), while
 //     host_status is required (its failure propagates as the daemon-client's
-//     exit-4 error — covered in daemon-client.test, not re-asserted here).
+//     exit-4 error: covered in daemon-client.test, not re-asserted here).
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // vi.mock factories are hoisted above all imports, so they may only reference
@@ -166,7 +166,7 @@ async function runJson(opts: StatusOptions): Promise<{
 
 const baseOpts: StatusOptions = {};
 
-describe('status --json — success envelope on stdout', () => {
+describe('status --json: success envelope on stdout', () => {
   it('emits {ok:true,data} to STDOUT only (stderr empty)', async () => {
     const env = await runJson(baseOpts);
     expect(env.ok).toBe(true);
@@ -226,7 +226,7 @@ describe('status --json — success envelope on stdout', () => {
   });
 });
 
-describe('status — graceful degradation (optional engines)', () => {
+describe('status: graceful degradation (optional engines)', () => {
   it('store_status throwing → data.store null, others still present', async () => {
     currentCaller.callTool = vi.fn(async (name: string) => {
       if (name === 'store_status') throw new Error('tool not registered');
@@ -240,7 +240,7 @@ describe('status — graceful degradation (optional engines)', () => {
 
   it('workflow_status logical-failure envelope → data.workflow null (not a crash)', async () => {
     // The daemon returns {ok:false,error:'no active task'} as DATA when no task
-    // is active — status normalizes it to null rather than propagating.
+    // is active: status normalizes it to null rather than propagating.
     PAYLOADS.workflow_status = { ok: false, error: 'no active task' };
     const env = await runJson(baseOpts);
     expect(env.data.workflow).toBeNull();
@@ -260,7 +260,7 @@ describe('status — graceful degradation (optional engines)', () => {
   });
 });
 
-describe('status — daemon down (probe-only, NEVER auto-starts)', () => {
+describe('status: daemon down (probe-only, NEVER auto-starts)', () => {
   beforeEach(() => {
     probeHolder.current = { running: false };
   });
@@ -283,7 +283,7 @@ describe('status — daemon down (probe-only, NEVER auto-starts)', () => {
       await status({ ...baseOpts });
       const c = capture();
       expect(c.out).toBe('');
-      expect(c.err).toMatch(/noir status — noir-demo \(proj-abc\)/);
+      expect(c.err).toMatch(/noir status: noir-demo \(proj-abc\)/);
       expect(c.err).toContain('not running');
       expect(c.err).toContain('noir daemon start');
     } finally {
@@ -298,7 +298,7 @@ describe('status — daemon down (probe-only, NEVER auto-starts)', () => {
   });
 });
 
-describe('status — human table on stderr', () => {
+describe('status: human table on stderr', () => {
   it('renders banner + Field/Value table to STDERR, nothing to STDOUT', async () => {
     const { capture, restore } = captureStreams();
     try {
@@ -306,7 +306,7 @@ describe('status — human table on stderr', () => {
       const c = capture();
       expect(c.out).toBe('');
       const err = c.err;
-      expect(err).toMatch(/noir status — noir-demo \(proj-abc\)/);
+      expect(err).toMatch(/noir status: noir-demo \(proj-abc\)/);
       expect(err).toContain('Project');
       expect(err).toContain('Daemon');
       expect(err).toContain('running');
@@ -365,7 +365,7 @@ describe('status — human table on stderr', () => {
     try {
       await status({ ...baseOpts });
       // the ad-hoc `[degraded: read-only]` marker is now a status badge
-      // (`⚠ degraded: read-only`) — symbol + text label, colorblind/NO_COLOR-safe.
+      // (`⚠ degraded: read-only`): symbol + text label, colorblind/NO_COLOR-safe.
       const err = capture().err;
       expect(err).toContain('degraded: read-only');
       expect(err).toContain('⚠');
@@ -386,7 +386,7 @@ describe('status — human table on stderr', () => {
   });
 });
 
-describe('status — quiet suppression', () => {
+describe('status: quiet suppression', () => {
   it('human banner suppressed under --quiet; table still renders', async () => {
     const { capture, restore } = captureStreams();
     try {
@@ -394,7 +394,7 @@ describe('status — quiet suppression', () => {
       const c = capture();
       // log() (the banner) is silenced under --quiet; table() still writes
       // because the table IS the data, not a non-essential diagnostic.
-      expect(c.err).not.toMatch(/noir status —/);
+      expect(c.err).not.toMatch(/noir status:/);
       expect(c.err).toContain('Daemon');
     } finally {
       restore();

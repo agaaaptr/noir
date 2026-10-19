@@ -1,13 +1,13 @@
-// Workspace change feed — a monotonic cursor + a bounded ring of change entries,
+// Workspace change feed: a monotonic cursor + a bounded ring of change entries,
 // stored in the workspace store's KV, plus in-process long-poll waiters.
 //
 // The cursor is the workspace's single ordering authority: every
 // mutation (save / supersede / forget) bumps it, and each feed entry carries the
 // cursor it was assigned. Because the workspace daemon is ONE process, `await_changes`
-// long-polling needs no cross-process signalling — waiters are registered here
+// long-polling needs no cross-process signalling: waiters are registered here
 // and woken synchronously after a write (`wakeFeedWaiters`). This is the
 // cross-host-reliable "notification" (pushing content into the agent's context
-// is an anti-pattern — the agent reads on demand instead).
+// is an anti-pattern: the agent reads on demand instead).
 import type { Store } from '@noir-ai/store';
 
 const WORKSPACE_CURSOR_KEY = 'workspace:cursor';
@@ -17,7 +17,7 @@ const FEED_RING_LIMIT = 500;
 
 export type FeedKind = 'save' | 'supersede' | 'forget';
 
-/** A change-feed entry: minimal denormalized projection (id + summary — never full content). */
+/** A change-feed entry: minimal denormalized projection (id + summary: never full content). */
 export interface FeedEntry {
   cursor: number;
   kind: FeedKind;
@@ -58,7 +58,7 @@ export function changesSince(
   const feed = store.getState<FeedEntry[]>(WORKSPACE_FEED_KEY) ?? [];
   const trimmed = store.getState<boolean>(WORKSPACE_FEED_TRIMMED_KEY) === true;
   // A client whose cursor predates the oldest surviving entry has missed
-  // evicted changes — surface it so it re-pulls from scratch instead of
+  // evicted changes: surface it so it re-pulls from scratch instead of
   // believing it is caught up (spec: changes_since is the always-works
   // backstop). `- 1` matters: a client whose cursor is exactly one behind the
   // oldest surviving entry is fully caught up (the ring holds everything newer),
@@ -67,7 +67,7 @@ export function changesSince(
   return { cursor: currentCursor(store), changes: feed.filter((e) => e.cursor > cursor), gapped };
 }
 
-/** One-line, bounded summary for a feed entry (never full content — token-efficient). */
+/** One-line, bounded summary for a feed entry (never full content: token-efficient). */
 export function summarize(content: string, max = 120): string {
   const first = content.split('\n')[0] ?? '';
   if (first.length <= max) return first;
@@ -91,7 +91,7 @@ const waiters: Waiter[] = [];
 /** Wake every waiter whose cursor is behind the current cursor. Called after a write. */
 export function wakeFeedWaiters(store: Store): void {
   const cursor = currentCursor(store);
-  // Snapshot — `resolve` mutates `waiters` (removes the waiter).
+  // Snapshot: `resolve` mutates `waiters` (removes the waiter).
   for (const w of [...waiters]) {
     if (w.cursor < cursor) w.resolve(true);
   }

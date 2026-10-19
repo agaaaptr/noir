@@ -1,12 +1,12 @@
 // Write-path semantic dedup + CLI-wiring tests.
 //
 // Two surfaces:
-//   1. `checkWritePathDedup` (the hook) — direct unit tests with hand-crafted
+//   1. `checkWritePathDedup` (the hook): direct unit tests with hand-crafted
 //      ScaffoldResults + injected fake embedders (no onnx). Covers the two-tier
 //      threshold, the content-hash cache gate, graceful-degrade when the
 //      embedder throws, the fresh-project fast path, and the conflict
 //      connect (conflicts[] record with similarity).
-//   2. `init`/`sync` TASK 1 wiring — pre-populate a skill target with a
+//   2. `init`/`sync` TASK 1 wiring: pre-populate a skill target with a
 //      differing file, then assert the clack resolver fires under interactive
 //      and is bypassed under --no-input.
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -16,7 +16,7 @@ import type { ScaffoldResult } from '@noir-ai/create';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { checkWritePathDedup, type EmbedLike } from '../src/dedup-write.js';
 
-// @clack/prompts mock — `select` returns a per-test value; `isCancel` recognises
+// @clack/prompts mock: `select` returns a per-test value; `isCancel` recognises
 // the CANCEL sentinel. Hoisted so the factory closure can reference it.
 const { clackMock } = vi.hoisted(() => {
   const CANCEL = Symbol('cancel');
@@ -42,7 +42,7 @@ afterEach(() => {
   rmSync(tmp, { recursive: true, force: true });
 });
 
-/** Build a minimal ScaffoldResult — the hook reads only `written` and pushes to
+/** Build a minimal ScaffoldResult: the hook reads only `written` and pushes to
  *  `conflicts`, so the rest is zero-filled. Aliased as `res(...)` at the bottom. */
 function fakeRes(written: string[]): ScaffoldResult {
   return {
@@ -82,7 +82,7 @@ function fakeEmbedIdentical(): EmbedLike {
 }
 
 // 1. Two-tier threshold.
-describe('checkWritePathDedup — two-tier threshold', () => {
+describe('checkWritePathDedup: two-tier threshold', () => {
   it('≥ 0.95: under --no-input records the near-dup AND proceeds with Create anyway', async () => {
     // CLAUDE.md is the file we just "wrote"; AGENTS.md is the existing near-dup.
     writeFileSync(join(tmp, 'CLAUDE.md'), 'A', 'utf8');
@@ -119,7 +119,7 @@ describe('checkWritePathDedup — two-tier threshold', () => {
     expect(values).toEqual(['create', 'mirror', 'replace', 'skip']);
   });
 
-  it('≥ 0.95 interactive — Skip deletes the just-written proposed file', async () => {
+  it('≥ 0.95 interactive: Skip deletes the just-written proposed file', async () => {
     writeFileSync(join(tmp, 'CLAUDE.md'), 'A', 'utf8');
     writeFileSync(join(tmp, 'AGENTS.md'), 'A', 'utf8');
     clackMock.select.mockResolvedValueOnce('skip');
@@ -131,7 +131,7 @@ describe('checkWritePathDedup — two-tier threshold', () => {
     expect(existsSync(join(tmp, 'AGENTS.md'))).toBe(true); // matched stays
   });
 
-  it('≥ 0.95 interactive — Replace overwrites the matched existing file', async () => {
+  it('≥ 0.95 interactive: Replace overwrites the matched existing file', async () => {
     writeFileSync(join(tmp, 'CLAUDE.md'), 'FRESH-BYTES', 'utf8');
     writeFileSync(join(tmp, 'AGENTS.md'), 'OLD', 'utf8');
     clackMock.select.mockResolvedValueOnce('replace');
@@ -181,7 +181,7 @@ describe('checkWritePathDedup — two-tier threshold', () => {
 });
 
 // 2. Fresh-project fast path: empty candidate set → no embedding.
-describe('checkWritePathDedup — fast path', () => {
+describe('checkWritePathDedup: fast path', () => {
   it('empty candidate set (fresh project): embedder is never called', async () => {
     writeFileSync(join(tmp, 'CLAUDE.md'), 'A', 'utf8'); // proposed; no other host files
     const embed = vi.fn(fakeEmbedIdentical());
@@ -206,7 +206,7 @@ describe('checkWritePathDedup — fast path', () => {
 });
 
 // 3. Graceful degradation: embedder unavailable → warn-skip, write still ok.
-describe('checkWritePathDedup — graceful degradation', () => {
+describe('checkWritePathDedup: graceful degradation', () => {
   it('embedder throws → warn-skip, empty result, exit-0-shaped (no throw)', async () => {
     writeFileSync(join(tmp, 'CLAUDE.md'), 'A', 'utf8');
     writeFileSync(join(tmp, 'AGENTS.md'), 'A', 'utf8');
@@ -225,7 +225,7 @@ describe('checkWritePathDedup — graceful degradation', () => {
 });
 
 // 4. Content-hash gate: repeat run with unchanged candidates doesn't re-embed.
-describe('checkWritePathDedup — content-hash cache', () => {
+describe('checkWritePathDedup: content-hash cache', () => {
   it('second run with unchanged candidates does NOT re-embed (cache hits)', async () => {
     writeFileSync(join(tmp, 'CLAUDE.md'), 'PROPOSED-CONTENT', 'utf8');
     writeFileSync(join(tmp, 'AGENTS.md'), 'PROPOSED-CONTENT', 'utf8');
@@ -279,7 +279,7 @@ describe('checkWritePathDedup — content-hash cache', () => {
 });
 
 // 5. --json connect: near-dup recorded in conflicts[] with similarity.
-describe('checkWritePathDedup — conflict connect (conflicts[])', () => {
+describe('checkWritePathDedup: conflict connect (conflicts[])', () => {
   it('action tier records a ConflictRecord (mode=artifact, similarity set, 12-char shas)', async () => {
     writeFileSync(join(tmp, 'CLAUDE.md'), 'A', 'utf8');
     writeFileSync(join(tmp, 'AGENTS.md'), 'A', 'utf8');
@@ -301,10 +301,10 @@ describe('checkWritePathDedup — conflict connect (conflicts[])', () => {
 
 // 6. TASK 1 wiring: init/sync forward onConflict to emitSkillsToDir.
 // Spying on the producer (rather than @clack) isolates the WIRING under test
-// from the clack menu's own behavior — the contract TASK 1 closes is "the
+// from the clack menu's own behavior: the contract TASK 1 closes is "the
 // CLI threads buildConflictOpts().onConflict into emitSkillsToDir", and the
 // spy asserts EXACTLY that at the call boundary.
-describe('TASK 1 — init/sync forward onConflict to skills emit', () => {
+describe('TASK 1: init/sync forward onConflict to skills emit', () => {
   it('interactive init: emitSkillsToDir is called with onConflict + interactive=true', async () => {
     const skills = await import('@noir-ai/skills');
     const spy = vi.spyOn(skills, 'emitSkillsToDir').mockResolvedValue({

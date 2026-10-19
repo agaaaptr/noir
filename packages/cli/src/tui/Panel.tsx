@@ -1,8 +1,8 @@
-// Shared container — every TUI surface uses this one component for rounded
+// Shared container: every TUI surface uses this one component for rounded
 // borders + width accounting so no caller duplicates `borderStyle round` /
 // `borderColor gray` / `width` math.
 //
-// When `maxWidth` is set the panel caps at that column ceiling — used by the
+// When `maxWidth` is set the panel caps at that column ceiling: used by the
 // command palette for the fixed-width overlay look (like Raycast / VS Code).
 // Defaults to full terminal width via contentWidth().
 //
@@ -30,7 +30,7 @@ function panelWidth(maxWidth?: number): number {
 /**
  * The columns a panel hands to a child's text, once the panel's own border and
  * padding are paid for. `padding` is the horizontal padding the CHILD adds for
- * itself — each 1-column inset costs 2 columns.
+ * itself: each 1-column inset costs 2 columns.
  *
  * Sizing text from this number is what keeps a row inside its box: a row one
  * column too wide is wrapped by Ink onto a stray second line, which reads as the
@@ -50,7 +50,7 @@ export function Panel({ children, maxWidth }: PanelProps): ReactElement {
   const width = panelWidth(maxWidth);
   // The border color rides the SAME color authority as every other surface:
   // when colors are off (NO_COLOR / non-TTY), pass `undefined` so Ink renders
-  // the border in the default terminal color with no ANSI — a hardcoded
+  // the border in the default terminal color with no ANSI: a hardcoded
   // borderColor="gray" bypassed useColor() and left colored borders around
   // plain content (the documented NO_COLOR contract).
   const borderColor = useColor() ? ('gray' as const) : undefined;

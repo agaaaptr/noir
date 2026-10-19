@@ -2,7 +2,7 @@
 //
 // Joining points the repo's `noir` entry at the workspace through the stdio
 // bridge, leaving returns that entry to plain stdio, and both rewrite ONLY the
-// keys that describe how a host reaches the server — anything else the user put
+// keys that describe how a host reaches the server: anything else the user put
 // on the entry (`env`, `headers`, `headersHelper`) is theirs and stays. Every
 // test here runs offline against a real temp repo.
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -32,11 +32,11 @@ import { writeStdioEntry, writeWorkspaceEntry } from '../src/workspace-mcp.js';
 const WORKSPACE = 'demo';
 const MCP_FILE = '.mcp.json';
 
-/** Plain stdio — what a repo has before it joins anything. */
+/** Plain stdio: what a repo has before it joins anything. */
 const STDIO = { command: 'noir', args: ['mcp', 'serve', '--stdio'] };
 /** The workspace entry: stdio that names the workspace for the bridge to resolve. */
 const BRIDGE = { command: 'noir', args: ['mcp', 'serve', '--stdio', '--workspace', WORKSPACE] };
-/** Wiring a user added by hand — none of it describes the transport. */
+/** Wiring a user added by hand: none of it describes the transport. */
 const USER_WIRING = {
   env: { NOIR_LOG: 'debug' },
   headers: { 'X-Api-Key': 'hand-added' },

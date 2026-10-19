@@ -1,6 +1,6 @@
 // `noir run` host-failure contract: a failed host run must exit non-zero, emit
 // an actionable stderr message (not a "usage" success line), and report
-// {ok:false} under --json — the shipped v1.11.2 behavior returned exit 0 with
+// {ok:false} under --json: the shipped v1.11.2 behavior returned exit 0 with
 // {ok:true} and streamed the auth error as if it were the answer. Drives the
 // real commander tree + run.ts with a mocked runHost (offline, no host spawn).
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -33,7 +33,7 @@ import { handleError } from '../src/output.js';
 /**
  * Drive a FRESH commander program (mirroring bin.run's parse→handleError→exit
  * contract). A fresh program per invocation avoids commander global-option
- * leakage across parses on the singleton — e.g. a prior test's `--json` would
+ * leakage across parses on the singleton: e.g. a prior test's `--json` would
  * otherwise stay set on the shared `program` and change fail()'s routing.
  */
 async function runCli(argv: readonly string[]): Promise<number> {
@@ -46,7 +46,7 @@ async function runCli(argv: readonly string[]): Promise<number> {
   return typeof process.exitCode === 'number' ? process.exitCode : 0;
 }
 
-describe('noir run — host-failure contract', () => {
+describe('noir run: host-failure contract', () => {
   let stderr: MockInstance<typeof process.stderr.write>;
   let stdout: MockInstance<typeof process.stdout.write>;
   let cwd: MockInstance<typeof process.cwd>;
@@ -300,7 +300,7 @@ describe('noir run — host-failure contract', () => {
   });
 });
 
-describe('mergeEnv — profile env overlay', () => {
+describe('mergeEnv: profile env overlay', () => {
   it('overlays profile env over the base env', () => {
     expect(mergeEnv({ A: '1' }, { B: '2' })).toEqual({ A: '1', B: '2' });
   });

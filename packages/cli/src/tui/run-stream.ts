@@ -3,7 +3,7 @@
 // THIS PATH MUST NEVER GO THROUGH `captureProcessOutput`. That helper swaps
 // `process.stdout.write` / `process.stderr.write` for collectors while a
 // dispatched command runs, and Ink renders every frame by calling
-// `process.stdout.write` itself — so a run screen wrapped in it would have its
+// `process.stdout.write` itself: so a run screen wrapped in it would have its
 // own frames swallowed. A run therefore spawns through the injected run seam,
 // folds the host's normalized events into React state here, and lets Ink render
 // normally: the host's output is data this module turns into lines, and it
@@ -16,8 +16,8 @@
 // that spell it out and again as the block that closes it, and a tool call
 // arrives first as the frame that opens its block and again inside the message
 // that finished it. Both are therefore PROVISIONAL on arrival, and the thing
-// that announced them is what they resolve into — a tool call is one row and
-// one count whether or not the host streams partials — with the provisional
+// that announced them is what they resolve into: a tool call is one row and
+// one count whether or not the host streams partials: with the provisional
 // form surviving only when the run ends before the confirmation lands (a
 // cancelled run still shows the text it wrote and the tools it ran).
 
@@ -35,7 +35,7 @@ const TOOL_MARK = '●';
 export interface RunStreamSnapshot {
   /** The pane rows: assistant text and tool activity, in arrival order. */
   readonly lines: readonly string[];
-  /** The host's answer as plain text — what a post-run action would save. */
+  /** The host's answer as plain text: what a post-run action would save. */
   readonly answer: string;
   /** How many tool calls the run has started. */
   readonly toolCount: number;
@@ -51,13 +51,13 @@ export interface RunStreamSnapshot {
  * One pane row, and whether the host has confirmed it yet.
  *
  * `text` is a tool's name on a tool row and a stretch of assistant text on a
- * text row — one field either way, because the fold has to be able to find the
+ * text row: one field either way, because the fold has to be able to find the
  * row an announcement opened by the name it opened it with.
  */
 interface Row {
   readonly kind: 'text' | 'tool';
   readonly text: string;
-  /** True until a completed message — or the end of the run — confirms it. */
+  /** True until a completed message: or the end of the run: confirms it. */
   pending: boolean;
 }
 
@@ -81,7 +81,7 @@ export class RunStream {
       case 'tool':
         // The incremental feed's word for a call it has just started. A call
         // read out of a completed message carries that message's id, and is the
-        // authoritative row — it is also the only row a host that streams no
+        // authoritative row: it is also the only row a host that streams no
         // partials ever sends.
         this.recordTool(event.name, event.messageId !== undefined);
         break;
@@ -139,8 +139,8 @@ export class RunStream {
   /**
    * Commit a completed assistant message.
    *
-   * Its text supersedes the deltas that spelled it out — the host reports the
-   * same words twice — and its tool calls are the authoritative word on the
+   * Its text supersedes the deltas that spelled it out: the host reports the
+   * same words twice: and its tool calls are the authoritative word on the
    * calls the incremental feed opened, each taking over the row its own
    * announcement opened. The text lands where its deltas were, which is above
    * the calls it went on to make: a message that says something and then calls
@@ -171,8 +171,8 @@ export class RunStream {
   /**
    * Record a tool call, confirmed by a completed message or announced by the
    * frame that opened its block. A confirmed call takes over the row the
-   * announcement left open; with nothing to take over — the first word on the
-   * call, which is all some hosts ever send — it opens a row of its own.
+   * announcement left open; with nothing to take over: the first word on the
+   * call, which is all some hosts ever send: it opens a row of its own.
    */
   private recordTool(name: string, confirmed: boolean): void {
     if (confirmed) {

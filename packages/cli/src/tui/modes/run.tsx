@@ -1,7 +1,7 @@
 // The run screen: drive the host and watch it work.
 //
 // This is the TUI's own host-driven mode. It does NOT dispatch a command and
-// capture its output — it spawns through the injected run seam, folds the
+// capture its output: it spawns through the injected run seam, folds the
 // host's normalized events into state, and lets Ink render frames normally.
 // That distinction is load-bearing: the dispatch path swaps
 // `process.stdout.write` for a collector, and Ink draws by calling that same
@@ -9,15 +9,15 @@
 // data, never a write.
 //
 // Everything the screen shows is derived from one place: the run's stream
-// state, the clock, and the phase. The phase is a small machine — a host is
+// state, the clock, and the phase. The phase is a small machine: a host is
 // either running, asking what to do with an answer, waiting for the value an
 // action needs, working on it, or finished. Esc means "get me out of here" at
 // every step: it stops the host (asking first, forcing only if the host will
 // not listen), backs out of a value, and closes the screen once there is
-// nothing left to wait for. Ctrl+C means the same while a host is live — the
+// nothing left to wait for. Ctrl+C means the same while a host is live: the
 // dashboard turns Ink's own Ctrl+C exit off so this screen can stop the child
 // and name the transcript, instead of vanishing mid-run and leaving a host
-// behind. A cancelled run does not wait for a second keystroke — it leaves as
+// behind. A cancelled run does not wait for a second keystroke: it leaves as
 // soon as the host has actually stopped.
 
 import { Box, Text, useInput } from 'ink';
@@ -46,7 +46,7 @@ export interface RunStartHandlers {
   /** Aborting this asks the host to stop; the run still resolves normally. */
   readonly signal: AbortSignal;
   /**
-   * The host child, as soon as it exists — and again for every later spawn of
+   * The host child, as soon as it exists: and again for every later spawn of
    * the same run. What a cancel kills: a signal aimed at Noir is not addressed
    * to the child, and one the host ignores needs a forceful follow-up.
    */
@@ -55,7 +55,7 @@ export interface RunStartHandlers {
 
 /** A run in progress: the binary being driven, and how it ends. */
 export interface RunSession {
-  /** The binary being driven — what the failure text and the status line name. */
+  /** The binary being driven: what the failure text and the status line name. */
   readonly binary: string;
   readonly done: Promise<RunHostResult>;
 }
@@ -175,7 +175,7 @@ export function RunMode({
   }, [onExit]);
 
   // One turn, from spawn to settlement. The cleanup stops the host the same way
-  // Esc does — signal first, force after a grace — because leaving the screen
+  // Esc does: signal first, force after a grace: because leaving the screen
   // (or starting a follow-up) must not leave a host running in the background,
   // and a host that ignores the signal must not outlive Noir either.
   useEffect(() => {
@@ -306,7 +306,7 @@ export function RunMode({
       // prompt. Captured here so none of that reaches the frame Ink is drawing,
       // and so a captured failure cannot rewrite the finished run's result. The
       // outcome is read back through the closure rather than the capture's
-      // return value — the capture exists for the bytes, not the result.
+      // return value: the capture exists for the bytes, not the result.
       void (async () => {
         let outcome: PostRunOutcome = { ok: true, message: '' };
         const captured = await captureProcessOutput(async () => {
@@ -318,7 +318,7 @@ export function RunMode({
           ok: outcome.ok,
           message: [outcome.message, outcome.detail, written]
             .filter((part): part is string => part !== undefined && part.length > 0)
-            .join(' — ')
+            .join(': ')
             .replace(/\s+/g, ' '),
         });
       })();
@@ -346,7 +346,7 @@ export function RunMode({
     // so, rather than tearing the frame down and leaving the transcript path
     // unsaid. A second keystroke while that stop is already in flight forces the
     // host now, rather than holding the screen for the grace. With nothing
-    // running there is nothing to stop, so it leaves the dashboard — what it does
+    // running there is nothing to stop, so it leaves the dashboard: what it does
     // in every other mode.
     if (key.ctrl && input === 'c') {
       if (phase.kind === 'running') {

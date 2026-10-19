@@ -11,7 +11,7 @@ import { existsSync } from 'node:fs';
  * The 5-way conflict resolution a caller can pick when a write would clobber an
  * existing, differing file. `merge` is intentionally NOT here: it is a
  * create-engine-specific superset (3-way merge with conflict markers) that only
- * the scaffold resolver can produce — consumers of THIS type (store/workflow/
+ * the scaffold resolver can produce: consumers of THIS type (store/workflow/
  * skills) never emit or accept `merge`.
  */
 export type ConflictResolution = 'replace' | 'preserve' | 'rename' | 'duplicate' | 'cancel';

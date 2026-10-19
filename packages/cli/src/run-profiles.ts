@@ -6,7 +6,7 @@
 // error that lists the available names (botocore semantics + inline listing).
 //
 // Security doctrine: `env` values may reference `${VAR}` from Noir's process
-// environment and `null` deletes a variable from the child env — .noir/config.yml
+// environment and `null` deletes a variable from the child env: .noir/config.yml
 // is committable project state, so literal secrets must never be stored there.
 
 import type { NoirConfig } from '@noir-ai/core';
@@ -23,7 +23,7 @@ export type ProfileResolutionResult =
   | { readonly ok: true; readonly profile: ProfileResolution }
   | { readonly ok: false; readonly message: string };
 
-/** Best-effort project config load — `noir run` keeps working outside a project. */
+/** Best-effort project config load: `noir run` keeps working outside a project. */
 export function loadRunConfig(root: string): NoirConfig | null {
   try {
     return loadProjectInfo(root).config;
@@ -59,10 +59,10 @@ export function resolveRunProfile(
     const available =
       names.length > 0
         ? names.join(', ')
-        : '(none defined — add a run.profiles block to .noir/config.yml)';
+        : '(none defined: add a run.profiles block to .noir/config.yml)';
     return {
       ok: false,
-      message: `unknown run profile "${name}" — no profile named "${name}" is defined under run.profiles in .noir/config.yml. Available: ${available}`,
+      message: `unknown run profile "${name}": no profile named "${name}" is defined under run.profiles in .noir/config.yml. Available: ${available}`,
     };
   }
   const envExpanded: Record<string, string | undefined> = {};
@@ -74,14 +74,14 @@ export function resolveRunProfile(
   // The same process-injection names `.noir/.env` refuses are refused here too:
   // a profile `env` block lives in the committable `.noir/config.yml`, so a
   // deny-listed key it sets would be inherited by the spawned host process.
-  // Refuse by KEY (never scan values — expansion can only rewrite a value, it
+  // Refuse by KEY (never scan values: expansion can only rewrite a value, it
   // never routes one into a key).
   for (const key of Object.keys(envExpanded)) {
     if (isDeniedEnvKey(key)) {
       return {
         ok: false,
         message:
-          `run profile "${name}" refuses process-injection key "${key}" — a profile env block ` +
+          `run profile "${name}" refuses process-injection key "${key}": a profile env block ` +
           `in .noir/config.yml must not set ${key} (it can inject into the spawned host process). ` +
           `Remove "${key}" from the profile.`,
       };

@@ -29,7 +29,7 @@ const CALLER_PROJECT_ID = 'fe-repo';
 const PROBE_PORT = 4444;
 
 // `node --import tsx` resolves the `tsx` bare specifier relative to the child's
-// cwd, and the fixture repo has no node_modules — resolve it to an absolute file
+// cwd, and the fixture repo has no node_modules: resolve it to an absolute file
 // URL up front instead.
 const require = createRequire(import.meta.url);
 const TSX_LOADER = pathToFileURL(require.resolve('tsx')).href;
@@ -63,7 +63,7 @@ function recordDaemon(record: { pid: number; port: number }): void {
 /**
  * Replace `fetch` with a stub that answers every request with `body`. A `null`
  * body simulates a daemon that accepts no connection at all. The mock is
- * returned so a test can assert how often — and where — the bridge probed.
+ * returned so a test can assert how often: and where: the bridge probed.
  */
 function stubHealth(body: unknown | null) {
   const mock = vi.fn(async (_url: unknown, _init?: { signal?: AbortSignal | null }) => {
@@ -251,7 +251,7 @@ describe('bridgeStdioToWorkspace', () => {
     }
 
     expect(errors.join('')).toContain(`no daemon recorded for workspace ${WORKSPACE}`);
-    // stdout belongs to the host's protocol traffic — a failure must not be
+    // stdout belongs to the host's protocol traffic: a failure must not be
     // written where the host would read it as a message.
     expect(outputs.join('')).toBe('');
   });

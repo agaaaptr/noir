@@ -11,7 +11,7 @@
 //
 // `EMBED_DIM` is the fixed width of the vec0 table (384). It is the single
 // source of truth for the target dimensionality and matches the MiniLM-L6-v2
-// default model — changing it would require a store schema migration, which
+// default model: changing it would require a store schema migration, which
 // the context layer explicitly does NOT do.
 
 /**
@@ -24,7 +24,7 @@ export const EMBED_DIM = 384;
 /**
  * Return a unit-norm copy of `vec` (L2 normalization). The input is never
  * mutated. Length is preserved: callers responsible for ensuring the vector is
- * already `EMBED_DIM`-wide (truncate BEFORE normalizing — Matryoshka order
+ * already `EMBED_DIM`-wide (truncate BEFORE normalizing: Matryoshka order
  * matters; normalizing then truncating would distort directions).
  *
  * A zero-length or all-zero / non-finite input cannot be normalized; for those

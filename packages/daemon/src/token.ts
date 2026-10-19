@@ -3,7 +3,7 @@
 // file is a credential the moment it exists.
 //
 // Scope key: one token file per daemon identity, next to that identity's record
-// in `projectRecordDir()` — a project daemon's key is its projectId, and a
+// in `projectRecordDir()`: a project daemon's key is its projectId, and a
 // workspace daemon's key is the workspace name. The
 // stdio transport never reads or writes a token: it has no network surface, and
 // the host header-forwarding bugs make a header-delivered token unsafe there.
@@ -19,7 +19,7 @@ export function generateToken(): string {
 }
 
 /**
- * The token scope key for a per-project daemon is its projectId — the same
+ * The token scope key for a per-project daemon is its projectId: the same
  * identity keying that project's daemon record, so `"<scopeKey>.token"` and
  * `"<scopeKey>.json"` always describe the same daemon.
  */
@@ -40,7 +40,7 @@ export function readDaemonToken(scopeKey: string): string | null {
   try {
     return readFileSync(path, 'utf8').trim() || null;
   } catch (err) {
-    // ENOENT means the file is genuinely absent — the common "no token yet"
+    // ENOENT means the file is genuinely absent: the common "no token yet"
     // case (a stdio-only daemon, or one that never minted a token) and a
     // completely normal null. Any OTHER error (EACCES, EIO, EISDIR…) means the
     // file is there but unreadable: surface it once, naming the file and the
@@ -49,7 +49,7 @@ export function readDaemonToken(scopeKey: string): string | null {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
     process.stderr.write(
       `noir: warning: cannot read the daemon token file at ${path} ` +
-        `(${(err as NodeJS.ErrnoException).code ?? 'UNKNOWN'}) — proceeding without a token\n`,
+        `(${(err as NodeJS.ErrnoException).code ?? 'UNKNOWN'}): proceeding without a token\n`,
     );
     return null;
   }

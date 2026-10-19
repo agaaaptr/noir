@@ -10,8 +10,8 @@
 // MCP server (emits a host `.mcp.json` server entry, no Noir runtime).
 //
 // Zod v4 (`z.record(keyType, valueType)` is key-first). The schema is additive
-// and defaults to the safest tier — every optional field degrades to "skill
-// only, manual paste, no host MCP wiring" — so a minimal `{ "name":
+// and defaults to the safest tier: every optional field degrades to "skill
+// only, manual paste, no host MCP wiring": so a minimal `{ "name":
 // "noir-x" }` declaration still parses + behaves as a pure playbook.
 
 import * as z from 'zod';
@@ -41,7 +41,7 @@ export const IntegrationSddSchema = z
   .default({ writeBack: [] });
 
 /** Host MCP declaration. Only meaningful when `runtime ∈ {mcp-stdio,
- *  external-mcp}`; `null` for `none`/`gated-write-proxy` (ClickUp — writes go
+ *  external-mcp}`; `null` for `none`/`gated-write-proxy` (ClickUp: writes go
  *  through Noir's own MCP tool, never the host's). */
 export const IntegrationMcpSchema = z
   .object({
@@ -67,7 +67,7 @@ export const IntegrationDeclarationSchema = z.object({
 export type IntegrationDeclaration = z.infer<typeof IntegrationDeclarationSchema>;
 
 /** Coerce + validate an `integration.json` payload. Throws a ZodError on a
- *  malformed declaration — the caller (discover) wraps it with the
+ *  malformed declaration: the caller (discover) wraps it with the
  *  integration's dir for an actionable message. */
 export function parseIntegration(json: unknown): IntegrationDeclaration {
   return IntegrationDeclarationSchema.parse(json);
@@ -84,7 +84,7 @@ export function validateIntegration(
 
 /** Runtime → host-MCP emission predicate. The compiler widens emission (makes
  *  the host MCP block available to the adapter) ONLY for these tiers. The
- *  adapter ultimately decides per-host what to render — for Claude, `external-
+ *  adapter ultimately decides per-host what to render: for Claude, `external-
  *  mcp` becomes a `.mcp.json` server entry; `mcp-stdio` registers through the
  *  existing `noir mcp serve --stdio` entry so no NEW server entry is emitted. */
 export function runtimeEmitsHostMcp(runtime: IntegrationDeclaration['runtime']): boolean {

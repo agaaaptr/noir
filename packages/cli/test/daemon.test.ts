@@ -1,4 +1,4 @@
-// S9 — `noir daemon {start,stop,status,restart}` behavior tests.
+// S9: `noir daemon {start,stop,status,restart}` behavior tests.
 //
 // Covers the foreground-honest UX without starting a real Noir daemon:
 //   - `start --detach` contract pins: the parent never spawns on reuse, and
@@ -26,7 +26,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vites
 
 // Mock ONLY ensureDaemonRunning + spawnDetachedDaemon (so start's foreground,
 // reused, and detach paths never spin a real server or spawn a real child);
-// every other export stays real — status/stop need the genuine record helpers +
+// every other export stays real: status/stop need the genuine record helpers +
 // pidAlive + fetch.
 vi.mock('@noir-ai/daemon', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@noir-ai/daemon')>();
@@ -184,7 +184,7 @@ describe('noir daemon start', () => {
       const r = await run(() => daemonStart({}));
       expect(r.err).toBeDefined();
       expect(inferExitCode(r.err)).toBe(EXIT.ERROR);
-      // daemonStart propagates loadProjectInfo's throw directly — bin's
+      // daemonStart propagates loadProjectInfo's throw directly: bin's
       // handleError surfaces it to stderr in production; at the unit level the
       // hint lives on the thrown error, so assert it there (not stderr).
       expect(r.err instanceof Error ? r.err.message : String(r.err)).toMatch(/not initialized/i);
@@ -245,8 +245,8 @@ describe('noir daemon start', () => {
   });
 });
 
-describe('noir daemon status — exit-code contract', () => {
-  // daemonStatus resolves the caller's project id from process.cwd() — seed a
+describe('noir daemon status: exit-code contract', () => {
+  // daemonStatus resolves the caller's project id from process.cwd(): seed a
   // distinct project so this describe's record reads don't collide with start's.
   const PROJECT_ID = 'daemon-status-project';
   let root: string;
@@ -344,7 +344,7 @@ describe('noir daemon status — exit-code contract', () => {
   });
 });
 
-describe('noir daemon stop — best-effort exit 0', () => {
+describe('noir daemon stop: best-effort exit 0', () => {
   const PROJECT_ID = 'daemon-stop-project';
   let root: string;
   let origCwd: string;

@@ -60,7 +60,7 @@ export class NoirCliError extends Error {
 const NOIR_ERROR_CODE = 'noir.error';
 
 // Global-option shape. Commander stores `--no-input` under the attribute
-// `input` (default `true`; the flag sets it `false`) — see commander's
+// `input` (default `true`; the flag sets it `false`): see commander's
 // `Option.attributeName()` which strips the leading `no-`. Both `input`
 // (commander's real key) and `noInput` (the spec's intent) are accepted so
 // callers may pass either commander's raw globals or a hand-built object.
@@ -75,7 +75,7 @@ export interface CliOptions {
   /** TUI-policy flag. `false` (`--no-tui`) forces bare `noir` onto the
    *  non-interactive `status` path even in a TTY; `true` (`--tui`) is an
    *  advisory hint that still requires a TTY; absent (auto) defers to
-   *  {@link isInteractive}. Advisory only — never hard-gates a subcommand. */
+   *  {@link isInteractive}. Advisory only: never hard-gates a subcommand. */
   readonly tui?: boolean;
   /** Hint-suppression flag (`--no-tips`). When `true`, redirect /
    *  deprecation hints (and any other {@link tip} output) are silenced for
@@ -102,7 +102,7 @@ function envFlagSet(name: string): boolean {
   return v !== undefined && v !== '';
 }
 
-// `isCiEnv` is imported from ./theme.js (the color authority) — see note there.
+// `isCiEnv` is imported from ./theme.js (the color authority): see note there.
 
 // Interactivity gate. Drives both the @clack home menu and the
 // decoration of every helper below. Requires BOTH stdin and stdout to be TTYs:
@@ -119,7 +119,7 @@ export function isInteractive(opts: CliOptions = {}): boolean {
  * `preAction` sets `NOIR_NON_INTERACTIVE=1` under `--json`/`--no-input`; this
  * helper folds that with the {@link isInteractive} TTY/CI/NO_COLOR gate so a
  * single boolean flows into the engine + `buildConflictOpts`. The ENGINE itself
- * never reads `process.env` for interactivity — only this CLI helper does.
+ * never reads `process.env` for interactivity: only this CLI helper does.
  */
 export function resolveInteractive(): boolean {
   if (flaggedNonInteractiveCli()) return false;
@@ -143,7 +143,7 @@ export function json(obj: unknown): void {
 
 // Human diagnostics (stderr). picocolors auto-strips ANSI under NO_COLOR /
 // non-TTY, and each helper additionally short-circuits under `--json`
-// (decoration off, payload is the output) — and `info`/`log`/`success` also
+// (decoration off, payload is the output): and `info`/`log`/`success` also
 // under `--quiet`. `warn`/`error` survive `--quiet` (they carry signal).
 export function log(msg: string, opts: CliOptions = {}): void {
   if (isJsonMode(opts) || isQuietMode(opts)) return;
@@ -182,12 +182,12 @@ export function tip(msg: string, opts: CliOptions = {}): void {
   process.stderr.write(`${c.warn(msg)}\n`);
 }
 
-// Tables (stderr). Suppressed entirely under `--json` — the command has
+// Tables (stderr). Suppressed entirely under `--json`: the command has
 // already emitted the rows as a JSON array via `json()`.
 //
 // Design: cli-table3 styles headers/borders via `@colors/colors`
 // (whose NO_COLOR/TTY semantics differ from picocolors), which painted EVERY
-// header red while the body stripped — RED is now reserved strictly for ERROR.
+// header red while the body stripped: RED is now reserved strictly for ERROR.
 // We bypass `@colors/colors` entirely by passing EMPTY `style.head`/`style.border`
 // arrays (cli-table3's `wrapWithStyleColors` early-returns on length 0) and
 // PRE-COLOR the header strings ourselves via `theme.c` (picocolors). Result:
@@ -237,7 +237,7 @@ const MIN_CONTENT_WIDTH = 3;
  *
  *   1. Measure each column's NATURAL content width in DISPLAY columns (longest
  *      cell, at least a small minimum content width).
- *   2. If the natural total fits, use it as-is — every cell renders whole.
+ *   2. If the natural total fits, use it as-is: every cell renders whole.
  *   3. Otherwise GREEDILY TRIM ONLY THE WIDEST column, down to its own header
  *      length (never below the minimum content width, and never held open above
  *      the content budget), until the row fits. A long header can therefore not
@@ -275,13 +275,13 @@ function computeColWidths(
   // cli-table3 row overhead: per column 1 left border + 2 padding, plus a final
   // right border ⇒ 3n + 1 non-content chars. `budget` is what remains for the
   // sum of column CONTENT areas, and it is the ONLY budget this function uses:
-  // every "does it fit" test below — the natural-width fast path included —
+  // every "does it fit" test below: the natural-width fast path included —
   // compares against it, so no branch can return a row wider than the terminal.
   //
   // Floored at `n` (one content column per column) deliberately. A narrower
   // budget would be a lie twice over: cli-table3 accepts only POSITIVE integer
   // widths, so a zero or negative column collapses rather than shrinking; and
-  // whenever `4n + 1 > terminalWidth()` the row is unachievable anyway — the
+  // whenever `4n + 1 > terminalWidth()` the row is unachievable anyway: the
   // borders and padding alone no longer fit, so no arrangement of the content
   // can save it. The floor keeps the trim from driving a column to zero on such
   // a terminal and gives the final pass a natural stopping point (all columns
@@ -294,8 +294,8 @@ function computeColWidths(
   // Overflow: greedily cut the widest reducible column down to its floor.
   const content = natural.slice();
   let sum = naturalSum;
-  // A column's floor is its own header — so a table that can fit its headers
-  // keeps every one of them on a single line — capped at the whole budget,
+  // A column's floor is its own header: so a table that can fit its headers
+  // keeps every one of them on a single line: capped at the whole budget,
   // because a header wider than that can never be honoured anyway. Without the
   // cap, one very long header would pin its column open and push the row past
   // the terminal.
@@ -311,7 +311,7 @@ function computeColWidths(
         idx = i;
       }
     }
-    if (idx === -1) break; // every column is at its floor — stop
+    if (idx === -1) break; // every column is at its floor: stop
     const overshoot = sum - budget;
     const reducible = (content[idx] ?? 0) - (floor[idx] ?? MIN_CONTENT_WIDTH);
     const cut = Math.min(overshoot, reducible);
@@ -333,7 +333,7 @@ function computeColWidths(
           idx = j;
         }
       }
-      if (idx === -1) break; // every column is a single column wide — give up
+      if (idx === -1) break; // every column is a single column wide: give up
       const cut = Math.min(sum - budget, (content[idx] ?? 1) - 1);
       content[idx] = (content[idx] ?? 1) - cut;
       sum -= cut;
@@ -346,8 +346,8 @@ function computeColWidths(
  * True for a value shaped like a filesystem path. Paths legitimately contain
  * whitespace (a directory named "My Projects"), so this is a SHAPE test rather
  * than a single-token test: the value must carry a separator AND either start
- * like a path — a leading `/`, `./`, `../`, `~/`, or a Windows drive prefix such
- * as `C:\` — or end in a file extension (`…/store.db`). A sentence that merely
+ * like a path: a leading `/`, `./`, `../`, `~/`, or a Windows drive prefix such
+ * as `C:\`: or end in a file extension (`…/store.db`). A sentence that merely
  * contains a slash ("the spec/plan docs") matches neither, so it is still left
  * to `wordWrap` instead of being cut.
  */
@@ -360,12 +360,12 @@ function isPathToken(s: string): boolean {
  * A cell value cut to fit its column's content area.
  *
  * Only a cell that OVERFLOWS is touched, and the untouched path returns the
- * value byte-for-byte — which is what keeps a coloured cell coloured, since the
+ * value byte-for-byte: which is what keeps a coloured cell coloured, since the
  * truncators strip ANSI and return plain text. A path is cut in the MIDDLE, so
  * the leading directories and the final file name both survive; it is tested
  * first because a path can contain spaces and would otherwise be mistaken for
  * free text. A non-path multi-word cell is left entirely to `wordWrap`, and a
- * single-token cell — which cannot wrap — is cut at the tail. Every cut is
+ * single-token cell: which cannot wrap: is cut at the tail. Every cut is
  * measured in display columns and never splits a grapheme cluster.
  */
 function truncateCell(value: unknown, contentWidth: number): string {
@@ -524,8 +524,8 @@ const EXIT_FLUSH_MS = 250;
  * caller left to catch what it throws: the verdict is written and the exit
  * follows it, with the same shape and the same exit code an ordinary failure
  * would have produced. Under `--json` the envelope is the run's last output, so
- * the exit waits for the write to land — a process that exits with stdout still
- * queued loses it — and goes without it if the write never lands, because the
+ * the exit waits for the write to land: a process that exits with stdout still
+ * queued loses it: and goes without it if the write never lands, because the
  * whole point of this path is to leave.
  */
 export function failAndExit(exitCode: number, message: string, opts: CliOptions = {}): void {
@@ -552,7 +552,7 @@ export function failAndExit(exitCode: number, message: string, opts: CliOptions 
 
 /**
  * Guard for commands that would otherwise block on a prompt. Honors the
- * hard rule: "no blocking prompts when !isTTY or --no-input — error exit 2
+ * hard rule: "no blocking prompts when !isTTY or --no-input: error exit 2
  * naming the missing flag instead". `hint` describes the operation so the
  * message points the user at the flag-based alternative.
  */
@@ -586,7 +586,7 @@ export function inferExitCode(err: unknown): number {
   if (err instanceof NoirCliError) return err.exitCode;
   if (err instanceof CommanderError) {
     // Errors our own `fail()` threw carry a `noir.*` code and an authoritative
-    // exitCode — respect it. Commander's own errors are remapped by `code`.
+    // exitCode: respect it. Commander's own errors are remapped by `code`.
     if (err.code.startsWith('noir.')) return err.exitCode;
     return commanderExitCode(err);
   }

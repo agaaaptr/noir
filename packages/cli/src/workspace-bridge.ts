@@ -1,7 +1,7 @@
 // The workspace stdio bridge.
 //
 // A repository that joined a shared workspace is served by that workspace's
-// daemon — a separate process holding the workspace store, reached over HTTP
+// daemon: a separate process holding the workspace store, reached over HTTP
 // with a bearer token. The host knows nothing of that: it starts the plain
 // stdio command (`noir mcp serve --stdio --workspace <name>`), and this module
 // turns that into a connection to the daemon. It resolves the daemon's address
@@ -12,7 +12,7 @@
 // `verifyWorkspaceDaemon`, so "is this record really this workspace's daemon"
 // is answered in exactly one place.
 //
-// Two properties shape the relay. It is transparent — the host performs the MCP
+// Two properties shape the relay. It is transparent: the host performs the MCP
 // handshake and every call with the daemon directly, so there is no tool surface
 // here to drift from the daemon's. And stdout carries nothing but the host's
 // protocol traffic: diagnostics go to stderr, and the token goes only into the
@@ -33,8 +33,8 @@ import { EXIT, fail } from './output.js';
 /**
  * How long a `/health` probe may take. A record can point at a port that an
  * unrelated process holds open without ever answering, and a host waiting on
- * its MCP server must not hang there. The bridge probes once — there is no retry
- * loop — so this bound is the whole wait.
+ * its MCP server must not hang there. The bridge probes once: there is no retry
+ * loop: so this bound is the whole wait.
  */
 const HEALTH_PROBE_TIMEOUT_MS = 1500;
 
@@ -58,7 +58,7 @@ export async function resolveWorkspaceDaemon(
   const health = await verifyWorkspaceDaemon(record, name);
   if (health.kind === 'foreign') {
     // A different workspace answering here is the sharper diagnosis, so name
-    // both sides — it tells the reader which record is the stale one.
+    // both sides: it tells the reader which record is the stale one.
     return {
       error:
         `workspace ${name} is recorded on port ${record.port}, but the daemon ` +
@@ -83,7 +83,7 @@ export async function resolveWorkspaceDaemon(
     callerProjectId = loadProjectInfo(root).id;
   } catch {
     return {
-      error: `no project identity in ${root} — run \`noir init\` before serving a workspace from here`,
+      error: `no project identity in ${root}: run \`noir init\` before serving a workspace from here`,
     };
   }
 
@@ -92,8 +92,8 @@ export async function resolveWorkspaceDaemon(
 
 /**
  * What a `/health` probe learned. `silent` covers every way an answer can fail
- * to identify the recorded daemon — no connection, a non-2xx status, a body that
- * is not JSON, or a body that names a different process — because all of them
+ * to identify the recorded daemon: no connection, a non-2xx status, a body that
+ * is not JSON, or a body that names a different process: because all of them
  * mean the same thing to the caller: this record cannot be used.
  */
 export type WorkspaceDaemonHealth =
@@ -107,7 +107,7 @@ export type WorkspaceDaemonHealth =
  *
  * A record goes stale in two ways, and both must be refused: its pid is dead
  * (the daemon exited without cleaning up), or its pid is alive but belongs to
- * something else — a recycled pid is a perfectly healthy process that has
+ * something else: a recycled pid is a perfectly healthy process that has
  * nothing to do with this workspace, and the caller must not act on the record.
  * A dead pid is settled without a probe; a live one must echo BOTH the recorded
  * pid and the workspace name back before it is trusted.
@@ -162,7 +162,7 @@ async function probeHealth(
  * A workspace that cannot be resolved to a healthy daemon fails here: the reason
  * goes to stderr with the daemon-down exit code, because a host that cannot
  * reach its server must see a failure rather than a server that silently answers
- * nothing. Once the session is running the bridge does not exit that way — a
+ * nothing. Once the session is running the bridge does not exit that way: a
  * connection failure is reported on stderr and closes the relay, which the host
  * observes as the session ending.
  */
@@ -200,7 +200,7 @@ async function relay(host: StdioBridgeTransport, daemon: Transport): Promise<voi
     let settled = false;
     // Set as soon as the session starts coming down. Closing the transport
     // rejects whatever send is still in flight, and that rejection is the
-    // shutdown working, not a bridge failure — so it must not be reported as one.
+    // shutdown working, not a bridge failure: so it must not be reported as one.
     let closing = false;
     const settle = (): void => {
       if (settled) return;
@@ -214,7 +214,7 @@ async function relay(host: StdioBridgeTransport, daemon: Transport): Promise<voi
     };
 
     host.onmessage = (message) => {
-      // A send that fails is terminal for the session — the daemon is gone or
+      // A send that fails is terminal for the session: the daemon is gone or
       // refused the message, and relaying anything further would report a
       // success the host cannot trust.
       void daemon.send(message).catch(closeDaemon);
@@ -237,7 +237,7 @@ async function relay(host: StdioBridgeTransport, daemon: Transport): Promise<voi
     };
     daemon.onerror = (error) => {
       // An abort while the session is closing is expected and silent; anything
-      // else is reported, though never fatal on its own — the send that caused
+      // else is reported, though never fatal on its own: the send that caused
       // it is rejected too, and that path closes the session.
       if (closing) return;
       process.stderr.write(
@@ -266,7 +266,7 @@ async function relay(host: StdioBridgeTransport, daemon: Transport): Promise<voi
  *
  * The framing (newline-delimited messages, buffered reads, backpressure-aware
  * writes) mirrors the stdio transport that ships with the MCP server package,
- * which the CLI cannot import — it depends on the client package only, and the
+ * which the CLI cannot import: it depends on the client package only, and the
  * bridge is the one place the CLI hosts a stdio server of its own.
  */
 class StdioBridgeTransport implements Transport {
@@ -345,7 +345,7 @@ class StdioBridgeTransport implements Transport {
     }
   };
 
-  /** The host closed its end of the pipe — the session is over. */
+  /** The host closed its end of the pipe: the session is over. */
   private readonly onStdinEnd = (): void => {
     void this.close();
   };

@@ -1,11 +1,11 @@
 /**
- * Migration model — Nx-style declarative upgrade scripts, hand-rolled.
+ * Migration model: Nx-style declarative upgrade scripts, hand-rolled.
  *
  * Per the migration design (inline conflict markers, never
  * interactive prompts), every migration script:
  *  - is a small, IDEMPOTENT TypeScript function (`run(root, opts) → result`).
  *    Re-running it on an already-migrated tree is a no-op (or produces the
- *    same conflict markers again — also safe).
+ *    same conflict markers again: also safe).
  *  - NEVER prompts. `--no-input` CI must survive. When a migration cannot
  *    reconcile a co-edited region, it writes git-style conflict markers
  *    (`<<<<<<<` / `=======` / `>>>>>>>`) into the file and records the path in
@@ -28,7 +28,7 @@ export interface MigrationContext {
   dryRun?: boolean;
   /** The project's `rules.enabled` switch, when the caller knows it. False
    *  tells a migration that `.noir/rules/RULES.md` is not part of this project
-   *  — the scaffold withholds the seed — so a migration must not write that
+   * : the scaffold withholds the seed: so a migration must not write that
    *  file back, however convincing its evidence for a refresh. Undefined means
    *  enabled, which is the state of every project that predates the switch. */
   rulesEnabled?: boolean;

@@ -9,7 +9,7 @@ export async function serve(opts: { stdio: boolean; workspace?: string }): Promi
   applyNoirEnv(process.cwd());
   // A workspace member reaches its daemon through this same stdio entry point:
   // the entry names the workspace, and the bridge resolves the daemon's address
-  // and token from disk itself. Nothing about the daemon — its URL, its secret —
+  // and token from disk itself. Nothing about the daemon: its URL, its secret —
   // lives in the host's config, so nothing there can go stale or leak.
   if (opts.workspace !== undefined) {
     await bridgeStdioToWorkspace(opts.workspace, process.cwd());

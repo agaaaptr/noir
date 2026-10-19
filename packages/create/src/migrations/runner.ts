@@ -12,7 +12,7 @@ import type { MigrationContext, MigrationResult, MigrationScript } from './types
  * skipped. Within the window, scripts run sorted by `to` ascending so a
  * multi-step upgrade (1.0.0 → 1.1.0 → 1.2.0) composes in order.
  *
- * The runner NEVER throws on a per-script failure — it captures the error,
+ * The runner NEVER throws on a per-script failure: it captures the error,
  * records a synthetic conflict entry (`<path>__error`), and continues so a
  * single broken migration doesn't block the rest of the chain. The orchestrator
  * decides whether non-empty `conflicts` is a hard failure (init --upgrade) or a
@@ -72,7 +72,7 @@ function pickWindow(
 }
 
 /** Tiny numeric tuple compare: `'1.10.3'` → `[1,10,3]`, compared element-wise.
- *  Pre-release suffixes (e.g. `-beta.1`) are ignored — Noir ships `x.y.z`
+ *  Pre-release suffixes (e.g. `-beta.1`) are ignored: Noir ships `x.y.z`
  *  scaffold versions and the runner only needs a deterministic order. */
 function compareVer(v: string): number {
   const parts = v.split('-')[0]?.split('.') ?? [];

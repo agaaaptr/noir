@@ -1,4 +1,4 @@
-// D1/D2 — `noir daemon start --detach` behavior tests. These pin the detached
+// D1/D2: `noir daemon start --detach` behavior tests. These pin the detached
 // path WITHOUT starting a real daemon or spawning a real child:
 //   - `spawnDetachedDaemon` + `ensureDaemonRunning` (from @noir-ai/daemon) are
 //     mocked at the module boundary so neither a child process nor an in-process
@@ -10,7 +10,7 @@
 // Covered here:
 //   - `--detach` → parent path: calls `spawnDetachedDaemon`, emits the
 //     `{mode:'detached', pid, port}` envelope under `--json`, and returns (the
-//     parent EXITS — it never blocks);
+//     parent EXITS: it never blocks);
 //   - `--detach` double-spawn guard: when a daemon is ALREADY healthy, the parent
 //     reports `{mode:'detached', reused:true}` and returns WITHOUT spawning;
 //   - `--_detached-child` → child path: `ensureDaemonRunning` runs in-process
@@ -112,12 +112,12 @@ describe('noir daemon start --detach (parent path)', () => {
     expect(spawnDetachedDaemon).toHaveBeenCalledTimes(1);
     expect(spawnDetachedDaemon).toHaveBeenCalledWith(
       expect.objectContaining({
-        // spawn.ts's signature is `opts:{project:ProjectInfo}` — the project
+        // spawn.ts's signature is `opts:{project:ProjectInfo}`: the project
         // rides inside the wrapper, so assert the nested id.
         project: expect.objectContaining({ id: 'daemon-detach-test-project' }),
       }),
     );
-    // The parent EMITS then EXITS — no blocking message, single envelope.
+    // The parent EMITS then EXITS: no blocking message, single envelope.
     const envelope = JSON.parse(r.stdout);
     expect(envelope.ok).toBe(true);
     expect(envelope.data).toEqual({ mode: 'detached', pid: 4321, port: 54321 });
@@ -125,7 +125,7 @@ describe('noir daemon start --detach (parent path)', () => {
 
   it('double-spawn guard: reports already-running and returns WITHOUT spawning', async () => {
     // A healthy daemon record → the parent reports reuse and skips the spawn
-    // (the spawned child would only reuse it and exit — no double-spawn).
+    // (the spawned child would only reuse it and exit: no double-spawn).
     const server: Server = createServer((req, res) => {
       if (req.url === '/health') {
         res.writeHead(200, { 'content-type': 'application/json' });

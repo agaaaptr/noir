@@ -4,10 +4,10 @@
  * map lookup is sufficient and keeps `@noir-ai/create` dependency-light.
  *
  * Semantics (documented):
- *  - Tokens are `{{ name }}` / `{{name}}` — any amount of ASCII whitespace
+ *  - Tokens are `{{ name }}` / `{{name}}`: any amount of ASCII whitespace
  *    inside the braces is permitted. The name is trimmed.
  *  - Known vars (value is a string) are substituted verbatim. NO escaping is
- *    applied — callers must pre-escape for the target format (JSON/YAML/MD).
+ *    applied: callers must pre-escape for the target format (JSON/YAML/MD).
  *    This is intentional: the engine renders into multiple formats and a
  *    single universal escaper would be wrong for at least one of them.
  *  - Unknown vars (not in `vars`, or value `undefined`) → the original token

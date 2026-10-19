@@ -1,4 +1,4 @@
-// Output hygiene — the repository-facing scan.
+// Output hygiene: the repository-facing scan.
 //
 // The repository's own source and documents are checked against the hygiene
 // rules @noir-ai/skills declares: the patterns that make text read as machine
@@ -14,8 +14,8 @@
 // the rules honour, so no path list is kept here.
 //
 // The scan runs only where the layout it is written for exists: a package
-// tree, `scripts/`, or `docs/`. Anywhere else — an ordinary application
-// repository, which is a README and little more — it reports an empty result
+// tree, `scripts/`, or `docs/`. Anywhere else: an ordinary application
+// repository, which is a README and little more: it reports an empty result
 // and reads nothing, root documents included. These rules judge the text this
 // project writes, not the prose of whoever happened to run the command.
 //
@@ -131,7 +131,7 @@ function readDirEntries(dir: string): Dirent[] {
   try {
     return readdirSync(dir, { withFileTypes: true });
   } catch {
-    return []; // absent or unreadable — there is nothing to scan
+    return []; // absent or unreadable: there is nothing to scan
   }
 }
 
@@ -251,7 +251,7 @@ export function hygieneCounts(result: HygieneScanResult): string {
     return `nothing to scan (no packages/*/src, packages/*/test, scripts/ or documents found)${omitted}`;
   }
   if (result.findings.length === 0) {
-    return `clean — ${result.scanned} file${result.scanned === 1 ? '' : 's'} scanned${omitted}`;
+    return `clean: ${result.scanned} file${result.scanned === 1 ? '' : 's'} scanned${omitted}`;
   }
   const files = new Set(result.findings.map((f) => f.path)).size;
   return `${result.fail} fail, ${result.warn} warn in ${files} file${files === 1 ? '' : 's'}${omitted}`;
@@ -266,13 +266,13 @@ export function hygieneDetail(result: HygieneScanResult): string {
   const named = result.findings.slice(0, HYGIENE_FINDING_CAP);
   const hidden = result.findings.length - named.length;
   const where = named.map((f) => `${f.path}:${f.line} ${f.id}`).join('; ');
-  return `${counts} — ${where}${hidden > 0 ? ` (+${hidden} more)` : ''}`;
+  return `${counts}: ${where}${hidden > 0 ? ` (+${hidden} more)` : ''}`;
 }
 
 /**
  * Reads the repository's own source and documents through `checkHygiene` and
  * returns the scan result: the files read, the findings (failures first), and
- * the fail/warn counts. It pushes no doctor row — that is the caller's
+ * the fail/warn counts. It pushes no doctor row: that is the caller's
  * business (`checkOutputHygiene` in the doctor command, or the CI gate's own
  * report).
  *
@@ -320,8 +320,8 @@ export function scanOutputHygiene(root: string): HygieneScanResult {
         }
       }
     } catch {
-      // An unreadable path says nothing about hygiene — the store check owns
-      // broken files — so the scan moves on to the next one.
+      // An unreadable path says nothing about hygiene: the store check owns
+      // broken files: so the scan moves on to the next one.
     }
   }
   findings.sort((a, b) => {

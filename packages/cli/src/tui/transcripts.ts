@@ -6,7 +6,7 @@
 // there, newest first, and reads one back so the run screen can render it.
 //
 // It is a seam (an interface plus one filesystem implementation) so the TUI can
-// be driven in a test without a run ever writing into the repository — and so
+// be driven in a test without a run ever writing into the repository: and so
 // the persistence rules live in one place: the same 0700 directory and 0600
 // file the CLI's own runs create, because a transcript quotes raw host output
 // and prompts, which can contain credentials.
@@ -18,7 +18,7 @@ import { writeTranscript } from '../commands/run.js';
 
 /** One persisted transcript, as the picker lists it. */
 export interface TranscriptEntry {
-  /** Absolute path — what {@link TranscriptStore.read} takes back. */
+  /** Absolute path: what {@link TranscriptStore.read} takes back. */
   readonly path: string;
   /** Base name, which is what the picker shows. */
   readonly name: string;

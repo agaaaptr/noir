@@ -1,32 +1,32 @@
-# Keystone K — Foundation Refactor Implementation Plan
+# Keystone K: Foundation Refactor Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Generalize Noir's managed-block + host-emit primitives into reusable foundations so the Rules/Ignore/Scaffold/Integration slices extend them — pure refactor, zero behavior change.
+**Goal:** Generalize Noir's managed-block + host-emit primitives into reusable foundations so the Rules/Ignore/Scaffold/Integration slices extend them: pure refactor, zero behavior change.
 
-**Architecture:** (1) a `managedBlock(name, commentStyle)` factory in `@noir-ai/core` (keeps `CONTEXT_BLOCK_*` byte-identical); (2) a shared `blockWriter` module extracted from `cli/init.ts`'s inline `replaceBlock`; (3) an `emitRules?` seam on `HostAdapter` + claude impl. The skills-compiler generalization (original K3) is **deferred to the Integration slice** — YAGNI until a second artifact family exists.
+**Architecture:** (1) a `managedBlock(name, commentStyle)` factory in `@noir-ai/core` (keeps `CONTEXT_BLOCK_*` byte-identical); (2) a shared `blockWriter` module extracted from `cli/init.ts`'s inline `replaceBlock`; (3) an `emitRules?` seam on `HostAdapter` + claude impl. The skills-compiler generalization (original K3) is **deferred to the Integration slice**: YAGNI until a second artifact family exists.
 
 **Tech Stack:** TypeScript ESM, pnpm workspace, tsup, vitest, Biome, zod v4.
 
 ## Global Constraints
 
-- **No behavior change** — every existing test stays green; `CONTEXT_BLOCK_BEGIN`/`END` remain the exact bytes `<!-- noir:context begin -->` / `<!-- noir:context end -->`.
+- **No behavior change**: every existing test stays green; `CONTEXT_BLOCK_BEGIN`/`END` remain the exact bytes `<!-- noir:context begin -->` / `<!-- noir:context end -->`.
 - Test gate: `pnpm build && pnpm lint && pnpm typecheck && pnpm test` all green (currently 729 tests).
 - Tests live at `packages/<pkg>/test/<name>.test.ts` (vitest), importing from the package source (relative `../src/...js`) or the workspace package.
-- Commits are **local on `develop`** — do NOT push. One commit per task.
+- Commits are **local on `develop`**: do NOT push. One commit per task.
 - ESM + `node:fs`/`node:path`; no new runtime deps.
 
 ## File Structure
 
-- `packages/core/src/markers.ts` — add `managedBlock` factory + `ManagedBlock`/`CommentStyle` types + `CONTEXT_BLOCK`/`RULES_BLOCK` named instances; keep `CONTEXT_BLOCK_BEGIN/END`.
-- `packages/core/src/block-writer.ts` — NEW: `writeManagedRegion` / `readManagedBlock` / `stripManagedBlock` / `commentStyleFor` (extracted from `cli/init.ts`).
-- `packages/core/src/index.ts` — export the new symbols.
-- `packages/core/test/markers.test.ts` — NEW.
-- `packages/core/test/block-writer.test.ts` — NEW.
-- `packages/cli/src/init.ts` — replace inline `replaceBlock`/`safeRead`/`escapeRe` with `writeManagedRegion`.
-- `packages/adapters/src/types.ts` — add optional `emitRules?(ctx): string` to `HostAdapter`.
-- `packages/adapters/src/claude.ts` — implement `emitRules`.
-- `packages/adapters/test/claude.test.ts` — add `emitRules` test.
+- `packages/core/src/markers.ts`: add `managedBlock` factory + `ManagedBlock`/`CommentStyle` types + `CONTEXT_BLOCK`/`RULES_BLOCK` named instances; keep `CONTEXT_BLOCK_BEGIN/END`.
+- `packages/core/src/block-writer.ts`: NEW: `writeManagedRegion` / `readManagedBlock` / `stripManagedBlock` / `commentStyleFor` (extracted from `cli/init.ts`).
+- `packages/core/src/index.ts`: export the new symbols.
+- `packages/core/test/markers.test.ts`: NEW.
+- `packages/core/test/block-writer.test.ts`: NEW.
+- `packages/cli/src/init.ts`: replace inline `replaceBlock`/`safeRead`/`escapeRe` with `writeManagedRegion`.
+- `packages/adapters/src/types.ts`: add optional `emitRules?(ctx): string` to `HostAdapter`.
+- `packages/adapters/src/claude.ts`: implement `emitRules`.
+- `packages/adapters/test/claude.test.ts`: add `emitRules` test.
 
 ---
 
@@ -88,7 +88,7 @@ describe('managedBlock factory', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm --filter @noir-ai/core test -- markers`
-Expected: FAIL — `managedBlock`/`CONTEXT_BLOCK`/`RULES_BLOCK` not exported.
+Expected: FAIL: `managedBlock`/`CONTEXT_BLOCK`/`RULES_BLOCK` not exported.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -120,7 +120,7 @@ export const CONTEXT_BLOCK_BEGIN = CONTEXT_BLOCK.begin;
 export const CONTEXT_BLOCK_END = CONTEXT_BLOCK.end;
 ```
 
-`packages/core/src/index.ts` — add to the existing markers re-export line:
+`packages/core/src/index.ts`: add to the existing markers re-export line:
 ```ts
 export {
   type CommentStyle,
@@ -234,7 +234,7 @@ describe('blockWriter', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm --filter @noir-ai/core test -- block-writer`
-Expected: FAIL — `writeManagedRegion` etc. not exported.
+Expected: FAIL: `writeManagedRegion` etc. not exported.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -310,7 +310,7 @@ export {
 ```
 
 Refactor `packages/cli/src/init.ts`:
-- Change the import from `@noir-ai/core` to: `import { CONTEXT_BLOCK, createProjectId, paths, writeManagedRegion } from '@noir-ai/core';` (drop `CONTEXT_BLOCK_BEGIN`/`CONTEXT_BLOCK_END` — no longer used here).
+- Change the import from `@noir-ai/core` to: `import { CONTEXT_BLOCK, createProjectId, paths, writeManagedRegion } from '@noir-ai/core';` (drop `CONTEXT_BLOCK_BEGIN`/`CONTEXT_BLOCK_END`: no longer used here).
 - Replace the block:
   ```ts
   const existing = safeRead(join(root, 'CLAUDE.md'));
@@ -330,7 +330,7 @@ Refactor `packages/cli/src/init.ts`:
 
 Run: `pnpm --filter @noir-ai/core test -- block-writer`
 Run: `pnpm --filter @noir-ai/cli test -- init`
-Expected: both PASS; `init` tests unchanged (behavior identical — `emitContext` still returns the same wrapped block).
+Expected: both PASS; `init` tests unchanged (behavior identical: `emitContext` still returns the same wrapped block).
 
 - [ ] **Step 5: Commit**
 
@@ -373,17 +373,17 @@ describe('claudeAdapter.emitRules', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm --filter @noir-ai/adapters test -- claude`
-Expected: FAIL — `emitRules` is `undefined`.
+Expected: FAIL: `emitRules` is `undefined`.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`packages/adapters/src/types.ts` — add to the `HostAdapter` interface (after `emitContext`):
+`packages/adapters/src/types.ts`: add to the `HostAdapter` interface (after `emitContext`):
 ```ts
   /** Managed block inserting the host's AI-rules import (e.g. @.noir/rules/RULES.md). */
   emitRules?(ctx: EmitContext): string;
 ```
 
-`packages/adapters/src/claude.ts` — update the import and add the method:
+`packages/adapters/src/claude.ts`: update the import and add the method:
 ```ts
 import { CONTEXT_BLOCK_BEGIN, CONTEXT_BLOCK_END, RULES_BLOCK } from '@noir-ai/core';
 ```
@@ -419,11 +419,11 @@ Expected: all green; test count = 729 + 5 (markers) + 6 (block-writer) + 1 (emit
 
 - [ ] **Step 2: Spike-check the keystone claim**
 
-Confirm (read-only) that a hypothetical Rules slice could now: (a) call `writeManagedRegion(CLAUDE.md, RULES_BLOCK, adapter.emitRules(ctx))` without touching `core`/`adapters`; (b) use `commentStyleFor('.gitignore')` for the Ignore slice. No code written — just confirm the seams exist and are exported from `@noir-ai/core`.
+Confirm (read-only) that a hypothetical Rules slice could now: (a) call `writeManagedRegion(CLAUDE.md, RULES_BLOCK, adapter.emitRules(ctx))` without touching `core`/`adapters`; (b) use `commentStyleFor('.gitignore')` for the Ignore slice. No code written: just confirm the seams exist and are exported from `@noir-ai/core`.
 
 - [ ] **Step 3: Note the K3 deferral**
 
-Append to `docs/internal/specs/2026-07-25-keystone-k-design.md` (under a new "## Implementation notes" section): "K3 (skills-compiler generalization) deferred to the Integration slice — YAGNI until a second artifact family (integrations) exists. K shipped: markers factory (K1), shared blockWriter (K2), emitRules seam (K4)."
+Append to `docs/internal/specs/2026-07-25-keystone-k-design.md` (under a new "## Implementation notes" section): "K3 (skills-compiler generalization) deferred to the Integration slice: YAGNI until a second artifact family (integrations) exists. K shipped: markers factory (K1), shared blockWriter (K2), emitRules seam (K4)."
 
 - [ ] **Step 4: Commit**
 
@@ -437,6 +437,6 @@ git commit -m "docs(keystone-k): note K3 deferral to Integration slice"
 ## Self-Review
 
 - **Spec coverage:** K1 (markers factory) → Task 1; K2 (blockWriter + init refactor) → Task 2; K4 (emitRules seam) → Task 3; acceptance gate → Task 4. K3 deferred (noted). ✓
-- **Placeholders:** none — each step has real test code + real impl code + exact run commands.
+- **Placeholders:** none: each step has real test code + real impl code + exact run commands.
 - **Type consistency:** `ManagedBlock`/`CommentStyle` (Task 1) consumed by `blockWriter` (Task 2) and `RULES_BLOCK` (Task 1) consumed by `emitRules` (Task 3). Names match across tasks. ✓
 - **Behavior preservation:** `CONTEXT_BLOCK_BEGIN/END` bytes unchanged (Task 1 test asserts it); `emitContext` untouched; `init.ts` swap is behavior-equivalent (Task 2 keeps the `init` tests as the regression gate). ✓

@@ -1,10 +1,10 @@
 // ContextEngine for @noir-ai/context.
 //
 // The single object that ties the embedder, indexer, and retriever together and
-// that the daemon injects as `ctx.context` — the new optional ServerContext
+// that the daemon injects as `ctx.context`: the new optional ServerContext
 // service, mirroring `ctx.store` / `ctx.engine`. It is constructed ONCE per
 // serve lifecycle from the daemon's already-open Store handle (the single
-// writer — in-process, no sidecar, canonical ProjectId) and a
+// writer: in-process, no sidecar, canonical ProjectId) and a
 // resolved EmbedderConfig, exactly as `buildWorkflowEngine` is built once from
 // the same handle.
 //
@@ -16,7 +16,7 @@
 //   • surface a `status()` snapshot that mirrors `buildStoreStatus`
 //     and adds the embedder description + the indexed-file count.
 //
-// Single-writer discipline: the engine — through its indexer — is the ONLY
+// Single-writer discipline: the engine: through its indexer: is the ONLY
 // thing that calls `indexDoc`/`upsertVec` for context. The retriever is purely
 // read-only. Both reuse the injected handle; the engine never opens a second
 // store connection.
@@ -33,7 +33,7 @@
 // kNN-only hydration: the Store interface exposes no read-by-id
 // and vec0 carries no meta column, so a purely-semantic hit (kNN-only, no BM25
 // snippet) cannot be windowed without a content source. The engine wires the
-// indexer's `readChunkContent` as the retriever's `readDoc` hydrator — the
+// indexer's `readChunkContent` as the retriever's `readDoc` hydrator: the
 // indexer owns the registry layout (`ctx:registry` + `ctx:file:<key>`) and the
 // chunk-id format, so it is the natural read-by-id. When the hydrator hits, the
 // chunk's CLEAN content is prefix-windowed with `<<query-term>>` highlights
@@ -65,9 +65,9 @@ export interface ContextStatus {
   ok: boolean;
   /** Canonical project id (never a filesystem path). */
   projectId: string;
-  /** Rows in `docs` (live read off the single writer handle — no cache). */
+  /** Rows in `docs` (live read off the single writer handle: no cache). */
   docCount: number;
-  /** Rows in `vec0` (live read off the single writer handle — no cache). */
+  /** Rows in `vec0` (live read off the single writer handle: no cache). */
   vecCount: number;
   /** Number of files currently tracked in `ctx:registry`. */
   indexedFiles: number;
@@ -85,7 +85,7 @@ export interface ContextStatus {
 /** Construction options for {@link ContextEngine}. */
 export interface ContextEngineOptions {
   /**
-   * The daemon's store handle — the ONLY storage surface used (single writer).
+   * The daemon's store handle: the ONLY storage surface used (single writer).
    * May be a read-only fallback handle; pass {@link storeDegraded} so `status()`
    * can report it.
    */
@@ -100,7 +100,7 @@ export interface ContextEngineOptions {
   projectId: ProjectId;
   /**
    * Resolved embedder config (from `resolveEmbedderConfig`). Construction never
-   * touches the network or native runtime — even `local` defers its dynamic
+   * touches the network or native runtime: even `local` defers its dynamic
    * import to the first `embed()` call.
    */
   embedderCfg: EmbedderConfig;
@@ -115,13 +115,13 @@ export interface ContextEngineOptions {
 // Engine
 
 /**
- * Noir's embedded hybrid retrieval engine — the `ctx.context` service.
+ * Noir's embedded hybrid retrieval engine: the `ctx.context` service.
  *
  * Constructed once per serve lifecycle (mirror `buildWorkflowEngine`) from the
  * daemon's store handle + a resolved {@link EmbedderConfig}. Resolves the
  * embedder, then owns the indexer (the only context writer) and the retriever
  * (the only context reader). Public surface: {@link indexPaths}, {@link reindex},
- * {@link search}, {@link status} — the operations the `context_index`,
+ * {@link search}, {@link status}: the operations the `context_index`,
  * `context_search`, and `context_status` MCP tools delegate to.
  */
 export class ContextEngine {
@@ -154,11 +154,11 @@ export class ContextEngine {
     this.embedder = info;
 
     // Persistent degradation: read-only store OR vectors explicitly disabled.
-    // (A misconfigured remote/ollama embedder is NOT degraded here — it builds
+    // (A misconfigured remote/ollama embedder is NOT degraded here: it builds
     // cleanly and surfaces its failure per-call via SearchResult.degraded.)
     this.degraded = opts.storeDegraded === true || info.kind === 'none';
 
-    // Both reuse the SAME injected handle — the engine never opens a second
+    // Both reuse the SAME injected handle: the engine never opens a second
     // connection (single writer). The indexer is root-bound so path keys are
     // repo-relative; the retriever is read-only and uses the retriever defaults
     // (RRF k=60 / [0.5,0.5], budget 4096). The retriever's `readDoc` hydrator
@@ -175,7 +175,7 @@ export class ContextEngine {
 
   /**
    * Incrementally index `paths` (files or directories) into the store. Delegates
-   * to the indexer. The engine — through the indexer — is the
+   * to the indexer. The engine: through the indexer: is the
    * ONLY context writer; the daemon stays the single writer via this handle.
    */
   indexPaths(paths: string[], opts?: IndexPathOptions): Promise<IndexResult> {
@@ -184,7 +184,7 @@ export class ContextEngine {
 
   /**
    * Drop every indexed chunk + vector, then re-index the registered roots from
-   * scratch ("warn + offer reindex, not silent" — the daemon's
+   * scratch ("warn + offer reindex, not silent": the daemon's
    * `context_index --force` delegates here). Delegates to the indexer; the
    * engine stays the only context writer.
    */

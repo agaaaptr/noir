@@ -2,7 +2,7 @@
 //
 // Pure and inert by construction (no timers, no I/O), so the two things that
 // are easy to get wrong can be pinned exactly: the host reports the same
-// assistant text twice — once as deltas, once as the completed block — and a
+// assistant text twice: once as deltas, once as the completed block: and a
 // run that stops mid-block must keep the words it already produced. The same
 // fold re-renders a transcript read back from disk, so a reopen reads as prose
 // rather than as JSONL.

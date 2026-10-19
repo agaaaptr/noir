@@ -22,19 +22,19 @@ export interface QuickOpts {
 }
 
 /**
- * Quick mode — the fast path for small / spike tasks.
+ * Quick mode: the fast path for small / spike tasks.
  *
  * Writes a stub spec to `.noir/specs/SP-<NNNN>-<taskId>-<slug>.md` (via
  * {@link writeSpec}) and fast-forwards the task from `draft` to `executing`,
  * recording the spec and plan gates as `decision: 'skipped'`. The verify gate
- * is intentionally LEFT alone — it still fires as `approved` when the task
+ * is intentionally LEFT alone: it still fires as `approved` when the task
  * later reaches `done`, providing the one real checkpoint (discipline lite).
  *
  * The task must already be started (`engine.startTask(..., 'quick')`); this
  * function reads the slug from the persisted TaskState. Skipped gates are
  * RECORDED (the observable-checkpoint invariant: every gate decision is
  * recorded), never silently dropped
- * — the audit KV and `history` both carry the `skipped` entries.
+ *: the audit KV and `history` both carry the `skipped` entries.
  */
 export async function runQuick(
   engine: WorkflowEngine,
@@ -67,7 +67,7 @@ export async function runQuick(
   await engine.advance(taskId); // draft → clarifying (no gate)
   await engine.advance(taskId, { skip: true }); // → specified (spec gate skipped)
   await engine.advance(taskId, { skip: true }); // → planned (plan gate skipped)
-  return engine.advance(taskId); // → executing (no gate) — land here
+  return engine.advance(taskId); // → executing (no gate): land here
 }
 
 /** Terminal states with nothing left to resume. `blocked` is NOT terminal. */
@@ -80,7 +80,7 @@ const TERMINAL_STATES: ReadonlySet<WorkflowState> = new Set<WorkflowState>(['don
  * taskId (v1 is one-task-per-project) → the persisted
  * `workflow:<taskId>` TaskState. Returns `null` when there is no active task,
  * the task record is missing, or the active task is terminal (`done` /
- * `abandoned` — nothing to resume). A `blocked` task IS resumable.
+ * `abandoned`: nothing to resume). A `blocked` task IS resumable.
  *
  * Uses only the public {@link Store} API, so a freshly-`openStore`'d handle
  * against the same on-disk DB is sufficient (no live engine required).

@@ -37,7 +37,7 @@ export async function retireLegacyDaemonRecord(
   // Read the raw bytes FIRST, separately from parsing: a file that exists but
   // cannot be read (root-owned from a `sudo noir` run, EMFILE, …) is NOT the
   // same as a corrupt record. A live legacy daemon may still hold the project
-  // DB, so refusing is the only safe move — never delete a guard file we could
+  // DB, so refusing is the only safe move: never delete a guard file we could
   // not read.
   let raw: string;
   try {
@@ -45,14 +45,14 @@ export async function retireLegacyDaemonRecord(
   } catch (err) {
     // ENOENT is a BENIGN race: `existsSync` said the file was there, and another
     // process (a concurrent `noir` invocation retiring the same legacy record)
-    // removed it in between. There is nothing left to retire — a no-op, not a
+    // removed it in between. There is nothing left to retire: a no-op, not a
     // refusal. Without this the race surfaces as "cannot read the legacy daemon
     // record", which tells the user to fix the readability of a file that no
     // longer exists.
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') return;
     const code = (err as NodeJS.ErrnoException).code ?? 'UNKNOWN';
     throw new Error(
-      `cannot read the legacy daemon record (${code}) — fix the file's ` +
+      `cannot read the legacy daemon record (${code}): fix the file's ` +
         `readability or remove it manually, then re-run.`,
     );
   }
@@ -71,7 +71,7 @@ export async function retireLegacyDaemonRecord(
 
   // Only signal a pid that plausibly belongs to THIS boot. After a reboot the
   // OS reallocates pids from a low counter, so a record left by a force-reboot
-  // may name an unrelated process that happens to be alive right now — and
+  // may name an unrelated process that happens to be alive right now: and
   // signalling it would kill the user's editor or browser. A `startedAt` that
   // predates the current boot proves the daemon is long gone.
   const bootBoundary = Date.now() - uptime() * 1000;
@@ -81,7 +81,7 @@ export async function retireLegacyDaemonRecord(
     try {
       process.kill(pid, 'SIGTERM');
     } catch {
-      /* already gone — fall through */
+      /* already gone: fall through */
     }
     const exited = await waitForExit(pid, timeoutMs);
     if (!exited) {
@@ -90,7 +90,7 @@ export async function retireLegacyDaemonRecord(
       throw new Error(
         `a daemon from a previous Noir version (pid ${pid}) did not exit within ` +
           `${timeoutMs}ms and still holds this project's ` +
-          `store open — stop it with \`kill ${pid}\` and re-run.`,
+          `store open: stop it with \`kill ${pid}\` and re-run.`,
       );
     }
   }

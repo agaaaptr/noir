@@ -1,11 +1,11 @@
 // Reciprocal Rank Fusion (RRF) for hybrid retrieval.
 //
-// Fuses two pre-ranked retrieval lists — BM25 (`Store.searchFt`) and cosine
-// kNN (`Store.knn`) — into one ranked list via the canonical Cormack SIGIR'09
+// Fuses two pre-ranked retrieval lists: BM25 (`Store.searchFt`) and cosine
+// kNN (`Store.knn`): into one ranked list via the canonical Cormack SIGIR'09
 // rank-based formula. RRF is deliberately RANK-BASED: it never reads either
 // list's raw scores, so it sidesteps the BM25-vs-cosine scale mismatch
 // entirely. A document present in only one list contributes
-// only that list's term — no penalty, no normalization — and the raw BM25 and
+// only that list's term: no penalty, no normalization: and the raw BM25 and
 // cosine scores are NEVER summed.
 //
 // The formula below is written with the Greek capital sigma, which is the
@@ -14,7 +14,7 @@
 // irregular-script rule rather than the rule carrying a Greek allowance:
 // noir-hygiene: exempt
 //
-// Reference: Cormack, Clarke, Büttcher — Reciprocal Rank Fusion (SIGIR 2009).
+// Reference: Cormack, Clarke, Büttcher: Reciprocal Rank Fusion (SIGIR 2009).
 //   score(d) = Σ_i  w_i / (k + rank_i(d))      (1-based ranks, default k = 60)
 
 import type { FtsHit, VecHit } from './types.js';
@@ -32,7 +32,7 @@ export const DEFAULT_RRF_WEIGHTS: readonly [number, number] = [0.5, 0.5];
 export interface FuseRrfOptions {
   /**
    * RRF constant `k`. Larger values flatten the top-rank advantage.
-   * Defaults to {@link DEFAULT_RRF_K} (60 — the canonical value).
+   * Defaults to {@link DEFAULT_RRF_K} (60: the canonical value).
    */
   k?: number;
   /**
@@ -49,7 +49,7 @@ export interface RrfResult {
   /** Source bucket from the originating hit (bm25's, else kNN's). */
   source: string;
   /**
-   * Fused RRF score `Σ w_i/(k+rank_i)`. Rank-based — NOT a normalized
+   * Fused RRF score `Σ w_i/(k+rank_i)`. Rank-based: NOT a normalized
    * similarity; only meaningful for ordering within a single `fuseRrf` call.
    */
   score: number;
@@ -77,14 +77,14 @@ function rankMap(
  *
  * The input lists MUST be ordered best-first (the store returns them that way:
  * `searchFt` ranks by BM25 relevance, `knn` by ascending distance). Position in
- * the array IS the rank — the hits' raw `score` fields are intentionally
+ * the array IS the rank: the hits' raw `score` fields are intentionally
  * ignored (never sum raw BM25 + cosine).
  *
  * For each unique id: `score = w_bm25/(k + rank_bm25) + w_knn/(k + rank_knn)`,
  * dropping a term when the id is absent from that list (no penalty, no
  * normalization). Results sort by score descending; ties break by the doc's
  * best (minimum) rank across both lists, then by first-seen insertion order
- * (bm25 list first, then kNN-only docs) — all deterministic, so identical
+ * (bm25 list first, then kNN-only docs): all deterministic, so identical
  * inputs always yield identical ordering (no RNG, no clock).
  *
  * Pure and side-effect-free.

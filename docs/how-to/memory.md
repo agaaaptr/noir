@@ -1,7 +1,7 @@
 # How to use cross-session memory
 
 Memory is how one session tells the next one what it learned. Each entry is a
-**typed observation** — a decision, a bug, a preference, an architectural fact —
+**typed observation**: a decision, a bug, a preference, an architectural fact —
 stored locally in the project store and retrieved by meaning, not by file path.
 A new session recalls "how do we handle retries here?" and gets the answer you
 wrote three weeks ago, without you re-explaining it.
@@ -22,7 +22,7 @@ it down (see the notes on each), but reading and writing memory wants it up:
 `noir daemon start --detach`.
 
 Nothing here needs a model provider. Observations are stored and retrieved
-locally — **never sent to an LLM** — unless you explicitly opt into
+locally: **never sent to an LLM**: unless you explicitly opt into
 consolidation (§6).
 
 ## 1. Save a decision
@@ -83,7 +83,7 @@ memory recall — 2 hits for 'how do we handle retries'
 ```
 
 `--limit` caps the number of hits (default 10). When the daemon is unreachable,
-recall **still works** — it falls back to an in-process read-only pass over the
+recall **still works**: it falls back to an in-process read-only pass over the
 store and marks itself: `degraded: BM25-only` on the header line, meaning
 keyword matching only, no vectors. `--json` reports the same as
 `data.degraded: true`. Nothing is ever written on that path.
@@ -101,7 +101,7 @@ Session       Observations   Last seen
 a91d…         4              2026-09-12 18:44
 ```
 
-This is the fastest way to find an id to `recall` or `forget` — and, when memory
+This is the fastest way to find an id to `recall` or `forget`: and, when memory
 feels noisy, to see which session did the talking.
 
 ## 4. Forget something
@@ -111,7 +111,7 @@ noir memory forget 9b7e0d41-… 4f2c1a8e-…
 ```
 
 One or more ids, from `recall` or `sessions`. It prints
-`Forgot N observation(s).` Ids that do not exist are simply not counted — a
+`Forgot N observation(s).` Ids that do not exist are simply not counted: a
 repeat run is harmless. There is no confirmation prompt, so be sure of the id;
 `recall` shows the full text before you commit to it.
 
@@ -131,13 +131,13 @@ The content is resolved from the first source that is present: `--content`, then
 the file argument, then piped stdin, then an interactive prompt. With none of
 them the command exits `2`.
 
-**The content is stored as you give it** — Noir does not summarize, rewrite, or
+**The content is stored as you give it**: Noir does not summarize, rewrite, or
 send it anywhere. Whatever you pipe in is what lands in memory, which is why
 this is the right tool for a session-end summary you have already written, and
 the wrong one for a 4,000-line log you have not read.
 
 `--event-type <label>` records where it came from; the observation's source
-becomes `auto:<label>`, lowercased — the default label is `Stop`, so
+becomes `auto:<label>`, lowercased: the default label is `Stop`, so
 `source: auto:stop`. Use it to keep capture provenance honest (a `SessionEnd`
 summary is not the same evidence as a `Stop` one).
 
@@ -147,7 +147,7 @@ Capture works on a shared workspace too, with a per-repository feed. See
 ## 6. Consolidate observations into lessons (opt-in)
 
 Consolidation asks a model to read a set of observations and derive a smaller
-set of lessons from them — the "what general rule do these five bugs imply?"
+set of lessons from them: the "what general rule do these five bugs imply?"
 
 ```bash
 noir memory consolidate --types bug --limit 50
@@ -157,10 +157,10 @@ It runs **only when you have explicitly turned it on**. Two things must be true:
 `memory.consolidation.enabled: true` in `.noir/config.yml`, plus a usable
 provider and model, obtained either way:
 
-- **Name them under `memory.consolidation`** — set `provider` together with its
+- **Name them under `memory.consolidation`**: set `provider` together with its
   own `model`. This is checked first.
 - **Or leave that block's provider unset** and let the `consolidate` tier supply
-  it — `model.tiers.consolidate`, falling back to `model.defaultProvider`. Whichever
+  it: `model.tiers.consolidate`, falling back to `model.defaultProvider`. Whichever
   provider block the tier resolves to must itself declare a `model` id.
 
 Naming a provider under `memory.consolidation` **without** a `model` fails
@@ -176,7 +176,7 @@ Consolidated 2 lessons from 7 observations.
 - 7d4a…: Every backoff path needs a jitter source that is seeded in tests.
 ```
 
-When they are not, nothing runs and nothing is charged — the command exits `1`
+When they are not, nothing runs and nothing is charged: the command exits `1`
 and says which piece is missing:
 
 ```
@@ -191,8 +191,8 @@ provider + model), then restart the daemon.
 | `model-unavailable` | A provider is named, but its model could not be resolved. |
 | `no-candidates` | Nothing matched `--types` / `--limit` — there is nothing to derive from. |
 
-Consolidation is also **not supported on a shared workspace** — the workspace
-memory store has no consolidation model — and the command says so rather than
+Consolidation is also **not supported on a shared workspace**: the workspace
+memory store has no consolidation model: and the command says so rather than
 failing obscurely.
 
 > **This is the one memory command that can cost money**, which is why it is
@@ -231,14 +231,14 @@ narrower. Start the daemon (`noir daemon start --detach`) and re-run for the
 full hybrid ranking.
 
 **"The host never mentions what I saved."** The host reads memory when a skill
-calls for it — `noir-recall` queries before re-deriving something, and
+calls for it: `noir-recall` queries before re-deriving something, and
 `noir-wrap` saves at the end of a task. Saving an observation does not push it
 into an already running session; it is there for the next one.
 
 **"Is any of this sent anywhere?"** No. Saving, recalling, listing and
 forgetting are local. The store is `.noir/store/<projectId>.db`, keyed by the
 project id, not a filesystem path. The single exception is consolidation, which
-you have to switch on — see [privacy.md](../explanation/privacy.md).
+you have to switch on: see [privacy.md](../explanation/privacy.md).
 
 ## See also
 

@@ -2,9 +2,9 @@
 // A guided orchestrator over the existing patch-release flow (CLAUDE.md).
 // Walks the checklist; hands off at human-approval gates. The FSM release
 // phase (optional, done→released) is designed but not
-// yet wired — this CLI is the release tool that work called for.
+// yet wired: this CLI is the release tool that work called for.
 // Build-once / idempotent: bump-version.mjs is idempotent; release:tag
-// refuses dirty/unpushed; tags are immutable (never reuse — deprecate+patch).
+// refuses dirty/unpushed; tags are immutable (never reuse: deprecate+patch).
 
 import { execSync, spawnSync } from 'node:child_process';
 import { type CliOptions, EXIT, fail, info, log, success, tip, warn } from '../output.js';
@@ -116,7 +116,7 @@ export async function release(opts: ReleaseOptions): Promise<void> {
     );
     success('gate: ✓ all six gates green', opts);
 
-    // 4. Commit (spawnSync — no shell, no injection).
+    // 4. Commit (spawnSync: no shell, no injection).
     info(`[4/13] commit/push: ${describe('commit', 'noir')}`, opts);
     spawnSync('git', ['add', '-A'], { encoding: 'utf8', stdio: 'inherit' });
     spawnSync('git', ['commit', '-m', `chore(release): v${version} + docs sync`], {
@@ -136,7 +136,7 @@ export async function release(opts: ReleaseOptions): Promise<void> {
     tip('open GitHub Actions → approve the publish job, then continue', opts);
     tip('after approval: verify `npm view @noir-ai/cli dist-tags beta` = beta version', opts);
 
-    // 8-13 (remaining steps — documented for human continuation)
+    // 8-13 (remaining steps: documented for human continuation)
     info('remaining steps (merge→stable→dist→sync): see CLAUDE.md', opts);
     for (const s of ALL.slice(7)) {
       const who: 'noir' | 'human' = s.startsWith('human-approve') ? 'human' : 'noir';

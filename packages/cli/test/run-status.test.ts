@@ -1,8 +1,8 @@
 // Unit tests for the `noir run` status line and the host-stderr tail that a
 // failure report carries. No terminal, no host, no clock: the line takes its
-// stream, its clock, and its TTY answers as inputs, so every branch — the
+// stream, its clock, and its TTY answers as inputs, so every branch: the
 // machine-output silence, the two-marker pipe form, the in-place redraw, and
-// the shared-cursor rule — is exercised deterministically here.
+// the shared-cursor rule: is exercised deterministically here.
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   HOST_STDERR_TAIL_LINES,
@@ -63,7 +63,7 @@ describe('humanizeElapsed', () => {
   });
 });
 
-describe('RunStatusLine — gating', () => {
+describe('RunStatusLine: gating', () => {
   it('emits nothing under --json, on a terminal or a pipe', () => {
     for (const stderrIsTty of [true, false]) {
       const h = harness({ json: true, stderrIsTty });
@@ -139,7 +139,7 @@ describe('RunStatusLine — gating', () => {
   });
 });
 
-describe('RunStatusLine — content', () => {
+describe('RunStatusLine: content', () => {
   it('names the model once the host announces it', () => {
     const h = harness();
     h.status.begin();
@@ -167,7 +167,7 @@ describe('RunStatusLine — content', () => {
     const h = harness();
     h.status.begin();
     // One assistant message arrives as several lines, each carrying the
-    // CUMULATIVE usage of that message — summing them would over-count.
+    // CUMULATIVE usage of that message: summing them would over-count.
     h.status.event({ kind: 'assistant', messageId: 'msg-1', usage: { inputTokens: 100 } });
     h.status.event({
       kind: 'assistant',
@@ -201,14 +201,14 @@ describe('RunStatusLine — content', () => {
     h.status.event({ kind: 'assistant', messageId: 'm1' });
     h.status.event({ kind: 'result', isError: false });
     expect(h.writes.at(-1)).toBe(`\r${ESC}[K`);
-    // end() is idempotent — the caller finalizing the line as well is a no-op.
+    // end() is idempotent: the caller finalizing the line as well is a no-op.
     const after = h.writes.length;
     h.status.end();
     expect(h.writes).toHaveLength(after);
   });
 });
 
-describe('RunStatusLine — the shared cursor', () => {
+describe('RunStatusLine: the shared cursor', () => {
   it('finishes its row before the answer is written, so the two never share it', () => {
     const h = harness();
     h.status.begin();
@@ -218,7 +218,7 @@ describe('RunStatusLine — the shared cursor', () => {
     // The row is finished now: a second write has nothing left to yield.
     h.status.beforeStdout(' world');
     expect(h.writes).toHaveLength(2);
-    // 'Hello' ended no line, so the cursor is inside the answer — a carriage
+    // 'Hello' ended no line, so the cursor is inside the answer: a carriage
     // return here would land on top of it.
     h.status.event({ kind: 'assistant', messageId: 'm1', usage: { inputTokens: 5 } });
     expect(h.writes).toHaveLength(2);
@@ -313,7 +313,7 @@ describe('RunStatusLine — the shared cursor', () => {
   });
 });
 
-describe('RunStatusLine — fitting the terminal', () => {
+describe('RunStatusLine: fitting the terminal', () => {
   // Long enough that "● <model> · <elapsed> · ↓…↑… tokens" overflows a
   // terminal of ordinary width.
   const LONG_MODEL = 'claude-sonnet-4-5-20250929';
@@ -426,7 +426,7 @@ describe('RunStatusLine — fitting the terminal', () => {
     expect(h.text()).not.toContain(`${ESC}[1A`);
   });
 
-  it('leaves the piped markers whole — a log line has no row to fit', () => {
+  it('leaves the piped markers whole: a log line has no row to fit', () => {
     setColumns(NARROW);
     const h = harness({ stderrIsTty: false });
     h.status.begin();

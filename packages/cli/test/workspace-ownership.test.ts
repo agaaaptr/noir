@@ -3,7 +3,7 @@
 // record as a live daemon.
 //
 // Every test here runs offline. The record points at a pid that is genuinely
-// alive — a real child process this test spawns — while the port answers `/health`
+// alive: a real child process this test spawns: while the port answers `/health`
 // as something else (another workspace, or a different pid). That is exactly the
 // recycled-pid situation the guard exists for. The liveness answer comes from a
 // real local HTTP server, so the probe's fetch, its JSON parse and its bounded
@@ -27,7 +27,7 @@ let home: string;
 let servers: Server[];
 let children: ChildProcess[];
 
-/** Spawn a real, long-lived process and return it — the "live pid" a stale record points at. */
+/** Spawn a real, long-lived process and return it: the "live pid" a stale record points at. */
 function spawnLiveProcess(): ChildProcess {
   const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
     stdio: 'ignore',

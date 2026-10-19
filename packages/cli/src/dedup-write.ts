@@ -27,7 +27,7 @@
 // entries are scoped to the resolved model id (a model change invalidates them).
 //
 // When a near-dup is found, the conflict record (mode 'artifact'
-// — the closest generic in ConflictContext['mode']) is appended to the
+//: the closest generic in ConflictContext['mode']) is appended to the
 // ScaffoldResult.conflicts[] the caller returns, so `--json` consumers see the
 // near-dup with its cosine `similarity` without a prompt.
 //
@@ -61,7 +61,7 @@ const DEDUP_CACHE_VERSION = 1;
 export interface DedupWriteOpts {
   /** Explicit interactivity flag (the engine + skills emit read the same). */
   interactive: boolean;
-  /** Project info — read from `.noir/config.yml` by the caller. When undefined
+  /** Project info: read from `.noir/config.yml` by the caller. When undefined
    *  OR when the resolved embedder is `kind:'none'`, the hook warn-skips. */
   project?: ProjectInfo;
   /** Testability seam (mirrors `checkSemanticDupDoctor`'s `opts.embed`): when
@@ -144,7 +144,7 @@ export async function checkWritePathDedup(
     const sim = best.similarity;
     result.found.push({ proposedRel, matchedRel, similarity: sim });
 
-    // The conflict record's resolution reflects what actually happened — not a
+    // The conflict record's resolution reflects what actually happened: not a
     // hardcoded 'preserve'. Non-interactive + cancel default to 'preserve'
     // (Create anyway); the prompt's replace/mirror choices map onto the
     // ConflictResolution union.

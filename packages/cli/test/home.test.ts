@@ -1,4 +1,4 @@
-// S9 t4 — `noir` (bare) home menu tests. @clack/prompts is mocked so the
+// S9 t4: `noir` (bare) home menu tests. @clack/prompts is mocked so the
 // interactive select/text/cancel flows are deterministic and never touch the
 // real stdin; the bin-provided `dispatch` callback is a vi.fn double. These pin
 // the three routing arms (interactive menu, --json → `status --json`,
@@ -165,7 +165,7 @@ function pickSectionAndAction(sectionId: string, actionId: string): void {
   clackMock.select.mockResolvedValueOnce(sectionId).mockResolvedValueOnce(actionId);
 }
 
-describe('home — non-interactive routing (scriptable)', () => {
+describe('home: non-interactive routing (scriptable)', () => {
   it('--json → dispatch(["status","--json"])', async () => {
     const deps = makeDeps();
     await home({ json: true }, deps);
@@ -191,11 +191,11 @@ describe('home — non-interactive routing (scriptable)', () => {
   });
 });
 
-// TUI policy — `--no-tui` (opts.tui === false) forces the non-interactive
+// TUI policy: `--no-tui` (opts.tui === false) forces the non-interactive
 // `status` path even when isInteractive() would be true (a TTY). `--tui`
-// (opts.tui === true) is advisory only — it still requires a TTY, so a non-TTY
+// (opts.tui === true) is advisory only: it still requires a TTY, so a non-TTY
 // run stays on the non-interactive path. Auto (no flag) preserves S9 behavior.
-describe('home — TUI policy routing', () => {
+describe('home: TUI policy routing', () => {
   it('--no-tui forces dispatch(["status"]) even in a TTY (no menu)', async () => {
     setTty(true, true); // interactive by TTY alone
     const deps = makeDeps();
@@ -231,7 +231,7 @@ describe('home — TUI policy routing', () => {
     expect(clackMock.select).not.toHaveBeenCalled();
   });
 
-  it('auto (no flag) preserves S9 behavior — menu in a TTY, status without one', async () => {
+  it('auto (no flag) preserves S9 behavior: menu in a TTY, status without one', async () => {
     setTty(true, true);
     clackMock.select.mockResolvedValueOnce('exit');
     const deps = makeDeps();
@@ -240,7 +240,7 @@ describe('home — TUI policy routing', () => {
   });
 });
 
-describe('home — interactive grouped @clack menu', () => {
+describe('home: interactive grouped @clack menu', () => {
   beforeEach(() => {
     setTty(true, true); // interactive
   });

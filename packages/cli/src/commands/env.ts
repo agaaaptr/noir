@@ -1,8 +1,8 @@
-// `noir env [--json]` — which configuration is in effect, and where each value
+// `noir env [--json]`: which configuration is in effect, and where each value
 // comes from.
 //
 // The command exists to answer the one question the maintainer hit live: "I
-// edited `.noir/.env` and nothing changed — so which value is actually in
+// edited `.noir/.env` and nothing changed: so which value is actually in
 // effect, and who supplied it?". The resolution rule itself is that
 // a key `.noir/.env` DEFINES wins and the real environment is the fallback for
 // the keys the file omits; this command renders that decision per key instead of
@@ -11,19 +11,19 @@
 // HARD RULE: NAMES AND SHAPES ONLY, NEVER A VALUE. Each row carries
 // the key, the side that won, and a REDACTED shape (`pk_…(42)` = the first three
 // characters + the length) so two tokens can be told apart without a secret ever
-// being printed. `--json` carries even less — `valueLength` only; the shape
+// being printed. `--json` carries even less: `valueLength` only; the shape
 // belongs to the human table and never reaches stdout (see `env`, whose payload
 // is an EXPLICIT projection of the resolved rows).
 //
 // CURATION, NOT A DUMP. `loadNoirEnv().sources` records every key
-// that resolves to something, including every ambient one as `'env'` — under the
+// that resolves to something, including every ambient one as `'env'`: under the
 // default argument that is the whole of `process.env` (PATH, npm_config_*, …).
 // Rendering that inventory would bury the answer this command exists to give, so
 // the report is exactly:
 //
-//   (a) every key `.noir/.env` defines — the user's own short list, and the
+//   (a) every key `.noir/.env` defines: the user's own short list, and the
 //       thing they just edited; plus
-//   (b) ambient keys named by {@link CURATED_AMBIENT_KEYS} — the Noir-relevant
+//   (b) ambient keys named by {@link CURATED_AMBIENT_KEYS}: the Noir-relevant
 //       names a user may have exported from a shell rc; plus
 //   (c) ambient keys named by the project's OWN config
 //       (`model.providers.<name>.apiKeyEnv`), read through the shipped
@@ -39,7 +39,7 @@ import { truncateToWidth } from '../width.js';
 /**
  * Ambient (environment-only) names worth reporting: the Noir-relevant keys a
  * user might reasonably have exported from a shell rc. Deliberately a SHORT
- * allowlist — see the curation note above. `CLICKUP_API_TOKEN` is the
+ * allowlist: see the curation note above. `CLICKUP_API_TOKEN` is the
  * integration token, the four `*_API_KEY` names are the remote embedder /
  * provider keys the docs name, `OLLAMA_BASE_URL` backs a local Ollama embedder,
  * and `NOIR_PROFILE` selects a `run.profiles` entry.
@@ -47,11 +47,11 @@ import { truncateToWidth } from '../width.js';
  * `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL` and `API_TIMEOUT_MS` sit next to
  * `ANTHROPIC_API_KEY` because together they are the gateway set: a user who
  * points a run at a non-Anthropic endpoint configures exactly these, and
- * "which side supplied my gateway value — the file or my shell?" is the
+ * "which side supplied my gateway value: the file or my shell?" is the
  * question they came here to answer.
  *
  * An ambient key NOT in this list is still resolved (and still feeds the
- * precedence decision) — it is simply not reported, because "every variable in
+ * precedence decision): it is simply not reported, because "every variable in
  * your shell" is not an answer to "which value is in effect".
  */
 export const CURATED_AMBIENT_KEYS: readonly string[] = [
@@ -73,7 +73,7 @@ export const CURATED_AMBIENT_KEYS: readonly string[] = [
  *
  * The loader APPLIES its overlay to `process.env` in place, and after that the
  * file's own values are indistinguishable from an inherited export for exactly
- * the keys where the question matters — so "is my shell value being overridden?"
+ * the keys where the question matters: so "is my shell value being overridden?"
  * (the `shadowed` column) can only be answered from a pre-overlay snapshot.
  *
  * A SHALLOW COPY of the environment, values included: the shadow comparison
@@ -87,21 +87,21 @@ let ambientBaseline: Record<string, string | undefined> | undefined;
 
 /**
  * Snapshot the ambient environment before the bin applies `.noir/.env`. Called
- * from `bin.ts`'s `preAction` for `noir env` only — every other command just
+ * from `bin.ts`'s `preAction` for `noir env` only: every other command just
  * applies the overlay and never needs the baseline.
  */
 export function captureAmbientEnv(env: Record<string, string | undefined> = process.env): void {
   ambientBaseline = { ...env };
 }
 
-/** One resolved key: the name, the side that won, and a length — never a value. */
+/** One resolved key: the name, the side that won, and a length: never a value. */
 export interface EnvVarRow {
   /** The env-var NAME (safe to print; this is what the user types). */
   key: string;
   /** The side that won: `.noir/.env` (`'file'`) or the ambient environment. */
   source: 'file' | 'env';
   /** Present (true) only when `.noir/.env` defines the key AND the ambient
-   *  environment defined it with a DIFFERENT value — i.e. the file is
+   *  environment defined it with a DIFFERENT value: i.e. the file is
    *  overriding something. Omitted otherwise (the JSON shape is additive). */
   shadowed?: boolean;
   /** Character count of the value in effect. A length is not a value. */
@@ -112,7 +112,7 @@ export interface EnvVarRow {
 export interface EnvPayload {
   vars: EnvVarRow[];
   /** Loader diagnostics (malformed lines, shadowed keys, a tracked-file
-   *  refusal). Names only — the loader never puts a value in a warning. */
+   *  refusal). Names only: the loader never puts a value in a warning. */
   warnings: string[];
 }
 
@@ -127,14 +127,14 @@ interface ResolvedEnv {
 
 /**
  * A redacted DISPLAY shape for a value: the first three characters plus the
- * length (`pk_la…(42)`). Enough to tell two tokens apart in a table — the shape
- * a provider dashboard shows for a masked key — and never enough to use one.
+ * length (`pk_la…(42)`). Enough to tell two tokens apart in a table: the shape
+ * a provider dashboard shows for a masked key: and never enough to use one.
  * The length is deliberate: it is what makes "the file's value is in effect, not
  * the one I exported" visible without printing either.
  *
  * SHORT VALUES ARE SHOWN AS LENGTH ONLY. For a value of `SHORT_VALUE_MAX` chars
  * or fewer the prefix would BE the whole value (`dev…(3)` for `NOIR_PROFILE=dev`
- * prints a complete value — and a short one is exactly the kind a user might
+ * prints a complete value: and a short one is exactly the kind a user might
  * have picked, or a legacy token might be). The floor is 8 rather than the 3
  * the prefix needs, so a short-but-real value like a hostname or a base URL
  * cannot be reconstructed by guessing the last few characters.
@@ -156,7 +156,7 @@ function redactShape(value: string): string {
  * built-in allowlist would never guess still shows up.
  *
  * An uninitialized (or unparseable) project yields `[]`: `noir env` reports what
- * it can from the file + the environment instead of refusing to run — the file
+ * it can from the file + the environment instead of refusing to run: the file
  * is exactly what the user came here to inspect.
  */
 function configApiKeyEnvNames(root: string): string[] {
@@ -176,11 +176,11 @@ function configApiKeyEnvNames(root: string): string[] {
 
 /**
  * Resolve the reported keys: provenance from `loadNoirEnv` (the loader is the
- * single decision point — this command never re-implements the precedence),
+ * single decision point: this command never re-implements the precedence),
  * filtered down to the curated report described at the top of this file.
  *
  * The resolved VALUE is used only for its length and its redacted shape, inside
- * the loop body below — it is never stored on a row, so it cannot leak into the
+ * the loop body below: it is never stored on a row, so it cannot leak into the
  * `--json` envelope.
  */
 function resolveEnv(root: string, ambientEnv: Record<string, string | undefined>): ResolvedEnv {
@@ -191,8 +191,8 @@ function resolveEnv(root: string, ambientEnv: Record<string, string | undefined>
   // Candidate keys: everything `sources` records (the loader's authority), plus
   // the curated names that are SET in the ambient environment. The second half
   // exists because `sources` is empty whenever the loader takes one of its two
-  // no-op paths — no `.noir/.env` at all, or a git-tracked file refused outright
-  // — and neither means "nothing is in effect": with no file
+  // no-op paths: no `.noir/.env` at all, or a git-tracked file refused outright
+  //: and neither means "nothing is in effect": with no file
   // contributing, an exported `CLICKUP_API_TOKEN` IS the value in effect, and
   // reporting "nothing to report" while it sits in the user's shell would be a
   // lie. It cannot contradict the loader: those are exactly the keys the loader
@@ -216,7 +216,7 @@ function resolveEnv(root: string, ambientEnv: Record<string, string | undefined>
     const value = source === 'file' ? (overlay[key] ?? '') : (ambientEnv[key] ?? '');
     // Shadowing is the same condition the loader warns on: the file defines a
     // key the ambient environment ALSO defines, with a different value. Equal
-    // values are not a shadow — nothing the user exported is being overridden.
+    // values are not a shadow: nothing the user exported is being overridden.
     const shadowed =
       source === 'file' && ambientEnv[key] !== undefined && ambientEnv[key] !== value;
 
@@ -241,14 +241,14 @@ function describeSource(row: EnvVarRow): string {
  * `noir env [--json]`: report every key that is in effect, its winning source,
  * and a redacted shape of its value.
  *
- * `--json` writes `{ok:true, data:{vars, warnings}}` to STDOUT — the explicit
+ * `--json` writes `{ok:true, data:{vars, warnings}}` to STDOUT: the explicit
  * projection below is the redaction boundary (`shapes` is deliberately dropped).
  * The human path renders a KEY/SOURCE/VALUE table to STDERR and writes nothing
  * to stdout.
  *
  * Loader warnings are NOT re-printed here: `bin.ts`'s `preAction` already
  * applies `.noir/.env` through `applyNoirEnv`, which writes every warning
- * (including the tracked-file refusal) to stderr before this action runs — so
+ * (including the tracked-file refusal) to stderr before this action runs: so
  * they are visible in every real invocation, and printing them again would only
  * duplicate them. They are carried in the `--json` payload for consumers.
  *
@@ -265,11 +265,11 @@ export async function env(opts: CliOptions = {}): Promise<void> {
 
   if (report.vars.length === 0) {
     // "no keys IN EFFECT", not "no keys": a file can define keys that resolve to
-    // nothing — a git-tracked file is refused outright, and a
+    // nothing: a git-tracked file is refused outright, and a
     // process-injection key (NODE_OPTIONS, npm_*) is skipped by the loader. Both
     // are reported by the loader's own stderr warnings above this line.
     info(
-      'nothing to report — .noir/.env defines no keys in effect and no Noir-relevant environment variable is set',
+      'nothing to report: .noir/.env defines no keys in effect and no Noir-relevant environment variable is set',
       opts,
     );
     return;

@@ -51,7 +51,7 @@ export interface MigrationPlan {
 /** Per-segment numeric semver comparison. Returns true when `a < b`. */
 function semverLt(a: string, b: string): boolean {
   // Strip a leading `v` (npm-idiomatic exact-version spelling that
-  // installManagedNode explicitly supports) — bare Number('v1.9.0') is NaN → 0.
+  // installManagedNode explicitly supports): bare Number('v1.9.0') is NaN → 0.
   const seg = (s: string): number => Number(s.replace(/^v/, '')) || 0;
   const pa = a.split('.').map(seg);
   const pb = b.split('.').map(seg);
@@ -108,7 +108,7 @@ export interface InstallManagedNodeOptions {
   /**
    * Forwarded into {@link provisionManagedNode}. Carries the offline mock
    * seams (`fetch`, `exec`, `target`, `signal`) so the install pipeline is
-   * unit-testable without network — same pattern as `provisionManagedNode`'s
+   * unit-testable without network: same pattern as `provisionManagedNode`'s
    * own suite in `packages/core/test/node-provision.test.ts`.
    */
   provision?: Pick<ProvisionOptions, 'fetch' | 'exec' | 'target' | 'signal'>;
@@ -146,9 +146,9 @@ export async function installManagedNode(
   mkdirSync(cliDir, { recursive: true });
   mkdirSync(binDir, { recursive: true });
 
-  // Provision the managed Node runtime. Idempotent — re-runs are no-ops.
+  // Provision the managed Node runtime. Idempotent: re-runs are no-ops.
   // On any failure, provisionManagedNode either falls back to a system Node
-  // >=22 (returns { source: 'system' }) or throws — we surface the throw as an
+  // >=22 (returns { source: 'system' }) or throws: we surface the throw as an
   // {ok:false} envelope rather than letting it kill the CLI.
   let runtime: ProvisionedNode;
   try {
@@ -181,9 +181,9 @@ export async function installManagedNode(
   const shim = join(binDir, 'noir');
   const shimBody = `#!/usr/bin/env bash\n"${nodeBin}" "${join(cliDir, 'lib', 'node_modules', '@noir-ai', 'cli', 'dist', 'bin.js')}" "$@"\n`;
   atomicWriteFile(shim, shimBody);
-  chmodSync(shim, 0o755); // must be executable — atomicWriteFile sets 0o644 by default
+  chmodSync(shim, 0o755); // must be executable: atomicWriteFile sets 0o644 by default
   ensureShimExecutable(); // defense-in-depth: re-assert 0o755 (idempotent, never throws)
-  // (POSIX shim; Windows uses a .cmd wrapper — install.sh/install.ps1.)
+  // (POSIX shim; Windows uses a .cmd wrapper: install.sh/install.ps1.)
 
   // Resolve installed version via the provisioned node.
   const ver = await runManagerCmd(
@@ -216,7 +216,7 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
   // `--list`; works standalone too. Requires an existing install record —
   // if there's none, there's nothing to dismiss (no banner was shown).
   // Track the dismiss outcome so `--dismiss --list --json` folds it into the
-  // SINGLE list envelope — never two JSON documents on stdout.
+  // SINGLE list envelope: never two JSON documents on stdout.
   let dismissOutcome: { dismissed: boolean; version: string | null } | undefined;
   if (opts.dismiss === true) {
     const rec = readInstallRecord();
@@ -261,7 +261,7 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
   try {
     minVersion = loadProjectInfo(process.cwd()).config.update.minVersion;
   } catch {
-    // Not initialized yet — the config default applies.
+    // Not initialized yet: the config default applies.
   }
   const plan = buildMigrationPlan({
     detected,
@@ -275,7 +275,7 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
   // refuse a downgrade, UNCONDITIONALLY. The floor/downgrade-guard exist as
   // safety invariants; gating them on `--no-input` meant the common interactive
   // path (and `--json`, which does not set input:false) silently proceeded with
-  // only a stderr warning — the invariant was never actually enforced.
+  // only a stderr warning: the invariant was never actually enforced.
   if (plan.belowMinVersion) {
     fail(
       EXIT.USAGE,
@@ -308,7 +308,7 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
   }
   installSpin.succeed(`Installed noir ${result.version}`);
 
-  // Migration step runs FIRST, in BOTH modes — the --json early-return below
+  // Migration step runs FIRST, in BOTH modes: the --json early-return below
   // must not skip it (a scripted/CI migration relying on --uninstall-prev would
   // otherwise silently leave the stale install in place while reporting success).
   // Its diagnostics go to stderr (warn/success), which --json leaves untouched.

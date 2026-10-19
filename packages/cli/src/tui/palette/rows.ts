@@ -1,7 +1,7 @@
 // Pure row-building for the single command surface (v2). The App owns the
 // query + active row + key routing; this module derives the visible rows for a
 // corpus so the App can resolve the active row into a dispatch (Enter) while
-// the presentational `Palette` renders the same rows — one source of truth for
+// the presentational `Palette` renders the same rows: one source of truth for
 // what the palette shows and what a selection runs.
 
 import type { HomeAction, HomeSection } from '../commands/sections.js';
@@ -30,7 +30,7 @@ export interface PaletteRow {
   destructive: boolean;
   group: string | null;
   /**
-   * The command's required value ('query', 'name', 'prompt') — the palette
+   * The command's required value ('query', 'name', 'prompt'): the palette
    * collects it inline before dispatching, so `argv` alone would run the
    * command without its argument. Undefined for rows that dispatch bare (and
    * for non-dispatchable rows).
@@ -122,7 +122,7 @@ export function buildPaletteRows(input: BuildRowsInput): PaletteRow[] {
   if (corpus === 'output') {
     const matches = computeMatches(outputLines, query);
     if (query.length > 0 && matches.length === 0) {
-      // A typed filter with zero hits is an explicit empty state — never list
+      // A typed filter with zero hits is an explicit empty state: never list
       // the full output under a misleading "matches" header.
       return [
         {

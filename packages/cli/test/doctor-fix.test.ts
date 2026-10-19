@@ -1,4 +1,4 @@
-// `noir doctor --fix` — the owner-only permission heal.
+// `noir doctor --fix`: the owner-only permission heal.
 //
 // The pass re-asserts owner-only permissions on the files Noir keeps private
 // (`.noir/.env` and, for an initialized project, the store DB + directory)
@@ -6,7 +6,7 @@
 // state and the `--json` payload carries exactly what changed in a `fixes`
 // array. Three things are under test: a lax `.env` is tightened to 0600 and
 // the `noir-env` row flips to ok; a clean root is a no-op (every entry
-// `unchanged`); and the `--json` shape stays stable — `fixes` appears only
+// `unchanged`); and the `--json` shape stays stable: `fixes` appears only
 // when `--fix` was passed.
 //
 // Offline/free: no network, no API key, no embedder.
@@ -70,7 +70,7 @@ async function runDoctor(opts: { fix?: boolean } = {}): Promise<FixPayload> {
   return envelope.data;
 }
 
-describe('noir doctor --fix — owner-only permission heal', () => {
+describe('noir doctor --fix: owner-only permission heal', () => {
   it('heals a lax .env to 0600, flips the row to ok, and reports the heal', async () => {
     mkdirSync(join(root, '.noir'), { recursive: true });
     writeFileSync(envPath(), '# seeded\n', 'utf8');
@@ -102,7 +102,7 @@ describe('noir doctor --fix — owner-only permission heal', () => {
     chmodSync(envPath(), 0o644);
 
     // Without --fix the payload carries no `fixes` key and the lax mode is left
-    // alone — the heal is opt-in, not a side effect of a plain diagnosis.
+    // alone: the heal is opt-in, not a side effect of a plain diagnosis.
     const plain = await runDoctor({});
     expect('fixes' in plain).toBe(false);
     expect(modeOf()).toBe(0o644);

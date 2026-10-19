@@ -6,7 +6,7 @@
 // (`../commands/registry.ts`) derives one entry per leaf command; this module
 // owns only the contract those entries must satisfy.
 //
-// `argv` is the canonical identifier — the exact space-joined token sequence a
+// `argv` is the canonical identifier: the exact space-joined token sequence a
 // user would type (e.g. `['context', 'search']`), with the program root name
 // ('noir') never included. `destructive` is a derived read flag (mutation /
 // workflow-advancing commands) so the palette can gate confirmation prompts
@@ -16,7 +16,7 @@
  * A palette entry projecting a leaf `noir` subcommand for the TUI palette.
  */
 export interface PaletteCommand {
-  /** Space-joined argv — the stable dispatch key (e.g. `context search`). */
+  /** Space-joined argv: the stable dispatch key (e.g. `context search`). */
   readonly id: string;
   /** Title-cased argv joined by `: ` for the palette's human label. */
   readonly label: string;
@@ -29,7 +29,7 @@ export interface PaletteCommand {
   readonly description: string;
   /** Top-level group the command belongs to (`argv[0]`), for palette grouping. */
   readonly category: string;
-  /** Search keywords — extra tokens the palette matcher scores beyond the label. */
+  /** Search keywords: extra tokens the palette matcher scores beyond the label. */
   readonly keywords: readonly string[];
   /**
    * True for commands that mutate the store / workflow / host artifacts (context
@@ -39,7 +39,7 @@ export interface PaletteCommand {
    */
   readonly destructive: boolean;
   /**
-   * The command cannot run without a value on the command line — this is the
+   * The command cannot run without a value on the command line: this is the
    * short label of that value ('query', 'name', 'prompt'), used as the
    * placeholder while the palette collects it inline. Undefined for commands
    * that run bare.

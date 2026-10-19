@@ -1,4 +1,4 @@
-# Overnight Session — Runtime Polish, TUI, Idempotency, Handoff (2026-07-26)
+# Overnight Session: Runtime Polish, TUI, Idempotency, Handoff (2026-07-26)
 
 > Autonomous AFK session. Branch `develop` @ **1.3.0-beta.6** (1158 tests, 11 packages, typecheck green, **1 pre-existing lint warning**). Sub-agents **Opus/Sonnet only** (user constraint). This doc + `docs/roadmap/` + `docs/CHANGELOG.md` + `docs/v1x-next-session.md` + `/recall noir` = full recovery context.
 
@@ -6,23 +6,23 @@
 
 | # | Decision |
 |---|---|
-| Q1 | `engines.node` `>=20 → >=22` (better-sqlite3 `^12 → ^13`, the N-API rewrite that removes `prebuild-install`; `allowedDeprecatedVersions: { boolean: '*' }`). `>=24` rejected — drops Node 22 LTS for zero benefit; `>=22` covers 22–25 incl. dev's 24.12.0. |
+| Q1 | `engines.node` `>=20 → >=22` (better-sqlite3 `^12 → ^13`, the N-API rewrite that removes `prebuild-install`; `allowedDeprecatedVersions: { boolean: '*' }`). `>=24` rejected: drops Node 22 LTS for zero benefit; `>=22` covers 22–25 incl. dev's 24.12.0. |
 | Q2 | Stay `@huggingface/transformers` 3.x + track upstream (#1730/#1718); `boolean` muted dev-side. |
 | Q3 | Bordered 2-col for `noir status`; borderless/dense for high-row-count lists. |
-| Q4 ⚑ | **Adopt Ink now** — lazy, scoped to a `noir tui` subcommand (main CLI stays commander + @clack). React 19, hand-rolled widgets (@inkjs/ui & ink-ui stale). |
+| Q4 ⚑ | **Adopt Ink now**: lazy, scoped to a `noir tui` subcommand (main CLI stays commander + @clack). React 19, hand-rolled widgets (@inkjs/ui & ink-ui stale). |
 | Q5 | Flip `noir sync` to **merge-default** after ancestor seeding; `--no-merge-regions` escape. |
 | Q6 | Semantic-dedup **always-on** in write path + content-hash gate; two-tier (≥0.95 action, 0.85–0.95 info). |
 | Q7 | `noir handoff` → STDOUT + optional `--write` (`.noir/handoff/<id>.md`, gitignored). |
 | Q8 | Bounded seed extraction (`context_search` + `memory_recall`) + MCP tool references. |
-| Q9 ⚑ | **Split per tier for release, but execute as ONE session — ZERO leftover task/debt.** |
+| Q9 ⚑ | **Split per tier for release, but execute as ONE session: ZERO leftover task/debt.** |
 | Q10 | `engines` bump ships as **minor 1.4.0** + prominent changelog note. |
 
-## Root causes (from the 11-agent investigation — load-bearing facts)
+## Root causes (from the 11-agent investigation: load-bearing facts)
 - **Red headers** = cli-table3 default `style.head:['red']` unoverridden in `packages/cli/src/output.ts:157-172`.
-- **Multi-region merge IS shipped** (SP-H) — the stale comment at `packages/create/src/scaffold.ts:85-91` is **wrong** (audit contradiction resolved).
+- **Multi-region merge IS shipped** (SP-H): the stale comment at `packages/create/src/scaffold.ts:85-91` is **wrong** (audit contradiction resolved).
 - **"noir init duplicates" perception** = `managedBlock` has no content-hash dedup → `noir sync` re-writes unchanged files (git churn), not real file duplication.
 - **3 file producers bypass the conflict contract**: `workflow/artifacts.ts`, `skills/compiler.ts` (rm-rf orphan cleanup, no per-file guard), `store/markdown.ts`.
-- **No on-demand host-handoff artifact** — transfer is 100% passive today.
+- **No on-demand host-handoff artifact**: transfer is 100% passive today.
 - **"TUI" today** = a one-shot `@clack` menu (`home.ts:73-132`), not a runtime.
 
 ## Tiers
@@ -53,7 +53,7 @@ Testing project (ground truth, read-only during discovery): `/Users/agaaaptr/Doc
 Update `docs/roadmap/` (current status) · `docs/CHANGELOG.md` · `docs/v1x-next-session.md` · Agent Memory (`memory_save`) · **local commit on `develop`**.
 
 ## Release
-`1.3.0-beta.7` (Tier A) → `1.3.0-beta.8` (Tier B) → `1.4.0` (Tier C). **Push `develop` + tag at the very end, only if all targets met + validation green.** `release.yml` `publish` job uses `environment: release` with `required_reviewers` — if it gates npm publish, **document** the blocked publish (do NOT bypass lawfully). Deprecate-never-delete.
+`1.3.0-beta.7` (Tier A) → `1.3.0-beta.8` (Tier B) → `1.4.0` (Tier C). **Push `develop` + tag at the very end, only if all targets met + validation green.** `release.yml` `publish` job uses `environment: release` with `required_reviewers`: if it gates npm publish, **document** the blocked publish (do NOT bypass lawfully). Deprecate-never-delete.
 
 ## Resume recipe
 1. `/recall noir` → lands the session-decisions memory + this plan.

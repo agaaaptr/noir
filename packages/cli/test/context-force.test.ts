@@ -1,11 +1,11 @@
 // `noir context index --force` CLI threading tests (task E1).
 //
-// daemon-client is mocked at the module boundary (no real daemon / HTTP — NF4),
+// daemon-client is mocked at the module boundary (no real daemon / HTTP: NF4),
 // mirroring context.test.ts. These pin the CLI contract:
 //   • --force → `context_index` is called with `{force:true}` (the daemon does
 //     the full reindex);
 //   • no --force → the `force` key is omitted from the tool args (incremental);
-//   • the old "recognized but not yet honored" notice is GONE — no stderr output
+//   • the old "recognized but not yet honored" notice is GONE: no stderr output
 //     on the force path beyond the normal rendering.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

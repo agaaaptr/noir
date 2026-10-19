@@ -6,12 +6,12 @@
 // that daemon for BOTH members, then refuses a third, non-member repository
 // with the membership error. Everything is driven through the built CLI
 // (`packages/cli/dist/bin.js`), so the CLI (and the daemon package it loads)
-// must be built first — the full gate runs `pnpm build` before the suite, and
+// must be built first: the full gate runs `pnpm build` before the suite, and
 // this file fails with a clear message when the build is missing.
 //
 // The test is offline: the daemon and the bridge talk over the loopback address,
 // and the read-only `host_status` tool needs no API key and no network. The
-// teardown is part of the proof — after stopping the daemon the test asserts no
+// teardown is part of the proof: after stopping the daemon the test asserts no
 // process is left running and no daemon record is left on disk, so a leaked
 // background daemon fails the file instead of stranding a process in CI.
 
@@ -34,7 +34,7 @@ const MEMBER_A = 'e2e-member-a';
 const MEMBER_B = 'e2e-member-b';
 const OUTSIDER = 'e2e-outsider';
 
-/** The built CLI entry — this proof exercises the shipped artifact, not source. */
+/** The built CLI entry: this proof exercises the shipped artifact, not source. */
 const BIN = fileURLToPath(new URL('../dist/bin.js', import.meta.url));
 
 // Isolate the workspace registry/record/store and the daemon token from any
@@ -156,7 +156,7 @@ async function runMemberSession(root: string, memberId: string): Promise<void> {
     await waitUntil(() => out.includes('"id":1'), 'the initialize response', 30000);
 
     // `host_status` is read-only and offline, and its answer carries the CALLER's
-    // project id — so it proves the shared daemon served the RIGHT member store.
+    // project id: so it proves the shared daemon served the RIGHT member store.
     child.stdin.write(rpc(2, 'tools/call', { name: 'host_status', arguments: {} }));
     await waitUntil(() => out.includes('"id":2'), 'the host_status response', 30000);
 
@@ -184,7 +184,7 @@ async function runMemberSession(root: string, memberId: string): Promise<void> {
 
 beforeAll(async () => {
   if (!existsSync(BIN)) {
-    throw new Error(`the built CLI is missing at ${BIN} — run \`pnpm build\` before this test`);
+    throw new Error(`the built CLI is missing at ${BIN}: run \`pnpm build\` before this test`);
   }
   repoA = initRepo('repo-a', MEMBER_A);
   repoB = initRepo('repo-b', MEMBER_B);
@@ -224,7 +224,7 @@ beforeAll(async () => {
 // The hook's own timeout must exceed the shutdown bound it waits on: `awaitExit`
 // allows the daemon 15s to die before the SIGKILL fallback, so a hung shutdown
 // under vitest's 10s default would trip the hook first and leave the process
-// behind — the leak this teardown exists to prevent.
+// behind: the leak this teardown exists to prevent.
 afterAll(async () => {
   // Stop the daemon we started and wait for it to finish (bounded)...
   if (daemon !== undefined && daemon.exitCode === null && daemon.signalCode === null) {

@@ -48,7 +48,7 @@ export function isUpdateStale(cache: UpdateCache, intervalHours: number): boolea
   const lastMs = new Date(cache.lastCheckAt).getTime();
   // Guard against an unparseable / non-date `lastCheckAt` (e.g. corrupt cache,
   // hand-edited file). `new Date('garbage').getTime()` returns NaN; any
-  // arithmetic with NaN is NaN, so the `>=` would be false — meaning a corrupt
+  // arithmetic with NaN is NaN, so the `>=` would be false: meaning a corrupt
   // cache would silently look "fresh" and suppress the check forever. Treat
   // NaN as "never checked" → stale.
   if (Number.isNaN(lastMs)) return true;
@@ -72,7 +72,7 @@ export function latestVersionFromCache(cache: UpdateCache, channel: string): str
 }
 
 /** Default registry-fetch bound when the caller passes no signal of its own
- *  (5s) — an unresponsive registry must not hang `noir update --check` /
+ *  (5s): an unresponsive registry must not hang `noir update --check` /
  *  `noir update` for undici's default ~300s. The fire-and-forget background
  *  check passes its own tighter 2s controller, which takes precedence. */
 const UPDATE_FETCH_TIMEOUT_MS = 5_000;

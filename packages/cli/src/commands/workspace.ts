@@ -71,7 +71,7 @@ function finishJoin(
   writeWorkspaceEntry(project.root, project.config.host, name, opts);
 }
 
-/** `noir daemon start --workspace <name>` — found a workspace + start its daemon. */
+/** `noir daemon start --workspace <name>`: found a workspace + start its daemon. */
 export async function daemonStartWorkspace(opts: WorkspaceStartOptions): Promise<void> {
   const project = loadProjectOrFail(opts);
   if (!isValidWorkspaceName(opts.name)) {
@@ -138,7 +138,7 @@ export async function daemonStartWorkspace(opts: WorkspaceStartOptions): Promise
   log(`workspace daemon listening at ${ensured.url}`, opts);
 }
 
-/** `noir daemon join <name>` — join an existing workspace from this repo. */
+/** `noir daemon join <name>`: join an existing workspace from this repo. */
 export async function daemonJoin(opts: WorkspaceJoinOptions): Promise<void> {
   const project = loadProjectOrFail(opts);
   if (!isValidWorkspaceName(opts.name)) {
@@ -148,7 +148,7 @@ export async function daemonJoin(opts: WorkspaceJoinOptions): Promise<void> {
   if (!reg) {
     fail(
       EXIT.ERROR,
-      `workspace ${JSON.stringify(opts.name)} not found — start it from a member repo with \`noir daemon start --workspace ${opts.name}\`.`,
+      `workspace ${JSON.stringify(opts.name)} not found: start it from a member repo with \`noir daemon start --workspace ${opts.name}\`.`,
       opts,
     );
   }
@@ -168,7 +168,7 @@ export async function daemonJoin(opts: WorkspaceJoinOptions): Promise<void> {
   info(`joined workspace ${JSON.stringify(opts.name)} (${ensured.url}).`, opts);
 }
 
-/** `noir workspace list` — every workspace on this machine + member count. */
+/** `noir workspace list`: every workspace on this machine + member count. */
 export async function workspaceList(opts: CliOptions): Promise<void> {
   let names: string[] = [];
   try {
@@ -206,11 +206,11 @@ export async function workspaceList(opts: CliOptions): Promise<void> {
   }
   for (const r of rows) {
     const state = r.running ? ', running' : r.stale ? ', not running (stale record)' : '';
-    log(`${r.name} — ${r.members} member(s)${state}`, opts);
+    log(`${r.name}: ${r.members} member(s)${state}`, opts);
   }
 }
 
-/** `noir workspace status [name]` — members + daemon liveness. */
+/** `noir workspace status [name]`: members + daemon liveness. */
 export async function workspaceStatus(opts: WorkspaceStatusOptions): Promise<void> {
   const name = opts.name ?? readWorkspaceMarker(process.cwd()) ?? undefined;
   if (name === undefined) {
@@ -246,14 +246,14 @@ export async function workspaceStatus(opts: WorkspaceStatusOptions): Promise<voi
   for (const m of data.members) log(`  member: ${m}`, opts);
 }
 
-/** `noir workspace leave` — remove this repo from membership + restore stdio. */
+/** `noir workspace leave`: remove this repo from membership + restore stdio. */
 export async function workspaceLeave(opts: WorkspaceLeaveOptions): Promise<void> {
   const project = loadProjectOrFail(opts);
   const name = readWorkspaceMarker(project.root);
   if (name === null) {
     fail(EXIT.USAGE, 'this repo is not joined to a workspace.', opts);
   }
-  // Restore stdio FIRST — it is the one step that can fail (a non-Noir .mcp.json
+  // Restore stdio FIRST: it is the one step that can fail (a non-Noir .mcp.json
   // is refused without `--force`). Doing it last would strand the repo mid-leave:
   // membership removed + marker cleared, but .mcp.json still pointed at a
   // workspace the repo no longer belongs to.
@@ -270,7 +270,7 @@ export async function workspaceLeave(opts: WorkspaceLeaveOptions): Promise<void>
   info(`left workspace ${JSON.stringify(name)}.`, opts);
 }
 
-/** `noir workspace stop [name]` — stop the workspace daemon (membership retained). */
+/** `noir workspace stop [name]`: stop the workspace daemon (membership retained). */
 export async function workspaceStop(opts: WorkspaceStatusOptions): Promise<void> {
   const name = opts.name ?? readWorkspaceMarker(process.cwd()) ?? undefined;
   if (name === undefined) {
@@ -315,7 +315,7 @@ export async function workspaceStop(opts: WorkspaceStatusOptions): Promise<void>
 /**
  * Why a record was not proven to belong to this workspace's daemon, so `stop`
  * must not signal it. A different workspace answering the recorded port is the
- * sharper diagnosis — it names which record is the stale one — so it is reported
+ * sharper diagnosis: it names which record is the stale one: so it is reported
  * on its own; any other failure to identify is the "silent" case.
  */
 function stopRefusal(

@@ -7,7 +7,7 @@
 // The child is the SINGLE writer of the daemon record (its in-process
 // `ensureDaemonRunning` → `startHttpServer` writes THIS project's record with
 // the child's own pid), so the parent discovers the port by polling that
-// scoped record for `rec.pid === child.pid` — never by racing a write of its own.
+// scoped record for `rec.pid === child.pid`: never by racing a write of its own.
 
 import { spawn } from 'node:child_process';
 import type { ProjectInfo } from '@noir-ai/core';
@@ -47,7 +47,7 @@ async function waitFor(
 }
 
 /** True once `GET /health` on `port` answers 200 (best-effort, never throws).
- *  Bounded — a blackhole socket that accepts TCP but never answers must not
+ *  Bounded: a blackhole socket that accepts TCP but never answers must not
  *  hang the detach-wait loop past `healthTimeoutMs`. */
 async function healthOk(port: number, timeoutMs: number): Promise<boolean> {
   try {
@@ -63,7 +63,7 @@ async function healthOk(port: number, timeoutMs: number): Promise<boolean> {
 /**
  * Spawn a detached `noir daemon start --_detached-child` child and wait for it
  * to become healthy. Resolves `{pid, port}` once the child's daemon record is
- * visible AND `/health` answers — the parent can then report and exit. Throws
+ * visible AND `/health` answers: the parent can then report and exit. Throws
  * (with a `timed out` message) if the record or `/health` never appears.
  */
 export async function spawnDetachedDaemon(
@@ -77,7 +77,7 @@ export async function spawnDetachedDaemon(
   // `process.argv[1]` is the `noir` bin entry in production (the child argv must
   // re-invoke the SAME entry). Under `noUncheckedIndexedAccess` it is typed
   // `string | undefined`, and an `undefined` slot breaks every `spawn` overload
-  // (collapsing `child` to `never`), so narrow it to `string` explicitly — the
+  // (collapsing `child` to `never`), so narrow it to `string` explicitly: the
   // bin entry is guaranteed present when the CLI is actually running.
   const binEntry = process.argv[1];
   if (typeof binEntry !== 'string' || binEntry.length === 0) {
@@ -87,8 +87,8 @@ export async function spawnDetachedDaemon(
   // The hidden `--_detached-child` flag tells the child it IS the detached daemon
   // (run the daemon in-process, don't spawn again). `--cwd` pins the project the
   // child boots (it re-runs `loadProjectInfo(process.cwd())`), so the child loads
-  // the SAME project the parent resolved — regardless of the child's inherited
-  // working directory. `--json` is deliberately NOT forwarded — the child's
+  // the SAME project the parent resolved: regardless of the child's inherited
+  // working directory. `--json` is deliberately NOT forwarded: the child's
   // stdout is ignored anyway.
   const child = spawn(
     process.execPath,
@@ -110,7 +110,7 @@ export async function spawnDetachedDaemon(
   }
 
   // The child writes this project's daemon record itself (with ITS pid) when
-  // its in-process server binds — poll until that record appears.
+  // its in-process server binds: poll until that record appears.
   await waitFor(
     `daemon record for pid ${pid}`,
     recordTimeoutMs,
@@ -124,7 +124,7 @@ export async function spawnDetachedDaemon(
     );
   }
 
-  // Record exists — the port is real only once the server answers /health.
+  // Record exists: the port is real only once the server answers /health.
   await waitFor(`daemon /health on port ${rec.port}`, healthTimeoutMs, pollIntervalMs, () =>
     healthOk(rec.port, healthTimeoutMs),
   );

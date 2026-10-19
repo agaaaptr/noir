@@ -1,8 +1,8 @@
 # Running with multiple host profiles
 
 `noir run <prompt>` drives a host agentic CLI headless (Claude Code by default).
-If you have more than one host setup — two Claude Code installs, a work profile
-and a personal one, a different binary per project — define them as **run
+If you have more than one host setup: two Claude Code installs, a work profile
+and a personal one, a different binary per project: define them as **run
 profiles** instead of typing `--command` every time.
 
 > **Shell aliases are not on `PATH`.** `spawn()` does not go through the shell,
@@ -12,7 +12,7 @@ profiles** instead of typing `--command` every time.
 > unset/unsupported `$SHELL`, still fails with ENOENT). For predictable behavior
 > use an executable on `PATH`, an absolute path, a launcher script in
 > `~/.local/bin/`, or a profile below. (Noir can resolve PATH entries and aliases
-> through your interactive shell automatically when they only exist there — see
+> through your interactive shell automatically when they only exist there: see
 > the note at the end.)
 
 ## 1. Define profiles
@@ -50,7 +50,7 @@ noir run "…"                                  # falls back to defaultProfile
 ```
 
 An explicitly named profile that does not exist is an **error** that lists the
-available names — it never silently falls back.
+available names: it never silently falls back.
 
 ## 3. List
 
@@ -64,14 +64,14 @@ noir run --list-profiles
 ## 4. Remove / edit
 
 Edit `run.profiles` in `.noir/config.yml` (remove the block or the key).
-There is no stored state — the config is the single source of truth.
+There is no stored state: the config is the single source of truth.
 
 ## Security
 
 `.noir/config.yml` is **committable project state**. Never paste a token into
 `env`; `run.profiles.<name>.env` is the one place `${VAR}` is interpolated, so
 write `ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}` and put the real value in
-`.noir/.env` — the recommended home: project-scoped, `0600`, gitignored, and
+`.noir/.env`: the recommended home: project-scoped, `0600`, gitignored, and
 the winner for every key it defines. A machine-global export in your shell or
 `~/.claude/settings.json` is a fallback and cannot shadow the file. See
 [Configuring a project with `.noir/.env`](configure-env.md) and
@@ -84,10 +84,10 @@ interactive shell (`$SHELL`) to see whether the name is a PATH entry exported in
 an rc file or an alias/function. PATH entries are re-spawned directly; aliases
 and functions are bridged through the shell with the prompt passed **only as
 argv** (never shell-parsed). This covers the "everything lives in `.zshrc`"
-setup — but a launcher script remains the most predictable option.
+setup: but a launcher script remains the most predictable option.
 
 Requirements + limits of the fallback: `$SHELL` must be set and be `zsh`,
-`bash`, or `fish` (GUI/launchd-launched processes often lack `$SHELL` — a
+`bash`, or `fish` (GUI/launchd-launched processes often lack `$SHELL`: a
 launcher script or profile `binary` path is the reliable answer there); the
 probe is skipped entirely on Windows and for names containing `/`; a hanging rc
 file aborts the probe after ~3 s and surfaces the plain ENOENT error.

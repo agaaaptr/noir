@@ -18,7 +18,7 @@ import { EMBED_DIM, l2normalize } from './normalize.js';
 /**
  * Build a deterministic embedder. The returned function maps each input string
  * to a stable, unit-norm `EMBED_DIM`-wide `Float32Array` derived from a SHA-256
- * hash of the text. TEST-ONLY (no production path consumes it — the `kind:none`
+ * hash of the text. TEST-ONLY (no production path consumes it: the `kind:none`
  * branch throws its own stub rather than returning a fake).
  *
  * @param dim output width (defaults to {@link EMBED_DIM} = 384)

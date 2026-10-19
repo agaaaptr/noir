@@ -1,4 +1,4 @@
-// S9 — `noir doctor` behavior tests.
+// S9: `noir doctor` behavior tests.
 //
 // Covers the check matrix + exit-code contract (exit 1 iff any CRITICAL fail)
 // and the --json `{ok,data}` envelope. Expectations are driven by
@@ -79,7 +79,7 @@ function findCheck(checks: Array<{ name: string; status: string; detail: string 
   return c;
 }
 
-describe('noir doctor — uninitialized project', () => {
+describe('noir doctor: uninitialized project', () => {
   it('reports config warn + skips project-dependent checks; exit reflects native deps', async () => {
     const nativeOk = vecAvailability().ok === true;
     const r = await run(() => doctor({ json: true }));
@@ -108,14 +108,14 @@ describe('noir doctor — uninitialized project', () => {
     const r = await run(() => doctor({}));
     // doctor throws NoirCliError on fail with a summary line already printed;
     // on an uninitialized project it exits 0 only when native deps are healthy.
-    expect(r.stderr).toMatch(/noir doctor —/);
+    expect(r.stderr).toMatch(/noir doctor:/);
     expect(r.stderr).toMatch(/Check.*Status.*Detail/);
     expect(r.stderr).toMatch(/runtime/);
     expect(r.stderr).toMatch(/config/);
   });
 });
 
-describe('noir doctor — invalid config (CRITICAL fail → exit 1)', () => {
+describe('noir doctor: invalid config (CRITICAL fail → exit 1)', () => {
   it('a config that fails zod → config FAIL + exit 1', async () => {
     mkdirSync(paths.noirDir(root), { recursive: true });
     writeFileSync(paths.projectId(root), 'bad-cfg-project\n', 'utf8');
@@ -132,7 +132,7 @@ describe('noir doctor — invalid config (CRITICAL fail → exit 1)', () => {
   });
 });
 
-describe('noir doctor — initialized project (vec-gated store open)', () => {
+describe('noir doctor: initialized project (vec-gated store open)', () => {
   it.skipIf(vecAvailability().ok !== true)(
     'config ok + store opens + exit 0 (sqlite-vec native available)',
     async () => {
@@ -141,7 +141,7 @@ describe('noir doctor — initialized project (vec-gated store open)', () => {
       writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
       // doctor opens the store READONLY (a non-mutating health probe), and
       // openStore only creates `.noir/store/` on a read-WRITE open. Seed a real
-      // store once so the readonly open succeeds — mirroring a project that has
+      // store once so the readonly open succeeds: mirroring a project that has
       // been used (a bare `noir init` hasn't opened the store yet either).
       const seed = await openStore({ projectId: 'doctor-init-project', root, readonly: false });
       await Promise.resolve(seed.close());
@@ -161,8 +161,8 @@ describe('noir doctor — initialized project (vec-gated store open)', () => {
   );
 });
 
-describe('noir doctor — initialized but store not yet created (fresh project)', () => {
-  it('store WARNS (not fails) when the store DB is absent — no critical from store', async () => {
+describe('noir doctor: initialized but store not yet created (fresh project)', () => {
+  it('store WARNS (not fails) when the store DB is absent: no critical from store', async () => {
     const nativeOk = vecAvailability().ok === true;
     mkdirSync(paths.noirDir(root), { recursive: true });
     writeFileSync(paths.projectId(root), 'doctor-fresh-project\n', 'utf8');
@@ -177,11 +177,11 @@ describe('noir doctor — initialized but store not yet created (fresh project)'
     expect(store.status).toBe('warn');
     expect(store.detail).toMatch(/not created yet/);
     // The store absence must NOT drive a critical failure. The only possible
-    // `fail` on this host is native-deps when sqlite-vec can't load — and even
+    // `fail` on this host is native-deps when sqlite-vec can't load: and even
     // then the store row stays a warning, not the failure.
     if (nativeOk) {
       expect(env.data.summary.fail).toBe(0);
-      expect(r.err).toBeUndefined(); // exit 0 — nothing critical
+      expect(r.err).toBeUndefined(); // exit 0: nothing critical
     } else {
       expect(findCheck(env.data.checks, 'native deps').status).toBe('fail');
       expect(env.data.summary.fail).toBe(1);
@@ -190,7 +190,7 @@ describe('noir doctor — initialized but store not yet created (fresh project)'
   });
 });
 
-describe('noir doctor — .noir/.env permission advisory', () => {
+describe('noir doctor: .noir/.env permission advisory', () => {
   it('warns (never fails) when .noir/.env is group/world-readable', async () => {
     mkdirSync(paths.noirDir(root), { recursive: true });
     writeFileSync(paths.projectId(root), 'doctor-env-project\n', 'utf8');
@@ -218,7 +218,7 @@ describe('noir doctor — .noir/.env permission advisory', () => {
   });
 });
 
-describe('noir doctor — provider status (no live call)', () => {
+describe('noir doctor: provider status (no live call)', () => {
   it.skipIf(vecAvailability().ok !== true)(
     'reports configured provider + hasKey from env (never a live call)',
     async () => {
@@ -248,7 +248,7 @@ describe('noir doctor — provider status (no live call)', () => {
   );
 });
 
-describe('noir doctor — --json envelope shape', () => {
+describe('noir doctor: --json envelope shape', () => {
   it('emits {ok:true, data:{noir, checks[], summary}} with consistent counts', async () => {
     const r = await run(() => doctor({ json: true }));
     const envelope = JSON.parse(r.stdout);
@@ -265,7 +265,7 @@ describe('noir doctor — --json envelope shape', () => {
   });
 });
 
-describe('noir doctor — scaffold-version drift (slice S-T2)', () => {
+describe('noir doctor: scaffold-version drift (slice S-T2)', () => {
   it('reports onDisk=null + drift=false (warn) when the stamp is absent', async () => {
     const r = await run(() => doctor({ json: true }));
     const env = JSON.parse(r.stdout);
@@ -313,10 +313,10 @@ describe('noir doctor — scaffold-version drift (slice S-T2)', () => {
     expect(row.detail).toMatch(/noir init --upgrade/);
   });
 
-  it('reports drift=true (warn) for a project stamped 1.0.0 — the 1.1.0 bump', async () => {
+  it('reports drift=true (warn) for a project stamped 1.0.0: the 1.1.0 bump', async () => {
     // Task 11 / spec §11.2: bumping CURRENT_SCAFFOLD_VERSION is the mechanism
     // that tells every EXISTING project to run `noir init --upgrade`. This
-    // pins the real 1.0.0 → current pair — the '0.9.0' case above would keep
+    // pins the real 1.0.0 → current pair: the '0.9.0' case above would keep
     // passing even if the bump were reverted.
     mkdirSync(paths.noirDir(root), { recursive: true });
     writeFileSync(paths.projectId(root), 'doctor-scaffold-1-0-0\n', 'utf8');
@@ -346,7 +346,7 @@ describe('noir doctor — scaffold-version drift (slice S-T2)', () => {
   });
 });
 
-describe('noir doctor — RULES.md budget', () => {
+describe('noir doctor: RULES.md budget', () => {
   it('absent RULES.md → ok informational, data.rules is null', async () => {
     // Initialize the project so the check runs (rather than skip-with-warn).
     mkdirSync(paths.noirDir(root), { recursive: true });
@@ -420,7 +420,7 @@ describe('noir doctor — RULES.md budget', () => {
     mkdirSync(join(root, '.noir', 'rules'), { recursive: true });
     writeFileSync(paths.projectId(root), 'doctor-rules-over-lines\n', 'utf8');
     // Default 6 KB budget. 200 short lines stay well under 6 KB but exceed the
-    // 150-line ceiling — exercises the OR leg independently of the byte leg.
+    // 150-line ceiling: exercises the OR leg independently of the byte leg.
     writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
     const body = `${Array.from({ length: 200 }, (_, i) => `rule ${i}`).join('\n')}\n`;
     writeFileSync(paths.rulesMd(root), body, 'utf8');
@@ -461,24 +461,24 @@ describe('noir doctor — RULES.md budget', () => {
   });
 });
 
-// S10 — host-artifacts presence check.
-describe('noir doctor — host artifacts (S10)', () => {
+// S10: host-artifacts presence check.
+describe('noir doctor: host artifacts (S10)', () => {
   it('host row warns "skipped" when the project is not initialized; data.host null', async () => {
     const r = await run(() => doctor({ json: true }));
     const env = JSON.parse(r.stdout);
     expect(env.data.host).toBeNull();
     const row = findCheck(env.data.checks, 'host artifacts');
     expect(row.status).toBe('warn');
-    expect(row.detail).toMatch(/skipped — not initialized/);
+    expect(row.detail).toMatch(/skipped: not initialized/);
   });
 
-  it('claude project with all artifacts → ok; data.host reports active + expected (NO AGENTS.md — I1)', async () => {
+  it('claude project with all artifacts → ok; data.host reports active + expected (NO AGENTS.md: I1)', async () => {
     mkdirSync(paths.noirDir(root), { recursive: true });
     writeFileSync(paths.projectId(root), 'doctor-host-claude\n', 'utf8');
     writeFileSync(paths.config(root), 'host: claude\nmode: full\n', 'utf8');
     // Seed the expected claude artifacts (what `noir init` would write).
     // I1: claude NO LONGER emits AGENTS.md (it would double-import .noir/
-    // sources via CLAUDE.md's @-imports) — doctor's expected set excludes it.
+    // sources via CLAUDE.md's @-imports): doctor's expected set excludes it.
     writeFileSync(
       join(root, 'CLAUDE.md'),
       '<!-- noir:context begin -->\n@import ".noir/NOIR.md"\n<!-- noir:context end -->\n',
@@ -499,7 +499,7 @@ describe('noir doctor — host artifacts (S10)', () => {
     expect(row.detail).toMatch(/host=claude/);
   });
 
-  it('gemini project → expected set is GEMINI.md + .gemini/mcp.json (NO AGENTS.md — I1)', async () => {
+  it('gemini project → expected set is GEMINI.md + .gemini/mcp.json (NO AGENTS.md: I1)', async () => {
     mkdirSync(paths.noirDir(root), { recursive: true });
     writeFileSync(paths.projectId(root), 'doctor-host-gemini\n', 'utf8');
     writeFileSync(paths.config(root), 'host: gemini\nmode: full\n', 'utf8');
@@ -525,7 +525,7 @@ describe('noir doctor — host artifacts (S10)', () => {
     writeFileSync(paths.projectId(root), 'doctor-host-cursor\n', 'utf8');
     writeFileSync(paths.config(root), 'host: cursor\nmode: full\n', 'utf8');
     // Seed AGENTS.md + .cursor/mcp.json (what `noir init --host cursor` writes).
-    // The prior `noir-contract.mdc` host-rules pointer was REMOVED — cursor's
+    // The prior `noir-contract.mdc` host-rules pointer was REMOVED: cursor's
     // rules ride AGENTS.md's @.noir/rules/RULES.md import (the .mdc collided
     // with the cursor flat-skill prune of `noir-*.mdc` under .cursor/rules/).
     writeFileSync(join(root, 'AGENTS.md'), '# agents\n', 'utf8');
@@ -546,7 +546,7 @@ describe('noir doctor — host artifacts (S10)', () => {
     expect(row.status).toBe('ok');
     expect(row.detail).toMatch(/host=cursor/);
 
-    // Warn leg: delete .cursor/mcp.json and re-run — the row escalates to warn
+    // Warn leg: delete .cursor/mcp.json and re-run: the row escalates to warn
     // (NEVER fail), and data.host.missing lists the deleted file.
     rmSync(join(root, '.cursor', 'mcp.json'));
     const rWarn = await run(() => doctor({ json: true }));
@@ -556,7 +556,7 @@ describe('noir doctor — host artifacts (S10)', () => {
     const warnRow = findCheck(envWarn.data.checks, 'host artifacts');
     expect(warnRow.status).toBe('warn');
     expect(warnRow.detail).toMatch(/noir sync/);
-    // Host-artifacts is warn-only — never escalates to a critical fail.
+    // Host-artifacts is warn-only: never escalates to a critical fail.
     expect(envWarn.data.summary.fail).toBe(0);
   });
 
@@ -582,7 +582,7 @@ describe('noir doctor — host artifacts (S10)', () => {
     expect(row.status).toBe('ok');
     expect(row.detail).toMatch(/host=opencode/);
 
-    // Warn leg: delete opencode.json and re-run — the row escalates to warn
+    // Warn leg: delete opencode.json and re-run: the row escalates to warn
     // (NEVER fail), and data.host.missing lists the deleted file.
     rmSync(join(root, 'opencode.json'));
     const rWarn = await run(() => doctor({ json: true }));
@@ -592,12 +592,12 @@ describe('noir doctor — host artifacts (S10)', () => {
     const warnRow = findCheck(envWarn.data.checks, 'host artifacts');
     expect(warnRow.status).toBe('warn');
     expect(warnRow.detail).toMatch(/noir sync/);
-    // Host-artifacts is warn-only — never escalates to a critical fail.
+    // Host-artifacts is warn-only: never escalates to a critical fail.
     expect(envWarn.data.summary.fail).toBe(0);
   });
 });
 
-// Host governance — the per-host enforcement coverage row (honest, never fail).
+// Host governance: the per-host enforcement coverage row (honest, never fail).
 describe('enforcement coverage', () => {
   it('reports ENFORCED (ok) for claude', async () => {
     mkdirSync(paths.noirDir(root), { recursive: true });
@@ -636,11 +636,11 @@ describe('enforcement coverage', () => {
     const env = JSON.parse(r.stdout);
     const row = findCheck(env.data.checks, 'enforcement');
     expect(row.status).toBe('warn');
-    expect(row.detail).toMatch(/disabled — enforcement\.enabled is false/);
+    expect(row.detail).toMatch(/disabled: enforcement\.enabled is false/);
   });
 });
 
-// C1 — doctor install row (advisory; ok/warn only, never fail, never network).
+// C1: doctor install row (advisory; ok/warn only, never fail, never network).
 describe('buildInstallCheck (pure)', () => {
   // Import the function + the param type via dynamic import (tree-shaken by the
   // entrypoint, but directly importable for a unit test).
@@ -671,13 +671,13 @@ describe('buildInstallCheck (pure)', () => {
   });
 });
 
-// S11 — publish-readiness check (advisory; warn-only).
+// S11: publish-readiness check (advisory; warn-only).
 //
 // The check is exercised via `checkPublish(checks, packagesDir)` directly with
-// synthetic package dirs (isolated, deterministic — no dependency on the real
+// synthetic package dirs (isolated, deterministic: no dependency on the real
 // repo's package.json contents or on `npm pack` being available). A final
 // integration test confirms `doctor()` wires the publish row into the payload.
-describe('noir doctor — publish check (S11)', () => {
+describe('noir doctor: publish check (S11)', () => {
   /** Build a synthetic `packages/` dir under a temp root with the given package
    *  shapes. Each entry is `[dirName, package.json-shape]`. Returns the
    *  absolute path of the synthetic packages dir. */
@@ -773,7 +773,7 @@ describe('noir doctor — publish check (S11)', () => {
     expect(env.data.publish.checked).toBeGreaterThanOrEqual(1);
     expect(Array.isArray(env.data.publish.issues)).toBe(true);
     const row = findCheck(env.data.checks, 'publish');
-    // Advisory only — the publish row must never be a critical fail.
+    // Advisory only: the publish row must never be a critical fail.
     expect(row.status).not.toBe('fail');
   });
 });

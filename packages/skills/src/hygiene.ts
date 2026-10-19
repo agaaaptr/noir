@@ -43,8 +43,8 @@ export interface HygieneFinding {
 }
 
 /** The line that exempts a file from every rule. A file that must keep what the
- *  rules flag — the rule source, the token table, a document that states the
- *  ban — carries the line matching its kind near the top. */
+ *  rules flag: the rule source, the token table, a document that states the
+ *  ban: carries the line matching its kind near the top. */
 export const HYGIENE_EXEMPT_MARKERS: Readonly<Record<HygieneKind, string>> = {
   code: '// noir-hygiene: exempt',
   markdown: '<!-- noir-hygiene: exempt -->',
@@ -132,7 +132,7 @@ const WORKFLOW_NARRATION: HygieneRule = {
   appliesTo: 'code',
 };
 
-/** An emoji from the decoration set anywhere in a comment — the common flourish
+/** An emoji from the decoration set anywhere in a comment: the common flourish
  *  in generated comments, opening the comment or trailing it. A glyph the
  *  comment has put in quotes is being talked about rather than used, so it is
  *  left alone; the trailing check allows for the presentation selector the
@@ -230,8 +230,8 @@ const IRREGULAR_SCRIPT = `[${IRREGULAR_SCRIPT_SOURCES.join('')}]`;
  *  line. The project writes in its own language, so a character from a foreign
  *  script is a leak rather than a word, and an invisible code point (a
  *  zero-width space, a byte-order mark, a replacement character) is a decoding
- *  accident. A fixture that has to carry one — a test that measures how a wide
- *  glyph is laid out, say — states its own exemption with the marker above
+ *  accident. A fixture that has to carry one: a test that measures how a wide
+ *  glyph is laid out, say: states its own exemption with the marker above
  *  rather than teaching this rule which characters to allow. */
 const IRREGULAR_SCRIPT_IN_TEXT: HygieneRule = {
   id: 'no-irregular-script',
@@ -291,7 +291,7 @@ export const HYGIENE_RULES: readonly HygieneRule[] = [
  *
  *  A file is exempt from every rule when it carries the marker
  *  `HYGIENE_EXEMPT_MARKERS` declares for its kind on a line above the first
- *  finding — the rule source itself, the token table, and any guidance or
+ *  finding: the rule source itself, the token table, and any guidance or
  *  fixture file that has to name what the rules forbid. Such a file states its
  *  own exemption, so no consumer keeps a list of paths to skip. A marker placed
  *  at or below the first finding exempts nothing.
@@ -306,8 +306,8 @@ export function checkHygiene(text: string, kind: HygieneKind): HygieneFinding[] 
 }
 
 /** Whether `text` carries the exemption marker for `kind` above the first
- *  finding the hygiene rules report, so every rule — the prose finders
- *  included — leaves the file alone. The prose finders run outside
+ *  finding the hygiene rules report, so every rule: the prose finders
+ *  included: leaves the file alone. The prose finders run outside
  *  `checkHygiene`, so consumers that run them gate the file on this predicate
  *  rather than on `checkHygiene`'s findings. A marker placed at or below the
  *  first finding exempts nothing. */

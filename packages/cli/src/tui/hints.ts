@@ -10,7 +10,7 @@
  * The dashboard's idle footer hint (the App's keybinding manifest as text).
  *
  * Order matters: the footer is cut to the terminal width, so what leads is what
- * survives on a narrow terminal. The quit keys lead for that reason — they are
+ * survives on a narrow terminal. The quit keys lead for that reason: they are
  * the only place the dashboard says how to leave, and losing them at the
  * commonest terminal width (80) would be worse than losing any of the prose
  * that follows.
@@ -25,7 +25,7 @@ export const RUNNING_HINT = 'running… (Ctrl+C to force exit)';
 export const LIST_NAV_HINT = '↑/↓ navigate · Enter run · Esc close · Tab view';
 
 /** The run screen's hint while the host is streaming. */
-export const RUN_HINT = 'streaming — Esc cancels the host';
+export const RUN_HINT = 'streaming: Esc cancels the host';
 
 /** The run screen's hint once Esc has asked the host to stop. */
 export const RUN_CANCEL_HINT = 'cancelling…';
@@ -45,7 +45,7 @@ export interface HelpEntry {
 /**
  * The keybinding manifest, rendered by the palette's `help` corpus. Keep this in
  * sync with the App's single `useInput` dispatcher (the same file that owns the
- * bindings) — a drift here is a doc bug, not a behavior bug.
+ * bindings): a drift here is a doc bug, not a behavior bug.
  */
 export const HELP_ENTRIES: readonly HelpEntry[] = [
   { keys: '/command', desc: 'run a Noir sub-command (e.g. /status, /sync, /task next)' },
@@ -53,11 +53,11 @@ export const HELP_ENTRIES: readonly HelpEntry[] = [
   { keys: 'Esc', desc: 'back: clear input → dismiss output → quit' },
   { keys: 'q', desc: 'quit (when the input is empty)' },
   { keys: '↑ / ↓', desc: 'scroll the output pane (dashboard) · navigate the list (palette)' },
-  { keys: '?', desc: 'palette — help & keybindings (this list)' },
-  { keys: 'h', desc: 'palette — commands (quick actions + all commands)' },
-  { keys: 'Ctrl+K', desc: 'palette — all commands (fuzzy search)' },
-  { keys: 'Ctrl+F', desc: 'palette — find in the dispatched output' },
-  { keys: 'Ctrl+T', desc: 'transcripts — reopen a past run, read-only' },
+  { keys: '?', desc: 'palette: help & keybindings (this list)' },
+  { keys: 'h', desc: 'palette: commands (quick actions + all commands)' },
+  { keys: 'Ctrl+K', desc: 'palette: all commands (fuzzy search)' },
+  { keys: 'Ctrl+F', desc: 'palette: find in the dispatched output' },
+  { keys: 'Ctrl+T', desc: 'transcripts: reopen a past run, read-only' },
   { keys: 'Tab', desc: 'switch between commands, output, and help' },
   { keys: 'y / n', desc: 'approve / decline a destructive command prompt' },
   { keys: 'Esc (in a run)', desc: 'cancel the host and return to the dashboard' },

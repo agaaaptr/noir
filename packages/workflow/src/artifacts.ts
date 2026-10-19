@@ -37,7 +37,7 @@ export type WorkflowConflictResolverReturn =
 // SYNC resolver only: this seam is a synchronous wrapper around writeFileSync
 // (resolveAndWrite cannot await). A caller needing an async resolver (e.g. the
 // CLI's @clack-based one) should use @noir-ai/create's regenerate seam, which is
-// async-aware — passing an async resolver here would unwrap a Promise object.
+// async-aware: passing an async resolver here would unwrap a Promise object.
 export type WorkflowConflictResolver = (
   ctx: WorkflowConflictContext,
 ) => WorkflowConflictResolverReturn;
@@ -58,7 +58,7 @@ export interface WorkflowConflictOpts {
  * true, so the caller's plain `writeFileSync(abs, proposed)` lands cleanly.
  * `duplicate` writes the proposed bytes to `<abs>.noir` and returns false (the
  * caller skips its own write). Default (no opts / non-interactive): the v1.2
- * behavior — overwrite — so existing callers are unchanged.
+ * behavior: overwrite: so existing callers are unchanged.
  */
 function resolveAndWrite(
   abs: string,
@@ -209,7 +209,7 @@ export function writeTask(
 }
 
 /**
- * Write the clarify-phase artifact — resolved questions + assumptions.
+ * Write the clarify-phase artifact: resolved questions + assumptions.
  * `.noir/clarifications/CL-<NNNN>-<taskId>-<slug>.md`.
  */
 export function writeClarifications(

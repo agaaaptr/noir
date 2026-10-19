@@ -3,17 +3,17 @@
 // Honest daemon UX. `noir daemon start` runs the daemon either
 // FOREGROUND or DETACHED, depending on flags:
 //   - default (foreground): `ensureDaemonRunning` (from @noir-ai/daemon) starts
-//     a fresh in-process HTTP server — whose listen handle + idle timer +
+//     a fresh in-process HTTP server: whose listen handle + idle timer +
 //     SIGINT/SIGTERM handlers (installed inside `startHttpServer`) keep this CLI
-//     process alive until idle-stop or a signal — or reuses an already-healthy
+//     process alive until idle-stop or a signal: or reuses an already-healthy
 //     one and exits.
 //   - `--detach` (parent path): `spawnDetachedDaemon` forks a detached child
 //     `noir daemon start --_detached-child` (unref'd + silent stdio), waits for
 //     the child's daemon record + `/health` to confirm it is serving, reports
-//     `{mode:'detached', pid, port}`, and the PARENT exits — the child keeps the
+//     `{mode:'detached', pid, port}`, and the PARENT exits: the child keeps the
 //     daemon alive in the background.
 //   - `--_detached-child` (child path; hidden, set by the parent's spawn):
-//     we ARE the detached child — run `ensureDaemonRunning` in-process (the HTTP
+//     we ARE the detached child: run `ensureDaemonRunning` in-process (the HTTP
 //     server keeps THIS process alive) and emit `{mode:'detached'}`. The child
 //     is the SINGLE writer of the daemon record (its own pid), so the parent
 //     discovers the port by polling that record.
@@ -45,7 +45,7 @@ export interface DaemonOptions extends CliOptions {}
 /** `daemon start` adds the real `--detach` flag plus the hidden
  *  `--_detached-child` marker the detached child carries. */
 export interface DaemonStartOptions extends DaemonOptions {
-  /** `--detach`: parent path — fork a detached child and exit. */
+  /** `--detach`: parent path: fork a detached child and exit. */
   detach?: boolean;
   /** `--_detached-child` (hidden, reserved): we ARE the detached child. */
   detachChild?: boolean;
@@ -73,7 +73,7 @@ function formatUptime(sec: number): string {
   return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
 }
 
-/** Resolve the CALLER's project id — the lookup key for this project's daemon
+/** Resolve the CALLER's project id: the lookup key for this project's daemon
  *  record (the record is per-project). `undefined` when uninitialized: there is
  *  no project whose daemon we could legitimately report or stop. */
 function resolveCallerProjectId(): string | undefined {
@@ -84,7 +84,7 @@ function resolveCallerProjectId(): string | undefined {
   }
 }
 
-/** Best-effort `/health` probe (never throws). Bounded — a blackhole socket that
+/** Best-effort `/health` probe (never throws). Bounded: a blackhole socket that
  *  accepts TCP but never answers must not hang `noir daemon start/status/stop`
  *  indefinitely. When `expectedPid` is given, the probe ALSO requires the
  *  responding daemon's own pid to match (the PID-reuse guard: a foreign process
@@ -103,7 +103,7 @@ async function isHealthy(
     const body = (await res.json()) as HealthBody | undefined;
     if (body?.ok !== true || body.pid !== expectedPid) return false;
     // Cross-project isolation: only reuse a daemon that serves the expected
-    // project (absent /health projectId — a pre-1.12 daemon — is not trusted).
+    // project (absent /health projectId: a pre-1.12 daemon: is not trusted).
     if (expectedProjectId !== undefined && body.projectId !== expectedProjectId) return false;
     return true;
   } catch {
@@ -113,7 +113,7 @@ async function isHealthy(
 
 // `noir daemon start` (foreground default; `--detach` + `--_detached-child`)
 /**
- * Start the Noir daemon — foreground by default, or detached via `--detach`.
+ * Start the Noir daemon: foreground by default, or detached via `--detach`.
  *
  * Three modes, chosen by the flags (all three guard double-spawn: an
  * already-healthy daemon is reported `{mode:'detached', reused:true}` / the
@@ -121,17 +121,17 @@ async function isHealthy(
  *
  * 1. `--_detached-child` (hidden, only ever set by `spawnDetachedDaemon`'s
  *    child argv): we ARE the detached daemon. Run `ensureDaemonRunning`
- *    in-process — the started HTTP server + idle timer + signal handlers keep
- *    THIS process alive as the background daemon — emit `{mode:'detached'}`
+ *    in-process: the started HTTP server + idle timer + signal handlers keep
+ *    THIS process alive as the background daemon: emit `{mode:'detached'}`
  *    (or `{mode:'detached', reused:true}` when a healthy daemon is reused, in
  *    which case the redundant child exits) and return. The child is the SINGLE
  *    writer of the daemon record (its own pid), which is how the parent learns
- *    the port. We deliberately do NOT call `ensured.stop()` — that would undo
+ *    the port. We deliberately do NOT call `ensured.stop()`: that would undo
  *    the daemon we just started (or tear down a reused one owned elsewhere).
  * 2. `--detach` (parent path): `spawnDetachedDaemon` forks the detached
  *    child, waits until the child's record + `/health` confirm it is serving,
  *    emits `{mode:'detached', pid, port}`, and the PARENT returns (and thus
- *    exits — it never blocks). Guard first: if a daemon is ALREADY healthy,
+ *    exits: it never blocks). Guard first: if a daemon is ALREADY healthy,
  *    report `{mode:'detached', reused:true}` and return WITHOUT spawning.
  * 3. Foreground (default): `ensureDaemonRunning` in-process. When it STARTS a
  *    daemon, the HTTP server keeps this process alive until
@@ -142,7 +142,7 @@ async function isHealthy(
  */
 export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
   // Workspace mode: `--workspace <name>` founds/joins a cross-repo workspace and
-  // starts its daemon (a separate daemon kind — never the project daemon).
+  // starts its daemon (a separate daemon kind: never the project daemon).
   if (opts.workspace !== undefined) {
     await daemonStartWorkspace({
       ...opts,
@@ -153,7 +153,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
     return;
   }
   // A throw from loadProjectInfo on an uninitialized project must route through
-  // fail() — otherwise under --json stdout stays EMPTY (the raw error only
+  // fail(): otherwise under --json stdout stays EMPTY (the raw error only
   // reaches stderr), violating the `{ok:false}` envelope contract.
   let project: ProjectInfo;
   try {
@@ -176,12 +176,12 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
         return;
       }
       // The HTTP server + idle timer + signal handlers inside startHttpServer
-      // keep this child process alive past `return` — it IS the daemon now.
+      // keep this child process alive past `return`: it IS the daemon now.
       info('noir daemon: detached foreground. Ctrl+C to stop.', opts);
       log(`Noir daemon listening at ${child.url}`, opts);
       return;
     }
-    // An already-healthy daemon was reused — this redundant child reports and
+    // An already-healthy daemon was reused: this redundant child reports and
     // exits (the parent's double-spawn guard should have caught this, but the
     // child re-checks so two racing spawns can never start two daemons).
     if (opts.json === true) {
@@ -198,7 +198,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
   // daemon; the parent reports the backgrounded daemon and exits.
   if (opts.detach === true) {
     // Double-spawn guard: only spawn a child if no daemon is already healthy
-    // (the child would merely reuse it and exit — a wasted detached process).
+    // (the child would merely reuse it and exit: a wasted detached process).
     // Scoped read: THIS project's record, so a daemon serving another project
     // is neither adopted nor counted as ours.
     const existing = readProjectDaemonRecord(project.id);
@@ -240,7 +240,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
     return;
   }
 
-  // Foreground (default) — run the daemon in-process.
+  // Foreground (default): run the daemon in-process.
   const ds = spinner('Starting Noir daemon...', opts).start();
   let ensured: Awaited<ReturnType<typeof ensureDaemonRunning>>;
   try {
@@ -283,7 +283,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
     return;
   }
 
-  // Reused an already-running daemon — this process exits after reporting.
+  // Reused an already-running daemon: this process exits after reporting.
   ds.succeed('Daemon already running');
   if (opts.json === true) {
     process.stdout.write(
@@ -305,7 +305,7 @@ export async function daemonStart(opts: DaemonStartOptions): Promise<void> {
 export async function daemonStop(opts: DaemonOptions): Promise<void> {
   // The record is keyed by ProjectId, so the caller's project IS the scope: a
   // daemon serving another project is simply not visible here (no
-  // cross-project guard needed — the foreign record is a different file). When
+  // cross-project guard needed: the foreign record is a different file). When
   // the caller has no project there is no record to name, and guessing would
   // mean either stopping nothing or signalling a stranger's daemon.
   const callerProject = resolveCallerProjectId();
@@ -338,7 +338,7 @@ export async function daemonStop(opts: DaemonOptions): Promise<void> {
   // Guard PID reuse: only SIGTERM the recorded pid if it still answers as OUR
   // daemon on the recorded port. If the daemon crashed and the pid was recycled
   // by an unrelated process, a blind `process.kill(pid)` would signal an
-  // innocent process — so probe `/health` first and clear the stale record if it
+  // innocent process: so probe `/health` first and clear the stale record if it
   // does not answer.
   const healthy = pidAlive(rec.pid) && (await isHealthy(rec.port, rec.pid, callerProject));
   if (healthy) {
@@ -350,7 +350,7 @@ export async function daemonStop(opts: DaemonOptions): Promise<void> {
       errMsg = err instanceof Error ? err.message : String(err);
     }
   }
-  // Our own record only — unconditionally, now that it is unambiguously ours.
+  // Our own record only: unconditionally, now that it is unambiguously ours.
   clearProjectDaemonRecord(callerProject);
 
   if (opts.json === true) {
@@ -385,7 +385,7 @@ export async function daemonStop(opts: DaemonOptions): Promise<void> {
 /**
  * Report daemon liveness: read the record, confirm the pid is alive, and ping
  * `/health` for a live uptime. A missing/stale/unresponsive record maps to
- * exit 4 (DAEMON_DOWN) — the "probed by script" contract.
+ * exit 4 (DAEMON_DOWN): the "probed by script" contract.
  *
  * `--json` emits `{ok:true, data:{running,pid,port,startedAt,uptimeSec,mode}}`
  * on success; failure goes through `fail()` (structured `{ok:false,error}` on
@@ -412,7 +412,7 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
 
   // Live liveness probe: the daemon's HTTP server answers GET /health with
   // `{ok, pid, uptimeSec}`. A dead port / non-200 / unreachable host ⇒ stale.
-  // Bounded like the other probes — a blackhole socket must not hang `noir
+  // Bounded like the other probes: a blackhole socket must not hang `noir
   // daemon status` (the "probed by script" exit-4 contract).
   const hs = spinner('Probing daemon health...', opts).start();
   let health: HealthBody | null = null;
@@ -424,7 +424,7 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
       health = (await res.json()) as HealthBody;
     }
   } catch {
-    // ECONNREFUSED / DNS / timeout — treat as not-running below.
+    // ECONNREFUSED / DNS / timeout: treat as not-running below.
     health = null;
   }
   // PID-reuse guard (same invariant as @noir-ai/daemon ensure.ts isHealthy +
@@ -440,7 +440,7 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
     fail(
       EXIT.DAEMON_DOWN,
       health !== null && !pidOk
-        ? 'Noir daemon is not running (pid missing/mismatched — a foreign process holds the recorded port; stale record removed).'
+        ? 'Noir daemon is not running (pid missing/mismatched: a foreign process holds the recorded port; stale record removed).'
         : 'Noir daemon is not running (port unresponsive; stale record removed).',
       opts,
     );
@@ -477,18 +477,18 @@ export async function daemonStatus(opts: DaemonOptions): Promise<void> {
 
 // `noir daemon token`
 /**
- * Print this project's daemon bearer token — the command a host's
+ * Print this project's daemon bearer token: the command a host's
  * MCP `headersHelper` runs at connect time so no secret lives in a config file.
  *
  * stdout carries the token and NOTHING else: no banner, no decoration, no
- * second line — the command's whole purpose is to be consumed by a program.
+ * second line: the command's whole purpose is to be consumed by a program.
  * `--json` emits the `{ok:true,data:{token}}` envelope instead (the same data
  * channel, self-describing). Every diagnostic goes to stderr.
  *
  * Every "no usable token" outcome is exit 4 (DAEMON_DOWN), like `daemon status`:
  * an uninitialized project, no daemon record, a record whose daemon is gone, or
  * a record with no token file beside it. A token is a credential for a LIVE
- * daemon — printing the token of a daemon that is not running would authenticate
+ * daemon: printing the token of a daemon that is not running would authenticate
  * nothing while looking like success, which is exactly the silent failure the
  * `headersHelper` contract must not have.
  *
@@ -508,18 +508,18 @@ export async function daemonToken(opts: DaemonOptions): Promise<void> {
   if (!rec) {
     fail(
       EXIT.DAEMON_DOWN,
-      'Noir daemon is not running (no daemon record — start it with `noir daemon start`).',
+      'Noir daemon is not running (no daemon record: start it with `noir daemon start`).',
       opts,
     );
   }
   // A record whose process is gone is stale, and liveness alone is not enough:
   // an unrelated process can recycle the recorded pid. /health must answer with
-  // THIS pid (and project) — the same ownership proof `daemon status` demands —
+  // THIS pid (and project): the same ownership proof `daemon status` demands —
   // so a recycled pid cannot mint a token for a daemon that is not there.
   if (!pidAlive(rec.pid) || !(await isHealthy(rec.port, rec.pid, callerProject))) {
     fail(
       EXIT.DAEMON_DOWN,
-      'Noir daemon is not running (stale record — start it with `noir daemon start`).',
+      'Noir daemon is not running (stale record: start it with `noir daemon start`).',
       opts,
     );
   }
@@ -527,7 +527,7 @@ export async function daemonToken(opts: DaemonOptions): Promise<void> {
   if (token === null) {
     fail(
       EXIT.DAEMON_DOWN,
-      'Noir daemon is not running (the record has no token beside it — restart it with `noir daemon start`).',
+      'Noir daemon is not running (the record has no token beside it: restart it with `noir daemon start`).',
       opts,
     );
   }
@@ -536,7 +536,7 @@ export async function daemonToken(opts: DaemonOptions): Promise<void> {
     process.stdout.write(`${JSON.stringify({ ok: true, data: { token } })}\n`);
     return;
   }
-  // The ONLY stdout write on the human path — a headersHelper reads exactly this.
+  // The ONLY stdout write on the human path: a headersHelper reads exactly this.
   process.stdout.write(`${token}\n`);
 }
 
@@ -549,7 +549,7 @@ export async function daemonToken(opts: DaemonOptions): Promise<void> {
  * `--json` a restart emits exactly ONE stdout envelope (the start result), and
  * so the human output's headline is the new daemon, not the torn-down old one.
  * Foreground `start` blocks once it brings up a daemon, so a foreground restart
- * blocks too — the honest behavior; with `--detach` the parent exits after the
+ * blocks too: the honest behavior; with `--detach` the parent exits after the
  * detached child is confirmed serving.
  */
 export async function daemonRestart(opts: DaemonOptions & { detach?: boolean }): Promise<void> {

@@ -1,6 +1,6 @@
 # Using the ClickUp integration (noir-clickup)
 
-Noir ships one opt-in integration: **noir-clickup** — a gated write proxy for
+Noir ships one opt-in integration: **noir-clickup**: a gated write proxy for
 ClickUp that reads task state and writes status/subtask/comments back. It is
 shipped as a skill (agent-visible) plus daemon MCP tools
 (`integrations_auth`, `noir_clickup_write`).
@@ -17,13 +17,13 @@ placement** (and the daemon-restart rule that follows).
 ## 2. Place the token (pick one, in order)
 
 The token is read by the **daemon at call time**. The daemon's env is a
-**snapshot taken when it spawned** — so wherever you put it, **restart the
+**snapshot taken when it spawned**: so wherever you put it, **restart the
 daemon afterward**: `noir daemon restart`.
 
-1. **Recommended — `.noir/.env`.** Project-scoped, gitignored, created at
+1. **Recommended: `.noir/.env`.** Project-scoped, gitignored, created at
    `0600` by `noir init`, and it works no matter how the process was launched
    (terminal, GUI MCP client, launchd, CI). Under Noir's precedence this file
-   **wins for every key it defines** — a machine-global export cannot shadow
+   **wins for every key it defines**: a machine-global export cannot shadow
    it:
    ```bash
    # .noir/.env  (gitignored — never commit)
@@ -33,25 +33,25 @@ daemon afterward**: `noir daemon restart`.
    is the fallback level: it applies only to keys `.noir/.env` leaves unset, so
    any key the file defines wins over the ambient value. `~/.zshenv` works for
    non-interactive shells; a CI job exports the token from its secret store.
-   There is no `VAR=value noir …` per-command prefix override — a prefix arrives
+   There is no `VAR=value noir …` per-command prefix override: a prefix arrives
    in `process.env` exactly like the inherited environment, so it is this same
    level. For a real per-invocation value, use a `run.profiles.<n>.env` entry
    (see [host-profiles.md](host-profiles.md)).
-3. **Machine-global host file — `~/.claude/settings.json` `env` block.** A
+3. **Machine-global host file: `~/.claude/settings.json` `env` block.** A
    fallback for a host-launched daemon when you would rather not keep the token
    in the repository; it cannot shadow `.noir/.env`:
    ```json
    { "env": { "CLICKUP_API_TOKEN": "pk_your_token_here" } }
    ```
-   (Note: `~/.zshrc` is the least reliable of all — interactive shells only, so
+   (Note: `~/.zshrc` is the least reliable of all: interactive shells only, so
    `.zshrc` exports are invisible to detached daemons.)
 
 `noir env` shows which source actually won for `CLICKUP_API_TOKEN`.
 
 If the token is missing, `integrations_auth` returns `no-token` and the skill
-stops with this setup guidance — it never guesses or invents a token.
+stops with this setup guidance: it never guesses or invents a token.
 
-Placement doctrine — what belongs in `.noir/.env`, the exact precedence chain,
+Placement doctrine: what belongs in `.noir/.env`, the exact precedence chain,
 and how to confirm which value is in effect (`noir env`):
 [configure-env.md](configure-env.md).
 
@@ -82,9 +82,9 @@ integrations:
 ## 4. Verify + audit
 
 - Restart the daemon, then call `integrations_auth({ envVar: 'CLICKUP_API_TOKEN' })`
-  (or run any ClickUp skill flow) — `{ok:true}` means the token resolved.
+  (or run any ClickUp skill flow): `{ok:true}` means the token resolved.
   `envVar` must be one of the **declared** `tokenEnv` names (allowlisted by the
-  daemon to prevent secret exfiltration) — passing an undeclared name returns
+  daemon to prevent secret exfiltration): passing an undeclared name returns
   `{ok:false, reason:'no-token'}`.
 - Every gated write is logged to `.noir/audit/integration-clickup.jsonl`.
 

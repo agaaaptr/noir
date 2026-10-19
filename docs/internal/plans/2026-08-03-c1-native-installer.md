@@ -1,10 +1,10 @@
-# C1 Native Installer + Migration + Self-Update — Implementation Plan
+# C1 Native Installer + Migration + Self-Update: Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship the managed-Node native installer, `noir install`/`migrate` (settings-preserving), `noir update` + cached async version check, `install.ps1` + Scoop + real Homebrew formula, and the trust/release pipeline — all commits local on `develop`.
+**Goal:** Ship the managed-Node native installer, `noir install`/`migrate` (settings-preserving), `noir update` + cached async version check, `install.ps1` + Scoop + real Homebrew formula, and the trust/release pipeline: all commits local on `develop`.
 
-**Architecture:** The native path is a **managed-Node runtime** — a pinned Node LTS in `~/.noir/runtime/<v>`, `@noir-ai/cli` installed into an isolated npm prefix `~/.noir/cli`, and a shim `~/.noir/bin/noir` as the only PATH contract. `~/.noir/install.json` is the single source of truth for install method; `~/.noir/update-cache.json` for version-check caching. The CLI gains `install`/`migrate`/`update` commands + a doctor `install` row; the release pipeline gains pinned installers + `SHA256SUMS` + attestations + a Windows CI matrix + install smoke test.
+**Architecture:** The native path is a **managed-Node runtime**: a pinned Node LTS in `~/.noir/runtime/<v>`, `@noir-ai/cli` installed into an isolated npm prefix `~/.noir/cli`, and a shim `~/.noir/bin/noir` as the only PATH contract. `~/.noir/install.json` is the single source of truth for install method; `~/.noir/update-cache.json` for version-check caching. The CLI gains `install`/`migrate`/`update` commands + a doctor `install` row; the release pipeline gains pinned installers + `SHA256SUMS` + attestations + a Windows CI matrix + install smoke test.
 
 **Tech Stack:** Node ≥ 22, TypeScript, commander (CLI tree), Zod (config), pnpm, vitest (tests), bash + PowerShell (installers), GitHub Actions (CI/release).
 
@@ -12,7 +12,7 @@
 
 - **Commits stay LOCAL on `develop`.** No push. Publish is a separate later phase.
 - Full gate before "done": `pnpm lint` → `pnpm build` → `pnpm typecheck` → `pnpm test` → `pnpm docs:validate`.
-- Test suite is offline/free — no network calls, no paid keys. Mock all subprocess/network.
+- Test suite is offline/free: no network calls, no paid keys. Mock all subprocess/network.
 - Single source of truth: `~/.noir/install.json` (install method) + `~/.noir/update-cache.json` (version check). Re-derive from filesystem truth; never trust stale config.
 - Data dir (`~/.noir/` + project `.noir/`) is NEVER touched by install/update/migrate. Migrate the bin, leave data alone.
 - Never auto-uninstall a prior manager. Offer `--uninstall-prev` explicitly; rollback = reinstall from the previous manager.
@@ -40,11 +40,11 @@
 - Produces:
   - `type InstallMethod = 'native' | 'npm' | 'pnpm' | 'yarn' | 'bun' | 'homebrew' | 'scoop' | 'unknown'`
   - `interface InstallRecord { method: InstallMethod; version: string; channel: string; installedAt: string; managedRuntimeVersion?: string }`
-  - `installJsonPath(): string` — `NOIR_INSTALL_JSON` override ?? `join(noirHome(), 'install.json')`
+  - `installJsonPath(): string`: `NOIR_INSTALL_JSON` override ?? `join(noirHome(), 'install.json')`
   - `readInstallRecord(): InstallRecord | null`
   - `writeInstallRecord(rec: InstallRecord): void` (atomic: temp → rename)
   - `clearInstallRecord(): void`
-  - `atomicWriteFile(path: string, data: string): void` — exported shared helper (temp in same dir → rename)
+  - `atomicWriteFile(path: string, data: string): void`: exported shared helper (temp in same dir → rename)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -110,7 +110,7 @@ describe('atomicWriteFile', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/core/test/install-method.test.ts`
-Expected: FAIL — `Cannot find module '../src/install-method.js'`.
+Expected: FAIL: `Cannot find module '../src/install-method.js'`.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -166,7 +166,7 @@ export function clearInstallRecord(): void {
 ```
 
 ```ts
-// packages/core/src/index.ts — add to the existing export block
+// packages/core/src/index.ts: add to the existing export block
 export {
   type InstallMethod,
   type InstallRecord,
@@ -191,7 +191,7 @@ export function writeDaemonRecord(rec: DaemonRecord): void {
 }
 ```
 
-> Check `@noir-ai/daemon` already depends on `@noir-ai/core` (it does — `noirHome` is re-exported there). Remove the now-unused `writeFileSync` import if biome flags it.
+> Check `@noir-ai/daemon` already depends on `@noir-ai/core` (it does: `noirHome` is re-exported there). Remove the now-unused `writeFileSync` import if biome flags it.
 
 - [ ] **Step 5: Run tests**
 
@@ -229,7 +229,7 @@ git commit -m "feat(core): ~/.noir/install.json + atomic-write helper"
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// packages/core/test/config.test.ts — add
+// packages/core/test/config.test.ts: add
 import { parseConfig } from '../src/config.js';
 // ...
 it('parses update: block with defaults', () => {
@@ -257,17 +257,17 @@ it('update: block overrides honored', () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run packages/core/test/config.test.ts`
-Expected: FAIL — `cfg.update` is `undefined`.
+Expected: FAIL: `cfg.update` is `undefined`.
 
 - [ ] **Step 3: Write minimal implementation**
 
 In `packages/core/src/config.ts`, add after the `integrations:` block:
 
 ```ts
-  // C1 — `update:` block. Additive, no-op when absent (defaults make it a
+  // C1: `update:` block. Additive, no-op when absent (defaults make it a
   // pass-through). Configures the async startup version check + self-update
   // surface (`noir update`). Mirrors the `daemon:`/`rules:`/`prd:` idiom: an
-  // absent `update:` block resolves to enabled/24h/latest/notice — the safe
+  // absent `update:` block resolves to enabled/24h/latest/notice: the safe
   // defaults. `minVersion` is a floor: update never installs below it. The
   // env kill-switches NOIR_DISABLE_UPDATE_CHECK / NOIR_DISABLE_UPDATES are
   // honored OUTSIDE config (process-level), so enterprise users can disable
@@ -308,14 +308,14 @@ git commit -m "feat(core): update: config block"
 - Consumes: `atomicWriteFile` (Task 1), `readInstallRecord` (Task 1), `noirHome`.
 - Produces:
   - `interface UpdateCache { lastCheckAt: string | null; latestVersion: string | null; channel: string | null }`
-  - `updateCachePath(): string` — `NOIR_UPDATE_CACHE_JSON` ?? `join(noirHome(), 'update-cache.json')`
+  - `updateCachePath(): string`: `NOIR_UPDATE_CACHE_JSON` ?? `join(noirHome(), 'update-cache.json')`
   - `readUpdateCache(): UpdateCache`
   - `writeUpdateCache(cache: UpdateCache): void`
-  - `isUpdateCheckDisabled(env: NodeJS.ProcessEnv): boolean` — true when `NOIR_DISABLE_UPDATE_CHECK` or `CI`
-  - `isUpdateStale(cache: UpdateCache, intervalHours: number): boolean` — true when no lastCheckAt, or elapsed ≥ interval
+  - `isUpdateCheckDisabled(env: NodeJS.ProcessEnv): boolean`: true when `NOIR_DISABLE_UPDATE_CHECK` or `CI`
+  - `isUpdateStale(cache: UpdateCache, intervalHours: number): boolean`: true when no lastCheckAt, or elapsed ≥ interval
   - `shouldCheckForUpdate(opts: { env: NodeJS.ProcessEnv; configUpdate: UpdateConfigLike; cache: UpdateCache }): boolean`
   - `latestVersionFromCache(cache: UpdateCache, channel: string): string | null`
-  - `fetchLatestVersion(channel: string, signal?: AbortSignal): Promise<string | null>` — hits npm registry `/@noir-ai/cli` dist-tag, offline-safe (returns null on any failure)
+  - `fetchLatestVersion(channel: string, signal?: AbortSignal): Promise<string | null>`: hits npm registry `/@noir-ai/cli` dist-tag, offline-safe (returns null on any failure)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -409,7 +409,7 @@ describe('shouldCheckForUpdate', () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run packages/core/test/update-check.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL: module not found.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -495,7 +495,7 @@ export async function fetchLatestVersion(channel: string, signal?: AbortSignal):
 ```
 
 ```ts
-// packages/core/src/index.ts — add
+// packages/core/src/index.ts: add
 export {
   type UpdateCache,
   type UpdateConfigLike,
@@ -535,10 +535,10 @@ git commit -m "feat(core): cached async update-check + update-cache.json"
 - Consumes: `InstallMethod`, `InstallRecord` (Task 1).
 - Produces:
   - `interface DetectResult { method: InstallMethod; version: string | null; uninstallCmd: string | null; managerDetected: boolean }`
-  - `detectInstallMethods(env: NodeJS.ProcessEnv): Promise<DetectResult[]>` — probes npm/pnpm/yarn/bun/homebrew/scoop, read-only, never mutates.
-  - `detectActiveMethod(): InstallMethod` — from `readInstallRecord()`, else `'unknown'`.
+  - `detectInstallMethods(env: NodeJS.ProcessEnv): Promise<DetectResult[]>`: probes npm/pnpm/yarn/bun/homebrew/scoop, read-only, never mutates.
+  - `detectActiveMethod(): InstallMethod`: from `readInstallRecord()`, else `'unknown'`.
   - `uninstallCommandFor(method: InstallMethod): string | null`
-  - `runManagerCmd(cmd: string[], opts?: { cwd?: string }): Promise<{ code: number; stdout: string; stderr: string }>` — wraps `spawn` with a timeout, offline-safe (non-zero → `{code, ...}`, never throws).
+  - `runManagerCmd(cmd: string[], opts?: { cwd?: string }): Promise<{ code: number; stdout: string; stderr: string }>`: wraps `spawn` with a timeout, offline-safe (non-zero → `{code, ...}`, never throws).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -577,7 +577,7 @@ describe('detectActiveMethod', () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run packages/core/test/install-detect.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL: module not found.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -709,7 +709,7 @@ git commit -m "feat(core): install-method detection + manager subprocess runner"
 
 ---
 
-### Task 5: `noir install` command (CLI) — migrate to native preserving settings
+### Task 5: `noir install` command (CLI): migrate to native preserving settings
 
 **Files:**
 - Create: `packages/cli/src/commands/install.ts`
@@ -721,9 +721,9 @@ git commit -m "feat(core): install-method detection + manager subprocess runner"
 - Produces:
   - `interface InstallOptions extends CliOptions { list?: boolean; uninstallPrev?: boolean; spec?: string }`
   - `install(opts: InstallOptions): Promise<void>`
-  - `installManagedNode(opts: { channel?: string; version?: string; env: NodeJS.ProcessEnv }): Promise<{ ok: boolean; version: string | null; error?: string }>` — the managed-Node native install (downloads pinned Node to `~/.noir/runtime/<v>`, installs `@noir-ai/cli` into isolated prefix `~/.noir/cli`, writes shim `~/.noir/bin/noir`, writes install record).
+  - `installManagedNode(opts: { channel?: string; version?: string; env: NodeJS.ProcessEnv }): Promise<{ ok: boolean; version: string | null; error?: string }>`: the managed-Node native install (downloads pinned Node to `~/.noir/runtime/<v>`, installs `@noir-ai/cli` into isolated prefix `~/.noir/cli`, writes shim `~/.noir/bin/noir`, writes install record).
 
-- [ ] **Step 1: Write the failing test (pure parts — the flow with a fake installer)**
+- [ ] **Step 1: Write the failing test (pure parts: the flow with a fake installer)**
 
 ```ts
 // packages/cli/test/install.test.ts
@@ -757,7 +757,7 @@ describe('buildMigrationPlan (pure)', () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run packages/cli/test/install.test.ts`
-Expected: FAIL — `buildMigrationPlan` not exported.
+Expected: FAIL: `buildMigrationPlan` not exported.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -852,7 +852,7 @@ export async function installManagedNode(opts: {
   const nodeBin = join(runtimeDir, 'node', 'bin', 'node');
   const npmBin = join(runtimeDir, 'node', 'bin', 'npm');
   if (!existsSync(nodeBin)) {
-    return { ok: false, version: null, error: `managed Node not provisioned (expected ${nodeBin}) — run the native installer first (install.sh/install.ps1)` };
+    return { ok: false, version: null, error: `managed Node not provisioned (expected ${nodeBin}): run the native installer first (install.sh/install.ps1)` };
   }
 
   // Install @noir-ai/cli into the isolated prefix using the managed npm.
@@ -865,7 +865,7 @@ export async function installManagedNode(opts: {
   const shim = join(binDir, 'noir');
   const shimBody = `#!/usr/bin/env bash\n"${nodeBin}" "${join(cliDir, 'lib', 'node_modules', '@noir-ai', 'cli', 'dist', 'bin.js')}" "$@"\n`;
   atomicWriteFile(shim, shimBody);
-  // (POSIX shim; Windows uses a .cmd wrapper — Task 9.)
+  // (POSIX shim; Windows uses a .cmd wrapper: Task 9.)
 
   // Resolve installed version via the shim.
   const ver = await runManagerCmd([nodeBin, join(cliDir, 'lib', 'node_modules', '@noir-ai', 'cli', 'dist', 'bin.js'), '--version'], { env: opts.env, timeoutMs: 30_000 });
@@ -903,7 +903,7 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
     if (opts.noInput === true) {
       fail(EXIT.USAGE, `refusing downgrade to ${plan.nativeVersion} (installed ${plan.installedVersion})`, opts);
     }
-    // @clack confirm gate (lazy import) — same pattern as home.ts.
+    // @clack confirm gate (lazy import): same pattern as home.ts.
   }
 
   const result = await installManagedNode({ channel: plan.nativeVersion === 'beta' ? 'beta' : undefined, version: plan.nativeVersion.startsWith('v') ? plan.nativeVersion : plan.nativeVersion === 'latest' || plan.nativeVersion === 'beta' ? undefined : plan.nativeVersion, env: process.env });
@@ -929,7 +929,7 @@ export async function install(opts: InstallOptions = {}): Promise<void> {
 In `packages/cli/src/bin.ts`, after the `task` group (before `handoff`), add:
 
 ```ts
-  // C1 — `noir install` / `noir migrate`: move to the native install path,
+  // C1: `noir install` / `noir migrate`: move to the native install path,
   // preserving all settings. `migrate` is an alias (mirrors claude migrate-installer).
   const installCmd = program
     .command('install')
@@ -942,7 +942,7 @@ In `packages/cli/src/bin.ts`, after the `task` group (before `handoff`), add:
       const cli = cmd.optsWithGlobals() as CliOptions;
       await install({ ...cli, spec, list: opts.list === true, uninstallPrev: opts.uninstallPrev === true });
     });
-  // `migrate` alias — same behavior.
+  // `migrate` alias: same behavior.
   program
     .command('migrate', { hidden: true })
     .description('alias for `noir install` (move to the native install path)')
@@ -956,7 +956,7 @@ In `packages/cli/src/bin.ts`, after the `task` group (before `handoff`), add:
     });
 ```
 
-> Check whether commander supports `.command('migrate', { hidden: true })` with a separate action — if the two-arg form (a separate Command file) doesn't fit this pattern, use `.command('migrate').action(...)` and register it as an alias via `installCmd.alias('migrate')` (cleaner). Prefer `installCmd.alias('migrate')`.
+> Check whether commander supports `.command('migrate', { hidden: true })` with a separate action: if the two-arg form (a separate Command file) doesn't fit this pattern, use `.command('migrate').action(...)` and register it as an alias via `installCmd.alias('migrate')` (cleaner). Prefer `installCmd.alias('migrate')`.
 
 - [ ] **Step 5: Run tests**
 
@@ -967,7 +967,7 @@ Expected: PASS (install pure test + existing bin arg pins unchanged).
 
 ```bash
 git add packages/cli/src/commands/install.ts packages/cli/src/bin.ts packages/cli/test/install.test.ts
-git commit -m "feat(cli): noir install/migrate — native path preserving settings"
+git commit -m "feat(cli): noir install/migrate: native path preserving settings"
 ```
 
 ---
@@ -985,7 +985,7 @@ git commit -m "feat(cli): noir install/migrate — native path preserving settin
 - Produces:
   - `interface UpdateOptions extends CliOptions { check?: boolean; spec?: string }`
   - `update(opts: UpdateOptions): Promise<void>`
-  - `runAsyncUpdateCheck(opts: { env: NodeJS.ProcessEnv; configUpdate: UpdateConfigLike; quiet: boolean }): Promise<void>` — non-blocking, time-boxed, cache-writes, silent on failure.
+  - `runAsyncUpdateCheck(opts: { env: NodeJS.ProcessEnv; configUpdate: UpdateConfigLike; quiet: boolean }): Promise<void>`: non-blocking, time-boxed, cache-writes, silent on failure.
 
 - [ ] **Step 1: Write the failing test (pure parts)**
 
@@ -1009,7 +1009,7 @@ describe('buildUpdateTarget (pure)', () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run packages/cli/test/update.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL: module not found.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -1135,7 +1135,7 @@ export async function runAsyncUpdateCheck(opts: {
 - [ ] **Step 4: Register `update` in bin.ts**
 
 ```ts
-  // C1 — `noir update`: self-update via the active install method.
+  // C1: `noir update`: self-update via the active install method.
   program
     .command('update')
     .description('update Noir to the latest version via the active install method')
@@ -1190,7 +1190,7 @@ git commit -m "feat(cli): noir update + async cached version check"
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// packages/cli/test/doctor.test.ts — add
+// packages/cli/test/doctor.test.ts: add
 import { describe, expect, it } from 'vitest';
 import { buildInstallCheck, type InstallCheckOutcome } from '../src/commands/doctor.js';
 import type { InstallMethod } from '@noir-ai/core';
@@ -1218,7 +1218,7 @@ describe('buildInstallCheck (pure)', () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run packages/cli/test/doctor.test.ts`
-Expected: FAIL — `buildInstallCheck` not exported.
+Expected: FAIL: `buildInstallCheck` not exported.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -1242,7 +1242,7 @@ export interface InstallCheckOutcome {
   latestKnown: string | null;
 }
 
-/** Pure: build the doctor `install` row. NEVER `fail` — an install method issue
+/** Pure: build the doctor `install` row. NEVER `fail`: an install method issue
  *  is advisory, not a broken host. Reads the cache only; no network. */
 export function buildInstallCheck(opts: {
   method: InstallMethod;
@@ -1295,7 +1295,7 @@ Expected: PASS (new + existing doctor checks still green; no `fail` regressions)
 
 ```bash
 git add packages/cli/src/commands/doctor.ts packages/cli/test/doctor.test.ts
-git commit -m "feat(cli): doctor install row — method + advisory, cache-only"
+git commit -m "feat(cli): doctor install row: method + advisory, cache-only"
 ```
 
 ---
@@ -1304,7 +1304,7 @@ git commit -m "feat(cli): doctor install row — method + advisory, cache-only"
 
 **Files:**
 - Modify: `packages/cli/src/commands/home.ts`
-- Modify: `packages/cli/src/tui/App.tsx` (optional banner region) — keep minimal
+- Modify: `packages/cli/src/tui/App.tsx` (optional banner region): keep minimal
 - Test: `packages/cli/test/home.test.ts`
 
 **Interfaces:**
@@ -1314,7 +1314,7 @@ git commit -m "feat(cli): doctor install row — method + advisory, cache-only"
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// packages/cli/test/home.test.ts — add
+// packages/cli/test/home.test.ts: add
 import { describe, expect, it } from 'vitest';
 import { shouldShowMigrationBanner } from '../src/commands/home.js';
 
@@ -1329,12 +1329,12 @@ describe('shouldShowMigrationBanner', () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run packages/cli/test/home.test.ts`
-Expected: FAIL — function not exported.
+Expected: FAIL: function not exported.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```ts
-// packages/cli/src/commands/home.ts — add
+// packages/cli/src/commands/home.ts: add
 import { detectActiveMethod, readInstallRecord, type InstallRecord } from '@noir-ai/core';
 
 /** One-time nudge: shows only for non-native installs, once per version. The
@@ -1350,7 +1350,7 @@ In `runMenu()`, after the banner write and before `clack.intro`, add (only when 
 ```ts
   const rec = readInstallRecord();
   if (rec && shouldShowMigrationBanner(rec, NOIR_VERSION)) {
-    process.stderr.write(`\n  ${c.yellow('noir installed via ' + rec.method)} — consider \`noir install\` for the native path (auto-update, no npm prefix/PATH issues). Dismiss with: \`noir install --list\` (persisted per version).\n\n`);
+    process.stderr.write(`\n  ${c.yellow('noir installed via ' + rec.method)}: consider \`noir install\` for the native path (auto-update, no npm prefix/PATH issues). Dismiss with: \`noir install --list\` (persisted per version).\n\n`);
   }
 ```
 
@@ -1375,20 +1375,20 @@ git commit -m "feat(cli): one-time TUI migration banner for non-native installs"
 - Modify: `scripts/install.sh` (Windows MINGW/MSYS/CYGWIN → redirect to install.ps1)
 - Create: `packaging/scoop/noir.json`
 - Modify: `packaging/homebrew/noir.rb` (real url/sha256/version + `std_npm_args`)
-- Test: (no unit test — these are exercised by the CI smoke test in Task 10)
+- Test: (no unit test: these are exercised by the CI smoke test in Task 10)
 
 **Interfaces:**
 - Consumes: the existing `install.sh` logic (channel/version/proxy/prefix/PATH verify); `~/.noir/` layout (Task 1).
 - Produces:
-  - `install.ps1` — native PowerShell sibling to install.sh: `NOIR_CHANNEL`/`NOIR_VERSION`/proxy; installs to `%LOCALAPPDATA%\noir` (`~\.noir`); verifies `noir --version`; writes `install.json` record.
-  - `install.sh` — when MINGW/MSYS/CYGWIN, print `powershell -c "irm <url>/install.ps1 | iex"` and exit 0.
-  - `packaging/scoop/noir.json` — Scoop manifest (community bucket), hash of npm tarball.
-  - `packaging/homebrew/noir.rb` — real formula.
+  - `install.ps1`: native PowerShell sibling to install.sh: `NOIR_CHANNEL`/`NOIR_VERSION`/proxy; installs to `%LOCALAPPDATA%\noir` (`~\.noir`); verifies `noir --version`; writes `install.json` record.
+  - `install.sh`: when MINGW/MSYS/CYGWIN, print `powershell -c "irm <url>/install.ps1 | iex"` and exit 0.
+  - `packaging/scoop/noir.json`: Scoop manifest (community bucket), hash of npm tarball.
+  - `packaging/homebrew/noir.rb`: real formula.
 
 - [ ] **Step 1: Write `scripts/install.ps1`**
 
 ```powershell
-# scripts/install.ps1 — native PowerShell installer for Noir (Windows).
+# scripts/install.ps1: native PowerShell installer for Noir (Windows).
 # Mirrors scripts/install.sh. Env knobs: NOIR_CHANNEL, NOIR_VERSION,
 # HTTP_PROXY/HTTPS_PROXY/NO_PROXY. Installs @noir-ai/cli via a managed-Node
 # runtime under ~\.noir (runtime/, cli/, bin/) and writes ~\.noir\install.json.
@@ -1466,8 +1466,8 @@ In `scripts/install.sh`, in `detect_platform()`, change the Windows case to redi
 ```bash
     MINGW*|MSYS*|CYGWIN*) os="windows"
       # C1: on Windows the canonical path is the native PowerShell installer.
-      # Don't run a bash-wrapped npm install here — redirect instead.
-      warn "Windows detected — use the native PowerShell installer:"
+      # Don't run a bash-wrapped npm install here: redirect instead.
+      warn "Windows detected: use the native PowerShell installer:"
       warn "  powershell -c \"irm https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.ps1 | iex\""
       exit 0
       ;;
@@ -1488,7 +1488,7 @@ In `scripts/install.sh`, in `detect_platform()`, change the Windows case to redi
 }
 ```
 
-> `hash` must be the real SHA-256 of the tarball (`shasum -a 256 <tarball>`). This is filled at release time (Task 10). `bin` points at the ESM entry; Scoop wraps it with node if `node` is available, else the user must have Node — the manifest should note `requires node` (Scoop `dependencies: nodejs-lts`).
+> `hash` must be the real SHA-256 of the tarball (`shasum -a 256 <tarball>`). This is filled at release time (Task 10). `bin` points at the ESM entry; Scoop wraps it with node if `node` is available, else the user must have Node: the manifest should note `requires node` (Scoop `dependencies: nodejs-lts`).
 
 - [ ] **Step 4: Complete the Homebrew formula**
 
@@ -1527,13 +1527,13 @@ git commit -m "feat(dist): install.ps1 + Windows redirect + Scoop + real Homebre
 
 ---
 
-### Task 10: Release pipeline — pinned installers + SHA256SUMS + attestations + CI matrix + install smoke test
+### Task 10: Release pipeline: pinned installers + SHA256SUMS + attestations + CI matrix + install smoke test
 
 **Files:**
 - Modify: `.github/workflows/release.yml`
 - Modify: `.github/workflows/ci.yml`
 - Create: `.github/actions/install-smoke/action.yml` (or inline steps)
-- Test: (workflow YAML — validated by running the workflows; the smoke test itself is the CI validation)
+- Test: (workflow YAML: validated by running the workflows; the smoke test itself is the CI validation)
 
 **Interfaces:**
 - Consumes: existing `release.yml` publish steps (id-token: write, provenance).
@@ -1542,7 +1542,7 @@ git commit -m "feat(dist): install.ps1 + Windows redirect + Scoop + real Homebre
   - Artifact attestations for those assets (`actions/attest-build-provenance`).
   - `ci.yml` matrix gains `windows-latest`; an install-smoke job runs the installer on each OS and asserts `noir --version` + `noir doctor`.
 
-- [ ] **Step 1: Extend `release.yml` — checksum + attestation step**
+- [ ] **Step 1: Extend `release.yml`: checksum + attestation step**
 
 Add after the "Publish the packed tarballs" step (before "Update release registry"):
 
@@ -1629,12 +1629,12 @@ git commit -m "ci: windows matrix + install smoke test + release checksums/attes
 
 ---
 
-### Task 11: Hardening pass — migration banner dismissal, per-channel cache, PATH hint
+### Task 11: Hardening pass: migration banner dismissal, per-channel cache, PATH hint
 
 **Files:**
 - Modify: `packages/cli/src/commands/home.ts` (banner dismissal persists)
-- Modify: `packages/core/src/update-check.ts` (per-channel cache — store `channel` keyed map, not single channel)
-- Modify: `packages/cli/src/commands/install.ts` (PATH-precedence hint after migrate — `hash -r`, `which -a`)
+- Modify: `packages/core/src/update-check.ts` (per-channel cache: store `channel` keyed map, not single channel)
+- Modify: `packages/cli/src/commands/install.ts` (PATH-precedence hint after migrate: `hash -r`, `which -a`)
 - Test: `packages/cli/test/home.test.ts`, `packages/core/test/update-check.test.ts`, `packages/cli/test/install.test.ts`
 
 **Interfaces:**
@@ -1650,7 +1650,7 @@ Change `UpdateCache` to:
 ```ts
 export interface UpdateCache {
   lastCheckAt: string | null;
-  /** latestVersion per channel — avoids cross-channel contamination. */
+  /** latestVersion per channel: avoids cross-channel contamination. */
   versions: Record<string, string | null>;
 }
 ```
@@ -1682,7 +1682,7 @@ git commit -m "refactor(cli): per-channel update cache + banner dismissal + PATH
 
 ---
 
-### Task 12: Documentation — user-facing + roadmap (no drift)
+### Task 12: Documentation: user-facing + roadmap (no drift)
 
 **Files:**
 - Modify: `docs/how-to/installation.md`
@@ -1722,7 +1722,7 @@ git commit -m "refactor(cli): per-channel update cache + banner dismissal + PATH
 - [ ] **Step 3: Update roadmap + records**
 
 - `docs/roadmap/capability-01-package-distribution.md`: status → native installer/self-update shipped; move "Gap" items to shipped; update acceptance criteria (DONE-when now MET); new file references.
-- `docs/roadmap/STATUS.md`: C1 → "Partial — core + native installer + self-update shipped"; active capability/slice note.
+- `docs/roadmap/STATUS.md`: C1 → "Partial: core + native installer + self-update shipped"; active capability/slice note.
 - `docs/roadmap/roadmap.manifest.yaml`: sync with STATUS.md (pattern).
 - `docs/roadmap/releases.md`: version targets + narrative for the new work.
 - `docs/roadmap/backlog.md`: move shipped items to "History of resolutions" (install.ps1, Scoop, Homebrew, noir update, migrate, checksum/attestation/pinned installer).
@@ -1742,7 +1742,7 @@ Expected: PASS (no broken links, no stale version refs, registry integrity ok).
 
 ```bash
 git add docs/ docs/decisions/0005-native-installer-managed-node.md CHANGELOG.md
-git commit -m "docs: C1 native installer + migration + self-update — full docs sync"
+git commit -m "docs: C1 native installer + migration + self-update: full docs sync"
 ```
 
 ---
@@ -1778,11 +1778,11 @@ Summarize: what shipped, the docs updated, the CI matrix + smoke test, and that 
 - Global constraints → enforced per task (local commits, offline tests, no auto-uninstall, version-assert, atomic writes, doctor ok/warn).
 
 ### Placeholder scan
-- No "TBD"/"TODO"/"implement later". The two `REPLACE_WITH_REAL_SHA256` markers are intentional placeholders that Task 10/12 fills at release time (they cannot be known at plan time — real hashes come from the actual published tarball).
+- No "TBD"/"TODO"/"implement later". The two `REPLACE_WITH_REAL_SHA256` markers are intentional placeholders that Task 10/12 fills at release time (they cannot be known at plan time: real hashes come from the actual published tarball).
 
 ### Type consistency
 - `InstallMethod`, `InstallRecord`, `UpdateCache`, `UpdateConfigLike`, `DetectResult`, `MigrationPlan`, `InstallCheckOutcome`, `UpdateTarget` all defined in the producing task and consumed by later tasks with matching signatures.
 - `writeInstallRecord`/`readInstallRecord`/`atomicWriteFile` (Task 1) used consistently in Tasks 4–8.
 - `installManagedNode` (Task 5) reused by Task 6 (`update`).
 - `shouldCheckForUpdate`/`latestVersionFromCache`/`fetchLatestVersion` (Task 3) used in Task 6/7.
-- Per-channel cache change in Task 11 updates `latestVersionFromCache` signature — Task 7's doctor uses `latestVersionFromCache(cache, 'latest')`, still valid after the change (Task 11 keeps the channel arg).
+- Per-channel cache change in Task 11 updates `latestVersionFromCache` signature: Task 7's doctor uses `latestVersionFromCache(cache, 'latest')`, still valid after the change (Task 11 keeps the channel arg).

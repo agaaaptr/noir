@@ -1,13 +1,13 @@
 // Post-run actions for `noir run`: a short menu offered once a successful run
 // has finished, so the answer that just streamed past can be put somewhere —
-// memory, a task finding, a handoff artifact, a file — or the session can be
+// memory, a task finding, a handoff artifact, a file: or the session can be
 // continued, without leaving the terminal to re-open an editor or the host.
 //
 // Every action delegates to a command seam that already exists (`memory
 // capture`, `task research-record`, `handoff`, a fresh host invocation, a file
 // write) instead of talking to the daemon itself: the single-writer, privacy
 // and exit-code contracts keep living in one place per concern. "Continue this
-// session" is a NEW invocation of the same single-shot run path — the host is
+// session" is a NEW invocation of the same single-shot run path: the host is
 // spawned, streams, and exits exactly as before; Noir never keeps a session
 // alive between turns.
 //
@@ -16,7 +16,7 @@
 // their exact previous output. Nothing here may change the finished run's exit
 // code: an action that fails (daemon down, no active task, an unwritable path)
 // is reported and dropped, never escalated. And the menu is ONE definition
-// shared by two surfaces — the terminal prompt and the TUI's overlay — so the
+// shared by two surfaces: the terminal prompt and the TUI's overlay: so the
 // actions, their order and their wording cannot drift between them: the surface
 // decides how a row is drawn and where a value is typed, the performer decides
 // what a choice does.
@@ -38,7 +38,7 @@ export interface PostRunMenuOption {
   readonly label: string;
   readonly hint: string;
   /**
-   * The value this row needs collected before it can run — a prompt for a
+   * The value this row needs collected before it can run: a prompt for a
    * continuation, a path for a file write. A surface that can ask for it (the
    * terminal prompt does; the TUI draws its own input line) reads the label and
    * placeholder from here rather than guessing them, so the question it asks is
@@ -63,7 +63,7 @@ export interface PostRunOutcome {
 }
 
 export interface PostRunActionInput {
-  /** The host's answer as plain text — what was streamed to stdout. */
+  /** The host's answer as plain text: what was streamed to stdout. */
   readonly answer: string;
   /** Path of the raw stream-json transcript, quoted in the prompts. */
   readonly transcript: string;
@@ -75,14 +75,14 @@ export interface PostRunActionInput {
   /**
    * Continue an existing session with a prompt collected fresh. Absent when
    * continuing is not on offer (no session id was reported, or this run is
-   * itself the continuation) — the menu drops the option rather than rendering
+   * itself the continuation): the menu drops the option rather than rendering
    * a dead row.
    */
   readonly resume?: (prompt: string, sessionId: string) => Promise<void>;
   /**
    * Whether a continuation is on offer, overriding the `resume` rule above. A
-   * surface that continues a session ITSELF — the TUI starts another turn on
-   * the same screen — says so here, rather than having to hand over a function
+   * surface that continues a session ITSELF: the TUI starts another turn on
+   * the same screen: says so here, rather than having to hand over a function
    * it would never call. Absent means "ask the `resume` seam".
    */
   readonly canContinue?: boolean;
@@ -159,7 +159,7 @@ export function postRunActions(input: PostRunActionInput): PostRunMenuOption[] {
   options.push({
     value: 'dismiss',
     label: 'Dismiss',
-    hint: 'nothing further — the run is already complete',
+    hint: 'nothing further: the run is already complete',
   });
   return options;
 }
@@ -170,7 +170,7 @@ export function postRunActions(input: PostRunActionInput): PostRunMenuOption[] {
  * failed must not become that run's result.
  *
  * `value` is whatever the surface collected for a row that declares
- * {@link PostRunMenuOption.needsValue} — a prompt, or a file path.
+ * {@link PostRunMenuOption.needsValue}: a prompt, or a file path.
  */
 export async function performPostRunAction(
   choice: PostRunAction,
@@ -205,15 +205,15 @@ export async function performPostRunAction(
         : `${label}: ${err instanceof Error ? err.message : String(err)}`;
     return {
       ok: false,
-      message: `${label} did not complete — the run's result stands.`,
+      message: `${label} did not complete: the run's result stands.`,
       ...(quoted === undefined ? {} : { detail: quoted }),
     };
   }
 }
 
 /**
- * Offer the actions for a finished run. Returns immediately — before loading
- * the prompt library — when the invocation is not interactive, which is what
+ * Offer the actions for a finished run. Returns immediately: before loading
+ * the prompt library: when the invocation is not interactive, which is what
  * keeps a scripted or piped run byte-identical to one made before this menu
  * existed. A cancelled, dismissed, or undrawable menu is a no-op, not an error:
  * the run has already succeeded and been reported, so the prompt itself can
@@ -241,8 +241,8 @@ export async function offerPostRunActions(input: PostRunActionInput): Promise<vo
 }
 
 /**
- * Render what an action did. A confirmation prints as one; a caution — or a
- * failure — prints as a diagnostic, and a failure quotes its cause only when
+ * Render what an action did. A confirmation prints as one; a caution: or a
+ * failure: prints as a diagnostic, and a failure quotes its cause only when
  * the cause has not already been printed by whoever threw.
  */
 function report(outcome: PostRunOutcome, opts: CliOptions): void {
@@ -256,9 +256,9 @@ function report(outcome: PostRunOutcome, opts: CliOptions): void {
 /**
  * Draw the menu and return what was chosen, or `undefined` when the user wants
  * nothing. Loading the prompt library, rendering the question, and reading the
- * answer are all one step on purpose: every way this can fail — the library not
+ * answer are all one step on purpose: every way this can fail: the library not
  * loading, the terminal going away between the interactivity gate and the
- * render, stdin erroring — costs the menu and nothing else. It is an offer on a
+ * render, stdin erroring: costs the menu and nothing else. It is an offer on a
  * run that has already succeeded and been reported, so it must never be the
  * thing that turns that run into a failure.
  */
@@ -283,7 +283,7 @@ async function openMenu(
 
 /**
  * Ask for the value a row declared it needs. `undefined` means the user backed
- * out (or the prompt could not be drawn), which abandons the action — an empty
+ * out (or the prompt could not be drawn), which abandons the action: an empty
  * answer is NOT a back-out, and is handed on so each action can decide what an
  * empty value means (a generated file name, or nothing to continue with).
  */
@@ -354,7 +354,7 @@ async function continueSession(
     return {
       ok: true,
       tone: 'caution',
-      message: 'No prompt given — the session was not continued.',
+      message: 'No prompt given: the session was not continued.',
     };
   }
   await resume(prompt, sessionId);
@@ -369,7 +369,7 @@ function saveAnswerToFile(input: PostRunActionInput, value: string | undefined):
   const body = input.answer.endsWith('\n') ? input.answer : `${input.answer}\n`;
   try {
     // The answer can quote credentials or private code, so a newly created
-    // file is owner-only — the same reason the transcript is 0600.
+    // file is owner-only: the same reason the transcript is 0600.
     writeFileSync(target, body, { mode: 0o600 });
   } catch (err) {
     return {

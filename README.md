@@ -1,37 +1,37 @@
 # Noir
 
-> The discipline, context, and memory layer for any agentic CLI — spec-driven workflow, native working-context, and cross-session memory, local-first by default.
+> The discipline, context, and memory layer for any agentic CLI: spec-driven workflow, native working-context, and cross-session memory, local-first by default.
 
 [![npm](https://img.shields.io/npm/v/@noir-ai/cli?include_prereleases&label=npm)](https://www.npmjs.com/package/@noir-ai/cli)
 [![CI](https://github.com/agaaaptr/noir/actions/workflows/ci.yml/badge.svg)](https://github.com/agaaaptr/noir/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/node/v/@noir-ai/cli)](https://www.npmjs.com/package/@noir-ai/cli)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-The `noir` grouped home menu — section picker + per-section action lists with hints (interactive; `noir status` when non-interactive):
+The `noir` grouped home menu: section picker + per-section action lists with hints (interactive; `noir status` when non-interactive):
 
 ![Noir grouped home menu showing section picker with Status &amp; context, Memory, Workflow, Setup &amp; maintenance, and Dashboard sections](docs/assets/tui/noir-home-menu.png)
 
 **Noir** is a host-agnostic orchestration layer that makes an agentic CLI behave like a disciplined spec-driven engineer. **Claude Code is the default host; Gemini, Cursor, OpenCode, and AGENTS.md are one `--host` flag away** (bring-your-own-agent). It wires three capabilities every long-running agent loses without help:
 
 1. **Spec-driven workflow**: an escapable, observable lifecycle (idea → spec → plan → implement → verify → document) where every gate decision is recorded.
-2. **Native working-context** — a hybrid retrieval engine (BM25 + vector kNN + Reciprocal Rank Fusion) so the host queries small ranked snippets instead of re-reading whole files.
-3. **Cross-session memory** — typed, searchable, governable long-term memory; save an insight in one session and recall it in another.
+2. **Native working-context**: a hybrid retrieval engine (BM25 + vector kNN + Reciprocal Rank Fusion) so the host queries small ranked snippets instead of re-reading whole files.
+3. **Cross-session memory**: typed, searchable, governable long-term memory; save an insight in one session and recall it in another.
 
-**Noir is an orchestration layer, NOT an LLM runtime.** It contains no agent loop. The optional model layer is single-shot, provider-explicit, and degrades to pure orchestration when no key is set — it never makes a silent paid call.
+**Noir is an orchestration layer, NOT an LLM runtime.** It contains no agent loop. The optional model layer is single-shot, provider-explicit, and degrades to pure orchestration when no key is set: it never makes a silent paid call.
 
 ## Status
 
 <!-- noir:doc:status -->
-**Latest stable:** `1.19.2` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.19.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Latest stable:** `1.19.2` (npm dist-tag `latest`: `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.19.2-beta.1` (npm dist-tag `beta`: `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.19.2` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-10-15T07:50:59.351Z*
+*Last auto-generated: 2026-10-19T06:17:09.489Z*
 <!-- /noir:doc:status -->
 
 ## Quick start
 
-**Recommended — native installer** (managed-Node runtime under `~/.noir/`; no system Node prerequisite, no `sudo`/admin):
+**Recommended: native installer** (managed-Node runtime under `~/.noir/`; no system Node prerequisite, no `sudo`/admin):
 
 ```bash
 # macOS / Linux
@@ -123,4 +123,4 @@ This repo is developed with Claude Code; [AGENTS.md](AGENTS.md) holds the conven
 
 ## License
 
-[MIT](LICENSE) — true OSS.
+[MIT](LICENSE): true OSS.

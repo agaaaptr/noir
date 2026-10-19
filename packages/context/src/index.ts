@@ -1,4 +1,4 @@
-// @noir-ai/context — Noir's embedded hybrid retrieval engine.
+// @noir-ai/context: Noir's embedded hybrid retrieval engine.
 //
 // Fills the `EmbedFn` seam declared (but never implemented) by @noir-ai/store:
 // local embeddings (@huggingface/transformers + all-MiniLM-L6-v2, 384-dim),
@@ -41,7 +41,7 @@ export {
 } from './dedup.js';
 // --- Embedders (the EmbedFn seam) ---
 // NOTE: `fakeEmbedFn` (a TEST-ONLY deterministic double) is deliberately NOT
-// re-exported here — the package `exports` map exposes only `.`, so anything in
+// re-exported here: the package `exports` map exposes only `.`, so anything in
 // this barrel ships in the published tarball. Cross-package test suites keep
 // their own local copy; context's own tests import it via the relative
 // `../src/embedders/fake.js` path.

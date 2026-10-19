@@ -69,7 +69,7 @@ function cleanRunWith(text: string, opts: RunHostOptions): RunHostResult {
   };
 }
 
-describe('noir run — status line wiring', () => {
+describe('noir run: status line wiring', () => {
   /** Every write to either stream, in the order the process made them. */
   let log: { stream: 'out' | 'err'; chunk: string }[];
   let stdout: MockInstance<typeof process.stdout.write>;
@@ -167,7 +167,7 @@ describe('noir run — status line wiring', () => {
     expect(err.split('\r\x1b[K').length - 1).toBeGreaterThanOrEqual(3);
     expect(textOf('out')).toBe('hello\n');
 
-    // The status line finished its row BEFORE the answer reached stdout — the
+    // The status line finished its row BEFORE the answer reached stdout: the
     // answer must never begin glued to the tail of the progress text.
     const handover = log.findIndex((w) => w.stream === 'err' && w.chunk === '\n');
     const answer = log.findIndex((w) => w.stream === 'out' && w.chunk === 'hello');
@@ -211,7 +211,7 @@ describe('noir run — status line wiring', () => {
     expect(await runCli(['run', 'hi'])).toBe(1);
     expect(textOf('out')).toBe('let me look at that');
 
-    // Without the row break the error reads as the tail of the answer — the
+    // Without the row break the error reads as the tail of the answer: the
     // exact shape this guards against: "…look at thathost 'claude' failed".
     const answer = log.findIndex((w) => w.stream === 'out' && w.chunk === 'let me look at that');
     const failure = log.findIndex((w) => w.stream === 'err' && w.chunk.includes('failed (exit 1)'));

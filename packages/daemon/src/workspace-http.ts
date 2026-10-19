@@ -1,8 +1,8 @@
-// Workspace daemon HTTP server — the cross-repo multiplexer.
+// Workspace daemon HTTP server: the cross-repo multiplexer.
 //
 // Unlike `startHttpServer` (one project, one store), a workspace daemon serves
 // MANY projects over one Streamable HTTP endpoint. It opens:
-//   • ONE workspace store (memory + feed — the shared context), and
+//   • ONE workspace store (memory + feed: the shared context), and
 //   • ZERO-or-more member project stores (context/workflow tools), opened lazily
 //     and cached, keyed by the member projectId.
 // Each request carries its identity in the URL query `?p=<projectId>`; a request
@@ -12,7 +12,7 @@
 //
 // Transport auth mirrors the project daemon: one bearer token
 // per serve lifecycle, regenerated on every start, scoped to the WORKSPACE NAME
-// (the identity keying this daemon's record — a projectId is meaningless here,
+// (the identity keying this daemon's record: a projectId is meaningless here,
 // since a workspace spans projects). `/mcp` requires it and answers 401 without
 // it; `/health` stays token-free because `probeWorkspaceDaemon` depends on it
 // and its body carries no secret.
@@ -51,7 +51,7 @@ import {
   writeWorkspaceDaemonRecord,
 } from './workspace-record.js';
 
-/** The method set `/mcp` accepts — the same one the Streamable HTTP transport
+/** The method set `/mcp` accepts: the same one the Streamable HTTP transport
  *  itself accepts, so a request refused here and one refused deeper down agree
  *  on what this endpoint allows. One list, three consumers: the guard below,
  *  the `Allow` header, and the refusal message, so a change lands in all three
@@ -129,11 +129,11 @@ async function buildMember(root: string): Promise<MemberContext | null> {
   }
   // Everything after the store open must not strand the handle. A member config
   // the context layer rejects (e.g. `context.embedder.dim !== 384` for a remote
-  // embedder — the core schema constrains only to a positive int) throws HERE,
+  // embedder: the core schema constrains only to a positive int) throws HERE,
   // after the store is open: without this guard it would leak an open SQLite
   // connection for the daemon's life (the member never reaches memberCache, so
   // shutdown never closes it) AND reject the request handler, which has no
-  // catch — hanging the client with no 500 envelope. Close and return null so
+  // catch: hanging the client with no 500 envelope. Close and return null so
   // getMember yields null and the handler's 500 path answers.
   try {
     const engine = buildWorkflowEngine(
@@ -167,7 +167,7 @@ export async function startWorkspaceHttpServer(
   // token can never outlive the process that issued it (a restarted daemon
   // invalidates every previously handed-out token). Generated before the server
   // accepts a request; written to disk after listen, below. The scope key is the
-  // workspace NAME — the same identity keying this daemon's record.
+  // workspace NAME: the same identity keying this daemon's record.
   const daemonToken = generateToken();
   const tokenScopeKey = name;
   const validateHost = localhostHostValidation();
@@ -190,7 +190,7 @@ export async function startWorkspaceHttpServer(
   const embed = createEmbedFn(embedderCfg).embed;
   // Build the workspace memory engine even when the store opened degraded
   // (read-only fallback): reads (recall/search) keep working, writes fence with a
-  // clear "store is read-only" envelope via the engine's own degraded flag — the
+  // clear "store is read-only" envelope via the engine's own degraded flag: the
   // same degraded story as the project daemon. Only a totally unopenable store
   // (wsStore === undefined) omits memory tools entirely.
   const wsMemory: MemoryEngine | undefined = wsStore
@@ -207,7 +207,7 @@ export async function startWorkspaceHttpServer(
   const memberCache = new Map<string, MemberContext>();
   // A cold-cache miss is async (store open). Without an in-flight slot, two
   // requests for the same member that miss the cache in the same tick each
-  // reach a second `openStoreForDaemon` — a second write handle to one DB,
+  // reach a second `openStoreForDaemon`: a second write handle to one DB,
   // the first of which is then silently dropped (leak) and never closed.
   const memberInFlight = new Map<string, Promise<MemberContext | null>>();
 
@@ -223,7 +223,7 @@ export async function startWorkspaceHttpServer(
       const built = await buildMember(member.root);
       // The registry pairs a projectId with the root it joined from. If the root
       // no longer resolves to that same projectId (re-`noir init`, moved dir),
-      // the member is stale — refuse rather than serve another project's store
+      // the member is stale: refuse rather than serve another project's store
       // under this authenticated identity.
       if (built === null) return null;
       if (built.project.id !== repo) {
@@ -293,7 +293,7 @@ export async function startWorkspaceHttpServer(
       // Auth on the HTTP transport only and AHEAD of the
       // membership check: an unauthenticated caller must not learn whether a
       // given projectId is a member of this workspace (401 before 403).
-      // `/health` stays token-free — `probeWorkspaceDaemon` depends on it — but
+      // `/health` stays token-free: `probeWorkspaceDaemon` depends on it: but
       // it remains host/origin validated above.
       const provided = req.headers.authorization?.replace(/^Bearer\s+/i, '');
       if (!tokenMatches(daemonToken, provided)) {
@@ -301,7 +301,7 @@ export async function startWorkspaceHttpServer(
         res.end(
           JSON.stringify({
             ok: false,
-            error: `unauthorized: this workspace daemon requires a token — set \`Authorization: Bearer <token>\` on its MCP entry (the token file is ${tokenPath(tokenScopeKey)}), or use the stdio transport.`,
+            error: `unauthorized: this workspace daemon requires a token: set \`Authorization: Bearer <token>\` on its MCP entry (the token file is ${tokenPath(tokenScopeKey)}), or use the stdio transport.`,
           }),
         );
         return;
@@ -327,7 +327,7 @@ export async function startWorkspaceHttpServer(
         return;
       }
       // Prune members that left the registry (fresh read above). Close their
-      // open project-store handles before dropping them — a long-lived daemon
+      // open project-store handles before dropping them: a long-lived daemon
       // must not leak a departed member's SQLite connection + WAL mapping.
       for (const key of memberCache.keys()) {
         if (!isWorkspaceMember(registry, key)) {
@@ -351,7 +351,7 @@ export async function startWorkspaceHttpServer(
           ? {
               memory: wsMemory,
               // The memory engine writes to the WORKSPACE store, whose degraded
-              // flag differs from the member's project store — thread it so the
+              // flag differs from the member's project store: thread it so the
               // memory tools fence on the right handle (server.ts memoryStoreDegraded).
               memoryStoreDegraded: wsStore.degraded,
               workspace: {

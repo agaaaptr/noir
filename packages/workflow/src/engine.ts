@@ -24,7 +24,7 @@ import {
  * outcome (the audit KV is the single source of truth). `task.history` on the
  * TaskState is a DERIVED view
  * the engine regenerates from the audit KV so
- * there is a single write, single timestamp, single read-back — no drift.
+ * there is a single write, single timestamp, single read-back: no drift.
  */
 const ACTIVE_KEY = 'workflow:active';
 const GATE_PHASES = ['spec', 'plan', 'verify'] as const satisfies ReadonlyArray<Phase>;
@@ -32,19 +32,19 @@ const GATE_PHASES = ['spec', 'plan', 'verify'] as const satisfies ReadonlyArray<
 const RESEARCH_TEXT_CAP = 220;
 
 /**
- * Default gate config — used when the engine is constructed without an explicit
+ * Default gate config: used when the engine is constructed without an explicit
  * {@link WorkflowGateConfig} (the legacy 3-arg call shape every existing
  * consumer uses). Mirrors @noir-ai/core's `prd.mandatoryFor` default so the
  * soft PRD recommendation fires for feature/epic tasks out of the box.
  */
 const DEFAULT_GATE_CONFIG: WorkflowGateConfig = {
   prd: { mandatoryFor: ['feature', 'epic'] },
-  // The verify gate is OFF by default — a task with no
+  // The verify gate is OFF by default: a task with no
   // verify config behaves exactly as v1.9.4 (records approved/forced/skipped,
   // no evidence, no blocking). Opt-in via gateConfig.verify or NoirConfig.
   verify: { required: false, retryBudget: 2 },
   // Research is a SOFT grounding recommendation for
-  // feature/epic (mirrors the PRD gate) — never a hard block.
+  // feature/epic (mirrors the PRD gate): never a hard block.
   research: { recommendFor: ['feature', 'epic'], requireSource: true },
 };
 
@@ -52,7 +52,7 @@ const DEFAULT_GATE_CONFIG: WorkflowGateConfig = {
 export interface AdvanceOpts {
   /**
    * Pass a gate without satisfying its criteria. Requires a non-empty `reason`
-   * (validated here, in the engine — `recordGate` is policy-free). The landing
+   * (validated here, in the engine: `recordGate` is policy-free). The landing
    * gate, if any, is recorded with `decision: 'forced'`. Mutually exclusive
    * with {@link skip}. This is ALSO the explicit-override path for the soft
    * PRD recommendation: supplying `--force <reason>` at the
@@ -66,12 +66,12 @@ export interface AdvanceOpts {
    * TaskState; a landing gate-state (specified/planned/done) still records its
    * gate so the observable-checkpoint invariant holds. A no-op jump (target
    * equal to the current phase) returns the task unchanged without re-recording
-   * any gate (guard — the prior behavior double-stamped the audit).
+   * any gate (guard: the prior behavior double-stamped the audit).
    */
   to?: Phase;
   /**
    * Quick-mode: record the landing gate (if any) as `decision: 'skipped'`
-   * instead of `approved`. The gate is still RECORDED — never silently dropped
+   * instead of `approved`. The gate is still RECORDED: never silently dropped
    * (the observable-checkpoint invariant: every gate decision is recorded) —
    * only the decision changes.
    * Mutually exclusive with {@link force}.
@@ -90,7 +90,7 @@ export interface AdvanceOpts {
 /**
  * The phase whose gate admits entry into `state` (the inverse of {@link gateFor}).
  *
- * The verify gate fires on entering `done` — but `done` is `stateForPhase('document')`,
+ * The verify gate fires on entering `done`: but `done` is `stateForPhase('document')`,
  * so the target *phase* of that transition is `document`, not `verify`. The gate
  * must therefore be looked up from the target *state*, not the target phase.
  */
@@ -137,7 +137,7 @@ export class VerifyGateError extends Error {
 }
 
 /**
- * WorkflowEngine — drives an SDD task through its lifecycle.
+ * WorkflowEngine: drives an SDD task through its lifecycle.
  *
  * The engine is a thin orchestrator over three primitives:
  *   • the hand-rolled FSM ({@link applyTransition}) for legal forward moves,
@@ -151,7 +151,7 @@ export class VerifyGateError extends Error {
  *   • the soft PRD recommendation at the spec gate for mandatoryFor tasks.
  *
  * Modes (Full/Quick) and cross-session resume are not implemented yet, and the
- * engine exposes no MCP tools — it stays mode-agnostic here and only stores
+ * engine exposes no MCP tools: it stays mode-agnostic here and only stores
  * `mode` on the TaskState.
  */
 export class WorkflowEngine {
@@ -160,7 +160,7 @@ export class WorkflowEngine {
   constructor(
     private readonly store: Store,
     /**
-     * Project root — the engine is constructed with it so modes (quickPath
+     * Project root: the engine is constructed with it so modes (quickPath
      * writes a spec stub via {@link writeSpec}) and future artifact flushes
      * (checkpoint/audit export) are self-contained. Public so the modes module
      * can pass it to {@link ArtifactWriter}.
@@ -168,7 +168,7 @@ export class WorkflowEngine {
     readonly root: string,
     private readonly projectId: ProjectId,
     /**
-     * Gate-config block. Optional — the legacy 3-arg call
+     * Gate-config block. Optional: the legacy 3-arg call
      * shape (every existing consumer) resolves to {@link DEFAULT_GATE_CONFIG}
      * (PRD recommendation fires for feature/epic). The daemon / CLI bridge
      * passes the resolved `prd.mandatoryFor` from NoirConfig so user overrides
@@ -191,10 +191,10 @@ export class WorkflowEngine {
 
   /**
    * Create a new task at draft/intake, persist it, and point `workflow:active`
-   * at it. Re-starting an existing taskId overwrites it (intentional — the KV is
+   * at it. Re-starting an existing taskId overwrites it (intentional: the KV is
    * the source of truth, not a journal).
    *
-   * `taskClass` is optional and additive — legacy callers
+   * `taskClass` is optional and additive: legacy callers
    * (and existing tests) omit it; the soft PRD gate then never fires for the
    * task (consistent with the "additive, no-op when absent" rule). New callers
    * that want the recommendation pass `'feature'` / `'epic'` / etc.
@@ -219,7 +219,7 @@ export class WorkflowEngine {
     // Re-start overwrites the TaskState; the DERIVED KV (audit + research) must
     // be reset too, else status() re-derives the prior run's full gate history
     // and stale research findings onto the "fresh" draft task. Only clear when a
-    // prior task existed (a first start must leave the KV ABSENT, not `[]` — the
+    // prior task existed (a first start must leave the KV ABSENT, not `[]`: the
     // `null`-vs-empty contract readGateHistory/readResearch rely on).
     if (this.store.getState<TaskState>(`workflow:${taskId}`) !== null) {
       this.store.setState<GateResult[]>(`audit:${taskId}`, []);
@@ -234,20 +234,20 @@ export class WorkflowEngine {
    * Advance `taskId` to its next phase, or jump with `opts.to`.
    *
    * At a gate-landing state (entering `specified` / `planned` / `done`) a
-   * {@link GateResult} is recorded — `approved` by default, `forced` (with the
+   * {@link GateResult} is recorded: `approved` by default, `forced` (with the
    * reason) when `opts.force` is supplied, or `skipped` when `opts.skip` is
    * supplied (quick mode). `force` and `skip` are mutually exclusive. Jumps
    * bypass the FSM and additionally stamp `jumpEntry`.
    *
    * Single source of truth: the gate is written ONCE to the audit KV via
    * {@link recordGate}, and `task.history` is RE-DERIVED from that KV. No
-   * second write, no second timestamp — the sub-ms drift is gone.
+   * second write, no second timestamp: the sub-ms drift is gone.
    */
   async advance(taskId: string, opts?: AdvanceOpts): Promise<TaskState> {
     const task = this.requireTask(taskId);
 
     // Terminal states are terminal: `done` / `abandoned` have no outgoing FSM
-    // edge, so a jump (`opts.to`) must not resurrect them either — otherwise a
+    // edge, so a jump (`opts.to`) must not resurrect them either: otherwise a
     // completed task could be jumped back into any phase and re-record gates.
     this.assertNotTerminal(task);
 
@@ -286,22 +286,22 @@ export class WorkflowEngine {
 
     // Guard: a jump to the CURRENT phase is a no-op. Previously the engine
     // re-stamped the audit (the landing gate fired again), producing a spurious
-    // duplicate entry. Return the task unchanged — no gate, no state change.
+    // duplicate entry. Return the task unchanged: no gate, no state change.
     //
     // EXCEPT when the task is BLOCKED: setBlocked flips state to 'blocked' but
     // leaves phase untouched, and blocked has no FSM edges, so the only way out
     // is an explicit jump. A jump to the SAME phase on a blocked task is exactly
-    // that unblock — fall through so `targetState = stateForPhase(targetPhase)`
+    // that unblock: fall through so `targetState = stateForPhase(targetPhase)`
     // reassigns the phase's live state (blocked → executing/specified/…). The
     // backward-jump suppression below already treats the equal phase as backward,
     // so no duplicate gate is recorded. Without this, a task blocked mid-phase
     // could only escape lossily (jump forward to skip work, or backward to regress).
     if (jump && targetPhase === task.phase && task.state !== 'blocked') {
       // A no-op jump must not silently swallow a force/skip/evidence that was
-      // intended for a gate landing — reject it explicitly.
+      // intended for a gate landing: reject it explicitly.
       if (opts?.force !== undefined || opts?.skip === true || opts?.evidence !== undefined) {
         throw new Error(
-          `cannot force/skip/verify a jump to the current phase (${task.phase}) — it is a no-op`,
+          `cannot force/skip/verify a jump to the current phase (${task.phase}): it is a no-op`,
         );
       }
       return task;
@@ -314,11 +314,11 @@ export class WorkflowEngine {
     }
 
     // Observable checkpoint: entering specified/planned/done always records a
-    // gate — looked up from the target STATE (see gatePhaseForState).
+    // gate: looked up from the target STATE (see gatePhaseForState).
     const gatePhase = gatePhaseForState(targetState);
 
     // Guard: a BACKWARD jump (target phase at-or-before the current phase) must
-    // NOT re-record a gate that ALREADY fired — the authoritative audit carries
+    // NOT re-record a gate that ALREADY fired: the authoritative audit carries
     // the original decision, and the audit is append-only. The suppression is
     // CONDITIONAL on the gate actually being in the audit: a task that JUMPED
     // over a gate (e.g. clarifying → verifying via a forward jump) has NOT fired
@@ -332,12 +332,12 @@ export class WorkflowEngine {
       gateAlreadyFired &&
       PHASES.indexOf(targetPhase) <= PHASES.indexOf(task.phase);
 
-    // A backward jump SUPPRESSES the gate write — so a force/skip supplied with
+    // A backward jump SUPPRESSES the gate write: so a force/skip supplied with
     // it would be silently discarded. Reject explicitly (mirrors the no-op-jump
     // guard).
     if (backwardJump && (opts?.force !== undefined || opts?.skip === true)) {
       throw new Error(
-        `cannot force/skip a BACKWARD jump to ${targetPhase} — its gate already fired; the suppression would discard your override`,
+        `cannot force/skip a BACKWARD jump to ${targetPhase}: its gate already fired; the suppression would discard your override`,
       );
     }
 
@@ -355,7 +355,7 @@ export class WorkflowEngine {
       // The verify gate is evidence-backed when the
       // task's class is configured `verify.required`. `force`/`skip` override
       // the evaluation (the explicit escapes), exactly like the other gates.
-      // Default OFF — a task with no verify config takes the legacy path
+      // Default OFF: a task with no verify config takes the legacy path
       // (decision approved/forced/skipped, no evidence, no blocking).
       if (gatePhase === 'verify' && this.verifyRequiredFor(task) && !forced && !skipped) {
         const evidence = opts?.evidence;
@@ -363,7 +363,7 @@ export class WorkflowEngine {
         const fresh =
           evidence !== undefined && evidence.ranAt >= task.updatedAt ? evidence : undefined;
         if (fresh === undefined) {
-          // No fresh evidence: do NOT transition, do NOT record — "pending" is
+          // No fresh evidence: do NOT transition, do NOT record: "pending" is
           // the absence of a decision. Throw so the daemon/CLI handler surfaces
           // a clear pendingGate envelope + recovery options.
           throw new VerifyGateError('evidence-required', task.updatedAt);
@@ -393,7 +393,7 @@ export class WorkflowEngine {
             throw new VerifyGateError('budget-exhausted', task.updatedAt, fresh);
           }
           // Evidence ran and a HARD check failed: record a `failed` decision
-          // WITH evidence (a visible failure — observable-checkpoint invariant),
+          // WITH evidence (a visible failure: observable-checkpoint invariant),
           // but do NOT transition to `done`. Throw so the caller surfaces recovery.
           recordGate(this.store, taskId, {
             phase: 'verify',
@@ -419,7 +419,7 @@ export class WorkflowEngine {
         // Soft PRD recommendation: when entering `specified` (the spec gate),
         // the task is mandatoryFor-eligible, no PRD artifact exists, and the user
         // did NOT supply --force, fold a recommendation note into the recorded
-        // gate's `reason`. The advance STILL PROCEEDS — this is the "quiet
+        // gate's `reason`. The advance STILL PROCEEDS: this is the "quiet
         // observable nudge" doctrine: never a hard block, never silently
         // dropped. Quick-mode + unlisted taskClasses skip the check entirely;
         // --force records `forced` with the user's reason (the explicit override).
@@ -434,7 +434,7 @@ export class WorkflowEngine {
           decision,
           // When a caller supplied verify evidence but the task's class does NOT
           // require the verify gate, still RECORD the evidence (never silently
-          // discard a validation run) — the gate simply isn't blocking.
+          // discard a validation run): the gate simply isn't blocking.
           ...(gatePhase === 'verify' && opts?.evidence !== undefined
             ? { evidence: opts.evidence }
             : {}),
@@ -466,7 +466,7 @@ export class WorkflowEngine {
    * Compute the soft PRD-recommendation message, or `null` when the
    * recommendation does NOT apply. The recommendation applies when ALL of:
    *   • the gate landing now is the spec gate (entering `specified`), AND
-   *   • the task is in full mode (quick mode skips — quickPath writes a stub), AND
+   *   • the task is in full mode (quick mode skips: quickPath writes a stub), AND
    *   • the task has a `taskClass` listed in `gateConfig.prd.mandatoryFor`, AND
    *   • no PRD artifact exists at `.noir/prd/PRD-<NNNN>-<id>-<slug>.md` (readPrd), AND
    *   • the user did NOT supply --force (force is the explicit-override path).
@@ -492,9 +492,9 @@ export class WorkflowEngine {
     const taskClass = task.taskClass;
     if (taskClass === undefined) return null;
     if (!this.gateConfig.prd.mandatoryFor.includes(taskClass)) return null;
-    if (opts?.force) return null; // explicit override — user's reason wins
+    if (opts?.force) return null; // explicit override: user's reason wins
     if (readPrd(this.root, task.taskId, task.slug) !== null) return null;
-    return `PRD recommended for ${taskClass} — provide one (noir-prd) or --force <reason> to skip`;
+    return `PRD recommended for ${taskClass}: provide one (noir-prd) or --force <reason> to skip`;
   }
 
   /**
@@ -502,7 +502,7 @@ export class WorkflowEngine {
    * gate (mirrors {@link prdRecommendation}). Fires when the task's class is in
    * `research.recommendFor` AND `research:<taskId>` has no source-backed findings
    * (only absent or assumption-only entries without sources). Never a hard block
-   * — the advance always proceeds; `--force` is the explicit override.
+   *: the advance always proceeds; `--force` is the explicit override.
    */
   private researchRecommendation(
     task: TaskState,
@@ -522,7 +522,7 @@ export class WorkflowEngine {
       (f) => f.type === 'grounding-fact' || (f.source !== undefined && f.source.trim().length > 0),
     );
     if (hasGrounding) return null;
-    return `research grounding recommended for ${taskClass} — record findings (noir task research record) or --force <reason> to skip`;
+    return `research grounding recommended for ${taskClass}: record findings (noir task research record) or --force <reason> to skip`;
   }
 
   /** Read the persisted TaskState, or null if the task is unknown. */
@@ -549,7 +549,7 @@ export class WorkflowEngine {
   /**
    * Re-flush the current state to KV + flush the gate audit export to
    * `.noir/audit/<taskId>.json`: the prior implementation
-   * only bumped `updatedAt`, which every advance already does — vestigial.
+   * only bumped `updatedAt`, which every advance already does: vestigial.
    * Cross-session resume (`resumeTask`) reads `workflow:<id>` straight from the
    * KV and consumes nothing from this method; the ledger noted the write was
    * dead. The fix is to WIRE the checkpoint to a real cross-tool artifact
@@ -571,11 +571,11 @@ export class WorkflowEngine {
   }
 
   /**
-   * Set state directly to `blocked` (no FSM edge — the admin escape). The reason
+   * Set state directly to `blocked` (no FSM edge: the admin escape). The reason
    * is captured on the TaskState for surfacing in `noir.workflow_status`.
    *
    * A SUPPLIED reason must be non-empty after trimming (mirrors the
-   * `--force` policy). `setBlocked(id)` with no reason stays valid — it clears
+   * `--force` policy). `setBlocked(id)` with no reason stays valid: it clears
    * no field and just flips state. A whitespace-only reason is rejected as
    * malformed (consistent with `--force`'s whitespace rejection).
    */
@@ -602,7 +602,7 @@ export class WorkflowEngine {
   async abandon(taskId: string): Promise<TaskState> {
     const task = this.requireTask(taskId);
     // Terminal tasks stay terminal: `abandon` on a done/abandoned task THROWS
-    // (assertNotTerminal) rather than relabelling it (done stays done — it was
+    // (assertNotTerminal) rather than relabelling it (done stays done: it was
     // verified). advance() and setBlocked share the same terminal policy.
     this.assertNotTerminal(task);
     task.state = 'abandoned';
@@ -678,7 +678,7 @@ export class WorkflowEngine {
   private assertNotTerminal(task: TaskState): void {
     if (task.state === 'done' || task.state === 'abandoned') {
       throw new Error(
-        `task is ${task.state} (terminal) — it cannot be advanced or jumped; start a new task`,
+        `task is ${task.state} (terminal): it cannot be advanced or jumped; start a new task`,
       );
     }
   }

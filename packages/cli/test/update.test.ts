@@ -56,7 +56,7 @@ describe('buildUpdateTarget (pure)', () => {
     expect(t.isUpgrade).toBe(false);
   });
 
-  // T6 hardening — semver downgrade guard. The bare inequality check
+  // T6 hardening: semver downgrade guard. The bare inequality check
   // (`latestKnown !== currentVersion`) treated a registry that returned an
   // OLDER version as an "upgrade", which would silently downgrade the install.
   // isUpgrade must require latestKnown to be STRICTLY NEWER (semver-greater).
@@ -71,7 +71,7 @@ describe('buildUpdateTarget (pure)', () => {
     expect(t.isUpgrade).toBe(false);
   });
   it('a pinned spec (with a leading `v`) is the guard target, not latestKnown', () => {
-    // current 1.10.0, registry 1.12.0, but spec v1.9.0 is a DOWNGRADE — the
+    // current 1.10.0, registry 1.12.0, but spec v1.9.0 is a DOWNGRADE: the
     // guards must evaluate the concrete spec, not the registry's latest.
     const t = buildUpdateTarget({
       method: 'native',
@@ -123,7 +123,7 @@ describe('buildUpdateTarget (pure)', () => {
     ).toBe(false);
   });
 
-  // I2 — update.minVersion floor (config.ts:238). The floor bounds the
+  // I2: update.minVersion floor (config.ts:238). The floor bounds the
   // latest-known version the registry returned: if the registry ever offers a
   // version below the configured floor (e.g. a beta/prerelease channel lag, or
   // a yanked/stale dist-tag), the update must refuse rather than downgrade the
@@ -201,7 +201,7 @@ describe('buildUpdateTarget (pure)', () => {
   });
 });
 
-// update() — integration tests for the T6 hardening behaviors. The core
+// update(): integration tests for the T6 hardening behaviors. The core
 // module is mocked at the boundary (no real network, no real install record),
 // so these stay offline/free.
 
@@ -224,7 +224,7 @@ async function runStderr(fn: () => Promise<void>): Promise<{ stderr: string; err
   return { stderr: errChunks.join(''), err };
 }
 
-describe('update() — NOIR_DISABLE_UPDATES kill-switch', () => {
+describe('update(): NOIR_DISABLE_UPDATES kill-switch', () => {
   let saved: string | undefined;
   beforeEach(() => {
     saved = process.env.NOIR_DISABLE_UPDATES;
@@ -253,7 +253,7 @@ describe('update() — NOIR_DISABLE_UPDATES kill-switch', () => {
   });
 });
 
-describe('update() — registry-unreachable message', () => {
+describe('update(): registry-unreachable message', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // fetch returns null → "Could not reach the registry."

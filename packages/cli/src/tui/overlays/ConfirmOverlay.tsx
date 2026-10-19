@@ -13,7 +13,7 @@ import type { ReactElement } from 'react';
 import { c } from '../../theme.js';
 import { Panel } from '../Panel.js';
 
-/** The confirm overlay's props — supplied by the App. */
+/** The confirm overlay's props: supplied by the App. */
 export interface ConfirmOverlayProps {
   /** The argv being approved, e.g. `['context','index']`. */
   readonly argv: readonly string[];

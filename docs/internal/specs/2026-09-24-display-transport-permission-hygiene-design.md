@@ -1,4 +1,4 @@
-# Display integrity, workspace transport, permission contract, and output hygiene — design
+# Display integrity, workspace transport, permission contract, and output hygiene: design
 
 **Status:** Approved (design decisions confirmed with the maintainer on 2026-09-24)
 **Date:** 2026-09-24
@@ -24,7 +24,7 @@ gives, and without accounting for the display width of the text**.
   `ROW_TEXT_WIDTH = PALETTE_WIDTH - 6` and carries a comment about this exact defect class; the overlay
   hard-codes 30+30 and re-introduces the bug it was fixed for.
 - The same class recurs in three more places the refuters found: the dashboard divider is always 2 columns
-  too wide (`App.tsx:686` renders `divider()` — `terminalWidth − 4` — inside nested `paddingX` boxes whose
+  too wide (`App.tsx:686` renders `divider()`: `terminalWidth − 4`: inside nested `paddingX` boxes whose
   budget is `terminalWidth − 6`); the footer hint is a 105-character untruncated, unwrappable `Text`, so it
   splits on any terminal under 105 columns; and the overlay's *non-focused* row path has the identical
   missing accounting, latent only because every current label is ≤24 characters.
@@ -46,7 +46,7 @@ the host reports `HTTP 404` and `not authenticated`. Neither is accidental:
 - The **project daemon** matches `req.url === '/mcp'` exactly (`http.ts:156`) and answers everything else,
   including `/mcp?p=<uuid>`, with `404 not found` (`http.ts:197`). It is the only producer of a 404 for that URL
   shape in the tree. The **workspace daemon** matches both `/mcp` and `/mcp?…` (`workspace-http.ts:248`) and
-  answers 401 without a token, 403 for a non-member, 200 otherwise — it can never answer 404 for that shape.
+  answers 401 without a token, 403 for a non-member, 200 otherwise: it can never answer 404 for that shape.
   Verified live: project daemon → 404 with and without a valid token; workspace daemon → 401 without, 200 with.
 - `.mcp.json` entries written by `join`/`start --workspace` carry **no auth material at all**
   (`workspace-mcp.ts:59-76`), while the workspace daemon requires a bearer token minted fresh on every start.
@@ -66,7 +66,7 @@ the host reports `HTTP 404` and `not authenticated`. Neither is accidental:
 
 ### 3. `.noir/.env` never becomes owner-only
 
-Every repository warns `permissions 644 allow others to read — run chmod 600`, on every command. The 0600
+Every repository warns `permissions 644 allow others to read: run chmod 600`, on every command. The 0600
 contract is **create-only**: the manifest declares `skipIfExists` with `fileMode: 0o600`
 (`manifest.ts:259-263`) and the writer returns immediately when the path exists, so the mode is applied only on
 first creation. No code path anywhere in the tree ever changes an existing file's mode, no migration touches it,
@@ -83,7 +83,7 @@ comment-hygiene guidance reaches a user's repo through exactly three shipped lin
 guidance are absent from every shipped surface. Three further structural weaknesses make the gap worse: the
 rules seed template is emitted to *every* host but its body is Claude-specific and Noir-repo-specific; the
 `rules:` config block is half-inert (`rules.enabled` has no consumer); and the residue gate
-(`FORBIDDEN_RESIDUE`) is asserted only by a CI test — it is not part of `validateSkill`/`lintSkill`, so
+(`FORBIDDEN_RESIDUE`) is asserted only by a CI test: it is not part of `validateSkill`/`lintSkill`, so
 `noir skills lint` cannot surface it. Finally, the evals harness is self-referential: its assertions run against
 `expected_output`, not against model output.
 
@@ -110,8 +110,8 @@ reality at the same checkpoint.
 
 A1. One shared display-width module is the single source of truth for measuring terminal text. It strips ANSI
 SGR sequences, measures East-Asian wide and fullwidth characters as 2 columns, and truncates without splitting
-a surrogate pair or a grapheme cluster. Every renderer — Ink components, `output.ts` tables, status lines,
-banners — measures through it.
+a surrogate pair or a grapheme cluster. Every renderer: Ink components, `output.ts` tables, status lines,
+banners: measures through it.
 
 A2. Every width budget is derived from the container's real budget, never hard-coded. The post-run overlay and
 every other two-column surface derive their cells from the palette's existing pattern
@@ -211,9 +211,9 @@ link/anchor/version pass (`pnpm docs:validate`) and by a targeted re-read of eac
 
 ## Documentation obligations
 
-- `CHANGELOG.md` — a release section naming the behaviour changes, including the migrated MCP entry shape.
-- `docs/how-to/shared-workspaces.md` — rewritten around the bridge; the header-forwarding guidance is removed.
-- `docs/reference/` — config, environment, and MCP tool references regenerated and checked.
-- `docs/roadmap/releases.md`, `STATUS.md`, `backlog.md`, `roadmap.manifest.yaml` — status sync.
-- `CLAUDE.md` and `AGENTS.md` — the hygiene rules and the sweep exemption list.
+- `CHANGELOG.md`: a release section naming the behaviour changes, including the migrated MCP entry shape.
+- `docs/how-to/shared-workspaces.md`: rewritten around the bridge; the header-forwarding guidance is removed.
+- `docs/reference/`: config, environment, and MCP tool references regenerated and checked.
+- `docs/roadmap/releases.md`, `STATUS.md`, `backlog.md`, `roadmap.manifest.yaml`: status sync.
+- `CLAUDE.md` and `AGENTS.md`: the hygiene rules and the sweep exemption list.
 - A new ADR recording D1 and D2, since both change a documented interface.

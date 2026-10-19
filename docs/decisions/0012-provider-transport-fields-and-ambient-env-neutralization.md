@@ -19,7 +19,7 @@ that promise in opposite directions:
 2. **An accidental path.** Because the client is built without `baseURL`/`authToken`, the
    `@anthropic-ai/sdk` constructor falls back to reading `ANTHROPIC_BASE_URL` and
    `ANTHROPIC_AUTH_TOKEN` from `process.env` on its own. A corporate-gateway setup therefore
-   works — invisibly, unverifiably, and in direct contradiction of the adapter's own stated
+   works: invisibly, unverifiably, and in direct contradiction of the adapter's own stated
    invariant that env-var presence is never consulted. The no-silent-paid-call guard blocks
    only the `apiKey` env fallback, leaving baseURL/authToken fallbacks live.
 
@@ -31,9 +31,9 @@ to express any of it.
 ## Decision
 
 1. **Extend the provider block** (`model.providers.<name>`) with two transport fields:
-   - `authTokenEnv?: string` — a variable NAME (same indirection rule as `apiKeyEnv`);
+   - `authTokenEnv?: string`: a variable NAME (same indirection rule as `apiKeyEnv`);
      its value is sent as `Authorization: Bearer` by the anthropic adapter.
-   - `timeoutMs?: number` — per-request timeout in milliseconds (SDK `timeout` option),
+   - `timeoutMs?: number`: per-request timeout in milliseconds (SDK `timeout` option),
      minimum 1000.
    - `baseURL` semantics are corrected: honored by BOTH the anthropic and
      openai-compatible adapters (no longer a decoy for anthropic).
@@ -44,7 +44,7 @@ to express any of it.
    request the provider-explicit path did not choose. When neither credential resolves, the
    existing null-degradation fires before any client exists.
 3. **Keep the host path untouched.** `noir run` passes `.noir/.env` through to the spawned
-   host CLI by inheritance — that is the documented, intended gateway surface for hosts, and
+   host CLI by inheritance: that is the documented, intended gateway surface for hosts, and
    this ADR changes nothing about it.
 
 ## Consequences
@@ -62,9 +62,9 @@ to express any of it.
 
 ## Alternatives considered
 
-- **Document the ambient path instead of neutralizing it** — rejected: it leaves a stated
+- **Document the ambient path instead of neutralizing it**: rejected: it leaves a stated
   invariant false, makes consolidation traffic unauditable, and timeout/Bearer/headers remain
   unconfigurable.
-- **A `wire: 'anthropic' | 'openai'` shape field on custom-named providers** — deferred: the
+- **A `wire: 'anthropic' | 'openai'` shape field on custom-named providers**: deferred: the
   adapter set already implies the wire format per provider name; revisit if custom provider
   names needing an anthropic wire shape become a real request.

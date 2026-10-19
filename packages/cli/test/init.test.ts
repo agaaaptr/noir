@@ -72,13 +72,13 @@ describe('init', () => {
 });
 
 // `.noir/.env` holds real credentials, so a run that finds it readable by group
-// or others tightens it to 0600 and says so — a file fixed without a word is
+// or others tightens it to 0600 and says so: a file fixed without a word is
 // the silent drift this re-assert exists to end. The announcement has to be
 // emitted BEFORE the already-initialized guard: a bare `noir init` on an
 // existing project re-emits nothing, which is exactly the run that can find a
 // stale mode, so a heal moved below the guard would go unannounced on the one
 // path that most often performs it.
-describe('init — the .noir/.env permission heal is announced', () => {
+describe('init: the .noir/.env permission heal is announced', () => {
   posixIt(
     'announces the heal on an already-initialized project (before the no-op guard)',
     async () => {

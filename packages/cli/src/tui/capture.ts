@@ -2,7 +2,7 @@
 //
 // While the dashboard runs, Ink owns the terminal (raw-mode stdin + ANSI render
 // writes to stdout). When the user submits a `/<command>`, the EXISTING command
-// dispatch seam is reused verbatim — the dispatched command writes to
+// dispatch seam is reused verbatim: the dispatched command writes to
 // `process.stdout` / `process.stderr` via the same centralized output helpers
 // (`log`, `json`, `table`, `definitionList`, …) every other invocation uses.
 // To keep that contract AND render the result inside the dashboard's output
@@ -12,7 +12,7 @@
 // Invariant: Ink does not rerender mid-dispatch, because the App does not
 // `setState` between the stream swap and its restore (the only state change is
 // the single `setOutput` AFTER the await resolves). So the captured text is
-// exactly the dispatched command's bytes — no Ink frames leak in.
+// exactly the dispatched command's bytes: no Ink frames leak in.
 
 /** Capture everything written to stdout/stderr during `fn`, plus the exit code. */
 export interface CapturedOutput {

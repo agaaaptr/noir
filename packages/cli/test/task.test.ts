@@ -1,8 +1,8 @@
-// S9 — `noir task {new,status,advance,next}` tests. daemon-client is mocked
+// S9: `noir task {new,status,advance,next}` tests. daemon-client is mocked
 // at the module boundary. These pin the contract:
 //   • `status`/`next` read `workflow_status`; a logical-failure envelope
 //     (`{ok:false,error:'no active task'}` / `'unknown task'`) → exit 3
-//     (NOT_FOUND) — a focused task read's "absent" is not-found, not an error;
+//     (NOT_FOUND): a focused task read's "absent" is not-found, not an error;
 //   • `new`/`advance` are wired to `workflow_start`/`workflow_advance` (I1):
 //     they forward args, render the resulting task, and map a logical-failure
 //     envelope (incl. read-only store) to exit 1; an invalid mode/phase is
@@ -269,7 +269,7 @@ describe('task next', () => {
   });
 });
 
-describe('task new — wired to workflow_start', () => {
+describe('task new: wired to workflow_start', () => {
   it('--json emits the started task on STDOUT + calls workflow_start', async () => {
     const { capture, restore } = captureStreams();
     try {
@@ -310,7 +310,7 @@ describe('task new — wired to workflow_start', () => {
     payloads.current.workflow_start = {
       ok: false,
       degraded: true,
-      error: 'store is read-only (daemon down) — workflow_start is unavailable',
+      error: 'store is read-only (daemon down): workflow_start is unavailable',
     };
     await expect(taskNew({ ...base, slug: 'x' })).rejects.toMatchObject({ exitCode: 1 });
   });
@@ -329,7 +329,7 @@ describe('task new — wired to workflow_start', () => {
   });
 });
 
-describe('task advance — wired to workflow_advance', () => {
+describe('task advance: wired to workflow_advance', () => {
   it('forwards --to <phase> as {to} and emits the advanced task', async () => {
     const { capture, restore } = captureStreams();
     try {

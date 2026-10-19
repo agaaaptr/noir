@@ -9,7 +9,7 @@ export interface Slice {
   id: string; // stable, greppable, e.g. "s1-walking-skeleton"
   title: string;
   type: SliceType;
-  /** 1-3 sentences — drift is flaggable against this. */
+  /** 1-3 sentences: drift is flaggable against this. */
   rationale: string;
   /** What this slice delivers. */
   scopeIn: string;
@@ -51,7 +51,7 @@ function depsOf(s: { dependsOn: unknown }): { id: string; mode: string }[] {
   );
 }
 
-/** Validate a SlicePlan deterministically — schema, deps, file conflicts. */
+/** Validate a SlicePlan deterministically: schema, deps, file conflicts. */
 export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: string[] } {
   const errors: string[] = [];
   // Top-level guard: a malformed plan that omits `slices` must be a schema
@@ -74,7 +74,7 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
     ids.add(s.id);
 
     // Required fields. This is a runtime validator over LLM/opt-in content, so
-    // array fields are checked with Array.isArray — a malformed slice that omits
+    // array fields are checked with Array.isArray: a malformed slice that omits
     // them must produce a schema error, not a crash.
     if (!s.id) errors.push(`slice ${ids.size}: missing id`);
     if (!s.title) errors.push(`slice ${s.id}: missing title`);
@@ -147,7 +147,7 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
       const siblingFiles = arr(sibling.files?.create).concat(arr(sibling.files?.modify));
       const sPreserve = arr(s.files?.preserve);
       const siblingPreserve = arr(sibling.files?.preserve);
-      // What this slice WRITES (creates + modifies) — its own footprint.
+      // What this slice WRITES (creates + modifies): its own footprint.
       const sWrites = new Set(sFiles);
       // What the sibling writes (creates + modifies) AND preserves (a sibling
       // preserving a path we also create/modify is equally a conflict).
@@ -162,7 +162,7 @@ export function validateSlicePlan(plan: SlicePlan): { ok: boolean; errors: strin
           );
       }
       // Reverse direction: this slice PRESERVES a path the sibling writes
-      // (a symmetric pair — the check must not depend on slice ordering).
+      // (a symmetric pair: the check must not depend on slice ordering).
       const siblingWrites = new Set(siblingFiles);
       for (const f of sPreserve) {
         if (siblingWrites.has(f))

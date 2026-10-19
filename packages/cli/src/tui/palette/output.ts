@@ -7,7 +7,7 @@
 
 /**
  * Line indices whose (case-insensitive) text contains `query`, in line order.
- * An empty query matches nothing (`[]`) — the search only starts once the user
+ * An empty query matches nothing (`[]`): the search only starts once the user
  * types, and an empty query must never be treated as "matches every line".
  */
 export function computeMatches(lines: readonly string[], query: string): number[] {

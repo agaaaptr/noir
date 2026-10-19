@@ -14,7 +14,7 @@ export const claudeAdapter: HostAdapter = {
   id: 'claude',
   emitMcpConfig(_ctx, opts: McpConfigOptions, integration?: IntegrationMcpEmission): string {
     // Delegates to the shared `{mcpServers}` builder. Behavior-identical to the
-    // previous inline implementation — the claude.test.ts + create/scaffold.test.ts
+    // previous inline implementation: the claude.test.ts + create/scaffold.test.ts
     // byte-equality parity gates must hold (integration entry merge preserved).
     return buildMcpServersJson(opts, integration);
   },

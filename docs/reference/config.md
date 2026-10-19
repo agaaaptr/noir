@@ -1,6 +1,6 @@
 # Configuration Reference
 
-> Auto-generated from `NoirConfigSchema` (Zod v4) in `@noir-ai/core` — the
+> Auto-generated from `NoirConfigSchema` (Zod v4) in `@noir-ai/core`: the
 > schema `.describe()` strings are the single source of truth for these rows.
 
 ## Precedence
@@ -14,10 +14,10 @@
 4. built-in default
 ```
 
-`.noir/.env` therefore **wins for every key it defines** — a machine-global
+`.noir/.env` therefore **wins for every key it defines**: a machine-global
 export (`~/.zshrc`, `~/.claude/settings.json`, launchd, CI) cannot shadow it,
 and neither can a `VAR=value noir …` prefix (it arrives in `process.env`
-indistinguishably from the inherited environment, so it is level 3 — not an
+indistinguishably from the inherited environment, so it is level 3: not an
 override). A git-*tracked* `.noir/.env` is refused outright, and `noir env`
 shows which source won for each key. Full chain + recipes:
 [Configuring a project with `.noir/.env`](../how-to/configure-env.md).
@@ -25,7 +25,7 @@ shows which source won for each key. Full chain + recipes:
 **Config keys** (`.noir/config.yml`) resolve by their own order: CLI flag >
 environment variable (`NOIR_PROFILE`) > project `.noir/config.yml` >
 built-in default. Integration tokens (e.g. `CLICKUP_API_TOKEN`) are env
-vars, never config keys — see
+vars, never config keys: see
 [Environment Variables](environment.md),
 [Run profiles](../how-to/host-profiles.md), and
 [ClickUp setup](../how-to/clickup.md).
@@ -74,7 +74,7 @@ vars, never config keys — see
 | `model.providers` | `record` | no | — | Configured model providers, keyed by name |
 | `model.providers.<name>` | `record value` | yes | — | A named provider block |
 | `model.providers.<name>.model` | `string` | yes | — | Model id for this provider |
-| `model.providers.<name>.baseURL` | `string` | no | — | Base URL for a custom endpoint — Anthropic-shaped gateways and OpenAI-compatible local providers (Ollama/LM Studio/vLLM) |
+| `model.providers.<name>.baseURL` | `string` | no | — | Base URL for a custom endpoint: Anthropic-shaped gateways and OpenAI-compatible local providers (Ollama/LM Studio/vLLM) |
 | `model.providers.<name>.apiKeyEnv` | `string` | no | — | Env-var NAME holding the API key (never the value) |
 | `model.providers.<name>.authTokenEnv` | `string` | no | — | Env-var NAME holding the bearer token (never the value); sent as Authorization: Bearer for Anthropic-shaped endpoints |
 | `model.providers.<name>.timeoutMs` | `number` | no | — | Per-request timeout in milliseconds (min 1000) |
@@ -140,7 +140,7 @@ vars, never config keys — see
 | `update.checkEnabled` | `boolean` | no | true | Enable the async startup version check |
 | `update.checkIntervalHours` | `number` | no | 24 | Version-check cache TTL (hours) |
 | `update.channel` | `enum` | no | "latest" | Update channel |
-| `update.minVersion` | `string` | no | "1.6.0" | Floor — update never installs below this |
+| `update.minVersion` | `string` | no | "1.6.0" | Floor: update never installs below this |
 | `update.display` | `enum` | no | "notice" | Notice mode (parsed; notice path only) |
 
 ### run
@@ -191,9 +191,9 @@ vars, never config keys — see
 same rule covers `authTokenEnv`: a NAME, never the bearer-token value. The
 model layer reads `process.env[<that name>]`, so the dollar-brace form resolves to
 `undefined` and silently disables the provider. Only `run.profiles.<name>.env`
-interpolates a dollar-brace reference. Put the **value** in `.noir/.env` — the
+interpolates a dollar-brace reference. Put the **value** in `.noir/.env`: the
 recommended project-scoped home, `0600` and gitignored, and the winner for every key
-it defines — or in the real environment. Never pass tokens as CLI arguments (visible
+it defines: or in the real environment. Never pass tokens as CLI arguments (visible
 in process lists). See
 [Configuring a project with `.noir/.env`](../how-to/configure-env.md) and
 [Environment Variables](environment.md) for the full placement + precedence rules.
@@ -201,10 +201,10 @@ in process lists). See
 ## Honest notes
 
 - `update.display`, `context.roots`, and `context.budgetTokens`
-  are parsed + validated but have no live consumer yet — declaring them now avoids
+  are parsed + validated but have no live consumer yet: declaring them now avoids
   schema churn when their feature ships. Do not rely on them.
 - `rules.enabled` IS read: when false, `noir init`/`noir create` emit no
   `.noir/rules/RULES.md` (and an upgrade does not backfill one) and `noir doctor`
   reports its budget check as disabled. A RULES.md already on disk is left alone.
 - `rules.lengthBudgetKb` IS read: `noir doctor`'s RULES.md budget check.
-- `run.*` (host profiles; first surfaced on `beta` as 1.12.0-beta.1) and `workspace.*` (shared cross-repo workspaces, see the [shared-workspaces decision](../decisions/0009-shared-workspaces.md)) are new in 1.13.0. `enforcement.*` (agent-loop enforcement) is new and not yet in a published release. All other blocks predate 1.13.0.
+- `run.*` (host profiles; first surfaced on `beta` as 1.12.0-beta.1) and `workspace.*` (shared cross-repo workspaces, see the [shared-workspaces decision](../decisions/0009-shared-workspaces.md)) are new in 1.13.0. `enforcement.*` (agent-loop enforcement) shipped in 1.19.0 (host governance). All other blocks predate 1.13.0.

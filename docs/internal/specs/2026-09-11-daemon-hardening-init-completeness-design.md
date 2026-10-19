@@ -1,8 +1,8 @@
-# Daemon Hardening + Init Completeness — Design
+# Daemon Hardening + Init Completeness: Design
 
 > **Status:** implemented (shipped 2026-09-11 in v1.14.0)
 > **Target:** v1.14.0 (breaking: the daemon record layout changes, and `.noir/.env` precedence
-> inverts — see §15)
+> inverts: see §15)
 > **Capability:** C5 Runtime Infrastructure + C6 Documentation & Knowledge System + C7 Engineering Governance
 > **Slice id:** `daemon-hardening`
 > **Requires ADR:** ADR-0010 (per-project daemon records + HTTP transport auth) and ADR-0011
@@ -20,7 +20,7 @@
 
 ### 1.1 The daemon record is a single global file, and three separate guards exist to compensate
 
-The daemon records itself at `~/.noir/daemon.json` — one file, machine-wide, regardless of
+The daemon records itself at `~/.noir/daemon.json`: one file, machine-wide, regardless of
 how many projects are active (`packages/daemon/src/lifecycle.ts:32`):
 
 ```ts
@@ -40,9 +40,9 @@ The `ensure.ts` branch is the damaging one. Concretely:
 
 1. Project A's daemon runs (pid 100, record `projectId: A`).
 2. Project B runs any write → `ensureDaemonRunning` reads the record, sees `wrongProject`,
-   and calls `clearDaemonRecord()` (`ensure.ts:81`) — **deleting a live foreign daemon's record**.
+   and calls `clearDaemonRecord()` (`ensure.ts:81`): **deleting a live foreign daemon's record**.
 3. B starts its own daemon; the record now says B.
-4. A's daemon (pid 100) is still alive holding `.noir/store/A.db` open — but **nothing points
+4. A's daemon (pid 100) is still alive holding `.noir/store/A.db` open: but **nothing points
    to it**.
 5. A's next CLI call reads B's record → `wrongProject` → clears it → starts **a second daemon
    for A** → two write handles on A's DB.
@@ -62,7 +62,7 @@ Three guards across two files is the symptom. The cause is that the record has n
 .describe('Daemon HTTP port (optional; not yet wired to a consumer)')
 ```
 
-The plumbing downstream already exists — `http.ts:172` binds `opts.port ?? 0` — but no caller
+The plumbing downstream already exists: `http.ts:172` binds `opts.port ?? 0`: but no caller
 ever passes a port. `ensure.ts:83` calls `startHttpServer({ project, idleTimeoutSec })` with no
 `port`. It is validated, tested (`packages/core/test/config.test.ts:19`), and inert.
 
@@ -98,11 +98,11 @@ finishes `noir init` sees a handful of files and no signal that specs, plans, ta
 transcripts exist as concepts.
 
 Separately, `.noir/.env.example` (template `packages/create/templates/env.example.tmpl`)
-documents **only** `CLICKUP_API_TOKEN` and the `CLICKUP_TEAM_ID` correction — while
+documents **only** `CLICKUP_API_TOKEN` and the `CLICKUP_TEAM_ID` correction: while
 `docs/reference/environment.md` documents model-provider keys, `NOIR_PROFILE`, and the update
 kill-switches. The reference is complete; the file the user actually opens at init is not.
 
-### 1.6 `--upgrade` never backfills a seed file — proven by a real project
+### 1.6 `--upgrade` never backfills a seed file: proven by a real project
 
 `.noir/.env.example` is declared with `mode: 'skipIfExists'` (`manifest.ts:181-183`), so a
 **fresh** `noir init` creates it. But `--upgrade` is documented to *"emit only regenerate +
@@ -129,16 +129,16 @@ project's initialization is permanently absent from that project.**
   `docs/how-to/clickup.md:30`, `docs/how-to/host-profiles.md:70`.
 - **Consequence, measured.** The maintainer's `.noir/.env` holds `ANTHROPIC_AUTH_TOKEN`,
   `ANTHROPIC_BASE_URL`, `API_TIMEOUT_MS`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, and three
-  `ANTHROPIC_DEFAULT_*_MODEL` overrides — and the **same** `ANTHROPIC_*` keys are exported from
+  `ANTHROPIC_DEFAULT_*_MODEL` overrides: and the **same** `ANTHROPIC_*` keys are exported from
   `~/.zshrc`. Because real env wins, the project file is **silently ignored** in every
   shell-launched invocation. The user believed they had configured the project; they had not.
 - **The doctrine points elsewhere.** `noir-clickup/SKILL.md:36-53` ranks the placements
-  *"1. Primary fix — `~/.claude/settings.json` env block (most reliable); 2. Alternative —
-  `~/.zshenv` (NOT `.zshrc`); 3. Last resort — Manual paste"* — **`.noir/.env` is absent
+  *"1. Primary fix: `~/.claude/settings.json` env block (most reliable); 2. Alternative —
+  `~/.zshenv` (NOT `.zshrc`); 3. Last resort: Manual paste"*: **`.noir/.env` is absent
   entirely**. `SKILL.md:392` repeats it. On this machine `~/.claude/settings.json` has no `env`
   block at all (top-level keys: `hooks`, `enabledPlugins`, `extraKnownMarketplaces`,
   `effortLevel`, `modelSettings`, `skipWorkflowUsageWarning`), while `CLICKUP_API_TOKEN` and a
-  **dead** `CLICKUP_TEAM_ID` sit in `~/.zshrc` — the location the skill explicitly warns against.
+  **dead** `CLICKUP_TEAM_ID` sit in `~/.zshrc`: the location the skill explicitly warns against.
 
 ### 1.8 `noir run` fails with unactionable credential guidance
 
@@ -146,7 +146,7 @@ project's initialization is permanently absent from that project.**
 host fails to authenticate, `run.ts:135-146` emits:
 
 > `host 'claude' failed (exit 1): Not logged in · Please run /login` … `Note:
-> ANTHROPIC_API_KEY is set in your environment — it overrides the logged-in account …`
+> ANTHROPIC_API_KEY is set in your environment: it overrides the logged-in account …`
 
 Two defects:
 
@@ -158,8 +158,8 @@ Two defects:
    **unactionable**: `applyNoirEnv` re-injects the key on every invocation (`bin.ts:311`), so
    unsetting it in the shell changes nothing. No message names `.noir/.env` as the source.
 
-Reproduced: `lib-uii-gateway-monev-angular` was never `noir init`-ed — its `.noir/` contains only
-`transcripts/` — so there was no `.noir/.env` to carry credentials, and the failure surfaced as a
+Reproduced: `lib-uii-gateway-monev-angular` was never `noir init`-ed: its `.noir/` contains only
+`transcripts/`: so there was no `.noir/.env` to carry credentials, and the failure surfaced as a
 login error.
 
 ---
@@ -168,7 +168,7 @@ login error.
 
 **Host MCP transport: stdio is the default, and HTTP header support is unreliable.**
 
-- Noir's default host entry is **stdio** — `packages/adapters/src/mcp.ts:34-37` emits
+- Noir's default host entry is **stdio**: `packages/adapters/src/mcp.ts:34-37` emits
   `{command, args: ['mcp','serve','--stdio']}` when `opts.transport === 'stdio'`. The HTTP entry
   (`{type:'http', url}`) is the *non-default* branch, used when a repo joins a shared workspace
   (ADR-0009) or when a user configures it by hand. **In the default configuration there is no
@@ -176,10 +176,10 @@ login error.
 - Claude Code expands `${VAR}` and supports a `headersHelper` command that emits headers at
   connection time, so a secret-free config file is achievable in principle.
 - Claude Code has **open, unfixed bugs where `.mcp.json` custom headers are not forwarded on
-  tool-call POST requests** — headers may land on the initial SSE connection but not subsequent
+  tool-call POST requests**: headers may land on the initial SSE connection but not subsequent
   POSTs ([#28293](https://github.com/anthropics/claude-code/issues/28293),
   [#14977](https://github.com/anthropics/claude-code/issues/14977)). The reported workaround is
-  `claude mcp add -s user` rather than a project `.mcp.json` — which is exactly what Noir writes.
+  `claude mcp add -s user` rather than a project `.mcp.json`: which is exactly what Noir writes.
   Claude Code is Noir's regression-anchor host, so a header-delivered token is unsafe there today.
 
 **Implication.** Auth belongs on the HTTP transport only; the CLI (a client Noir owns) sends the
@@ -191,7 +191,7 @@ RequestInit` exists in `@modelcontextprotocol/client@2.0.0-beta.5`
 `{ requestInit: { headers: { Authorization: 'Bearer <token>' } } }`.
 
 **ADR-0009 §11 constrains the activation design.** `withWorkspaceDaemon`
-(`packages/cli/src/daemon-client.ts:584-617`) is deliberately **probe-only — no ensure**: a
+(`packages/cli/src/daemon-client.ts:584-617`) is deliberately **probe-only: no ensure**: a
 workspace daemon that is down must fail with guidance rather than silently auto-start. Any
 connect-triggered activation must therefore be scoped to the **project** daemon path and must not
 change workspace behaviour.
@@ -213,7 +213,7 @@ adopt or stop a workspace daemon."* §4 applies that same reasoning to projects.
   doctrine inverts this by ranking `~/.claude/settings.json` "#1 most reliable".
 - **1Password documents `env files > shell environment`** as the precedence for `op run`
   ([1password.dev/cli/reference/commands/run](https://www.1password.dev/cli/reference/commands/run))
-  — direct prior art for a file-beats-shell rule.
+ : direct prior art for a file-beats-shell rule.
 - **Environment variables are the wrong home for secrets on the record.** The systemd
   maintainers' own summary: environment blocks "propagate down the process tree, and are *not*
   generally understood as being secret"
@@ -221,13 +221,13 @@ adopt or stop a workspace daemon."* §4 applies that same reasoning to projects.
   A shell export is machine-global, appears in `env`/`printenv` and shell history, and has no
   `chmod 600` analogue.
 - **Node `--env-file` documents env-wins-over-file**
-  ([nodejs.org/api/cli.html](https://nodejs.org/api/cli.html)) — Noir's current behaviour matches
+  ([nodejs.org/api/cli.html](https://nodejs.org/api/cli.html)): Noir's current behaviour matches
   Node. That semantics exists so an override does not surprise; it is not a statement about where
   configuration *belongs*. The mechanical consequence that matters: a one-shot override and a
-  stale global export are **indistinguishable** — both arrive as "the real environment" — which is
+  stale global export are **indistinguishable**: both arrive as "the real environment": which is
   exactly the maintainer's shadowing failure (§1.7).
 - **Prior art for provenance.** `atmos describe component <name> --provenance` reports where every
-  value originated down to file and line — the pattern §12.4 adopts.
+  value originated down to file and line: the pattern §12.4 adopts.
 
 ### 2.1 Audit provenance and its limits
 
@@ -239,7 +239,7 @@ machine.
 findings of which **0 were refuted**, which is a defect in the verification, not evidence that all
 78 are real: the survivor rule (`keep >= refute` over two lenses) passed 1–1 ties, so a finding
 contested by one verifier and endorsed by the other survived unchanged. Deduplication was also
-imperfect — three distinct ids (`clickup-skill-omits-noir-env`,
+imperfect: three distinct ids (`clickup-skill-omits-noir-env`,
 `clickup-skill-setup-omits-noir-env`, `clickup-skill-token-setup-omits-noir-env`) describe one
 defect. Treat the raw count as a superset.
 
@@ -265,16 +265,16 @@ cited file or the live machine before being written down.
    written into any host config file.
 4. **Daemon activation is connection-driven** on the project path: connect first, start only on a
    refused connection.
-5. **`noir init` describes what it produces** — an aligned `.env.example`, a real `.noir/.env`
-   created at 0600, and a `.noir/README.md` map — and the managed ignore list stops naming paths
+5. **`noir init` describes what it produces**: an aligned `.env.example`, a real `.noir/.env`
+   created at 0600, and a `.noir/README.md` map: and the managed ignore list stops naming paths
    that are never created.
 6. **`noir init --upgrade` backfills what the manifest grew.** Any seed file added after a
    project's initialization is created on the next upgrade, so no project is permanently stranded
    without a file the current version expects (§11).
-7. **`.noir/.env` becomes the canonical project configuration home** — it wins over the ambient
+7. **`.noir/.env` becomes the canonical project configuration home**: it wins over the ambient
    environment for the keys it defines, it is refused when git-tracked, its shadowing is
    diagnosable, and every skill and doc says so first (§12).
-8. **`noir run` explains credential failures accurately** — covering the gateway
+8. **`noir run` explains credential failures accurately**: covering the gateway
    (`ANTHROPIC_AUTH_TOKEN`/`ANTHROPIC_BASE_URL`) shape, naming `.noir/.env` when that is the
    source, and noticing when the project was never initialized (§13).
 
@@ -292,7 +292,7 @@ cited file or the live machine before being written down.
 
 ---
 
-## 4. Part A — Per-project daemon records
+## 4. Part A: Per-project daemon records
 
 ### 4.1 Layout
 
@@ -300,7 +300,7 @@ cited file or the live machine before being written down.
 BEFORE                                AFTER
 ~/.noir/daemon.json              →    ~/.noir/daemons/<projectId>.json
 
-~/.noir/workspaces/<name>/daemon.json   (unchanged — existing precedent)
+~/.noir/workspaces/<name>/daemon.json   (unchanged: existing precedent)
 ```
 
 The new path is HOME-scoped, so it needs **no `.gitignore` entry** in any project (§10).
@@ -315,7 +315,7 @@ export interface ProjectDaemonRecord {
   port: number;
   startedAt: number;
   mode?: 'foreground' | 'detached';
-  /** The project this record belongs to — the identity, like `workspace` for a workspace record. */
+  /** The project this record belongs to: the identity, like `workspace` for a workspace record. */
   projectId: string;
 }
 
@@ -323,7 +323,7 @@ export function projectRecordPath(projectId: string): string;
 export function readProjectDaemonRecord(projectId: string): ProjectDaemonRecord | null;
 export function writeProjectDaemonRecord(projectId: string, rec: ProjectDaemonRecord): void;
 export function clearProjectDaemonRecord(projectId: string): void;
-/** Enumerate every project record on this machine — for `noir daemon status --all` and doctor. */
+/** Enumerate every project record on this machine: for `noir daemon status --all` and doctor. */
 export function listProjectDaemonRecords(): Array<{ projectId: string; rec: ProjectDaemonRecord }>;
 ```
 
@@ -337,8 +337,8 @@ three guards collapse:
 
 | Site | Before | After |
 |---|---|---|
-| `ensure.ts:67-81` | `wrongProject` branch + `clearDaemonRecord()` | deleted — no foreign record is reachable |
-| `commands/daemon.ts:323-344` | `wrongProject` + conditional clear | deleted — the record read is already scoped |
+| `ensure.ts:67-81` | `wrongProject` branch + `clearDaemonRecord()` | deleted: no foreign record is reachable |
+| `commands/daemon.ts:323-344` | `wrongProject` + conditional clear | deleted: the record read is already scoped |
 | `commands/daemon.ts:398-408` | wrong-project check → exit 4 | deleted |
 
 `daemonStop`'s message improves as a side effect: "No Noir daemon is running" becomes "No Noir
@@ -351,7 +351,7 @@ daemon is running **for this project**".
 - **`NOIR_DAEMON_JSON`** (retained) identifies only the *legacy* single-file path, read
   exclusively by the migration in §4.5.
 
-Both must be in the process-injection denylist in `packages/core/src/env-file.ts:36` — a
+Both must be in the process-injection denylist in `packages/core/src/env-file.ts:36`: a
 `.noir/.env` that redirects the record directory would otherwise be a hijack vector. Verified:
 `NOIR_DAEMON_JSON` is **already present**; `NOIR_DAEMON_DIR` is **absent and must be added**
 (the pattern is `(?:$|_)`-anchored, so `NOIR_DAEMON_DIR` does not match the existing
@@ -373,7 +373,7 @@ export async function retireLegacyDaemonRecord(): Promise<void> {
       // the legacy daemon still holds a write handle on this project's DB.
       throw new Error(
         `a daemon from a previous Noir version (pid ${rec.pid}) did not exit within ` +
-          `${EXIT_TIMEOUT_MS}ms and still holds this project's store open — ` +
+          `${EXIT_TIMEOUT_MS}ms and still holds this project's store open: ` +
           `stop it with \`kill ${rec.pid}\` and re-run.`,
       );
     }
@@ -386,13 +386,13 @@ Called from `ensureDaemonRunning` immediately before starting a daemon, and from
 Idempotent and self-deleting: after the file is removed no code path reads the legacy form again.
 
 **On timeout the start is refused, not forced.** Proceeding would start a second writer on a DB
-the legacy daemon still holds open — precisely the condition this migration exists to prevent.
+the legacy daemon still holds open: precisely the condition this migration exists to prevent.
 Refusing keeps the single-writer invariant and hands the user an actionable instruction. The
 record file is deliberately left in place so a later attempt retries the same retirement.
 
 **Why this exists.** Without it, a daemon running from the previous version keeps a write handle
 on `.noir/store/<projectId>.db` while the new version starts a second one. That window is
-**bounded** — the stranded daemon exits after `idleTimeoutSec` (default 900s) — but 15 minutes is
+**bounded**: the stranded daemon exits after `idleTimeoutSec` (default 900s): but 15 minutes is
 ample time for a `SQLITE_BUSY`. Retiring the old daemon closes the window instead of waiting it
 out.
 
@@ -401,7 +401,7 @@ out.
 Verified call sites of the record helpers:
 
 - `packages/daemon/src/ensure.ts` (read, clear)
-- `packages/daemon/src/spawn.ts` (read — the detached parent polls for the child's record)
+- `packages/daemon/src/spawn.ts` (read: the detached parent polls for the child's record)
 - `packages/daemon/src/http.ts:191,203-204` (write, read, clear)
 - `packages/cli/src/daemon-client.ts:151` (`probeDaemon`), `:229-252` (`resolveDaemon`)
 - `packages/cli/src/commands/daemon.ts:201,304,344,389,411,441`
@@ -409,7 +409,7 @@ Verified call sites of the record helpers:
 
 **Ordering change required in `probeDaemon`.** It currently reads the record first
 (`daemon-client.ts:151`) and *then* resolves the caller's project (`:189-197`). With per-project
-records, the project id must be resolved **first** — it is the lookup key. This inverts the order
+records, the project id must be resolved **first**: it is the lookup key. This inverts the order
 of those two blocks.
 
 `packages/daemon/src/workspace-*.ts` is **not** affected: `workspace-ensure.ts` never imports the
@@ -417,7 +417,7 @@ project record (verified).
 
 ---
 
-## 5. Part B — `daemon.port` honoured
+## 5. Part B: `daemon.port` honoured
 
 ### 5.1 Wiring
 
@@ -428,7 +428,7 @@ which already binds `opts.port ?? 0` (`http.ts:172`). The CLI passes
 
 Default remains `undefined` → ephemeral, so behaviour without config is unchanged.
 
-### 5.2 Port conflict resolution — a preference, not a demand
+### 5.2 Port conflict resolution: a preference, not a demand
 
 Today a bind failure **rejects** (`http.ts:170-177`, `httpServer.once('error', reject)`), and that
 rejection propagates out of `startHttpServer`. This is new handling, not rewiring.
@@ -438,7 +438,7 @@ When a configured port is already in use:
 1. Catch `EADDRINUSE` from the listen promise.
 2. Retry once with `port: 0` (ephemeral).
 3. Warn on stderr naming the configured port and the actual one.
-4. **Record the port actually bound** — never the requested one.
+4. **Record the port actually bound**: never the requested one.
 
 Rule 4 is the invariant that makes everything else safe: the record always tells the truth about
 where the daemon is listening. Two projects configured to the same port therefore do not fight —
@@ -446,7 +446,7 @@ the second one degrades to ephemeral and says so.
 
 ---
 
-## 6. Part C — HTTP-only auth token
+## 6. Part C: HTTP-only auth token
 
 ### 6.1 Design
 
@@ -455,22 +455,22 @@ the second one degrades to ephemeral and says so.
   outlives its daemon.
 - **Enforcement.** On `/mcp` only. The request must carry `Authorization: Bearer <token>`;
   otherwise `401` with a body naming the remediation. `/health` stays token-free but remains
-  host/origin-validated (`http.ts:129`) — the probe depends on it, and its body carries only
+  host/origin-validated (`http.ts:129`): the probe depends on it, and its body carries only
   `ok`/`pid`/`projectId`/`uptimeSec`, no secret.
 - **CLI.** Reads the token file and sends the header via the verified
   `requestInit` option (§2). Noir owns this client, so the Claude Code header bug does not apply.
-- **Hosts.** **stdio is untouched** — the default path needs no token and no config change. For
+- **Hosts.** **stdio is untouched**: the default path needs no token and no config change. For
   workspace/HTTP mode, `headersHelper` calling a new `noir daemon token` subcommand (which prints
   the token for the current project) keeps the secret out of `.mcp.json`.
 - **Failure is loud.** If a host drops the header, `/mcp` returns 401 and the CLI/host surfaces a
-  message naming the workaround (use stdio, or configure `headersHelper`) — never a silent
+  message naming the workaround (use stdio, or configure `headersHelper`): never a silent
   connection failure.
 
 ### 6.2 What this does and does not defend against
 
 - **Does** stop another local user on a shared machine from reaching the daemon's tool surface
   over loopback.
-- **Does not** stop a same-uid process — it can read the 0600 token file. That is inherent; no
+- **Does not** stop a same-uid process: it can read the 0600 token file. That is inherent; no
   loopback scheme fixes it.
 - **Does not** replace host/origin validation, which stays and continues to block the browser
   vector.
@@ -478,16 +478,16 @@ the second one degrades to ephemeral and says so.
 ### 6.3 Workspace daemon
 
 `startWorkspaceHttpServer` (`workspace-http.ts`) gets the same treatment, using the workspace
-NAME as the token scope key — the token lives at `~/.noir/daemons/<name>.token` alongside the
+NAME as the token scope key: the token lives at `~/.noir/daemons/<name>.token` alongside the
 project records. (A workspace named identically to a 36-char projectId would collide, but project
-ids are UUIDs and workspace names are deliberate user choices — accepted as a documented
+ids are UUIDs and workspace names are deliberate user choices: accepted as a documented
 limitation rather than forking a second token path.) Its `/health` keeps returning `workspace`
 for `probeWorkspaceDaemon`. Retrieval of a *workspace* token is via the file path named in the
 401 body; `noir daemon token` is project-scoped (§6.1).
 
 ---
 
-## 7. Part D — Connect-triggered activation (project path only)
+## 7. Part D: Connect-triggered activation (project path only)
 
 ### 7.1 Change
 
@@ -514,22 +514,22 @@ implementation that routes workspace calls through the new activation path viola
 The benefit is that a daemon starts because a connection was genuinely attempted, rather than as a
 side effect of a command that may not need one. It does **not** remove first-command latency, and
 it is not a prerequisite for Parts A–C. If it proves to add complexity without a measurable win
-during implementation, it is the natural candidate to defer — recorded in §16 acceptance criteria
+during implementation, it is the natural candidate to defer: recorded in §16 acceptance criteria
 as the separable item.
 
 ---
 
-## 8. Part E1 — `.env.example` aligned with the reference
+## 8. Part E1: `.env.example` aligned with the reference
 
 Extend `packages/create/templates/env.example.tmpl`, grouped and commented, to cover what
 `docs/reference/environment.md` already documents:
 
-- **Embedder keys — a closed, fixed set**, listed in `environment.md:51-61` and therefore
+- **Embedder keys: a closed, fixed set**, listed in `environment.md:51-61` and therefore
   nameable literally: `OPENAI_API_KEY` (`context.embedder.kind: remote`, `provider: openai`),
   `VOYAGE_API_KEY` (`provider: voyage`), `COHERE_API_KEY` (`provider: cohere`),
   `OLLAMA_BASE_URL` (`kind: ollama`).
 - **The model provider key is NOT a fixed variable.** `environment.md:42-43` documents it as
-  `model.tiers.<tier>.apiKeyEnv: <NAME>` — the user chooses the variable *name* and Noir reads
+  `model.tiers.<tier>.apiKeyEnv: <NAME>`: the user chooses the variable *name* and Noir reads
   whatever is named. `ANTHROPIC_API_KEY` is the *conventional example*, not a variable Noir looks
   up unconditionally. The template must present it that way (a commented `apiKeyEnv:` example),
   not as a hard-coded key that silently does nothing if set.
@@ -551,7 +551,7 @@ file manual env"*. Init therefore creates **both** files:
 | File | Mode | Purpose |
 |---|---|---|
 | `.noir/.env.example` | `skipIfExists` | committable documentation of the format; stays visible in git |
-| `.noir/.env` | `skipIfExists` | the real, working file — created empty of values, mode **0600** |
+| `.noir/.env` | `skipIfExists` | the real, working file: created empty of values, mode **0600** |
 
 The new entry is a `skipIfExists` manifest entry seeded from the same template body, with all
 values commented out. Constraints:
@@ -560,18 +560,18 @@ values commented out. Constraints:
   parses to an empty overlay, so creating it changes no behaviour.
 - **Mode 0600 at creation.** The file holds tokens the moment the user edits it; creating it
   world-readable and relying on a later `noir doctor` warning is the wrong default. Because
-  `skipIfExists` never touches an existing file, the mode is set on creation only — a user who
+  `skipIfExists` never touches an existing file, the mode is set on creation only: a user who
   chmods it back is warned by the existing doctor advisory (`doctor.ts:328-348`).
 - **Gitignored already.** The managed block carries `/.noir/.env` and `/.noir/.env.*`, with the
   `!/.noir/.env.example` negation keeping the example committable (`ignore-manager.ts:22-26`).
-  Exit criterion E3 verifies these globs actually behave — they are currently untested.
+  Exit criterion E3 verifies these globs actually behave: they are currently untested.
 
 Together with §12.2's tracked-file refusal, this is coherent: init creates the file **untracked**
 and gitignored, which is exactly the condition under which §12.2 will trust it.
 
 ### 8.2 The generated files must be accurate, not just present
 
-Creating the files is not sufficient — the earlier failure was a file that did not exist, but the
+Creating the files is not sufficient: the earlier failure was a file that did not exist, but the
 adjacent risk is a file that exists and misleads. The doctrine header added to both templates must
 match §12.1 verbatim, and the init time is the right moment to state it, because the user reads
 these files **at the moment of configuration**, not in `docs/`.
@@ -582,20 +582,20 @@ never overwritten.
 
 ---
 
-## 9. Part E2 — `.noir/README.md` map
+## 9. Part E2: `.noir/README.md` map
 
 Generated by the manifest as part of init, listing:
 
-1. **What exists now** — the files init just wrote, one line each.
-2. **What appears later** — each runtime directory, the feature that creates it, and the command
+1. **What exists now**: the files init just wrote, one line each.
+2. **What appears later**: each runtime directory, the feature that creates it, and the command
    that triggers it.
-3. **Where to go next** — config, environment variables, and the SDD workflow.
+3. **Where to go next**: config, environment variables, and the SDD workflow.
 
 Chosen over eager directory creation because every runtime directory is gitignored (`store/`,
-`handoff/`, `transcripts/`), so `.gitkeep` files would themselves be ignored — creating the
+`handoff/`, `transcripts/`), so `.gitkeep` files would themselves be ignored: creating the
 directories buys nothing. A README is discoverable, committable, and explains the *why*.
 
-### 9.1 This changes `noir init` output — deliberately
+### 9.1 This changes `noir init` output: deliberately
 
 Two files are added (`.noir/README.md`, `.noir/.env`) and one is rewritten (`.env.example`). The
 parity gates (`packages/adapters/test/claude.test.ts`, `packages/create/test/scaffold.test.ts`)
@@ -609,31 +609,31 @@ assertion.
 
 ---
 
-## 10. Part E3 — Managed ignore list cleanup
+## 10. Part E3: Managed ignore list cleanup
 
 `packages/core/src/ignore-manager.ts:16-32` currently writes:
 
 ```
-/.noir/store/       keep — real
-/.noir/handoff/     keep — real
-/.noir/*.sock       REMOVE — no socket is ever created
-/.noir/daemon.pid   REMOVE — the daemon records under ~/.noir/, never project-local
-/.noir/state/       REMOVE — never created
+/.noir/store/       keep: real
+/.noir/handoff/     keep: real
+/.noir/*.sock       REMOVE: no socket is ever created
+/.noir/daemon.pid   REMOVE: the daemon records under ~/.noir/, never project-local
+/.noir/state/       REMOVE: never created
 /.noir/.env         keep
 /.noir/.env.*       keep
 !/.noir/.env.example keep
-/.noir/transcripts/ keep — real
+/.noir/transcripts/ keep: real
 ```
 
 The three removed entries are already flagged as *vestigial* in
 `docs/roadmap/capability-05-runtime-infrastructure.md`. They are also load-bearing in a subtle
 way: `/.noir/daemon.pid` and `/.noir/*.sock` describe a project-local daemon layout that never
-existed and **does not exist after this slice either** — records are HOME-scoped (§4.1), so no
+existed and **does not exist after this slice either**: records are HOME-scoped (§4.1), so no
 replacement entry is needed. Removal is the correct outcome, not relocation.
 
 ---
 
-## 11. Part E4 — `noir init --upgrade` backfills missing seeds
+## 11. Part E4: `noir init --upgrade` backfills missing seeds
 
 `--upgrade` today emits only `regenerate` + `managedBlock` and deliberately leaves
 `skipIfExists` alone (`scaffold.ts:75-77`). That makes any seed file added to the manifest *after*
@@ -641,7 +641,7 @@ a project's initialization permanently unreachable for that project (§1.6).
 
 ### 11.1 The fix: upgrade emits every mode
 
-`upgrade` runs the full manifest; `skipIfExists` keeps its exact semantics — **create only if
+`upgrade` runs the full manifest; `skipIfExists` keeps its exact semantics: **create only if
 absent, never modify an existing file**. This is safe by construction: the writer cannot clobber
 user content, which is precisely why it is the right mode to run unconditionally.
 
@@ -657,7 +657,7 @@ No new mode is introduced. The three modes keep their meanings:
 
 `CURRENT_SCAFFOLD_VERSION` moves `1.0.0 → 1.1.0`. The file's own contract requires it: *"Bumped
 atomically whenever a manifest entry, template, or migration changes shape"*
-(`scaffold-version.ts:17-19`) — and this slice changes manifest entries and templates.
+(`scaffold-version.ts:17-19`): and this slice changes manifest entries and templates.
 
 `noir doctor` **already** reports scaffold drift (`checkScaffoldVersion`, `doctor.ts:461-485`,
 surfaced as `scaffold: { onDisk, current, drift }`). No new doctor row is needed: the bump alone
@@ -665,7 +665,7 @@ makes every existing project show drift, which is what tells the user to run `--
 the mechanism that closes §1.6 for projects already on disk.
 
 `MIGRATIONS` gains its first real entry, `1.0.0 → 1.1.0`, whose job is the **transformation**
-work that `skipIfExists` cannot do. Its scope is deliberately narrow — it is idempotent and
+work that `skipIfExists` cannot do. Its scope is deliberately narrow: it is idempotent and
 additive:
 
 1. Ensure `.noir/config.yml` carries the pointer comment telling the reader the file is
@@ -684,7 +684,7 @@ already-initialized no-op guard; it does not change `skipIfExists` semantics.
 
 ---
 
-## 12. Part F — `.noir/.env` as the canonical configuration home
+## 12. Part F: `.noir/.env` as the canonical configuration home
 
 ### 12.1 Precedence inversion
 
@@ -710,14 +710,14 @@ Levels 3 and 4 are unchanged in meaning; only their rank relative to `.noir/.env
 **There is deliberately NO "one-shot `VAR=value noir …`" level above the file.** A one-shot
 override is indistinguishable, inside the process, from the inherited shell environment (both
 arrive identically in `process.env`), so honouring it would re-open the very shadowing bug this
-inversion exists to close. The supported per-invocation escape hatch is **level 1** — a
+inversion exists to close. The supported per-invocation escape hatch is **level 1**: a
 `run.profiles.<name>.env` entry, which the run-profile path already merges over the file
 (`run.ts:89`).
 
 **What must not change.** `applyNoirEnv` continues to mutate **only Noir's own `process.env`**
 (and therefore the children Noir spawns). It never writes to a shell profile, never exports to the
 parent, and never persists anything. A user's manual `claude` invocation in a terminal is
-untouched — it sees the shell environment exactly as before. This is what makes the change
+untouched: it sees the shell environment exactly as before. This is what makes the change
 compatible with the "many Claude profiles with different API keys" workflow.
 
 ### 12.2 Refusing a git-tracked `.noir/.env`
@@ -733,25 +733,25 @@ result:                   BASE_URL  = evil              (file wins)
                           → the user's API key is sent to the attacker's endpoint
 ```
 
-The attacker never needs to know the token — redirecting the base URL is sufficient, because the
+The attacker never needs to know the token: redirecting the base URL is sufficient, because the
 token arrives via the fallback.
 
 **Rule.** Before the file is trusted at all:
 
 | Condition | Behaviour |
 |---|---|
-| `.noir/.env` is **untracked** by git | trust — the user's own file |
+| `.noir/.env` is **untracked** by git | trust: the user's own file |
 | `.noir/.env` is **tracked** by git | **refuse to load** + warn with the remedy |
-| not inside a git repository | trust — nothing arrived from a remote |
+| not inside a git repository | trust: nothing arrived from a remote |
 
 Detection: `git ls-files --error-unmatch .noir/.env`, run once per process, bounded, and **never
-throwing** — any git failure (absent binary, exotic setup) degrades to *trust*, matching the
+throwing**: any git failure (absent binary, exotic setup) degrades to *trust*, matching the
 "not a git repository" row rather than silently disabling the env file for everyone.
 
 Refusal message names the remedy explicitly:
 
 ```
-noir: refusing .noir/.env — it is tracked by git. A cloned repository could
+noir: refusing .noir/.env: it is tracked by git. A cloned repository could
 redirect credentials through it. Fix: add `.noir/.env` to .gitignore (the managed
 block already does) and run `git rm --cached .noir/.env`.
 ```
@@ -762,7 +762,7 @@ that deliberately force-added the file or removed the block.
 ### 12.3 Shadowing diagnostics
 
 A stale machine-global export and a deliberate one-shot override are mechanically
-indistinguishable — both arrive as "the real environment" — so under the new rule a shadowed
+indistinguishable: both arrive as "the real environment": so under the new rule a shadowed
 value is silent no longer the failure mode, but a *forgotten* global still surprises users.
 
 - When a key exists in **both** `.noir/.env` and the real environment **with different values**,
@@ -775,7 +775,7 @@ value is silent no longer the failure mode, but a *forgotten* global still surpr
 `sources: Record<string, 'file' | 'env'>`, recorded at the branch that decides the winner, so the
 resolved origin of every key is known without re-reading anything.
 
-New surface — **`noir env`** (read-only, never prints values):
+New surface: **`noir env`** (read-only, never prints values):
 
 ```
 KEY                            VALUE         FROM
@@ -787,8 +787,8 @@ NOIR_PROFILE                   work          environment
 
 Prior art: `atmos describe component <name> --provenance` reports value origin down to file and
 line. `--json` emits the same as `{ok, data:{vars:[{key, source, shadowed, valueLength}]}}`. This
-is the command that answers the maintainer's actual failure — "I edited `.noir/.env` and nothing
-changed" — with a single line instead of a debugging session.
+is the command that answers the maintainer's actual failure: "I edited `.noir/.env` and nothing
+changed": with a single line instead of a debugging session.
 
 ### 12.5 Doctrine consolidation
 
@@ -811,7 +811,7 @@ first and the machine-global files explicitly labelled as shadowing fallbacks.
 
 **Documentation.** Note the split: `docs/reference/config.md`, `cli.md`, and `mcp-tools.md` are
 **whole-file generated** by `scripts/docs-generate.mjs` (`:894-908`, `writeFileSync`). Editing the
-`.md` alone is erased by the next `pnpm docs:generate` — the change must land in the generator
+`.md` alone is erased by the next `pnpm docs:generate`: the change must land in the generator
 (Precedence source `:196-210`, Secrets-policy source `:330-345`). `docs/reference/environment.md`
 is hand-authored and is edited directly.
 
@@ -837,7 +837,7 @@ is hand-authored and is edited directly.
 `process.env['${ANTHROPIC_API_KEY}']` → `undefined` → a provider with no key, silently. Only
 `run.profiles.<name>.env` interpolates (`run-profiles.ts:36`). Three docs currently say otherwise
 (`config.md:129-130`, `environment.md:108`, `privacy.md:38`) while `environment.md:40-44` and
-`model/src/types.ts:125-128` state it correctly — so the reference page contradicts itself.
+`model/src/types.ts:125-128` state it correctly: so the reference page contradicts itself.
 
 ### 12.6 Not changing
 
@@ -845,17 +845,17 @@ is hand-authored and is edited directly.
   add `NOIR_DAEMON_DIR` (§4.4). Case-insensitivity on Windows is a separate defect to record.
 - **The 0600 permission advisory stays**, and gains teeth: `noir init` now creates the file at
   0600 (§8), so the advisory should fire only for a file the user chmod-ed themselves.
-- **Node `--env-file` parsing dialect stays** — only the precedence rank changes.
+- **Node `--env-file` parsing dialect stays**: only the precedence rank changes.
 
 ---
 
-## 13. Part G — `noir run` credential diagnostics
+## 13. Part G: `noir run` credential diagnostics
 
 ### 13.1 The auth-failure branch covers only one credential shape
 
 `run.ts:135-146` explains the failure only when `process.env.ANTHROPIC_API_KEY` is set
 (`run.ts:140`). A user on a custom gateway sets `ANTHROPIC_AUTH_TOKEN` + `ANTHROPIC_BASE_URL` and
-**never sees the branch**, so the message reduces to "run `/login`" — the wrong remedy for a
+**never sees the branch**, so the message reduces to "run `/login`": the wrong remedy for a
 non-interactive API-key setup.
 
 Broaden the branch to any recognised credential shape (`ANTHROPIC_API_KEY`,
@@ -867,7 +867,7 @@ variable is set, and whether it came from `.noir/.env` or the environment (§12.
 The current text says *"unset it … if you meant to use your subscription"*. Once the key lives in
 `.noir/.env`, `applyNoirEnv` re-injects it every invocation, so shell-level unsetting does
 nothing. When provenance says the key came from the file, the message must say so and name the
-file — otherwise the guidance actively misleads.
+file: otherwise the guidance actively misleads.
 
 ### 13.3 Running outside an initialized project
 
@@ -876,7 +876,7 @@ file — otherwise the guidance actively misleads.
 project credentials ⇒ a login error with no mention of the real gap.
 
 When `noir run` executes where `.noir/` (or `.noir/.env`) is absent, emit one informational line
-on stderr — suppressed under `--json` — offering `noir init` and naming `.noir/.env` as the place
+on stderr: suppressed under `--json`: offering `noir init` and naming `.noir/.env` as the place
 project credentials live. Informational only: never a failure, never a prompt.
 
 ### 13.4 Never print values
@@ -897,12 +897,12 @@ Every message added here names variables and files, never values. Consistent wit
   from ADR-0009 is untouched.
 - **No new network surface.** The daemon still binds `127.0.0.1` only; the token narrows access
   to it, it does not expose anything new.
-- **Migration never signals a foreign process.** `pidAlive` proves liveness, not identity — after a
+- **Migration never signals a foreign process.** `pidAlive` proves liveness, not identity: after a
   reboot, pids are reallocated from a low counter, so a record left by a force-reboot can name an
   unrelated process that is alive now. The migration therefore treats a record whose `startedAt`
   predates the current boot (`rec.startedAt < Date.now() - uptime*1000`) as stale: it deletes the
   record without signalling. A read failure (root-owned file, EMFILE) is likewise refused, not
-  collapsed into "no pid" and deleted — only a record whose bytes were read but do not parse is
+  collapsed into "no pid" and deleted: only a record whose bytes were read but do not parse is
   deleted. On SIGTERM timeout the start is refused and the file is left in place (§4.5, A5).
 
 ---
@@ -919,7 +919,7 @@ This is a **breaking change to the on-disk record layout**. Per the release deci
 - Release notes must state the manual steps explicitly. `docs/how-to/releasing.md` and
   `CHANGELOG.md` carry the upgrade note.
 
-The **`.noir/.env` precedence inversion (§12.1) is a second, independent breaking change** — it
+The **`.noir/.env` precedence inversion (§12.1) is a second, independent breaking change**: it
 alters which value wins, so a user who has the same key in both places will observe a different
 effective configuration after upgrading. For the maintainer this is the *fix* (their project file
 starts being honoured), but it must be called out rather than discovered:
@@ -928,7 +928,7 @@ starts being honoured), but it must be called out rather than discovered:
 - `docs/reference/environment.md` carries a short "changed in 1.14.0" note beside the chain.
 - The shadowing warning (§12.3) is the runtime signal: a user whose file now overrides a global
   export sees one line saying so, on the first command they run.
-- No automatic migration is possible or desirable — Noir cannot know whether a duplicated key is
+- No automatic migration is possible or desirable: Noir cannot know whether a duplicated key is
   a mistake or a deliberate override, and rewriting a user's `.zshrc` or `.noir/.env` is out of
   scope. Detection plus a clear message is the whole remedy.
 
@@ -945,22 +945,22 @@ scaffold-drift row prompts it.
 | A2 | No `wrongProject` branch remains in `ensure.ts` or `commands/daemon.ts`. |
 | A3 | `noir daemon stop` in project A signals only A's daemon and leaves B's record and process untouched. |
 | A4 | A legacy `~/.noir/daemon.json` is read once: its live daemon receives SIGTERM, the file is removed, and a second invocation is a no-op. |
-| A5 | If the legacy daemon does not exit within the bound, the start is **refused** with an actionable message and the legacy record is left in place — no second daemon is started against the held DB. |
+| A5 | If the legacy daemon does not exit within the bound, the start is **refused** with an actionable message and the legacy record is left in place: no second daemon is started against the held DB. |
 | B1 | With `daemon.port: 4321` free, the daemon binds 4321 and the record says 4321. |
 | B2 | With 4321 occupied, the daemon binds an ephemeral port, warns, and the record says the **actual** port. |
 | B3 | With no `daemon.port`, behaviour is byte-identical to today. |
 | C1 | `GET /health` answers without a token; a `/mcp` request without `Authorization` returns 401. |
 | C2 | The CLI's tool calls succeed against a token-protected daemon. |
 | C3 | The token file is mode 0600 and is regenerated on each daemon start. |
-| C4 | A stdio host session is unaffected — no token, no config change, no new failure mode. |
+| C4 | A stdio host session is unaffected: no token, no config change, no new failure mode. |
 | C5 | A 401 surfaces an actionable message, not a silent failure. |
 | D1 | With a configured port and no daemon, the first command connects, fails, spawns, reconnects, and succeeds. |
 | D2 | The reconnect backoff is bounded and gives up with a clear error. |
-| D3 | `withWorkspaceDaemon` behaviour is unchanged — still probe-only, never auto-starts. |
-| E1 | `.env.example` covers the fixed embedder keys, presents the model provider key as an `apiKeyEnv:` example rather than a hard-coded variable, and documents `NOIR_PROFILE` plus the update kill-switches — all commented, with a pointer to `environment.md`. |
+| D3 | `withWorkspaceDaemon` behaviour is unchanged: still probe-only, never auto-starts. |
+| E1 | `.env.example` covers the fixed embedder keys, presents the model provider key as an `apiKeyEnv:` example rather than a hard-coded variable, and documents `NOIR_PROFILE` plus the update kill-switches: all commented, with a pointer to `environment.md`. |
 | E2 | `noir init` writes `.noir/README.md`; every existing entry's bytes are unchanged. |
 | E3 | `.gitignore`'s managed block no longer contains `/.noir/*.sock`, `/.noir/daemon.pid`, or `/.noir/state/`, and `.env.*` / `!.env.example` glob behaviour is covered by a test. |
-| E4 | `noir init` creates `.noir/.env` with mode **0600**, containing only comments — loading it yields an empty overlay, so behaviour is unchanged. |
+| E4 | `noir init` creates `.noir/.env` with mode **0600**, containing only comments: loading it yields an empty overlay, so behaviour is unchanged. |
 | E5 | On an existing project, `noir init --upgrade` creates every absent `skipIfExists` entry (including `.env`, `.env.example`, `README.md`) and **modifies no existing file** except through `regenerate`/`managedBlock`. |
 | E6 | `--upgrade` on a project whose `.noir/.env` already exists leaves it byte-identical (a user's tokens are never touched). |
 | E7 | `CURRENT_SCAFFOLD_VERSION` is `1.1.0`, `MIGRATIONS` has a real `1.0.0 → 1.1.0` entry, and `noir doctor` reports drift for a `1.0.0` project. |
@@ -968,12 +968,12 @@ scaffold-drift row prompts it.
 | **F1** | A key defined in `.noir/.env` **wins** over the same key in the real environment. |
 | **F2** | A key **not** in `.noir/.env` is still read from the real environment (fallback intact). |
 | **F3** | A **git-tracked** `.noir/.env` is refused with the remediation message; untracked is trusted; no git repository → trusted; any git failure → trusted. |
-| **F4** | When a key is set in both places with different values, one stderr line names the **key** and the winner — never a value. |
+| **F4** | When a key is set in both places with different values, one stderr line names the **key** and the winner: never a value. |
 | **F5** | `noir env` lists every resolved key with its winning source and any shadowed source; `--json` emits the structured form; **no value is ever printed**. |
-| **F6** | `applyNoirEnv` mutates only Noir's own process environment — a sibling `claude` invocation in the same shell sees the unmodified shell environment. |
+| **F6** | `applyNoirEnv` mutates only Noir's own process environment: a sibling `claude` invocation in the same shell sees the unmodified shell environment. |
 | **F7** | `run.profiles.<name>.env` still merges **over** the result (the documented exception is preserved). |
 | **F8** | `apiKeyEnv` is documented as a bare NAME everywhere; no doc shows `apiKeyEnv: ${VAR}`. |
-| **F9** | The generated pages (`config.md`, `cli.md`, `mcp-tools.md`) are correct **after** `pnpm docs:generate` — verified by regenerating and diffing, not by reading the `.md`. |
+| **F9** | The generated pages (`config.md`, `cli.md`, `mcp-tools.md`) are correct **after** `pnpm docs:generate`: verified by regenerating and diffing, not by reading the `.md`. |
 | **G1** | A failed `noir run` auth with `ANTHROPIC_AUTH_TOKEN`/`ANTHROPIC_BASE_URL` set produces the credential guidance (it does not today). |
 | **G2** | When the credential came from `.noir/.env`, the message names the file, so the advice is actionable. |
 | **G3** | `noir run` outside an initialized project emits one informational stderr line offering `noir init`; suppressed under `--json`; never fails the run. |
@@ -985,7 +985,7 @@ part that repairs projects already on disk.
 
 ---
 
-## 17. Testing plan (offline — never needs network or a key)
+## 17. Testing plan (offline: never needs network or a key)
 
 - **Isolation (A1–A3).** Two project fixtures in one tmp HOME; assert both records coexist, that
   A's activity never removes B's record, and that `daemon stop` in A leaves B's record and pid.
@@ -993,7 +993,7 @@ part that repairs projects already on disk.
 - **Migration (A4–A5).** Seed a fake legacy record pointing at a spawned sleeping child; assert
   SIGTERM is delivered, the file is removed, and the second call is a no-op. Separately, point the
   record at a child that **ignores SIGTERM**; assert the call rejects with the actionable message,
-  that the legacy record still exists, and that **no daemon was started** — the two-writer
+  that the legacy record still exists, and that **no daemon was started**: the two-writer
   regression guard for the timeout path.
 - **Port (B1–B3).** Bind a socket to occupy a port, then start with it configured; assert the
   fallback, the warning, and the truthful record. Assert the unset case is unchanged.
@@ -1020,17 +1020,17 @@ part that repairs projects already on disk.
   (assert the value string is absent from all output); assert `noir env` and its `--json` form
   report source per key and never emit a value.
 - **Non-disturbance (F6).** Assert that after `applyNoirEnv`, a spawned sibling process started
-  from the *unmodified* ambient env does not see the overlay — i.e. the overlay is confined to
+  from the *unmodified* ambient env does not see the overlay: i.e. the overlay is confined to
   Noir's own tree.
 - **Generated-docs integrity (F9).** Run `pnpm docs:generate` in CI order and assert the generated
-  pages contain the new precedence text — the test that would have caught editing the `.md`
+  pages contain the new precedence text: the test that would have caught editing the `.md`
   directly.
 - **`noir run` diagnostics (G1–G4).** Drive the failure branch with each credential shape and
   assert the guidance appears; assert the `.noir/.env` source is named when applicable; assert the
   uninitialized-project notice goes to stderr and is absent under `--json`; assert no output
-  contains a value. Follows the existing `run.test.ts` mocking pattern — no real host is spawned.
+  contains a value. Follows the existing `run.test.ts` mocking pattern: no real host is spawned.
 
-Every test uses `NOIR_DAEMON_DIR` against a tmp HOME — no real `~/.noir`, no ports left bound, no
+Every test uses `NOIR_DAEMON_DIR` against a tmp HOME: no real `~/.noir`, no ports left bound, no
 network. The git-tracked tests create a throwaway repo under the tmp root and never touch the
 Noir repo's own git state.
 
@@ -1040,25 +1040,25 @@ Noir repo's own git state.
 
 ### 18.1 The missing page: how to configure `.noir/.env`
 
-`.noir/.env` is referenced in six user-facing files and documented **in none of them** — every
+`.noir/.env` is referenced in six user-facing files and documented **in none of them**: every
 mention is an aside inside a page about something else (`environment.md:6, :25, :109-112`,
 `config.md:9, :130`, `getting-started.md:224`, `clickup.md:28-32`, `host-profiles.md:70`,
 `privacy.md:38`). There is no page a user can be pointed to for "how do I configure this project".
 
 **New page: `docs/how-to/configure-env.md`.** It is the canonical how-to and covers:
 
-1. **What the file is for** — project-scoped configuration and secrets; what belongs there and
+1. **What the file is for**: project-scoped configuration and secrets; what belongs there and
    what does not (theme/UI preferences, machine-wide values).
-2. **Creating it** — it now exists after `noir init`; otherwise create it by hand and
+2. **Creating it**: it now exists after `noir init`; otherwise create it by hand and
    `chmod 600`. Include the one-liner.
-3. **The precedence chain** — §12.1 verbatim, with the shadowing rule called out.
-4. **Seeing what is in effect** — `noir env`, with example output, and `noir doctor`'s
+3. **The precedence chain**: §12.1 verbatim, with the shadowing rule called out.
+4. **Seeing what is in effect**: `noir env`, with example output, and `noir doctor`'s
    provenance rows.
-5. **Common recipes** — integration token (ClickUp), model provider key (and the `apiKeyEnv`
+5. **Common recipes**: integration token (ClickUp), model provider key (and the `apiKeyEnv`
    NAME-not-interpolation trap), embedder key, run-profile host selection, `NOIR_PROFILE`.
-6. **Safety** — gitignored by the managed block, 0600, the deny-list, and why a git-tracked
+6. **Safety**: gitignored by the managed block, 0600, the deny-list, and why a git-tracked
    `.noir/.env` is refused.
-7. **Troubleshooting** — "I edited it and nothing changed" (shadowing), "still `no-token`"
+7. **Troubleshooting**: "I edited it and nothing changed" (shadowing), "still `no-token`"
    (daemon env is a spawn-time snapshot → restart), "my repo's `.noir/.env` was ignored"
    (tracked-file refusal).
 
@@ -1067,7 +1067,7 @@ block, `config.md`'s Secrets policy (via the generator), and the clickup how-to.
 
 ### 18.2 Existing pages to correct
 
-The itemised defect list is **§12.5** — 14 doc/template items plus the 9 skills. Two structural
+The itemised defect list is **§12.5**: 14 doc/template items plus the 9 skills. Two structural
 rules apply and are easy to get wrong:
 
 - **`docs/reference/config.md`, `cli.md`, `mcp-tools.md` are whole-file generated** by
@@ -1078,24 +1078,24 @@ rules apply and are easy to get wrong:
 
 ### 18.3 Pages this slice adds or changes for the daemon work
 
-- `docs/reference/config.md` (generator) — `daemon.port` loses "not yet wired"; document the
+- `docs/reference/config.md` (generator): `daemon.port` loses "not yet wired"; document the
   preference-not-demand semantics and the ephemeral fallback, and remove it from the "Honest
   notes" list of unconsumed fields (`config.md:136-138`).
-- `docs/reference/environment.md` — add `NOIR_DAEMON_DIR`; mark `NOIR_DAEMON_JSON` legacy-only;
+- `docs/reference/environment.md`: add `NOIR_DAEMON_DIR`; mark `NOIR_DAEMON_JSON` legacy-only;
   add `NOIR_SKIP_NODE_PROVISION`; document the http-transport token.
-- `docs/explanation/architecture.md` — the per-project record layout, the token, **and the
+- `docs/explanation/architecture.md`: the per-project record layout, the token, **and the
   `.noir/` inventory that currently omits `.env`/`.env.example`** (`:46, :54`).
-- `docs/how-to/shared-workspaces.md` — the workspace token and `headersHelper` guidance.
-- `docs/how-to/installation.md` — the manifest/upgrade behaviour (§11).
+- `docs/how-to/shared-workspaces.md`: the workspace token and `headersHelper` guidance.
+- `docs/how-to/installation.md`: the manifest/upgrade behaviour (§11).
 
 ### 18.4 Roadmap, decision records, release
 
-- `docs/roadmap/capability-05-runtime-infrastructure.md` — move the reconciled `DONE-WHEN` items
+- `docs/roadmap/capability-05-runtime-infrastructure.md`: move the reconciled `DONE-WHEN` items
   out of "Gap / roadmap delta".
-- `docs/roadmap/backlog.md` — resolve the ignore-list cleanup entry; record every deferral.
-- `docs/decisions/0010-*.md` — the daemon ADR (§20).
-- `docs/decisions/0011-*.md` — the `.noir/.env` precedence + doctrine ADR (§20).
-- `CHANGELOG.md` + `docs/how-to/releasing.md` — the upgrade note and the **Changed** entry for the
+- `docs/roadmap/backlog.md`: resolve the ignore-list cleanup entry; record every deferral.
+- `docs/decisions/0010-*.md`: the daemon ADR (§20).
+- `docs/decisions/0011-*.md`: the `.noir/.env` precedence + doctrine ADR (§20).
+- `CHANGELOG.md` + `docs/how-to/releasing.md`: the upgrade note and the **Changed** entry for the
   precedence inversion (§15).
 
 ### 18.5 Accuracy rule for every page touched
@@ -1110,24 +1110,24 @@ a confidently wrong sentence, so each page is verified against the source it des
 
 ## 19. Implementation slices (for the plan phase)
 
-1. **A — records.** `project-record.ts`, `NOIR_DAEMON_DIR`, consumer updates, `probeDaemon`
+1. **A: records.** `project-record.ts`, `NOIR_DAEMON_DIR`, consumer updates, `probeDaemon`
    reordering, guard removal, migration, tests.
-2. **B — port.** Config describe, threading, `EADDRINUSE` fallback, tests.
-3. **C — token.** Generation, 0600 file, `/mcp` enforcement, CLI `requestInit`, `noir daemon
+2. **B: port.** Config describe, threading, `EADDRINUSE` fallback, tests.
+3. **C: token.** Generation, 0600 file, `/mcp` enforcement, CLI `requestInit`, `noir daemon
    token`, workspace parity, tests.
-4. **D — activation.** Connect-first ordering, bounded retry, workspace-path guard test.
-5. **E — init completeness.** `.env.example` doctrine + full variable set, `.noir/.env` creation
+4. **D: activation.** Connect-first ordering, bounded retry, workspace-path guard test.
+5. **E: init completeness.** `.env.example` doctrine + full variable set, `.noir/.env` creation
    at 0600, `.noir/README.md`, ignore-list cleanup, parity-gate updates.
-6. **E4 — upgrade backfill.** Full-manifest emission on `--upgrade`, `CURRENT_SCAFFOLD_VERSION`
+6. **E4: upgrade backfill.** Full-manifest emission on `--upgrade`, `CURRENT_SCAFFOLD_VERSION`
    `1.0.0 → 1.1.0`, the first real `1.0.0 → 1.1.0` migration, dry-run reporting, tests. Depends
    on 5 (it backfills what 5 adds).
-7. **F — `.noir/.env` consolidation.** Precedence inversion, tracked-file refusal, shadowing
+7. **F: `.noir/.env` consolidation.** Precedence inversion, tracked-file refusal, shadowing
    diagnostics, provenance (`loadNoirEnv.sources` + `noir env`), denylist addition. The
    highest-risk slice: it changes a documented contract, so it lands with its ADR.
-8. **F-docs — doctrine consolidation.** The 9 skills, the 14 doc/template items, and the
+8. **F-docs: doctrine consolidation.** The 9 skills, the 14 doc/template items, and the
    `scripts/docs-generate.mjs` generator edits. Depends on 7 (the wording must match the shipped
    rule).
-9. **G — `noir run` diagnostics.** Broadened auth branch, `.noir/.env` sourcing, uninitialized
+9. **G: `noir run` diagnostics.** Broadened auth branch, `.noir/.env` sourcing, uninitialized
    notice. Depends on 7 for provenance.
 10. **Docs accuracy audit + roadmap sync + ADR-0010/0011 + release notes.**
 
@@ -1167,14 +1167,14 @@ does not exist. They are one release unit even though they are two commits.
 8. **Runtime directories are documented, not created eagerly.** They are gitignored, so
    `.gitkeep` would be ignored too; a README explains the map instead.
 9. **`--upgrade` emits every manifest mode, rather than gaining a new "backfill" mode.**
-   `skipIfExists` already means "create only if absent, never modify" — running it during upgrade
+   `skipIfExists` already means "create only if absent, never modify": running it during upgrade
    is safe by construction, so a fourth mode would add surface without adding safety.
 10. **`.noir/.env` wins over the real environment for the keys it defines.** Project scope beats
     machine scope for project configuration; the research finds this in Claude Code's own settings
     model and in 1Password's documented `op run` precedence. Fill-only-unset is the correct rule
     for *ambient* overrides, not for a project's own declared configuration.
 11. **`applyNoirEnv` stays confined to Noir's own process tree.** The precedence change is a
-    *read* ordering, never a write-back — that is what keeps a user's manual, multi-profile
+    *read* ordering, never a write-back: that is what keeps a user's manual, multi-profile
     `claude` invocations working unchanged.
 12. **A git-tracked `.noir/.env` is refused.** Inverting precedence creates a credential-
     exfiltration path (redirect the base URL, harvest the token via the fallback); the tracked
@@ -1182,11 +1182,11 @@ does not exist. They are one release unit even though they are two commits.
     feature. Detection failure degrades to *trust*, so an exotic git setup cannot silently disable
     the env file.
 13. **Provenance is a first-class surface (`noir env`), not a debugging burden.** The maintainer's
-    failure was "I edited the file and nothing changed" — a question only a source-reporting
+    failure was "I edited the file and nothing changed": a question only a source-reporting
     command can answer. Prior art: `atmos describe component --provenance`.
 14. **Generated docs are fixed in the generator.** `config.md`/`cli.md`/`mcp-tools.md` are
     whole-file emitted by `scripts/docs-generate.mjs`; a `.md`-only edit is silently reverted,
     so the acceptance test regenerates and diffs rather than reading the file.
-15. **No value is ever printed** by any diagnostic added here — the existing "names only, never
+15. **No value is ever printed** by any diagnostic added here: the existing "names only, never
     values" contract (`doctor.ts:329`) is extended to `noir env`, the shadowing warning, and the
     `noir run` messages.

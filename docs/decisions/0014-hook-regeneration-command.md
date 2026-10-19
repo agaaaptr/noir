@@ -1,4 +1,4 @@
-# ADR-0014 — Host hook regeneration via an explicit `noir hooks sync` command
+# ADR-0014: Host hook regeneration via an explicit `noir hooks sync` command
 
 - **Status:** Accepted
 - **Date:** 2026-10-15
@@ -7,22 +7,22 @@
 
 The scaffold emits each host's lifecycle hook (the `noir hook` dispatcher wiring) through the
 adapter's `emitHooks` seam. For the two hosts whose hook config is a user-owned JSON file that
-must merge with keys Noir does not own — claude's `.claude/settings.local.json` and gemini's
-`.gemini/settings.json` — the manifest tags the entry `mergeJson`. `mergeJson` is deliberately
+must merge with keys Noir does not own: claude's `.claude/settings.local.json` and gemini's
+`.gemini/settings.json`: the manifest tags the entry `mergeJson`. `mergeJson` is deliberately
 excluded from the upgrade and sync emits (`EMITTED_IN` in `scaffold.ts` sets
 `mergeJson: { sync: false, upgrade: false }`) because:
 
 1. the file is user-owned: it also carries `permissions` / `env` / `enabledPlugins` that a
    wholesale rewrite would destroy, and
-2. a re-merge would resurrect a hook the user deliberately removed — the dedup marker
+2. a re-merge would resurrect a hook the user deliberately removed: the dedup marker
    (` hook`) is gone after removal, so an unconditional re-emit would re-add it.
 
 The write-once contract that follows from this is currently expressed only in a code comment
 (`scaffold.ts`), not in any decision document.
 
-That contract leaves one genuine gap: once the hook entry is removed — by the user, or because
+That contract leaves one genuine gap: once the hook entry is removed: by the user, or because
 the project was initialized before the hook shipped and the claude/gemini migration refuses to
-create a missing file (`createIfMissing: false`) — **no command can restore it.** The only way
+create a missing file (`createIfMissing: false`): **no command can restore it.** The only way
 back is hand-editing the host config. `cursor` does not have this gap: its hook file is
 `regenerate`-mode, so `noir sync` rewrites it on every run.
 

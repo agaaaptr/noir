@@ -1,4 +1,4 @@
-// F1 — scaffold engine dryRun surfaced onto the CLI (`--dry-run` / `--preview`).
+// F1: scaffold engine dryRun surfaced onto the CLI (`--dry-run` / `--preview`).
 //
 // Drives the REAL bin program (`createProgram().parseAsync`) against a fresh
 // temp dir and asserts the scaffold engine's existing dryRun support is exposed
@@ -75,7 +75,7 @@ describe('noir init --dry-run (F1 dryRun surfacing)', () => {
     expect(r.stderr).toContain('.noir/project.id');
     expect(r.stderr).toContain('CLAUDE.md');
 
-    // No files were written — the target dir is still empty.
+    // No files were written: the target dir is still empty.
     expect(readdirSync(root)).toEqual([]);
     // Explicit negative: no .noir/ store, no root pointer, no skill dir.
     for (const rel of ['.noir', '.mcp.json', 'CLAUDE.md', '.gitignore', '.claude']) {
@@ -116,7 +116,7 @@ describe('noir init --dry-run (F1 dryRun surfacing)', () => {
 // planned writes: "Noir will re-emit this pointer file" and "Noir will replace
 // a doc seed you never edited" are different news and read differently.
 
-describe('reportPlannedWrites — the refresh section', () => {
+describe('reportPlannedWrites: the refresh section', () => {
   function result(over: Partial<ScaffoldResult>): ScaffoldResult {
     return {
       written: [],
@@ -172,7 +172,7 @@ describe('reportPlannedWrites — the refresh section', () => {
     expect(out).toContain('Would refresh (unedited older copy):');
     expect(out).toContain('  .noir/.env.example');
     expect(out).toContain('  .noir/rules/RULES.md');
-    // A refreshed path is named under the refresh heading only — it is not also
+    // A refreshed path is named under the refresh heading only: it is not also
     // listed as a plain planned write above it.
     expect(out.indexOf('  .noir/.env.example')).toBeGreaterThan(out.indexOf('Would refresh'));
   });

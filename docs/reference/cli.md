@@ -6,7 +6,7 @@
 ```
 Usage: noir [options] [command]
 
-Noir — discipline, context, and memory layer for agentic CLIs.
+Noir: discipline, context, and memory layer for agentic CLIs.
 
 Options:
   -v, --version                     output the version number
@@ -55,8 +55,8 @@ Commands:
                                     patch-release flow
   tui                               interactive Ink dashboard (host · phase ·
                                     daemon + /command dispatch)
-  palette                           fuzzy command palette — run any noir
-                                    command (Ink)
+  palette                           fuzzy command palette: run any noir command
+                                    (Ink)
   run [options] [prompt...]         ask the host agent a question and print the
                                     answer
 ```
@@ -104,7 +104,7 @@ bootstrap the Noir AI layer in a new or empty directory
 | `--force` | re-scaffold even if already initialized (bypasses the already-init no-op) |
 | `--dry-run` | report planned writes without writing anything |
 | `--preview` | alias for --dry-run |
-| `--host <id>` | target agentic CLI (default: claude) — drives host-side emission (choices: "claude", "agents-md", "gemini", "cursor", "opencode") |
+| `--host <id>` | target agentic CLI (default: claude): drives host-side emission (choices: "claude", "agents-md", "gemini", "cursor", "opencode") |
 
 ### noir sync
 
@@ -409,7 +409,7 @@ start a new workflow task
 |---|---|
 | `--slug <slug>` | task slug |
 | `--mode <mode>` | full \| quick |
-| `--class <taskClass>` | task class (feature/epic/enhancement/bugfix/spike/quick-task/refactor) — drives the PRD gate |
+| `--class <taskClass>` | task class (feature/epic/enhancement/bugfix/spike/quick-task/refactor): drives the PRD gate |
 
 ### noir task status
 
@@ -568,7 +568,7 @@ interactive Ink dashboard (host · phase · daemon + /command dispatch)
 
 **Usage:** `noir palette [options]`
 
-fuzzy command palette — run any noir command (Ink)
+fuzzy command palette: run any noir command (Ink)
 
 ### noir run
 

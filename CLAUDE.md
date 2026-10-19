@@ -6,10 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-**Noir** is a host-agnostic, spec-driven-workflow + native-context + cross-session-memory **layer** for agentic CLIs — *not* an LLM runtime (bring your own agent). It makes an agentic CLI behave like a disciplined spec-driven engineer: escapable spec→plan→implement→verify lifecycle, hybrid retrieval so the host queries snippets instead of re-reading files, and typed cross-session memory.
+**Noir** is a host-agnostic, spec-driven-workflow + native-context + cross-session-memory **layer** for agentic CLIs: *not* an LLM runtime (bring your own agent). It makes an agentic CLI behave like a disciplined spec-driven engineer: escapable spec→plan→implement→verify lifecycle, hybrid retrieval so the host queries snippets instead of re-reading files, and typed cross-session memory.
 
 - **11 packages** in a pnpm monorepo: `@noir-ai/{core,store,workflow,skills,daemon,adapters,cli,context,model,memory,create}`.
-- **Host-agnostic**: 5 adapters (`claude` default, `agents-md`, `gemini`, `cursor`, `opencode`) via `resolveAdapter(host)`; universal `AGENTS.md` emitter. `claude` is the regression anchor — bare `noir init` is byte-identical.
+- **Host-agnostic**: 5 adapters (`claude` default, `agents-md`, `gemini`, `cursor`, `opencode`) via `resolveAdapter(host)`; universal `AGENTS.md` emitter. `claude` is the regression anchor: bare `noir init` is byte-identical.
 - **No plugin / marketplace**: ships only native `noir-` builtin skills (+ opt-in integrations like `noir-clickup`). The predecessor `noir-workflow` plugin was removed (see ADR-0002).
 - **Local-first**: embedded SQLite store (`better-sqlite3` + FTS5 + `sqlite-vec`), local 384-dim embeddings by default, zero API key required.
 
@@ -43,16 +43,16 @@ Key invariants to respect:
 - **The daemon is the single writer.** Store-touching CLI commands are MCP clients to it (`ensureDaemonRunning` + `@modelcontextprotocol/client`). Never open the store for writes from two processes.
 - **`.noir/` is the single source of truth**, keyed by canonical `ProjectId` (never a filesystem path). Generated host artifacts are pointers/transforms, never drifting copies.
 - **No silent paid calls.** The model layer resolves the provider ONLY from explicit config (`req.provider || cfg.defaultProvider`), never from env-var presence. No provider/key ⇒ `null`/`{ok:false}` before an SDK client is built. Memory consolidation is gated on `memory.consolidation.enabled` and refuses cleanly without a provider.
-- **Agent loops are impossible by construction** — the model request type has no `tools`/`stream` parameter. Tool use lives in the host CLI, not in Noir's model.
-- **Provider-explicit + local-first** — remote embedders and model calls are opt-in, never default.
+- **Agent loops are impossible by construction**: the model request type has no `tools`/`stream` parameter. Tool use lives in the host CLI, not in Noir's model.
+- **Provider-explicit + local-first**: remote embedders and model calls are opt-in, never default.
 
 ## Conventions
 
 - **Conventional Commits** (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`), **commit per scope** (`feat(skills): …`), scope per package.
-- **Keep commits local** — push only on explicit user request. Commits stay on `develop` until told otherwise.
-- **Test suite runs offline/free** — never add a test that needs a network call or paid key.
-- **Docs reflect shipped reality** — when code changes, update the relevant `docs/` at the same checkpoint. No documentation drift.
-- **Spec-first for large changes** — brainstorm → spec → plan → implement → review (dogfooded SDD). Specs/plans live in `docs/internal/{specs,plans}`; ADRs in `docs/decisions/`.
+- **Keep commits local**: push only on explicit user request. Commits stay on `develop` until told otherwise.
+- **Test suite runs offline/free**: never add a test that needs a network call or paid key.
+- **Docs reflect shipped reality**: when code changes, update the relevant `docs/` at the same checkpoint. No documentation drift.
+- **Spec-first for large changes**: brainstorm → spec → plan → implement → review (dogfooded SDD). Specs/plans live in `docs/internal/{specs,plans}`; ADRs in `docs/decisions/`.
 
 ## Developer vs agent guidance
 
@@ -62,16 +62,16 @@ Key invariants to respect:
 
 ## Do not
 
-- Don't reintroduce a plugin / marketplace / `noir-workflow` surface — it was removed on purpose, because Noir ships only native `noir-` builtin skills and never an installed plugin/marketplace (see ADR-0002).
+- Don't reintroduce a plugin / marketplace / `noir-workflow` surface: it was removed on purpose, because Noir ships only native `noir-` builtin skills and never an installed plugin/marketplace (see ADR-0002).
 - Don't commit secrets (API keys, npm tokens) or `.superpowers/` (local session scratch; gitignored).
 - Don't push to `main` without explicit go-ahead.
-- Don't require `noir init` to have been run in this repo — Noir is not yet mature/initialized here; the plugin stack (agentmemory, context-mode, superpowers) is the current context layer.
-- Don't write internal jargon — slice/task codes, roadmap codenames, or bare spec/plan/ADR section citations — in comments or docs; explain the why in self-contained plain language.
-- Don't dress comments and docs in decoration — banners drawn in punctuation, step-by-step narration, decorative emoji/icons, bare TODO/FIXME, or long unbroken comment blocks; write the reason instead. Enforced by `noir doctor`'s output-hygiene check and `noir skills lint` (see AGENTS.md).
+- Don't require `noir init` to have been run in this repo: Noir is not yet mature/initialized here; the plugin stack (agentmemory, context-mode, superpowers) is the current context layer.
+- Don't write internal jargon: slice/task codes, roadmap codenames, or bare spec/plan/ADR section citations: in comments or docs; explain the why in self-contained plain language.
+- Don't dress comments and docs in decoration: banners drawn in punctuation, step-by-step narration, decorative emoji/icons, bare TODO/FIXME, or long unbroken comment blocks; write the reason instead. Enforced by `noir doctor`'s output-hygiene check and `noir skills lint` (see AGENTS.md).
 
 ## Patch release flow (beta → stable)
 
-Noir ships two channels in parallel from git tags: `vX.Y.Z-beta.N` (pushed on `develop` → npm `beta` dist-tag) and `vX.Y.Z` (pushed on `main` → npm `latest` dist-tag). The same `.github/workflows/release.yml` runs both; the channel is detected from the tag name pattern, not the branch. The `release` GitHub Environment has a **required reviewer = agaaaptr** — every tag push pauses the `publish` job waiting for manual approval in the GitHub Actions UI (Claude cannot approve it).
+Noir ships two channels in parallel from git tags: `vX.Y.Z-beta.N` (pushed on `develop` → npm `beta` dist-tag) and `vX.Y.Z` (pushed on `main` → npm `latest` dist-tag). The same `.github/workflows/release.yml` runs both; the channel is detected from the tag name pattern, not the branch. The `release` GitHub Environment has a **required reviewer = agaaaptr**: every tag push pauses the `publish` job waiting for manual approval in the GitHub Actions UI (Claude cannot approve it).
 
 ### Prerequisites
 - `gh` authenticated, npm logged in (granular automation token), `NPM_TOKEN` GitHub secret set.
@@ -79,7 +79,7 @@ Noir ships two channels in parallel from git tags: `vX.Y.Z-beta.N` (pushed on `d
 - Full gate green: `pnpm lint → build → typecheck → test → docs:validate → hygiene:gate`.
 - `pnpm release:compute <version> beta` and `pnpm release:compute <version> stable` to confirm no version collision on npm.
 
-### Full checklist (run each command — do not skip)
+### Full checklist (run each command: do not skip)
 
 ```bash
 # 1. BUMP version + update CHANGELOG + docs (roadmap/releases/STATUS/backlog/manifest)
@@ -128,10 +128,10 @@ git checkout develop && git merge --ff-only main && git push origin develop
 ```
 
 ### Key invariants
-- **Never skip beta.** The beta channel is the gate before stable — it verifies the publish pipeline + npm provenance + all 11 packages land on `beta` correctly before touching `latest`.
+- **Never skip beta.** The beta channel is the gate before stable: it verifies the publish pipeline + npm provenance + all 11 packages land on `beta` correctly before touching `latest`.
 - **Never tag from a dirty or unpushed tree.** `pnpm release:tag` enforces this (clean + pushed-to-origin checks).
 - **Never reuse or move a tag.** npm versions are immutable. If a release is bad, deprecate and ship a patch.
-- **Docs sync with every patch.** CHANGELOG, releases.md, STATUS.md, backlog.md, and manifest.yaml must reflect shipped reality — no documentation drift.
+- **Docs sync with every patch.** CHANGELOG, releases.md, STATUS.md, backlog.md, and manifest.yaml must reflect shipped reality: no documentation drift.
 - **Both branches end at the same SHA.** After the Homebrew+Scoop bump + sync, `develop` and `main` must be identical.
 - **All 11 packages move together.** One version, one tag, one release.
 - **Never publish without the final comprehensive verification gate passing clean.** `docs/verification-gate.md` is the mandatory pre-publish gate (SCAN → IDENTIFY → FIX → RESCAN → VERIFY, repeat until zero findings); it runs before the beta tag and again before the stable tag.

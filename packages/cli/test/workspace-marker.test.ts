@@ -4,14 +4,14 @@
 // Joining a workspace writes two things: the `.noir/workspace.json` marker and a
 // `.mcp.json` `noir` entry that names the workspace for the stdio bridge. The
 // manifest is what regenerates that entry on `noir sync` / `noir init`, and it
-// knew nothing about the marker — so re-scaffolding a joined repo reverted it to
+// knew nothing about the marker: so re-scaffolding a joined repo reverted it to
 // plain stdio while the marker still claimed membership, leaving the config and
 // the membership disagreeing about the same repo.
 //
 // A repo that joined under the older flow has the mirror-image problem: its
 // entry is an `http://…/mcp?p=<projectId>` pointer to a daemon whose port and
-// token have both moved on. `noir sync` cannot repair it — a differing
-// `.mcp.json` is PRESERVED in a non-interactive run — so `init --upgrade` owns
+// token have both moved on. `noir sync` cannot repair it: a differing
+// `.mcp.json` is PRESERVED in a non-interactive run: so `init --upgrade` owns
 // that rewrite, once and idempotently.
 //
 // Every test runs offline against a real temp repo: no daemon, no network, no
@@ -28,13 +28,13 @@ import { writeWorkspaceEntry } from '../src/workspace-mcp.js';
 const WORKSPACE = 'demo';
 const MCP = '.mcp.json';
 const PROJECT_ID = '9f1c0b7e-0000-4000-8000-000000000000';
-/** The scaffold version that shipped the joined-http flow — the newest version
+/** The scaffold version that shipped the joined-http flow: the newest version
  *  a repo can be stamped at and still hold an `http …?p=…` entry. A project at
  *  this stamp is exactly what `init --upgrade` has to reach. */
 const PRE_UPGRADE = '1.2.0';
 const LEGACY_URL = `http://127.0.0.1:4999/mcp?p=${PROJECT_ID}`;
 
-/** Plain stdio — what an un-joined repo's entry looks like. */
+/** Plain stdio: what an un-joined repo's entry looks like. */
 const STDIO = { command: 'noir', args: ['mcp', 'serve', '--stdio'] };
 /** The workspace entry: stdio that names the workspace for the bridge to resolve. */
 const BRIDGE = { command: 'noir', args: ['mcp', 'serve', '--stdio', '--workspace', WORKSPACE] };
@@ -70,7 +70,7 @@ function joinWorkspace(name = WORKSPACE): void {
 
 /** A repo initialized by the release that shipped the joined-http flow: a valid
  *  project id, a config naming the host, an `http …?p=…` MCP entry and the
- *  workspace marker — but no `.noir/scaffold-version` advance since. */
+ *  workspace marker: but no `.noir/scaffold-version` advance since. */
 function seedLegacyJoinedRepo(): void {
   mkdirSync(paths.noirDir(root), { recursive: true });
   writeFileSync(paths.projectId(root), `${PROJECT_ID}\n`, 'utf8');
@@ -105,7 +105,7 @@ describe('a joined repo keeps its workspace entry', () => {
     expect(readMcp()).toBe(before);
     // The engine must see the on-disk entry as the one it would emit. A
     // differing `.mcp.json` is recorded as a conflict (and preserved, in a
-    // non-interactive run) — so a conflict here is the downgrade the fix
+    // non-interactive run): so a conflict here is the downgrade the fix
     // removes, whether or not this particular run was allowed to write.
     expect(res.written).not.toContain(MCP);
     expect(res.identical).toContain(MCP);
@@ -151,7 +151,7 @@ describe('init --upgrade migrates a legacy http entry', () => {
 
     expect(noirEntry()).toEqual(BRIDGE);
     expect(res?.migrationChanged).toContain(MCP);
-    // The migration edits ONE entry — the user's own server is not its business.
+    // The migration edits ONE entry: the user's own server is not its business.
     const cfg = JSON.parse(readMcp()) as { mcpServers: Record<string, unknown> };
     expect(cfg.mcpServers.otherapi).toEqual({ command: 'other-mcp' });
     expect(readMcp()).not.toContain('?p=');
@@ -172,7 +172,7 @@ describe('init --upgrade migrates a legacy http entry', () => {
     const res = await init(root, { transport: 'stdio', upgrade: true });
 
     expect(readMcp()).toBe(migrated);
-    // The migration really ran and declined — otherwise an empty `changed` list
+    // The migration really ran and declined: otherwise an empty `changed` list
     // could just mean the runner skipped it, and this would prove nothing.
     expect(res?.migrationsRan).toContain('1.2.0→1.3.0');
     expect(res?.migrationChanged).toEqual([]);
@@ -192,7 +192,7 @@ describe('init --upgrade migrates a joined repo downgraded to repo-scoped stdio'
     expect(noirEntry()).toEqual(BRIDGE);
     expect(noirEntry().args).toEqual(['mcp', 'serve', '--stdio', '--workspace', WORKSPACE]);
     expect(res?.migrationChanged).toContain(MCP);
-    // The migration edits ONE entry — the user's own server is not its business.
+    // The migration edits ONE entry: the user's own server is not its business.
     const cfg = JSON.parse(readMcp()) as { mcpServers: Record<string, unknown> };
     expect(cfg.mcpServers.otherapi).toEqual({ command: 'other-mcp' });
   });

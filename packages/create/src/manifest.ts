@@ -26,7 +26,7 @@ import { loadTemplate } from './template-loader.js';
 import type { WriteMode } from './writers.js';
 
 /**
- * Declarative scaffold manifest — the single source of truth for what
+ * Declarative scaffold manifest: the single source of truth for what
  * `init` / `create` / `sync` emit. Each entry is one artifact, tagged with its
  * write {@link WriteMode} so the orchestrator can dispatch without knowing
  * what's inside.
@@ -40,7 +40,7 @@ import type { WriteMode } from './writers.js';
  * per-host files
  * (CLAUDE.md/GEMINI.md for claude/gemini; AGENTS.md + .cursor/.../opencode.json
  * for agents-md/cursor/opencode) via the resolved adapter. The claude default
- * `noir init` stays BYTE-IDENTICAL to v1.1 — REMOVED the additive
+ * `noir init` stays BYTE-IDENTICAL to v1.1: REMOVED the additive
  * root `AGENTS.md` (it was double-importing `.noir/NOIR.md` + RULES.md via
  * CLAUDE.md's existing @-imports; claude's native surface is CLAUDE.md alone).
  *
@@ -60,7 +60,7 @@ export interface ManifestEntry {
   /** Repo-relative POSIX path (forward slashes). Orchestrator joins with root. */
   path: string;
   mode: WriteMode;
-  /** Opt-in flag for a DOC-ONLY seed — a file whose only job is to be read by a
+  /** Opt-in flag for a DOC-ONLY seed: a file whose only job is to be read by a
    *  human. On an upgrade, a seed still byte-identical to what an older Noir
    *  shipped is refreshed in place rather than staying frozen at that older
    *  text forever; one the user edited is never refreshed (it goes to the
@@ -68,14 +68,14 @@ export interface ManifestEntry {
    *
    *  Honored on the upgrade emit only. A fresh `init`/`create` either creates
    *  the file or leaves it alone, and `sync` does not emit seeds at all, so
-   *  neither can observe the flag — the behavior change is confined to the one
+   *  neither can observe the flag: the behavior change is confined to the one
    *  command a user runs to bring an initialized project up to date.
    *
    *  DOC-ONLY SEEDS ONLY. A file the user owns the contents of must never carry
    *  this flag: `.noir/.env`, `.noir/config.yml` and `.noir/project.id` are
    *  theirs to shape, and an upgrade that rewrote one of them would destroy
    *  exactly the work this engine exists to protect. Co-owned files (managed
-   *  blocks) must not set it either — they have a three-way merge that
+   *  blocks) must not set it either: they have a three-way merge that
    *  preserves user edits, which is the better tool for a shared file.
    *
    *  Which recorded seed the bytes are compared against is declared separately
@@ -87,7 +87,7 @@ export interface ManifestEntry {
   /** Required for `managedBlock` mode: the named block to re-emit. */
   block?: ManagedBlock;
   /** Literal content (`regenerate`/`skipIfExists`) or literal region BODY
-   *  (`managedBlock` — the orchestrator wraps it with the block markers).
+   *  (`managedBlock`: the orchestrator wraps it with the block markers).
    *  Mutually exclusive with {@link template}. */
   content?: string;
   /** Template name (resolved by `template-loader`) for content/body.
@@ -96,7 +96,7 @@ export interface ManifestEntry {
   /** One-line human description for `noir doctor` + logs. */
   description?: string;
   /** Permission for a NEWLY created file (e.g. `0o600` for a credential seed).
-   *  Applied only on creation — the `skipIfExists` contract means an existing
+   *  Applied only on creation: the `skipIfExists` contract means an existing
    *  file is not even opened. The orchestrator forwards this to the writer and
    *  reports it on the result as {@link ScaffoldResult.fileModes}; the mode of
    *  an existing credential file is re-asserted separately (`ensureOwnerOnly`).
@@ -107,7 +107,7 @@ export interface ManifestEntry {
   /** Required for `mergeJson` mode: the JSON patch object (or a template that
    *  renders to one). Merged into the existing file, preserving user keys. */
   patch?: Record<string, unknown>;
-  /** Required for `mergeJson` mode: dedup substring for `hooks.*` entries — an
+  /** Required for `mergeJson` mode: dedup substring for `hooks.*` entries: an
    *  existing entry whose command contains this is NOT re-added. */
   dedupSubstring?: string;
 }
@@ -131,7 +131,7 @@ export type BuildManifestContext = {
    *  MCP clients that don't read shell profiles can spawn the server. See
    *  `resolveNoirCommand()` in @noir-ai/core. */
   command: string;
-  /** Detected stack — drives stack-aware ignore emission (.npmignore /
+  /** Detected stack: drives stack-aware ignore emission (.npmignore /
    *  .prettierignore only for JS; .dockerignore only when a Dockerfile is
    *  present; an unknown/empty stack ⇒ all four, for backward compat). */
   stack?: StackInfo;
@@ -142,7 +142,7 @@ export type BuildManifestContext = {
    *  drops the working-rules seed from the manifest, so no command emits or
    *  backfills `.noir/rules/RULES.md` for a project that opted out. Undefined
    *  (the schema's default state, and every caller that predates the switch)
-   *  means enabled — a project with no `rules:` block emits the seed exactly
+   *  means enabled: a project with no `rules:` block emits the seed exactly
    *  as before. A file already on disk is never removed: dropping the entry
    *  removes the emission, not the file. */
   rulesEnabled?: boolean;
@@ -219,13 +219,13 @@ export const MANIFEST_PATH_PARITY: ReadonlyArray<
 
 /**
  * Which recorded seed each refreshable entry is compared against, keyed by the
- * path that emits it — see {@link ManifestEntry.refreshIfStale}.
+ * path that emits it: see {@link ManifestEntry.refreshIfStale}.
  *
  * The history entries record the text of BOTH seeds, so the comparison has to
  * be told which one it is looking at. The manifest is what knows which path
  * holds which seed, and keeping that pairing in a table beside the path
  * constants means a path change breaks at the same site instead of silently
- * comparing `.noir/.env.example` against the recorded working-rules text — a
+ * comparing `.noir/.env.example` against the recorded working-rules text: a
  * mismatch whose only symptom would be a file the user edited, overwritten.
  *
  * `manifest.test.ts` asserts this table and the flagged entries cover each
@@ -245,11 +245,11 @@ export const REFRESHABLE_SEED_KIND: Readonly<Record<string, SeedKind>> = {
  * `resolveAdapter(ctx.host)`). The host-agnostic half is unchanged from v1.1
  * (canonical `.noir/` store + ignore files). {@link buildHostArtifacts}
  * emits AGENTS.md ONLY for agents-md/cursor/opencode (claude/gemini use their
- * own CLAUDE.md/GEMINI.md — emitting AGENTS.md too would double-import .noir/).
+ * own CLAUDE.md/GEMINI.md: emitting AGENTS.md too would double-import .noir/).
  *
  * Mode-tagging rationale per artifact:
  *  - `project.id`  → skipIfExists. First init writes a fresh id; re-init MUST
- *    NOT overwrite — that would orphan the indexed store DB named after it.
+ *    NOT overwrite: that would orphan the indexed store DB named after it.
  *  - `config.yml`  → skipIfExists. User-owned; the seed is written once.
  *    (The seed renders `host: {{host}}` so a `--host gemini` init persists the
  *    chosen host for `noir sync` to read back.)
@@ -264,7 +264,7 @@ export function buildManifest(ctx: BuildManifestContext): ManifestEntry[] {
   return [...hostAgnosticEntries(ctx), ...buildHostArtifacts(resolveAdapter(ctx.host), ctx)];
 }
 
-/** The host-agnostic canonical-store + ignore entries — identical bytes for
+/** The host-agnostic canonical-store + ignore entries: identical bytes for
  *  every host. Split out so {@link buildHostArtifacts} can be unit-tested in
  *  isolation and so the doctor's host-artifacts check can reason about the
  *  host-specific half alone. */
@@ -295,11 +295,11 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
     {
       // init creates the REAL env file, not just the example. The body is
       // all-comment, so the file parses to an EMPTY overlay and creating it
-      // changes no behaviour — it exists so the user never has to copy the
+      // changes no behaviour: it exists so the user never has to copy the
       // example by hand. `fileMode: 0o600` because the file holds tokens the
       // moment the user edits it. The mode is applied when the file is created;
       // a copy that predates this contract (or that an editor saved by rename)
-      // has its mode re-asserted on every init/sync/create run — see `ensureOwnerOnly`.
+      // has its mode re-asserted on every init/sync/create run: see `ensureOwnerOnly`.
       path: P.env,
       mode: 'skipIfExists',
       template: 'config.env.tmpl',
@@ -323,7 +323,7 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
       description: 'AI working-rules seed',
     },
     {
-      // The `.noir/` runtime map — what init just wrote,
+      // The `.noir/` runtime map: what init just wrote,
       // what appears later (and which command creates it), and where to go
       // next. Host-agnostic: it describes the canonical store, which every
       // host shares. Co-owned (README_BLOCK) so user notes survive while the
@@ -371,7 +371,7 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
   ];
   // Stack-aware ignore emission. Only emit the ignore
   // files relevant to the detected stack. An unknown/empty stack (no language
-  // markers, no package manager — e.g. a blank dir or undetectable project) ⇒
+  // markers, no package manager: e.g. a blank dir or undetectable project) ⇒
   // emit all four (backward-compatible with the pre-fix behavior).
   const isEmpty = (ctx.stack?.languages?.length ?? 0) === 0 && !ctx.stack?.packageManager;
   const isJs =
@@ -396,7 +396,7 @@ function hostAgnosticEntries(ctx: BuildManifestContext): ManifestEntry[] {
 // Host-specific artifact generation. One entry point: `buildHostArtifacts`.
 
 /** Context shape passed to {@link buildHostArtifacts}. A strict subset of
- *  {@link BuildManifestContext} (no `projectId`/`host` — the adapter IS the
+ *  {@link BuildManifestContext} (no `projectId`/`host`: the adapter IS the
  *  resolved host, and host artifacts never need the project id). Exported
  *  separately so callers + tests can name the narrower contract. */
 export interface BuildHostArtifactsContext {
@@ -417,10 +417,10 @@ export interface BuildHostArtifactsContext {
 
 /**
  * Materialize the host-specific manifest entries from a resolved adapter.
- * SINGLE entry point — no scattered `if (host === '…')` conditionals in the
+ * SINGLE entry point: no scattered `if (host === '…')` conditionals in the
  * orchestrator. Returns entries in emission order:
  *
- *   1. **AGENTS.md** (universal baseline) — `regenerate` at
+ *   1. **AGENTS.md** (universal baseline): `regenerate` at
  *      `adapter.agentsMdPath(ctx)` (default `<root>/AGENTS.md`), content from
  *      the shared `emitAgentsMd(ctx)` helper. Emitted ONLY for hosts whose
  *      `emitContext` IS the AGENTS.md content (agents-md, cursor, opencode) —
@@ -430,10 +430,10 @@ export interface BuildHostArtifactsContext {
  *      `@`-imports the canonical `.noir/` sources; emitting AGENTS.md too
  *      would IMPORT THOSE FILES TWICE into the host's context (2× tokens +
  *      drift risk), so for those two hosts AGENTS.md is SKIPPED. (Claude Code
- *      still discovers AGENTS.md at the repo root when present — users who
+ *      still discovers AGENTS.md at the repo root when present: users who
  *      want the universal file can drop one in by hand; Noir's auto-emission
  *      stays single-source per host.)
- *   2. **Host-native context file** — emitted ONLY for hosts whose `emitContext`
+ *   2. **Host-native context file**: emitted ONLY for hosts whose `emitContext`
  *      is NOT the AGENTS.md content (i.e. the host has its OWN context file
  *      with a distinct syntax). Concretely: claude → `CLAUDE.md` (CONTEXT +
  *      RULES managed blocks, byte-identical to v1.1 via templates); gemini →
@@ -441,7 +441,7 @@ export interface BuildHostArtifactsContext {
  *      import syntax). For `agents-md`/`cursor`/`opencode` the context IS the
  *      AGENTS.md (already emitted in step 1) → SKIP to avoid a duplicate.
  *      Rules live INSIDE the host's context file: claude's in CLAUDE.md,
- *      gemini's in GEMINI.md, agents-md/cursor/opencode's in AGENTS.md — NO
+ *      gemini's in GEMINI.md, agents-md/cursor/opencode's in AGENTS.md: NO
  *      host emits a separate rules file. (The prior cursor
  *      `.cursor/rules/noir-contract.mdc` host-rules pointer was REMOVED: it
  *      collided with the cursor flat-skill prune of `noir-*.mdc` under
@@ -451,20 +451,20 @@ export interface BuildHostArtifactsContext {
  *      That rules import/block is dropped for every host when
  *      `ctx.rulesEnabled` is false: the switch withholds the seed, so pointing
  *      a host at it would resolve to nothing. The context import is unaffected
- *      — the switch gates the rules, not the brief. A host file that already
+ *     : the switch gates the rules, not the brief. A host file that already
  *      carries the rules region from when the switch was on keeps it: dropping
  *      the entry stops the emission, and nothing here rewrites a region out of
  *      an existing file.
- *   3. **Host MCP config** — `regenerate` at `adapter.mcpConfigPath(ctx)`
+ *   3. **Host MCP config**: `regenerate` at `adapter.mcpConfigPath(ctx)`
  *      (default `<root>/.mcp.json` for claude), content from
  *      `adapter.emitMcpConfig(ctx, {transport,url})`. Claude KEEPS the template
  *      path (byte-identical parity with v1.1 + the .mcp.json parity test that
  *      compares against `claudeAdapter.emitMcpConfig`) for a repo that has not
- *      joined a workspace; a joined repo — one carrying a `.noir/workspace.json`
- *      marker — gets the workspace entry instead, on every host, whatever
+ *      joined a workspace; a joined repo: one carrying a `.noir/workspace.json`
+ *      marker: gets the workspace entry instead, on every host, whatever
  *      transport the run asked for (see the entry's own comment below).
  *
- * Skills are OUT OF SCOPE here — the cli composes `emitSkillsToDir` with
+ * Skills are OUT OF SCOPE here: the cli composes `emitSkillsToDir` with
  * `adapter.skillsDir` + the host's `CompileTarget` (claude → `.claude/skills/`
  * as SKILL.md; cursor → `.cursor/rules/<skill>.mdc` FLAT; gemini/
  * agents-md/opencode have no skill dir → skip).
@@ -478,7 +478,7 @@ export function buildHostArtifacts(
   const host = adapter.id;
   const entries: ManifestEntry[] = [];
 
-  // 1. AGENTS.md — emitted for hosts whose emitContext IS the AGENTS.md content
+  // 1. AGENTS.md: emitted for hosts whose emitContext IS the AGENTS.md content
   //    (agents-md, cursor, opencode). SKIPPED for claude/gemini: their native
   //    CLAUDE.md / GEMINI.md already @-import the canonical .noir/ sources, so
   //    a root AGENTS.md would double-import (2× context tokens, drift risk).
@@ -498,7 +498,7 @@ export function buildHostArtifacts(
   // 2. Host-native context file (when distinct from AGENTS.md) + folded rules.
   switch (host) {
     case 'claude':
-      // CLAUDE.md keeps template-based bodies — byte-identical to v1.1 (the
+      // CLAUDE.md keeps template-based bodies: byte-identical to v1.1 (the
       // scaffold.test.ts parity gates compare against claudeAdapter.emitContext
       // + emitRules; the templates render to the same body bytes).
       entries.push({
@@ -510,7 +510,7 @@ export function buildHostArtifacts(
         description: 'CLAUDE.md context @import block',
       });
       // The rules block only exists when the project HAS a rules file. With the
-      // switch off the block is not emitted — a fresh project gets no dangling
+      // switch off the block is not emitted: a fresh project gets no dangling
       // `@import`, and a project that already carries the block from when the
       // switch was on keeps it (off stops the emission; it never cuts a region
       // out of a user's file).
@@ -527,9 +527,9 @@ export function buildHostArtifacts(
       break;
     case 'gemini':
       // GEMINI.md carries CONTEXT_BLOCK + RULES_BLOCK with Gemini's bare
-      // `@file` import syntax (no `@import` keyword, no quotes — distinct from
+      // `@file` import syntax (no `@import` keyword, no quotes: distinct from
       // Claude's form). Emitted as TWO managed regions so user content outside
-      // the markers survives `noir sync` (same write path as CLAUDE.md — the
+      // the markers survives `noir sync` (same write path as CLAUDE.md: the
       // multi-region atomic `managedBlocks` writer).
       entries.push({
         path: 'GEMINI.md',
@@ -557,7 +557,7 @@ export function buildHostArtifacts(
       // emitContext IS the AGENTS.md content (already emitted in step 1) →
       // no separate context file. Rules are carried by AGENTS.md's
       // `@.noir/rules/RULES.md` import (agents-md/cursor/opencode share that
-      // universal surface — NO host emits a separate rules file).
+      // universal surface: NO host emits a separate rules file).
       break;
   }
 
@@ -567,12 +567,12 @@ export function buildHostArtifacts(
   //    own emitter uses.
   //
   //    A repo that has JOINED a workspace gets the workspace entry, and that
-  //    decision belongs to the marker — not to the transport this run asked for.
+  //    decision belongs to the marker: not to the transport this run asked for.
   //    Membership is what decides how the host reaches the daemon (through the
   //    stdio bridge, which reads the token itself), so re-scaffolding must never
   //    drop a repo out of a workspace the marker still says it belongs to, nor
   //    write an address into its config. Reading the marker HERE, where the entry
-  //    is chosen, means no caller can bypass it — `sync`, `init --force`,
+  //    is chosen, means no caller can bypass it: `sync`, `init --force`,
   //    `create --force` and the doctor's expectation check all follow membership
   //    for free.
   const mcpAbs = mcpConfigPathForAdapter(adapter, ctx.root);
@@ -612,7 +612,7 @@ export function buildHostArtifacts(
     });
   }
 
-  // 4. Lifecycle hooks — per host, via the adapter seam. The shared `noir hook`
+  // 4. Lifecycle hooks: per host, via the adapter seam. The shared `noir hook`
   //    dispatcher carries all policy (brief injection, deny-list, Stop gate);
   //    each adapter returns only the thin per-host config that invokes it with a
   //    `--host` dialect. Hosts with no hook surface (agents-md, opencode) return

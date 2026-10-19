@@ -1,4 +1,4 @@
-// v2 — host orchestrator core (Archetype B). Pure-function tests over the
+// v2: host orchestrator core (Archetype B). Pure-function tests over the
 // deterministic parts: host command resolution (default vs custom, D2a), stream
 // event normalization, and the token/cost reducer with the `max usage per
 // message.id` dedup rule (the detail that separates a correct cost bar from a
@@ -12,7 +12,7 @@ import {
   UsageReducer,
 } from '../src/orchestrator.js';
 
-describe('resolveHostRun — default vs custom command (D2a)', () => {
+describe('resolveHostRun: default vs custom command (D2a)', () => {
   it('uses the host default binary when no custom command is given', () => {
     const claude = resolveHostRun('claude');
     expect(claude).not.toBeNull();
@@ -26,7 +26,7 @@ describe('resolveHostRun — default vs custom command (D2a)', () => {
     // order is the order the flags reach its argv, and the set decides what the
     // event stream can carry. `--include-partial-messages` is what makes the
     // host report tool calls as they start and text as it is written, which is
-    // the whole basis of a live run screen — dropping it silently degrades the
+    // the whole basis of a live run screen: dropping it silently degrades the
     // stream back to one frame per completed block, so a change here must be a
     // deliberate edit to this list.
     expect(resolveHostRun('claude')?.flags).toEqual([
@@ -132,10 +132,10 @@ describe('normalizeStreamEvent', () => {
   });
 });
 
-describe('normalizeStreamEvent — partial-message frames', () => {
+describe('normalizeStreamEvent: partial-message frames', () => {
   it('reports a tool call as it starts', () => {
     // The frame the host emits when a tool call begins. It carries no text and
-    // no usage — its whole value is the name, which is the only thing that can
+    // no usage: its whole value is the name, which is the only thing that can
     // tell a user what the host is doing between two stretches of prose.
     const e = normalizeStreamEvent({
       type: 'stream_event',
@@ -267,7 +267,7 @@ describe('normalizeStreamEvent — partial-message frames', () => {
   });
 });
 
-describe('UsageReducer — max usage per message.id, never sum', () => {
+describe('UsageReducer: max usage per message.id, never sum', () => {
   it('takes the max usage across a message that emits multiple cumulative lines', () => {
     // Claude emits one JSONL line per content block of a message, each line's
     // `usage` a cumulative snapshot of that message. Summing → 300/150 (wrong);

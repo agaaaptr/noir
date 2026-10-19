@@ -1,15 +1,15 @@
 # Sharing memory across repositories (workspaces)
 
 Two agent sessions in **different repos** (e.g. a backend repo and a frontend
-repo) can share **decision memory** through **one workspace daemon** — no
+repo) can share **decision memory** through **one workspace daemon**: no
 handoff documents. A **workspace** is a named, cross-repo sharing unit.
 
-> **What is shared — and what is not.** A workspace shares a *memory store*:
+> **What is shared: and what is not.** A workspace shares a *memory store*:
 > explicit `memory_save` / `memory capture` writes, explicit
 > `memory_recall` / `memory_search` reads, and a bounded change feed
 > (`changes_since` / `await_changes`). It does **not** share live agent
 > conversations, transcripts, context windows, or the project-local
-> `context`/`workflow`/`task` state — each repo keeps its own. Nothing is
+> `context`/`workflow`/`task` state: each repo keeps its own. Nothing is
 > pushed into an agent's context; the other session pulls on demand.
 
 The default transport stays **stdio**; nothing changes unless a repo explicitly
@@ -24,7 +24,7 @@ config, so nothing there can go stale or leak. (See the
 [workspace transport and daemon-routing decision](../decisions/0013-workspace-transport-and-daemon-routing.md)
 for why the older URL-based entry was replaced.)
 
-## 0. Prerequisite — initialize both repos
+## 0. Prerequisite: initialize both repos
 
 Both repos must be known to Noir before they can start or join a workspace
 (running either command in an uninitialized directory fails with
@@ -51,7 +51,7 @@ noir daemon start --workspace my-app --detach
 `noir daemon start --workspace <name>` is **foreground by default** (it blocks
 your shell; `Ctrl+C` stops it). Pass `--detach` to background the daemon and
 return to the shell. The daemon binds **127.0.0.1** on an **ephemeral
-(OS-assigned) port** — there is no fixed port to choose, and nothing you write
+(OS-assigned) port**: there is no fixed port to choose, and nothing you write
 down depends on it.
 
 ## 2. Join from the other repo (frontend)
@@ -88,7 +88,7 @@ That is the whole contract. The host starts
 4. relays every MCP message to `http://127.0.0.1:<port>/mcp?p=<this repo's
    projectId>`, which the daemon uses to authorize the caller as a member.
 
-Nothing about the daemon — its port, its token — appears in the config, so there
+Nothing about the daemon: its port, its token: appears in the config, so there
 is nothing to re-sync after a restart. (`command` is the resolved `noir` shim:
 bare `noir` on a standard install, an absolute path when Noir was installed as a
 native binary, so GUI MCP clients that do not read your shell profile still find
@@ -105,12 +105,12 @@ Where the config lives depends on the host (set at `noir init --host <id>`):
 | OpenCode | `opencode.json` |
 
 `join` rewrites the `noir` entry in that file, so the file has to be one of the
-`{ "mcpServers": { … } }` hosts — Claude Code, AGENTS.md, Cursor and Gemini all
+`{ "mcpServers": { … } }` hosts: Claude Code, AGENTS.md, Cursor and Gemini all
 use that shape and all get the same stdio entry naming the workspace. Claude
 Code is the regression anchor.
 
 > **OpenCode is not supported yet.** Its `opencode.json` uses a different shape —
-> a top-level `mcp` block with `type`-tagged entries, not `mcpServers` — which
+> a top-level `mcp` block with `type`-tagged entries, not `mcpServers`: which
 > `join` does not recognize: it refuses the file without `--force`, and
 > `--force` would add an `mcpServers` block OpenCode never reads. Treat
 > workspaces as Claude-Code-first for now.
@@ -133,14 +133,14 @@ present it gets a `401` refusal naming the token file.
   the token file at connect time and send it in the `Authorization` header; the
   token never reaches a config file, a command line, or a log. You never copy it
   anywhere.
-- `/health` stays **token-free**, so liveness probes work — which is exactly
+- `/health` stays **token-free**, so liveness probes work: which is exactly
   what lets the bridge and `noir workspace status` check the daemon without a
   credential. Its body carries no secret.
 - Membership is checked separately from the token: the `?p=<projectId>` in the
   URL must name a current member, or the daemon refuses the request. A repo that
   never joined is refused.
 
-`noir daemon token` is **project**-scoped — it prints the token for the project
+`noir daemon token` is **project**-scoped: it prints the token for the project
 daemon you are running, not a workspace token. There is no user-facing command
 for a workspace token, and you do not need one: the bridge reads it for you.
 
@@ -162,7 +162,7 @@ noir memory recall "users list pagination"
 workflow | fact | decision`. Provenance is stamped with the originating repo,
 never caller-supplied. To *notice* what the other session just recorded, the
 agent calls `changes_since { cursor }` (pull) or
-`await_changes { cursor, timeoutMs }` (long-poll) — MCP tools, not CLI verbs.
+`await_changes { cursor, timeoutMs }` (long-poll): MCP tools, not CLI verbs.
 
 Corrections are append-only: `memory_save { supersedes: "<older-id>", ... }`
 marks the target `superseded` (hidden by default; see it with
@@ -184,7 +184,7 @@ noir workspace list     # "my-app — 2 member(s), running"
 noir workspace status   # members + daemon liveness
 ```
 
-> Use `noir workspace status`, **not** `noir daemon status` — the latter reports
+> Use `noir workspace status`, **not** `noir daemon status`: the latter reports
 > only the per-project daemon and says "not running" even while the workspace
 > daemon is live and serving the repo.
 
@@ -208,7 +208,7 @@ unrelated process.
 
 Restarting the workspace daemon needs no re-join. The entry in every member repo
 names the **workspace**, not a port or a token, so it stays correct across any
-number of restarts — the next session's bridge resolves the current daemon and
+number of restarts: the next session's bridge resolves the current daemon and
 reads the current token on its own.
 
 What a restart does change is any **already-open session**. A running session
@@ -237,9 +237,9 @@ cat notes.md | noir memory capture
 noir memory capture --content "Frontend expects the /users contract from backend #42"
 ```
 
-`noir init`/`sync` never install **memory-capture** hooks — capture is an
+`noir init`/`sync` never install **memory-capture** hooks: capture is an
 explicit action. (The `claude` host does get an unrelated `SessionStart`
-*context* hook at `noir init` — that bootstraps project context, it does not
+*context* hook at `noir init`: that bootstraps project context, it does not
 capture memory.)
 
 ## Notes & troubleshooting
@@ -260,7 +260,7 @@ is the diagnosis; match it to the fix:
 `unexpected query string: this is a project daemon, which serves one project at
 /mcp with no query string; a ?p=<projectId> URL belongs to a workspace daemon.`
 means a workspace-shaped URL was addressed at a **project** daemon. In a joined
-repo you should not be writing URLs at all — the workspace is reached through
+repo you should not be writing URLs at all: the workspace is reached through
 the stdio entry. In a repo that joined under the older flow, a stale
 `http://…/mcp?p=…` entry is exactly what `noir init --upgrade` migrates to the
 bridge entry.
@@ -269,7 +269,7 @@ bridge entry.
   feature (not in this release).
 - **A non-member repo is refused** by the daemon; a repo that never joins is
   byte-for-byte unchanged.
-- **`noir daemon status` is misleading** in a joined repo — see the note in
+- **`noir daemon status` is misleading** in a joined repo: see the note in
   "Verify it works".
 - A workspace daemon defaults to never idling out (`workspace.idleTimeoutSec: 0`).
   Set a positive value under `workspace:` in `.noir/config.yml` to auto-stop it
@@ -284,7 +284,7 @@ bridge entry.
   fall back to a read-only pass over the shared store (a
   `degraded: BM25-only` warning is printed).
 - **`sync` / `init --force` keep a joined repo joined.** Membership is recorded
-  by a marker in the repo, and the entry follows membership — a re-scaffold
+  by a marker in the repo, and the entry follows membership: a re-scaffold
   re-emits the workspace entry rather than reverting to plain stdio.
   `noir workspace leave` is the way out.
 - **Moving a repo directory or re-cloning it breaks membership** (the registry

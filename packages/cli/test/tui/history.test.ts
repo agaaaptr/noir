@@ -1,4 +1,4 @@
-// C3 — palette command-history persistence. Pure fs tests over a temp NOIR_HOME;
+// C3: palette command-history persistence. Pure fs tests over a temp NOIR_HOME;
 // no TTY, no daemon, no network. Exercises `loadRecent` / `recordRecent` /
 // `isHistoryEnabled` and the `__setNoirHome` test override. Verifies the
 // projectId-keyed path, the NOIR_DISABLE_TUI_HISTORY opt-out, and the cap.
@@ -101,7 +101,7 @@ describe('loadRecent / recordRecent round-trip', () => {
     recordRecent('proj-b', ['sync']);
     expect(loadRecent('proj-a').map((e) => e.id)).toEqual(['status']);
     expect(loadRecent('proj-b').map((e) => e.id)).toEqual(['sync']);
-    // Different projects write to different dirs — no cross-contamination.
+    // Different projects write to different dirs: no cross-contamination.
     expect(existsSync(join(home, 'proj-a', 'tui-history.json'))).toBe(true);
     expect(existsSync(join(home, 'proj-b', 'tui-history.json'))).toBe(true);
   });

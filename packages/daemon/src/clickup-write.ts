@@ -2,20 +2,20 @@
 // companion to the `noir-clickup` skill's write flows (2/3/4/5). SECURITY-CRITICAL.
 //
 // The proxy owns EXACTLY four responsibilities, and ONLY these:
-//   1. ALLOWLISTED URL construction — URLs are built from `op` + `payload` + the
+//   1. ALLOWLISTED URL construction: URLs are built from `op` + `payload` + the
 //      workspace binding (`teamId`/`listId`). A caller-supplied `url` is NEVER
 //      honored; ClickUp ids are validated against a strict charset so a task id
 //      can't smuggle a path segment. This is the prompt-injection defense: a
 //      malicious task field can become JSON DATA in a POST body, but it can NEVER
 //      redirect the proxy to a different endpoint.
-//   2. DRY-RUN → CONFIRM gate — unless `confirm === true`, the proxy computes the
+//   2. DRY-RUN → CONFIRM gate: unless `confirm === true`, the proxy computes the
 //      exact would-be request(s) and returns a PREVIEW without any network call.
 //      `fetch` is not even touched. Only an explicit `confirm:true` (surfaced to
 //      the host's tool-approval gate) reaches the network.
-//   3. EXECUTE — on confirm, POST/PUT to ClickUp API v2 with the `pk_<token>`
+//   3. EXECUTE: on confirm, POST/PUT to ClickUp API v2 with the `pk_<token>`
 //      auth header (NO Bearer), concurrency cap 4 on batch, 429 backoff keyed on
-//      `X-RateLimit-Reset` (await until reset, retry once — never blind-retry).
-//   4. AUDIT — every EXECUTED write appends a record to `.noir/audit/` via the
+//      `X-RateLimit-Reset` (await until reset, retry once: never blind-retry).
+//   4. AUDIT: every EXECUTED write appends a record to `.noir/audit/` via the
 //      seam's `writeIntegrationAudit`. Dry-runs are NOT audited.
 //
 // The token is resolved by the caller (the tool handler, via `resolveToken`) and
@@ -26,16 +26,16 @@
 // refuse; never a crash); NO silent writes (confirm gate is HARD); allowlist is
 // the only source of URLs.
 
-// ClickUp API v2 base. Constant — the proxy never accepts a base URL from input.
+// ClickUp API v2 base. Constant: the proxy never accepts a base URL from input.
 const CLICKUP_BASE = 'https://api.clickup.com/api/v2';
 
-/** Per-attempt bound on each ClickUp HTTP write — a stalled ClickUp endpoint
+/** Per-attempt bound on each ClickUp HTTP write: a stalled ClickUp endpoint
  *  (accepts TCP, never answers) must not hang the gated write proxy. */
 const CLICKUP_FETCH_TIMEOUT_MS = 30_000;
 
 /** Strict charset for ClickUp ids (task/list/space/team). ClickUp task ids are
  *  alphanumeric (`abc123`) or numeric; custom ids look like `CU-42`. Allow
- *  letters, digits, underscore, hyphen only — rejects `/`, `?`, `#`, spaces, and
+ *  letters, digits, underscore, hyphen only: rejects `/`, `?`, `#`, spaces, and
  *  anything else that could mutate the path/query. */
 const ID_PATTERN = /^[A-Za-z0-9_-]+$/;
 
@@ -89,7 +89,7 @@ export interface ClickUpBinding {
 }
 
 /** A constructed HTTP request against an allowlisted endpoint. The auth header
- *  is ABSENT here — it is added at execute time only; the dry-run preview shows
+ *  is ABSENT here: it is added at execute time only; the dry-run preview shows
  *  a redacted placeholder so the token never leaves the execute path. */
 export interface BuiltRequest {
   method: 'GET' | 'POST' | 'PUT';
@@ -123,7 +123,7 @@ function resolveBinding(payload: Record<string, unknown>, binding: ClickUpBindin
   return resolved;
 }
 
-// Request builders — one per op. Each returns the request(s) the op renders.
+// Request builders: one per op. Each returns the request(s) the op renders.
 // URLs come ONLY from these templates; a caller-supplied `url` is ignored.
 function buildStatus(payload: Record<string, unknown>): BuiltRequest {
   const taskId = assertId(String(payload.taskId ?? ''), 'taskId');
@@ -199,7 +199,7 @@ function buildComment(payload: Record<string, unknown>): BuiltRequest {
 }
 
 /** A normalized task for the batch op (H2 markdown + the `tasks[]` array both
- *  reduce to this). All fields are JSON DATA in the POST body — adversary text
+ *  reduce to this). All fields are JSON DATA in the POST body: adversary text
  *  in a task title becomes the `name` string, never an executable instruction. */
 export interface NormalizedTask {
   name: string;
@@ -353,7 +353,7 @@ export function buildRequests(
   }
 }
 
-/** Render a dry-run preview row set. NO auth header, NO network — the token
+/** Render a dry-run preview row set. NO auth header, NO network: the token
  *  never enters this path. */
 export function previewRows(requests: BuiltRequest[]): RequestRow[] {
   return requests.map((r) => ({
@@ -366,7 +366,7 @@ export function previewRows(requests: BuiltRequest[]): RequestRow[] {
 }
 
 // Execute path. Reached ONLY when `confirm === true`. The token is added here
-// (and ONLY here) as `Authorization: pk_<token>` (NO Bearer — ClickUp v2 rejects
+// (and ONLY here) as `Authorization: pk_<token>` (NO Bearer: ClickUp v2 rejects
 // Bearer). 429 backoff reads `X-RateLimit-Reset` and awaits until reset, then
 // retries ONCE per request.
 
@@ -393,8 +393,8 @@ export interface ExecResult {
 }
 
 /** Build the outbound auth+content-type headers. The token is added here and
- *  ONLY here (as `Authorization: pk_<token>`, NO Bearer — ClickUp v2 rejects
- *  Bearer). Despite the historical name, this function does NOT redact — it
+ *  ONLY here (as `Authorization: pk_<token>`, NO Bearer: ClickUp v2 rejects
+ *  Bearer). Despite the historical name, this function does NOT redact: it
  *  attaches the RAW token; the dry-run preview never calls it (previews show
  *  the redacted `pk_***` placeholder instead), so the live token only travels
  *  on the execute path's outbound request. */
@@ -553,7 +553,7 @@ export async function executeOp(
     if (!createRes.success) return [createRes];
     const newId = typeof createRes.response.id === 'string' ? createRes.response.id : undefined;
     if (!newId) {
-      // Create succeeded but no id came back — can't set status. Surface the
+      // Create succeeded but no id came back: can't set status. Surface the
       // partial success; the host sees the create worked, the status didn't.
       return [
         createRes,
@@ -570,7 +570,7 @@ export async function executeOp(
     }
     createRes.newTaskId = newId;
     // The response-derived id is substituted into the allowlisted URL template
-    // — validate it against the SAME charset as every caller-supplied id so a
+    //: validate it against the SAME charset as every caller-supplied id so a
     // compromised/buggy ClickUp response can't smuggle a path segment (the
     // module's stated invariant: every id is charset-validated before use in a URL).
     assertId(newId, 'subtask-create-response.id');

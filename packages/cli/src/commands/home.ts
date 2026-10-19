@@ -19,25 +19,25 @@
 // previous, so the user can move across sections without re-entering level 1
 // each time. The section content comes from the SHARED React-free
 // {@link resolveSections} module (tui/commands/sections.ts), which references
-// palette-registry ids — so the menu cannot drift from the commander tree.
+// palette-registry ids: so the menu cannot drift from the commander tree.
 // `deps.commands` is injected by bin.ts (the same list the TUI palette uses).
 //
 // Both levels use `clack.select` (NOT `selectKey`): `selectKey` is a
 // select-by-typed-letter prompt with no arrow/enter/esc handling, and its
-// `_track=false` value stays `undefined` until a letter is pressed — Enter
+// `_track=false` value stays `undefined` until a letter is pressed: Enter
 // crashes with `Cannot read properties of undefined (reading 'label')` (the
 // 1.9.0 home-menu bug, fixed by `select` on @clack ≥1.7).
 //
 // `@clack/prompts` is imported lazily inside the interactive branch so the
 // non-interactive paths (the common CI/script case) never pay for it and never
 // touch stdin/stdout rendering (NF6). The menu never blocks when input is
-// disabled — `isInteractive` already gated that — and a Ctrl+C at any prompt
+// disabled: `isInteractive` already gated that: and a Ctrl+C at any prompt
 // maps to exit 5 (CANCELLED) via `fail`.
 //
 // Decoupling: `home` takes its `dispatch` + `commands` as injected callbacks
 // (provided by bin.ts) so this module has NO import edge back to bin.ts (which
 // would be circular: bin imports home). That also makes the menu unit-testable
-// without commander — tests pass a fake callback + mock @clack.
+// without commander: tests pass a fake callback + mock @clack.
 
 import { type HostId, hostLaunchDirective } from '@noir-ai/adapters';
 import {
@@ -61,13 +61,13 @@ import { buildUpdateNotice, DEFAULT_UPDATE_CONFIG, runAsyncUpdateCheck } from '.
 export interface HomeDeps {
   /**
    * Run a sub-command by user-form argv (e.g. `['status','--json']`) on a fresh
-   * commander program. Must NOT throw — it owns its own error → exit-code
+   * commander program. Must NOT throw: it owns its own error → exit-code
    * mapping (bin's `handleError`) and leaves the outcome on `process.exitCode`
    * so it becomes the final exit code of the whole `noir` invocation.
    */
   dispatch: (argv: readonly string[]) => Promise<void>;
   /**
-   * The live palette commands (derived from `createProgram()` by bin.ts) — the
+   * The live palette commands (derived from `createProgram()` by bin.ts): the
    * same source the TUI palette uses. The grouped home menu resolves its
    * sections against this so it cannot drift. Optional for backward-compat
    * (older tests omit it); when absent, sections fall back to the internal
@@ -82,7 +82,7 @@ function tryProject(): { id: string; name: string; host: HostId } | null {
     const info = loadProjectInfo(process.cwd());
     return { id: info.id, name: info.name, host: info.config.host };
   } catch {
-    // Not initialized yet (no `.noir/project-id`) — the menu still works; it
+    // Not initialized yet (no `.noir/project-id`): the menu still works; it
     // just shows the generic intro. `Status` will surface the real error.
     return null;
   }
@@ -111,9 +111,9 @@ const COMMANDS_HINT =
  *
  * TUI policy: `--no-tui` (`opts.tui === false`) forces the non-interactive
  * `status` path even when {@link isInteractive} would be true (a TTY). `--tui`
- * (`opts.tui === true`) is advisory only — it still requires a TTY, so the
+ * (`opts.tui === true`) is advisory only: it still requires a TTY, so the
  * `isInteractive(opts)` gate already encodes that. Auto (no flag) preserves the
- * prior behavior. Advisory only — `home` never hard-gates any subcommand.
+ * prior behavior. Advisory only: `home` never hard-gates any subcommand.
  */
 export async function home(opts: CliOptions, deps: HomeDeps): Promise<void> {
   if (isInteractive(opts) && opts.tui !== false) {
@@ -121,12 +121,12 @@ export async function home(opts: CliOptions, deps: HomeDeps): Promise<void> {
     return;
   }
   if (opts.json === true) {
-    // Machine snapshot — same data `noir status --json` produces.
+    // Machine snapshot: same data `noir status --json` produces.
     await deps.dispatch(['status', '--json']);
     return;
   }
   // Non-interactive, human: run `status` (human snapshot). status is probe-only
-  // — it never auto-starts a daemon and exits 0 even when down, so this is
+  //: it never auto-starts a daemon and exits 0 even when down, so this is
   // a useful bare-`noir` snapshot in CI / pipes instead of a help dump.
   await deps.dispatch(['status']);
 }
@@ -134,8 +134,8 @@ export async function home(opts: CliOptions, deps: HomeDeps): Promise<void> {
 // The grouped home menu (interactive arm).
 //
 // Two levels driven by a small state machine so navigation is smooth:
-//   LEVEL 1 — section picker (clack.select): 1-6 sections + Exit.
-//   LEVEL 2 — per-section action list (clack.select with hints).
+//   LEVEL 1: section picker (clack.select): 1-6 sections + Exit.
+//   LEVEL 2: per-section action list (clack.select with hints).
 //
 // Navigation keys are handled by @clack itself at each level (Esc cancels that
 // prompt). We return a sentinel from each level and branch on it, so "back"
@@ -149,11 +149,11 @@ type ClackChoice = string | symbol;
 type Clack = typeof import('@clack/prompts');
 
 /**
- * Level 1 — the section picker. Returns which section to open, or a control
+ * Level 1: the section picker. Returns which section to open, or a control
  * outcome. Uses `select` (NOT `selectKey`) so arrow navigation, Enter-to-submit,
  * and Esc/Ctrl+C cancel all work. `selectKey` is a select-by-typed-letter prompt
  * with no arrow/enter/esc handling and a `_track=false` value that stays
- * `undefined` until a matching letter is pressed — pressing Enter there crashes
+ * `undefined` until a matching letter is pressed: pressing Enter there crashes
  * with `Cannot read properties of undefined (reading 'label')` (the 1.9.0 home
  * menu bug, fixed by switching to `select` on @clack ≥1.7).
  */
@@ -181,7 +181,7 @@ async function pickSection(
 }
 
 /**
- * Level 2 — the action list for `section`. Returns which action to run, or a
+ * Level 2: the action list for `section`. Returns which action to run, or a
  * control outcome. `select` renders each action with a one-line `hint`; the
  * final "Back" option returns to the section picker. Cancel → back too.
  */
@@ -263,7 +263,7 @@ async function argvForAction(
   let argv = [...base];
   // Collect an inline arg ONLY when the action needs one; a non-arg action
   // skips the prompt entirely (this is what distinguishes "no arg needed"
-  // from "cancelled" — both used to collide on `null` and infinite-loop).
+  // from "cancelled": both used to collide on `null` and infinite-loop).
   if (action.needsArg) {
     const arg = await collectArg(clack, action, opts);
     if (arg === null) return null; // cancelled → back to the section
@@ -271,7 +271,7 @@ async function argvForAction(
   }
 
   // Gate destructive actions behind an explicit confirm (matches the TUI
-  // palette's destructive-confirm overlay — same table, isDestructive()).
+  // palette's destructive-confirm overlay: same table, isDestructive()).
   if (action.destructive || isDestructive(argv)) {
     const confirmed = await clack.confirm({
       message: `Run \`noir ${argv.join(' ')}\`? This may modify project files / the store.`,
@@ -300,7 +300,7 @@ async function runGroupedMenu(
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    // LEVEL 1 — section picker
+    // LEVEL 1: section picker
     if (currentSection === null) {
       const picked = await pickSection(clack, sections, opts);
       if (clack.isCancel(picked) || picked === 'exit') {
@@ -309,17 +309,17 @@ async function runGroupedMenu(
       }
       const idx = sections.findIndex((s) => s.id === picked);
       if (idx === -1) {
-        // Unknown section value — defensive: re-show the picker.
+        // Unknown section value: defensive: re-show the picker.
         continue;
       }
       currentSection = idx;
       continue;
     }
 
-    // LEVEL 2 — the current section's action list
+    // LEVEL 2: the current section's action list
     const section = sections[currentSection];
     if (!section) {
-      // Defensive: index out of range — back to the picker.
+      // Defensive: index out of range: back to the picker.
       currentSection = null;
       continue;
     }
@@ -349,7 +349,7 @@ async function runGroupedMenu(
       default: {
         const action = section.items.find((a) => a.id === chosen);
         if (!action) {
-          // Defensive: unknown action id — back to the picker.
+          // Defensive: unknown action id: back to the picker.
           currentSection = null;
           continue;
         }
@@ -400,7 +400,7 @@ async function runMenu(opts: CliOptions, deps: HomeDeps): Promise<void> {
   const rec = readInstallRecord();
   if (rec && shouldShowMigrationBanner(rec, NOIR_VERSION)) {
     process.stderr.write(
-      `\n  ${c.warn(`noir installed via ${rec.method}`)} — consider \`noir install\` for the native path (auto-update, no npm prefix/PATH issues). Dismiss with: \`noir install --dismiss\` (persisted per version).\n\n`,
+      `\n  ${c.warn(`noir installed via ${rec.method}`)}: consider \`noir install\` for the native path (auto-update, no npm prefix/PATH issues). Dismiss with: \`noir install --dismiss\` (persisted per version).\n\n`,
     );
   }
 
@@ -414,16 +414,16 @@ async function runMenu(opts: CliOptions, deps: HomeDeps): Promise<void> {
   });
   if (updateNotice) {
     process.stderr.write(
-      `\n  ${c.warn(`noir ${updateNotice.latestVersion} is available`)} (you have ${updateNotice.currentVersion}) — ${updateNotice.advice}.\n\n`,
+      `\n  ${c.warn(`noir ${updateNotice.latestVersion} is available`)} (you have ${updateNotice.currentVersion}): ${updateNotice.advice}.\n\n`,
     );
   }
 
-  clack.intro(project ? `noir — ${project.name}` : 'noir');
+  clack.intro(project ? `noir: ${project.name}` : 'noir');
 
   // Resolve the curated sections against the LIVE palette registry. bin.ts
   // injects `deps.commands` (the same list the TUI palette uses). Tests that
   // omit it (backward-compat) pass an empty list → sections degrade to those
-  // whose ids exist (none) — the menu would be empty, but those tests don't
+  // whose ids exist (none): the menu would be empty, but those tests don't
   // drive the interactive arm's content. bin.ts always injects the real list.
   const sections = await resolveSections(deps.commands ?? []);
 

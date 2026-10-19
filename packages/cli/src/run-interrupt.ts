@@ -2,7 +2,7 @@
 // TUI's live run screen.
 //
 // A run drives a host CLI as a child process. Stopping it is a two-step ladder
-// — the polite signal first, the forceful one after a grace — because a host
+//: the polite signal first, the forceful one after a grace: because a host
 // that ignores the polite signal would otherwise hold the terminal (or the run
 // screen) open for good. The child is never detached: it lives in Noir's own
 // process group, so this ladder is what guarantees it is gone before Noir
@@ -26,7 +26,7 @@ export function exitCodeForSignal(signal: NodeJS.Signals): number {
   return 128 + ((constants.signals as Record<string, number>)[signal] ?? 0);
 }
 
-/** What an interrupted run says — the terminal and the run screen alike. */
+/** What an interrupted run says: the terminal and the run screen alike. */
 export function interruptedNotice(transcript: string): string {
   return `interrupted · transcript: ${transcript}`;
 }
@@ -44,7 +44,7 @@ export interface RunInterruptOptions {
  *
  * The caller hands over every child a spawn produces (a run whose binary is
  * reached through the shell bridge produces a second one), and calls
- * {@link terminate} to stop — from a signal handler in the terminal, or from a
+ * {@link terminate} to stop: from a signal handler in the terminal, or from a
  * keystroke on the run screen. Both arrive here, so the kill path is the same
  * one in both cases.
  */
@@ -54,7 +54,7 @@ export class RunInterrupt {
   private readonly controller = new AbortController();
   /** The live child, or undefined between spawns. */
   private child: HostChild | undefined;
-  /** The child the ladder already ran for — a repeat call is not a new ladder. */
+  /** The child the ladder already ran for: a repeat call is not a new ladder. */
   private stopping: HostChild | undefined;
   private grace: NodeJS.Timeout | undefined;
   private signalName: InterruptSignal | undefined;
@@ -92,7 +92,7 @@ export class RunInterrupt {
     return this.signalName;
   }
 
-  /** True once a child had to be forced — it did not honour the polite signal. */
+  /** True once a child had to be forced: it did not honour the polite signal. */
   get escalated(): boolean {
     return this.forced;
   }

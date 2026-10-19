@@ -3,7 +3,7 @@
 // Presentational. The run screen owns the input routing (arrow keys, Enter,
 // Esc, and the value line) and the performer seam; this component paints the
 // rows and the state they are in. The rows themselves come from the shared
-// action set the terminal prompt also renders — the overlay decides how a row
+// action set the terminal prompt also renders: the overlay decides how a row
 // LOOKS, never what it does, so the two surfaces cannot offer different things.
 //
 // The row idiom is the palette's: a `▸ ` marker and reverse video on the
@@ -101,7 +101,7 @@ export function PostRunOverlay({
         </Text>
       </Box>,
       <Box key="value-label" paddingX={1}>
-        <Text>{c.dim(`${value.label} — Enter to continue · Esc to go back`)}</Text>
+        <Text>{c.dim(`${value.label}: Enter to continue · Esc to go back`)}</Text>
       </Box>,
     );
   }

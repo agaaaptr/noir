@@ -1,7 +1,7 @@
 // Failure-path coverage for the host orchestrator: API-error assistant events
 // must be flagged (so run.ts never streams them as answers), and runHost must
 // surface isError + errorText from the stream so the CLI can fail honestly.
-// Uses small offline fixture hosts — no real claude, no network.
+// Uses small offline fixture hosts: no real claude, no network.
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -21,7 +21,7 @@ const hasZsh = ((): boolean => {
   }
 })();
 
-describe('normalizeStreamEvent — API-error assistant events', () => {
+describe('normalizeStreamEvent: API-error assistant events', () => {
   it('flags an assistant event that is an API error message (is_api_error_message + error category)', () => {
     const e = normalizeStreamEvent({
       type: 'assistant',
@@ -53,7 +53,7 @@ describe('normalizeStreamEvent — API-error assistant events', () => {
   });
 });
 
-describe('runHost — failure surfacing (fixture hosts)', () => {
+describe('runHost: failure surfacing (fixture hosts)', () => {
   it('surfaces isError + errorText for an auth-error host that exits 1', async () => {
     const r = await runHost({
       host: 'claude',
@@ -90,7 +90,7 @@ describe('runHost — failure surfacing (fixture hosts)', () => {
   });
 });
 
-describe('runHost — shell-bridge ENOENT fallback (zsh alias)', () => {
+describe('runHost: shell-bridge ENOENT fallback (zsh alias)', () => {
   let dir: string;
   afterEach(() => {
     if (dir) rmSync(dir, { recursive: true, force: true });
@@ -126,7 +126,7 @@ describe('runHost — shell-bridge ENOENT fallback (zsh alias)', () => {
   });
 });
 
-describe('runHost — cancellation', () => {
+describe('runHost: cancellation', () => {
   it('kills the host on abort and resolves through the ordinary close path', async () => {
     const controller = new AbortController();
     // Abort as soon as the host has announced itself: the run is provably
@@ -207,7 +207,7 @@ describe('runHost — cancellation', () => {
     async () => {
       // The window a run cannot close by listening: the stop arrives while the
       // command is still being resolved, so there is no child to signal yet. The
-      // bridge that appears afterwards has to be stopped on the way in — and it
+      // bridge that appears afterwards has to be stopped on the way in: and it
       // is the user's INTERACTIVE shell until it execs the host, so the stop has
       // to survive that shell's startup too. What matters is the outcome: the run
       // ends, on the polite signal, well inside the grace a stoppable host gets.
@@ -231,7 +231,7 @@ describe('runHost — cancellation', () => {
       rmSync(bridgeDir, { recursive: true, force: true });
 
       expect(r.isError).toBe(true);
-      // The polite signal is what ended it — not the forceful one after a grace.
+      // The polite signal is what ended it: not the forceful one after a grace.
       expect(r.errorText).toContain('terminated by signal SIGTERM');
       expect(elapsed).toBeLessThan(INTERRUPT_GRACE_MS);
     },
@@ -243,8 +243,8 @@ describe('runHost — cancellation', () => {
       // A host that sits out the polite signal must not be able to outlast the
       // stop: the signal is offered again until it lands. This host refuses the
       // first one it receives and exits 7 on the second, so the run ending at all
-      // — well inside the grace, and ending on the polite signal rather than the
-      // escalation — is the proof that the signal was offered a second time.
+      //: well inside the grace, and ending on the polite signal rather than the
+      // escalation: is the proof that the signal was offered a second time.
       const bridgeDir = mkdtempSync(join(tmpdir(), 'noir-bridge-resend-'));
       writeFileSync(
         join(bridgeDir, '.zshrc'),
@@ -275,12 +275,12 @@ describe('runHost — cancellation', () => {
 
   it('forces a host that ignores the polite signal, and leaves nothing running', async () => {
     // The whole point of the ladder: a host that will not listen to SIGTERM
-    // must not hold the terminal — and must not outlive Noir either.
+    // must not hold the terminal: and must not outlive Noir either.
     const interrupt = new RunInterrupt({ graceMs: 200 });
     let child: HostChild | undefined;
     let atRunning!: () => void;
     // The fixture installs its refusal before it says anything, so the first
-    // line is what proves the host is actually up and ignoring signals — a
+    // line is what proves the host is actually up and ignoring signals: a
     // signal sent before that would land on a process that never refused.
     const running = new Promise<void>((resolve) => {
       atRunning = resolve;
@@ -303,7 +303,7 @@ describe('runHost — cancellation', () => {
     const r = await done;
 
     // 128 + SIGKILL: the run ended because the forceful signal landed, and the
-    // run does not resolve until it has — so the child is reaped, not orphaned.
+    // run does not resolve until it has: so the child is reaped, not orphaned.
     expect(r.exitCode).toBe(137);
     expect(interrupt.escalated).toBe(true);
     expect(() => process.kill(pid as number, 0)).toThrow();

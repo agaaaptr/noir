@@ -54,7 +54,7 @@ export function discoverBuiltin(builtinDir: string = BUILTIN_DIR): BuiltinSkill[
  *
  * Throws an aggregate error if any integration is malformed (missing
  * `SKILL.md`, bad frontmatter, or an `integration.json` that fails the Zod
- * schema) — fail-fast, atomic-ish, mirroring the builtin compiler's posture.
+ * schema): fail-fast, atomic-ish, mirroring the builtin compiler's posture.
  */
 export function discoverIntegrations(
   integrationsDir: string = INTEGRATIONS_DIR,
@@ -92,7 +92,7 @@ export function discoverIntegrations(
 }
 
 /**
- * Discover the full shipped pack — builtins + integrations — in one call. Used
+ * Discover the full shipped pack: builtins + integrations: in one call. Used
  * by `emitSkillsToDir` so `noir init`/`sync` emit BOTH. The
  * `integrationsDir` defaults to the sibling of `builtinDir` so a test fixture
  * that overrides only `builtinDir` cleanly resolves integrations to a

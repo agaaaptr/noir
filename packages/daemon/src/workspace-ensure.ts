@@ -1,4 +1,4 @@
-// Workspace daemon ensure + detached spawn — the workspace-aware counterparts to
+// Workspace daemon ensure + detached spawn: the workspace-aware counterparts to
 // ensure.ts / spawn.ts. A workspace daemon is keyed by its own record file
 // (`~/.noir/workspaces/<name>/daemon.json`), so reuse/health checks are scoped to
 // ONE workspace and never collide with the project daemon record.

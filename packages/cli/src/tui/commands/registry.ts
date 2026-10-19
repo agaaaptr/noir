@@ -6,12 +6,12 @@
 // walks the commander tree at palette-build time and projects each LEAF command
 // into a {@link PaletteCommand}.
 //
-// Leaf contract (mirrors the palette's intent — only dispatchable commands
+// Leaf contract (mirrors the palette's intent: only dispatchable commands
 // surface, never bare groups):
 //   - has an action handler (`.action()` was called), AND
 //   - has no child commands.
-// Groups — which own children and carry a usage-throwing fallback action in the
-// real CLI — are excluded by the "no children" clause regardless of their action
+// Groups: which own children and carry a usage-throwing fallback action in the
+// real CLI: are excluded by the "no children" clause regardless of their action
 // state. The program root name ('noir' / '') is never part of the argv path.
 
 import type { Command } from 'commander';
@@ -45,7 +45,7 @@ const DESTRUCTIVE_PREFIXES: readonly (readonly string[])[] = [
 /**
  * True when `argv` matches one of the {@link DESTRUCTIVE_PREFIXES}. A prefix
  * matches iff `argv` is at least as long as the prefix and every prefix token
- * equals the corresponding argv token — so `['context']` does NOT match the
+ * equals the corresponding argv token: so `['context']` does NOT match the
  * `['context', 'index']` prefix (a bare group isn't destructive), but
  * `['context', 'index']` does.
  */
@@ -137,7 +137,7 @@ function collectLeaves(cmd: Command, path: string[], out: PaletteCommand[]): voi
     return;
   }
 
-  // Not a leaf — recurse into each child, extending the path with its name.
+  // Not a leaf: recurse into each child, extending the path with its name.
   // A child `name()` is always a non-empty token (commander rejects empty
   // command names), so `path` only grows with real argv segments.
   for (const child of children) {

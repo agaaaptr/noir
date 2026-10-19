@@ -1,4 +1,4 @@
-// Structural quality checks for the builtin skill pack — the artifact
+// Structural quality checks for the builtin skill pack: the artifact
 // quality gate.
 //
 // Split from compiler.ts so `validateSkill` (hard errors) and `lintSkill` (soft
@@ -10,14 +10,14 @@
 // Rules here implement the researched canon (Anthropic best practices, the
 // agentskills.io spec, Claude Code docs): required sections, a <500-line body
 // budget, one-level-deep references (no chained refs), and a WHAT+WHEN
-// description. `checkRequiredSections` is the load-bearing check — it's what
+// description. `checkRequiredSections` is the load-bearing check: it's what
 // forces every SKILL.md to carry a real playbook shape, not a shell.
 
 import { ARTIFACT_TYPES } from '@noir-ai/core';
 import { checkHygiene, HYGIENE_EXEMPT_MARKERS, type HygieneFinding } from './hygiene.js';
 import type { BuiltinSkill } from './types.js';
 
-/** The SKILL.md body — the markdown after the YAML frontmatter block. The
+/** The SKILL.md body: the markdown after the YAML frontmatter block. The
  *  frontmatter is metadata the host reads on its own; the body is the playbook
  *  a reader loads. The validator and the two body-structure lint rules both
  *  measure this string, so it lives here (single source of truth) rather than
@@ -27,7 +27,7 @@ export function bodyOf(md: string): string {
 }
 
 /** The body with the blank line that separates it from the frontmatter removed
- *  — the text the author wrote as the body, which is what a finding's line
+ * : the text the author wrote as the body, which is what a finding's line
  *  number has to count in. `bodyOf` keeps that separator line, so numbering
  *  findings against its raw output reports every one of them a line past the
  *  line the author sees in the file. Only a leading blank line is dropped, and
@@ -39,7 +39,7 @@ function authoredBody(body: string): string {
 }
 
 /** The max body length the canon recommends (Anthropic: "under 500 lines").
- *  SKILL.md is a navigator, not a repository — split to references/ past this. */
+ *  SKILL.md is a navigator, not a repository: split to references/ past this. */
 export const MAX_BODY_LINES = 500;
 
 /** The floor for a full (non-stub) playbook body. Stubs were ~13 lines; a real
@@ -55,14 +55,14 @@ const WHEN_SECTION = /^## When to use$/im;
  *  is accepted for backward-compat with noir-wrap; `## Procedure` is canonical. */
 const PROCEDURE_SECTION = /^## (Procedure|Steps)$/im;
 
-/** One of these closing sections must exist — evidence/notes/degradation. */
+/** One of these closing sections must exist: evidence/notes/degradation. */
 const CLOSING_SECTION = /^## (Verification|Notes|Fallbacks|Troubleshooting|Why order matters)$/im;
 
-/** The lead cue regex — the FIRST part of the description must be a trigger. */
+/** The lead cue regex: the FIRST part of the description must be a trigger. */
 const WHEN_CUE =
   /^(use|using|used|whenever|when|before|after|while|starting|encountering|completing|creating|about to|upon|during|to|for|on)\b/i;
 
-/** A chained reference link — a reference file that links to ANOTHER reference
+/** A chained reference link: a reference file that links to ANOTHER reference
  *  file (`references/a.md` → `references/b.md` or `../references/b.md`). The
  *  canon forbids deep nesting (agentskills.io: "no chained references"). */
 const CHAINED_REF_RE = /\]\((\/?\.?\.?\/)?(references\/|\.\.\/references\/)/i;
@@ -87,7 +87,7 @@ export function withinLineBudget(body: string, max: number = MAX_BODY_LINES): bo
   return body.split('\n').length <= max;
 }
 
-/** Reference files that point at another reference file (chained — forbidden).
+/** Reference files that point at another reference file (chained: forbidden).
  *  Returns the offending reference names. */
 export function chainedReferences(skill: BuiltinSkill): string[] {
   return skill.references.filter((r) => CHAINED_REF_RE.test(r.content)).map((r) => r.name);
@@ -99,10 +99,10 @@ export function chainedReferences(skill: BuiltinSkill): string[] {
  * AND contain a compact WHAT clause naming what the skill does.
  *
  * Two canonical shapes both pass:
- *   "Use when turning an idea into a spec — draft the spec."   (WHEN → WHAT)
+ *   "Use when turning an idea into a spec: draft the spec."   (WHEN → WHAT)
  *   "Use when a task writes back to ClickUp: update its status."  (WHEN → WHAT)
  * The description MUST lead with a cue (the WHEN-only and WHAT-only schools are
- * both rejected). The WHAT clause is the part after the trigger phrase — split
+ * both rejected). The WHAT clause is the part after the trigger phrase: split
  * on an em/en dash or a period that ends the trigger phrase. A real WHAT clause
  * has ≥3 words naming the action, so a bare "Use when…" fails.
  */
@@ -111,7 +111,7 @@ export function isWhatWhenDescription(description: string): boolean {
   if (!trimmed) return false;
   if (!WHEN_CUE.test(trimmed)) return false; // must lead with a cue
   // Split off the trigger phrase: after an em/en dash, or after the first period.
-  // "Use when X — draft the spec." → whatPart = "draft the spec."
+  // "Use when X: draft the spec." → whatPart = "draft the spec."
   const whatPart = trimmed
     .split(/[—–]|(?<=\.) /)
     .slice(1)
@@ -128,7 +128,7 @@ export function looksLikeWhenDescription(description: string): boolean {
 
 /**
  * Soft-quality warnings for `lintSkill`. Each returns a short rule id + message.
- * These are advisory — a skill can pass `validateSkill` and still carry lint
+ * These are advisory: a skill can pass `validateSkill` and still carry lint
  * warnings that the author should resolve. Rules are drawn from the researched
  * anti-pattern list (no examples, thin body, first/second person narration,
  * voodoo constants, time-sensitive version pins).
@@ -153,14 +153,14 @@ export function lintWarnings(skill: BuiltinSkill): string[] {
   if (!hasExample) {
     warnings.push('no-example: no concrete code fence or worked example in the body');
   }
-  // First/second-person narration — "I/we/you" as the agent doing work.
+  // First/second-person narration: "I/we/you" as the agent doing work.
   if (
     /\b(I|we|you)\s+(will|should|can|need|must|do|write|create|implement|run|build)\b/i.test(file)
   ) {
     warnings.push('first-person: narration addresses the reader instead of imperative steps');
   }
   // Voodoo constants: a bare number with a magnitude claim but no justification
-  // ("wait 5 seconds" without why). Very loose — catches "wait N seconds" without
+  // ("wait 5 seconds" without why). Very loose: catches "wait N seconds" without
   // a "why".
   if (
     /\b(?:wait|sleep|retry|backoff|limit|cap)\s+[a-z]*\s*(\d{1,4})\b/i.test(file) &&
@@ -198,13 +198,13 @@ const DIR_TO_CODES: ReadonlyMap<string, ReadonlySet<string>> = (() => {
  * directory absent from the artifact registry (e.g. `.noir/sdd/`), or a file
  * under a canonical artifact directory whose name carries none of that
  * directory's type codes (e.g. `.noir/plans/<date>-<slug>.md` instead of
- * `PL-<NNNN>-…`). Hard errors — the host would mint non-standard artifacts.
+ * `PL-<NNNN>-…`). Hard errors: the host would mint non-standard artifacts.
  * See `docs/reference/artifact-format.md`.
  */
 export function artifactPathDrift(skill: BuiltinSkill): string[] {
   const texts = [skill.skillMd, ...skill.references.map((r) => r.content)];
   const drifts = new Set<string>();
-  // `.noir/<dir>/<name>` — name runs to whitespace/backtick/quote/paren so
+  // `.noir/<dir>/<name>`: name runs to whitespace/backtick/quote/paren so
   // `<date>-<slug>.md` placeholders are captured whole.
   const re = /\.noir\/([a-zA-Z0-9-]+)\/([^\s`'"()]+)/g;
   for (const text of texts) {
@@ -237,7 +237,7 @@ export function artifactPathDrift(skill: BuiltinSkill): string[] {
 // A SKILL.md body is a markdown document that also carries fenced code blocks,
 // so each part is checked with the kind of text it is: the prose as markdown,
 // the fenced blocks as source. Checking the whole body as one kind misfires in
-// both directions — a source rule reads markdown bold (`**text**`) as a block
+// both directions: a source rule reads markdown bold (`**text**`) as a block
 // comment, and a prose rule reads a `//` line inside a fence as a heading.
 // The fail tier blocks emission and the warn tier is advisory; which findings
 // go to which list is `validateSkill`'s decision, not this module's.
@@ -248,7 +248,7 @@ export function artifactPathDrift(skill: BuiltinSkill): string[] {
  *
  *  Fences follow the CommonMark rule: a line opening with a run of at least
  *  three backticks or tildes opens a block, and only a run of the same
- *  character at least as long closes it — a shorter run of the same character
+ *  character at least as long closes it: a shorter run of the same character
  *  (or the other character) inside the block is content, so a block that
  *  documents a fenced example stays one block. An unclosed fence runs to the
  *  end of the body, which is where CommonMark renders its content too. */
@@ -301,7 +301,7 @@ function exemptionLine(body: string): number {
  *
  *  A body that carries the exemption marker above its first finding is exempt
  *  in both kinds. The marker is a statement about the file, and a body is one
- *  file even though it is read as prose and as source — a fenced code block
+ *  file even though it is read as prose and as source: a fenced code block
  *  cannot carry the document's marker, so without this the code rules would
  *  keep firing inside a body that declared itself exempt. */
 export function hygieneFindings(body: string): HygieneFinding[] {

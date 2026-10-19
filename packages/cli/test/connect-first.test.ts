@@ -1,4 +1,4 @@
-// Task 7 — connect-first daemon activation on the PROJECT path (spec §7).
+// Task 7: connect-first daemon activation on the PROJECT path (spec §7).
 //
 // `withDaemon` used to be ensure-first: `ensureDaemonRunning` (which spawns a
 // daemon when none is healthy) ran BEFORE any connection was attempted, so a
@@ -6,7 +6,7 @@
 // `daemon.port` there is now a STABLE address to try first, so the order is
 // reversed: connect directly, and spawn only when that connection is refused.
 // Without a configured port there is nothing to probe and today's ensure-first
-// ordering is retained verbatim (spec 7.1 — D depends on B).
+// ordering is retained verbatim (spec 7.1: D depends on B).
 //
 // The project daemon + MCP client are mocked at the module boundary (no real
 // daemon, no real HTTP), following the per-file mock pattern established in
@@ -24,7 +24,7 @@ vi.mock('@modelcontextprotocol/client', () => ({
 vi.mock('@noir-ai/daemon', () => ({
   // daemon-client.ts imports `ensureDaemonRunning` (the spawn seam),
   // `readDaemonToken` (the HTTP bearer token, spec 6.1), `tokenPath` (named in
-  // the workspace 401 message) and — for the workspace probe — the workspace
+  // the workspace 401 message) and: for the workspace probe: the workspace
   // record reader + pid check.
   ensureDaemonRunning: vi.fn(),
   readDaemonToken: vi.fn(),
@@ -88,13 +88,13 @@ interface FakeBehaviour {
 
 /**
  * Install a fake MCP `Client` class over the mocked module. Each `new Client()`
- * gets a DISTINCT instance driven by `behaviours[i]` (construction order) — the
+ * gets a DISTINCT instance driven by `behaviours[i]` (construction order): the
  * connect-first path builds a throwaway probe client and then a separate retry
  * client, and the assertions have to tell their `connect` / `close` calls apart
  * (a single shared fake would make "was the probe closed?" unanswerable).
  *
  * The returned array is filled LAZILY (as each `new Client()` runs), so read it
- * at assertion time via {@link clientAt} — never destructure it up front, which
+ * at assertion time via {@link clientAt}: never destructure it up front, which
  * would capture `undefined` before the first client exists.
  */
 function installFakeClients(behaviours: FakeBehaviour[] = []): FakeClient[] {
@@ -190,7 +190,7 @@ beforeEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('withDaemon — connect-first on a configured daemon.port', () => {
+describe('withDaemon: connect-first on a configured daemon.port', () => {
   it('connects straight to the configured address and never spawns a daemon', async () => {
     const clients = installFakeClients([
       {
@@ -231,7 +231,7 @@ describe('withDaemon — connect-first on a configured daemon.port', () => {
     const payload = await callDaemonTool(portedOpts, 'host_status');
 
     expect(payload).toEqual({ ok: true, via: 'ensured' });
-    // One refused probe, then one spawn, then one retry — in that order.
+    // One refused probe, then one spawn, then one retry: in that order.
     expect(clientAt(clients, 0).connect).toHaveBeenCalledTimes(1);
     expect(clientAt(clients, 0).close).toHaveBeenCalledTimes(1); // the dead probe is discarded
     expect(ensureDaemonRunning).toHaveBeenCalledTimes(1);
@@ -263,18 +263,18 @@ describe('withDaemon — connect-first on a configured daemon.port', () => {
     expect(clientAt(clients, 1).connect).toHaveBeenCalledTimes(1);
     expect(vi.mocked(Client)).toHaveBeenCalledTimes(2);
     expect(ensureDaemonRunning).toHaveBeenCalledTimes(1);
-    // The failed retry client is closed before the throw — no leaked connection.
+    // The failed retry client is closed before the throw: no leaked connection.
     expect(clientAt(clients, 1).close).toHaveBeenCalledTimes(1);
     // Regression (I-1): resolveDaemon throws from here, so withDaemon's finally
     // never runs. The daemon ensureDaemonRunning just STARTED must still be torn
-    // down, or it is stranded — running, with no caller left to stop it.
+    // down, or it is stranded: running, with no caller left to stop it.
     expect(stop).toHaveBeenCalledTimes(1);
   });
 
-  it('bounds the direct probe — a port that never answers falls through instead of stalling', async () => {
+  it('bounds the direct probe: a port that never answers falls through instead of stalling', async () => {
     // A "blackhole": the port accepts the connection and never answers, so the
     // probe can only end by its own deadline. Real timers are faked so the test
-    // advances that deadline itself — no 5-minute wait, no sleep.
+    // advances that deadline itself: no 5-minute wait, no sleep.
     vi.useFakeTimers();
     try {
       const clients = installFakeClients([
@@ -361,7 +361,7 @@ describe('withDaemon — connect-first on a configured daemon.port', () => {
   });
 });
 
-describe('withDaemon — no stable address keeps the ensure-first ordering (spec 7.1)', () => {
+describe('withDaemon: no stable address keeps the ensure-first ordering (spec 7.1)', () => {
   it('no daemon.port configured → ensure runs first and there is no blind probe', async () => {
     const clients = installFakeClients();
     installEnsure();
@@ -373,7 +373,7 @@ describe('withDaemon — no stable address keeps the ensure-first ordering (spec
       project,
       idleTimeoutSec: project.config.daemon.idleTimeoutSec,
     });
-    // ONE client, constructed after ensure — there is no address to probe, so
+    // ONE client, constructed after ensure: there is no address to probe, so
     // no connect is attempted before the spawn decision.
     expect(vi.mocked(Client)).toHaveBeenCalledTimes(1);
     expect(clientAt(clients, 0).connect).toHaveBeenCalledTimes(1);
@@ -404,7 +404,7 @@ describe('withDaemon — no stable address keeps the ensure-first ordering (spec
   });
 });
 
-describe('withWorkspaceDaemon — probe-only, never auto-starts (ADR-0009 §11)', () => {
+describe('withWorkspaceDaemon: probe-only, never auto-starts (ADR-0009 §11)', () => {
   /** A workspace routing pair for a project whose config pins a daemon port. */
   const routing = { name: 'ws-demo', projectId: portedProject.id };
 
@@ -413,7 +413,7 @@ describe('withWorkspaceDaemon — probe-only, never auto-starts (ADR-0009 §11)'
 
     // NOTE the opts: the project HAS a configured `daemon.port`, so this also
     // proves the connect-first activation path is never reached from the
-    // workspace route — a workspace daemon that is down must fail, not spawn.
+    // workspace route: a workspace daemon that is down must fail, not spawn.
     const stderr = await captureStderr(async () => {
       const err = await thrownBy(() =>
         withWorkspaceDaemon(portedOpts, routing, async () => 'unreachable'),

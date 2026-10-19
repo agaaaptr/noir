@@ -1,4 +1,4 @@
-// Workspace daemon record — the workspace-aware counterpart to
+// Workspace daemon record: the workspace-aware counterpart to
 // `~/.noir/daemon.json`. Each workspace keeps its OWN record at
 // `~/.noir/workspaces/<name>/daemon.json`, deliberately a DIFFERENT file from the
 // project record so `noir daemon stop` / `ensureDaemonRunning` (which read/write
@@ -13,7 +13,7 @@ export interface WorkspaceDaemonRecord {
   pid: number;
   port: number;
   startedAt: number;
-  /** Workspace name — the identity this record belongs to. */
+  /** Workspace name: the identity this record belongs to. */
   workspace: string;
 }
 

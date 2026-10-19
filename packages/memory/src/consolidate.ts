@@ -1,30 +1,30 @@
 // Consolidation for @noir-ai/memory.
 //
 // The explicit, append-only, provider-gated consolidation job. Extracted
-// from the engine into its own module so the algorithm — gate → gather
+// from the engine into its own module so the algorithm: gate → gather
 // candidates → synthesize ONE lesson via the bounded model layer → append the
-// derived row — is unit-testable in isolation (no sqlite-vec, no embedder: the
+// derived row: is unit-testable in isolation (no sqlite-vec, no embedder: the
 // engine passes an `indexDerived` callback that performs the actual write). The
 // engine delegates here; the engine still owns the store handle, the embedder,
 // and the FTS5+vec+KV write path (`indexObservation`, shared with `save`).
 //
 // Non-negotiable rules enforced here:
-//   • Provider-EXPLICIT — the provider is resolved ONLY from
+//   • Provider-EXPLICIT: the provider is resolved ONLY from
 //     `config.consolidation.provider`; it is NEVER inferred from env-var
 //     presence. No explicit, enabled provider ⇒ refuse + log (`no-provider`)
 //     and NO model call is made. This is the line between free (store) and paid
-//     (LLM) — NEVER a silent paid call (the Agent-Memory anti-pattern).
-//   • Append-only — on success a DERIVED `type:'lesson'` row is appended with
+//     (LLM): NEVER a silent paid call (the Agent-Memory anti-pattern).
+//   • Append-only: on success a DERIVED `type:'lesson'` row is appended with
 //     `provenance:[candidate ids]`; the original observations are NEVER mutated
 //     or deleted (reversible + auditable).
-//   • Single-shot — one `complete()` call, free-text → lesson body. There
+//   • Single-shot: one `complete()` call, free-text → lesson body. There
 //     is no `tools` / `stream` parameter on the request and no loop here.
-//   • Canonical ProjectId — the lesson's `project` is the engine's canonical
+//   • Canonical ProjectId: the lesson's `project` is the engine's canonical
 //     id (NEVER a filesystem path).
 //
 // A refusal is NEVER a crash and NEVER silent: every miss is recorded in the
 // `memory:consolidation:miss` KV audit log (`logged:true`) so the user can see
-// exactly why no lesson was written — and that NO paid call was made.
+// exactly why no lesson was written: and that NO paid call was made.
 
 import { randomUUID } from 'node:crypto';
 import type { Store } from '@noir-ai/store';
@@ -48,7 +48,7 @@ import {
 /** Default cap on consolidation candidates (deterministic selection). */
 export const DEFAULT_CONSOLIDATE_LIMIT = 50;
 
-/** Hard ceiling on consolidation candidates — a caller passing an unbounded
+/** Hard ceiling on consolidation candidates: a caller passing an unbounded
  *  `limit` must not hydrate every observation from KV and concatenate their full
  *  content into one model prompt (OOM / context blowout). */
 const MAX_CONSOLIDATE_LIMIT = 200;
@@ -73,7 +73,7 @@ export const CONSOLIDATION_SYSTEM_PROMPT = [
  * derived observation to every index (embed → FTS5 + vec + KV + id index),
  * reusing the engine's shared `indexObservation` path so a lesson lands exactly
  * like a user-saved observation. Consolidation itself never touches the
- * embedder or the write path directly — it builds the lesson row + hands it off.
+ * embedder or the write path directly: it builds the lesson row + hands it off.
  */
 export interface ConsolidationDeps {
   /** The daemon's single-writer store handle (possibly read-only). */
@@ -87,32 +87,32 @@ export interface ConsolidationDeps {
   /**
    * Write a derived lesson observation to all indexes. The engine implements
    * this as `embedBestEffort(content)` then the shared `indexObservation(obs,
-   * vec)` — so the lesson is searchable (BM25 + vec) + hydrated from KV just
+   * vec)`: so the lesson is searchable (BM25 + vec) + hydrated from KV just
    * like a user save.
    */
   indexDerived: (observation: Observation) => Promise<void>;
 }
 
-// runConsolidation — the explicit, provider-gated job
+// runConsolidation: the explicit, provider-gated job
 
 /**
  * Run one explicit consolidation pass.
  *
  * Gate order (each refusal logs to `memory:consolidation:miss` and returns
  * `logged:true`; NONE makes a paid call before its gate passes):
- *  1. `no-provider` — consolidation not enabled OR no explicit `provider`
+ *  1. `no-provider`: consolidation not enabled OR no explicit `provider`
  *     configured. The provider is NEVER inferred from env-var presence.
- *  2. `model-unavailable` — enabled + provider set, but the model injection
+ *  2. `model-unavailable`: enabled + provider set, but the model injection
  *     is absent OR no explicit `model` id is configured (the documented stub).
  *     Also the refusal when `complete()` returns `null` (provider
- *     not resolvable at call time — e.g. key missing) OR `{ok:false}` (an
+ *     not resolvable at call time: e.g. key missing) OR `{ok:false}` (an
  *     attempted call failed): both are wrapped as `'model-unavailable'`.
- *  3. `no-candidates` — nothing matches the (optional) type filter / lookback,
+ *  3. `no-candidates`: nothing matches the (optional) type filter / lookback,
  *     OR the model returned empty text.
  *
  * On success: appends ONE derived `type:'lesson'` observation with
  * `provenance:[candidate ids]` via `indexDerived`; originals are NEVER mutated
- * (append-only — reversible + auditable).
+ * (append-only: reversible + auditable).
  */
 export async function runConsolidation(
   deps: ConsolidationDeps,
@@ -122,7 +122,7 @@ export async function runConsolidation(
   const cons = config.consolidation;
   const provider = cons?.provider;
 
-  // GATE 1 — provider-explicit. The provider is NEVER inferred
+  // GATE 1: provider-explicit. The provider is NEVER inferred
   // from env-var presence; no explicit, enabled provider ⇒ refuse + log, and
   // NO model call is made. This is the line between free (store) and paid (LLM).
   if (!cons?.enabled || !provider) {
@@ -130,7 +130,7 @@ export async function runConsolidation(
     return { ok: false, reason: 'no-provider', logged: true };
   }
 
-  // GATE 2 — the bounded model layer must be injected AND an explicit model
+  // GATE 2: the bounded model layer must be injected AND an explicit model
   // id configured. Its absence is the documented stub: refuse +
   // log, never crash, never a call.
   if (model === undefined || !cons.model) {
@@ -185,7 +185,7 @@ export async function runConsolidation(
 
   const text = result.text.trim();
   if (text.length === 0) {
-    // Model returned empty — treat as nothing to synthesize (no-candidates).
+    // Model returned empty: treat as nothing to synthesize (no-candidates).
     appendConsolidationMiss(store, {
       ts: Date.now(),
       reason: 'no-candidates',
@@ -194,7 +194,7 @@ export async function runConsolidation(
     return { ok: false, reason: 'no-candidates', logged: true };
   }
 
-  // Append the derived lesson (originals UNTOUCHED — append-only). The
+  // Append the derived lesson (originals UNTOUCHED: append-only). The
   // lesson inherits the baseline salience + the de-duplicated concept tags from
   // its sources; `files` is empty (a lesson is project-level, not file-scoped).
   const provenance = candidates.map((c) => c.id);
@@ -217,13 +217,13 @@ export async function runConsolidation(
   return { ok: true, lessons: [lesson], from: provenance };
 }
 
-// Pure helpers (exported for direct unit testing — mirrors @noir-ai/context
+// Pure helpers (exported for direct unit testing: mirrors @noir-ai/context
 // exporting its pure RRF / snippet helpers)
 
 /**
  * Gather consolidation candidates: observations with `type != 'lesson'`,
  * newest-first, optionally restricted to `types`, capped at `limit`. Pure read
- * off the id index + KV — no LLM, no clustering (deliberately deterministic). Exported so the
+ * off the id index + KV: no LLM, no clustering (deliberately deterministic). Exported so the
  * deterministic selection is testable without a model.
  */
 export function gatherCandidates(
@@ -242,7 +242,7 @@ export function gatherCandidates(
     if (obs.type === 'lesson') continue; // never re-consolidate a lesson
     if (types !== undefined && !types.includes(obs.type)) continue;
     // Workspace lifecycle: recall hides superseded/forgotten rows by default, so
-    // consolidation must too — otherwise a corrected or retracted observation
+    // consolidation must too: otherwise a corrected or retracted observation
     // would still be distilled into the derived lesson. (Legacy rows: no status.)
     if (obs.status !== undefined && obs.status !== 'active') continue;
     out.push(obs);

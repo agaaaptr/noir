@@ -4,7 +4,7 @@ import { NOIR_DIR } from './layout.js';
 import { NOIR_VERSION } from './version.js';
 
 /**
- * The canonical registry of `.noir/` artifact kinds — the SINGLE SOURCE OF TRUTH
+ * The canonical registry of `.noir/` artifact kinds: the SINGLE SOURCE OF TRUTH
  * for how generated files are named and where they live. The quality gate
  * (`packages/skills/src/quality.ts`) cross-checks every `.noir/…` path a skill
  * prescribes against this table; the workflow writers and the CLI handoff
@@ -37,7 +37,7 @@ export function artifactDir(root: string, kind: ArtifactKind): string {
  *  caller-supplied id cannot escape `.noir/` via a filename (the write paths
  *  join this into a real path). Replaced with `_` on collision. SHARED by the
  *  write name (`artifactFileName`) and the read match tail (`findArtifact`) so a
- *  name round-trips exactly — a file written as `TS-0001-foo_bar.md` is found by
+ *  name round-trips exactly: a file written as `TS-0001-foo_bar.md` is found by
  *  a `findArtifact` for `foo/bar`. */
 function safe(v: string): string {
   return v.replace(/[^A-Za-z0-9._-]/g, '_');
@@ -82,7 +82,7 @@ export function nextArtifactSequence(root: string, kind: ArtifactKind): number {
 }
 
 /**
- * Locate an existing artifact by its identifying fields — for readers like
+ * Locate an existing artifact by its identifying fields: for readers like
  * `readPrd` that used to derive the path deterministically from
  * `<taskId>-<slug>.md`. Returns the absolute path or `null`. Matches on the
  * trailing `-<taskId>-<slug>.md` (or `-<taskId>.md` / `-<slug>.md` as the kind
@@ -99,7 +99,7 @@ export function findArtifact(
   const parts: string[] = [];
   // Apply the SAME sanitizer as artifactFileName so a written name (with `_`
   // substitutions) is matched back by the same inputs (with their original
-  // characters) — one canonical name for both directions.
+  // characters): one canonical name for both directions.
   if (t.hasTaskId && opts.taskId) parts.push(safe(opts.taskId));
   if (t.hasSlug && opts.slug) parts.push(safe(opts.slug));
   const tail = parts.length > 0 ? `-${parts.join('-')}.md` : '.md';
@@ -138,7 +138,7 @@ export function titleFromSlug(slug: string): string {
 
 export interface ArtifactFrontmatterInput {
   kind: ArtifactKind;
-  /** The store key (`taskId`) — or `ADR-<NNNN>` for decisions. */
+  /** The store key (`taskId`): or `ADR-<NNNN>` for decisions. */
   id: string;
   slug?: string;
   status?: string;
@@ -150,7 +150,7 @@ export interface ArtifactFrontmatterInput {
  * `docs/reference/artifact-format.md`). Required fields: `kind`, `id`, `slug`
  * (when the kind has one), `title`, `status`, `date`, `generated_by`,
  * `generated_at`. Status defaults `draft` (or `proposed` for `adr`). Additive
- * over the v1.x `taskId`/`slug` — no reader parsed those keys.
+ * over the v1.x `taskId`/`slug`: no reader parsed those keys.
  */
 export function artifactFrontmatter(input: ArtifactFrontmatterInput): string {
   const { kind, id, slug, status, title } = input;

@@ -13,8 +13,8 @@ import { fileURLToPath } from 'node:url';
  *  - built (tsup): this module is inlined into the package's single bundle at
  *    `packages/create/dist/index.js` → `../templates/<name>`. `dist/` and
  *    `src/` are both direct children of the package root, so the relative
- *    offset is unchanged and `import.meta.url` — which points at the bundle,
- *    not at a `template-loader.js` — still resolves correctly.
+ *    offset is unchanged and `import.meta.url`: which points at the bundle,
+ *    not at a `template-loader.js`: still resolves correctly.
  *  - packed (npm tarball): `templates/` is included per `files`, dist/ layout
  *    preserved → same as built.
  *
@@ -34,7 +34,7 @@ function resolveTemplatesDir(): string {
 }
 
 /** Read a template's raw text by name (e.g. `noir.md.tmpl`). Throws on missing
- *  — an unknown template is a manifest bug and should fail loudly, not render
+ * : an unknown template is a manifest bug and should fail loudly, not render
  *  an empty string silently. */
 export function loadTemplate(name: string): string {
   return readFileSync(join(DEFAULT_TEMPLATES_DIR, name), 'utf8');

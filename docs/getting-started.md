@@ -6,8 +6,8 @@ New to Noir? Read the [README](../README.md) first for the 30-second "what and w
 
 ## What you need
 
-- **No system Node prerequisite** if you use the native installer (recommended) — it provisions a managed Node 22.x runtime under `~/.noir/`. If you install via npm/pnpm/yarn/bun directly, **Node.js ≥ 22** is required (Node 22 is what CI uses). For the from-source dev install below you also need **pnpm 10** (`corepack enable && corepack prepare pnpm@10 --activate`).
-- **An agentic CLI host.** Noir targets **Claude Code by default**; Gemini, Cursor, OpenCode, and AGENTS.md are supported via `noir init --host <id>` (see [CLI Reference](reference/cli.md)). This walkthrough uses Claude Code. Noir is the workflow/context/memory *layer* — it is not an agent runtime. **Bring your own agent.**
+- **No system Node prerequisite** if you use the native installer (recommended): it provisions a managed Node 22.x runtime under `~/.noir/`. If you install via npm/pnpm/yarn/bun directly, **Node.js ≥ 22** is required (Node 22 is what CI uses). For the from-source dev install below you also need **pnpm 10** (`corepack enable && corepack prepare pnpm@10 --activate`).
+- **An agentic CLI host.** Noir targets **Claude Code by default**; Gemini, Cursor, OpenCode, and AGENTS.md are supported via `noir init --host <id>` (see [CLI Reference](reference/cli.md)). This walkthrough uses Claude Code. Noir is the workflow/context/memory *layer*: it is not an agent runtime. **Bring your own agent.**
 - macOS, Linux, or Windows on x64 or arm64 (native deps ship prebuilt).
 
 ## Install
@@ -26,26 +26,26 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/aga
 Two channels ship in parallel:
 
 <!-- noir:doc:status -->
-**Latest stable:** `1.19.2` (npm dist-tag `latest` — `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.19.2-beta.1` (npm dist-tag `beta` — `npm i @noir-ai/cli@beta` to opt in)
+**Latest stable:** `1.19.2` (npm dist-tag `latest`: `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.19.2-beta.1` (npm dist-tag `beta`: `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.19.2` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-10-15T07:50:59.856Z*
+*Last auto-generated: 2026-10-19T06:17:10.309Z*
 <!-- /noir:doc:status -->
 
-- **Beta** — `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
+- **Beta**: `@noir-ai/cli@beta`. Set `NOIR_CHANNEL=beta` (POSIX) or `$env:NOIR_CHANNEL='beta'` (PowerShell):
 
   ```bash
   curl -fsSL https://raw.githubusercontent.com/agaaaptr/noir/main/scripts/install.sh | NOIR_CHANNEL=beta bash
   ```
 
-- **Pin a version** — `NOIR_VERSION=<VERSION>` overrides the channel.
+- **Pin a version**: `NOIR_VERSION=<VERSION>` overrides the channel.
 
-The installer is idempotent (re-run = upgrade), prints a PATH hint if `noir` isn't on PATH, and verifies with `noir --version` at the end. To move an existing npm/Homebrew/Scoop install to the native path, run `noir migrate` (settings preserved). To update later, run `noir update`. The full reference — npm/pnpm/yarn/bun, one-shot `npx`, Homebrew, Scoop, troubleshooting, the **beta vs stable** channel model, and the trust/checksum/attestation story — lives in **[installation.md](how-to/installation.md)**.
+The installer is idempotent (re-run = upgrade), prints a PATH hint if `noir` isn't on PATH, and verifies with `noir --version` at the end. To move an existing npm/Homebrew/Scoop install to the native path, run `noir migrate` (settings preserved). To update later, run `noir update`. The full reference: npm/pnpm/yarn/bun, one-shot `npx`, Homebrew, Scoop, troubleshooting, the **beta vs stable** channel model, and the trust/checksum/attestation story: lives in **[installation.md](how-to/installation.md)**.
 
 ### From source (repo developers only)
 
-If you're developing Noir itself rather than using it, install from source: `git clone`, then `pnpm install && pnpm build`, then put `noir` on PATH via `pnpm --filter @noir-ai/cli link --global`. The `.mcp.json` written by `noir init` calls `command: "noir"`, so Claude Code needs `noir` resolvable on PATH. For the troubleshooting that surrounds an install — native-dependency build failures, the first-run model download, and PATH problems after install — see **[installation.md](how-to/installation.md)**. End users should ignore this path and use the native installer or npm.
+If you're developing Noir itself rather than using it, install from source: `git clone`, then `pnpm install && pnpm build`, then put `noir` on PATH via `pnpm --filter @noir-ai/cli link --global`. The `.mcp.json` written by `noir init` calls `command: "noir"`, so Claude Code needs `noir` resolvable on PATH. For the troubleshooting that surrounds an install: native-dependency build failures, the first-run model download, and PATH problems after install: see **[installation.md](how-to/installation.md)**. End users should ignore this path and use the native installer or npm.
 
 ## Initialize a project
 
@@ -73,15 +73,15 @@ noir init
 | `CLAUDE.md` | A managed `@import ".noir/NOIR.md"` block is inserted (existing content is preserved). |
 | `.claude/skills/noir-*` | The **34 skills** (33 builtins + 1 integration) are compiled and emitted here. |
 
-`.noir/store/` (the SQLite DB), `.noir/specs/`, `.noir/plans/`, `.noir/tasks/`, `.noir/decisions/`, and `.noir/audit/` are created on demand as you work.
+`.noir/store/` (the SQLite DB), `.noir/specs/`, `.noir/plans/`, `.noir/tasks/`, `.noir/decisions/`, and `.noir/audit/` are created on demand as you work (the gate-evidence JSON in `audit/` is committed; its `integration-*.jsonl` write-audit logs are gitignored).
 
-> **No plugin, no marketplace.** Noir ships only its native `noir-` builtins. There is nothing to install into the host — `noir init`/`noir sync` overwrite the `noir-*` namespace idempotently.
+> **No plugin, no marketplace.** Noir ships only its native `noir-` builtins. There is nothing to install into the host: `noir init`/`noir sync` overwrite the `noir-*` namespace idempotently.
 >
-> **Edited a managed file?** When `noir init --upgrade` or `noir sync` finds a generated file (or skill) that differs from the template, it shows a conflict prompt — **Replace**, **Rename**, **Create duplicate**, **Keep mine**, or **Cancel** (plus **Merge (with conflict markers)** when a 3-way merge hit an overlap). After your first choice you're asked whether to **apply it to all remaining conflicts** this run, so re-emitting many divergent skills prompts once rather than per-file.
+> **Edited a managed file?** When `noir init --upgrade` or `noir sync` finds a generated file (or skill) that differs from the template, it shows a conflict prompt: **Replace**, **Rename**, **Create duplicate**, **Keep mine**, or **Cancel** (plus **Merge (with conflict markers)** when a 3-way merge hit an overlap). After your first choice you're asked whether to **apply it to all remaining conflicts** this run, so re-emitting many divergent skills prompts once rather than per-file.
 
 ## Connect your host over MCP
 
-The Noir MCP server runs in one of **two transport modes**. This is about *how the server process runs* — it's a separate concern from the spec-driven discipline level (full/quick) covered later. `noir init` defaults to the one almost everyone should use.
+The Noir MCP server runs in one of **two transport modes**. This is about *how the server process runs*: it's a separate concern from the spec-driven discipline level (full/quick) covered later. `noir init` defaults to the one almost everyone should use.
 
 ### Default: stdio (recommended)
 
@@ -98,14 +98,14 @@ This is the zero-config path. `noir init` (no flags) writes a `.mcp.json` that p
 **Steps:**
 
 1. `noir init` (default transport is `stdio`).
-2. Open the project in **Claude Code**. That's it — Claude Code auto-spawns `noir mcp serve --stdio` and connects.
+2. Open the project in **Claude Code**. That's it: Claude Code auto-spawns `noir mcp serve --stdio` and connects.
 3. The server's lifecycle **is** the Claude Code session: when you close the session, the server goes with it. No separate process to manage.
 
 This is the right choice for almost everyone. Use the daemon only if you need the extras below.
 
 ### Optional: daemon (persistent HTTP)
 
-The daemon is a **long-lived** Noir server that multiple clients can share — the host *and* terminal CLI commands (`noir context search`, `noir task new`, …) all talk to the same process, and it persists across host sessions.
+The daemon is a **long-lived** Noir server that multiple clients can share: the host *and* terminal CLI commands (`noir context search`, `noir task new`, …) all talk to the same process, and it persists across host sessions.
 
 **Steps:**
 
@@ -122,21 +122,21 @@ The daemon is a **long-lived** Noir server that multiple clients can share — t
    # foreground mode; Ctrl+C to stop. Use --detach for background
    ```
 
-3. Open the project in Claude Code. Noir's CLI commands auto-discover the daemon from this project's own record at `~/.noir/daemons/<projectId>.json`, and connect to the recorded port first — the daemon is spawned only if the connection is refused. Set `daemon.port` in `.noir/config.yml` if you want a stable port (it is a **preference**: if the port is taken the daemon falls back to an ephemeral one and warns, and the record always names the port actually bound). The `.mcp.json` URL must be filled in from the port the daemon reports.
+3. Open the project in Claude Code. Noir's CLI commands auto-discover the daemon from this project's own record at `~/.noir/daemons/<projectId>.json`, and connect to the recorded port first: the daemon is spawned only if the connection is refused. Set `daemon.port` in `.noir/config.yml` if you want a stable port (it is a **preference**: if the port is taken the daemon falls back to an ephemeral one and warns, and the record always names the port actually bound). The `.mcp.json` URL must be filled in from the port the daemon reports.
 
 **Caveats:**
 
 - Killing the daemon while the host is connected **breaks the connection**: there is **no auto-fallback to stdio**. Your data stays durable on disk, and reads have a degraded read-only fallback, but the live host link is severed until you restart the daemon.
 - The daemon is **foreground by default**; pass `--detach` to fork a detached child that persists after the parent exits (`noir daemon start --detach` reports the child's PID and port). Auto-restart daemons are not yet available.
-- Each project has its own daemon record (`~/.noir/daemons/<projectId>.json`), so running Noir concurrently in two projects no longer clobbers anything — both daemons coexist and neither is stopped by the other's activity.
-- The HTTP transport requires a bearer token, minted fresh on every daemon start and written at mode `0600` to `~/.noir/daemons/<projectId>.token` — a workspace daemon's token is named for the workspace instead (`<workspace-name>.token`). `noir daemon token` prints it; a host that supports `headersHelper` should store the command rather than the secret. `/health` stays token-free, and the stdio transport is unaffected (no network surface).
+- Each project has its own daemon record (`~/.noir/daemons/<projectId>.json`), so running Noir concurrently in two projects no longer clobbers anything: both daemons coexist and neither is stopped by the other's activity.
+- The HTTP transport requires a bearer token, minted fresh on every daemon start and written at mode `0600` to `~/.noir/daemons/<projectId>.token`: a workspace daemon's token is named for the workspace instead (`<workspace-name>.token`). `noir daemon token` prints it; a host that supports `headersHelper` should store the command rather than the secret. `/health` stays token-free, and the stdio transport is unaffected (no network surface).
 
 Pick the daemon **only** if you need a persistent shared server across host sessions. Active terminal commands start a daemon when needed; otherwise, stdio is the simplest host transport. See [transports](explanation/sdd-workflow.md#transports) for the full comparison.
 
 ### Share memory across two repos (workspaces)
 
 Working on one product across a **backend and a frontend repo**? Two separate
-sessions can share **decision memory** through one workspace daemon — no
+sessions can share **decision memory** through one workspace daemon: no
 handoff documents:
 
 ```bash
@@ -150,13 +150,13 @@ works, and troubleshooting.
 
 ## Your first session in Claude Code
 
-You work **through** the host. After `noir init` and opening the project in Claude Code, just ask it to build something — for example, *"add a CSV export to the reports module."* The native skills pick up the request and run Noir's spec-driven lifecycle:
+You work **through** the host. After `noir init` and opening the project in Claude Code, just ask it to build something: for example, *"add a CSV export to the reports module."* The native skills pick up the request and run Noir's spec-driven lifecycle:
 
 ```
 noir-brainstorming  →  noir-spec  →  noir-planning  →  noir-executing-plans  →  noir-verifying  →  noir-wrap
 ```
 
-- `noir-executing-plans` uses `context_search` to pull focused, ranked snippets instead of re-reading whole files, and `memory_recall` for anything you saved in a prior session — see [**context-and-handoff.md**](how-to/context-and-handoff.md) and [**memory.md**](how-to/memory.md).
+- `noir-executing-plans` uses `context_search` to pull focused, ranked snippets instead of re-reading whole files, and `memory_recall` for anything you saved in a prior session: see [**context-and-handoff.md**](how-to/context-and-handoff.md) and [**memory.md**](how-to/memory.md).
 - `noir-wrap` ends with `memory_save`, so insights carry into the next session.
 - **Every gate decision is recorded** in `.noir/audit/`. State persists to the project-local store, so a new session can resume a task where the last one left off.
 
@@ -171,44 +171,44 @@ noir doctor         # config / store / embedder / native deps / provider / insta
 noir doctor --fix   # the same check, re-asserting owner-only permissions on .noir/.env and the store first
 ```
 
-Driving that lifecycle yourself — `task new --class feature`, `advance --force`,
-`block`, `abandon`, `research-record`, `decompose` — is covered end to end in
+Driving that lifecycle yourself: `task new --class feature`, `advance --force`,
+`block`, `abandon`, `research-record`, `decompose`: is covered end to end in
 [**sdd-tasks.md**](how-to/sdd-tasks.md). The daemon exposes the same surface as
 `workflow_*` MCP tools (`workflow_status`, `workflow_start`, `workflow_advance`,
 `workflow_resume`, `workflow_block`, `workflow_abandon`,
 `workflow_research_record`, `checkpoint`).
 
-`noir doctor` includes an **install row** (advisory `ok`/`warn`, never `fail`, no network call) that reports the detected install method (`native`/`npm`/`pnpm`/…), the installed version, and the latest-known version from the update cache — a non-blocking `native recommended` nudge appears when you're on a non-native path.
+`noir doctor` includes an **install row** (advisory `ok`/`warn`, never `fail`, no network call) that reports the detected install method (`native`/`npm`/`pnpm`/…), the installed version, and the latest-known version from the update cache: a non-blocking `native recommended` nudge appears when you're on a non-native path.
 
-That's the whole loop. You don't drive the gates by hand — you talk to the host, and the host drives Noir.
+That's the whole loop. You don't drive the gates by hand: you talk to the host, and the host drives Noir.
 
 ## Browsing commands (home + palette)
 
 You don't need to memorize every subcommand:
 
 - **Bare `noir`** (no arguments) opens a **grouped home menu**: a section picker (Status &amp; context / Memory / Workflow / Setup &amp; maintenance / Dashboard (full-screen)) then per-section action lists with hints and destructive-action confirmation. Use `↑/↓` to move and `Enter` to select; `Esc` steps back / cancels.
-- **`noir tui`** opens the **Ink dashboard** — live status, `/command` input, and one command surface (the palette): `Ctrl+K` all commands, `h` quick actions, `?` keybindings, `Ctrl+F` find-in-output, `Ctrl+T` recent transcripts, `Tab` to switch the palette view. A `/run <prompt>` runs the host **live in the pane** instead of headless (see below).
-- **`noir palette`** opens the fuzzy command palette directly (type to filter, `↑/↓` to choose, `Enter` to run). A command that cannot run without a value (`context search`, `daemon join`, `run`, …) asks for it on the same input line — type it and press `Enter`, or `Esc` to go back to the filter.
+- **`noir tui`** opens the **Ink dashboard**: live status, `/command` input, and one command surface (the palette): `Ctrl+K` all commands, `h` quick actions, `?` keybindings, `Ctrl+F` find-in-output, `Ctrl+T` recent transcripts, `Tab` to switch the palette view. A `/run <prompt>` runs the host **live in the pane** instead of headless (see below).
+- **`noir palette`** opens the fuzzy command palette directly (type to filter, `↑/↓` to choose, `Enter` to run). A command that cannot run without a value (`context search`, `daemon join`, `run`, …) asks for it on the same input line: type it and press `Enter`, or `Esc` to go back to the filter.
 
 From the home menu, select **Dashboard** to launch the TUI, or **All commands** to open the fuzzy palette. The curated quick actions live inside the palette (`h`) rather than a separate home screen.
 
 ## Switching discipline: full vs quick
 
-Separate from the transport, every task runs at a **discipline level** — `full` or `quick`. Set the default in `.noir/config.yml` (`mode: full` is the default after `noir init`), or override it per task:
+Separate from the transport, every task runs at a **discipline level**: `full` or `quick`. Set the default in `.noir/config.yml` (`mode: full` is the default after `noir init`), or override it per task:
 
 ```bash
 noir task new --slug csv-export --mode quick
 ```
 
-- **full** — spec + plan are authored **and reviewed** (gates), then execute, then verify (tests/build). Use this for real features and risky changes. This is the default.
-- **quick** — spec + plan are **skipped** (a `<quick-mode stub spec>` is written, and the spec/plan gates are recorded as `skipped`), execute runs, and the **verify gate still fires**. Use this for small, trivial, or spike tasks. It is not a free-for-all: it only skips formal planning, not verification.
+- **full**: spec + plan are authored **and reviewed** (gates), then execute, then verify (tests/build). Use this for real features and risky changes. This is the default.
+- **quick**: spec + plan are **skipped** (a `<quick-mode stub spec>` is written, and the spec/plan gates are recorded as `skipped`), execute runs, and the **verify gate still fires**. Use this for small, trivial, or spike tasks. It is not a free-for-all: it only skips formal planning, not verification.
 
 The host picks up the configured mode via the `noir-brainstorming` skill / the `workflow_start` MCP tool (which falls back to the configured `mode`). See [Spec-Driven modes](explanation/sdd-workflow.md#modes) for the details.
 
 ## Driving the host headlessly (`noir run`)
 
 `noir run <prompt>` drives a host agentic CLI (Claude Code by default) **headless**
-and streams its answer — no interactive session, scriptable under `--json`:
+and streams its answer: no interactive session, scriptable under `--json`:
 
 ```bash
 noir run "summarize the TODOs in src/"
@@ -260,9 +260,9 @@ A raw stream-json transcript is always persisted to `.noir/transcripts/`.
   listed as they start, and `Esc` cancels. `Ctrl+T` reopens a recent transcript
   read-only.
 
-The full walkthrough — the `--json` envelope field by field, `--profile` and
+The full walkthrough: the `--json` envelope field by field, `--profile` and
 `--list-profiles`, the exact interrupt ladder, the post-run menu choices, and the
-run screen's keybindings — is in
+run screen's keybindings: is in
 [**running-the-host.md**](how-to/running-the-host.md).
 
 ## Configuration
@@ -273,7 +273,7 @@ Noir's knobs live in three places: `.noir/config.yml` (schema in
 `.noir/.env`.
 
 **`.noir/.env` is the recommended home for project-scoped values**, and it
-**wins for every key it defines** — the real environment is only the fallback
+**wins for every key it defines**: the real environment is only the fallback
 for the keys it does not define, so a machine-global export cannot shadow it.
 Set up the ClickUp integration with [clickup.md](how-to/clickup.md).
 
@@ -281,13 +281,13 @@ The precedence chain, what belongs in the file, and the commands that show
 which value is in effect (`noir env`) —
 [configure-env.md](how-to/configure-env.md). The `noir env` report and its
 `--json` contract are specified in
-[environment.md](reference/environment.md#noir-env--see-which-source-won).
+[environment.md](reference/environment.md#noir-env-see-which-source-won).
 
 ## Where to go next
 
 - [installation.md](how-to/installation.md): the full install reference (every path, troubleshooting, the channel model, and what `noir init --upgrade` does to a project).
-- [running-the-host.md](how-to/running-the-host.md) — driving the host headless: `--json`, profiles, the interrupt ladder, the post-run menu, the live run screen.
-- [sdd-tasks.md](how-to/sdd-tasks.md) — the task lifecycle from a terminal: start, advance, escape a gate, verify, resume.
+- [running-the-host.md](how-to/running-the-host.md): driving the host headless: `--json`, profiles, the interrupt ladder, the post-run menu, the live run screen.
+- [sdd-tasks.md](how-to/sdd-tasks.md): the task lifecycle from a terminal: start, advance, escape a gate, verify, resume.
 - [memory.md](how-to/memory.md): save, recall, capture, consolidate, forget.
 - [context-and-handoff.md](how-to/context-and-handoff.md): index and search the codebase, and hand a session over (`noir handoff` / `noir wrap`).
 - [shared-workspaces.md](how-to/shared-workspaces.md): share decision memory across repositories (BE ↔ FE) through one workspace daemon.

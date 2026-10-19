@@ -2,7 +2,7 @@
 // through the user's interactive shell. `child_process.spawn()` cannot see shell
 // aliases or functions (they only exist inside an interactive shell that has
 // sourced .zshrc/.bashrc/config.fish), and PATH entries exported only in rc
-// files are invisible to non-interactive children — both surface as ENOENT.
+// files are invisible to non-interactive children: both surface as ENOENT.
 //
 // Safety model (the whole point of this module):
 //   - the NAME is validated against a strict charset and passed ONLY via argv
@@ -18,7 +18,7 @@ import { spawn } from 'node:child_process';
 import { basename } from 'node:path';
 
 const PROBE_TIMEOUT_MS = 3000;
-/** Strict command-name charset — anything else is never handed to a shell. */
+/** Strict command-name charset: anything else is never handed to a shell. */
 const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._+-]*$/;
 const SUPPORTED_SHELLS = new Set(['zsh', 'bash', 'fish']);
 
@@ -85,7 +85,7 @@ function shellKind(shell: string): 'zsh' | 'bash' | 'fish' | null {
   return (SUPPORTED_SHELLS.has(kind) ? kind : null) as 'zsh' | 'bash' | 'fish' | null;
 }
 
-/** Login+interactive flags per shell. fish has no separate login mode — `-i -c`
+/** Login+interactive flags per shell. fish has no separate login mode: `-i -c`
  *  sources config.fish; zsh/bash use `-lic` (login+interactive) so rc files that
  *  only load in login shells (PATH via .zprofile / /etc/zprofile) are visible. */
 const PROBE_FLAGS: Record<'zsh' | 'bash' | 'fish', string> = {
@@ -118,8 +118,8 @@ function probeCommand(
     const script = kind ? PROBE_SCRIPTS[kind] : '';
     const flags = kind ? PROBE_FLAGS[kind] : '-lic';
     // bash/zsh consume a positional `$0` (the `noirbridge` dummy) and read the
-    // command name from `$1`; fish has NO `$0` — its positional args ARE `$argv`
-    // starting at $argv[1] — so the dummy must be omitted there or $argv[1] would
+    // command name from `$1`; fish has NO `$0`: its positional args ARE `$argv`
+    // starting at $argv[1]: so the dummy must be omitted there or $argv[1] would
     // resolve the literal "noirbridge" and the probe would always come back empty.
     const probeArgs = kind === 'fish' ? [name] : ['noirbridge', name];
     const child = spawn(shell, [flags, script, ...probeArgs], {
@@ -132,7 +132,7 @@ function probeCommand(
     child.stdout.on('data', (c: string) => {
       stdout += c;
     });
-    child.stderr.resume(); // rc noise (e.g. "no job control") — ignored
+    child.stderr.resume(); // rc noise (e.g. "no job control"): ignored
     const timer = setTimeout(() => {
       if (child.pid) {
         try {
@@ -197,7 +197,7 @@ export interface BridgeSpec {
 /**
  * Build the bridge spawn for an alias/function: run the user's interactive
  * shell and execute `NAME "$@"` (fish: `NAME $argv`). The host's flags + prompt
- * are appended as positional args after the dummy `$0` (`noirbridge`) — they are
+ * are appended as positional args after the dummy `$0` (`noirbridge`): they are
  * forwarded verbatim by the shell and never parsed. bash re-sources .bashrc
  * (login shells skip it) so the alias/function defined there is available.
  */

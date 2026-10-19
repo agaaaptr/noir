@@ -1,5 +1,5 @@
 // `noir run --list-profiles --json` contract (S9): under --json, machine data
-// goes to STDOUT as a JSON envelope — a table()/info() call is silenced in json
+// goes to STDOUT as a JSON envelope: a table()/info() call is silenced in json
 // mode, so the command used to print nothing at all. Regression for the
 // verification pass (2026-08-19).
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -68,7 +68,7 @@ describe('noir run --list-profiles --json', () => {
 
   it('emits an empty array (ok:true) when no profiles are configured', async () => {
     // Rewrite the config without a run block (outside-project behavior is the
-    // same path — loadRunConfig falls back to the empty default config).
+    // same path: loadRunConfig falls back to the empty default config).
     writeFileSync(join(root, '.noir', 'config.yml'), 'host: claude\n', 'utf8');
     const code = await runCli(['run', '--list-profiles', '--json']);
     expect(code).toBe(0);

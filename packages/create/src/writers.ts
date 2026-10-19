@@ -12,19 +12,19 @@ import type { FileModeOutcome, ManagedBlock } from '@noir-ai/core';
 import { atomicWriteFile, stripManagedBlock, writeManagedRegion } from '@noir-ai/core';
 
 /**
- * The three-mode writer — generalizes the earlier `writeManagedRegion` into
+ * The three-mode writer: generalizes the earlier `writeManagedRegion` into
  * the declarative dispatch the scaffold manifest drives. Each mode maps 1:1 to
  * an artifact class in the artifact matrix:
  *
- *  - {@link regenerate}    — pure pointers (`.mcp.json`, `NOIR.md` brief, …).
+ *  - {@link regenerate}   : pure pointers (`.mcp.json`, `NOIR.md` brief, …).
  *                           Always overwritten, atomically.
- *  - {@link managedBlock}  — co-owned files (`CLAUDE.md` context/rules,
+ *  - {@link managedBlock} : co-owned files (`CLAUDE.md` context/rules,
  *                           `.gitignore` noir block, …). DELEGATES to
  *                           core's `writeManagedRegion` so user content
  *                           outside the markers is preserved byte-for-byte and
  *                           re-runs are idempotent. Never duplicate the
  *                           managed-region logic.
- *  - {@link skipIfExists}  — user-owned seeds (`RULES.md`, `config.yml`,
+ *  - {@link skipIfExists} : user-owned seeds (`RULES.md`, `config.yml`,
  *                           `project.id`). Write once; never clobber.
  *
  * The orchestrator (`scaffold.ts`) is the only intended caller; the per-mode
@@ -39,7 +39,7 @@ export interface WriteOutcome {
   path: string;
   mode: WriteMode;
   /** true when bytes hit disk; false for skipIfExists no-ops. regenerate and
-   *  managedBlock always write (managedBlock may write identical bytes — that
+   *  managedBlock always write (managedBlock may write identical bytes: that
    *  still counts as a write for telemetry purposes; the file IS up to date). */
   written: boolean;
 }
@@ -49,7 +49,7 @@ export interface WriteOutcome {
  *  file (the pointer files this is used for are read by the host agent first —
  *  a truncated CLAUDE.md/.mcp.json would break the very startup Noir serves).
  *
- *  Parent directories are NOT created here — the orchestrator does that once
+ *  Parent directories are NOT created here: the orchestrator does that once
  *  for the whole manifest so a missing dir is a single, attributable failure
  *  rather than N silent ones inside the writer.
  */
@@ -74,7 +74,7 @@ export function regenerate(absPath: string, content: string): WriteOutcome {
     fd = openSync(tmp, 'w');
     writeSync(fd, content, 0, 'utf8');
     closeSync(fd);
-    fd = undefined; // closed cleanly — don't re-close in finally
+    fd = undefined; // closed cleanly: don't re-close in finally
     renameSync(tmp, absPath);
   } finally {
     if (fd !== undefined) {
@@ -123,22 +123,22 @@ export function managedBlock(
  *  Strategy:
  *   1. Read the file (missing → empty).
  *   2. Strip EVERY named block (via core's `stripManagedBlock`, in the given
- *      order) — what remains is user content + any managed blocks outside this
+ *      order): what remains is user content + any managed blocks outside this
  *      group.
  *   3. Append all `regionText`s in the GIVEN ORDER, joined by a single `\n`.
  *      Each `regionText` already ends with `\n` (buildRegion appends the end
  *      marker's trailing newline), so `\n` between regions yields exactly one
- *      blank-line separator (`END\n` + `\n` + `BEGIN`) — byte-identical to what
+ *      blank-line separator (`END\n` + `\n` + `BEGIN`): byte-identical to what
  *      the single-block path emits on a first run, so the CONTEXT/RULES parity
  *      gates against `claudeAdapter.emitContext/emitRules` keep passing.
  *   4. Write the result atomically (via core's `atomicWriteFile`: temp sibling +
  *      rename). This target is a file the user also owns, so an interrupted
- *      write must not leave the user's own content half-written — and the swap
+ *      write must not leave the user's own content half-written: and the swap
  *      keeps the file's existing permissions, which a fresh temp file would
  *      otherwise reset to the umask default.
  *
  *  Single-region files (NOIR.md brief, ignore files) do NOT route through here
- *  — the orchestrator only calls this for groups of ≥2 managed blocks, so
+ * : the orchestrator only calls this for groups of ≥2 managed blocks, so
  *  single-region byte-stability (delegated to core's `writeManagedRegion`)
  *  is unchanged. */
 export function managedBlocks(
@@ -175,7 +175,7 @@ export function managedBlocks(
 /** Assemble `<begin>\n<body>\n<end>\n` for a managed block. Centralized here so
  *  every caller (manifest rendering, tests, future migrations) produces the
  *  exact byte shape `writeManagedRegion` strips/expects. The trailing newline
- *  is part of the contract — `stripManagedBlock`'s regex eats a trailing `\n`
+ *  is part of the contract: `stripManagedBlock`'s regex eats a trailing `\n`
  *  so re-runs stay idempotent instead of accumulating blank lines.
  *
  *  `body` is `trimEnd()`-ed before wrapping so template authors can keep the
@@ -208,7 +208,7 @@ export function predictManagedBlock(
  *  strip-all + append-all pass (the single-region case delegates to
  *  {@link predictManagedBlock}). Used by the content-hash dedup so a
  *  multi-region file (CLAUDE.md CONTEXT+RULES) that is already up to date is
- *  skipped — `noir sync` on an unchanged tree writes NOTHING. */
+ *  skipped: `noir sync` on an unchanged tree writes NOTHING. */
 export function predictManagedBlocks(
   currentContent: string,
   regions: ReadonlyArray<{ block: ManagedBlock; regionText: string }>,
@@ -237,7 +237,7 @@ export function predictManagedBlocks(
  *  BEFORE the rename (see `AtomicWriteOptions.mode`), so the file never exists
  *  at its final path with a laxer mode. It is deliberately ignored when the
  *  target already exists: this writer's whole contract is "never touch an
- *  existing file", and that includes its permissions. POSIX-only — Windows
+ *  existing file", and that includes its permissions. POSIX-only: Windows
  *  permissions are ACL-based and the mode is dropped there.
  *
  *  The write goes through `atomicWriteFile` (tmp + rename) rather than a bare
@@ -258,7 +258,7 @@ export function skipIfExists(absPath: string, content: string, fileMode?: number
 }
 
 /** What happened when the owner-only mode was re-asserted on a credential
- *  file — see {@link ensureOwnerOnly}. */
+ *  file: see {@link ensureOwnerOnly}. */
 export type EnvMode = FileModeOutcome;
 
 /** Re-exported from `@noir-ai/core`, where the re-assert lives: the embedded
@@ -277,7 +277,7 @@ export { ensureOwnerOnly } from '@noir-ai/core';
 /** Overwrite an existing seed's bytes while keeping the permission bits it
  *  already has. The `skipIfExists` refresh variant: the file exists (a refresh
  *  is only ever decided from bytes already on disk), its content is Noir's own
- *  shipped text, and only that text changes — so, unlike {@link regenerate},
+ *  shipped text, and only that text changes: so, unlike {@link regenerate},
  *  which writes a fresh temp file at the umask default and renames over the
  *  target, this leaves the mode alone.
  *
@@ -286,7 +286,7 @@ export { ensureOwnerOnly } from '@noir-ai/core';
  *  half-written seed behind and no permission is silently changed. Parent
  *  directories are the orchestrator's job, created once for the whole manifest.
  *
- *  The staleness decision is NOT made here — the writer is handed bytes that
+ *  The staleness decision is NOT made here: the writer is handed bytes that
  *  the caller has already established are an unedited older copy of the seed. */
 export function refreshSeed(absPath: string, content: string): WriteOutcome {
   atomicWriteFile(absPath, content);
@@ -301,10 +301,10 @@ export function refreshSeed(absPath: string, content: string): WriteOutcome {
  * stale). This path:
  *  1. Reads the existing file (missing → `{}`).
  *  2. Preserves EVERY existing top-level key (`permissions`, `env`, `hooks`, …).
- *  3. Merges the provided `patch` object — for `hooks` arrays, the existing
+ *  3. Merges the provided `patch` object: for `hooks` arrays, the existing
  *     arrays are kept and entries whose command already contains the given
  *     `dedupSubstring` are NOT re-added (context-mode's alreadyRegistered
- *     pattern — the entry is written once, never clobbered).
+ *     pattern: the entry is written once, never clobbered).
  *  4. Writes atomically via the same tmp+rename as `regenerate` when the merged
  *     bytes differ (content-hash dedup: an unchanged `noir sync` writes nothing).
  *
@@ -322,7 +322,7 @@ export function mergeJson(
     try {
       existing = JSON.parse(readFileSync(absPath, 'utf8')) as Record<string, unknown>;
     } catch {
-      // Corrupt/unparseable existing file — treat as empty, the merge will
+      // Corrupt/unparseable existing file: treat as empty, the merge will
       // produce a valid file (the old bytes are preserved in git if versioned).
       existing = {};
     }
@@ -331,7 +331,7 @@ export function mergeJson(
   const merged = deepMergePreservingHooks(existing, patch, dedupSubstring, force);
   const content = `${JSON.stringify(merged, null, 2)}\n`;
 
-  // Content-hash dedup — a no-op sync writes nothing.
+  // Content-hash dedup: a no-op sync writes nothing.
   if (existsSync(absPath)) {
     try {
       if (readFileSync(absPath, 'utf8') === content) {
@@ -346,7 +346,7 @@ export function mergeJson(
   return { path: absPath, mode: 'mergeJson', written: true };
 }
 
-/** True when a `hooks.<Event>` entry carries the dedup marker — either as its
+/** True when a `hooks.<Event>` entry carries the dedup marker: either as its
  *  own `command` or inside the matcher group's inner `hooks` array, the shape
  *  Claude Code stores (`{hooks:[{type:'command',command:'…'}]}`). Checking only
  *  the top level never matched that shape, so a re-emit (init `--force`)
