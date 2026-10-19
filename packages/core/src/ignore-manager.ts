@@ -9,7 +9,7 @@ export const IGNORE_BLOCK = managedBlock('ignore', 'hash');
  *
  *  `/.noir/handoff/` is gitignored so `noir handoff --write` artifacts (host
  *  handoff prompts, often session-specific and machine-local) never pollute
- *  commits — they're paste-and-go prompts, not reviewed source.
+ *  commits: they're paste-and-go prompts, not reviewed source.
  *
  *  NO project-local daemon paths are listed: the daemon records live under
  *  `~/.noir/daemons/` (HOME-scoped, keyed by ProjectId), no socket is ever
@@ -22,14 +22,18 @@ const IGNORE_ENTRIES: ReadonlyArray<[file: string, entries: readonly string[]]> 
     [
       '/.noir/store/',
       '/.noir/handoff/',
-      // .noir/.env holds tokens — never commit it. The .env.example stays
+      // .noir/.env holds tokens: never commit it. The .env.example stays
       // visible as the documented placeholder (github/gitignore convention).
       '/.noir/.env',
       '/.noir/.env.*',
       '!/.noir/.env.example',
-      // `noir run` transcripts may contain host prompts/output — runtime data,
+      // `noir run` transcripts may contain host prompts/output: runtime data,
       // not reviewed source.
       '/.noir/transcripts/',
+      // Integration write-audit logs (e.g. ClickUp) are append-only machine
+      // runtime data, not reviewed source. The sibling gate-evidence JSON
+      // (/.noir/audit/<taskId>.json) stays tracked: it is committable SDD state.
+      '/.noir/audit/integration-*.jsonl',
     ],
   ],
   ['.dockerignore', ['.noir/']],

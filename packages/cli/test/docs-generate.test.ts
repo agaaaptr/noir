@@ -1,4 +1,4 @@
-// Offline test for scripts/docs-generate.mjs — the docs generator seam.
+// Offline test for scripts/docs-generate.mjs: the docs generator seam.
 //
 // Two structural generator defects lived here: the CLI reference ran only the
 // root `noir --help` (so no subcommand flag was ever documented), and the
@@ -10,10 +10,10 @@
 //     covering the fragile parts: wrapped descriptions, hand-written after-text,
 //     alias tokens, flag/description splitting);
 //   - the config generator runs end-to-end against the real Zod schema
-//     (`node -e` reflection only — no network, no key), so the depth budget is
+//     (`node -e` reflection only: no network, no key), so the depth budget is
 //     asserted against the schema rather than a snapshot;
 //   - the CLI reference is asserted on the committed `docs/reference/cli.md`,
-//     which `pnpm docs:generate` writes — a walker regression re-run at release
+//     which `pnpm docs:generate` writes: a walker regression re-run at release
 //     time drops these rows and fails here.
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -33,7 +33,7 @@ function repoRoot(): string {
 }
 
 // The generator is an ESM `.mjs` script. Import its exported generators +
-// parsers — the `isMainModule()` guard keeps the CLI dispatch from firing on
+// parsers: the `isMainModule()` guard keeps the CLI dispatch from firing on
 // import, so this is safe + side-effect-free.
 const GENERATOR_URL = pathToFileURL(join(repoRoot(), 'scripts', 'docs-generate.mjs')).href;
 const {
@@ -75,7 +75,7 @@ Commands:
   join [options] <name>  join a shared workspace from this repo
   stop                   stop the Noir daemon
 
-Shared workspaces (two repos, one product — e.g. backend + frontend):
+Shared workspaces (two repos, one product: e.g. backend + frontend):
   noir daemon start --workspace <name> --detach   found a workspace from this repo
   noir daemon join <name>                         join it from the other repo
 `;
@@ -94,7 +94,7 @@ Options:
   -h, --help               display help for command
 `;
 
-describe('docs generator — help parsers', () => {
+describe('docs generator: help parsers', () => {
   it('lists only real subcommands, ignoring hand-written after-text', () => {
     expect(helpCommands(GROUP_HELP)).toEqual(['start', 'join', 'stop']);
   });
@@ -120,7 +120,7 @@ describe('docs generator — help parsers', () => {
   });
 });
 
-describe('docs generator — reference stub gate', () => {
+describe('docs generator: reference stub gate', () => {
   // The generators write an italic placeholder when the build artefact they read
   // is missing, so a placeholder surviving into docs/reference/ means the doc was
   // committed half-generated. The gate must fail on it.
@@ -129,7 +129,7 @@ describe('docs generator — reference stub gate', () => {
       {
         path: 'docs/reference/cli.md',
         content:
-          '# CLI Command Reference\n\n_(CLI not built — run `pnpm build` to generate CLI reference)_\n',
+          '# CLI Command Reference\n\n_(CLI not built: run `pnpm build` to generate CLI reference)_\n',
       },
       { path: 'docs/reference/packages.md', content: '# Packages\n\n| a | b |\n|---|---|\n' },
     ]);
@@ -164,7 +164,7 @@ describe('docs generator — reference stub gate', () => {
   });
 });
 
-describe('docs generator — internal-doc lifecycle', () => {
+describe('docs generator: internal-doc lifecycle', () => {
   it('marks a shipped spec/plan pair archived alongside the SDD history', () => {
     const lifecycle = new Map(buildRegistry().documents.map((d) => [d.path, d.lifecycle]));
     // The 2026-09-14 spec + plan pair shipped in 1.15.0, so it is history now.
@@ -181,7 +181,7 @@ describe('docs generator — internal-doc lifecycle', () => {
   });
 });
 
-describe('docs generator — config reference', () => {
+describe('docs generator: config reference', () => {
   it.skipIf(!coreBuilt)('reflects third-level fields without losing earlier levels', () => {
     const markdown = genConfigSchema();
 
@@ -215,7 +215,7 @@ describe('docs generator — config reference', () => {
   });
 });
 
-describe('docs generator — CLI reference', () => {
+describe('docs generator: CLI reference', () => {
   it('documents subcommand flags beyond the root help', () => {
     // The root block and the global section survive alongside the walk.
     expect(cliReference).toContain('# CLI Command Reference');
@@ -240,8 +240,8 @@ describe('docs generator — CLI reference', () => {
   });
 });
 
-describe('docs generator — index', () => {
-  // The index row built its label as ` — ${suffix}` unconditionally, so a
+describe('docs generator: index', () => {
+  // The index row built its label as `: ${suffix}` unconditionally, so a
   // document carrying no label at all (neither archived nor the root README —
   // the large majority of them) ended in a dangling separator.
   const indexPath = join(repoRoot(), 'docs', 'README.md');
@@ -255,6 +255,6 @@ describe('docs generator — index', () => {
   it('still labels the one row that always carries a label', () => {
     // The root README is two levels up from docs/README.md, and is the only
     // document the generator labels unconditionally.
-    expect(index).toContain('](../README.md) — Project overview');
+    expect(index).toContain('](../README.md): Project overview');
   });
 });

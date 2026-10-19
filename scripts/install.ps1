@@ -350,6 +350,24 @@ function Resolve-Spec {
   return "@$ch"
 }
 
+# --- Refuse to downgrade when NOIR_VERSION pins an older version --------------
+# Mirrors the CLI (`noir install`/`migrate`/`update`), which refuses downgrades.
+# Uses the provisioned Node to compare the requested pin against the version
+# recorded in ~\.noir\install.json.
+function Guard-Downgrade {
+  param([string]$Home)
+  if (-not $env:NOIR_VERSION) { return }
+  if ($env:NOIR_VERSION -eq 'latest' -or $env:NOIR_VERSION -eq 'beta') { return }
+  $record = Join-Path $Home 'install.json'
+  if (-not (Test-Path $record)) { return }
+
+  $env:NOIR_INSTALL_JSON = $record
+  $env:NOIR_TARGET = $env:NOIR_VERSION
+  $js = 'const fs=require("node:fs");let rec;try{rec=JSON.parse(fs.readFileSync(process.env.NOIR_INSTALL_JSON,"utf8"))}catch{process.exit(0)}const cur=typeof rec.version==="string"?rec.version:"";if(!cur||cur==="0.0.0")process.exit(0);const seg=s=>Number(String(s).replace(/^v/,""))||0;const a=String(process.env.NOIR_TARGET).replace(/^v/,"").split(".");const b=String(cur).replace(/^v/,"").split(".");for(let i=0;i<3;i++){const x=seg(a[i]),y=seg(b[i]);if(x<y){console.error("refusing downgrade to "+process.env.NOIR_TARGET+" (installed "+cur+"). Remove "+process.env.NOIR_INSTALL_JSON+" or install a newer version.");process.exit(2)}if(x>y)process.exit(0)}process.exit(0);'
+  & $Script:RuntimeNodeBin -e $js
+  if ($LASTEXITCODE -eq 2) { exit 2 }
+}
+
 # --- Main install -------------------------------------------------------------
 function Main {
   $scriptDir = Get-ScriptDir
@@ -363,6 +381,7 @@ function Main {
 
   $spec    = Resolve-Spec
   $home2   = Get-NoirHome
+  Guard-Downgrade -Home $home2
   $cliDir  = Join-Path $home2 'cli'
   $binDir  = Join-Path $home2 'bin'
   New-Item -ItemType Directory -Force -Path $cliDir, $binDir | Out-Null

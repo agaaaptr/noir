@@ -117,4 +117,11 @@ describe('syncIgnores — managed entry list (spec 10)', () => {
     expect(isIgnored(entries, '.noir/.env')).toBe(true);
     expect(isIgnored(entries, '.noir/.env.example')).toBe(false);
   });
+
+  it('ignores integration-*.jsonl audit logs but keeps gate-evidence JSON committable', () => {
+    syncIgnores(root);
+    const entries = blockEntries(readFileSync(join(root, '.gitignore'), 'utf8'));
+    expect(isIgnored(entries, '.noir/audit/integration-clickup.jsonl')).toBe(true);
+    expect(isIgnored(entries, '.noir/audit/abc-123.json')).toBe(false);
+  });
 });

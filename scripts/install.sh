@@ -362,6 +362,22 @@ resolve_spec() {
   esac
 }
 
+# --- Refuse to downgrade when NOIR_VERSION pins an older version --------------
+# The CLI (`noir install`/`migrate`/`update`) refuses downgrades unconditionally;
+# the raw shell installer must match, otherwise `NOIR_VERSION=<older>` silently
+# downgrades. Compare the requested pin against the version recorded in
+# ~/.noir/install.json using the provisioned Node (no external semver needed).
+guard_downgrade() {  # $1 = noir home dir (contains install.json)
+  [[ -n "${NOIR_VERSION:-}" ]] || return 0
+  case "$NOIR_VERSION" in latest|beta) return 0 ;; esac
+  local record="$1/install.json"
+  [[ -f "$record" ]] || return 0
+  # Node prints the refusal to stderr and exits 2 when target < installed.
+  if ! NOIR_INSTALL_JSON="$record" NOIR_TARGET="$NOIR_VERSION" "$RUNTIME_NODE_BIN" -e 'const fs=require("node:fs");let rec;try{rec=JSON.parse(fs.readFileSync(process.env.NOIR_INSTALL_JSON,"utf8"))}catch{process.exit(0)}const cur=typeof rec.version==="string"?rec.version:"";if(!cur||cur==="0.0.0")process.exit(0);const seg=s=>Number(String(s).replace(/^v/,""))||0;const a=String(process.env.NOIR_TARGET).replace(/^v/,"").split(".");const b=String(cur).replace(/^v/,"").split(".");for(let i=0;i<3;i++){const x=seg(a[i]),y=seg(b[i]);if(x<y){console.error("refusing downgrade to "+process.env.NOIR_TARGET+" (installed "+cur+"). Remove ~/.noir/install.json or install a newer version.");process.exit(2)}if(x>y)process.exit(0)}process.exit(0);'; then
+    exit 2
+  fi
+}
+
 # --- Pass proxies through to npm (npm also reads npm_config_proxy) ------------
 export_proxies() {
   : "${HTTP_PROXY:="${http_proxy:-}"}";  export HTTP_PROXY
@@ -448,6 +464,7 @@ main() {
   local spec home cli_dir bin_dir shim cli_main ver record
   spec="$(resolve_spec)"
   home="$(noir_home)"
+  guard_downgrade "$home"
   cli_dir="${home}/cli"
   bin_dir="${home}/bin"
   mkdir -p "$cli_dir" "$bin_dir"

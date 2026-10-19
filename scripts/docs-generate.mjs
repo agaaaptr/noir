@@ -7,10 +7,10 @@
 // packages/skills/builtin/*/SKILL.md, packages/daemon/src/*.
 //
 // Commands:
-//   generate  — regenerate all managed doc blocks across the repo
-//   validate  — check docs for broken links, stale refs, version mismatches
-//   registry  — rebuild .noir/docs-registry.json
-//   index     — generate docs/README.md table of contents
+//   generate : regenerate all managed doc blocks across the repo
+//   validate : check docs for broken links, stale refs, version mismatches
+//   registry : rebuild .noir/docs-registry.json
+//   index    : generate docs/README.md table of contents
 //
 // Managed block markers:
 //   <!-- noir:doc:status -->       → current stable/beta version status
@@ -167,8 +167,8 @@ function genVersionStatus() {
   const beta = distTags.beta || 'N/A';
 
   return [
-    `**Latest stable:** \`${latest}\` (npm dist-tag \`latest\` — \`npm i @noir-ai/cli\` resolves here)`,
-    `**Current beta:** \`${beta}\` (npm dist-tag \`beta\` — \`npm i @noir-ai/cli@beta\` to opt in)`,
+    `**Latest stable:** \`${latest}\` (npm dist-tag \`latest\`: \`npm i @noir-ai/cli\` resolves here)`,
+    `**Current beta:** \`${beta}\` (npm dist-tag \`beta\`: \`npm i @noir-ai/cli@beta\` to opt in)`,
     `**Source version:** \`${base}\` (clean SemVer in \`packages/*/package.json\`)`,
     '',
     `*Last auto-generated: ${new Date().toISOString()}*`,
@@ -208,7 +208,7 @@ function helpUsage(help) {
   return line ? line.slice('Usage: '.length).trim() : '';
 }
 
-/** The command's description block — the lines between Usage and the first section. */
+/** The command's description block: the lines between Usage and the first section. */
 function helpDescription(help) {
   const lines = help.split('\n');
   const start = lines.findIndex((l) => l.startsWith('Usage: '));
@@ -244,7 +244,7 @@ function helpCommands(help) {
  * splits at the first run of two-or-more spaces (never inside a flag, whose own
  * space separates `--flag` from its `<value>` placeholder). Wrapped description
  * lines are joined back into one cell. The built-in help/version flags are
- * dropped — this table documents the command's own flags.
+ * dropped: this table documents the command's own flags.
  */
 function helpOptions(help) {
   const options = [];
@@ -361,12 +361,12 @@ function renderCliSection(section) {
 
 /**
  * The full CLI reference. The root help alone documents no subcommand flag —
- * commander prints those under `<command> --help` — so this walks the tree and
+ * commander prints those under `<command> --help`: so this walks the tree and
  * emits one section per command on top of the root block.
  */
 async function genCliReference() {
   const built = join(ROOT, 'packages', 'cli', 'dist', 'bin.js');
-  const notBuilt = '_(CLI not built — run `pnpm build` to generate CLI reference)_';
+  const notBuilt = '_(CLI not built: run `pnpm build` to generate CLI reference)_';
   const lines = [
     '# CLI Command Reference',
     '',
@@ -413,7 +413,7 @@ async function genCliReference() {
     await walkCliCommands([], helpCommands(mainHelp), sections, new Set(), run);
     for (const section of sections) lines.push(...renderCliSection(section));
   } else {
-    lines.push('_(Command help unavailable — run `pnpm build` first.)_');
+    lines.push('_(Command help unavailable: run `pnpm build` first.)_');
     lines.push('');
   }
 
@@ -424,7 +424,7 @@ function genConfigSchema() {
   const lines = [
     '# Configuration Reference',
     '',
-    '> Auto-generated from `NoirConfigSchema` (Zod v4) in `@noir-ai/core` — the',
+    '> Auto-generated from `NoirConfigSchema` (Zod v4) in `@noir-ai/core`: the',
     '> schema `.describe()` strings are the single source of truth for these rows.',
     '',
     '## Precedence',
@@ -438,10 +438,10 @@ function genConfigSchema() {
     '4. built-in default',
     '```',
     '',
-    '`.noir/.env` therefore **wins for every key it defines** — a machine-global',
+    '`.noir/.env` therefore **wins for every key it defines**: a machine-global',
     'export (`~/.zshrc`, `~/.claude/settings.json`, launchd, CI) cannot shadow it,',
     'and neither can a `VAR=value noir …` prefix (it arrives in `process.env`',
-    'indistinguishably from the inherited environment, so it is level 3 — not an',
+    'indistinguishably from the inherited environment, so it is level 3: not an',
     'override). A git-*tracked* `.noir/.env` is refused outright, and `noir env`',
     'shows which source won for each key. Full chain + recipes:',
     '[Configuring a project with `.noir/.env`](../how-to/configure-env.md).',
@@ -449,7 +449,7 @@ function genConfigSchema() {
     '**Config keys** (`.noir/config.yml`) resolve by their own order: CLI flag >',
     'environment variable (`NOIR_PROFILE`) > project `.noir/config.yml` >',
     'built-in default. Integration tokens (e.g. `CLICKUP_API_TOKEN`) are env',
-    'vars, never config keys — see',
+    'vars, never config keys: see',
     '[Environment Variables](environment.md),',
     '[Run profiles](../how-to/host-profiles.md), and',
     '[ClickUp setup](../how-to/clickup.md).',
@@ -482,7 +482,7 @@ function genConfigSchema() {
         const describeField = (key, field, depth) => {
           // Zod v4: a wrapped field (optional/nullable/default) keeps its real
           // schema on _def.innerType; the type is a short string on _def.type
-          // (e.g. "enum", "object", "string", "boolean") — NOT the v3 typeName.
+          // (e.g. "enum", "object", "string", "boolean"): NOT the v3 typeName.
           const inner = field?._def?.innerType || field?.unwrap?.() || field;
           const typeName = inner?._def?.type || field?._def?.type || 'unknown';
           const dv = field?._def?.defaultValue;
@@ -494,7 +494,7 @@ function genConfigSchema() {
             type: typeName,
             required: !(field?.isOptional?.() ?? false),
             // This Zod version stores .describe() on the schema's top-level
-            // description property, not _def.description — check both.
+            // description property, not _def.description: check both.
             description:
               inner?._def?.description ||
               inner?.description ||
@@ -529,8 +529,8 @@ function genConfigSchema() {
             }
             // A record whose VALUE is an object (model.providers, run.profiles,
             // integrations) otherwise hides every real setting behind the single
-            // '<name>' row. Reflect the value's own fields one level deep — the
-            // same depth budget a plain object gets — so a provider block's
+            // '<name>' row. Reflect the value's own fields one level deep: the
+            // same depth budget a plain object gets: so a provider block's
             // authTokenEnv / timeoutMs (and its siblings) reach the table
             // straight from their .describe(), with no hand-maintained list to
             // drift. Nested objects INSIDE the value stay one row (e.g.
@@ -563,7 +563,7 @@ function genConfigSchema() {
     const shape = JSON.parse(schemaOutput || '{}');
 
     if (Object.keys(shape).length === 0) {
-      lines.push('_(Schema reflection unavailable — run `pnpm build` first)_');
+      lines.push('_(Schema reflection unavailable: run `pnpm build` first)_');
       lines.push('');
       lines.push(
         'See `packages/core/src/config.ts` for the authoritative `NoirConfigSchema` definition.',
@@ -595,7 +595,7 @@ function genConfigSchema() {
       }
     }
   } catch {
-    lines.push('_(Config schema unavailable — build packages first with `pnpm build`)_');
+    lines.push('_(Config schema unavailable: build packages first with `pnpm build`)_');
   }
 
   lines.push('');
@@ -625,9 +625,9 @@ function genConfigSchema() {
     'same rule covers `authTokenEnv`: a NAME, never the bearer-token value. The',
     'model layer reads `process.env[<that name>]`, so the dollar-brace form resolves to',
     '`undefined` and silently disables the provider. Only `run.profiles.<name>.env`',
-    'interpolates a dollar-brace reference. Put the **value** in `.noir/.env` — the',
+    'interpolates a dollar-brace reference. Put the **value** in `.noir/.env`: the',
     'recommended project-scoped home, `0600` and gitignored, and the winner for every key',
-    'it defines — or in the real environment. Never pass tokens as CLI arguments (visible',
+    'it defines: or in the real environment. Never pass tokens as CLI arguments (visible',
     'in process lists). See',
     '[Configuring a project with `.noir/.env`](../how-to/configure-env.md) and',
     '[Environment Variables](environment.md) for the full placement + precedence rules.',
@@ -637,13 +637,13 @@ function genConfigSchema() {
   lines.push('');
   lines.push(
     '- `update.display`, `context.roots`, and `context.budgetTokens`',
-    '  are parsed + validated but have no live consumer yet — declaring them now avoids',
+    '  are parsed + validated but have no live consumer yet: declaring them now avoids',
     '  schema churn when their feature ships. Do not rely on them.',
     '- `rules.enabled` IS read: when false, `noir init`/`noir create` emit no',
     '  `.noir/rules/RULES.md` (and an upgrade does not backfill one) and `noir doctor`',
     '  reports its budget check as disabled. A RULES.md already on disk is left alone.',
     "- `rules.lengthBudgetKb` IS read: `noir doctor`'s RULES.md budget check.",
-    '- `run.*` (host profiles; first surfaced on `beta` as 1.12.0-beta.1) and `workspace.*` (shared cross-repo workspaces, see the [shared-workspaces decision](../decisions/0009-shared-workspaces.md)) are new in 1.13.0. `enforcement.*` (agent-loop enforcement) is new and not yet in a published release. All other blocks predate 1.13.0.',
+    '- `run.*` (host profiles; first surfaced on `beta` as 1.12.0-beta.1) and `workspace.*` (shared cross-repo workspaces, see the [shared-workspaces decision](../decisions/0009-shared-workspaces.md)) are new in 1.13.0. `enforcement.*` (agent-loop enforcement) shipped in 1.19.0 (host governance). All other blocks predate 1.13.0.',
   );
   lines.push('');
   return lines.join('\n');
@@ -717,7 +717,7 @@ function genMcpTools() {
     '',
   ];
 
-  // MCP tools are registered in packages/daemon/src/*.ts — grep for registration patterns.
+  // MCP tools are registered in packages/daemon/src/*.ts: grep for registration patterns.
   // Every registration lives in one file (server.ts), so the table is flat: a
   // grouping by source file would put all of them in one bucket, and inventing
   // one from the tool name would be a second naming scheme to keep in step.
@@ -820,7 +820,7 @@ const IN_FLIGHT_INTERNAL = new Set([]);
 
 /**
  * A reference-doc stub line: the generators write an explicit italic
- * parenthetical when the source they read is missing (`_(CLI not built — run
+ * parenthetical when the source they read is missing (`_(CLI not built: run
  * \`pnpm build\` to generate CLI reference)_`, `_(… unavailable …)_`). A line
  * that is entirely one of these, inside `docs/reference/`, means a generation
  * step was skipped and the committed reference is half-generated.
@@ -829,7 +829,7 @@ const GENERATED_PLACEHOLDER_RE = /^_\([^)]*(?:unavailable|not built)[^)]*\)_\s*$
 
 /**
  * Stub lines left in the generated reference docs. Pure (takes the docs, not the
- * filesystem) so the gate's behaviour is pinned by an offline test — the full
+ * filesystem) so the gate's behaviour is pinned by an offline test: the full
  * {@link validateDocs} run also shells out to `npm view`.
  *
  * @param {{ path: string, content: string }[]} docs - repo-relative path + bytes.
@@ -844,7 +844,7 @@ export function findGeneratedPlaceholders(docs) {
       const line = lines[i].trim();
       if (GENERATED_PLACEHOLDER_RE.test(line)) {
         issues.push(
-          `[GENERATED-PLACEHOLDER] ${doc.path}:${i + 1}: reference stub "${line}" — regenerate with \`pnpm docs:generate\`.`,
+          `[GENERATED-PLACEHOLDER] ${doc.path}:${i + 1}: reference stub "${line}": regenerate with \`pnpm docs:generate\`.`,
         );
       }
     }
@@ -860,12 +860,12 @@ function findDocs(dir = DOCS_DIR, basePath = 'docs') {
     const fullPath = join(dir, entry.name);
     const relPath = `${basePath}/${entry.name}`;
 
-    // Skip the docs/CHANGELOG.md stub — the root CHANGELOG.md is the single source of
+    // Skip the docs/CHANGELOG.md stub: the root CHANGELOG.md is the single source of
     // truth and is added explicitly by buildRegistry(). Keeping a pointer file at
     // docs/CHANGELOG.md would register it twice.
     if (relPath === 'docs/CHANGELOG.md') continue;
 
-    // Skip docs/README.md — it is the auto-generated index itself; indexing it would
+    // Skip docs/README.md: it is the auto-generated index itself; indexing it would
     // self-reference (it appears as a spurious "Documentation" entry in the index).
     if (relPath === 'docs/README.md') continue;
 
@@ -1038,7 +1038,7 @@ function validateDocs() {
       // Skip external URLs
       if (linkTarget.startsWith('http://') || linkTarget.startsWith('https://')) continue;
 
-      // In-page anchor (`#fragment`) — target is THIS file.
+      // In-page anchor (`#fragment`): target is THIS file.
       if (linkTarget.startsWith('#')) {
         const fragment = linkTarget.slice(1);
         if (fragment && !getHeadingSlugs(file.relPath).has(fragment)) {
@@ -1094,7 +1094,7 @@ function validateDocs() {
     // Detect hardcoded X.Y.Z version numbers outside managed blocks.
     // If a user-facing doc has a version string that matches the *current*
     // base version (from package.json) but is NOT inside a managed block,
-    // it's a drift risk — it will be stale on the next release.
+    // it's a drift risk: it will be stale on the next release.
     const inManagedBlock = (lineIdx) => {
       // Look backwards from lineIdx to find the nearest <!-- noir:doc:* --> marker
       // and check it's not closed.
@@ -1246,7 +1246,7 @@ async function cmdGenerate() {
   }
 
   // Regenerate the docs/README.md index too (previously a separate `docs:index`
-  // command that drifted — fold it in so `docs:generate` keeps it fresh).
+  // command that drifted: fold it in so `docs:generate` keeps it fresh).
   cmdIndex();
 
   console.log(`\nDone. ${updated} document(s) updated.`);
@@ -1308,7 +1308,7 @@ function cmdIndex() {
     lines.push(`## ${group.title}`);
     lines.push('');
     for (const doc of group.docs) {
-      // Links from docs/README.md are relative — strip docs/ prefix. A document
+      // Links from docs/README.md are relative: strip docs/ prefix. A document
       // that lives outside docs/ (the root README) is one level up instead; the
       // bare path would resolve back to docs/README.md itself, a self-link.
       const isOutsideDocs = !doc.path.startsWith('docs/');
@@ -1322,7 +1322,7 @@ function cmdIndex() {
       // The separator belongs to the suffix: most documents carry no label at
       // all (neither archived nor the root README), and appending it
       // unconditionally left those rows ending in a dangling dash.
-      const detail = suffix ? ` — ${suffix}` : '';
+      const detail = suffix ? `: ${suffix}` : '';
       lines.push(`- [**${doc.title}**](${relativePath})${detail}`);
     }
     lines.push('');
@@ -1336,8 +1336,8 @@ function cmdIndex() {
 
 /**
  * True when this module is the Node entry point
- * (`node scripts/docs-generate.mjs <cmd>`). When imported as a module — the
- * test suite does — the CLI dispatch + `process.exit` paths are skipped so the
+ * (`node scripts/docs-generate.mjs <cmd>`). When imported as a module: the
+ * test suite does: the CLI dispatch + `process.exit` paths are skipped so the
  * generators and help parsers below are testable. Resolves symlinks.
  */
 function isMainModule() {

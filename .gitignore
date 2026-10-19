@@ -30,3 +30,7 @@ artifacts/
 !.noir/.env.example
 # `noir run` transcripts contain raw host prompts/output (may include secrets).
 .noir/transcripts/
+# `noir handoff --write` prompts (session-local) + integration write-audit logs
+# (machine runtime data) — not reviewed source.
+.noir/handoff/
+.noir/audit/integration-*.jsonl
