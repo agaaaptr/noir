@@ -4,7 +4,7 @@ current_phase: shipped
 
 active_capability: null
 
-active_slice: null  # noir hooks sync shipped as 1.19.1; typo suggestions + hook-command guard shipped as 1.19.2 (2026-10-15)
+active_slice: null  # 1.19.3 (2026-10-19): gitignore audit logs + installer downgrade guard + prose sweep
 
 roadmap:
   - id: C1

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.19.3 (2026-10-19): gitignore audit logs + installer downgrade guard + prose sweep
+
+### Fixed
+- **Runtime integration write-audit logs could be committed.** `.noir/audit/` holds two kinds of file: committable gate-evidence JSON (`<taskId>.json`) and runtime append-only integration write logs (`integration-*.jsonl`). The managed `.gitignore` block now ignores `/.noir/audit/integration-*.jsonl` while keeping the gate evidence tracked; the repo root `.gitignore` also gains that entry plus the missing `/.noir/handoff/` (so `noir handoff --write` artifacts are ignored).
+- **The raw shell installers could silently downgrade.** `curl|bash` (and `irm|iex`) with `NOIR_VERSION=<older>` passed the pin straight to npm, unlike `noir install`/`migrate`/`update` which refuse downgrades unconditionally. `install.sh` and `install.ps1` now read `~/.noir/install.json` before installing and refuse a concrete `NOIR_VERSION` older than the recorded version (exit 2, the same guard as the CLI).
+
+### Changed
+- **Prose sweep.** The "term — definition" em-dash convention became "term: definition" across the documentation, source description strings and comments, historical internal docs, and changelogs; a stray `landscape` became `field`; and stale doc references are corrected (the ADR count reads `0001…0014`, and `enforcement.*` is marked as shipped in 1.19.0).
+
+### Upgrade steps
+1. **Nothing to do.** No scaffold migration or config change. Existing projects pick up the new gitignore entry on their next `noir sync` (the managed block is idempotent).
+
 ## 1.19.2 (2026-10-15): typo suggestions + hook-command guard
 
 ### Added
