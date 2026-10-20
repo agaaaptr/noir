@@ -34,6 +34,9 @@ const IGNORE_ENTRIES: ReadonlyArray<[file: string, entries: readonly string[]]> 
       // runtime data, not reviewed source. The sibling gate-evidence JSON
       // (/.noir/audit/<taskId>.json) stays tracked: it is committable SDD state.
       '/.noir/audit/integration-*.jsonl',
+      // The write-path semantic-dedup cache stores cached embeddings
+      // (SHA-256 -> vector), regenerated on demand: runtime data, not source.
+      '/.noir/dedup-cache.json',
     ],
   ],
   ['.dockerignore', ['.noir/']],

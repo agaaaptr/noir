@@ -124,4 +124,11 @@ describe('syncIgnores — managed entry list (spec 10)', () => {
     expect(isIgnored(entries, '.noir/audit/integration-clickup.jsonl')).toBe(true);
     expect(isIgnored(entries, '.noir/audit/abc-123.json')).toBe(false);
   });
+
+  it('ignores the regenerable dedup-cache embeddings but keeps other .noir JSON committed', () => {
+    syncIgnores(root);
+    const entries = blockEntries(readFileSync(join(root, '.gitignore'), 'utf8'));
+    expect(isIgnored(entries, '.noir/dedup-cache.json')).toBe(true);
+    expect(isIgnored(entries, '.noir/config.yml')).toBe(false);
+  });
 });
