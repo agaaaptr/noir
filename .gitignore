@@ -18,8 +18,12 @@ coverage/
 # Release pack output (pnpm pack --pack-destination)
 artifacts/
 
-# Noir runtime embedding/dedup cache — pending the 1.19.4 core gitignore fix.
+# Noir runtime embedding/dedup cache (regenerable). Core fix landed in source and
+# ships in 1.19.4; this manual line bridges until the next `noir sync` emits it.
 .noir/dedup-cache.json
+
+# Claude Code local settings (permissions + the noir hook): local-only, never commit.
+.claude/settings.local.json
 
 # >>> noir:ignore >>>
 /.noir/store/
