@@ -16,11 +16,11 @@
 > Pin a version with `NOIR_VERSION=<VERSION>` (POSIX) or `$env:NOIR_VERSION='<VERSION>'` (PowerShell).
 
 <!-- noir:doc:status -->
-**Latest stable:** `1.19.3` (npm dist-tag `latest`: `npm i @noir-ai/cli` resolves here)
-**Current beta:** `1.19.3-beta.1` (npm dist-tag `beta`: `npm i @noir-ai/cli@beta` to opt in)
+**Latest stable:** `1.19.4` (npm dist-tag `latest`: `npm i @noir-ai/cli` resolves here)
+**Current beta:** `1.19.4-beta.1` (npm dist-tag `beta`: `npm i @noir-ai/cli@beta` to opt in)
 **Source version:** `1.19.4` (clean SemVer in `packages/*/package.json`)
 
-*Last auto-generated: 2026-10-20T03:38:46.414Z*
+*Last auto-generated: 2026-10-20T04:21:15.358Z*
 <!-- /noir:doc:status -->
 
 ---
