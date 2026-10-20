@@ -4,7 +4,7 @@ current_phase: shipped
 
 active_capability: null
 
-active_slice: null  # 1.19.3 (2026-10-19): gitignore audit logs + installer downgrade guard + prose sweep
+active_slice: null  # 1.19.4 (2026-10-20): dogfood + hook fallback fix + dedup-cache gitignore
 
 roadmap:
   - id: C1

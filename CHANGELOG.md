@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.19.4 (2026-10-20): dogfood + hook fallback fix + dedup-cache gitignore
+
+### Fixed
+- **`noir hook` could inject a non-Noir cwd's brief from the repo's own `.noir/`.** The dispatch and root resolution used `findNoirRoot(cwd) ?? process.cwd()`, so a hook running on a non-Noir cwd fell back to the repo's `.noir/` once the repo itself was dogfooded (surfaced by the dogfood: a hook test that passed before, because the repo had no `.noir/`, began failing). It now falls back to the cwd itself, so a non-Noir cwd yields an empty brief and default config.
+- **The regenerable embedding dedup-cache could be committed.** `.noir/dedup-cache.json` (a SHA-256-keyed embedding cache written by the write-path semantic-dedup) was absent from the managed gitignore block, so a fresh `noir init` left it tracked. `noir init`/`sync`/`upgrade` now emit `/.noir/dedup-cache.json` (the `--upgrade` re-emit is verified for an unedited project).
+
+### Changed
+- **Noir is dogfooded in this repo.** `noir init` scaffolded `.noir/`, `.mcp.json`, and the 34 `noir-*` skills; the former plugin stack (agentmemory, context-mode, superpowers) is dropped, and `CLAUDE.md`/`AGENTS.md`/`privacy.md` reflect the Noir-native toolchain. `.claude/settings.local.json` is gitignored explicitly.
+
+### Upgrade steps
+1. **Nothing to do.** The gitignore entry is re-emitted on the next `noir sync`/`noir init --upgrade`; no scaffold migration or config change.
+
 ## 1.19.3 (2026-10-19): gitignore audit logs + installer downgrade guard + prose sweep
 
 ### Fixed
