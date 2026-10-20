@@ -32,8 +32,9 @@ runs `noir hook`, injects them at session start.
 Nothing below is created eagerly — each directory shows up the first time the
 feature that owns it runs, so an empty project stays empty. `store/`, `handoff/`
 and `transcripts/` hold runtime data and are gitignored, as are the
-`integration-*.jsonl` write-audit logs under `audit/`; everything else
-(including the gate-evidence JSON in `audit/`) is committed.
+`integration-*.jsonl` write-audit logs under `audit/` and the regenerable
+`dedup-cache.json` embedding cache; everything else (including the gate-evidence
+JSON in `audit/`) is committed.
 
 | Directory | Written by | Triggered by |
 | --- | --- | --- |
